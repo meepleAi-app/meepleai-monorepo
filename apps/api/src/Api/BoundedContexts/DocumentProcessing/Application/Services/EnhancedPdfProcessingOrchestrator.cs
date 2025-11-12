@@ -379,30 +379,43 @@ public class EnhancedPdfProcessingOrchestrator
     }
 
     /// <summary>
-    /// Calculates quality score for paged extraction based on text coverage and page density
+    /// Calculates quality score for paged extraction using linear interpolation
     /// </summary>
     /// <remarks>
-    /// Mimics PdfQualityValidationDomainService.TextCoverageScore logic:
-    /// - Avg chars/page ≥ 1000 → High (0.85)
-    /// - Avg chars/page ≥ 500 → Medium (0.70)
-    /// - Avg chars/page ≥ 200 → Low (0.50)
-    /// - Avg chars/page < 200 → VeryLow (0.25)
+    /// Uses same logic as PdfQualityValidationDomainService.CalculateTextCoverage:
+    /// - minChars = 500 (default from ADR-003)
+    /// - idealChars = 1000 (minChars * 2)
+    ///
+    /// Scoring (linear interpolation):
+    /// - &lt;500 cpp: 0.0 → 0.5 (e.g., 250 cpp → 0.25, 400 cpp → 0.40)
+    /// - 500-1000 cpp: 0.5 → 1.0 (e.g., 800 cpp → 0.80 ✅ passes Stage 1, 900 cpp → 0.90)
+    /// - ≥1000 cpp: 1.0
+    ///
+    /// This ensures 800 cpp meets Stage 1 threshold (0.80), matching domain service behavior.
     /// </remarks>
     private static double CalculatePagedQualityScore(PagedTextExtractionResult result)
     {
         if (result.TotalPages == 0)
             return 0.0;
 
-        var avgCharsPerPage = (double)result.TotalCharacters / result.TotalPages;
+        var charsPerPage = (double)result.TotalCharacters / result.TotalPages;
+        const int minChars = 500;    // From ADR-003: MinCharsPerPage default
+        const int idealChars = 1000; // minChars * 2
 
-        // Map to same quality thresholds as ExtractionQuality enum
-        return avgCharsPerPage switch
+        // Below minimum: linear interpolation from 0.0 to 0.5
+        if (charsPerPage < minChars)
         {
-            >= 1000 => 0.85,  // High quality (≥1000 chars/page)
-            >= 500 => 0.70,   // Medium quality (≥500 chars/page)
-            >= 200 => 0.50,   // Low quality (≥200 chars/page)
-            _ => 0.25         // Very low quality (<200 chars/page)
-        };
+            return Math.Min(charsPerPage / minChars * 0.5, 0.5);
+        }
+
+        // At or above ideal: maximum score
+        if (charsPerPage >= idealChars)
+        {
+            return 1.0;
+        }
+
+        // Between minimum and ideal: linear interpolation from 0.5 to 1.0
+        return 0.5 + (charsPerPage - minChars) / (idealChars - minChars) * 0.5;
     }
 
     /// <summary>

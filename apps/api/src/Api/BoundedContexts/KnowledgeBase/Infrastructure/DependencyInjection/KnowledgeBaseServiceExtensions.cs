@@ -1,7 +1,10 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
+using Api.Services;
+using Api.Services.LlmClients;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 
@@ -17,6 +20,17 @@ public static class KnowledgeBaseServiceExtensions
         services.AddSingleton<VectorSearchDomainService>();
         services.AddSingleton<RrfFusionDomainService>();
         services.AddSingleton<QualityTrackingDomainService>();
+
+        // ISSUE-958: LLM Hybrid Architecture
+        // Domain Services - Routing Strategy
+        services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();
+
+        // Infrastructure - LLM Clients (Singleton - stateless HTTP clients)
+        services.AddSingleton<ILlmClient, OllamaLlmClient>();
+        services.AddSingleton<ILlmClient, OpenRouterLlmClient>();
+
+        // Application Services - Hybrid LLM Service (Scoped - may use request context)
+        services.AddScoped<ILlmService, HybridLlmService>();
 
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();

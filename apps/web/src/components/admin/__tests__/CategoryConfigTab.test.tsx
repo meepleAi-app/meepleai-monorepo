@@ -5,10 +5,10 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CategoryConfigTab from "../CategoryConfigTab";
 import { api } from "../../../lib/api";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/Toast";
 
 jest.mock("../../../lib/api");
-jest.mock("react-hot-toast");
+jest.mock("@/components/Toast");
 
 const mockApi = api as jest.Mocked<typeof api>;
 const mockToast = toast as jest.Mocked<typeof toast>;

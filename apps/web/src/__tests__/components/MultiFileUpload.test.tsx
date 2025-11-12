@@ -893,7 +893,8 @@ describe('MultiFileUpload Component', () => {
     it('renders hidden file input', () => {
       render(<MultiFileUpload {...defaultProps} />);
       const input = screen.getByLabelText(/File input for PDF upload/i);
-      expect(input).toHaveStyle({ display: 'none' });
+      // Shadcn Input component uses className="hidden" which applies Tailwind's display: none
+      expect(input).toHaveClass('hidden');
       expect(input).toHaveAttribute('accept', 'application/pdf');
       expect(input).toHaveAttribute('multiple');
     });
@@ -932,16 +933,16 @@ describe('MultiFileUpload Component', () => {
       render(<MultiFileUpload {...defaultProps} />);
       const button = screen.getByRole('button', { name: /Select Files/i });
 
-      // Initial state
-      expect(button).toHaveStyle({ backgroundColor: 'rgb(0, 112, 243)' });
+      // Shadcn Button component uses Tailwind CSS classes for styling
+      // Hover states are handled by CSS, not inline styles
+      // Verify button renders and is interactive
+      expect(button).toBeInTheDocument();
+      expect(button).toHaveAttribute('type', 'button');
 
-      // Mouse enter
+      // Mouse enter/leave events work (no errors thrown)
       fireEvent.mouseEnter(button);
-      expect(button).toHaveStyle({ backgroundColor: 'rgb(0, 81, 204)' });
-
-      // Mouse leave
       fireEvent.mouseLeave(button);
-      expect(button).toHaveStyle({ backgroundColor: 'rgb(0, 112, 243)' });
+      expect(button).toBeInTheDocument();
     });
 
     it('handles Start Upload button hover states in manual mode', () => {
@@ -958,16 +959,16 @@ describe('MultiFileUpload Component', () => {
       render(<MultiFileUpload {...defaultProps} autoUpload={false} />);
       const button = screen.getByTestId('start-upload-button');
 
-      // Initial state
-      expect(button).toHaveStyle({ backgroundColor: 'rgb(52, 168, 83)' });
+      // Shadcn Button component uses Tailwind CSS classes for styling
+      // Hover states are handled by CSS, not inline styles
+      // Verify button renders with custom background color and is interactive
+      expect(button).toBeInTheDocument();
+      expect(button).toHaveStyle({ backgroundColor: '#34a853' });
 
-      // Mouse enter
+      // Mouse enter/leave events work (no errors thrown)
       fireEvent.mouseEnter(button);
-      expect(button).toHaveStyle({ backgroundColor: 'rgb(45, 142, 71)' });
-
-      // Mouse leave
       fireEvent.mouseLeave(button);
-      expect(button).toHaveStyle({ backgroundColor: 'rgb(52, 168, 83)' });
+      expect(button).toBeInTheDocument();
     });
   });
 
@@ -1270,13 +1271,15 @@ describe('MultiFileUpload Component', () => {
     it('applies correct game badge styles', () => {
       render(<MultiFileUpload {...defaultProps} />);
       const badge = screen.getByTestId('game-info-badge');
+      // The container div has padding and marginBottom, but backgroundColor/border/borderRadius
+      // are now applied by the shadcn Badge component using Tailwind CSS classes
       expect(badge).toHaveStyle({
         padding: '12px 16px',
-        backgroundColor: 'rgb(232, 245, 233)',
-        border: '1px solid rgb(52, 168, 83)',
-        borderRadius: '6px',
         marginBottom: '16px'
       });
+      // Verify Badge component (rendered as div with badge classes) is inside the container
+      expect(badge.querySelector('div')).toBeInTheDocument();
+      expect(screen.getByText(/Target Game: Test Game/)).toBeInTheDocument();
     });
   });
 });

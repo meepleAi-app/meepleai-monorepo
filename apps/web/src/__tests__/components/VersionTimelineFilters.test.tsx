@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { VersionTimelineFilters } from '../../components/VersionTimelineFilters';
 
 describe('VersionTimelineFilters', () => {
@@ -27,7 +28,8 @@ describe('VersionTimelineFilters', () => {
     expect(screen.getByLabelText('Reset filters')).toBeInTheDocument();
   });
 
-  it('should display all authors in dropdown', () => {
+  it('should display all authors in dropdown', async () => {
+    const user = userEvent.setup();
     render(
       <VersionTimelineFilters
         authors={mockAuthors}
@@ -37,11 +39,15 @@ describe('VersionTimelineFilters', () => {
       />
     );
 
-    const select = screen.getByLabelText('Author') as HTMLSelectElement;
-    expect(select.options).toHaveLength(mockAuthors.length + 1); // +1 for "All authors"
-    expect(screen.getByText('User One')).toBeInTheDocument();
-    expect(screen.getByText('User Two')).toBeInTheDocument();
-    expect(screen.getByText('User Three')).toBeInTheDocument();
+    // Open the select dropdown
+    const trigger = screen.getByRole('combobox', { name: /author/i });
+    await user.click(trigger);
+
+    // Check that all authors are present
+    expect(screen.getByRole('option', { name: 'All authors' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'User One' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'User Two' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'User Three' })).toBeInTheDocument();
   });
 
   it('should call onFiltersChange when start date changes', () => {
@@ -62,7 +68,8 @@ describe('VersionTimelineFilters', () => {
     });
   });
 
-  it('should call onFiltersChange when author changes', () => {
+  it('should call onFiltersChange when author changes', async () => {
+    const user = userEvent.setup();
     render(
       <VersionTimelineFilters
         authors={mockAuthors}
@@ -72,8 +79,13 @@ describe('VersionTimelineFilters', () => {
       />
     );
 
-    const authorSelect = screen.getByLabelText('Author') as HTMLSelectElement;
-    fireEvent.change(authorSelect, { target: { value: 'User One' } });
+    // Click the select trigger to open the dropdown
+    const authorTrigger = screen.getByRole('combobox', { name: /author/i });
+    await user.click(authorTrigger);
+
+    // Click the option
+    const option = screen.getByRole('option', { name: 'User One' });
+    await user.click(option);
 
     expect(mockOnFiltersChange).toHaveBeenCalledWith({
       author: 'User One',
@@ -133,7 +145,8 @@ describe('VersionTimelineFilters', () => {
 
     expect((screen.getByLabelText('Start Date') as HTMLInputElement).value).toBe('2024-01-01');
     expect((screen.getByLabelText('End Date') as HTMLInputElement).value).toBe('2024-12-31');
-    expect((screen.getByLabelText('Author') as HTMLSelectElement).value).toBe('User Two');
+    // For shadcn Select, check the trigger text instead of value
+    expect(screen.getByRole('combobox', { name: /author/i })).toHaveTextContent('User Two');
     expect((screen.getByLabelText('Search Versions') as HTMLInputElement).value).toBe('v2');
   });
 });

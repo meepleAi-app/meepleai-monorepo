@@ -73,13 +73,13 @@ describe('ChatHistoryItem', () => {
     it('applies active styling when isActive is true', () => {
       const { container } = render(<ChatHistoryItem {...defaultProps} isActive={true} />);
       const listItem = container.querySelector('li');
-      expect(listItem).toHaveStyle({ background: '#e8f0fe' });
+      expect(listItem).toHaveClass('bg-primary/10', 'border-primary');
     });
 
     it('applies inactive styling when isActive is false', () => {
       const { container } = render(<ChatHistoryItem {...defaultProps} isActive={false} />);
       const listItem = container.querySelector('li');
-      expect(listItem).toHaveStyle({ background: 'white' });
+      expect(listItem).toHaveClass('bg-background', 'border-border');
     });
 
     it('sets aria-current attribute when active', () => {
@@ -255,27 +255,27 @@ describe('ChatHistoryItem', () => {
     it('applies correct cursor style', () => {
       const { container } = render(<ChatHistoryItem {...defaultProps} />);
       const listItem = container.querySelector('li');
-      expect(listItem).toHaveStyle({ cursor: 'pointer' });
+      expect(listItem).toHaveClass('cursor-pointer');
     });
 
     it('applies border radius', () => {
       const { container } = render(<ChatHistoryItem {...defaultProps} />);
       const listItem = container.querySelector('li');
-      expect(listItem).toHaveStyle({ borderRadius: '4px' });
+      expect(listItem).toHaveClass('rounded');
     });
 
     it('applies different border color for active state', () => {
       const { container } = render(<ChatHistoryItem {...defaultProps} isActive={true} />);
       const listItem = container.querySelector('li');
-      // Border should be blue when active
-      expect(listItem).toHaveStyle({ border: '1px solid #1a73e8' });
+      // Border should be primary color when active
+      expect(listItem).toHaveClass('border-primary');
     });
 
     it('applies different border color for inactive state', () => {
       const { container } = render(<ChatHistoryItem {...defaultProps} isActive={false} />);
       const listItem = container.querySelector('li');
-      // Border should be gray when inactive
-      expect(listItem).toHaveStyle({ border: '1px solid #dadce0' });
+      // Border should be default border color when inactive
+      expect(listItem).toHaveClass('border-border');
     });
   });
 });

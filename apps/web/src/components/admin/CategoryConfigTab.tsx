@@ -6,8 +6,10 @@
  */
 
 import { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/Toast";
 import { api, SystemConfigurationDto, UpdateConfigurationRequest } from "../../lib/api";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 
 interface CategoryConfigTabProps {
   title: string;
@@ -174,43 +176,43 @@ export default function CategoryConfigTab({
                   {/* Value Display/Edit */}
                   {isEditing ? (
                     <div className="flex items-center gap-2 mt-2">
-                      <input
+                      <Input
                         type="text"
                         value={editing.value}
                         onChange={(e) =>
                           setEditing({ ...editing, value: e.target.value })
                         }
-                        className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1"
                         disabled={isSaving}
                         autoFocus
                       />
-                      <button
+                      <Button
                         onClick={() => handleSave(config)}
                         disabled={isSaving}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
+                        size="default"
                       >
                         {isSaving ? "Saving..." : "Save"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={handleCancel}
                         disabled={isSaving}
-                        className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 disabled:bg-slate-100 transition-colors"
+                        variant="outline"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 mt-2">
                       <code className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white rounded-lg text-sm font-mono">
                         {config.value}
                       </code>
-                      <button
+                      <Button
                         onClick={() => handleEdit(config)}
                         disabled={isSaving || !config.isActive}
-                        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+                        size="sm"
                       >
                         Edit
-                      </button>
+                      </Button>
                     </div>
                   )}
 
@@ -232,17 +234,19 @@ export default function CategoryConfigTab({
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     onClick={() => handleToggleActive(config)}
                     disabled={isSaving}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      config.isActive
-                        ? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300"
-                        : "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    variant={config.isActive ? "destructive" : "default"}
+                    size="sm"
+                    className={
+                      !config.isActive
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : ""
+                    }
                   >
                     {config.isActive ? "Deactivate" : "Activate"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

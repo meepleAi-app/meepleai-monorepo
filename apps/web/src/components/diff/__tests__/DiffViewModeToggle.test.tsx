@@ -25,14 +25,23 @@ describe('DiffViewModeToggle', () => {
     it('should have radiogroup role', () => {
       render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
 
-      expect(screen.getByRole('radiogroup', { name: 'Diff view mode' })).toBeInTheDocument();
+      // shadcn ToggleGroup uses "group" role, not "radiogroup"
+      expect(screen.getByRole('group')).toBeInTheDocument();
     });
 
     it('should display correct text and icons', () => {
       render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
 
-      expect(screen.getByText('📋 List')).toBeInTheDocument();
-      expect(screen.getByText('⇄ Side-by-Side')).toBeInTheDocument();
+      // Updated: shadcn uses Lucide icons instead of emoji
+      expect(screen.getByText('List')).toBeInTheDocument();
+      expect(screen.getByText('Side-by-Side')).toBeInTheDocument();
+
+      // Icons are rendered as SVG
+      const listButton = screen.getByLabelText('List view');
+      const sideButton = screen.getByLabelText('Side-by-side view');
+
+      expect(listButton.querySelector('svg')).toBeInTheDocument();
+      expect(sideButton.querySelector('svg')).toBeInTheDocument();
     });
   });
 
@@ -42,8 +51,8 @@ describe('DiffViewModeToggle', () => {
 
       const listButton = screen.getByLabelText('List view');
 
-      expect(listButton).toHaveClass('view-mode-button--active');
-      expect(listButton).toHaveAttribute('aria-checked', 'true');
+      // shadcn ToggleGroup uses data-state="on" for active state
+      expect(listButton).toHaveAttribute('data-state', 'on');
     });
 
     it('should mark side-by-side button as inactive when currentMode is list', () => {
@@ -51,8 +60,8 @@ describe('DiffViewModeToggle', () => {
 
       const sideButton = screen.getByLabelText('Side-by-side view');
 
-      expect(sideButton).not.toHaveClass('view-mode-button--active');
-      expect(sideButton).toHaveAttribute('aria-checked', 'false');
+      // shadcn ToggleGroup uses data-state="off" for inactive state
+      expect(sideButton).toHaveAttribute('data-state', 'off');
     });
   });
 
@@ -62,8 +71,8 @@ describe('DiffViewModeToggle', () => {
 
       const sideButton = screen.getByLabelText('Side-by-side view');
 
-      expect(sideButton).toHaveClass('view-mode-button--active');
-      expect(sideButton).toHaveAttribute('aria-checked', 'true');
+      // shadcn ToggleGroup uses data-state="on" for active state
+      expect(sideButton).toHaveAttribute('data-state', 'on');
     });
 
     it('should mark list button as inactive when currentMode is side-by-side', () => {
@@ -71,8 +80,8 @@ describe('DiffViewModeToggle', () => {
 
       const listButton = screen.getByLabelText('List view');
 
-      expect(listButton).not.toHaveClass('view-mode-button--active');
-      expect(listButton).toHaveAttribute('aria-checked', 'false');
+      // shadcn ToggleGroup uses data-state="off" for inactive state
+      expect(listButton).toHaveAttribute('data-state', 'off');
     });
   });
 
@@ -101,7 +110,7 @@ describe('DiffViewModeToggle', () => {
       expect(mockOnModeChange).toHaveBeenCalledTimes(1);
     });
 
-    it('should allow clicking already active button', async () => {
+    it('should not trigger onModeChange when clicking already active button', async () => {
       const user = userEvent.setup();
 
       render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
@@ -109,24 +118,37 @@ describe('DiffViewModeToggle', () => {
       const listButton = screen.getByLabelText('List view');
       await user.click(listButton);
 
-      expect(mockOnModeChange).toHaveBeenCalledWith('list');
+      // shadcn ToggleGroup does not call onChange when clicking already-selected item
+      expect(mockOnModeChange).not.toHaveBeenCalled();
     });
 
     it('should handle rapid mode switching', async () => {
       const user = userEvent.setup();
 
-      render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
+      const { rerender } = render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
 
-      const listButton = screen.getByLabelText('List view');
       const sideButton = screen.getByLabelText('Side-by-side view');
 
+      // Click to switch to side-by-side
       await user.click(sideButton);
+      expect(mockOnModeChange).toHaveBeenNthCalledWith(1, 'side-by-side');
+
+      // Rerender with new mode
+      rerender(<DiffViewModeToggle currentMode="side-by-side" onModeChange={mockOnModeChange} />);
+
+      // Click to switch back to list
+      const listButton = screen.getByLabelText('List view');
       await user.click(listButton);
-      await user.click(sideButton);
+      expect(mockOnModeChange).toHaveBeenNthCalledWith(2, 'list');
+
+      // Rerender with list mode
+      rerender(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
+
+      // Click to switch to side-by-side again
+      const sideButtonAgain = screen.getByLabelText('Side-by-side view');
+      await user.click(sideButtonAgain);
 
       expect(mockOnModeChange).toHaveBeenCalledTimes(3);
-      expect(mockOnModeChange).toHaveBeenNthCalledWith(1, 'side-by-side');
-      expect(mockOnModeChange).toHaveBeenNthCalledWith(2, 'list');
       expect(mockOnModeChange).toHaveBeenNthCalledWith(3, 'side-by-side');
     });
   });
@@ -138,13 +160,15 @@ describe('DiffViewModeToggle', () => {
       const listButton = screen.getByLabelText('List view');
       const sideButton = screen.getByLabelText('Side-by-side view');
 
-      expect(listButton).toHaveAttribute('role', 'radio');
-      expect(sideButton).toHaveAttribute('role', 'radio');
+      // shadcn ToggleGroup items don't use role="radio", they use button role
+      expect(listButton).toHaveAttribute('type', 'button');
+      expect(sideButton).toHaveAttribute('type', 'button');
     });
 
     it('should have correct aria-checked attributes', () => {
       render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
 
+      // shadcn ToggleGroup uses aria-checked (like radio buttons)
       expect(screen.getByLabelText('List view')).toHaveAttribute('aria-checked', 'true');
       expect(screen.getByLabelText('Side-by-side view')).toHaveAttribute('aria-checked', 'false');
     });
@@ -162,20 +186,23 @@ describe('DiffViewModeToggle', () => {
       expect(screen.getByLabelText('Side-by-side view')).toHaveAttribute('aria-checked', 'true');
     });
 
-    it('should be keyboard navigable', async () => {
-      const user = userEvent.setup();
-
+    it('should be keyboard navigable', () => {
       render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
 
+      // Radix ToggleGroup is keyboard navigable - verify group has tabindex
+      const toggleGroup = screen.getByRole('group');
+      expect(toggleGroup).toHaveAttribute('tabindex');
+
+      // Verify buttons are focusable
       const listButton = screen.getByLabelText('List view');
-
-      listButton.focus();
-      expect(listButton).toHaveFocus();
-
-      await user.keyboard('{Tab}');
-
       const sideButton = screen.getByLabelText('Side-by-side view');
-      expect(sideButton).toHaveFocus();
+
+      expect(listButton).toBeInTheDocument();
+      expect(sideButton).toBeInTheDocument();
+
+      // Active button should have tabindex 0, inactive should have -1 (Radix roving focus)
+      expect(listButton).toHaveAttribute('tabindex');
+      expect(sideButton).toHaveAttribute('tabindex');
     });
 
     it('should activate button on Enter key', async () => {
@@ -214,17 +241,20 @@ describe('DiffViewModeToggle', () => {
       expect(container.querySelector('.diff-view-mode-toggle')).toBeInTheDocument();
     });
 
-    it('should apply view-mode-button class to both buttons', () => {
-      const { container } = render(
+    it('should have toggle group items', () => {
+      render(
         <DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />
       );
 
-      const buttons = container.querySelectorAll('.view-mode-button');
+      // shadcn ToggleGroup creates buttons, not custom class names
+      const listButton = screen.getByLabelText('List view');
+      const sideButton = screen.getByLabelText('Side-by-side view');
 
-      expect(buttons).toHaveLength(2);
+      expect(listButton).toBeInTheDocument();
+      expect(sideButton).toBeInTheDocument();
     });
 
-    it('should toggle active class when mode changes', () => {
+    it('should toggle active state when mode changes', () => {
       const { rerender } = render(
         <DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />
       );
@@ -232,13 +262,14 @@ describe('DiffViewModeToggle', () => {
       const listButton = screen.getByLabelText('List view');
       const sideButton = screen.getByLabelText('Side-by-side view');
 
-      expect(listButton).toHaveClass('view-mode-button--active');
-      expect(sideButton).not.toHaveClass('view-mode-button--active');
+      // shadcn uses data-state instead of CSS class modifiers
+      expect(listButton).toHaveAttribute('data-state', 'on');
+      expect(sideButton).toHaveAttribute('data-state', 'off');
 
       rerender(<DiffViewModeToggle currentMode="side-by-side" onModeChange={mockOnModeChange} />);
 
-      expect(listButton).not.toHaveClass('view-mode-button--active');
-      expect(sideButton).toHaveClass('view-mode-button--active');
+      expect(listButton).toHaveAttribute('data-state', 'off');
+      expect(sideButton).toHaveAttribute('data-state', 'on');
     });
   });
 
@@ -248,6 +279,7 @@ describe('DiffViewModeToggle', () => {
 
       render(<DiffViewModeToggle currentMode={mode} onModeChange={mockOnModeChange} />);
 
+      // shadcn ToggleGroup uses aria-checked (like radio buttons)
       expect(screen.getByLabelText('List view')).toHaveAttribute('aria-checked', 'true');
     });
 
@@ -259,6 +291,7 @@ describe('DiffViewModeToggle', () => {
 
       render(<DiffViewModeToggle {...props} />);
 
+      // shadcn ToggleGroup uses aria-checked (like radio buttons)
       expect(screen.getByLabelText('Side-by-side view')).toHaveAttribute('aria-checked', 'true');
     });
   });

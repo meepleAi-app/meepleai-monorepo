@@ -5,6 +5,9 @@
 
 import type { UploadQueueItem as UploadQueueItemType, UploadQueueStats } from '../hooks/useUploadQueue';
 import { UploadQueueItem } from './UploadQueueItem';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 interface UploadQueueProps {
   items: UploadQueueItemType[];
@@ -83,88 +86,55 @@ export function UploadQueue({
             </div>
           </div>
           {hasCompleted && (
-            <button
+            <Button
               onClick={onClearCompleted}
+              variant="outline"
+              size="sm"
               aria-label="Clear completed uploads from queue"
-              style={{
-                padding: '6px 14px',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#5f6368',
-                backgroundColor: 'white',
-                border: '1px solid #dadce0',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f5f5f5';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
-              }}
             >
               Clear Completed
-            </button>
+            </Button>
           )}
         </div>
 
         {/* Overall Progress Bar */}
-        <div
-          role="progressbar"
+        <Progress
+          value={totalProgress}
+          className="h-2.5"
           aria-label="Overall upload progress"
-          aria-valuenow={totalProgress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          style={{
-            width: '100%',
-            height: '10px',
-            backgroundColor: '#e0e0e0',
-            borderRadius: '5px',
-            overflow: 'hidden'
-          }}
-        >
-          <div
-            style={{
-              width: `${totalProgress}%`,
-              height: '100%',
-              backgroundColor: '#0070f3',
-              transition: 'width 0.3s ease'
-            }}
-          />
-        </div>
+        />
 
         {/* Stats Summary */}
-        <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '13px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
           {stats.pending > 0 && (
-            <div style={{ color: '#666' }}>
-              <span style={{ fontWeight: 600 }}>{stats.pending}</span> pending
-            </div>
+            <Badge variant="secondary">
+              {stats.pending} pending
+            </Badge>
           )}
           {stats.uploading > 0 && (
-            <div style={{ color: '#0070f3' }}>
-              <span style={{ fontWeight: 600 }}>{stats.uploading}</span> uploading
-            </div>
+            <Badge variant="default">
+              {stats.uploading} uploading
+            </Badge>
           )}
           {stats.processing > 0 && (
-            <div style={{ color: '#ff9800' }}>
-              <span style={{ fontWeight: 600 }}>{stats.processing}</span> processing
-            </div>
+            <Badge variant="secondary" style={{ backgroundColor: '#fff3e0', color: '#ff9800' }}>
+              {stats.processing} processing
+            </Badge>
           )}
           {stats.succeeded > 0 && (
-            <div style={{ color: '#34a853' }}>
-              <span style={{ fontWeight: 600 }}>{stats.succeeded}</span> succeeded
-            </div>
+            <Badge variant="default" style={{ backgroundColor: '#e8f5e9', color: '#34a853' }}>
+              {stats.succeeded} succeeded
+            </Badge>
           )}
           {stats.failed > 0 && (
-            <div style={{ color: '#d93025' }}>
-              <span style={{ fontWeight: 600 }}>{stats.failed}</span> failed
-            </div>
+            <Badge variant="destructive">
+              {stats.failed} failed
+            </Badge>
           )}
           {stats.cancelled > 0 && (
-            <div style={{ color: '#999' }}>
-              <span style={{ fontWeight: 600 }}>{stats.cancelled}</span> cancelled
-            </div>
+            <Badge variant="outline">
+              {stats.cancelled} cancelled
+            </Badge>
           )}
         </div>
       </div>

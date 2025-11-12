@@ -1,4 +1,6 @@
 import React from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export interface DiffNavigationControlsProps {
   currentIndex: number;
@@ -11,6 +13,7 @@ export interface DiffNavigationControlsProps {
 /**
  * Navigation controls for jumping between changes
  * Prev/Next buttons with keyboard support
+ * Migrated to shadcn UI components
  */
 export function DiffNavigationControls({
   currentIndex,
@@ -25,28 +28,32 @@ export function DiffNavigationControls({
   const isNextDisabled = disabled || currentIndex >= totalChanges - 1;
 
   return (
-    <div className="diff-navigation-controls" role="navigation" aria-label="Diff navigation">
-      <span className="diff-navigation-position">
+    <div className="diff-navigation-controls flex items-center gap-2" role="navigation" aria-label="Diff navigation">
+      <span className="diff-navigation-position text-sm text-muted-foreground whitespace-nowrap">
         {currentIndex + 1} / {totalChanges} changes
       </span>
-      <button
+      <Button
+        variant="outline"
+        size="sm"
         onClick={onPrev}
         disabled={isPrevDisabled}
-        className="diff-nav-button diff-nav-button--prev"
         aria-label="Previous change"
         title="Previous change (Alt+Up)"
       >
-        ↑ Prev
-      </button>
-      <button
+        <ChevronUp className="h-4 w-4 mr-1" />
+        Prev
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
         onClick={onNext}
         disabled={isNextDisabled}
-        className="diff-nav-button diff-nav-button--next"
         aria-label="Next change"
         title="Next change (Alt+Down)"
       >
-        Next ↓
-      </button>
+        Next
+        <ChevronDown className="h-4 w-4 ml-1" />
+      </Button>
     </div>
   );
 }

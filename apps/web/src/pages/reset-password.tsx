@@ -26,6 +26,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { AccessibleFormInput, AccessibleButton } from "@/components/accessible";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 // Type definitions
 type AuthUser = {
@@ -317,9 +319,9 @@ export default function ResetPasswordPage() {
             <span className="text-4xl">🎲</span>
             <span className="text-2xl font-bold gradient-text">MeepleAI</span>
           </Link>
-          <Link href="/" className="btn-secondary text-sm py-2 px-4">
-            Back to Home
-          </Link>
+          <Button variant="secondary" asChild className="text-sm">
+            <Link href="/">Back to Home</Link>
+          </Button>
         </div>
       </header>
 
@@ -331,7 +333,7 @@ export default function ResetPasswordPage() {
           transition={{ duration: 0.6 }}
           className="w-full max-w-md"
         >
-          <div className="card p-8 space-y-6">
+          <Card className="p-8 space-y-6">
             {/* Request Reset Mode */}
             {mode === "request" && !requestSuccess && (
               <>
@@ -409,9 +411,9 @@ export default function ResetPasswordPage() {
                   .
                 </p>
                 <div className="pt-4">
-                  <Link href="/" className="btn-secondary">
-                    Back to Login
-                  </Link>
+                  <Button variant="secondary" asChild>
+                    <Link href="/">Back to Login</Link>
+                  </Button>
                 </div>
               </div>
             )}
@@ -436,12 +438,12 @@ export default function ResetPasswordPage() {
                   <p className="text-sm text-red-400">{errorMessage}</p>
                 )}
                 <div className="pt-4 space-y-2">
-                  <Link href="/reset-password" className="btn-primary block">
-                    Request New Reset Link
-                  </Link>
-                  <Link href="/" className="btn-secondary block">
-                    Back to Login
-                  </Link>
+                  <Button asChild className="w-full">
+                    <Link href="/reset-password">Request New Reset Link</Link>
+                  </Button>
+                  <Button variant="secondary" asChild className="w-full">
+                    <Link href="/">Back to Login</Link>
+                  </Button>
                 </div>
               </div>
             )}
@@ -582,7 +584,7 @@ export default function ResetPasswordPage() {
                 <div className="animate-spin text-2xl mx-auto w-fit">⏳</div>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Security Notice */}
           <div className="mt-6 text-center text-sm text-slate-500">

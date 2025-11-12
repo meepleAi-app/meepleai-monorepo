@@ -8,14 +8,15 @@
 import React from 'react';
 import { useChatContext } from './ChatProvider';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function AgentSelector() {
   const { agents, selectedAgentId, selectAgent, selectedGameId, loading } = useChatContext();
 
   if (loading.agents) {
     return (
-      <div style={{ marginBottom: 12 }}>
-        <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 13 }}>
+      <div className="mb-3">
+        <label className="block mb-1.5 font-medium text-sm">
           Seleziona Agente:
         </label>
         <SkeletonLoader variant="gameSelection" />
@@ -23,49 +24,40 @@ export function AgentSelector() {
     );
   }
 
+  const isDisabled = loading.agents || !selectedGameId;
+  const hasAgents = agents.length > 0;
+
+  const placeholderText = !selectedGameId
+    ? 'Seleziona prima un gioco'
+    : !hasAgents
+    ? 'Nessun agente disponibile'
+    : 'Seleziona un agente';
+
   return (
-    <div style={{ marginBottom: 12 }}>
-      <label
-        htmlFor="agentSelect"
-        style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 13 }}
-      >
+    <div className="mb-3">
+      <label className="block mb-1.5 font-medium text-sm">
         Seleziona Agente:
       </label>
-      <select
-        id="agentSelect"
+      <Select
         value={selectedAgentId ?? ''}
-        onChange={(e) => {
-          const value = e.target.value;
-          selectAgent(value || null);
-        }}
-        disabled={loading.agents || !selectedGameId}
-        aria-busy={loading.agents}
-        title={!selectedGameId ? 'Seleziona prima un gioco' : undefined}
-        style={{
-          width: '100%',
-          padding: 8,
-          fontSize: 13,
-          borderRadius: 4,
-          border: '1px solid #dadce0',
-          cursor: loading.agents || !selectedGameId ? 'not-allowed' : 'pointer',
-          opacity: !selectedGameId ? 0.6 : 1
-        }}
+        onValueChange={(value) => selectAgent(value || null)}
+        disabled={isDisabled}
       >
-        {!selectedGameId ? (
-          <option value="">Seleziona prima un gioco</option>
-        ) : agents.length === 0 ? (
-          <option value="">Nessun agente disponibile</option>
-        ) : (
-          <>
-            <option value="">Seleziona un agente</option>
-            {agents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name}
-              </option>
-            ))}
-          </>
-        )}
-      </select>
+        <SelectTrigger
+          className="w-full"
+          aria-busy={loading.agents}
+          title={!selectedGameId ? 'Seleziona prima un gioco' : undefined}
+        >
+          <SelectValue placeholder={placeholderText} />
+        </SelectTrigger>
+        <SelectContent>
+          {selectedGameId && hasAgents && agents.map((agent) => (
+            <SelectItem key={agent.id} value={agent.id}>
+              {agent.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

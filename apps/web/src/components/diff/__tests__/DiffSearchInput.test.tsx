@@ -62,7 +62,8 @@ describe('DiffSearchInput', () => {
       );
 
       expect(container.querySelector('.diff-search-input')).toBeInTheDocument();
-      expect(container.querySelector('.diff-search-field')).toBeInTheDocument();
+      // Updated to check for shadcn Input component (no .diff-search-field class)
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
     });
   });
 
@@ -106,7 +107,11 @@ describe('DiffSearchInput', () => {
     it('should display × symbol', () => {
       render(<DiffSearchInput value="test" onChange={mockOnChange} />);
 
-      expect(screen.getByText('✕')).toBeInTheDocument();
+      // Updated: shadcn Button uses Lucide X icon, not text ✕
+      const clearButton = screen.getByLabelText('Clear search');
+      expect(clearButton).toBeInTheDocument();
+      // Icon is rendered as SVG by lucide-react
+      expect(clearButton.querySelector('svg')).toBeInTheDocument();
     });
   });
 

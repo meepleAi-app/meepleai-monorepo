@@ -4,12 +4,14 @@
  * Handles user message input and submission.
  * Integrates with ChatProvider for state and submission.
  * AI-14: Includes SearchModeToggle for hybrid search feature.
+ * Migrated to shadcn/ui components.
  */
 
 import React, { FormEvent } from 'react';
 import { useChatContext } from './ChatProvider';
 import { LoadingButton } from '../loading/LoadingButton';
 import { SearchModeToggle, SearchMode } from '@/components';
+import { Input } from '@/components/ui/input';
 
 export function MessageInput() {
   const {
@@ -63,7 +65,7 @@ export function MessageInput() {
         <label htmlFor="message-input" className="sr-only">
           Ask a question about the game
         </label>
-        <input
+        <Input
           id="message-input"
           type="text"
           value={inputValue}
@@ -71,31 +73,14 @@ export function MessageInput() {
           placeholder="Fai una domanda sul gioco..."
           disabled={isDisabled}
           aria-label="Message input"
-          style={{
-            flex: 1,
-            padding: 12,
-            fontSize: 14,
-            border: '1px solid #dadce0',
-            borderRadius: 4
-          }}
+          className="flex-1"
         />
         <LoadingButton
           type="submit"
           isLoading={loading.sending}
           loadingText="Invio..."
           disabled={isSendDisabled}
-          spinnerSize="sm"
           aria-label="Send message"
-          style={{
-            padding: '12px 24px',
-            background: isSendDisabled ? '#dadce0' : '#0070f3',
-            color: 'white',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: 14,
-            fontWeight: 500,
-            cursor: isSendDisabled ? 'not-allowed' : 'pointer'
-          }}
         >
           Invia
         </LoadingButton>

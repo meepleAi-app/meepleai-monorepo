@@ -13,6 +13,8 @@
 
 import React from 'react';
 import { Message } from '@/types';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface MessageActionsProps {
   message: Message;
@@ -37,50 +39,32 @@ export function MessageActions({
   if (isUser && !isEditing) {
     return (
       <div
-        className="message-actions"
-        style={{
-          display: 'flex',
-          gap: 4,
-          opacity: 0,
-          transition: 'opacity 0.2s'
-        }}
+        className={cn(
+          "message-actions flex gap-1 opacity-0 transition-opacity duration-200"
+        )}
       >
-        <button
+        <Button
           onClick={() => onEdit?.(message.id, message.content)}
           disabled={isUpdating}
           aria-label="Edit message"
-          style={{
-            padding: '2px 6px',
-            background: '#94a3b8',
-            color: 'white',
-            border: 'none',
-            borderRadius: 3,
-            fontSize: 10,
-            cursor: isUpdating ? 'not-allowed' : 'pointer',
-            opacity: isUpdating ? 0.5 : 1
-          }}
           title="Modifica messaggio"
+          variant="secondary"
+          size="sm"
+          className="h-6 px-2 text-[10px]"
         >
           ✏️
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => onDelete?.(message.id)}
           disabled={isUpdating}
           aria-label="Delete message"
-          style={{
-            padding: '2px 6px',
-            background: '#94a3b8',
-            color: 'white',
-            border: 'none',
-            borderRadius: 3,
-            fontSize: 10,
-            cursor: isUpdating ? 'not-allowed' : 'pointer',
-            opacity: isUpdating ? 0.5 : 1
-          }}
           title="Elimina messaggio"
+          variant="secondary"
+          size="sm"
+          className="h-6 px-2 text-[10px]"
         >
           🗑️
-        </button>
+        </Button>
       </div>
     );
   }
@@ -91,52 +75,40 @@ export function MessageActions({
       <div
         role="group"
         aria-label="Message feedback"
-        style={{
-          display: 'flex',
-          gap: 8,
-          marginTop: 8
-        }}
+        className="flex gap-2 mt-2"
       >
-        <button
+        <Button
           onClick={() => onFeedback?.(message.id, 'helpful')}
           aria-label="Mark as helpful"
           aria-pressed={message.feedback === 'helpful'}
-          style={{
-            padding: '4px 8px',
-            background: message.feedback === 'helpful' ? '#34a853' : '#f1f3f4',
-            color: message.feedback === 'helpful' ? 'white' : '#64748b',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: 12,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4
-          }}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-auto px-2 py-1 text-xs gap-1",
+            message.feedback === 'helpful'
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+          )}
         >
           <span>👍</span>
           <span>Utile</span>
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => onFeedback?.(message.id, 'not-helpful')}
           aria-label="Mark as not helpful"
           aria-pressed={message.feedback === 'not-helpful'}
-          style={{
-            padding: '4px 8px',
-            background: message.feedback === 'not-helpful' ? '#ea4335' : '#f1f3f4',
-            color: message.feedback === 'not-helpful' ? 'white' : '#64748b',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: 12,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4
-          }}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-auto px-2 py-1 text-xs gap-1",
+            message.feedback === 'not-helpful'
+              ? "bg-red-600 text-white hover:bg-red-700"
+              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+          )}
         >
           <span>👎</span>
           <span>Non utile</span>
-        </button>
+        </Button>
       </div>
     );
   }

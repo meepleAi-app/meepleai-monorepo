@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import AnalyticsDashboard from '../../pages/admin/analytics';
 import { api } from '../../lib/api';
 import { createMockDashboardStats, createMockDashboardMetrics } from '../fixtures/common-fixtures';
@@ -628,8 +628,10 @@ describe('AnalyticsDashboard', () => {
         expect(screen.getByText(/Analytics exported as CSV/)).toBeInTheDocument();
       });
 
-      // Fast-forward 5 seconds
-      jest.advanceTimersByTime(5000);
+      // Fast-forward 5 seconds - wrap in act() for React 19
+      await act(async () => {
+        jest.advanceTimersByTime(5000);
+      });
 
       await waitFor(() => {
         expect(screen.queryByText(/Analytics exported as CSV/)).not.toBeInTheDocument();
@@ -653,8 +655,10 @@ describe('AnalyticsDashboard', () => {
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(1));
 
-      // Fast-forward 30 seconds
-      jest.advanceTimersByTime(30000);
+      // Fast-forward 30 seconds - wrap in act() for React 19
+      await act(async () => {
+        jest.advanceTimersByTime(30000);
+      });
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(2));
 
@@ -673,11 +677,15 @@ describe('AnalyticsDashboard', () => {
       const autoButton = await screen.findByRole('button', { name: /Auto-refresh ON/i });
       fireEvent.click(autoButton);
 
-      // Fast-forward 30 seconds
-      jest.advanceTimersByTime(30000);
+      // Fast-forward 30 seconds - wrap in act() for React 19
+      await act(async () => {
+        jest.advanceTimersByTime(30000);
+      });
 
       // Should still be 1 call (no auto-refresh)
-      expect(mockApi.get).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledTimes(1);
+      });
 
       jest.useRealTimers();
     });

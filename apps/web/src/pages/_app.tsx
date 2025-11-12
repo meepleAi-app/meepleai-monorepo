@@ -1,5 +1,6 @@
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
+import { ThemeProvider } from 'next-themes';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ToastContainer } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
@@ -69,11 +70,13 @@ function AppContent({ Component, pageProps }: AppProps) {
 
 export default function App(props: AppProps) {
   return (
-    <ErrorBoundary
-      componentName="App"
-      showDetails={process.env.NODE_ENV === 'development'}
-    >
-      <AppContent {...props} />
-    </ErrorBoundary>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ErrorBoundary
+        componentName="App"
+        showDetails={process.env.NODE_ENV === 'development'}
+      >
+        <AppContent {...props} />
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }

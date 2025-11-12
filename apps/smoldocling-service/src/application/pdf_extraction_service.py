@@ -2,7 +2,7 @@
 import logging
 import time
 from pathlib import Path
-from typing import BinaryIO, List
+from typing import BinaryIO
 
 from ..domain.models import (
     PdfDocument,

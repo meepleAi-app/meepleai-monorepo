@@ -189,10 +189,10 @@ public class EnhancedPdfProcessingOrchestratorTests
     [Fact]
     public async Task Test07_PagedExtraction_Stage1Success()
     {
-        // Arrange - Paged extraction with Stage 1 success
-        var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, pageCount: 10);
-        var stage2 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, pageCount: 10);
-        var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, pageCount: 10);
+        // Arrange - Paged extraction with Stage 1 success (high quality chars/page)
+        var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, pageCount: 10, charsPerPage: 1200); // 0.85 ≥ 0.80
+        var stage2 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, pageCount: 10, charsPerPage: 600);
+        var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, pageCount: 10, charsPerPage: 300);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
             stage1, stage2, stage3, _logger, _configuration);
@@ -206,7 +206,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         Assert.True(result.Success);
         Assert.Equal(1, result.StageUsed);
         Assert.Equal(10, result.PageChunks.Count);
-        Assert.True(result.TotalDurationMs > 0);
+        Assert.True(result.TotalDurationMs >= 0); // Can be 0 for very fast operations
 
         // Only Stage 1 called
         Assert.Equal(1, stage1.PagedCallCount);
@@ -217,10 +217,10 @@ public class EnhancedPdfProcessingOrchestratorTests
     [Fact]
     public async Task Test08_PagedExtraction_FallbackToStage3()
     {
-        // Arrange - Stages 1-2 fail paged extraction, Stage 3 succeeds
+        // Arrange - Stages 1-2 fail paged extraction, Stage 3 succeeds (best effort)
         var stage1 = new FakeExtractor(success: false, errorMsg: "Stage1 paged failed");
         var stage2 = new FakeExtractor(success: false, errorMsg: "Stage2 paged failed");
-        var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, pageCount: 5);
+        var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, pageCount: 5, charsPerPage: 200);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
             stage1, stage2, stage3, _logger, _configuration);
@@ -239,6 +239,99 @@ public class EnhancedPdfProcessingOrchestratorTests
         Assert.Equal(1, stage1.PagedCallCount);
         Assert.Equal(1, stage2.PagedCallCount);
         Assert.Equal(1, stage3.PagedCallCount);
+    }
+
+    [Fact]
+    public async Task Test09_PagedExtraction_HonorsQualityThreshold()
+    {
+        // Arrange - Test quality-based fallback for paged extraction
+        // Stage 1: Low quality (avg 200 chars/page → score 0.50 < 0.80 threshold) → falls back
+        // Stage 2: Medium quality (avg 600 chars/page → score 0.70 ≥ 0.70 threshold) → accepts
+        var stage1 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 200); // VeryLow 0.50 < 0.80
+        var stage2 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 600); // Medium 0.70 ≥ 0.70
+        var stage3 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 100); // VeryLow 0.25
+
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            stage1, stage2, stage3, _logger, _configuration);
+
+        await using var pdfStream = CreateDummyPdfStream();
+
+        // Act
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(2, result.StageUsed); // Should use Stage 2 (Stage 1 below threshold)
+        Assert.Equal("SmolDocling", result.StageName);
+        Assert.Equal(10, result.PageChunks.Count);
+        Assert.Equal(6000, result.TotalCharacters); // 10 pages * 600 chars/page
+
+        // Verify fallback occurred
+        Assert.Equal(1, stage1.PagedCallCount); // Stage 1 called but rejected
+        Assert.Equal(1, stage2.PagedCallCount); // Stage 2 called and accepted
+        Assert.Equal(0, stage3.PagedCallCount); // Stage 3 NOT called
+    }
+
+    [Fact]
+    public async Task Test10_PagedExtraction_VeryLowQualityFallsBackToStage3()
+    {
+        // Arrange - All stages produce low quality, but fallback chain still works
+        // Stage 1: VeryLow (100 chars/page → 0.25 < 0.80) → rejects
+        // Stage 2: Low (300 chars/page → 0.50 < 0.70) → rejects
+        // Stage 3: Low (200 chars/page) → accepts (best effort, no threshold)
+        var stage1 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 100); // 0.25 < 0.80
+        var stage2 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 300); // 0.50 < 0.70
+        var stage3 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 200); // Best effort
+
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            stage1, stage2, stage3, _logger, _configuration);
+
+        await using var pdfStream = CreateDummyPdfStream();
+
+        // Act
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(3, result.StageUsed); // Should use Stage 3 (all others below threshold)
+        Assert.Equal("Docnet", result.StageName);
+        Assert.Equal(5, result.PageChunks.Count);
+        Assert.Equal(1000, result.TotalCharacters); // 5 pages * 200 chars/page
+
+        // Verify all stages attempted
+        Assert.Equal(1, stage1.PagedCallCount);
+        Assert.Equal(1, stage2.PagedCallCount);
+        Assert.Equal(1, stage3.PagedCallCount);
+    }
+
+    [Fact]
+    public async Task Test11_PagedExtraction_HighQualityStage1Accepted()
+    {
+        // Arrange - Stage 1 produces high quality, should NOT fallback
+        // Stage 1: High (1200 chars/page → 0.85 ≥ 0.80) → accepts immediately
+        var stage1 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 1200); // 0.85 ≥ 0.80
+        var stage2 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 800);
+        var stage3 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 400);
+
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            stage1, stage2, stage3, _logger, _configuration);
+
+        await using var pdfStream = CreateDummyPdfStream();
+
+        // Act
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(1, result.StageUsed); // Stage 1 accepted immediately
+        Assert.Equal("Unstructured", result.StageName);
+        Assert.Equal(8, result.PageChunks.Count);
+        Assert.Equal(9600, result.TotalCharacters); // 8 pages * 1200 chars/page
+
+        // Verify only Stage 1 called
+        Assert.Equal(1, stage1.PagedCallCount);
+        Assert.Equal(0, stage2.PagedCallCount); // NOT called
+        Assert.Equal(0, stage3.PagedCallCount); // NOT called
     }
 
     [Fact]
@@ -312,6 +405,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         private readonly string? _errorMsg;
         private readonly bool _throwException;
         private readonly int _pageCount;
+        private readonly int _charsPerPage;
 
         public int CallCount { get; private set; }
         public int PagedCallCount { get; private set; }
@@ -322,7 +416,8 @@ public class EnhancedPdfProcessingOrchestratorTests
             string text = "Fake extracted text",
             string? errorMsg = null,
             bool throwException = false,
-            int pageCount = 10)
+            int pageCount = 10,
+            int charsPerPage = 100)
         {
             _success = success;
             _quality = quality;
@@ -330,6 +425,7 @@ public class EnhancedPdfProcessingOrchestratorTests
             _errorMsg = errorMsg;
             _throwException = throwException;
             _pageCount = pageCount;
+            _charsPerPage = charsPerPage;
         }
 
         public Task<TextExtractionResult> ExtractTextAsync(
@@ -371,18 +467,19 @@ public class EnhancedPdfProcessingOrchestratorTests
 
             if (_success)
             {
+                // Generate chunks with configurable chars per page (for quality testing)
                 var chunks = Enumerable.Range(1, _pageCount)
                     .Select(i => new PageTextChunk(
                         PageNumber: i,
-                        Text: $"Page {i} content",
-                        CharStartIndex: (i - 1) * 100,
-                        CharEndIndex: i * 100))
+                        Text: new string('X', _charsPerPage), // Generate text of exact length
+                        CharStartIndex: (i - 1) * _charsPerPage,
+                        CharEndIndex: i * _charsPerPage))
                     .ToList();
 
                 return Task.FromResult(PagedTextExtractionResult.CreateSuccess(
                     pageChunks: chunks,
                     totalPages: _pageCount,
-                    totalCharacters: _pageCount * 100,
+                    totalCharacters: _pageCount * _charsPerPage,
                     ocrTriggered: false));
             }
 

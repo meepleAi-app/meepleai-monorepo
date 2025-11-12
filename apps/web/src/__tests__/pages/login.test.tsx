@@ -156,7 +156,7 @@ describe('Login Page', () => {
       render(<LoginPage />);
 
       const homeLink = screen.getByRole('link', { name: 'Return to Home' });
-      expect(homeLink).toHaveClass('bg-primary-600', 'hover:bg-primary-700');
+      expect(homeLink).toHaveClass('bg-primary', 'hover:bg-primary/90');
     });
   });
 
@@ -328,7 +328,7 @@ describe('Login Page', () => {
       render(<LoginPage />);
 
       const homeLink = screen.getByRole('link', { name: 'Return to Home' });
-      expect(homeLink).toHaveClass('focus:outline-none', 'focus:ring-2', 'focus:ring-primary-500');
+      expect(homeLink).toHaveClass('focus:outline-none', 'focus:ring-2', 'focus:ring-ring');
     });
   });
 });

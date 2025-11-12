@@ -140,7 +140,7 @@ export function ExportChatModal({
                 checked={format === 'pdf'}
                 onChange={(e) => setFormat(e.target.value as ExportFormat)}
                 disabled={isExporting}
-                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                className="w-4 h-4 text-primary focus:ring-ring"
               />
               <div className="flex-1">
                 <div className="font-medium text-slate-900 dark:text-white">PDF</div>
@@ -159,7 +159,7 @@ export function ExportChatModal({
                 checked={format === 'txt'}
                 onChange={(e) => setFormat(e.target.value as ExportFormat)}
                 disabled={isExporting}
-                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                className="w-4 h-4 text-primary focus:ring-ring"
               />
               <div className="flex-1">
                 <div className="font-medium text-slate-900 dark:text-white">Testo (TXT)</div>
@@ -178,7 +178,7 @@ export function ExportChatModal({
                 checked={format === 'md'}
                 onChange={(e) => setFormat(e.target.value as ExportFormat)}
                 disabled={isExporting}
-                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                className="w-4 h-4 text-primary focus:ring-ring"
               />
               <div className="flex-1">
                 <div className="font-medium text-slate-900 dark:text-white">Markdown</div>
@@ -220,7 +220,7 @@ export function ExportChatModal({
                   text-sm
                   focus:outline-none
                   focus:ring-2
-                  focus:ring-primary-500
+                  focus:ring-ring
                   disabled:bg-slate-100
                   disabled:cursor-not-allowed
                   dark:bg-slate-800
@@ -252,7 +252,7 @@ export function ExportChatModal({
                   text-sm
                   focus:outline-none
                   focus:ring-2
-                  focus:ring-primary-500
+                  focus:ring-ring
                   disabled:bg-slate-100
                   disabled:cursor-not-allowed
                   dark:bg-slate-800
@@ -298,7 +298,7 @@ export function ExportChatModal({
               dark:hover:bg-slate-700
               focus:outline-none
               focus:ring-2
-              focus:ring-primary-500
+              focus:ring-ring
               disabled:opacity-50
               disabled:cursor-not-allowed
               transition-colors
@@ -314,13 +314,13 @@ export function ExportChatModal({
               py-2
               text-sm
               font-medium
-              text-white
-              bg-primary-600
-              hover:bg-primary-700
+              text-primary-foreground
+              bg-primary
+              hover:bg-primary/90
               rounded-lg
               focus:outline-none
               focus:ring-2
-              focus:ring-primary-500
+              focus:ring-ring
               disabled:opacity-50
               disabled:cursor-not-allowed
               transition-colors

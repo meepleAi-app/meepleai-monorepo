@@ -172,7 +172,7 @@ export default function BoardGameAI() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="hidden md:block"
             >
-              <Card className="p-6 shadow-2xl shadow-primary-500/20">
+              <Card className="p-6 shadow-2xl shadow-primary/20">
                 <div className="space-y-4">
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
@@ -180,7 +180,7 @@ export default function BoardGameAI() {
                     transition={{ duration: 0.4, delay: 0.4 }}
                     className="flex justify-end"
                   >
-                    <div className="bg-primary-500 text-white px-4 py-3 rounded-2xl max-w-[80%]">
+                    <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl max-w-[80%]">
                       In Terraforming Mars, can I use a Standard Project during the production phase?
                     </div>
                   </motion.div>
@@ -270,7 +270,7 @@ export default function BoardGameAI() {
                     initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
                     animate={featuresInView ? { opacity: 1, x: 0 } : {}}
                     transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className="p-6 hover:border-primary-500/50 transition-colors"
+                    className="p-6 hover:border-primary/50 transition-colors"
                   >
                     <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
                       <span className="text-2xl">{feature.icon}</span>
@@ -346,7 +346,7 @@ export default function BoardGameAI() {
             </p>
             <Button
               asChild
-              className="text-lg bg-white text-primary-600 hover:bg-slate-100"
+              className="text-lg bg-white text-primary hover:bg-slate-100"
               data-testid="cta-get-started"
               disabled={loading}
             >

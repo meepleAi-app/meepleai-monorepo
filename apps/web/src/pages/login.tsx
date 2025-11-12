@@ -94,15 +94,15 @@ export default function LoginPage() {
                   text-center
                   px-4
                   py-2
-                  bg-primary-600
-                  hover:bg-primary-700
+                  bg-primary
+                  hover:bg-primary/90
                   text-white
                   font-medium
                   rounded-lg
                   transition-colors
                   focus:outline-none
                   focus:ring-2
-                  focus:ring-primary-500
+                  focus:ring-ring
                   focus:ring-offset-2
                 "
               >

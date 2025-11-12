@@ -154,13 +154,14 @@ public class PdfTextProcessingDomainServiceTests
     {
         // Arrange: Zero-width space (U+200B)
         var rawText = "Word1\u200BWord2";
+        Assert.Equal(11, rawText.Length); // Verify input has zero-width character
 
         // Act
         var result = _sut.NormalizeText(rawText);
 
         // Assert
-        Assert.DoesNotContain("\u200B", result);
-        Assert.Contains("Word1Word2", result);
+        Assert.Equal(10, result.Length); // Zero-width character removed
+        Assert.Equal("Word1Word2", result);
     }
 
     [Fact]

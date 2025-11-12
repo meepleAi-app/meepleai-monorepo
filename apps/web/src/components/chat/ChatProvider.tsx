@@ -180,13 +180,14 @@ export function ChatProvider({ children }: ChatProviderProps) {
   // Helper Functions for Game-Specific State
   // ============================================================================
 
-  const setChats = useCallback((updater: React.SetStateAction<Chat[]>) => {
-    if (!selectedGameId) return;
+  const setChats = useCallback((updater: React.SetStateAction<Chat[]>, gameId?: string) => {
+    const targetGameId = gameId || selectedGameId;
+    if (!targetGameId) return;
     setChatStatesByGame(prev => {
       const newMap = new Map(prev);
-      const currentState = newMap.get(selectedGameId) || { chats: [], activeChatId: null, messages: [] };
+      const currentState = newMap.get(targetGameId) || { chats: [], activeChatId: null, messages: [] };
       const newChats = typeof updater === 'function' ? updater(currentState.chats) : updater;
-      newMap.set(selectedGameId, { ...currentState, chats: newChats });
+      newMap.set(targetGameId, { ...currentState, chats: newChats });
       return newMap;
     });
   }, [selectedGameId]);
@@ -256,7 +257,6 @@ export function ChatProvider({ children }: ChatProviderProps) {
     try {
       const agentsResponse = await api.get<Agent[]>(`/api/v1/games/${gameId}/agents`);
       const agentsList = Array.isArray(agentsResponse) ? agentsResponse : [];
-      setErrorMessage('');
       setAgents(agentsList);
 
       // Auto-select first agent if available
@@ -277,12 +277,11 @@ export function ChatProvider({ children }: ChatProviderProps) {
     try {
       const chatsList = await api.get<Chat[]>(`/api/v1/chats?gameId=${gameId}`);
 
-      setChats(chatsList ?? []);
-      setErrorMessage('');
+      setChats(chatsList ?? [], gameId);
     } catch (err) {
       console.error('Error loading chats:', err);
       setErrorMessage('Failed to load chats');
-      setChats([]);
+      setChats([], gameId);
     } finally {
       setLoading(prev => ({ ...prev, chats: false }));
     }
@@ -310,6 +309,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
 
   const selectGame = useCallback(async (gameId: string) => {
     setSelectedGameId(gameId);
+    setErrorMessage(''); // Clear any previous errors before loading
     // Load agents and chats for the selected game
     await Promise.all([
       loadAgents(gameId),

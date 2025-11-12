@@ -201,7 +201,7 @@ public class LlmService : ILlmService
 
             _logger.LogInformation("Successfully generated chat completion");
 
-            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, metadata);
+            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, LlmCost.Empty, metadata);
         }
         catch (TaskCanceledException ex)
         {

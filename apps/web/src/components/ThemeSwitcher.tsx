@@ -2,18 +2,40 @@
 
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import { Moon, Sun, Monitor } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 /**
- * ThemeSwitcher Component
+ * ThemeSwitcher Component (FRONTEND-4)
  *
- * Provides a toggle button to switch between light and dark themes.
+ * Provides a dropdown menu to switch between light, dark, and system themes.
  * Uses next-themes for theme management with CSS class strategy.
  *
  * Features:
+ * - Three modes: Light, Dark, System
  * - Animated icon transitions
  * - System theme detection
- * - Accessible keyboard navigation
- * - WCAG 2.1 AA compliant contrast
+ * - localStorage persistence (automatic via next-themes)
+ * - Accessible keyboard navigation (WCAG 2.1 AA)
+ * - No FOUC (Flash of Unstyled Content)
+ *
+ * @example
+ * ```tsx
+ * import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+ *
+ * export default function Navigation() {
+ *   return (
+ *     <nav>
+ *       <ThemeSwitcher />
+ *     </nav>
+ *   );
+ * }
+ * ```
  */
 export function ThemeSwitcher() {
   const { theme, setTheme, systemTheme } = useTheme();
@@ -33,77 +55,84 @@ export function ThemeSwitcher() {
   const currentTheme = theme === 'system' ? systemTheme : theme;
   const isDark = currentTheme === 'dark';
 
-  const toggleTheme = () => {
-    setTheme(isDark ? 'light' : 'dark');
+  const getIcon = () => {
+    if (theme === 'system') return <Monitor className="h-5 w-5" />;
+    if (isDark) return <Moon className="h-5 w-5" />;
+    return <Sun className="h-5 w-5" />;
+  };
+
+  const getLabel = () => {
+    if (theme === 'system') return 'System';
+    if (isDark) return 'Dark';
+    return 'Light';
   };
 
   return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      className="
-        relative w-10 h-10 rounded-lg
-        bg-secondary hover:bg-secondary/80
-        border border-border
-        transition-all duration-200
-        hover:scale-105 active:scale-95
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-        group
-      "
-      aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
-      aria-pressed={isDark}
-    >
-      {/* Sun icon (light mode) */}
-      <svg
-        className={`
-          absolute inset-0 m-auto w-5 h-5 text-foreground
-          transition-all duration-300
-          ${isDark ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'}
-        `}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="4" />
-        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-      </svg>
-
-      {/* Moon icon (dark mode) */}
-      <svg
-        className={`
-          absolute inset-0 m-auto w-5 h-5 text-foreground
-          transition-all duration-300
-          ${isDark ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-0'}
-        `}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-        />
-      </svg>
-
-      {/* Tooltip */}
-      <span className="
-        absolute -bottom-10 left-1/2 -translate-x-1/2
-        px-2 py-1 rounded text-xs font-medium
-        bg-popover text-popover-foreground
-        border border-border
-        opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100
-        transition-opacity duration-200
-        pointer-events-none whitespace-nowrap
-        z-50
-      ">
-        {isDark ? 'Light mode' : 'Dark mode'}
-      </span>
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="
+            relative inline-flex items-center justify-center gap-2
+            w-auto h-10 px-3 rounded-lg
+            bg-secondary hover:bg-secondary/80
+            border border-border
+            transition-all duration-200
+            hover:scale-105 active:scale-95
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+          "
+          aria-label="Theme switcher"
+        >
+          <span className="transition-transform duration-300">
+            {getIcon()}
+          </span>
+          <span className="text-sm font-medium hidden sm:inline-block">
+            {getLabel()}
+          </span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36">
+        <DropdownMenuItem
+          onClick={() => setTheme('light')}
+          className="cursor-pointer"
+          aria-label="Switch to light theme"
+        >
+          <Sun className="mr-2 h-4 w-4" />
+          <span>Light</span>
+          {theme === 'light' && (
+            <span className="ml-auto text-primary" aria-label="Current theme">
+              ✓
+            </span>
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme('dark')}
+          className="cursor-pointer"
+          aria-label="Switch to dark theme"
+        >
+          <Moon className="mr-2 h-4 w-4" />
+          <span>Dark</span>
+          {theme === 'dark' && (
+            <span className="ml-auto text-primary" aria-label="Current theme">
+              ✓
+            </span>
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme('system')}
+          className="cursor-pointer"
+          aria-label="Use system theme preference"
+        >
+          <Monitor className="mr-2 h-4 w-4" />
+          <span>System</span>
+          {theme === 'system' && (
+            <span className="ml-auto text-primary" aria-label="Current theme">
+              ✓
+            </span>
+          )}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -119,7 +148,7 @@ export function ThemeSwitcher() {
  *
  * export default function App({ Component, pageProps }) {
  *   return (
- *     <ThemeProvider>
+ *     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
  *       <Component {...pageProps} />
  *     </ThemeProvider>
  *   );

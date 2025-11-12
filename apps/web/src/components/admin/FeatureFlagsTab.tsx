@@ -10,8 +10,9 @@
  */
 
 import { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/Toast";
 import { api, SystemConfigurationDto } from "../../lib/api";
+import { Switch } from "@/components/ui/switch";
 
 interface FeatureFlagsTabProps {
   configurations: SystemConfigurationDto[];
@@ -132,24 +133,13 @@ export default function FeatureFlagsTab({ configurations, onConfigurationChange 
                 </div>
 
                 {/* Toggle Switch */}
-                <button
-                  onClick={() => handleToggle(flag)}
+                <Switch
+                  checked={isEnabled}
+                  onCheckedChange={() => handleToggle(flag)}
                   disabled={isToggling || !flag.isActive}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isEnabled
-                      ? "bg-green-600"
-                      : "bg-slate-300 dark:bg-slate-600"
-                  }`}
-                  role="switch"
-                  aria-checked={isEnabled}
                   aria-label={`Toggle ${flag.key}`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isEnabled ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
+                  className={isEnabled ? "data-[state=checked]:bg-green-600" : ""}
+                />
               </div>
 
               {/* Metadata */}

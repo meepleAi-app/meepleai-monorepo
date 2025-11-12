@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 interface TimelineFilters {
   startDate?: string;
@@ -43,72 +46,72 @@ export const VersionTimelineFilters: React.FC<VersionTimelineFiltersProps> = ({
         {/* Date Range */}
         <div className="flex gap-2">
           <div className="flex flex-col">
-            <label htmlFor="startDate" className="text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="startDate" className="text-sm font-medium mb-1">
               Start Date
             </label>
-            <input
+            <Input
               id="startDate"
               type="date"
               value={localFilters.startDate || ''}
               onChange={(e) => handleFilterChange('startDate', e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="flex flex-col">
-            <label htmlFor="endDate" className="text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="endDate" className="text-sm font-medium mb-1">
               End Date
             </label>
-            <input
+            <Input
               id="endDate"
               type="date"
               value={localFilters.endDate || ''}
               onChange={(e) => handleFilterChange('endDate', e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         {/* Author Filter */}
         <div className="flex flex-col">
-          <label htmlFor="author" className="text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="author" className="text-sm font-medium mb-1">
             Author
           </label>
-          <select
-            id="author"
-            value={localFilters.author || ''}
-            onChange={(e) => handleFilterChange('author', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <Select
+            value={localFilters.author || '__all__'}
+            onValueChange={(value) => handleFilterChange('author', value === '__all__' ? '' : value)}
           >
-            <option value="">All authors</option>
-            {authors.map(author => (
-              <option key={author} value={author}>{author}</option>
-            ))}
-          </select>
+            <SelectTrigger id="author" className="w-[180px]">
+              <SelectValue placeholder="All authors" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All authors</SelectItem>
+              {authors.map(author => (
+                <SelectItem key={author} value={author}>{author}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Search */}
         <div className="flex flex-col flex-1 min-w-[200px]">
-          <label htmlFor="search" className="text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="search" className="text-sm font-medium mb-1">
             Search Versions
           </label>
-          <input
+          <Input
             id="search"
             type="text"
             value={localFilters.searchQuery || ''}
             onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
             placeholder="Search by version..."
-            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         {/* Reset Button */}
-        <button
+        <Button
           onClick={handleReset}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors"
+          variant="secondary"
           aria-label="Reset filters"
         >
           Reset Filters
-        </button>
+        </Button>
       </div>
     </div>
   );

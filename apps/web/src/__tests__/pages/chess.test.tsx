@@ -14,41 +14,41 @@ jest.mock("../../lib/api", () => ({
 // Mock react-chessboard
 jest.mock("react-chessboard", () => ({
   Chessboard: ({
-    position,
-    onPieceDrop,
-    boardOrientation,
-    customSquareStyles,
-    boardWidth
+    options
   }: {
-    position: string;
-    onPieceDrop: (args: {
-      piece: string;
-      sourceSquare: string;
-      targetSquare: string;
-    }) => boolean;
-    boardOrientation: string;
-    customSquareStyles: Record<string, object>;
-    boardWidth: number;
+    options?: {
+      position?: string;
+      onPieceDrop?: (args: {
+        piece: string;
+        sourceSquare: string;
+        targetSquare: string;
+      }) => boolean;
+      boardOrientation?: string;
+      squareStyles?: Record<string, object>;
+    };
   }) => (
     <div
       data-testid="chessboard"
-      data-position={position}
-      data-orientation={boardOrientation}
-      data-board-width={boardWidth}
-      data-custom-squares={JSON.stringify(customSquareStyles)}
+      data-position={options?.position}
+      data-orientation={options?.boardOrientation}
+      data-custom-squares={JSON.stringify(options?.squareStyles || {})}
     >
-      <button
-        data-testid="make-move-e2-e4"
-        onClick={() => onPieceDrop({ piece: "wP", sourceSquare: "e2", targetSquare: "e4" })}
-      >
-        Make Move e2-e4
-      </button>
-      <button
-        data-testid="make-invalid-move"
-        onClick={() => onPieceDrop({ piece: "wR", sourceSquare: "a1", targetSquare: "a1" })}
-      >
-        Invalid Move
-      </button>
+      {options?.onPieceDrop && (
+        <>
+          <button
+            data-testid="make-move-e2-e4"
+            onClick={() => options.onPieceDrop!({ piece: "wP", sourceSquare: "e2", targetSquare: "e4" })}
+          >
+            Make Move e2-e4
+          </button>
+          <button
+            data-testid="make-invalid-move"
+            onClick={() => options.onPieceDrop!({ piece: "wR", sourceSquare: "a1", targetSquare: "a1" })}
+          >
+            Invalid Move
+          </button>
+        </>
+      )}
     </div>
   )
 }));

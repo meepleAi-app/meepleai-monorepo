@@ -103,12 +103,13 @@ public class PdfTextProcessingDomainService
     /// </summary>
     private string RemoveZeroWidthCharacters(string text)
     {
-        // Remove zero-width space (\u200B), zero-width non-joiner (\u200C),
-        // zero-width joiner (\u200D), and byte order mark (\uFEFF)
-        return text.Replace("\u200B", "")
-                   .Replace("\u200C", "")
-                   .Replace("\u200D", "")
-                   .Replace("\uFEFF", "");
+        // Remove zero-width characters by replacing each one individually
+        // This is more reliable than regex for unicode character removal
+        return text
+            .Replace("\u200B", string.Empty) // zero-width space
+            .Replace("\u200C", string.Empty) // zero-width non-joiner
+            .Replace("\u200D", string.Empty) // zero-width joiner
+            .Replace("\uFEFF", string.Empty); // byte order mark (BOM)
     }
 }
 

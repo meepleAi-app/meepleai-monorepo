@@ -357,6 +357,18 @@ if (typeof Range.prototype.getBoundingClientRect === 'undefined') {
   Range.prototype.getBoundingClientRect = jest.fn().mockReturnValue({ bottom: 0, height: 0, left: 0, right: 0, top: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
 }
 
+// Mock Pointer Capture API for Radix UI components (Select, Dropdown, etc.)
+// jsdom doesn't implement these methods which Radix UI requires
+if (typeof Element.prototype.hasPointerCapture === 'undefined') {
+  Element.prototype.hasPointerCapture = jest.fn().mockReturnValue(false);
+}
+if (typeof Element.prototype.setPointerCapture === 'undefined') {
+  Element.prototype.setPointerCapture = jest.fn();
+}
+if (typeof Element.prototype.releasePointerCapture === 'undefined') {
+  Element.prototype.releasePointerCapture = jest.fn();
+}
+
   const state = typeof expect !== 'undefined' ? expect.getState?.() : undefined;
   if (state?.testPath?.includes('src/pages/__tests__/admin.test.tsx')) {
     if (!process.env.NEXT_PUBLIC_API_BASE) {

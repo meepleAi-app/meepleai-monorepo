@@ -142,21 +142,23 @@ describe('LoadingButton', () => {
     });
   });
 
-  describe('Spinner size', () => {
-    it('should render spinner with custom size', () => {
+  describe('Spinner rendering', () => {
+    it('should render Lucide Loader2 icon when loading', () => {
       const { container } = render(
-        <LoadingButton isLoading={true} spinnerSize="lg">
+        <LoadingButton isLoading={true}>
           Submit
         </LoadingButton>
       );
       const spinner = container.querySelector('svg');
-      expect(spinner).toHaveAttribute('width', '32'); // lg = 32px
+      expect(spinner).toBeInTheDocument();
+      expect(spinner).toHaveClass('lucide-loader-circle');
+      expect(spinner).toHaveClass('animate-spin');
     });
 
-    it('should default to medium spinner size', () => {
+    it('should have correct icon size classes', () => {
       const { container } = render(<LoadingButton isLoading={true}>Submit</LoadingButton>);
       const spinner = container.querySelector('svg');
-      expect(spinner).toHaveAttribute('width', '24'); // md = 24px
+      expect(spinner).toHaveClass('h-4', 'w-4');
     });
   });
 

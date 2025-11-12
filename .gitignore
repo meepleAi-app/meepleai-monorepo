@@ -464,3 +464,4 @@ codeql-db/
 apps/web/e2e-test-output.txt
 .playwright-mcp/
 alerts.json
+tools/test-llm-comparison.py

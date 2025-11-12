@@ -24,7 +24,7 @@ export default function ShadcnDemo() {
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-500 via-secondary-500 to-accent-500 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
             Shadcn/UI Components Demo
           </h1>
           <p className="text-slate-400 text-lg">
@@ -81,7 +81,7 @@ export default function ShadcnDemo() {
               />
               {inputValue && (
                 <p className="text-sm text-slate-400">
-                  You typed: <span className="text-primary-500">{inputValue}</span>
+                  You typed: <span className="text-primary">{inputValue}</span>
                 </p>
               )}
             </div>
@@ -113,7 +113,7 @@ export default function ShadcnDemo() {
               </Select>
               {selectValue && (
                 <p className="text-sm text-slate-400">
-                  Selected: <span className="text-secondary-500">{selectValue}</span>
+                  Selected: <span className="text-secondary">{selectValue}</span>
                 </p>
               )}
             </div>
@@ -174,12 +174,14 @@ export default function ShadcnDemo() {
           <Card>
             <CardHeader>
               <CardTitle>Installation Complete</CardTitle>
-              <CardDescription>Issue #988 - BGAI-046</CardDescription>
+              <CardDescription>Issue #927 - FRONTEND-2 ✅</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-400">
                 ✅ Shadcn/ui successfully installed<br />
-                ✅ Core components configured<br />
+                ✅ 16 components configured<br />
+                ✅ Tailwind CSS 4 compatible<br />
+                ✅ TypeScript types working<br />
                 ✅ Theme integration complete
               </p>
             </CardContent>
@@ -187,30 +189,60 @@ export default function ShadcnDemo() {
         </div>
 
         {/* Footer Info */}
-        <Card className="bg-gradient-to-br from-primary-500/10 to-secondary-500/10 border-primary-500/20">
+        <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/20">
           <CardHeader>
             <CardTitle>Installed Components</CardTitle>
             <CardDescription>Ready to use in your application</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            <ul className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
               <li className="flex items-center gap-2">
-                <span className="text-primary-500">✓</span> Button
+                <span className="text-primary">✓</span> Button
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-primary-500">✓</span> Card
+                <span className="text-primary">✓</span> Card
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-primary-500">✓</span> Input
+                <span className="text-primary">✓</span> Input
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-primary-500">✓</span> Select
+                <span className="text-primary">✓</span> Select
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-primary-500">✓</span> Dialog
+                <span className="text-primary">✓</span> Dialog
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-accent-500">+</span> More available
+                <span className="text-primary">✓</span> Dropdown Menu
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Table
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Avatar
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Badge
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Progress
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Skeleton
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Switch
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Textarea
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Toggle
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Toggle Group
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-secondary">✓</span> Sonner (Toast)
               </li>
             </ul>
           </CardContent>

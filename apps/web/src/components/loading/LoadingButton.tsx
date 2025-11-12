@@ -1,8 +1,12 @@
 /**
- * LoadingButton Component
+ * LoadingButton Component - Migrated to shadcn/ui
  *
  * Button component with integrated loading state and spinner.
  * Automatically disables and shows loading indicator when isLoading is true.
+ * Now uses shadcn Button internally.
+ *
+ * NOTE: Consider using AccessibleButton which has the same functionality
+ * with better accessibility features.
  *
  * @example
  * ```tsx
@@ -18,17 +22,18 @@
  *   isLoading={isSubmitting}
  *   loadingText="Submitting..."
  *   onClick={handleSubmit}
- *   className="btn-primary"
  * >
  *   Submit Form
  * </LoadingButton>
  * ```
  */
 
-import { ButtonHTMLAttributes, ReactNode } from 'react';
-import { Spinner } from './Spinner';
+import { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export interface LoadingButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface LoadingButtonProps extends React.ComponentPropsWithoutRef<typeof Button> {
   /**
    * Whether the button is in loading state
    * @default false
@@ -41,12 +46,6 @@ export interface LoadingButtonProps extends ButtonHTMLAttributes<HTMLButtonEleme
   loadingText?: string;
 
   /**
-   * Size of the loading spinner
-   * @default 'md'
-   */
-  spinnerSize?: 'sm' | 'md' | 'lg';
-
-  /**
    * Button content
    */
   children: ReactNode;
@@ -54,35 +53,31 @@ export interface LoadingButtonProps extends ButtonHTMLAttributes<HTMLButtonEleme
 
 /**
  * LoadingButton component with integrated loading state
+ * Now powered by shadcn/ui Button
  */
 export function LoadingButton({
   isLoading = false,
   loadingText,
-  spinnerSize = 'md',
   children,
-  className = '',
+  className,
   disabled,
+  type = 'button',
   ...buttonProps
 }: LoadingButtonProps) {
-  // Determine button disabled state
-  const isDisabled = disabled || isLoading;
-
   return (
-    <button
-      type="button"
+    <Button
       {...buttonProps}
-      disabled={isDisabled}
+      type={type}
+      disabled={disabled || isLoading}
       aria-busy={isLoading}
       aria-live="polite"
-      className={`
-        inline-flex items-center justify-center gap-2
-        transition-opacity duration-200
-        ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}
-        ${className}
-      `}
+      className={cn(
+        isLoading && 'opacity-70 cursor-not-allowed',
+        className
+      )}
     >
-      {isLoading && <Spinner size={spinnerSize} />}
+      {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
       {isLoading ? loadingText || null : children}
-    </button>
+    </Button>
   );
 }

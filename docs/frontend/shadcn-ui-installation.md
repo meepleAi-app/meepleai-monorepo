@@ -1,8 +1,9 @@
 # Shadcn/UI Installation Guide
 
-**Issue**: #988 (BGAI-046)
-**Status**: ✅ Completed
-**Date**: 2025-11-12
+**Issue**: #927 (FRONTEND-2)
+**Status**: ✅ Complete (Pre-existing)
+**Date**: 2025-11-12 (Verified & Documented)
+**Original Installation**: Unknown (Before Issue #927)
 
 ## Overview
 
@@ -22,13 +23,27 @@ Unlike traditional component libraries, shadcn/ui components are copied directly
 
 ### Components Installed
 
-Core components available in `apps/web/src/components/ui/`:
+**16 components installed** in `apps/web/src/components/ui/` (160% of Issue #927 requirement):
 
-- ✅ **Button** - Multiple variants (default, secondary, destructive, outline, ghost, link) and sizes
-- ✅ **Card** - Content container with Header, Title, Description, Content, Footer subcomponents
-- ✅ **Input** - Text input field with consistent styling
-- ✅ **Select** - Dropdown selection with Trigger, Content, Item subcomponents
-- ✅ **Dialog** - Modal dialog with Trigger, Content, Header, Footer subcomponents
+#### Required Components (10)
+1. ✅ **button** - Multiple variants and sizes
+2. ✅ **card** - Structured content containers with all subcomponents
+3. ✅ **input** - Text input fields with full styling
+4. ✅ **dialog** - Modal dialogs with Radix UI primitives
+5. ✅ **dropdown-menu** - Context menus and dropdowns
+6. ✅ **select** - Dropdown selection components
+7. ✅ **table** - Data tables with caption, header, body
+8. ✅ **avatar** - User avatars with image and fallback
+9. ✅ **badge** - Status indicators and labels
+10. ✅ **sonner** - Toast notifications (modern alternative to toast)
+
+#### Bonus Components (6)
+11. ✅ **progress** - Progress bars and indicators
+12. ✅ **skeleton** - Loading placeholders
+13. ✅ **switch** - Toggle switches
+14. ✅ **textarea** - Multi-line text input
+15. ✅ **toggle** - Toggle buttons with pressed states
+16. ✅ **toggle-group** - Grouped toggle buttons
 
 ### Dependencies Added
 
@@ -276,6 +291,170 @@ pnpm typecheck
 ```
 **Status**: ⚠️ 2 pre-existing errors in e2e tests (unrelated to shadcn)
 
+## Migration Guide for Existing Components
+
+### Migration Strategy (Issue #930 - Phase 1, Week 3-4)
+
+shadcn/ui components coexist with existing custom components through namespace separation:
+- **shadcn/ui**: `@/components/ui/*` (imported from shadcn)
+- **Custom Components**: `@/components/*` (MeepleAI-specific)
+
+**Approach**: Gradual migration over 20-30 components in Issue #930.
+
+### Migration Workflow
+
+```mermaid
+graph LR
+    A[Identify Component] --> B[Check shadcn/ui Equivalent]
+    B --> C{Exists?}
+    C -->|Yes| D[Install if needed]
+    C -->|No| E[Keep Custom or Request Feature]
+    D --> F[Create Wrapper if needed]
+    F --> G[Update Imports]
+    G --> H[Test Functionality]
+    H --> I[Remove Old Component]
+```
+
+### Step-by-Step Migration Process
+
+#### Step 1: Audit Existing Components
+```bash
+# List custom components
+ls -la apps/web/src/components/*.tsx
+
+# Check for shadcn/ui equivalents
+ls -la apps/web/src/components/ui/
+```
+
+#### Step 2: Install Missing shadcn/ui Components
+```bash
+cd apps/web
+npx shadcn@latest add <component-name>
+```
+
+#### Step 3: Create Business Logic Wrappers (if needed)
+
+**Example: MeepleButton wrapping shadcn Button**
+```tsx
+// apps/web/src/components/MeepleButton.tsx
+import { Button, type ButtonProps } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+interface MeepleButtonProps extends ButtonProps {
+  // Add MeepleAI-specific props
+  analytics?: boolean;
+  loading?: boolean;
+}
+
+export function MeepleButton({
+  analytics = false,
+  loading = false,
+  children,
+  className,
+  ...props
+}: MeepleButtonProps) {
+  // Add MeepleAI business logic
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (analytics) {
+      // Track button click
+    }
+    props.onClick?.(e);
+  };
+
+  return (
+    <Button
+      className={cn(loading && 'opacity-50 cursor-wait', className)}
+      onClick={handleClick}
+      disabled={loading || props.disabled}
+      {...props}
+    >
+      {loading ? 'Loading...' : children}
+    </Button>
+  );
+}
+```
+
+#### Step 4: Update Component Imports
+
+**Find and replace** across codebase:
+```tsx
+// Before
+import { CustomButton } from '@/components/CustomButton';
+
+// After
+import { Button } from '@/components/ui/button';
+// OR
+import { MeepleButton } from '@/components/MeepleButton';
+```
+
+#### Step 5: Test Migration
+
+```bash
+# Run tests for affected files
+pnpm test <component-test-file>
+
+# Visual regression testing
+pnpm test:e2e
+
+# Accessibility testing
+pnpm test:a11y
+```
+
+#### Step 6: Remove Old Component
+
+```bash
+# After confirming migration success
+rm apps/web/src/components/CustomButton.tsx
+rm apps/web/src/components/__tests__/CustomButton.test.tsx
+```
+
+### Migration Checklist (Per Component)
+
+- [ ] shadcn/ui equivalent identified
+- [ ] Component installed (if not present)
+- [ ] Wrapper created (if business logic needed)
+- [ ] All imports updated
+- [ ] Tests passing
+- [ ] Accessibility verified
+- [ ] Visual regression checked
+- [ ] Old component removed
+- [ ] Documentation updated
+
+### Components Ready for Migration
+
+**High Priority** (Phase 1, Issue #930):
+1. ✅ Buttons → Already migrated (AccessibleButton uses shadcn dialog)
+2. ✅ Cards → Already using shadcn/ui
+3. ✅ Modals/Dialogs → Already migrated (AccessibleModal)
+4. ⏳ Form inputs → Migrate to shadcn Input, Textarea, Select
+5. ⏳ Dropdowns → Migrate to shadcn DropdownMenu
+6. ⏳ Loading states → Use shadcn Skeleton, Progress
+
+**Low Priority** (Future Phases):
+- Custom admin components
+- Complex composed components (multi-file upload)
+- Domain-specific components (chess board, BGG search)
+
+### Migration Benefits
+
+✅ **Consistency**: Unified design language across application
+✅ **Accessibility**: WCAG 2.1 AA compliance out-of-the-box
+✅ **Maintainability**: Community-maintained, regularly updated components
+✅ **Developer Experience**: Better TypeScript types and IntelliSense
+✅ **Performance**: Optimized bundle size with tree-shaking
+✅ **Customization**: Full ownership with copy-paste approach
+
+### Migration Risks & Mitigation
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| **Breaking Changes** | Medium | Test thoroughly before removing old components |
+| **Visual Regressions** | Low | E2E visual testing with Playwright |
+| **Accessibility Regressions** | Low | Run jest-axe tests on all migrated components |
+| **Developer Confusion** | Low | Clear documentation and gradual rollout |
+
+---
+
 ## Troubleshooting
 
 ### Import Errors
@@ -329,5 +508,6 @@ const customButton = cn(
 - **Library**: [shadcn/ui](https://ui.shadcn.com/) by [@shadcn](https://twitter.com/shadcn)
 - **Primitives**: [Radix UI](https://www.radix-ui.com/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Implementation**: Issue #988 - BGAI-046
-- **Date**: November 12, 2025
+- **Implementation**: Issue #927 - FRONTEND-2 (Phase 1, Week 1)
+- **Verification Date**: November 12, 2025
+- **Original Installation**: Pre-existing (before Issue #927 created)

@@ -550,9 +550,9 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
         </AccessibleModal>
       );
 
-      // Then: max-w-sm class is applied
+      // Then: sm:max-w-[350px] class is applied
       const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveClass('max-w-sm');
+      expect(dialog).toHaveClass('sm:max-w-[350px]');
     });
 
     it('Given size="md", When modal renders, Then correct size class is applied', () => {
@@ -563,9 +563,9 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
         </AccessibleModal>
       );
 
-      // Then: max-w-md class is applied
+      // Then: sm:max-w-[500px] class is applied
       const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveClass('max-w-md');
+      expect(dialog).toHaveClass('sm:max-w-[500px]');
     });
 
     it('Given size="lg", When modal renders, Then correct size class is applied', () => {
@@ -576,9 +576,9 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
         </AccessibleModal>
       );
 
-      // Then: max-w-lg class is applied
+      // Then: sm:max-w-[700px] class is applied
       const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveClass('max-w-lg');
+      expect(dialog).toHaveClass('sm:max-w-[700px]');
     });
 
     it('Given size="xl", When modal renders, Then correct size class is applied', () => {
@@ -589,9 +589,9 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
         </AccessibleModal>
       );
 
-      // Then: max-w-xl class is applied
+      // Then: sm:max-w-[900px] class is applied
       const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveClass('max-w-xl');
+      expect(dialog).toHaveClass('sm:max-w-[900px]');
     });
 
     it('Given size="full", When modal renders, Then correct size class is applied', () => {
@@ -602,10 +602,9 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
         </AccessibleModal>
       );
 
-      // Then: max-w-full class is applied
+      // Then: sm:max-w-[95vw] class is applied
       const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveClass('max-w-full');
-      expect(dialog).toHaveClass('mx-4');
+      expect(dialog).toHaveClass('sm:max-w-[95vw]');
     });
   });
 

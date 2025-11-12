@@ -174,12 +174,14 @@ export default function ShadcnDemo() {
           <Card>
             <CardHeader>
               <CardTitle>Installation Complete</CardTitle>
-              <CardDescription>Issue #988 - BGAI-046</CardDescription>
+              <CardDescription>Issue #927 - FRONTEND-2 ✅</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-400">
                 ✅ Shadcn/ui successfully installed<br />
-                ✅ Core components configured<br />
+                ✅ 16 components configured<br />
+                ✅ Tailwind CSS 4 compatible<br />
+                ✅ TypeScript types working<br />
                 ✅ Theme integration complete
               </p>
             </CardContent>
@@ -193,7 +195,7 @@ export default function ShadcnDemo() {
             <CardDescription>Ready to use in your application</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            <ul className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
               <li className="flex items-center gap-2">
                 <span className="text-primary-500">✓</span> Button
               </li>
@@ -210,7 +212,37 @@ export default function ShadcnDemo() {
                 <span className="text-primary-500">✓</span> Dialog
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-accent-500">+</span> More available
+                <span className="text-primary-500">✓</span> Dropdown Menu
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary-500">✓</span> Table
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary-500">✓</span> Avatar
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary-500">✓</span> Badge
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary-500">✓</span> Progress
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary-500">✓</span> Skeleton
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary-500">✓</span> Switch
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary-500">✓</span> Textarea
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary-500">✓</span> Toggle
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary-500">✓</span> Toggle Group
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-secondary-500">✓</span> Sonner (Toast)
               </li>
             </ul>
           </CardContent>

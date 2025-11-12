@@ -64,12 +64,16 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             // Prepare multipart form data
             using var content = new MultipartFormDataContent();
 
-            // Copy stream to memory stream (needed for retry logic)
-            using var memoryStream = new MemoryStream();
-            await pdfStream.CopyToAsync(memoryStream, ct);
-            memoryStream.Position = 0;
+            // Copy stream to byte array (needed for retry logic - stream must be reusable)
+            byte[] pdfBytes;
+            using (var memoryStream = new MemoryStream())
+            {
+                await pdfStream.CopyToAsync(memoryStream, ct);
+                pdfBytes = memoryStream.ToArray();
+            }
 
-            using var streamContent = new StreamContent(memoryStream);
+            // Create StreamContent from byte array (allows Polly retry to resend full content)
+            using var streamContent = new StreamContent(new MemoryStream(pdfBytes));
             streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
 
             content.Add(streamContent, "file", "document.pdf");
@@ -77,7 +81,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             // Execute HTTP request (retry + circuit breaker handled by Polly in DI)
             _logger.LogDebug("[{RequestId}] Sending request to SmolDocling service", requestId);
 
-            var response = await client.PostAsync("/api/v1/extract", content, ct);
+            using var response = await client.PostAsync("/api/v1/extract", content, ct);
 
             // Handle response
             if (!response.IsSuccessStatusCode)
@@ -193,16 +197,21 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
 
             using var content = new MultipartFormDataContent();
 
-            using var memoryStream = new MemoryStream();
-            await pdfStream.CopyToAsync(memoryStream, ct);
-            memoryStream.Position = 0;
+            // Copy stream to byte array (needed for retry logic - stream must be reusable)
+            byte[] pdfBytes;
+            using (var memoryStream = new MemoryStream())
+            {
+                await pdfStream.CopyToAsync(memoryStream, ct);
+                pdfBytes = memoryStream.ToArray();
+            }
 
-            using var streamContent = new StreamContent(memoryStream);
+            // Create StreamContent from byte array (allows Polly retry to resend full content)
+            using var streamContent = new StreamContent(new MemoryStream(pdfBytes));
             streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
 
             content.Add(streamContent, "file", "document.pdf");
 
-            var response = await client.PostAsync("/api/v1/extract", content, ct);
+            using var response = await client.PostAsync("/api/v1/extract", content, ct);
 
             if (!response.IsSuccessStatusCode)
             {

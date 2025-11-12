@@ -43,7 +43,7 @@
    * ```
    */
 
-  import { forwardRef, InputHTMLAttributes } from 'react';
+  import { forwardRef, InputHTMLAttributes, useId } from 'react';
   import { Input } from '@/components/ui/input';
   import { cn } from '@/lib/utils';
 
@@ -100,8 +100,9 @@
       },
       ref
     ) => {
-      // Generate unique IDs for accessibility
-      const inputId = id || `input-${label.toLowerCase().replace(/\s+/g, '-')}`;
+      // Generate unique IDs for accessibility (P1: Use useId() to avoid duplicates)
+      const generatedId = useId();
+      const inputId = id || generatedId;
       const errorId = `${inputId}-error`;
       const hintId = `${inputId}-hint`;
 

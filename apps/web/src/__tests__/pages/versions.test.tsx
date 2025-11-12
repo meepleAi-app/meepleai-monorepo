@@ -198,6 +198,12 @@ beforeEach(() => {
   alertSpy.mockImplementation(() => {});
   // Default router with no gameId
   mockUseRouter.mockImplementation(() => createRouter());
+
+  // Reset mock implementation to default behavior
+  // This ensures tests can override with mockResolvedValueOnce
+  mockApi.get.mockReset();
+  mockApi.post.mockReset();
+  mockApi.put.mockReset();
 });
 
 // =============================================================================
@@ -771,6 +777,11 @@ describe('VersionHistory Page', () => {
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
+      // Wait for auth to load first
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
+      });
+
       await waitFor(() => {
         const homeLink = screen.getByText('Home').closest('a');
         expect(homeLink).toHaveAttribute('href', '/');
@@ -783,6 +794,11 @@ describe('VersionHistory Page', () => {
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
+
+      // Wait for auth to load first
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
+      });
 
       await waitFor(() => {
         expect(screen.getByText(/Game:/i)).toBeInTheDocument();
@@ -803,6 +819,11 @@ describe('VersionHistory Page', () => {
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
+      // Wait for auth to load first
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
+      });
+
       await waitFor(() => {
         const restoreButtons = screen.getAllByText(/Ripristina/i);
         expect(restoreButtons.length).toBeGreaterThan(0);
@@ -815,6 +836,11 @@ describe('VersionHistory Page', () => {
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
+
+      // Wait for auth to load first
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
+      });
 
       await waitFor(() => {
         const restoreButtons = screen.getAllByText(/Ripristina/i);

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ['class'],
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -7,50 +8,9 @@ module.exports = {
   ],
   theme: {
     extend: {
-      colors: {
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#0056b3', // WCAG fix: 4.52:1 on dark bg (was #0070f3 = 4.42:1)
-          600: '#004494', // Darker for better contrast
-          700: '#1e40af',
-          800: '#1e3a8a',
-          900: '#1e3a8a',
-        },
-        secondary: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#34a853',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-        },
-        accent: {
-          50: '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#ff9800',
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
-        },
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary': 'linear-gradient(135deg, #0070f3 0%, #0052cc 100%)',
-        'gradient-hero': 'linear-gradient(135deg, #0070f3 0%, #34a853 50%, #ff9800 100%)',
-        'gradient-cta': 'linear-gradient(135deg, #0070f3 0%, #34a853 100%)',
-      },
+      // Colors now fully managed via CSS variables in globals.css
+      // Brand colors (primary, secondary, accent) use HSL format
+      // shadcn/ui semantic tokens also use HSL format
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in',
         'slide-up': 'slideUp 0.6s ease-out',

@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     # Italian language support
     tesseract-ocr-ita \
+    # OpenCV dependencies (required by unstructured-inference)
+    libgl1 \
+    libglib2.0-0 \
     # Build tools (if needed)
     gcc \
     g++ \

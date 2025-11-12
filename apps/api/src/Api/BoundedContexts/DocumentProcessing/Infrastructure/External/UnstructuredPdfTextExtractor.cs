@@ -62,8 +62,8 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
             content.Add(strategyContent, "strategy");  // Use fast strategy for <2s target
             content.Add(languageContent, "language");
 
-            // Step 3: Call Python service
-            var response = await client.PostAsync("/api/v1/extract", content, ct);
+            // Step 3: Call Python service (CODE-01: Dispose HttpResponseMessage)
+            using var response = await client.PostAsync("/api/v1/extract", content, ct);
 
             // Step 4: Handle errors
             if (!response.IsSuccessStatusCode)

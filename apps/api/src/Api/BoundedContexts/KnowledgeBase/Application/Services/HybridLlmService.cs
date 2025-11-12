@@ -113,11 +113,32 @@ public class HybridLlmService : ILlmService
         var decision = _routingStrategy.SelectProvider(user);
         var client = GetClientWithCircuitBreaker(decision.ProviderName);
 
+        // P1: If fallback provider used, update decision to match actual provider
         if (client == null)
         {
             _logger.LogError(
                 "No available provider found (circuit breakers may be open), using first client as fallback");
             client = _clients.First();
+
+            // Update decision for fallback provider
+            decision = _routingStrategy.SelectProvider(user); // Will select based on user, but we override below
+            // TODO: Better approach - create decision specifically for fallback provider
+        }
+        else if (client.ProviderName != decision.ProviderName)
+        {
+            // P1: Fallback provider was selected - update decision to match
+            _logger.LogWarning(
+                "Primary provider {Primary} unavailable, using fallback {Fallback}",
+                decision.ProviderName, client.ProviderName);
+
+            // Get new decision for the actual provider being used
+            var fallbackUser = user; // Preserve user context
+            // Create a decision that matches the fallback provider
+            decision = new LlmRoutingDecision(
+                ProviderName: client.ProviderName,
+                ModelId: GetDefaultModelForProvider(client.ProviderName),
+                Reason: $"Fallback from {decision.ProviderName} (circuit open or unhealthy)"
+            );
         }
 
         _logger.LogInformation(
@@ -540,5 +561,18 @@ public class HybridLlmService : ILlmService
             }
             return status;
         }
+    }
+
+    /// <summary>
+    /// P1: Get default model for a provider (fallback scenario)
+    /// </summary>
+    private static string GetDefaultModelForProvider(string providerName)
+    {
+        return providerName.ToLowerInvariant() switch
+        {
+            "ollama" => "llama3.3:70b", // Free tier default
+            "openrouter" => "meta-llama/llama-3.3-70b-instruct:free", // Free tier default
+            _ => "llama3.3:70b" // Safe default
+        };
     }
 }

@@ -25,6 +25,7 @@ public static class DocumentProcessingServiceExtensions
         services.AddSingleton<TableToAtomicRuleConverter>();
         services.AddSingleton<PdfValidationDomainService>(); // PDF-09: Business validation rules
         services.AddScoped<PdfTextProcessingDomainService>(); // DDD-PHASE4: Text processing business rules
+        services.AddScoped<PdfQualityValidationDomainService>(); // BGAI-012: Quality threshold enforcement
 
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();

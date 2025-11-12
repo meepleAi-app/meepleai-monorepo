@@ -38,6 +38,7 @@ This directory contains technical documentation for the MeepleAI monorepo, organ
 - **[Architecture Diagrams](./technic/architecture-diagrams.md)** - System architecture, authentication flow, RAG pipeline, streaming SSE (Mermaid diagrams)
 - **[Database Schema](./database-schema.md)** - Complete database schema reference
 - **[Observability Guide](./observability.md)** - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
+- **[Logging and Audit Guide](./operations/logging-and-audit-guide.md)** - Complete guide to logging systems (Serilog, Seq, correlation IDs) and audit trails
 - **[SECURITY.md](./SECURITY.md)** - Security policies, secret management, key rotation procedures
 - **[RAG Evaluation](./ai-06-rag-evaluation.md)** - Offline RAG evaluation system with IR metrics (AI-06)
 

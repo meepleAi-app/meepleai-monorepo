@@ -363,7 +363,7 @@ export default function ResetPasswordPage() {
                     required
                     autoComplete="email"
                     placeholder="you@example.com"
-                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-ring"
                   />
 
                   <AccessibleButton
@@ -381,7 +381,7 @@ export default function ResetPasswordPage() {
                 <div className="text-center">
                   <Link
                     href="/"
-                    className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
+                    className="text-sm text-primary hover:text-primary/80 transition-colors"
                   >
                     ← Back to Login
                   </Link>
@@ -404,7 +404,7 @@ export default function ResetPasswordPage() {
                       setRequestSuccess(false);
                       setEmail("");
                     }}
-                    className="text-primary-400 hover:text-primary-300 underline"
+                    className="text-primary hover:text-primary/80 underline"
                   >
                     try again
                   </button>
@@ -476,7 +476,7 @@ export default function ResetPasswordPage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     autoComplete="new-password"
-                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-ring"
                   />
 
                   {/* Password Requirements */}
@@ -540,7 +540,7 @@ export default function ResetPasswordPage() {
                         ? "Passwords do not match"
                         : undefined
                     }
-                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-ring"
                   />
 
                   <AccessibleButton
@@ -562,7 +562,7 @@ export default function ResetPasswordPage() {
                 <div className="text-center">
                   <Link
                     href="/"
-                    className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
+                    className="text-sm text-primary hover:text-primary/80 transition-colors"
                   >
                     ← Back to Login
                   </Link>

@@ -216,7 +216,7 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="hidden md:block"
           >
-            <Card className="p-6 shadow-2xl shadow-primary-500/20">
+            <Card className="p-6 shadow-2xl shadow-primary/20">
               <div className="space-y-4">
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
@@ -224,7 +224,7 @@ export default function Home() {
                   transition={{ duration: 0.4, delay: 0.4 }}
                   className="flex justify-end"
                 >
-                  <div className="bg-primary-500 text-white px-4 py-3 rounded-2xl max-w-[80%]">
+                  <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl max-w-[80%]">
                     How does en passant work in chess?
                   </div>
                 </motion.div>
@@ -311,7 +311,7 @@ export default function Home() {
                   initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
                   animate={keyFeaturesInView ? { opacity: 1, x: 0 } : {}}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="p-6 hover:border-primary-500/50 transition-colors"
+                  className="p-6 hover:border-primary/50 transition-colors"
                 >
                   <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
                     <span className="text-2xl">{feature.icon}</span>
@@ -342,7 +342,7 @@ export default function Home() {
           >
             <Button
               onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
-              className="text-lg bg-white text-primary-600 hover:bg-slate-100"
+              className="text-lg bg-white text-primary hover:bg-slate-100"
               data-testid="cta-get-started"
             >
               {authUser ? "Start Chatting" : "Get Started Free"}
@@ -422,7 +422,7 @@ export default function Home() {
               }}
               className={`px-6 py-3 font-medium transition-all ${
                 authMode === "login"
-                  ? "text-primary-500 border-b-2 border-primary-500"
+                  ? "text-primary border-b-2 border-primary"
                   : "text-slate-300 hover:text-white"
               }`}
             >
@@ -439,7 +439,7 @@ export default function Home() {
               }}
               className={`px-6 py-3 font-medium transition-all ${
                 authMode === "register"
-                  ? "text-primary-500 border-b-2 border-primary-500"
+                  ? "text-primary border-b-2 border-primary"
                   : "text-slate-300 hover:text-white"
               }`}
             >
@@ -526,7 +526,7 @@ export default function Home() {
                     id="register-role"
                     value={registerForm.role}
                     onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 outline-none focus:border-primary-500 transition-colors"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 outline-none focus:border-primary transition-colors"
                     aria-label="Select user role"
                   >
                     <option value="User">User</option>

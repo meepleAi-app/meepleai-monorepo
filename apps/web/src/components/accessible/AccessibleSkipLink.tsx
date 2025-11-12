@@ -108,14 +108,14 @@ export function AccessibleSkipLink({
         focus:z-50
         focus:px-6
         focus:py-3
-        focus:bg-primary-600
-        focus:text-white
+        focus:bg-primary
+        focus:text-primary-foreground
         focus:font-medium
         focus:rounded-lg
         focus:shadow-lg
         focus:outline-none
         focus:ring-4
-        focus:ring-primary-300
+        focus:ring-primary
         transition-all
         duration-200
         ${className}

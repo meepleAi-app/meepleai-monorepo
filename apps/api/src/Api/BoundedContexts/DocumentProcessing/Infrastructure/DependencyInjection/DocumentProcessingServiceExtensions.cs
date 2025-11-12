@@ -34,7 +34,7 @@ public static class DocumentProcessingServiceExtensions
 
         if (extractorProvider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase))
         {
-            // Register Unstructured HTTP client with Polly retry policy
+            // Stage 1: Unstructured (primary - RAG-optimized)
             services.AddHttpClient("UnstructuredService", client =>
                 {
                     var baseUrl = configuration["PdfProcessing:Extractor:UnstructuredService:BaseUrl"]
@@ -46,13 +46,32 @@ public static class DocumentProcessingServiceExtensions
 
                     client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
                 })
-                .AddPolicyHandler(GetRetryPolicy(configuration));
+                .AddPolicyHandler(GetRetryPolicy(configuration, "Unstructured"));
 
             services.AddScoped<IPdfTextExtractor, UnstructuredPdfTextExtractor>();
         }
+        else if (extractorProvider.Equals("SmolDocling", StringComparison.OrdinalIgnoreCase))
+        {
+            // Stage 2: SmolDocling (VLM fallback for complex layouts)
+            services.AddHttpClient("SmolDoclingService", client =>
+                {
+                    var baseUrl = configuration["PdfExtraction:SmolDocling:BaseUrl"]
+                                  ?? "http://smoldocling-service:8002";
+                    client.BaseAddress = new Uri(baseUrl);
+
+                    var timeoutSeconds = configuration.GetValue<int?>("PdfExtraction:SmolDocling:TimeoutSeconds") ?? 60;
+                    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+                    client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
+                })
+                .AddPolicyHandler(GetRetryPolicy(configuration, "SmolDocling"))
+                .AddPolicyHandler(GetCircuitBreakerPolicy(configuration));
+
+            services.AddScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>();
+        }
         else
         {
-            // Default: Docnet extractor (existing implementation)
+            // Stage 3: Docnet (simple fallback)
             services.AddScoped<IPdfTextExtractor, DocnetPdfTextExtractor>();
         }
 
@@ -60,17 +79,66 @@ public static class DocumentProcessingServiceExtensions
     }
 
     /// <summary>
-    /// Get Polly retry policy for Unstructured service HTTP calls
+    /// Get Polly retry policy for PDF extraction services
     /// </summary>
-    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(IConfiguration configuration)
+    /// <param name="configuration">Configuration</param>
+    /// <param name="serviceName">Service name (Unstructured or SmolDocling)</param>
+    /// <returns>Retry policy with exponential backoff</returns>
+    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(
+        IConfiguration configuration,
+        string serviceName)
     {
-        var maxRetries = configuration.GetValue<int?>("PdfProcessing:Extractor:UnstructuredService:MaxRetries") ?? 3;
+        var configKey = serviceName == "Unstructured"
+            ? "PdfProcessing:Extractor:UnstructuredService:MaxRetries"
+            : "PdfExtraction:SmolDocling:MaxRetries";
+
+        var maxRetries = configuration.GetValue<int?>(configKey) ?? 3;
 
         return HttpPolicyExtensions
             .HandleTransientHttpError()
             .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.RequestTimeout)
             .WaitAndRetryAsync(
                 maxRetries,
-                retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+                retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (outcome, timespan, retryCount, context) =>
+                {
+                    Console.WriteLine(
+                        $"[{serviceName}] Retry {retryCount} after {timespan.TotalSeconds}s delay (Status: {outcome.Result?.StatusCode})");
+                });
+    }
+
+    /// <summary>
+    /// Get Polly circuit breaker policy for SmolDocling service
+    /// </summary>
+    /// <remarks>
+    /// Circuit breaker protects against cascade failures when VLM service is down
+    /// - Opens after 5 consecutive failures
+    /// - Stays open for 60s before attempting half-open
+    /// - Prevents resource exhaustion from failed GPU requests
+    /// </remarks>
+    private static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy(IConfiguration configuration)
+    {
+        var failureThreshold = configuration.GetValue<int?>("PdfExtraction:SmolDocling:CircuitBreaker:FailureThreshold") ?? 5;
+        var durationSeconds = configuration.GetValue<int?>("PdfExtraction:SmolDocling:CircuitBreaker:DurationSeconds") ?? 60;
+
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .Or<TimeoutException>()
+            .CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: failureThreshold,
+                durationOfBreak: TimeSpan.FromSeconds(durationSeconds),
+                onBreak: (outcome, duration) =>
+                {
+                    Console.WriteLine(
+                        $"[SmolDocling] Circuit breaker OPEN for {duration.TotalSeconds}s (Threshold: {failureThreshold} failures)");
+                },
+                onReset: () =>
+                {
+                    Console.WriteLine("[SmolDocling] Circuit breaker CLOSED - service recovered");
+                },
+                onHalfOpen: () =>
+                {
+                    Console.WriteLine("[SmolDocling] Circuit breaker HALF-OPEN - testing service");
+                });
     }
 }

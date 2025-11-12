@@ -86,13 +86,17 @@ class PdfExtractionService:
             tables = self.unstructured.extract_tables(elements)
             detected_structures = self.unstructured.detect_structures(elements)
 
-            # Step 7: Get page count
+            # Step 7: Get page count (handle empty chunks edge case)
             page_numbers = [
                 el.metadata.page_number
                 for el in elements
-                if hasattr(el, "metadata") and hasattr(el.metadata, "page_number")
+                if hasattr(el, "metadata") and hasattr(el.metadata, "page_number") and el.metadata.page_number is not None
             ]
             page_count = max(page_numbers) if page_numbers else 1
+
+            # Ensure page_count is never None (defensive programming)
+            if page_count is None or page_count < 1:
+                page_count = 1
 
             # Step 8: Convert chunks to domain models
             text_chunks = []

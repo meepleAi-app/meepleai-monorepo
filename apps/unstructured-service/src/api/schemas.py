@@ -82,7 +82,7 @@ class ErrorDetail(BaseModel):
     code: str = Field(description="Error code")
     message: str = Field(description="Error message")
     details: Optional[Dict[str, Any]] = Field(default=None, description="Additional error details")
-    timestamp: datetime = Field(description="Error timestamp")
+    timestamp: str = Field(description="Error timestamp (ISO 8601)")
     request_id: Optional[str] = Field(default=None, description="Request ID for tracing")
 
 
@@ -110,7 +110,7 @@ class HealthCheckResponse(BaseModel):
     """Health check response"""
 
     status: Literal["healthy", "unhealthy"] = Field(description="Service health status")
-    timestamp: datetime = Field(description="Check timestamp")
+    timestamp: str = Field(description="Check timestamp (ISO 8601)")
     checks: Dict[str, str] = Field(description="Individual health checks")
 
     class Config:

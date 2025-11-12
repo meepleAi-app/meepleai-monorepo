@@ -96,7 +96,7 @@ async def value_error_handler(request, exc: ValueError):
             error=ErrorDetail(
                 code="INVALID_REQUEST",
                 message=str(exc),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.utcnow().isoformat(),
                 request_id=request_id,
             )
         ).model_dump(),
@@ -115,7 +115,7 @@ async def runtime_error_handler(request, exc: RuntimeError):
             error=ErrorDetail(
                 code="EXTRACTION_FAILED",
                 message=str(exc),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.utcnow().isoformat(),
                 request_id=request_id,
             )
         ).model_dump(),
@@ -135,7 +135,7 @@ async def general_exception_handler(request, exc: Exception):
                 code="INTERNAL_ERROR",
                 message="An internal error occurred during PDF extraction",
                 details={"error_type": type(exc).__name__},
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.utcnow().isoformat(),
                 request_id=request_id,
             )
         ).model_dump(),
@@ -176,7 +176,7 @@ async def extract_pdf(
                     error=ErrorDetail(
                         code="UNSUPPORTED_MEDIA_TYPE",
                         message=f"File type not supported: {file.content_type}. Expected application/pdf",
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.utcnow().isoformat(),
                         request_id=request_id,
                     )
                 ).model_dump(),
@@ -193,7 +193,7 @@ async def extract_pdf(
                     error=ErrorDetail(
                         code="FILE_TOO_LARGE",
                         message=f"File size {file_size} bytes exceeds maximum {settings.max_file_size} bytes",
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.utcnow().isoformat(),
                         request_id=request_id,
                     )
                 ).model_dump(),
@@ -257,7 +257,7 @@ async def extract_pdf(
                 error=ErrorDetail(
                     code="CORRUPTED_PDF",
                     message=str(e),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.utcnow().isoformat(),
                     request_id=request_id,
                 )
             ).model_dump(),
@@ -271,7 +271,7 @@ async def extract_pdf(
                     code="EXTRACTION_FAILED",
                     message="Failed to extract text from PDF",
                     details={"error": str(e)},
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.utcnow().isoformat(),
                     request_id=request_id,
                 )
             ).model_dump(),

@@ -80,7 +80,8 @@ class QualityScoreCalculator:
         - min_chars_per_page to 2x: linear scale
         - >= 2x min_chars_per_page: 1.0 (excellent)
         """
-        if page_count == 0:
+        # Defensive: handle None or zero page_count
+        if page_count is None or page_count <= 0:
             return 0.0
 
         chars_per_page = len(text) / page_count

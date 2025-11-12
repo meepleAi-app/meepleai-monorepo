@@ -52,7 +52,7 @@ class ErrorDetail(BaseModel):
     code: str
     message: str
     details: Optional[Dict[str, Any]] = None
-    timestamp: datetime
+    timestamp: str  # ISO 8601 format
     request_id: Optional[str] = None
 
 
@@ -67,6 +67,6 @@ class HealthCheckResponse(BaseModel):
     """Health check response"""
 
     status: str  # "healthy" or "unhealthy"
-    timestamp: datetime
+    timestamp: str  # ISO 8601 format
     checks: Dict[str, str]
     gpu_info: Optional[Dict[str, Any]] = None

@@ -244,12 +244,12 @@ public class EnhancedPdfProcessingOrchestratorTests
     [Fact]
     public async Task Test09_PagedExtraction_HonorsQualityThreshold()
     {
-        // Arrange - Test quality-based fallback for paged extraction
-        // Stage 1: Low quality (avg 200 chars/page → score 0.50 < 0.80 threshold) → falls back
-        // Stage 2: Medium quality (avg 600 chars/page → score 0.70 ≥ 0.70 threshold) → accepts
-        var stage1 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 200); // VeryLow 0.50 < 0.80
-        var stage2 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 600); // Medium 0.70 ≥ 0.70
-        var stage3 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 100); // VeryLow 0.25
+        // Arrange - Test quality-based fallback with linear interpolation
+        // Stage 1: 400 cpp → score 0.40 < 0.80 → falls back
+        // Stage 2: 850 cpp → score 0.85 ≥ 0.70 → accepts
+        var stage1 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 400); // 0.40 < 0.80
+        var stage2 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 850); // 0.85 ≥ 0.70
+        var stage3 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 100); // 0.10
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
             stage1, stage2, stage3, _logger, _configuration);
@@ -264,7 +264,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         Assert.Equal(2, result.StageUsed); // Should use Stage 2 (Stage 1 below threshold)
         Assert.Equal("SmolDocling", result.StageName);
         Assert.Equal(10, result.PageChunks.Count);
-        Assert.Equal(6000, result.TotalCharacters); // 10 pages * 600 chars/page
+        Assert.Equal(8500, result.TotalCharacters); // 10 pages * 850 chars/page
 
         // Verify fallback occurred
         Assert.Equal(1, stage1.PagedCallCount); // Stage 1 called but rejected
@@ -275,13 +275,13 @@ public class EnhancedPdfProcessingOrchestratorTests
     [Fact]
     public async Task Test10_PagedExtraction_VeryLowQualityFallsBackToStage3()
     {
-        // Arrange - All stages produce low quality, but fallback chain still works
-        // Stage 1: VeryLow (100 chars/page → 0.25 < 0.80) → rejects
-        // Stage 2: Low (300 chars/page → 0.50 < 0.70) → rejects
-        // Stage 3: Low (200 chars/page) → accepts (best effort, no threshold)
-        var stage1 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 100); // 0.25 < 0.80
-        var stage2 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 300); // 0.50 < 0.70
-        var stage3 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 200); // Best effort
+        // Arrange - All stages low quality with linear interpolation
+        // Stage 1: 200 cpp → 0.20 < 0.80 → rejects
+        // Stage 2: 400 cpp → 0.40 < 0.70 → rejects
+        // Stage 3: 300 cpp → accepts (best effort, no threshold)
+        var stage1 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 200); // 0.20 < 0.80
+        var stage2 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 400); // 0.40 < 0.70
+        var stage3 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 300); // Best effort
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
             stage1, stage2, stage3, _logger, _configuration);
@@ -296,7 +296,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         Assert.Equal(3, result.StageUsed); // Should use Stage 3 (all others below threshold)
         Assert.Equal("Docnet", result.StageName);
         Assert.Equal(5, result.PageChunks.Count);
-        Assert.Equal(1000, result.TotalCharacters); // 5 pages * 200 chars/page
+        Assert.Equal(1500, result.TotalCharacters); // 5 pages * 300 chars/page
 
         // Verify all stages attempted
         Assert.Equal(1, stage1.PagedCallCount);
@@ -307,11 +307,11 @@ public class EnhancedPdfProcessingOrchestratorTests
     [Fact]
     public async Task Test11_PagedExtraction_HighQualityStage1Accepted()
     {
-        // Arrange - Stage 1 produces high quality, should NOT fallback
-        // Stage 1: High (1200 chars/page → 0.85 ≥ 0.80) → accepts immediately
-        var stage1 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 1200); // 0.85 ≥ 0.80
-        var stage2 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 800);
-        var stage3 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 400);
+        // Arrange - Stage 1 at threshold boundary (800 cpp → 0.80)
+        // Stage 1: 800 cpp → score 0.80 ≥ 0.80 → accepts immediately (exactly at threshold)
+        var stage1 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 800); // 0.80 ≥ 0.80
+        var stage2 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 700);
+        var stage3 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 500);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
             stage1, stage2, stage3, _logger, _configuration);
@@ -326,7 +326,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         Assert.Equal(1, result.StageUsed); // Stage 1 accepted immediately
         Assert.Equal("Unstructured", result.StageName);
         Assert.Equal(8, result.PageChunks.Count);
-        Assert.Equal(9600, result.TotalCharacters); // 8 pages * 1200 chars/page
+        Assert.Equal(6400, result.TotalCharacters); // 8 pages * 800 chars/page
 
         // Verify only Stage 1 called
         Assert.Equal(1, stage1.PagedCallCount);

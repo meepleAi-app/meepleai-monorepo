@@ -10,7 +10,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ConfigurationManagement from '../../pages/admin/configuration';
 import { api } from '../../lib/api';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/components/Toast';
 
 // Mock Next.js Head
 jest.mock('next/head', () => {
@@ -32,13 +32,12 @@ jest.mock('next/link', () => {
   };
 });
 
-// Mock react-hot-toast
-jest.mock('react-hot-toast', () => ({
+// Mock sonner toast
+jest.mock('@/components/Toast', () => ({
   toast: {
     success: jest.fn(),
     error: jest.fn(),
   },
-  Toaster: () => <div data-testid="toaster" />,
 }));
 
 // Mock child components
@@ -830,15 +829,7 @@ describe('ConfigurationManagement Page', () => {
       });
     });
 
-    test('renders Toaster component', async () => {
-      // Act
-      render(<ConfigurationManagement />);
-
-      // Assert
-      await waitFor(() => {
-        expect(screen.getByTestId('toaster')).toBeInTheDocument();
-      });
-    });
+    // Note: Toaster component is now in _app.tsx, not in this page component
 
     test('sets correct page title', async () => {
       // Act

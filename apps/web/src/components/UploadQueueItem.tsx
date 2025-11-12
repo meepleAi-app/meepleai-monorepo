@@ -4,6 +4,9 @@
  */
 
 import type { UploadQueueItem as UploadQueueItemType, UploadStatus } from '../hooks/useUploadQueue';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 interface UploadQueueItemProps {
   item: UploadQueueItemType;
@@ -94,59 +97,29 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
             {retryCount > 0 && ` • Retry ${retryCount}`}
           </div>
         </div>
-        <div
+        <Badge
+          variant={status === 'success' ? 'default' : status === 'failed' ? 'destructive' : 'secondary'}
           role="status"
           aria-live="polite"
           aria-label={`Upload status: ${statusLabel}`}
-          style={{
-            fontSize: '13px',
-            fontWeight: 600,
-            color: statusColor,
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'white',
-            border: `1px solid ${statusColor}`,
-            whiteSpace: 'nowrap',
-            marginLeft: '12px'
-          }}
+          style={{ color: statusColor, borderColor: statusColor }}
         >
           {statusLabel}
-        </div>
+        </Badge>
       </div>
 
       {/* Progress Bar */}
       {showProgressBar && (
-        <div
-          role="progressbar"
-          aria-label={`Upload progress for ${file.name}`}
-          aria-valuenow={progress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          style={{
-            width: '100%',
-            height: '8px',
-            backgroundColor: '#e0e0e0',
-            borderRadius: '4px',
-            overflow: 'hidden',
-            marginBottom: '8px'
-          }}
-        >
-          <div
-            style={{
-              width: `${progress}%`,
-              height: '100%',
-              backgroundColor: statusColor,
-              transition: 'width 0.3s ease'
-            }}
+        <>
+          <Progress
+            value={progress}
+            className="h-2 mb-2"
+            aria-label={`Upload progress for ${file.name}`}
           />
-        </div>
-      )}
-
-      {/* Progress Percentage */}
-      {showProgressBar && (
-        <div style={{ fontSize: '13px', color: '#5f6368', marginBottom: '8px' }}>
-          {progress}% complete
-        </div>
+          <div style={{ fontSize: '13px', color: '#5f6368', marginBottom: '8px' }}>
+            {progress}% complete
+          </div>
+        </>
       )}
 
       {/* Error Message */}
@@ -176,81 +149,35 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
         {showCancelButton && (
-          <button
+          <Button
             onClick={() => onCancel(id)}
+            variant="destructive"
+            size="sm"
             aria-label={`Cancel upload of ${file.name}`}
-            style={{
-              padding: '6px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: '#d93025',
-              backgroundColor: 'white',
-              border: '1px solid #d93025',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#ffebee';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'white';
-            }}
           >
             Cancel
-          </button>
+          </Button>
         )}
 
         {showRetryButton && (
-          <button
+          <Button
             onClick={() => onRetry(id)}
+            size="sm"
             aria-label={`Retry upload of ${file.name}`}
-            style={{
-              padding: '6px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: 'white',
-              backgroundColor: '#0070f3',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#0051cc';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#0070f3';
-            }}
           >
             Retry
-          </button>
+          </Button>
         )}
 
         {showRemoveButton && (
-          <button
+          <Button
             onClick={() => onRemove(id)}
+            variant="outline"
+            size="sm"
             aria-label={`Remove ${file.name} from queue`}
-            style={{
-              padding: '6px 14px',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: '#5f6368',
-              backgroundColor: 'white',
-              border: '1px solid #dadce0',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f5f5f5';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'white';
-            }}
           >
             Remove
-          </button>
+          </Button>
         )}
       </div>
     </div>

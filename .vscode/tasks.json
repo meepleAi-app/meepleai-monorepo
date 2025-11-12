@@ -1,6 +1,58 @@
 {
   "version": "2.0.0",
   "tasks": [
+    // .NET API Tasks
+    {
+      "label": "build-api",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["build", "--configuration", "Debug"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "clean-api",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["clean"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "test-api",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["test"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "watch-api",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["watch", "run"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api/src/Api"
+      },
+      "isBackground": true,
+      "problemMatcher": "$msCompile"
+    },
+    
+    // Frontend Tasks
     {
       "label": "dev",
       "type": "shell",
@@ -45,6 +97,26 @@
         "cwd": "${workspaceFolder}/apps/web"
       },
       "problemMatcher": "$eslint-stylish"
+    },
+    
+    // Compound Tasks
+    {
+      "label": "build-all",
+      "dependsOn": ["build-api", "build"],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test-all",
+      "dependsOn": ["test-api", "test"],
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "problemMatcher": []
     }
   ]
 }

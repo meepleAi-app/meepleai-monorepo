@@ -12,6 +12,8 @@
 
 import React from 'react';
 import { useChatContext } from './ChatProvider';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 export function MessageEditForm() {
   const {
@@ -31,60 +33,33 @@ export function MessageEditForm() {
   const canSave = editContent.trim().length > 0 && !isUpdating;
 
   return (
-    <div style={{ marginTop: 8 }}>
-      <textarea
+    <div className="mt-2">
+      <Textarea
         value={editContent}
         onChange={(e) => setEditContent(e.target.value)}
         disabled={isUpdating}
-        style={{
-          width: '100%',
-          minHeight: 80,
-          padding: 8,
-          fontSize: 14,
-          border: '1px solid #cbd5e1',
-          borderRadius: 4,
-          fontFamily: 'inherit',
-          resize: 'vertical'
-        }}
+        className="min-h-[80px] resize-y"
         aria-label="Edit message content"
         autoFocus
       />
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <button
+      <div className="flex gap-2 mt-2">
+        <Button
           onClick={() => void saveEdit()}
           disabled={!canSave}
-          style={{
-            padding: '6px 12px',
-            background: canSave ? '#1a73e8' : '#cbd5e1',
-            color: 'white',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 500,
-            cursor: canSave ? 'pointer' : 'not-allowed'
-          }}
+          size="sm"
           aria-label="Save edited message"
         >
           {isUpdating ? 'Salvataggio...' : 'Salva'}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={cancelEdit}
           disabled={isUpdating}
-          style={{
-            padding: '6px 12px',
-            background: '#94a3b8',
-            color: 'white',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 500,
-            cursor: isUpdating ? 'not-allowed' : 'pointer',
-            opacity: isUpdating ? 0.5 : 1
-          }}
+          variant="secondary"
+          size="sm"
           aria-label="Cancel editing"
         >
           Annulla
-        </button>
+        </Button>
       </div>
     </div>
   );

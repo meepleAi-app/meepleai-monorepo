@@ -7,6 +7,8 @@
 
 import React from 'react';
 import { Chat } from '@/types';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface ChatHistoryItemProps {
   chat: Chat;
@@ -23,16 +25,12 @@ function formatChatPreview(chat: Chat): string {
 export function ChatHistoryItem({ chat, isActive, onSelect, onDelete }: ChatHistoryItemProps) {
   return (
     <li
-      style={{
-        padding: 12,
-        marginBottom: 8,
-        background: isActive ? '#e8f0fe' : 'white',
-        border: `1px solid ${isActive ? '#1a73e8' : '#dadce0'}`,
-        borderRadius: 4,
-        cursor: 'pointer',
-        position: 'relative',
-        fontSize: 13
-      }}
+      className={cn(
+        'p-3 mb-2 rounded cursor-pointer relative text-sm border',
+        isActive
+          ? 'bg-primary/10 border-primary'
+          : 'bg-background border-border'
+      )}
       onClick={onSelect}
       role="button"
       tabIndex={0}
@@ -44,30 +42,21 @@ export function ChatHistoryItem({ chat, isActive, onSelect, onDelete }: ChatHist
       }}
       aria-current={isActive ? 'true' : undefined}
     >
-      <div style={{ fontWeight: 500, marginBottom: 4 }}>{chat.agentName}</div>
-      <div style={{ fontSize: 11, color: '#64748b' }}>{formatChatPreview(chat)}</div>
-      <button
+      <div className="font-medium mb-1">{chat.agentName}</div>
+      <div className="text-xs text-slate-500">{formatChatPreview(chat)}</div>
+      <Button
+        variant="destructive"
+        size="sm"
+        className="absolute top-2 right-2 h-7 px-2 text-xs"
         onClick={(e) => {
           e.stopPropagation();
           onDelete();
         }}
         aria-label={`Delete chat with ${chat.agentName}`}
-        style={{
-          position: 'absolute',
-          top: 8,
-          right: 8,
-          padding: '4px 8px',
-          background: '#ea4335',
-          color: 'white',
-          border: 'none',
-          borderRadius: 3,
-          fontSize: 11,
-          cursor: 'pointer'
-        }}
         title="Elimina chat"
       >
         🗑️
-      </button>
+      </Button>
     </li>
   );
 }

@@ -405,9 +405,73 @@ startxref
     /// </summary>
     private Stream CreateMultiPageTestPdfStream(int pageCount)
     {
-        // For simplicity, return single page PDF (multi-page would require complex structure)
-        // In real tests, we'd use a proper PDF library or test fixtures
-        return CreateSimpleTestPdfStream();
+        // Generate a simple multi-page PDF structure
+        var pages = new System.Text.StringBuilder();
+        var pageObjects = new System.Text.StringBuilder();
+        int objectId = 4; // Start after catalog, pages root, and first page
+
+        for (int i = 0; i < pageCount; i++)
+        {
+            int pageObjectId = objectId++;
+            int contentObjectId = objectId++;
+
+            // Page object
+            pageObjects.AppendLine($"{pageObjectId} 0 obj");
+            pageObjects.AppendLine("<<");
+            pageObjects.AppendLine("/Type /Page");
+            pageObjects.AppendLine("/Parent 2 0 R");
+            pageObjects.AppendLine("/Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >>");
+            pageObjects.AppendLine($"/Contents {contentObjectId} 0 R");
+            pageObjects.AppendLine(">>");
+            pageObjects.AppendLine("endobj");
+
+            // Content stream
+            var content = $"BT /F1 12 Tf 50 700 Td (Page {i + 1} content) Tj ET";
+            pageObjects.AppendLine($"{contentObjectId} 0 obj");
+            pageObjects.AppendLine($"<< /Length {content.Length} >>");
+            pageObjects.AppendLine("stream");
+            pageObjects.AppendLine(content);
+            pageObjects.AppendLine("endstream");
+            pageObjects.AppendLine("endobj");
+
+            // Collect page references
+            if (i > 0) pages.Append(" ");
+            pages.Append($"{pageObjectId} 0 R");
+        }
+
+        var pdfContent = $@"%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [ {pages} ]
+/Count {pageCount}
+>>
+endobj
+
+{pageObjects}
+
+xref
+0 {objectId}
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+trailer
+<<
+/Size {objectId}
+/Root 1 0 R
+>>
+startxref
+100
+%%EOF";
+
+        return new MemoryStream(System.Text.Encoding.ASCII.GetBytes(pdfContent));
     }
 
     #endregion

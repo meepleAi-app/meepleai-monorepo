@@ -7,6 +7,9 @@ import { type DragEvent, type ChangeEvent, useCallback, useRef, useState } from 
 import { useUploadQueue } from '../hooks/useUploadQueue';
 import { UploadQueue } from './UploadQueue';
 import { UploadSummary } from './UploadSummary';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 interface MultiFileUploadProps {
   gameId: string;
@@ -236,15 +239,12 @@ export function MultiFileUpload({
         data-testid="game-info-badge"
         style={{
           padding: '12px 16px',
-          backgroundColor: '#e8f5e9',
-          border: '1px solid #34a853',
-          borderRadius: '6px',
-          marginBottom: '16px',
-          fontSize: '14px',
-          color: '#1e7e34'
+          marginBottom: '16px'
         }}
       >
-        <strong>Target Game:</strong> {gameName} ({gameId})
+        <Badge variant="default" style={{ fontSize: '14px', padding: '8px 16px' }}>
+          Target Game: {gameName} ({gameId})
+        </Badge>
       </div>
 
       {/* Validation Errors */}
@@ -313,39 +313,22 @@ export function MultiFileUpload({
         <div style={{ fontSize: '14px', color: '#5f6368', marginBottom: '16px' }}>
           or click to browse (up to {MAX_FILES_PER_BATCH} files, max 100 MB each)
         </div>
-        <button
+        <Button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             handleBrowseClick();
           }}
-          style={{
-            padding: '10px 24px',
-            fontSize: '14px',
-            fontWeight: 500,
-            color: 'white',
-            backgroundColor: '#0070f3',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#0051cc';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#0070f3';
-          }}
         >
           Select Files
-        </button>
-        <input
+        </Button>
+        <Input
           ref={fileInputRef}
           type="file"
           accept="application/pdf"
           multiple
           onChange={handleFileInputChange}
-          style={{ display: 'none' }}
+          className="hidden"
           aria-label="File input for PDF upload"
         />
       </div>
@@ -353,30 +336,15 @@ export function MultiFileUpload({
       {/* Manual Upload Button (shown when autoUpload disabled and files pending) */}
       {!autoUpload && stats.pending > 0 && (
         <div style={{ marginBottom: '16px', textAlign: 'center' }}>
-          <button
+          <Button
             type="button"
             onClick={() => void startUpload()}
             data-testid="start-upload-button"
-            style={{
-              padding: '12px 32px',
-              fontSize: '16px',
-              fontWeight: 600,
-              color: 'white',
-              backgroundColor: '#34a853',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#2d8e47';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#34a853';
-            }}
+            size="lg"
+            style={{ backgroundColor: '#34a853' }}
           >
             Start Upload ({stats.pending} file{stats.pending > 1 ? 's' : ''})
-          </button>
+          </Button>
         </div>
       )}
 

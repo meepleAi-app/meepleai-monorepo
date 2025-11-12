@@ -114,8 +114,11 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
         const options = await gameSelect.locator('option').allTextContents();
 
         if (options.some((opt) => opt.includes('HARMONIES'))) {
-          // Select existing
-          await gameSelect.selectOption({ label: /HARMONIES/i });
+          // Select existing - find the exact label text
+          const harmoniesOption = options.find((opt) => opt.includes('HARMONIES'));
+          if (harmoniesOption) {
+            await gameSelect.selectOption({ label: harmoniesOption });
+          }
         } else if (options.length > 0) {
           // Select first game or create new one
           await gameSelect.selectOption({ index: 0 });
@@ -192,7 +195,11 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       if (await gameSelect.isVisible({ timeout: 5000 })) {
         // Try to select HARMONIES
         try {
-          await gameSelect.selectOption({ label: /HARMONIES/i });
+          const options = await gameSelect.locator('option').allTextContents();
+          const harmoniesOption = options.find((opt) => opt.includes('HARMONIES'));
+          if (harmoniesOption) {
+            await gameSelect.selectOption({ label: harmoniesOption });
+          }
           await page.waitForTimeout(1000);
         } catch (e) {
           // Game might not be in dropdown yet

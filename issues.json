@@ -1,0 +1,7051 @@
+Could not find platform independent libraries <prefix>
+Total issues: 200
+[
+  {
+    "closedAt": "2025-11-12T11:46:21Z",
+    "createdAt": "2025-11-12T08:09:50Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol53g",
+        "name": "bug",
+        "description": "Something isn't working",
+        "color": "d73a4a"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeeUXw",
+        "name": "accessibility",
+        "description": "Accessibility (a11y)",
+        "color": "7F00FF"
+      }
+    ],
+    "milestone": null,
+    "number": 1035,
+    "state": "CLOSED",
+    "title": "[P1] ThemeSwitcher hidden on mobile - accessibility bug"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:35:06Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlfA",
+        "name": "quality",
+        "description": "Quality framework and metrics",
+        "color": "FBCA04"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1023,
+    "state": "OPEN",
+    "title": "[BGAI-085] Phase 1A completion checklist"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:35:04Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol56A",
+        "name": "documentation",
+        "description": "Improvements or additions to documentation",
+        "color": "0075ca"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1022,
+    "state": "OPEN",
+    "title": "[BGAI-084] Documentation updates (user guide, README)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:35:02Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeZ4Qg",
+        "name": "bug-fix",
+        "description": "Bug fixes and edge cases",
+        "color": "d73a4a"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1021,
+    "state": "OPEN",
+    "title": "[BGAI-083] Final bug fixes and polish"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:35:00Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1020,
+    "state": "OPEN",
+    "title": "[BGAI-082] Performance testing (P95 latency <3s)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:58Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlfA",
+        "name": "quality",
+        "description": "Quality framework and metrics",
+        "color": "FBCA04"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1019,
+    "state": "OPEN",
+    "title": "[BGAI-081] Accuracy validation (80% target on 100 Q&A)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:56Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXmRw",
+        "name": "e2e",
+        "description": "End-to-end testing",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1018,
+    "state": "OPEN",
+    "title": "[BGAI-080] End-to-end testing (question \u00e2\u2020\u2019 PDF citation)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:53Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1017,
+    "state": "OPEN",
+    "title": "[BGAI-078] Game catalog page (/board-game-ai/games)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:51Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlkw",
+        "name": "i18n",
+        "description": "Internationalization (Italian)",
+        "color": "C2E0C6"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1016,
+    "state": "OPEN",
+    "title": "[BGAI-077] Complete Italian UI strings (200+ translations)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:49Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1015,
+    "state": "OPEN",
+    "title": "[BGAI-076] PDF viewer tests (Jest + Playwright)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:46Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1014,
+    "state": "OPEN",
+    "title": "[BGAI-074] Citation click \u00e2\u2020\u2019 jump to page functionality"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:44Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1013,
+    "state": "OPEN",
+    "title": "[BGAI-073] PDF viewer integration (react-pdf)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:42Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeegog",
+        "name": "dataset",
+        "description": "Dataset creation/management",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1012,
+    "state": "OPEN",
+    "title": "[BGAI-072] Adversarial dataset (50 synthetic queries)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:39Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeeglA",
+        "name": "annotation",
+        "description": "Dataset annotation work",
+        "color": "FBCA04"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeegog",
+        "name": "dataset",
+        "description": "Dataset creation/management",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1011,
+    "state": "OPEN",
+    "title": "[BGAI-071] Annotation: 7 Wonders, Agricola, Splendor (30 Q&A)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:34:38Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkzg",
+        "name": "month-6",
+        "description": "Month 6: Italian UI + Completion",
+        "color": "BFDADC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeeglA",
+        "name": "annotation",
+        "description": "Dataset annotation work",
+        "color": "FBCA04"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeegog",
+        "name": "dataset",
+        "description": "Dataset creation/management",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 18,
+      "title": "Month 6: Italian UI",
+      "description": "Italian localization, PDF viewer, Phase 1A completion",
+      "dueOn": "2025-07-14T00:00:00Z"
+    },
+    "number": 1010,
+    "state": "OPEN",
+    "title": "[BGAI-070] Annotation: Scythe, Catan, Pandemic (30 Q&A)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:58Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXmRw",
+        "name": "e2e",
+        "description": "End-to-end testing",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1009,
+    "state": "OPEN",
+    "title": "[BGAI-069] Month 5 E2E testing"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:56Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1008,
+    "state": "OPEN",
+    "title": "[BGAI-068] Error handling and retry logic"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:54Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1007,
+    "state": "OPEN",
+    "title": "[BGAI-067] Streaming SSE support for real-time responses"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:52Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9PxA",
+        "name": "integration",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1006,
+    "state": "OPEN",
+    "title": "[BGAI-066] Backend API integration (/api/v1/board-game-ai/ask)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:50Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1005,
+    "state": "OPEN",
+    "title": "[BGAI-065] Jest tests for Q&A components (20 tests)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:48Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1004,
+    "state": "OPEN",
+    "title": "[BGAI-064] Loading and error states (UI/UX)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:46Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1003,
+    "state": "OPEN",
+    "title": "[BGAI-063] GameSelector dropdown component"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:44Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1002,
+    "state": "OPEN",
+    "title": "[BGAI-062] ResponseCard component (answer, confidence, citations)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:42Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1001,
+    "state": "OPEN",
+    "title": "[BGAI-061] QuestionInputForm component (frontend)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:40Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlfA",
+        "name": "quality",
+        "description": "Quality framework and metrics",
+        "color": "FBCA04"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 1000,
+    "state": "OPEN",
+    "title": "[BGAI-060] Run first accuracy test (baseline measurement)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:38Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlfA",
+        "name": "quality",
+        "description": "Quality framework and metrics",
+        "color": "FBCA04"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 999,
+    "state": "OPEN",
+    "title": "[BGAI-059] Quality test implementation (accuracy validation)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:36Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeeglA",
+        "name": "annotation",
+        "description": "Dataset annotation work",
+        "color": "FBCA04"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeegog",
+        "name": "dataset",
+        "description": "Dataset creation/management",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 998,
+    "state": "OPEN",
+    "title": "[BGAI-058] Annotation: Azul (15 Q&A pairs)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:35Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeeglA",
+        "name": "annotation",
+        "description": "Dataset annotation work",
+        "color": "FBCA04"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeegog",
+        "name": "dataset",
+        "description": "Dataset creation/management",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 997,
+    "state": "OPEN",
+    "title": "[BGAI-057] Annotation: Wingspan (15 Q&A pairs)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:33:33Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXklQ",
+        "name": "month-5",
+        "description": "Month 5: Golden Dataset + Q&A Interface",
+        "color": "FEF2C0"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeeglA",
+        "name": "annotation",
+        "description": "Dataset annotation work",
+        "color": "FBCA04"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeegog",
+        "name": "dataset",
+        "description": "Dataset creation/management",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 17,
+      "title": "Month 5: Golden Dataset",
+      "description": "100 Q&A pairs, Q&A interface",
+      "dueOn": "2025-06-14T00:00:00Z"
+    },
+    "number": 996,
+    "state": "OPEN",
+    "title": "[BGAI-056] Annotation: Terraforming Mars (20 Q&A pairs)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:32:01Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXmRw",
+        "name": "e2e",
+        "description": "End-to-end testing",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 995,
+    "state": "OPEN",
+    "title": "[BGAI-055] Month 4 integration testing"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:59Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 994,
+    "state": "OPEN",
+    "title": "[BGAI-054] Frontend build optimization"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:56Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 993,
+    "state": "OPEN",
+    "title": "[BGAI-052] Responsive design testing (320px-1920px)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:54Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 992,
+    "state": "OPEN",
+    "title": "[BGAI-051] Frontend component testing (Jest 90%+)"
+  },
+  {
+    "closedAt": "2025-11-12T05:49:39Z",
+    "createdAt": "2025-11-11T20:31:52Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 991,
+    "state": "CLOSED",
+    "title": "[BGAI-050] BoardGameAI page structure (/board-game-ai)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:50Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlkw",
+        "name": "i18n",
+        "description": "Internationalization (Italian)",
+        "color": "C2E0C6"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 990,
+    "state": "OPEN",
+    "title": "[BGAI-049] i18n setup (React Intl, it.json)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:48Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 989,
+    "state": "OPEN",
+    "title": "[BGAI-048] Base components (Button, Card, Input, Form)"
+  },
+  {
+    "closedAt": "2025-11-12T06:38:24Z",
+    "createdAt": "2025-11-11T20:31:45Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 988,
+    "state": "CLOSED",
+    "title": "[BGAI-046] Install shadcn/ui in Next.js app"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:44Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 987,
+    "state": "OPEN",
+    "title": "[BGAI-045] Quality framework integration tests"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:42Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ99dg",
+        "name": "monitoring",
+        "description": "Monitoring and observability",
+        "color": "1D76DB"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNVw9wA",
+        "name": "devops",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 986,
+    "state": "OPEN",
+    "title": "[BGAI-044] Grafana dashboard (5-metric gauges)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:40Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ99dg",
+        "name": "monitoring",
+        "description": "Monitoring and observability",
+        "color": "1D76DB"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 985,
+    "state": "OPEN",
+    "title": "[BGAI-043] Prometheus metrics (Board Game AI specific)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:38Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlfA",
+        "name": "quality",
+        "description": "Quality framework and metrics",
+        "color": "FBCA04"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 984,
+    "state": "OPEN",
+    "title": "[BGAI-042] Automated evaluation job (weekly cron)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:36Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkUg",
+        "name": "month-4",
+        "description": "Month 4: Quality Framework + Frontend",
+        "color": "F9D0C4"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlfA",
+        "name": "quality",
+        "description": "Quality framework and metrics",
+        "color": "FBCA04"
+      }
+    ],
+    "milestone": {
+      "number": 16,
+      "title": "Month 4: Quality Framework",
+      "description": "5-metric framework, shadcn/ui, Frontend foundation",
+      "dueOn": "2025-05-14T00:00:00Z"
+    },
+    "number": 983,
+    "state": "OPEN",
+    "title": "[BGAI-041] Extend PromptEvaluationService (5-metric framework)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:31:00Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol56A",
+        "name": "documentation",
+        "description": "Improvements or additions to documentation",
+        "color": "0075ca"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 982,
+    "state": "OPEN",
+    "title": "[BGAI-040] Update ADRs with validation implementation"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:58Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlfA",
+        "name": "quality",
+        "description": "Quality framework and metrics",
+        "color": "FBCA04"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 981,
+    "state": "OPEN",
+    "title": "[BGAI-039] Accuracy baseline measurement (target 80%+)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:55Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeZ4Qg",
+        "name": "bug-fix",
+        "description": "Bug fixes and edge cases",
+        "color": "d73a4a"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 980,
+    "state": "OPEN",
+    "title": "[BGAI-038] Bug fixes for validation edge cases"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:53Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 979,
+    "state": "OPEN",
+    "title": "[BGAI-037] Performance optimization (parallel validation)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:51Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXmRw",
+        "name": "e2e",
+        "description": "End-to-end testing",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 978,
+    "state": "OPEN",
+    "title": "[BGAI-036] End-to-end testing (question \u00e2\u2020\u2019 validated response)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:49Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9PxA",
+        "name": "integration",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 977,
+    "state": "OPEN",
+    "title": "[BGAI-035] Wire all 5 validation layers in RAG pipeline"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:47Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 976,
+    "state": "OPEN",
+    "title": "[BGAI-034] Unit tests for consensus validation (18 tests)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:45Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlTQ",
+        "name": "validation",
+        "description": "Multi-model validation",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 975,
+    "state": "OPEN",
+    "title": "[BGAI-033] Consensus similarity calculation (cosine \u00e2\u2030\u00a50.90)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:25Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNVwyxg",
+        "name": "llm",
+        "description": "LLM integration related",
+        "color": "7057FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlTQ",
+        "name": "validation",
+        "description": "Multi-model validation",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 974,
+    "state": "OPEN",
+    "title": "[BGAI-032] MultiModelValidationService (GPT-4 + Claude consensus)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:23Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 973,
+    "state": "OPEN",
+    "title": "[BGAI-031] Unit tests for 3 validation layers"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:21Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlTQ",
+        "name": "validation",
+        "description": "Multi-model validation",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 972,
+    "state": "OPEN",
+    "title": "[BGAI-030] HallucinationDetectionService (forbidden keywords)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:19Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlTQ",
+        "name": "validation",
+        "description": "Multi-model validation",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 971,
+    "state": "OPEN",
+    "title": "[BGAI-029] CitationValidationService (verify source references)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:30:18Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkNA",
+        "name": "month-3",
+        "description": "Month 3: Multi-Model Validation",
+        "color": "C5DEF5"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlTQ",
+        "name": "validation",
+        "description": "Multi-model validation",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 15,
+      "title": "Month 3: Multi-Model Validation",
+      "description": "5-layer validation, GPT-4 + Claude consensus",
+      "dueOn": "2025-04-14T00:00:00Z"
+    },
+    "number": 970,
+    "state": "OPEN",
+    "title": "[BGAI-028] ConfidenceValidationService (threshold \u00e2\u2030\u00a50.70)"
+  },
+  {
+    "closedAt": "2025-11-12T19:11:05Z",
+    "createdAt": "2025-11-11T20:29:47Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol56A",
+        "name": "documentation",
+        "description": "Improvements or additions to documentation",
+        "color": "0075ca"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 969,
+    "state": "CLOSED",
+    "title": "[BGAI-027] LLM integration documentation and ADR"
+  },
+  {
+    "closedAt": "2025-11-12T19:02:44Z",
+    "createdAt": "2025-11-11T20:29:46Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ99dg",
+        "name": "monitoring",
+        "description": "Monitoring and observability",
+        "color": "1D76DB"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 968,
+    "state": "CLOSED",
+    "title": "[BGAI-026] Cost tracking (Ollama vs OpenRouter)"
+  },
+  {
+    "closedAt": "2025-11-12T18:54:17Z",
+    "createdAt": "2025-11-11T20:29:44Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 967,
+    "state": "CLOSED",
+    "title": "[BGAI-025] Performance testing (latency <3s P95)"
+  },
+  {
+    "closedAt": "2025-11-12T18:36:33Z",
+    "createdAt": "2025-11-11T20:29:42Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 966,
+    "state": "CLOSED",
+    "title": "[BGAI-024] Backward compatibility testing for RAG"
+  },
+  {
+    "closedAt": "2025-11-12T18:18:20Z",
+    "createdAt": "2025-11-11T20:29:40Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPednZQ",
+        "name": "refactoring",
+        "description": "Code refactoring",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 965,
+    "state": "CLOSED",
+    "title": "[BGAI-023] Replace existing LLM calls in RagService with AdaptiveLlmService"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:29:01Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9PxA",
+        "name": "integration",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 964,
+    "state": "OPEN",
+    "title": "[BGAI-022] Integration tests for adaptive LLM routing"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:28:59Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACO0WY9Q",
+        "name": "configuration",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 963,
+    "state": "OPEN",
+    "title": "[BGAI-021] Feature flag AI:Provider configuration"
+  },
+  {
+    "closedAt": "2025-11-12T17:54:49Z",
+    "createdAt": "2025-11-11T20:28:57Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNVwyxg",
+        "name": "llm",
+        "description": "LLM integration related",
+        "color": "7057FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXluQ",
+        "name": "orchestration",
+        "description": "Service orchestration",
+        "color": "D93F0B"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 962,
+    "state": "CLOSED",
+    "title": "[BGAI-020] AdaptiveLlmService (routing logic between LLM providers)"
+  },
+  {
+    "closedAt": "2025-11-12T12:46:32Z",
+    "createdAt": "2025-11-11T20:28:55Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 961,
+    "state": "CLOSED",
+    "title": "[BGAI-019] Unit tests for LLM clients (Ollama + optional OpenRouter)"
+  },
+  {
+    "closedAt": "2025-11-12T13:37:43Z",
+    "createdAt": "2025-11-11T20:28:53Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNVwyxg",
+        "name": "llm",
+        "description": "LLM integration related",
+        "color": "7057FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 960,
+    "state": "CLOSED",
+    "title": "[BGAI-018] OpenRouterClient implementation (if Option B chosen)"
+  },
+  {
+    "closedAt": "2025-11-12T12:32:22Z",
+    "createdAt": "2025-11-11T20:27:56Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNVwyxg",
+        "name": "llm",
+        "description": "LLM integration related",
+        "color": "7057FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 959,
+    "state": "CLOSED",
+    "title": "[BGAI-017] Implement OllamaClient (C# wrapper for local LLM)"
+  },
+  {
+    "closedAt": "2025-11-12T12:19:17Z",
+    "createdAt": "2025-11-11T20:27:42Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNVwyxg",
+        "name": "llm",
+        "description": "LLM integration related",
+        "color": "7057FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkHA",
+        "name": "month-2",
+        "description": "Month 2: LLM Integration",
+        "color": "BFD4F2"
+      }
+    ],
+    "milestone": {
+      "number": 14,
+      "title": "Month 2: LLM Integration",
+      "description": "OpenRouter, Ollama, adaptive routing",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 958,
+    "state": "CLOSED",
+    "title": "[BGAI-016] Evaluate LLM strategy: Ollama-only vs OpenRouter+Ollama"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:26:33Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol56A",
+        "name": "documentation",
+        "description": "Improvements or additions to documentation",
+        "color": "0075ca"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 957,
+    "state": "OPEN",
+    "title": "[BGAI-015] Documentation (README, API docs, code comments)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:26:31Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlfA",
+        "name": "quality",
+        "description": "Quality framework and metrics",
+        "color": "FBCA04"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXmgQ",
+        "name": "code-review",
+        "description": "Code review needed",
+        "color": "FFA500"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 956,
+    "state": "OPEN",
+    "title": "[BGAI-014] Code review checklist for PDF processing"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T20:26:29Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeZ4Qg",
+        "name": "bug-fix",
+        "description": "Bug fixes and edge cases",
+        "color": "d73a4a"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 955,
+    "state": "OPEN",
+    "title": "[BGAI-013] Bug fixes and edge cases for PDF pipeline"
+  },
+  {
+    "closedAt": "2025-11-12T08:21:17Z",
+    "createdAt": "2025-11-11T20:23:30Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 954,
+    "state": "CLOSED",
+    "title": "[BGAI-003-v2] Unit tests for Unstructured integration (12 test cases)"
+  },
+  {
+    "closedAt": "2025-11-12T08:02:43Z",
+    "createdAt": "2025-11-11T20:23:27Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbI0Sg",
+        "name": "pdf",
+        "description": "PDF processing related",
+        "color": "0075CA"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 953,
+    "state": "CLOSED",
+    "title": "[BGAI-002-v2] Implement UnstructuredPdfExtractor (C# client for Python service)"
+  },
+  {
+    "closedAt": "2025-11-11T22:26:36Z",
+    "createdAt": "2025-11-11T20:23:06Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbI0Sg",
+        "name": "pdf",
+        "description": "PDF processing related",
+        "color": "0075CA"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXmBA",
+        "name": "python",
+        "description": "Python code",
+        "color": "3572A5"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 952,
+    "state": "CLOSED",
+    "title": "[BGAI-001-v2] Install and configure Unstructured library (Apache 2.0)"
+  },
+  {
+    "closedAt": "2025-11-12T09:38:16Z",
+    "createdAt": "2025-11-11T20:15:35Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXlfA",
+        "name": "quality",
+        "description": "Quality framework and metrics",
+        "color": "FBCA04"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 951,
+    "state": "CLOSED",
+    "title": "[BGAI-012] PDF quality validation (\u00e2\u2030\u00a50.80 quality score)"
+  },
+  {
+    "closedAt": "2025-11-12T09:48:03Z",
+    "createdAt": "2025-11-11T20:15:33Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9PxA",
+        "name": "integration",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXmRw",
+        "name": "e2e",
+        "description": "End-to-end testing",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 950,
+    "state": "CLOSED",
+    "title": "[BGAI-011] Integration tests for 3-stage PDF pipeline (end-to-end)"
+  },
+  {
+    "closedAt": "2025-11-12T09:27:59Z",
+    "createdAt": "2025-11-11T20:15:07Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbI0Sg",
+        "name": "pdf",
+        "description": "PDF processing related",
+        "color": "0075CA"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXluQ",
+        "name": "orchestration",
+        "description": "Service orchestration",
+        "color": "D93F0B"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 949,
+    "state": "CLOSED",
+    "title": "[BGAI-010] Implement EnhancedPdfProcessingOrchestrator (3-stage fallback)"
+  },
+  {
+    "closedAt": "2025-11-12T09:09:21Z",
+    "createdAt": "2025-11-11T20:15:05Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9PxA",
+        "name": "integration",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 948,
+    "state": "CLOSED",
+    "title": "[BGAI-008] Integration tests for SmolDocling pipeline"
+  },
+  {
+    "closedAt": "2025-11-12T08:37:51Z",
+    "createdAt": "2025-11-11T20:14:46Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbI0Sg",
+        "name": "pdf",
+        "description": "PDF processing related",
+        "color": "0075CA"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 947,
+    "state": "CLOSED",
+    "title": "[BGAI-007] Implement SmolDoclingPdfExtractor (C# client)"
+  },
+  {
+    "closedAt": "2025-11-12T07:47:10Z",
+    "createdAt": "2025-11-11T20:11:23Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNVw9wA",
+        "name": "devops",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeYbXQ",
+        "name": "docker",
+        "description": "Docker and containerization",
+        "color": "2088FF"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 946,
+    "state": "CLOSED",
+    "title": "[BGAI-006] Docker configuration for pdf-processor service"
+  },
+  {
+    "closedAt": "2025-11-12T05:58:34Z",
+    "createdAt": "2025-11-11T20:10:50Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXl5Q",
+        "name": "microservice",
+        "description": "Microservice implementation",
+        "color": "5319E7"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXmBA",
+        "name": "python",
+        "description": "Python code",
+        "color": "3572A5"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 945,
+    "state": "CLOSED",
+    "title": "[BGAI-005] Create FastAPI service for SmolDocling (Python)"
+  },
+  {
+    "closedAt": "2025-11-11T20:22:46Z",
+    "createdAt": "2025-11-11T20:10:48Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 944,
+    "state": "CLOSED",
+    "title": "[BGAI-004] Unit tests for LlmWhispererPdfExtractor (12 tests minimum)"
+  },
+  {
+    "closedAt": "2025-11-11T20:22:45Z",
+    "createdAt": "2025-11-11T20:10:45Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACO0WY9Q",
+        "name": "configuration",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 943,
+    "state": "CLOSED",
+    "title": "[BGAI-003] Add LLMWhisperer configuration (appsettings + feature flag)"
+  },
+  {
+    "closedAt": "2025-11-11T20:22:43Z",
+    "createdAt": "2025-11-11T20:10:43Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbI0Sg",
+        "name": "pdf",
+        "description": "PDF processing related",
+        "color": "0075CA"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 942,
+    "state": "CLOSED",
+    "title": "[BGAI-002] Implement LlmWhispererPdfExtractor (C# HttpClient wrapper)"
+  },
+  {
+    "closedAt": "2025-11-11T20:22:41Z",
+    "createdAt": "2025-11-11T20:10:41Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACO0WY9Q",
+        "name": "configuration",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": {
+      "number": 13,
+      "title": "Month 1: PDF Processing",
+      "description": "LLMWhisperer, SmolDocling, 3-stage pipeline",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 941,
+    "state": "CLOSED",
+    "title": "[BGAI-001] Setup LLMWhisperer account and API key configuration"
+  },
+  {
+    "closedAt": "2025-11-12T07:42:54Z",
+    "createdAt": "2025-11-11T17:13:38Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeKn9Q",
+        "name": "board-game-ai",
+        "description": "Board Game AI features",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPeXkCA",
+        "name": "month-1",
+        "description": "Month 1: PDF Processing Pipeline",
+        "color": "D4C5F9"
+      }
+    ],
+    "milestone": null,
+    "number": 940,
+    "state": "CLOSED",
+    "title": "[DDD] Migrate PdfTextExtractionService to IPdfTextExtractor adapter"
+  },
+  {
+    "closedAt": "2025-11-11T17:11:33Z",
+    "createdAt": "2025-11-11T16:58:46Z",
+    "labels": [],
+    "milestone": null,
+    "number": 939,
+    "state": "CLOSED",
+    "title": "[DDD] Complete PdfValidationService Migration"
+  },
+  {
+    "closedAt": "2025-11-11T20:35:23Z",
+    "createdAt": "2025-11-11T16:04:16Z",
+    "labels": [],
+    "milestone": null,
+    "number": 937,
+    "state": "CLOSED",
+    "title": "[DDD] Complete Remaining 5% - PDF Services + RAG Split"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T15:52:08Z",
+    "labels": [],
+    "milestone": null,
+    "number": 936,
+    "state": "OPEN",
+    "title": "\u00f0\u0178\u201d\u00ac Spike: POC Infisical Secret Rotation (Phase 2)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T14:43:01Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": null,
+    "number": 935,
+    "state": "OPEN",
+    "title": "[FRONTEND-29] Epic: Performance & Accessibility (Phase 6)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T14:42:57Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": null,
+    "number": 934,
+    "state": "OPEN",
+    "title": "[FRONTEND-24] Epic: Design Polish (Phase 5)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T14:42:31Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": null,
+    "number": 933,
+    "state": "OPEN",
+    "title": "[FRONTEND-12] Epic: App Router Migration (Phase 3)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T14:42:06Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": null,
+    "number": 932,
+    "state": "OPEN",
+    "title": "[FRONTEND-19] Epic: Advanced Features (Phase 4)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T14:41:57Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": null,
+    "number": 931,
+    "state": "OPEN",
+    "title": "[FRONTEND-7] Epic: React 19 Optimization (Phase 2)"
+  },
+  {
+    "closedAt": "2025-11-12T10:43:08Z",
+    "createdAt": "2025-11-11T14:39:18Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 930,
+    "state": "CLOSED",
+    "title": "[FRONTEND-5] Component migration strategy and execution (20-30 components)"
+  },
+  {
+    "closedAt": "2025-11-12T07:55:21Z",
+    "createdAt": "2025-11-11T14:38:41Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 929,
+    "state": "CLOSED",
+    "title": "[FRONTEND-4] Implement theming system with dark/light/auto modes"
+  },
+  {
+    "closedAt": "2025-11-12T18:56:16Z",
+    "createdAt": "2025-11-11T14:38:36Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 928,
+    "state": "CLOSED",
+    "title": "[FRONTEND-3] Design tokens migration to CSS variables"
+  },
+  {
+    "closedAt": "2025-11-12T19:10:40Z",
+    "createdAt": "2025-11-11T14:38:32Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 927,
+    "state": "CLOSED",
+    "title": "[FRONTEND-2] Install and configure shadcn/ui"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T14:37:48Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": null,
+    "number": 926,
+    "state": "OPEN",
+    "title": "[FRONTEND-1] Epic: Foundation & Quick Wins (Phase 1)"
+  },
+  {
+    "closedAt": "2025-11-12T07:38:02Z",
+    "createdAt": "2025-11-11T11:51:06Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 925,
+    "state": "CLOSED",
+    "title": "[DDD] AI Agents Architecture Decision"
+  },
+  {
+    "closedAt": "2025-11-11T16:02:58Z",
+    "createdAt": "2025-11-11T11:46:25Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbnUWg",
+        "name": "prerequisite",
+        "description": "Prerequisite for other issues",
+        "color": "D93F0B"
+      }
+    ],
+    "milestone": null,
+    "number": 924,
+    "state": "CLOSED",
+    "title": "[DDD] Extend KnowledgeBase with ChatThread Support"
+  },
+  {
+    "closedAt": "2025-11-11T16:02:11Z",
+    "createdAt": "2025-11-11T11:46:11Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbnUWg",
+        "name": "prerequisite",
+        "description": "Prerequisite for other issues",
+        "color": "D93F0B"
+      }
+    ],
+    "milestone": null,
+    "number": 923,
+    "state": "CLOSED",
+    "title": "[DDD] Create GameManagement Bounded Context"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:37:37Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidyw",
+        "name": "fase-4-advanced",
+        "description": "FASE 4: Advanced Features",
+        "color": "6554C0"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbii3A",
+        "name": "email",
+        "description": "Email integration",
+        "color": "0065FF"
+      }
+    ],
+    "milestone": {
+      "number": 12,
+      "title": "FASE 4: Advanced Features",
+      "description": "Reporting and alerting system",
+      "dueOn": "2025-12-30T00:00:00Z"
+    },
+    "number": 922,
+    "state": "OPEN",
+    "title": "[Testing] E2E report generation + Email validation"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:37:35Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidyw",
+        "name": "fase-4-advanced",
+        "description": "FASE 4: Advanced Features",
+        "color": "6554C0"
+      }
+    ],
+    "milestone": {
+      "number": 12,
+      "title": "FASE 4: Advanced Features",
+      "description": "Reporting and alerting system",
+      "dueOn": "2025-12-30T00:00:00Z"
+    },
+    "number": 921,
+    "state": "OPEN",
+    "title": "[Frontend] Enhanced alert configuration UI"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:37:33Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidyw",
+        "name": "fase-4-advanced",
+        "description": "FASE 4: Advanced Features",
+        "color": "6554C0"
+      }
+    ],
+    "milestone": {
+      "number": 12,
+      "title": "FASE 4: Advanced Features",
+      "description": "Reporting and alerting system",
+      "dueOn": "2025-12-30T00:00:00Z"
+    },
+    "number": 920,
+    "state": "OPEN",
+    "title": "[Frontend] /pages/admin/reports.tsx - Report builder"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:37:31Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidyw",
+        "name": "fase-4-advanced",
+        "description": "FASE 4: Advanced Features",
+        "color": "6554C0"
+      }
+    ],
+    "milestone": {
+      "number": 12,
+      "title": "FASE 4: Advanced Features",
+      "description": "Reporting and alerting system",
+      "dueOn": "2025-12-30T00:00:00Z"
+    },
+    "number": 919,
+    "state": "OPEN",
+    "title": "[Testing] Unit tests ReportingService (90%+)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:37:29Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidyw",
+        "name": "fase-4-advanced",
+        "description": "FASE 4: Advanced Features",
+        "color": "6554C0"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbii3A",
+        "name": "email",
+        "description": "Email integration",
+        "color": "0065FF"
+      }
+    ],
+    "milestone": {
+      "number": 12,
+      "title": "FASE 4: Advanced Features",
+      "description": "Reporting and alerting system",
+      "dueOn": "2025-12-30T00:00:00Z"
+    },
+    "number": 918,
+    "state": "OPEN",
+    "title": "[Backend] Email delivery integration for reports"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:37:27Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidyw",
+        "name": "fase-4-advanced",
+        "description": "FASE 4: Advanced Features",
+        "color": "6554C0"
+      }
+    ],
+    "milestone": {
+      "number": 12,
+      "title": "FASE 4: Advanced Features",
+      "description": "Reporting and alerting system",
+      "dueOn": "2025-12-30T00:00:00Z"
+    },
+    "number": 917,
+    "state": "OPEN",
+    "title": "[Backend] Report templates - 4 predefined templates"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:37:25Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidyw",
+        "name": "fase-4-advanced",
+        "description": "FASE 4: Advanced Features",
+        "color": "6554C0"
+      }
+    ],
+    "milestone": {
+      "number": 12,
+      "title": "FASE 4: Advanced Features",
+      "description": "Reporting and alerting system",
+      "dueOn": "2025-12-30T00:00:00Z"
+    },
+    "number": 916,
+    "state": "OPEN",
+    "title": "[Backend] ReportingService.cs - Generation + Scheduling"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:37:23Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidyw",
+        "name": "fase-4-advanced",
+        "description": "FASE 4: Advanced Features",
+        "color": "6554C0"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": {
+      "number": 12,
+      "title": "FASE 4: Advanced Features",
+      "description": "Reporting and alerting system",
+      "dueOn": "2025-12-30T00:00:00Z"
+    },
+    "number": 915,
+    "state": "OPEN",
+    "title": "FASE 4: Advanced Features - Reporting System + Advanced Alerting"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:36:38Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACO0WYwA",
+        "name": "security",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 914,
+    "state": "OPEN",
+    "title": "[Testing] E2E + Security audit + Stress test (1000+ users)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:36:36Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 913,
+    "state": "OPEN",
+    "title": "[Testing] Jest tests management components (90%+)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:36:35Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiiIw",
+        "name": "reusable",
+        "description": "Reusable component",
+        "color": "00B8D9"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 912,
+    "state": "OPEN",
+    "title": "[Frontend] BulkActionBar component"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:36:33Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 911,
+    "state": "OPEN",
+    "title": "[Frontend] UserActivityTimeline component"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:36:31Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiiIw",
+        "name": "reusable",
+        "description": "Reusable component",
+        "color": "00B8D9"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 910,
+    "state": "OPEN",
+    "title": "[Frontend] FilterPanel component - Reusable advanced filters"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:36:29Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 909,
+    "state": "OPEN",
+    "title": "[Frontend] API key creation modal with scopes"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:36:27Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 908,
+    "state": "OPEN",
+    "title": "[Frontend] /pages/admin/api-keys.tsx - API key management UI"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:59Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 907,
+    "state": "OPEN",
+    "title": "[Testing] Unit tests bulk operations (90%+)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:57Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 906,
+    "state": "OPEN",
+    "title": "[Backend] CSV import/export utility"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:55Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 905,
+    "state": "OPEN",
+    "title": "[Backend] UserManagementService - Bulk operations"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:53Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 904,
+    "state": "OPEN",
+    "title": "[Backend] ApiKeyManagementService - Usage statistics"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:51Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidjg",
+        "name": "fase-3-management",
+        "description": "FASE 3: Enhanced Management",
+        "color": "FF8B00"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": {
+      "number": 11,
+      "title": "FASE 3: Enhanced Management",
+      "description": "API keys and user management enhancements",
+      "dueOn": "2025-12-23T00:00:00Z"
+    },
+    "number": 903,
+    "state": "OPEN",
+    "title": "FASE 3: Enhanced Management - API Keys + User Management + Bulk Ops"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:17Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 902,
+    "state": "OPEN",
+    "title": "[Testing] E2E test + Load test (100 concurrent users)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:15Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 901,
+    "state": "OPEN",
+    "title": "[Integration] Grafana embed iframe setup"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:13Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 900,
+    "state": "OPEN",
+    "title": "[Testing] Jest tests infrastructure components (90%+)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:11Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 899,
+    "state": "OPEN",
+    "title": "[Frontend] /pages/admin/infrastructure.tsx"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:09Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 898,
+    "state": "OPEN",
+    "title": "[Frontend] MetricsChart component (Chart.js)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:07Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 897,
+    "state": "OPEN",
+    "title": "[Frontend] ServiceCard component (health, metrics, actions)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:35:05Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 896,
+    "state": "OPEN",
+    "title": "[Frontend] ServiceHealthMatrix component"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:34:39Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 895,
+    "state": "OPEN",
+    "title": "[Testing] Unit tests InfrastructureMonitoringService (90%+)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:34:37Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 894,
+    "state": "OPEN",
+    "title": "[Backend] GET /api/v1/admin/infrastructure/details"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:34:35Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 893,
+    "state": "OPEN",
+    "title": "[Backend] Prometheus client integration"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:34:33Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 892,
+    "state": "OPEN",
+    "title": "[Backend] Extend /health endpoints with detailed metrics"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:34:31Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 891,
+    "state": "OPEN",
+    "title": "[Backend] InfrastructureMonitoringService.cs"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:34:29Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbidTQ",
+        "name": "fase-2-infrastructure",
+        "description": "FASE 2: Infrastructure Monitoring",
+        "color": "00875A"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": {
+      "number": 10,
+      "title": "FASE 2: Infrastructure Monitoring",
+      "description": "Multi-service health monitoring",
+      "dueOn": "2025-12-09T00:00:00Z"
+    },
+    "number": 890,
+    "state": "OPEN",
+    "title": "FASE 2: Infrastructure Monitoring - Multi-Service Health Checks"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:33:54Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 889,
+    "state": "OPEN",
+    "title": "[Testing] Performance (<1s) + Accessibility (WCAG AA)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:33:52Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 888,
+    "state": "OPEN",
+    "title": "[Testing] E2E Playwright test - Dashboard flow"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:33:50Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 887,
+    "state": "OPEN",
+    "title": "[Testing] Jest tests dashboard components (90%+ coverage)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:33:31Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 886,
+    "state": "OPEN",
+    "title": "[Frontend] Dashboard API integration + 30s polling"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:33:29Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 885,
+    "state": "OPEN",
+    "title": "[Frontend] /pages/admin/index.tsx - Dashboard page"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:33:27Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 884,
+    "state": "OPEN",
+    "title": "[Frontend] ActivityFeed component"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:33:25Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 883,
+    "state": "OPEN",
+    "title": "[Frontend] MetricsGrid component (4x3 grid)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:33:23Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbih5w",
+        "name": "component",
+        "description": "UI Component",
+        "color": "1E90FF"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiiIw",
+        "name": "reusable",
+        "description": "Reusable component",
+        "color": "00B8D9"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 882,
+    "state": "OPEN",
+    "title": "[Frontend] StatCard reusable component"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:33:21Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 881,
+    "state": "OPEN",
+    "title": "[Frontend] AdminLayout component (sidebar, header, breadcrumbs)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:32:55Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 880,
+    "state": "OPEN",
+    "title": "[Testing] Unit tests AdminDashboardService (90%+ coverage)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:32:53Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 879,
+    "state": "OPEN",
+    "title": "[Backend] HybridCache for dashboard stats (1min TTL)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:32:52Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 878,
+    "state": "OPEN",
+    "title": "[Backend] Activity Feed Service - GetRecentActivityAsync()"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:32:50Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 877,
+    "state": "OPEN",
+    "title": "[Backend] GET /api/v1/admin/dashboard/stats endpoint"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:32:48Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 876,
+    "state": "OPEN",
+    "title": "[Backend] Aggregate metrics from existing services"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:32:20Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 875,
+    "state": "OPEN",
+    "title": "[Backend] AdminDashboardService.cs - GetSystemStatsAsync()"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T11:32:02Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbiU5w",
+        "name": "admin-console",
+        "description": "Admin Console implementation",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbic_g",
+        "name": "fase-1-dashboard",
+        "description": "FASE 1: Dashboard Overview",
+        "color": "00B8D9"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbieYQ",
+        "name": "mvp",
+        "description": "MVP feature (FASE 1-2)",
+        "color": "00C7E6"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbihuQ",
+        "name": "epic",
+        "description": "Epic issue",
+        "color": "172B4D"
+      }
+    ],
+    "milestone": {
+      "number": 9,
+      "title": "FASE 1: Dashboard Overview",
+      "description": "Dashboard with system status and metrics",
+      "dueOn": "2025-11-25T00:00:00Z"
+    },
+    "number": 874,
+    "state": "OPEN",
+    "title": "FASE 1: Dashboard Overview - Centralized Admin Dashboard"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:51Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": {
+      "number": 6,
+      "title": "MVP Sprint 3",
+      "description": "Chat Enhancement (2 weeks)",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 873,
+    "state": "OPEN",
+    "title": "[TESTING] Performance Test Suite"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:50Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNZ6HNQ",
+        "name": "ci-cd",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": {
+      "number": 4,
+      "title": "MVP Sprint 1",
+      "description": "Authentication & Settings (2 weeks)",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 872,
+    "state": "OPEN",
+    "title": "[CI/CD] Coverage Reporting & Gates"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:47Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNZ6HNQ",
+        "name": "ci-cd",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": {
+      "number": 4,
+      "title": "MVP Sprint 1",
+      "description": "Authentication & Settings (2 weeks)",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 871,
+    "state": "OPEN",
+    "title": "[CI/CD] GitHub Actions - Test Automation Pipeline"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:45Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIx-Q",
+        "name": "sprint-5",
+        "description": "Sprint 5: Agents Foundation",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 8,
+      "title": "MVP Sprint 5",
+      "description": "Agents Foundation (2 weeks)",
+      "dueOn": "2025-04-18T00:00:00Z"
+    },
+    "number": 870,
+    "state": "OPEN",
+    "title": "[SPRINT-5] Integration Test Suite - Full Stack"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:43Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pww",
+        "name": "ai",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIx-Q",
+        "name": "sprint-5",
+        "description": "Sprint 5: Agents Foundation",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 8,
+      "title": "MVP Sprint 5",
+      "description": "Agents Foundation (2 weeks)",
+      "dueOn": "2025-04-18T00:00:00Z"
+    },
+    "number": 869,
+    "state": "OPEN",
+    "title": "[SPRINT-5] Move Validation (RuleSpec v2 Integration)"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:41Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIx-Q",
+        "name": "sprint-5",
+        "description": "Sprint 5: Agents Foundation",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 8,
+      "title": "MVP Sprint 5",
+      "description": "Agents Foundation (2 weeks)",
+      "dueOn": "2025-04-18T00:00:00Z"
+    },
+    "number": 868,
+    "state": "OPEN",
+    "title": "[SPRINT-5] Agent Selection UI"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:39Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pww",
+        "name": "ai",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIx-Q",
+        "name": "sprint-5",
+        "description": "Sprint 5: Agents Foundation",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 8,
+      "title": "MVP Sprint 5",
+      "description": "Agents Foundation (2 weeks)",
+      "dueOn": "2025-04-18T00:00:00Z"
+    },
+    "number": 867,
+    "state": "OPEN",
+    "title": "[SPRINT-5] Game Master Agent Integration"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:38Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pww",
+        "name": "ai",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIx-Q",
+        "name": "sprint-5",
+        "description": "Sprint 5: Agents Foundation",
+        "color": "F9D0C4"
+      }
+    ],
+    "milestone": {
+      "number": 8,
+      "title": "MVP Sprint 5",
+      "description": "Agents Foundation (2 weeks)",
+      "dueOn": "2025-04-18T00:00:00Z"
+    },
+    "number": 866,
+    "state": "OPEN",
+    "title": "[SPRINT-5] AI Agents Entity & Configuration"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:36Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxxg",
+        "name": "sprint-4",
+        "description": "Sprint 4: Game Sessions MVP",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 7,
+      "title": "MVP Sprint 4",
+      "description": "Game Sessions MVP (3 weeks)",
+      "dueOn": "2025-04-04T00:00:00Z"
+    },
+    "number": 865,
+    "state": "OPEN",
+    "title": "[SPRINT-4] Session History & Statistics"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:34Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxxg",
+        "name": "sprint-4",
+        "description": "Sprint 4: Game Sessions MVP",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 7,
+      "title": "MVP Sprint 4",
+      "description": "Game Sessions MVP (3 weeks)",
+      "dueOn": "2025-04-04T00:00:00Z"
+    },
+    "number": 864,
+    "state": "OPEN",
+    "title": "[SPRINT-4] Active Session Management UI"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:31Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxxg",
+        "name": "sprint-4",
+        "description": "Sprint 4: Game Sessions MVP",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 7,
+      "title": "MVP Sprint 4",
+      "description": "Game Sessions MVP (3 weeks)",
+      "dueOn": "2025-04-04T00:00:00Z"
+    },
+    "number": 863,
+    "state": "OPEN",
+    "title": "[SPRINT-4] Session Setup Modal & UI"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:29Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxxg",
+        "name": "sprint-4",
+        "description": "Sprint 4: Game Sessions MVP",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 7,
+      "title": "MVP Sprint 4",
+      "description": "Game Sessions MVP (3 weeks)",
+      "dueOn": "2025-04-04T00:00:00Z"
+    },
+    "number": 862,
+    "state": "OPEN",
+    "title": "[SPRINT-4] GameSessionService Implementation"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:27Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNLax4g",
+        "name": "database",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxxg",
+        "name": "sprint-4",
+        "description": "Sprint 4: Game Sessions MVP",
+        "color": "E99695"
+      }
+    ],
+    "milestone": {
+      "number": 7,
+      "title": "MVP Sprint 4",
+      "description": "Game Sessions MVP (3 weeks)",
+      "dueOn": "2025-04-04T00:00:00Z"
+    },
+    "number": 861,
+    "state": "OPEN",
+    "title": "[SPRINT-4] Game Session Entity & Database"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:25Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxoA",
+        "name": "sprint-3",
+        "description": "Sprint 3: Chat Enhancement",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": {
+      "number": 6,
+      "title": "MVP Sprint 3",
+      "description": "Chat Enhancement (2 weeks)",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 860,
+    "state": "OPEN",
+    "title": "[SPRINT-3] Chat Export Functionality"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:23Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxoA",
+        "name": "sprint-3",
+        "description": "Sprint 3: Chat Enhancement",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": {
+      "number": 6,
+      "title": "MVP Sprint 3",
+      "description": "Chat Enhancement (2 weeks)",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 859,
+    "state": "OPEN",
+    "title": "[SPRINT-3] PDF Citation Display Enhancement"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:21Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxoA",
+        "name": "sprint-3",
+        "description": "Sprint 3: Chat Enhancement",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": {
+      "number": 6,
+      "title": "MVP Sprint 3",
+      "description": "Chat Enhancement (2 weeks)",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 858,
+    "state": "OPEN",
+    "title": "[SPRINT-3] Chat UI with Thread Sidebar"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:19Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNVw1tw",
+        "name": "rag",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxoA",
+        "name": "sprint-3",
+        "description": "Sprint 3: Chat Enhancement",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": {
+      "number": 6,
+      "title": "MVP Sprint 3",
+      "description": "Chat Enhancement (2 weeks)",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 857,
+    "state": "OPEN",
+    "title": "[SPRINT-3] Game-Specific Chat Context"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:17Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9QIA",
+        "name": "chat",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxoA",
+        "name": "sprint-3",
+        "description": "Sprint 3: Chat Enhancement",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": {
+      "number": 6,
+      "title": "MVP Sprint 3",
+      "description": "Chat Enhancement (2 weeks)",
+      "dueOn": "2025-03-14T00:00:00Z"
+    },
+    "number": 856,
+    "state": "OPEN",
+    "title": "[SPRINT-3] Chat Thread Management"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:14Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxUQ",
+        "name": "sprint-2",
+        "description": "Sprint 2: Game Library Foundation",
+        "color": "1D76DB"
+      }
+    ],
+    "milestone": {
+      "number": 5,
+      "title": "MVP Sprint 2",
+      "description": "Game Library Foundation (2 weeks)",
+      "dueOn": "2025-02-28T00:00:00Z"
+    },
+    "number": 855,
+    "state": "OPEN",
+    "title": "[SPRINT-2] Game Detail Page - 4 Tabs"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:12Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxUQ",
+        "name": "sprint-2",
+        "description": "Sprint 2: Game Library Foundation",
+        "color": "1D76DB"
+      }
+    ],
+    "milestone": {
+      "number": 5,
+      "title": "MVP Sprint 2",
+      "description": "Game Library Foundation (2 weeks)",
+      "dueOn": "2025-02-28T00:00:00Z"
+    },
+    "number": 854,
+    "state": "OPEN",
+    "title": "[SPRINT-2] Game Search & Filter UI"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:10Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxUQ",
+        "name": "sprint-2",
+        "description": "Sprint 2: Game Library Foundation",
+        "color": "1D76DB"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbI0Sg",
+        "name": "pdf",
+        "description": "PDF processing related",
+        "color": "0075CA"
+      }
+    ],
+    "milestone": {
+      "number": 5,
+      "title": "MVP Sprint 2",
+      "description": "Game Library Foundation (2 weeks)",
+      "dueOn": "2025-02-28T00:00:00Z"
+    },
+    "number": 853,
+    "state": "OPEN",
+    "title": "[SPRINT-2] PDF Upload & Processing Pipeline"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:08Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxUQ",
+        "name": "sprint-2",
+        "description": "Sprint 2: Game Library Foundation",
+        "color": "1D76DB"
+      }
+    ],
+    "milestone": {
+      "number": 5,
+      "title": "MVP Sprint 2",
+      "description": "Game Library Foundation (2 weeks)",
+      "dueOn": "2025-02-28T00:00:00Z"
+    },
+    "number": 852,
+    "state": "OPEN",
+    "title": "[SPRINT-2] GameService CRUD Implementation"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:06Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNLax4g",
+        "name": "database",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxUQ",
+        "name": "sprint-2",
+        "description": "Sprint 2: Game Library Foundation",
+        "color": "1D76DB"
+      }
+    ],
+    "milestone": {
+      "number": 5,
+      "title": "MVP Sprint 2",
+      "description": "Game Library Foundation (2 weeks)",
+      "dueOn": "2025-02-28T00:00:00Z"
+    },
+    "number": 851,
+    "state": "OPEN",
+    "title": "[SPRINT-2] Game Entity & Database Schema"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:04Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxBw",
+        "name": "sprint-1",
+        "description": "Sprint 1: Authentication & Settings",
+        "color": "0E8A16"
+      }
+    ],
+    "milestone": {
+      "number": 4,
+      "title": "MVP Sprint 1",
+      "description": "Authentication & Settings (2 weeks)",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 850,
+    "state": "OPEN",
+    "title": "[SPRINT-1] Unit Test Suite - Authentication Module"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:02Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdV2dg",
+        "name": "backend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxBw",
+        "name": "sprint-1",
+        "description": "Sprint 1: Authentication & Settings",
+        "color": "0E8A16"
+      }
+    ],
+    "milestone": {
+      "number": 4,
+      "title": "MVP Sprint 1",
+      "description": "Authentication & Settings (2 weeks)",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 849,
+    "state": "OPEN",
+    "title": "[SPRINT-1] User Profile Management Service"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:11:00Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMdVr9Q",
+        "name": "frontend",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxBw",
+        "name": "sprint-1",
+        "description": "Sprint 1: Authentication & Settings",
+        "color": "0E8A16"
+      }
+    ],
+    "milestone": {
+      "number": 4,
+      "title": "MVP Sprint 1",
+      "description": "Authentication & Settings (2 weeks)",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 848,
+    "state": "OPEN",
+    "title": "[SPRINT-1] Settings Pages - 4 Tabs Implementation"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:10:58Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pxg",
+        "name": "medium-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxBw",
+        "name": "sprint-1",
+        "description": "Sprint 1: Authentication & Settings",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIz0w",
+        "name": "authentication",
+        "description": "Authentication/Authorization",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": {
+      "number": 4,
+      "title": "MVP Sprint 1",
+      "description": "Authentication & Settings (2 weeks)",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 847,
+    "state": "OPEN",
+    "title": "[SPRINT-1] 2FA/TOTP Management UI"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-11T10:10:55Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Pcw",
+        "name": "high-priority",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIxBw",
+        "name": "sprint-1",
+        "description": "Sprint 1: Authentication & Settings",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACPbIz0w",
+        "name": "authentication",
+        "description": "Authentication/Authorization",
+        "color": "5319E7"
+      }
+    ],
+    "milestone": {
+      "number": 4,
+      "title": "MVP Sprint 1",
+      "description": "Authentication & Settings (2 weeks)",
+      "dueOn": "2025-02-14T00:00:00Z"
+    },
+    "number": 846,
+    "state": "OPEN",
+    "title": "[SPRINT-1] OAuth Integration Complete"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-10T15:00:43Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 844,
+    "state": "OPEN",
+    "title": "epic: UI/UX Automated Testing Roadmap 2025"
+  },
+  {
+    "closedAt": "2025-11-10T19:39:24Z",
+    "createdAt": "2025-11-10T14:59:39Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 843,
+    "state": "CLOSED",
+    "title": "test(e2e): Expand E2E test coverage to 80%+ critical user journeys"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-10T14:58:29Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 842,
+    "state": "OPEN",
+    "title": "test(perf): Implement automated performance testing with Lighthouse CI"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-10T14:57:46Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 841,
+    "state": "OPEN",
+    "title": "test(a11y): Implement automated accessibility testing with axe-core"
+  },
+  {
+    "closedAt": "2025-11-11T17:03:08Z",
+    "createdAt": "2025-11-10T13:01:08Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMRQAiw",
+        "name": "area/testing",
+        "description": "Auto-created",
+        "color": "777777"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNGFmqw",
+        "name": "kind/bug",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 838,
+    "state": "CLOSED",
+    "title": "test: Investigate SetupGuide endpoint HTTP 403 failures (9/10 tests)"
+  },
+  {
+    "closedAt": "2025-11-10T15:41:34Z",
+    "createdAt": "2025-11-09T17:05:49Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMqFhlg",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ9Q3w",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 829,
+    "state": "CLOSED",
+    "title": "ci: Investigate API test suite timeout in CI (xUnit v3)"
+  },
+  {
+    "closedAt": "2025-11-10T12:31:08Z",
+    "createdAt": "2025-11-09T14:26:58Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5Yw",
+        "name": "kind/task",
+        "description": "Task tecnico",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMRQAiw",
+        "name": "area/testing",
+        "description": "Auto-created",
+        "color": "777777"
+      }
+    ],
+    "milestone": null,
+    "number": 827,
+    "state": "CLOSED",
+    "title": "test: Investigate and fix 2 skipped mock LLM tests"
+  },
+  {
+    "closedAt": "2025-11-10T12:16:11Z",
+    "createdAt": "2025-11-09T12:04:07Z",
+    "labels": [],
+    "milestone": null,
+    "number": 823,
+    "state": "CLOSED",
+    "title": "feat: Migrate to React 19 and Next.js 16"
+  },
+  {
+    "closedAt": "2025-11-09T13:10:11Z",
+    "createdAt": "2025-11-09T09:24:45Z",
+    "labels": [],
+    "milestone": null,
+    "number": 821,
+    "state": "CLOSED",
+    "title": "test: Add Microsoft.Extensions.TimeProvider.Testing for deterministic time-based tests"
+  },
+  {
+    "closedAt": "2025-11-10T09:14:47Z",
+    "createdAt": "2025-11-09T09:24:30Z",
+    "labels": [],
+    "milestone": null,
+    "number": 820,
+    "state": "CLOSED",
+    "title": "feat: Create migration to seed default AI/LLM configurations"
+  },
+  {
+    "closedAt": "2025-11-09T17:35:21Z",
+    "createdAt": "2025-11-09T09:24:10Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACMqFhlg",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 819,
+    "state": "CLOSED",
+    "title": "test: Enable assembly-level test cleanup with Xunit.Extensions.AssemblyFixture"
+  },
+  {
+    "closedAt": null,
+    "createdAt": "2025-11-09T08:15:41Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5RA",
+        "name": "area/infra",
+        "description": "Infrastruttura e DevEx",
+        "color": "1f6feb"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl55w",
+        "name": "area/security",
+        "description": "Sicurezza e policy",
+        "color": "d73a4a"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLqgg1Q",
+        "name": "kind/policy",
+        "description": "Auto-created",
+        "color": "777777"
+      }
+    ],
+    "milestone": null,
+    "number": 818,
+    "state": "OPEN",
+    "title": "security: Establish quarterly security scan review process"
+  },
+  {
+    "closedAt": "2025-11-10T07:59:57Z",
+    "createdAt": "2025-11-09T08:15:01Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5RA",
+        "name": "area/infra",
+        "description": "Infrastruttura e DevEx",
+        "color": "1f6feb"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5Yw",
+        "name": "kind/task",
+        "description": "Task tecnico",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl55w",
+        "name": "area/security",
+        "description": "Sicurezza e policy",
+        "color": "d73a4a"
+      }
+    ],
+    "milestone": null,
+    "number": 817,
+    "state": "CLOSED",
+    "title": "devex: Add pre-commit hooks to prevent large file commits"
+  },
+  {
+    "closedAt": "2025-11-10T07:17:17Z",
+    "createdAt": "2025-11-09T08:14:33Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5RA",
+        "name": "area/infra",
+        "description": "Infrastruttura e DevEx",
+        "color": "1f6feb"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5Yw",
+        "name": "kind/task",
+        "description": "Task tecnico",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 816,
+    "state": "CLOSED",
+    "title": "devex: Implement automated cleanup scripts for cache directories"
+  },
+  {
+    "closedAt": "2025-11-09T12:05:40Z",
+    "createdAt": "2025-11-09T08:14:04Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5RA",
+        "name": "area/infra",
+        "description": "Infrastruttura e DevEx",
+        "color": "1f6feb"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5Yw",
+        "name": "kind/task",
+        "description": "Task tecnico",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl55w",
+        "name": "area/security",
+        "description": "Sicurezza e policy",
+        "color": "d73a4a"
+      }
+    ],
+    "milestone": null,
+    "number": 815,
+    "state": "CLOSED",
+    "title": "chore: Run comprehensive dependency audit (backend + frontend)"
+  },
+  {
+    "closedAt": "2025-11-09T14:27:29Z",
+    "createdAt": "2025-11-09T08:13:41Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5RA",
+        "name": "area/infra",
+        "description": "Infrastruttura e DevEx",
+        "color": "1f6feb"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5Yw",
+        "name": "kind/task",
+        "description": "Task tecnico",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 814,
+    "state": "CLOSED",
+    "title": "test: Investigate and fix 33 failing integration tests"
+  },
+  {
+    "closedAt": "2025-11-09T09:30:48Z",
+    "createdAt": "2025-11-09T08:13:12Z",
+    "labels": [],
+    "milestone": null,
+    "number": 813,
+    "state": "CLOSED",
+    "title": "chore: Review and resolve TODO/FIXME comments (5 files)"
+  },
+  {
+    "closedAt": "2025-11-09T07:29:36Z",
+    "createdAt": "2025-11-09T07:15:23Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol56A",
+        "name": "documentation",
+        "description": "Improvements or additions to documentation",
+        "color": "0075ca"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol5-Q",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACLpl5Yw",
+        "name": "kind/task",
+        "description": "Task tecnico",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 811,
+    "state": "CLOSED",
+    "title": "Cleanup Session Follow-up: Documentation Consolidation and Package Updates"
+  },
+  {
+    "closedAt": "2025-11-09T06:19:47Z",
+    "createdAt": "2025-11-08T20:25:53Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol53g",
+        "name": "bug",
+        "description": "Something isn't working",
+        "color": "d73a4a"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 808,
+    "state": "CLOSED",
+    "title": "TEST-900: Fix 29 remaining test failures (Post-TEST-800)"
+  },
+  {
+    "closedAt": "2025-11-08T19:00:29Z",
+    "createdAt": "2025-11-08T18:41:38Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol53g",
+        "name": "bug",
+        "description": "Something isn't working",
+        "color": "d73a4a"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMRQAiw",
+        "name": "area/testing",
+        "description": "Auto-created",
+        "color": "777777"
+      }
+    ],
+    "milestone": null,
+    "number": 805,
+    "state": "CLOSED",
+    "title": "TEST: Fix Docnet.Core OCR native library crash (0xC0000005)"
+  },
+  {
+    "closedAt": "2025-11-09T06:45:32Z",
+    "createdAt": "2025-11-07T15:04:02Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol53g",
+        "name": "bug",
+        "description": "Something isn't working",
+        "color": "d73a4a"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACNJ992g",
+        "name": "testing",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACO0WYwA",
+        "name": "security",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "milestone": null,
+    "number": 801,
+    "state": "CLOSED",
+    "title": "[TEST] Complete Integration Test Failure Fixes (13 failures)"
+  },
+  {
+    "closedAt": "2025-11-08T18:00:50Z",
+    "createdAt": "2025-11-07T13:51:23Z",
+    "labels": [
+      {
+        "id": "LA_kwDOP49zUs8AAAACLol53g",
+        "name": "bug",
+        "description": "Something isn't working",
+        "color": "d73a4a"
+      },
+      {
+        "id": "LA_kwDOP49zUs8AAAACMRQAiw",
+        "name": "area/testing",
+        "description": "Auto-created",
+        "color": "777777"
+      }
+    ],
+    "milestone": null,
+    "number": 800,
+    "state": "CLOSED",
+    "title": "TEST: Fix pre-existing test failures discovered in CODE-02"
+  }
+]

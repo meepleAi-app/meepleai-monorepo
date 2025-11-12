@@ -13,7 +13,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
 import Link from "next/link";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "@/components/Toast";
 import { api, SystemConfigurationDto } from "../../lib/api";
 import FeatureFlagsTab from "../../components/admin/FeatureFlagsTab";
 import CategoryConfigTab from "../../components/admin/CategoryConfigTab";
@@ -151,8 +151,6 @@ export default function ConfigurationManagement() {
       <Head>
         <title>Configuration Management - MeepleAI Admin</title>
       </Head>
-
-      <Toaster position="top-right" />
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         {/* Restart Reminder Banner - Sticky Top */}

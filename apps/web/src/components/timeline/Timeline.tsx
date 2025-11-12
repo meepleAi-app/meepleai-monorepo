@@ -4,6 +4,8 @@ import { TimelineEvent, TimelineFilters, DEFAULT_FILTERS } from "@/lib/timeline-
 import { TimelineFilters as TimelineFiltersComponent } from "./TimelineFilters";
 import { TimelineEventList } from "./TimelineEventList";
 import { TimelineDetails } from "./TimelineDetails";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface TimelineProps {
   events: TimelineEvent[];
@@ -21,46 +23,20 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
 
   if (!isVisible) {
     return (
-      <button
+      <Button
         onClick={onToggleVisibility}
         aria-label="Show RAG Timeline"
-        style={{
-          position: "fixed",
-          bottom: 24,
-          right: 24,
-          padding: "12px 20px",
-          background: "#1a73e8",
-          color: "white",
-          border: "none",
-          borderRadius: 24,
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: "pointer",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          zIndex: 1000
-        }}
+        className="fixed bottom-6 right-6 rounded-full shadow-md z-[1000] flex items-center gap-2"
         title="Mostra Timeline RAG"
       >
-        <span style={{ fontSize: 18 }}>📊</span>
+        <span className="text-lg">📊</span>
         <span>Timeline RAG</span>
         {events.length > 0 && (
-          <span
-            style={{
-              padding: "2px 8px",
-              background: "white",
-              color: "#1a73e8",
-              borderRadius: 12,
-              fontSize: 12,
-              fontWeight: 700
-            }}
-          >
+          <Badge variant="secondary" className="ml-1">
             {events.length}
-          </span>
+          </Badge>
         )}
-      </button>
+      </Button>
     );
   }
 
@@ -102,26 +78,15 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
             </p>
           </div>
         </div>
-        <button
+        <Button
           onClick={onToggleVisibility}
           aria-label="Close RAG Timeline"
-          style={{
-            padding: "10px 18px",
-            background: "#f1f3f4",
-            color: "#64748b",
-            border: "none",
-            borderRadius: 4,
-            fontSize: 14,
-            fontWeight: 500,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8
-          }}
+          variant="ghost"
+          className="flex items-center gap-2"
         >
           <span>Chiudi Timeline</span>
-          <span aria-hidden="true" style={{ fontSize: 16 }}>✕</span>
-        </button>
+          <span aria-hidden="true" className="text-base">✕</span>
+        </Button>
       </header>
 
       {/* Multi-pane Layout */}

@@ -76,7 +76,6 @@ export function ChatSidebar() {
           loadingText="Creazione..."
           onClick={handleCreateChat}
           disabled={!selectedGameId || !selectedAgentId}
-          spinnerSize="sm"
           aria-label="Create new chat"
           style={{
             width: '100%',

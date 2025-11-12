@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { api } from "../lib/api";
 import { AccessibleModal, AccessibleFormInput, AccessibleButton } from "@/components/accessible";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 type AuthUser = {
   id: string;
@@ -109,37 +112,45 @@ export default function Home() {
             <span className="text-4xl">🎲</span>
             <span className="text-2xl font-bold gradient-text">MeepleAI</span>
           </Link>
-          <nav aria-label="Main navigation" className="hidden md:flex items-center gap-6">
-            {authUser ? (
-              <>
-                <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
-                  Chat
-                </Link>
-                <Link href="/chess" className="text-slate-300 hover:text-white transition-colors">
-                  Chess
-                </Link>
-                <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">
-                  Upload
-                </Link>
-                {authUser.role === "Admin" && (
-                  <Link href="/admin" className="text-slate-300 hover:text-white transition-colors">
-                    Admin
+
+          {/* Navigation and theme switcher */}
+          <div className="flex items-center gap-4">
+            {/* Theme switcher - always visible on all screen sizes */}
+            <ThemeSwitcher />
+
+            {/* Navigation links - hidden on mobile */}
+            <nav aria-label="Main navigation" className="hidden md:flex items-center gap-6">
+              {authUser ? (
+                <>
+                  <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
+                    Chat
                   </Link>
-                )}
-                <button
-                  onClick={logout}
-                  className="btn-secondary-accessible text-sm py-2 px-4"
-                  aria-label="Logout from MeepleAI"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <button onClick={() => setShowAuthModal(true)} className="btn-primary" data-testid="nav-get-started">
-                Get Started
-              </button>
-            )}
-          </nav>
+                  <Link href="/chess" className="text-slate-300 hover:text-white transition-colors">
+                    Chess
+                  </Link>
+                  <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">
+                    Upload
+                  </Link>
+                  {authUser.role === "Admin" && (
+                    <Link href="/admin" className="text-slate-300 hover:text-white transition-colors">
+                      Admin
+                    </Link>
+                  )}
+                  <button
+                    onClick={logout}
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 py-2 px-4"
+                    aria-label="Logout from MeepleAI"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Button onClick={() => setShowAuthModal(true)} data-testid="nav-get-started">
+                  Get Started
+                </Button>
+              )}
+            </nav>
+          </div>
         </div>
       </header>
 
@@ -164,23 +175,32 @@ export default function Home() {
               Never argue about rules again. Get instant, accurate answers from any game&apos;s rulebook with AI-powered semantic search.
             </p>
             <div className="flex flex-wrap gap-4">
-              <motion.button
-                onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
-                className="btn-primary text-lg"
-                data-testid="hero-get-started"
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                {authUser ? "Go to Chat" : "Get Started Free"}
-              </motion.button>
-              <motion.a
-                href="#features"
-                className="btn-secondary-accessible text-lg"
+                <Button
+                  onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
+                  className="text-lg"
+                  data-testid="hero-get-started"
+                >
+                  {authUser ? "Go to Chat" : "Get Started Free"}
+                </Button>
+              </motion.div>
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                See How It Works
-              </motion.a>
+                <Button
+                  variant="outline"
+                  className="text-lg"
+                  asChild
+                >
+                  <a href="#features">
+                    See How It Works
+                  </a>
+                </Button>
+              </motion.div>
             </div>
             {!authUser && (
               <p className="text-sm text-slate-50 mt-4">
@@ -196,7 +216,7 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="hidden md:block"
           >
-            <div className="card p-6 shadow-2xl shadow-primary-500/20">
+            <Card className="p-6 shadow-2xl shadow-primary/20">
               <div className="space-y-4">
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
@@ -204,7 +224,7 @@ export default function Home() {
                   transition={{ duration: 0.4, delay: 0.4 }}
                   className="flex justify-end"
                 >
-                  <div className="bg-primary-500 text-white px-4 py-3 rounded-2xl max-w-[80%]">
+                  <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl max-w-[80%]">
                     How does en passant work in chess?
                   </div>
                 </motion.div>
@@ -214,17 +234,17 @@ export default function Home() {
                   transition={{ duration: 0.4, delay: 0.6 }}
                   className="space-y-2"
                 >
-                  <div className="card p-4">
+                  <Card className="p-4">
                     <p className="text-sm">
                       <strong>🤖 MeepleAI:</strong> En passant is a special pawn capture that can only occur immediately after a pawn moves two squares forward from its starting position and lands beside an opponent&apos;s pawn...
                     </p>
                     <p className="text-xs text-slate-400 mt-2 italic">
                       📖 Sources: Chess Rules (FIDE) - Page 12
                     </p>
-                  </div>
+                  </Card>
                 </motion.div>
               </div>
-            </div>
+            </Card>
           </motion.div>
         </div>
 
@@ -259,17 +279,18 @@ export default function Home() {
               { icon: "💬", title: "2. Ask", description: "Ask questions in natural language. No need to search through pages—just ask like you're talking to an expert." },
               { icon: "⚡", title: "3. Play", description: "Get instant answers with exact sources. Every answer includes page numbers and rule sections for verification." }
             ].map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={featuresInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="card text-center p-8 hover:scale-105 transition-transform"
-              >
-                <div className="text-6xl mb-4">{feature.icon}</div>
-                <h3 className="text-2xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-slate-50 leading-relaxed">{feature.description}</p>
-              </motion.div>
+              <Card key={index}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={featuresInView ? { opacity: 1, y: 0 } : {}}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  className="text-center p-8 hover:scale-105 transition-transform"
+                >
+                  <div className="text-6xl mb-4">{feature.icon}</div>
+                  <h3 className="text-2xl font-semibold mb-3">{feature.title}</h3>
+                  <p className="text-slate-50 leading-relaxed">{feature.description}</p>
+                </motion.div>
+              </Card>
             ))}
           </div>
         </div>
@@ -285,19 +306,20 @@ export default function Home() {
               { icon: "🔍", title: "Source Citations", description: "Every answer includes exact page numbers and sections. Trust but verify with direct source references." },
               { icon: "⚙️", title: "RuleSpec Editor", description: "Create machine-readable rule specifications. Perfect for game designers and tournament organizers." }
             ].map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
-                animate={keyFeaturesInView ? { opacity: 1, x: 0 } : {}}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="card p-6 hover:border-primary-500/50 transition-colors"
-              >
-                <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
-                  <span className="text-2xl">{feature.icon}</span>
-                  {feature.title}
-                </h3>
-                <p className="text-slate-50">{feature.description}</p>
-              </motion.div>
+              <Card key={index}>
+                <motion.div
+                  initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
+                  animate={keyFeaturesInView ? { opacity: 1, x: 0 } : {}}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  className="p-6 hover:border-primary/50 transition-colors"
+                >
+                  <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
+                    <span className="text-2xl">{feature.icon}</span>
+                    {feature.title}
+                  </h3>
+                  <p className="text-slate-50">{feature.description}</p>
+                </motion.div>
+              </Card>
             ))}
           </div>
         </div>
@@ -314,15 +336,18 @@ export default function Home() {
         >
           <h2 className="text-5xl font-bold">Ready to Stop Arguing About Rules?</h2>
           <p className="text-xl opacity-90">Join board game enthusiasts using AI to understand rules better</p>
-          <motion.button
-            onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
-            className="btn-primary text-lg bg-white text-primary-600 hover:bg-slate-100"
-            data-testid="cta-get-started"
+          <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            {authUser ? "Start Chatting" : "Get Started Free"}
-          </motion.button>
+            <Button
+              onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
+              className="text-lg bg-white text-primary hover:bg-slate-100"
+              data-testid="cta-get-started"
+            >
+              {authUser ? "Start Chatting" : "Get Started Free"}
+            </Button>
+          </motion.div>
         </motion.div>
       </section>
       </main>
@@ -397,7 +422,7 @@ export default function Home() {
               }}
               className={`px-6 py-3 font-medium transition-all ${
                 authMode === "login"
-                  ? "text-primary-500 border-b-2 border-primary-500"
+                  ? "text-primary border-b-2 border-primary"
                   : "text-slate-300 hover:text-white"
               }`}
             >
@@ -414,7 +439,7 @@ export default function Home() {
               }}
               className={`px-6 py-3 font-medium transition-all ${
                 authMode === "register"
-                  ? "text-primary-500 border-b-2 border-primary-500"
+                  ? "text-primary border-b-2 border-primary"
                   : "text-slate-300 hover:text-white"
               }`}
             >
@@ -501,7 +526,7 @@ export default function Home() {
                     id="register-role"
                     value={registerForm.role}
                     onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 outline-none focus:border-primary-500 transition-colors"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 outline-none focus:border-primary transition-colors"
                     aria-label="Select user role"
                   >
                     <option value="User">User</option>

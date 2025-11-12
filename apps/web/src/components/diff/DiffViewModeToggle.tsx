@@ -1,4 +1,6 @@
 import React from 'react';
+import { List, Columns2 } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export interface DiffViewModeToggleProps {
   currentMode: 'list' | 'side-by-side';
@@ -7,28 +9,35 @@ export interface DiffViewModeToggleProps {
 
 /**
  * Toggle between list and side-by-side diff views
+ * Migrated to shadcn UI components (ToggleGroup)
  */
 export function DiffViewModeToggle({ currentMode, onModeChange }: DiffViewModeToggleProps) {
   return (
-    <div className="diff-view-mode-toggle" role="radiogroup" aria-label="Diff view mode">
-      <button
-        onClick={() => onModeChange('list')}
-        className={`view-mode-button ${currentMode === 'list' ? 'view-mode-button--active' : ''}`}
-        role="radio"
-        aria-checked={currentMode === 'list'}
+    <ToggleGroup
+      type="single"
+      value={currentMode}
+      onValueChange={(value) => {
+        if (value) onModeChange(value as 'list' | 'side-by-side');
+      }}
+      className="diff-view-mode-toggle"
+      aria-label="Diff view mode"
+    >
+      <ToggleGroupItem
+        value="list"
         aria-label="List view"
+        className="gap-1.5"
       >
-        📋 List
-      </button>
-      <button
-        onClick={() => onModeChange('side-by-side')}
-        className={`view-mode-button ${currentMode === 'side-by-side' ? 'view-mode-button--active' : ''}`}
-        role="radio"
-        aria-checked={currentMode === 'side-by-side'}
+        <List className="h-4 w-4" />
+        List
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="side-by-side"
         aria-label="Side-by-side view"
+        className="gap-1.5"
       >
-        ⇄ Side-by-Side
-      </button>
-    </div>
+        <Columns2 className="h-4 w-4" />
+        Side-by-Side
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 }

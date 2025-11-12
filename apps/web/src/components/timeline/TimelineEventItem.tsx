@@ -7,6 +7,9 @@ import {
   getStatusIcon,
   formatDuration
 } from "@/lib/timeline-types";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface TimelineEventItemProps {
   event: TimelineEvent;
@@ -27,118 +30,66 @@ export function TimelineEventItem({
   const statusIcon = getStatusIcon(event.status);
 
   return (
-    <div
-      style={{
-        marginBottom: 12,
-        border: `2px solid ${isSelected ? typeColor : "#dadce0"}`,
-        borderRadius: 8,
-        background: isSelected ? "#f8f9fa" : "white",
-        overflow: "hidden",
-        transition: "all 0.2s ease"
-      }}
+    <Card
+      className={`mb-3 transition-all ${
+        isSelected ? "border-2" : "border"
+      } ${isSelected ? "bg-muted" : ""}`}
+      style={isSelected ? { borderColor: typeColor } : {}}
     >
-      {/* Event Header */}
-      <div
-        style={{
-          padding: 12,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          cursor: "pointer",
-          borderBottom: isExpanded ? "1px solid #dadce0" : "none"
-        }}
+      <CardHeader
+        className="p-3 cursor-pointer flex-row items-center gap-3 space-y-0"
+        style={{ borderBottom: isExpanded ? "1px solid hsl(var(--border))" : "none" }}
         onClick={() => onSelect(event.id)}
       >
         {/* Status Icon */}
         <div style={{ fontSize: 20, flexShrink: 0 }}>{statusIcon}</div>
 
         {/* Event Type Badge */}
-        <div
-          style={{
-            padding: "4px 10px",
-            background: typeColor,
-            color: "white",
-            borderRadius: 12,
-            fontSize: 11,
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            flexShrink: 0
-          }}
+        <Badge
+          className="uppercase tracking-wider shrink-0 text-white"
+          style={{ background: typeColor }}
         >
           {getEventTypeLabel(event.type)}
-        </div>
+        </Badge>
 
         {/* Event Summary */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 500,
-              color: "#202124",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap"
-            }}
-          >
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">
             {event.data.message || getEventTypeLabel(event.type)}
           </div>
-          <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+          <div className="text-xs text-muted-foreground mt-0.5">
             {event.timestamp.toLocaleTimeString()}
           </div>
         </div>
 
         {/* Metrics Badge */}
         {event.data.metrics && (
-          <div
-            style={{
-              padding: "4px 8px",
-              background: "#e8f0fe",
-              color: "#1967d2",
-              borderRadius: 4,
-              fontSize: 11,
-              fontWeight: 500,
-              flexShrink: 0
-            }}
-          >
+          <Badge variant="secondary" className="shrink-0">
             {event.data.metrics.latencyMs !== undefined &&
               formatDuration(event.data.metrics.latencyMs)}
             {event.data.metrics.totalTokens !== undefined &&
               ` • ${event.data.metrics.totalTokens} tokens`}
-          </div>
+          </Badge>
         )}
 
         {/* Expand/Collapse Button */}
-        <button
+        <Button
           onClick={(e) => {
             e.stopPropagation();
             onToggleExpand(event.id);
           }}
-          style={{
-            padding: "4px 8px",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 16,
-            color: "#64748b",
-            flexShrink: 0
-          }}
+          variant="ghost"
+          size="sm"
+          className="shrink-0 text-base"
           title={isExpanded ? "Comprimi" : "Espandi"}
         >
           {isExpanded ? "▲" : "▼"}
-        </button>
-      </div>
+        </Button>
+      </CardHeader>
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div
-          style={{
-            padding: 12,
-            background: "#fafafa",
-            fontSize: 12,
-            color: "#202124"
-          }}
-        >
+        <CardContent className="p-3 bg-muted/50 text-xs text-foreground">
           {/* Message Content */}
           {event.data.message && event.type === "message" && (
             <div style={{ marginBottom: 12 }}>
@@ -331,8 +282,8 @@ export function TimelineEventItem({
               {event.data.chatId && <div>Chat ID: {event.data.chatId}</div>}
             </div>
           </details>
-        </div>
+        </CardContent>
       )}
-    </div>
+    </Card>
   );
 }

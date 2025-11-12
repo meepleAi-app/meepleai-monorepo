@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import AnalyticsDashboard from '../../pages/admin/analytics';
 import { api } from '../../lib/api';
 import { createMockDashboardStats, createMockDashboardMetrics } from '../fixtures/common-fixtures';
@@ -93,7 +93,13 @@ describe('AnalyticsDashboard', () => {
 
     render(<AnalyticsDashboard />);
 
+    // Wait for initial load to complete
     await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(1));
+
+    // Wait for button to show "Refresh" (not "Refreshing...")
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    });
 
     mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
@@ -386,6 +392,12 @@ describe('AnalyticsDashboard', () => {
 
       render(<AnalyticsDashboard />);
 
+      // Wait for page to load first
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      // Then check for percentage value
       await waitFor(() => {
         expect(screen.getByText((content, element) => {
           const text = element?.textContent || '';
@@ -443,9 +455,14 @@ describe('AnalyticsDashboard', () => {
 
       const { container } = render(<AnalyticsDashboard />);
 
-      await waitFor(() => container.querySelectorAll('select')[0]);
+      // Wait for page to load by checking for Analytics Dashboard heading
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
 
       const select = container.querySelectorAll('select')[0] as HTMLSelectElement;
+      expect(select).toBeTruthy();
+
       fireEvent.change(select, { target: { value: '7' } });
 
       await waitFor(() => {
@@ -506,9 +523,14 @@ describe('AnalyticsDashboard', () => {
 
       const { container } = render(<AnalyticsDashboard />);
 
-      await waitFor(() => container.querySelectorAll('select')[1]);
+      // Wait for page to load
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
 
       const select = container.querySelectorAll('select')[1] as HTMLSelectElement;
+      expect(select).toBeTruthy();
+
       fireEvent.change(select, { target: { value: 'Admin' } });
 
       await waitFor(() => {
@@ -628,8 +650,10 @@ describe('AnalyticsDashboard', () => {
         expect(screen.getByText(/Analytics exported as CSV/)).toBeInTheDocument();
       });
 
-      // Fast-forward 5 seconds
-      jest.advanceTimersByTime(5000);
+      // Fast-forward 5 seconds - wrap in act() for React 19
+      await act(async () => {
+        jest.advanceTimersByTime(5000);
+      });
 
       await waitFor(() => {
         expect(screen.queryByText(/Analytics exported as CSV/)).not.toBeInTheDocument();
@@ -653,8 +677,10 @@ describe('AnalyticsDashboard', () => {
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(1));
 
-      // Fast-forward 30 seconds
-      jest.advanceTimersByTime(30000);
+      // Fast-forward 30 seconds - wrap in act() for React 19
+      await act(async () => {
+        jest.advanceTimersByTime(30000);
+      });
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(2));
 
@@ -673,11 +699,15 @@ describe('AnalyticsDashboard', () => {
       const autoButton = await screen.findByRole('button', { name: /Auto-refresh ON/i });
       fireEvent.click(autoButton);
 
-      // Fast-forward 30 seconds
-      jest.advanceTimersByTime(30000);
+      // Fast-forward 30 seconds - wrap in act() for React 19
+      await act(async () => {
+        jest.advanceTimersByTime(30000);
+      });
 
       // Should still be 1 call (no auto-refresh)
-      expect(mockApi.get).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledTimes(1);
+      });
 
       jest.useRealTimers();
     });

@@ -1,17 +1,17 @@
 /**
- * AccessibleModal Component (UI-05)
+ * AccessibleModal Component (UI-05) - Migrated to shadcn/ui
  *
  * A fully accessible modal dialog component following WCAG 2.1 AA standards.
+ * Now uses shadcn Dialog internally while preserving all accessibility features.
  *
  * Features:
  * - Proper ARIA attributes (role="dialog", aria-modal, aria-labelledby)
- * - Focus trap (prevents Tab outside modal)
- * - Focus restoration (returns focus to trigger element on close)
- * - ESC key to close
+ * - Focus trap (prevents Tab outside modal) - handled by Dialog
+ * - Focus restoration (returns focus to trigger element on close) - handled by Dialog
+ * - ESC key to close - handled by Dialog
  * - Backdrop click to close (optional)
- * - Scroll lock on body
+ * - Scroll lock on body - handled by Dialog
  * - Screen reader announcements
- * - Smooth animations with framer-motion
  *
  * @example
  * ```tsx
@@ -36,8 +36,14 @@
  * ```
  */
 
-import { useEffect, useRef, ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ReactNode, useRef } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 export interface AccessibleModalProps {
   /**
@@ -93,6 +99,7 @@ export interface AccessibleModalProps {
 
 /**
  * AccessibleModal component with full WCAG 2.1 AA compliance
+ * Now powered by shadcn/ui Dialog
  */
 export function AccessibleModal({
   isOpen,
@@ -105,224 +112,61 @@ export function AccessibleModal({
   className = '',
   size = 'md',
 }: AccessibleModalProps) {
-  // Refs for focus management
-  const modalRef = useRef<HTMLDivElement>(null);
-  const previouslyFocusedElement = useRef<HTMLElement | null>(null);
+  // Generate unique IDs for ARIA labels
   const titleId = useRef(`modal-title-${Math.random().toString(36).substr(2, 9)}`);
   const descriptionId = useRef(
     description ? `modal-desc-${Math.random().toString(36).substr(2, 9)}` : undefined
   );
 
-  // Size classes
+  // Size classes mapping
   const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    full: 'max-w-full mx-4',
+    sm: 'sm:max-w-[350px]',
+    md: 'sm:max-w-[500px]',
+    lg: 'sm:max-w-[700px]',
+    xl: 'sm:max-w-[900px]',
+    full: 'sm:max-w-[95vw]',
   };
 
-  // Focus trap effect
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // Store currently focused element to restore later
-    previouslyFocusedElement.current = document.activeElement as HTMLElement;
-
-    // Focus the modal container after opening
-    const focusModal = () => {
-      if (modalRef.current) {
-        // Try to focus first focusable element, or modal itself
-        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-
-        if (focusableElements.length > 0) {
-          focusableElements[0].focus();
-        } else {
-          modalRef.current.focus();
-        }
-      }
-    };
-
-    // Small delay to ensure modal is rendered
-    const timeoutId = setTimeout(focusModal, 100);
-
-    // Handle Tab key to trap focus
-    const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab' || !modalRef.current) return;
-
-      const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-
-      if (focusableElements.length === 0) return;
-
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
-
-      // Shift+Tab on first element -> focus last
-      if (e.shiftKey && document.activeElement === firstElement) {
-        e.preventDefault();
-        lastElement.focus();
-      }
-      // Tab on last element -> focus first
-      else if (!e.shiftKey && document.activeElement === lastElement) {
-        e.preventDefault();
-        firstElement.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleTab);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('keydown', handleTab);
-    };
-  }, [isOpen]);
-
-  // ESC key handler
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen, onClose]);
-
-  // Body scroll lock
-  useEffect(() => {
-    if (isOpen) {
-      // Prevent body scroll
-      document.body.style.overflow = 'hidden';
-    } else {
-      // Restore body scroll
-      document.body.style.overflow = '';
-    }
-
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
-  // Focus restoration on close
-  useEffect(() => {
-    if (!isOpen && previouslyFocusedElement.current) {
-      previouslyFocusedElement.current.focus();
-      previouslyFocusedElement.current = null;
-    }
-  }, [isOpen]);
-
-  // Handle backdrop click
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (closeOnBackdropClick && e.target === e.currentTarget) {
+  // Handle dialog close
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
       onClose();
     }
   };
 
+  // Handle backdrop click (Dialog handles this via onInteractOutside)
+  const handleInteractOutside = (e: Event) => {
+    if (!closeOnBackdropClick) {
+      e.preventDefault();
+    }
+  };
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={handleBackdropClick}
-            aria-hidden="true"
-          />
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className={cn(
+          sizeClasses[size],
+          className
+        )}
+        aria-modal="true"
+        aria-labelledby={titleId.current}
+        aria-describedby={descriptionId.current}
+        onInteractOutside={handleInteractOutside}
+        hideCloseButton={!showCloseButton}
+      >
+        {/* Title - direct child of DialogContent for Radix requirements */}
+        <DialogTitle id={titleId.current}>{title}</DialogTitle>
 
-          {/* Modal */}
-          <motion.div
-            ref={modalRef}
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2 }}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId.current}
-            aria-describedby={descriptionId.current}
-            tabIndex={-1}
-            className={`relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full ${sizeClasses[size]} ${className}`}
-          >
-            {/* Modal Header */}
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <h2
-                    id={titleId.current}
-                    className="text-xl font-semibold text-slate-900 dark:text-white"
-                  >
-                    {title}
-                  </h2>
-                  {description && (
-                    <p
-                      id={descriptionId.current}
-                      className="mt-1 text-sm text-slate-600 dark:text-slate-400"
-                    >
-                      {description}
-                    </p>
-                  )}
-                </div>
+        {/* Description */}
+        {description && (
+          <DialogDescription id={descriptionId.current}>
+            {description}
+          </DialogDescription>
+        )}
 
-                {/* Close Button */}
-                {showCloseButton && (
-                  <button
-                    onClick={onClose}
-                    aria-label="Close dialog"
-                    className="
-                      flex-shrink-0
-                      p-1
-                      text-slate-400
-                      hover:text-slate-600
-                      dark:hover:text-slate-200
-                      transition-colors
-                      rounded
-                      focus-visible:outline-none
-                      focus-visible:ring-2
-                      focus-visible:ring-primary-500
-                    "
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-6">{children}</div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+        {/* Modal Content */}
+        <div className="mt-4">{children}</div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -348,8 +348,8 @@ describe('PromptVersionCard', () => {
       );
 
       const activateButton = screen.getByText('Activate');
-      expect(activateButton).toHaveClass('bg-blue-600');
-      expect(activateButton).toHaveClass('text-white');
+      expect(activateButton).toHaveClass('bg-primary');
+      expect(activateButton).toHaveClass('text-primary-foreground');
     });
 
     it('should apply correct button styles for compare button', () => {
@@ -362,16 +362,16 @@ describe('PromptVersionCard', () => {
       );
 
       const compareButton = screen.getByText('Compare');
-      expect(compareButton).toHaveClass('bg-gray-200');
-      expect(compareButton).toHaveClass('text-gray-700');
+      expect(compareButton).toHaveClass('bg-secondary');
+      expect(compareButton).toHaveClass('text-secondary-foreground');
     });
 
     it('should apply correct button styles for view button', () => {
       render(<PromptVersionCard version={baseVersion} showActions={true} />);
 
       const viewButton = screen.getByText('View');
-      expect(viewButton).toHaveClass('bg-gray-100');
-      expect(viewButton).toHaveClass('text-gray-700');
+      expect(viewButton).toHaveClass('border');
+      expect(viewButton).toHaveClass('bg-background');
     });
   });
 });

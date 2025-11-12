@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { api } from "../lib/api";
 import { AccessibleButton } from "@/components/accessible";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 type AuthUser = {
   id: string;
@@ -90,18 +92,21 @@ export default function BoardGameAI() {
                     Admin
                   </Link>
                 )}
-                <button
+                <Button
                   onClick={logout}
-                  className="btn-secondary-accessible text-sm py-2 px-4"
+                  variant="outline"
+                  className="text-sm py-2 px-4"
                   aria-label="Logout from MeepleAI"
                 >
                   Logout
-                </button>
+                </Button>
               </>
             ) : (
-              <Link href="/login" className="btn-primary">
-                Login
-              </Link>
+              <Button asChild>
+                <Link href="/login">
+                  Login
+                </Link>
+              </Button>
             )}
           </nav>
         </div>
@@ -130,24 +135,33 @@ export default function BoardGameAI() {
                 Get instant, accurate answers to any board game rule question. Our AI understands complex rule interactions and provides precise citations from official rulebooks.
               </p>
               <div className="flex flex-wrap gap-4">
-                <motion.button
-                  onClick={handleGetStarted}
-                  className="btn-primary text-lg"
+                <Button
+                  asChild
+                  className="text-lg"
                   data-testid="hero-get-started"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                   disabled={loading}
                 >
-                  {loading ? "Loading..." : authUser ? "Ask a Question" : "Get Started Free"}
-                </motion.button>
-                <motion.a
-                  href="#features"
-                  className="btn-secondary-accessible text-lg"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  <motion.button
+                    onClick={handleGetStarted}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {loading ? "Loading..." : authUser ? "Ask a Question" : "Get Started Free"}
+                  </motion.button>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="text-lg"
                 >
-                  Learn More
-                </motion.a>
+                  <motion.a
+                    href="#features"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Learn More
+                  </motion.a>
+                </Button>
               </div>
             </motion.div>
 
@@ -158,7 +172,7 @@ export default function BoardGameAI() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="hidden md:block"
             >
-              <div className="card p-6 shadow-2xl shadow-primary-500/20">
+              <Card className="p-6 shadow-2xl shadow-primary/20">
                 <div className="space-y-4">
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
@@ -166,7 +180,7 @@ export default function BoardGameAI() {
                     transition={{ duration: 0.4, delay: 0.4 }}
                     className="flex justify-end"
                   >
-                    <div className="bg-primary-500 text-white px-4 py-3 rounded-2xl max-w-[80%]">
+                    <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl max-w-[80%]">
                       In Terraforming Mars, can I use a Standard Project during the production phase?
                     </div>
                   </motion.div>
@@ -176,7 +190,7 @@ export default function BoardGameAI() {
                     transition={{ duration: 0.4, delay: 0.6 }}
                     className="space-y-2"
                   >
-                    <div className="card p-4">
+                    <Card className="p-4">
                       <p className="text-sm">
                         <strong>🤖 Board Game AI:</strong> No, Standard Projects can only be performed during the Action Phase, not during the Production Phase. The Production Phase is exclusively for generating resources and moving the production track markers.
                       </p>
@@ -186,10 +200,10 @@ export default function BoardGameAI() {
                       <div className="mt-2 flex items-center gap-2 text-xs">
                         <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded">Confidence: 95%</span>
                       </div>
-                    </div>
+                    </Card>
                   </motion.div>
                 </div>
-              </div>
+              </Card>
             </motion.div>
           </div>
 
@@ -251,19 +265,20 @@ export default function BoardGameAI() {
                   description: "Confidence scoring, citation verification, multi-model consensus, and forbidden keyword detection ensure quality."
                 }
               ].map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
-                  animate={featuresInView ? { opacity: 1, x: 0 } : {}}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="card p-6 hover:border-primary-500/50 transition-colors"
-                >
-                  <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
-                    <span className="text-2xl">{feature.icon}</span>
-                    {feature.title}
-                  </h3>
-                  <p className="text-slate-50">{feature.description}</p>
-                </motion.div>
+                <Card key={index}>
+                  <motion.div
+                    initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
+                    animate={featuresInView ? { opacity: 1, x: 0 } : {}}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    className="p-6 hover:border-primary/50 transition-colors"
+                  >
+                    <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
+                      <span className="text-2xl">{feature.icon}</span>
+                      {feature.title}
+                    </h3>
+                    <p className="text-slate-50">{feature.description}</p>
+                  </motion.div>
+                </Card>
               ))}
             </div>
           </div>
@@ -300,17 +315,18 @@ export default function BoardGameAI() {
                   description: "Receive an AI-generated answer with confidence score, citations, and the option to view the source PDF."
                 }
               ].map((step, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={howItWorksInView ? { opacity: 1, y: 0 } : {}}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="card text-center p-8 hover:scale-105 transition-transform"
-                >
-                  <div className="text-6xl mb-4">{step.icon}</div>
-                  <h3 className="text-2xl font-semibold mb-3">{step.title}</h3>
-                  <p className="text-slate-50 leading-relaxed">{step.description}</p>
-                </motion.div>
+                <Card key={index}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={howItWorksInView ? { opacity: 1, y: 0 } : {}}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    className="text-center p-8 hover:scale-105 transition-transform"
+                  >
+                    <div className="text-6xl mb-4">{step.icon}</div>
+                    <h3 className="text-2xl font-semibold mb-3">{step.title}</h3>
+                    <p className="text-slate-50 leading-relaxed">{step.description}</p>
+                  </motion.div>
+                </Card>
               ))}
             </div>
           </div>
@@ -328,16 +344,20 @@ export default function BoardGameAI() {
             <p className="text-xl opacity-90">
               Join thousands of board game enthusiasts who trust AI for accurate rule clarifications
             </p>
-            <motion.button
-              onClick={handleGetStarted}
-              className="btn-primary text-lg bg-white text-primary-600 hover:bg-slate-100"
+            <Button
+              asChild
+              className="text-lg bg-white text-primary hover:bg-slate-100"
               data-testid="cta-get-started"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
               disabled={loading}
             >
-              {loading ? "Loading..." : authUser ? "Ask Your First Question" : "Get Started Free"}
-            </motion.button>
+              <motion.button
+                onClick={handleGetStarted}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {loading ? "Loading..." : authUser ? "Ask Your First Question" : "Get Started Free"}
+              </motion.button>
+            </Button>
             <p className="text-sm text-slate-50 mt-4">
               💡 No credit card required • 95%+ accuracy • Instant answers
             </p>

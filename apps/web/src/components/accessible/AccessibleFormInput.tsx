@@ -1,222 +1,178 @@
 /**
- * AccessibleFormInput Component (UI-05)
- *
- * A fully accessible form input component following WCAG 2.1 AA standards.
- *
- * Features:
- * - Proper label association (htmlFor/id)
- * - Error announcements with aria-live
- * - Hint/description with aria-describedby
- * - Required field indication
- * - Focus indicators
- * - High contrast support
- * - Support for different input types
- *
- * @example
- * ```tsx
- * // Basic input
- * <AccessibleFormInput
- *   label="Email"
- *   type="email"
- *   value={email}
- *   onChange={(e) => setEmail(e.target.value)}
- *   required
- * />
- *
- * // Input with hint
- * <AccessibleFormInput
- *   label="Password"
- *   type="password"
- *   value={password}
- *   onChange={(e) => setPassword(e.target.value)}
- *   hint="Must be at least 8 characters"
- *   required
- * />
- *
- * // Input with error
- * <AccessibleFormInput
- *   label="Username"
- *   value={username}
- *   onChange={(e) => setUsername(e.target.value)}
- *   error="Username is already taken"
- * />
- * ```
- */
-
-import { forwardRef, InputHTMLAttributes, useId } from 'react';
-
-export interface AccessibleFormInputProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'aria-label'> {
-  /**
-   * Input label text (required for accessibility)
+   * AccessibleFormInput Component (UI-06) - Migrated to shadcn/ui
+   *
+   * A fully accessible form input component following WCAG 2.1 AA standards.
+   * Now uses shadcn Input internally while preserving all accessibility features.
+   *
+   * Features:
+   * - Proper label associations (htmlFor/id)
+   * - Error state styling and announcements
+   * - Helper text support
+   * - Required field indicators
+   * - ARIA attributes for screen readers
+   * - Focus indicators (WCAG 2.1 AA compliant)
+   *
+   * @example
+   * ```tsx
+   * // Basic input
+   * <AccessibleFormInput
+   *   label="Email"
+   *   type="email"
+   *   value={email}
+   *   onChange={(e) => setEmail(e.target.value)}
+   *   required
+   * />
+   *
+   * // Input with error
+   * <AccessibleFormInput
+   *   label="Password"
+   *   type="password"
+   *   value={password}
+   *   onChange={(e) => setPassword(e.target.value)}
+   *   error="Password must be at least 8 characters"
+   *   required
+   * />
+   *
+   * // Input with hint
+   * <AccessibleFormInput
+   *   label="Username"
+   *   value={username}
+   *   onChange={(e) => setUsername(e.target.value)}
+   *   hint="Only letters, numbers, and underscores"
+   * />
+   * ```
    */
-  label: string;
 
-  /**
-   * Optional hint/description text
-   * Announced by screen readers via aria-describedby
-   */
-  hint?: string;
+  import { forwardRef, InputHTMLAttributes, useId } from 'react';
+  import { Input } from '@/components/ui/input';
+  import { cn } from '@/lib/utils';
 
-  /**
-   * Error message to display
-   * Announced by screen readers via aria-describedby and aria-invalid
-   */
-  error?: string;
+  export interface AccessibleFormInputProps extends InputHTMLAttributes<HTMLInputElement> {
+    /**
+     * Label text for the input
+     */
+    label: string;
 
-  /**
-   * Whether the label should be visually hidden (still accessible to screen readers)
-   * @default false
-   */
-  hideLabel?: boolean;
+    /**
+     * Error message to display
+     */
+    error?: string;
 
-  /**
-   * Additional CSS classes for the container
-   */
-  containerClassName?: string;
+    /**
+     * Helper text to display below the input
+     */
+    hint?: string;
 
-  /**
-   * Additional CSS classes for the input
-   */
-  inputClassName?: string;
-}
+    /**
+     * Hide label visually but keep it accessible for screen readers
+     * @default false
+     */
+    hideLabel?: boolean;
 
-/**
- * AccessibleFormInput component with full WCAG 2.1 AA compliance
- */
-export const AccessibleFormInput = forwardRef<HTMLInputElement, AccessibleFormInputProps>(
-  (
-    {
-      label,
-      hint,
-      error,
-      hideLabel = false,
-      required,
-      containerClassName = '',
-      inputClassName = '',
-      className,
-      id: providedId,
-      ...props
-    },
-    ref
-  ) => {
-    // Generate unique IDs for accessibility
-    const generatedId = useId();
-    const inputId = providedId || generatedId;
-    const hintId = hint ? `${inputId}-hint` : undefined;
-    const errorId = error ? `${inputId}-error` : undefined;
+    /**
+     * Additional CSS classes for the input element
+     */
+    inputClassName?: string;
 
-    // Combine aria-describedby (hint + error)
-    const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
-
-    // Base input classes
-    const baseInputClasses = [
-      'w-full',
-      'px-4',
-      'py-3',
-      'rounded-lg',
-      'border',
-      'transition-colors',
-      'duration-200',
-      // Normal state
-      'bg-white',
-      'dark:bg-slate-800',
-      'text-slate-900',
-      'dark:text-white',
-      'border-slate-300',
-      'dark:border-slate-600',
-      // Focus state (WCAG 2.1 AA)
-      'focus:outline-none',
-      'focus:ring-2',
-      'focus:ring-primary-500',
-      'focus:border-primary-500',
-      // Disabled state
-      'disabled:bg-slate-100',
-      'disabled:dark:bg-slate-900',
-      'disabled:cursor-not-allowed',
-      'disabled:opacity-60',
-      // Error state
-      error ? 'border-red-500' : '',
-      error ? 'focus:ring-red-500' : '',
-      error ? 'focus:border-red-500' : '',
-    ];
-
-    const inputClasses = [
-      ...baseInputClasses,
-      inputClassName || className || '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-
-    return (
-      <div className={`space-y-2 ${containerClassName}`}>
-        {/* Label */}
-        <label
-          htmlFor={inputId}
-          className={`
-            block
-            text-sm
-            font-medium
-            text-slate-700
-            dark:text-slate-300
-            ${hideLabel ? 'sr-only' : ''}
-          `}
-        >
-          {label}
-          {required && (
-            <span className="text-red-500 ml-1" aria-label="required">
-              *
-            </span>
-          )}
-        </label>
-
-        {/* Input */}
-        <input
-          ref={ref}
-          id={inputId}
-          className={inputClasses}
-          required={required}
-          aria-required={required || undefined}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy}
-          {...props}
-        />
-
-        {/* Hint Text */}
-        {hint && !error && (
-          <p id={hintId} className="text-sm text-slate-600 dark:text-slate-400">
-            {hint}
-          </p>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div
-            id={errorId}
-            role="alert"
-            aria-live="polite"
-            aria-atomic="true"
-            className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400"
-          >
-            {/* Error icon */}
-            <svg
-              className="w-5 h-5 flex-shrink-0 mt-0.5"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span>{error}</span>
-          </div>
-        )}
-      </div>
-    );
+    /**
+     * Additional CSS classes for the container
+     */
+    className?: string;
   }
-);
 
-AccessibleFormInput.displayName = 'AccessibleFormInput';
+  /**
+   * AccessibleFormInput component with full WCAG 2.1 AA compliance
+   * Now powered by shadcn/ui Input
+   */
+  export const AccessibleFormInput = forwardRef<HTMLInputElement, AccessibleFormInputProps>(
+    (
+      {
+        label,
+        error,
+        hint,
+        hideLabel = false,
+        id,
+        required,
+        className = '',
+        inputClassName = '',
+        type = 'text',
+        ...props
+      },
+      ref
+    ) => {
+      // Generate unique IDs for accessibility (P1: Use useId() to avoid duplicates)
+      const generatedId = useId();
+      const inputId = id || generatedId;
+      const errorId = `${inputId}-error`;
+      const hintId = `${inputId}-hint`;
+
+      // Build aria-describedby string
+      const descriptors = [
+        error ? errorId : null,
+        hint ? hintId : null,
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      return (
+        <div className={cn('space-y-2', className)}>
+          {/* Label */}
+          <label
+            htmlFor={inputId}
+            className={cn(
+              'block text-sm font-medium text-foreground',
+              hideLabel && 'sr-only'
+            )}
+          >
+            {label}
+            {required && (
+              <span className="text-destructive ml-1" aria-label="required">
+                *
+              </span>
+            )}
+          </label>
+
+          {/* Input */}
+          <Input
+            ref={ref}
+            id={inputId}
+            type={type}
+            className={cn(
+              'transition-colors',
+              error && 'border-destructive focus-visible:ring-destructive',
+              inputClassName
+            )}
+            aria-describedby={descriptors || undefined}
+            aria-invalid={!!error}
+            aria-required={required}
+            {...props}
+          />
+
+          {/* Helper text */}
+          {hint && !error && (
+            <p
+              id={hintId}
+              className="text-sm text-muted-foreground"
+            >
+              {hint}
+            </p>
+          )}
+
+          {/* Error message */}
+          {error && (
+            <div
+              id={errorId}
+              className="text-sm text-destructive"
+              role="alert"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {error}
+            </div>
+          )}
+        </div>
+      );
+    }
+  );
+
+  AccessibleFormInput.displayName = 'AccessibleFormInput';

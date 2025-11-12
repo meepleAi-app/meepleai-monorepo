@@ -19,6 +19,7 @@ export interface DiffToolbarProps {
 /**
  * Toolbar with statistics, search, and navigation controls
  * Positioned above the diff view
+ * Updated to use Tailwind classes consistent with shadcn UI
  */
 export function DiffToolbar({
   statistics,
@@ -32,14 +33,14 @@ export function DiffToolbar({
   compact = false
 }: DiffToolbarProps) {
   return (
-    <div className={`diff-toolbar ${compact ? 'diff-toolbar--compact' : ''}`}>
+    <div className={`diff-toolbar flex flex-wrap items-center gap-4 p-4 border-b ${compact ? 'diff-toolbar--compact p-2 gap-2' : ''}`}>
       <div className="diff-toolbar-section diff-toolbar-section--stats">
         <DiffStatistics statistics={statistics} compact={compact} />
       </div>
 
       {showNavigation && (
         <>
-          <div className="diff-toolbar-section diff-toolbar-section--search">
+          <div className="diff-toolbar-section diff-toolbar-section--search flex-1 min-w-64">
             <DiffSearchInput
               value={searchQuery}
               onChange={onSearchChange}

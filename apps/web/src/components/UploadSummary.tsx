@@ -4,6 +4,8 @@
  */
 
 import type { UploadQueueStats } from '../hooks/useUploadQueue';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface UploadSummaryProps {
   stats: UploadQueueStats;
@@ -148,53 +150,20 @@ export function UploadSummary({ stats, onClose, onClearAll }: UploadSummaryProps
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        <button
+        <Button
           onClick={onClose}
           aria-label="Close upload summary"
-          style={{
-            padding: '10px 20px',
-            fontSize: '14px',
-            fontWeight: 500,
-            color: 'white',
-            backgroundColor: '#0070f3',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#0051cc';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#0070f3';
-          }}
         >
           Close
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={onClearAll}
+          variant="outline"
           aria-label="Clear all items from queue"
-          style={{
-            padding: '10px 20px',
-            fontSize: '14px',
-            fontWeight: 500,
-            color: '#5f6368',
-            backgroundColor: 'white',
-            border: '1px solid #dadce0',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f5f5f5';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'white';
-          }}
         >
           Clear Queue
-        </button>
+        </Button>
       </div>
     </div>
   );

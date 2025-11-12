@@ -11,6 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// <summary>
 /// Hybrid LLM service coordinating multiple providers (Ollama, OpenRouter) with adaptive routing
 /// ISSUE-958: Implements hybrid architecture with user-tier based routing and traffic split
+/// ISSUE-962 (BGAI-020): Enhanced with circuit breaker, health monitoring, and latency tracking
 /// </summary>
 /// <remarks>
 /// Architecture:
@@ -24,6 +25,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// - Anonymous/User: Heavy Ollama usage
 /// - Editor: Balanced
 /// - Admin: Premium models prioritized
+///
+/// Reliability (BGAI-020):
+/// - Circuit breaker: Prevents cascading failures (5 failures → open for 30s)
+/// - Health monitoring: Integration with ProviderHealthCheckService
+/// - Latency tracking: Real-time performance metrics (avg, P50, P95, P99)
+/// - Automatic failover: Routes to healthy providers
 /// </remarks>
 public class HybridLlmService : ILlmService
 {
@@ -31,6 +38,12 @@ public class HybridLlmService : ILlmService
     private readonly ILlmRoutingStrategy _routingStrategy;
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<HybridLlmService> _logger;
+    private readonly ProviderHealthCheckService? _healthCheckService;
+
+    // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
+    private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new();
+    private readonly Dictionary<string, LatencyStats> _latencyStats = new();
+    private readonly object _monitoringLock = new();
 
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;
@@ -40,22 +53,33 @@ public class HybridLlmService : ILlmService
         IEnumerable<ILlmClient> clients,
         ILlmRoutingStrategy routingStrategy,
         ILlmCostLogRepository costLogRepository,
-        ILogger<HybridLlmService> logger)
+        ILogger<HybridLlmService> logger,
+        ProviderHealthCheckService? healthCheckService = null)
     {
         _clients = clients ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
         _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _healthCheckService = healthCheckService; // Optional - may not be registered in tests
 
         if (!_clients.Any())
         {
-            throw new InvalidOperationException("At least one ILlmClient must be registered");
+            throw new ArgumentNullException("At least one ILlmClient must be registered");
         }
 
+        // ISSUE-962: Initialize circuit breakers and latency stats for each provider
+        foreach (var client in _clients)
+        {
+            _circuitBreakers[client.ProviderName] = new CircuitBreakerState();
+            _latencyStats[client.ProviderName] = new LatencyStats();
+        }
+
+        var healthCheckStatus = _healthCheckService != null ? "enabled" : "disabled";
         _logger.LogInformation(
-            "HybridLlmService initialized with {ClientCount} providers: {Providers} (cost tracking enabled)",
+            "HybridLlmService initialized with {ClientCount} providers: {Providers} (cost tracking + circuit breaker + latency tracking + health checks {HealthCheckStatus})",
             _clients.Count(),
-            string.Join(", ", _clients.Select(c => c.ProviderName)));
+            string.Join(", ", _clients.Select(c => c.ProviderName)),
+            healthCheckStatus);
     }
 
     /// <inheritdoc/>
@@ -85,15 +109,14 @@ public class HybridLlmService : ILlmService
             return LlmCompletionResult.CreateFailure("No user prompt provided");
         }
 
-        // Route to appropriate provider
+        // ISSUE-962: Route with circuit breaker awareness
         var decision = _routingStrategy.SelectProvider(user);
-        var client = GetClient(decision.ProviderName);
+        var client = GetClientWithCircuitBreaker(decision.ProviderName);
 
         if (client == null)
         {
             _logger.LogError(
-                "No client found for provider {Provider}, falling back to first available",
-                decision.ProviderName);
+                "No available provider found (circuit breakers may be open), using first client as fallback");
             client = _clients.First();
         }
 
@@ -101,6 +124,7 @@ public class HybridLlmService : ILlmService
             "Generating completion via {Provider} ({Model}) - Reason: {Reason}",
             client.ProviderName, decision.ModelId, decision.Reason);
 
+        // ISSUE-962: Track latency and circuit breaker state
         var stopwatch = Stopwatch.StartNew();
 
         try
@@ -115,12 +139,17 @@ public class HybridLlmService : ILlmService
 
             stopwatch.Stop();
 
+            // ISSUE-962: Record success metrics
+            RecordSuccess(client.ProviderName, stopwatch.ElapsedMilliseconds);
+
             // Add routing metadata
             if (result.Success && result.Metadata is Dictionary<string, string> metadata)
             {
                 metadata["routing_decision"] = decision.Reason;
                 metadata["selected_provider"] = client.ProviderName;
                 metadata["selected_model"] = decision.ModelId;
+                metadata["latency_ms"] = stopwatch.ElapsedMilliseconds.ToString();
+                metadata["circuit_state"] = GetCircuitState(client.ProviderName);
             }
 
             // ISSUE-960: Log cost to database (fire and forget - don't block response)
@@ -160,9 +189,12 @@ public class HybridLlmService : ILlmService
         {
             stopwatch.Stop();
 
+            // ISSUE-962: Record failure metrics
+            RecordFailure(client.ProviderName, stopwatch.ElapsedMilliseconds);
+
             _logger.LogError(ex,
-                "Error generating completion with {Provider} ({Model})",
-                client.ProviderName, decision.ModelId);
+                "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
+                client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
 
             // ISSUE-960: Log failed request cost (fire and forget)
             _ = Task.Run(async () =>
@@ -345,5 +377,168 @@ public class HybridLlmService : ILlmService
         }
 
         return cleaned;
+    }
+
+    /// <summary>
+    /// ISSUE-962: Get LLM client with circuit breaker and health awareness
+    /// </summary>
+    private ILlmClient? GetClientWithCircuitBreaker(string providerName)
+    {
+        var client = GetClient(providerName);
+        if (client == null) return null;
+
+        // Check if provider is available (circuit breaker + health status)
+        if (!IsProviderAvailable(client.ProviderName))
+        {
+            _logger.LogWarning(
+                "Provider {Provider} unavailable (circuit open or unhealthy). Trying fallback...",
+                client.ProviderName);
+
+            // Try to find alternative provider
+            foreach (var fallbackClient in _clients.Where(c => c.ProviderName != client.ProviderName))
+            {
+                if (IsProviderAvailable(fallbackClient.ProviderName))
+                {
+                    _logger.LogInformation(
+                        "Using fallback provider {Fallback} (primary {Primary} unavailable)",
+                        fallbackClient.ProviderName, client.ProviderName);
+                    return fallbackClient;
+                }
+            }
+
+            _logger.LogWarning("No fallback provider available, all providers unavailable");
+            return null;
+        }
+
+        return client;
+    }
+
+    /// <summary>
+    /// ISSUE-962: Check if provider is available (circuit breaker + health check)
+    /// </summary>
+    private bool IsProviderAvailable(string providerName)
+    {
+        lock (_monitoringLock)
+        {
+            // Check circuit breaker
+            if (_circuitBreakers.TryGetValue(providerName, out var breaker))
+            {
+                if (!breaker.AllowsRequests())
+                {
+                    return false; // Circuit open - provider unavailable
+                }
+            }
+
+            // Check health status (if health check service is enabled)
+            if (_healthCheckService != null)
+            {
+                var healthStatus = _healthCheckService.GetProviderHealth(providerName);
+                if (healthStatus != null && !healthStatus.IsAvailable())
+                {
+                    _logger.LogDebug(
+                        "Provider {Provider} marked unhealthy: {Status}",
+                        providerName, healthStatus.GetStatusSummary());
+                    return false; // Unhealthy - provider unavailable
+                }
+            }
+
+            return true; // Provider is available
+        }
+    }
+
+    /// <summary>
+    /// ISSUE-962: Record successful request (circuit breaker + latency)
+    /// </summary>
+    private void RecordSuccess(string providerName, long latencyMs)
+    {
+        lock (_monitoringLock)
+        {
+            if (_circuitBreakers.TryGetValue(providerName, out var breaker))
+            {
+                breaker.RecordSuccess();
+            }
+
+            if (_latencyStats.TryGetValue(providerName, out var stats))
+            {
+                stats.RecordLatency(latencyMs);
+            }
+
+            _logger.LogDebug(
+                "Request success: {Provider} - Latency: {Latency}ms, Circuit: {CircuitState}",
+                providerName, latencyMs, breaker?.GetStatus() ?? "unknown");
+        }
+    }
+
+    /// <summary>
+    /// ISSUE-962: Record failed request (circuit breaker + latency)
+    /// </summary>
+    private void RecordFailure(string providerName, long latencyMs)
+    {
+        lock (_monitoringLock)
+        {
+            if (_circuitBreakers.TryGetValue(providerName, out var breaker))
+            {
+                breaker.RecordFailure();
+            }
+
+            if (_latencyStats.TryGetValue(providerName, out var stats))
+            {
+                stats.RecordLatency(latencyMs); // Record even failures for complete picture
+            }
+
+            _logger.LogWarning(
+                "Request failure: {Provider} - Latency: {Latency}ms, Circuit: {CircuitState}",
+                providerName, latencyMs, breaker?.GetStatus() ?? "unknown");
+        }
+    }
+
+    /// <summary>
+    /// ISSUE-962: Get circuit breaker state for a provider
+    /// </summary>
+    private string GetCircuitState(string providerName)
+    {
+        lock (_monitoringLock)
+        {
+            return _circuitBreakers.TryGetValue(providerName, out var breaker)
+                ? breaker.GetStatus()
+                : "unknown";
+        }
+    }
+
+    /// <summary>
+    /// ISSUE-962: Get latency statistics for a provider
+    /// </summary>
+    public string GetLatencyStats(string providerName)
+    {
+        lock (_monitoringLock)
+        {
+            return _latencyStats.TryGetValue(providerName, out var stats)
+                ? stats.GetSummary()
+                : "No data";
+        }
+    }
+
+    /// <summary>
+    /// ISSUE-962: Get monitoring status for all providers
+    /// </summary>
+    public Dictionary<string, (string circuitState, string latencyStats)> GetMonitoringStatus()
+    {
+        lock (_monitoringLock)
+        {
+            var status = new Dictionary<string, (string, string)>();
+            foreach (var client in _clients)
+            {
+                var circuit = _circuitBreakers.TryGetValue(client.ProviderName, out var breaker)
+                    ? breaker.GetStatus()
+                    : "unknown";
+
+                var latency = _latencyStats.TryGetValue(client.ProviderName, out var stats)
+                    ? stats.GetSummary()
+                    : "No data";
+
+                status[client.ProviderName] = (circuit, latency);
+            }
+            return status;
+        }
     }
 }

@@ -159,6 +159,22 @@ public static class AdminEndpoints
             });
         });
 
+        // ISSUE-962 (BGAI-020): LLM provider health monitoring
+        group.MapGet("/admin/llm/health", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var healthStatus = await mediator.Send(new GetLlmHealthQuery(), ct);
+            return Results.Json(healthStatus);
+        })
+        .WithName("GetLlmHealth")
+        .WithTags("Admin", "LLM")
+        .WithSummary("Get LLM provider health status")
+        .WithDescription("Returns real-time health monitoring for all LLM providers (circuit breaker, latency, success rate)")
+        .Produces<LlmHealthStatusDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized);
+
         // AI-11: Quality tracking endpoints
         group.MapGet("/admin/quality/low-responses", async (
             HttpContext context,

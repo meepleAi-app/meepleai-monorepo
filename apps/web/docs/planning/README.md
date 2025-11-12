@@ -76,12 +76,44 @@ Shows:
 ---
 
 ### 📦 [All Issues Raw JSON](./all_issues_raw.json)
-**Machine-readable complete issue data from GitHub (200 issues)**
+**Machine-readable complete issue data from GitHub (478 issues)**
 
 **Use this for**:
 - Custom reporting and data analysis
 - Automation scripts and CI/CD integration
 - Data processing and metrics generation
+
+---
+
+### 🚀 [GitHub Project Import Guide](./GITHUB_PROJECT_IMPORT.md)
+**Complete guide for importing issues to GitHub Project**
+
+Shows:
+- Permission setup instructions
+- Automatic import script (import-to-project.sh)
+- Manual import procedures
+- Custom field configuration
+- Project automation setup
+
+**Use this for**:
+- Setting up https://github.com/users/DegrassiAaron/projects/2
+- Importing all 155 open issues automatically
+- Configuring board views and workflows
+
+---
+
+### 📊 [Project Summary](./PROJECT_SUMMARY.md)
+**Ready-to-use project data and configuration**
+
+Shows:
+- Issue distribution (16 FE, 5 BE, 4 Test for FASE 1, etc.)
+- 12 milestones with parallel execution capacity
+- Custom field templates
+- View configuration recommendations
+
+**Use this for**:
+- Quick project setup reference
+- Understanding parallelization opportunities
 
 ---
 

@@ -24,6 +24,9 @@ public static class KnowledgeBaseServiceExtensions
         // ISSUE-970: BGAI-028 - Confidence Validation (threshold ≥0.70)
         services.AddSingleton<IConfidenceValidationService, ConfidenceValidationService>();
 
+        // ISSUE-971: BGAI-029 - Citation Validation (verify source references)
+        services.AddScoped<ICitationValidationService, CitationValidationService>(); // Scoped - uses DbContext
+
         // ISSUE-958: LLM Hybrid Architecture
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../../lib/api";
+import { Button } from "@/components/ui/button";
 
 type AuthUser = {
   id: string;
@@ -188,14 +189,14 @@ export default function BulkExport() {
             </span>
           </div>
 
-          <button
+          <Button
             onClick={handleExport}
             disabled={selectedGameIds.size === 0 || isExporting}
-            className="btn-primary px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2"
             aria-label={`Export ${selectedGameIds.size} selected rule specs`}
           >
             {isExporting ? "Exporting..." : `Export ${selectedGameIds.size > 0 ? selectedGameIds.size : ""} Rule Spec${selectedGameIds.size !== 1 ? "s" : ""}`}
-          </button>
+          </Button>
         </div>
 
         {/* Games List */}

@@ -2,8 +2,7 @@ import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import { ThemeProvider } from 'next-themes';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { ToastContainer } from '../components/Toast';
-import { useToast } from '../hooks/useToast';
+import { Toaster } from '@/components/ui/sonner';
 import { useSessionCheck } from '../hooks/useSessionCheck';
 import { SessionWarningModal } from '../components/SessionWarningModal';
 import { AccessibleSkipLink } from '@/components/accessible';
@@ -25,8 +24,6 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
 }
 
 function AppContent({ Component, pageProps }: AppProps) {
-  const { toasts, dismiss } = useToast();
-
   // AUTH-05: Session timeout monitoring
   const { remainingMinutes, isNearExpiry } = useSessionCheck();
 
@@ -54,7 +51,7 @@ function AppContent({ Component, pageProps }: AppProps) {
       {/* Skip to main content link (UI-05 WCAG 2.1 AA requirement) */}
       <AccessibleSkipLink href="#main-content" />
       <Component {...pageProps} />
-      <ToastContainer toasts={toasts} onDismiss={dismiss} position="top-right" />
+      <Toaster />
 
       {/* AUTH-05: Session expiry warning modal */}
       {isNearExpiry && remainingMinutes !== null && (

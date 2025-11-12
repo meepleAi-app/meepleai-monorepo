@@ -330,8 +330,16 @@ describe('DiffNavigationControls', () => {
         />
       );
 
-      expect(screen.getByText('↑ Prev')).toBeInTheDocument();
-      expect(screen.getByText('Next ↓')).toBeInTheDocument();
+      // Updated: shadcn Button uses Lucide icons (ChevronUp, ChevronDown) instead of text arrows
+      const prevButton = screen.getByLabelText('Previous change');
+      const nextButton = screen.getByLabelText('Next change');
+
+      expect(prevButton).toHaveTextContent('Prev');
+      expect(nextButton).toHaveTextContent('Next');
+
+      // Icons are rendered as SVG
+      expect(prevButton.querySelector('svg')).toBeInTheDocument();
+      expect(nextButton.querySelector('svg')).toBeInTheDocument();
     });
   });
 });

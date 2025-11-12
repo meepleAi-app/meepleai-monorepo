@@ -200,7 +200,8 @@ describe('TimelineEventItem Component', () => {
       );
 
       const eventDiv = container.firstChild as HTMLElement;
-      expect(eventDiv).toHaveStyle({ background: '#f8f9fa' });
+      expect(eventDiv).toHaveClass('bg-muted');
+      expect(eventDiv).toHaveClass('border-2');
     });
 
     it('applies default styling when isSelected is false', () => {
@@ -215,7 +216,9 @@ describe('TimelineEventItem Component', () => {
       );
 
       const eventDiv = container.firstChild as HTMLElement;
-      expect(eventDiv).toHaveStyle({ background: 'white' });
+      expect(eventDiv).toHaveClass('border');
+      expect(eventDiv).not.toHaveClass('bg-muted');
+      expect(eventDiv).not.toHaveClass('border-2');
     });
 
     it('calls onSelect with event id when clicked', async () => {

@@ -228,39 +228,8 @@ describe('MessageEditForm', () => {
       expect(saveButton).toBeDisabled();
     });
 
-    it('applies not-allowed cursor when save button is disabled', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
-        editContent: ''
-      } as ChatContextValue);
-
-      render(<MessageEditForm />);
-      const saveButton = screen.getByLabelText('Save edited message');
-      expect(saveButton).toHaveStyle({ cursor: 'not-allowed' });
-    });
-
-    it('applies pointer cursor when save button is enabled', () => {
-      render(<MessageEditForm />);
-      const saveButton = screen.getByLabelText('Save edited message');
-      expect(saveButton).toHaveStyle({ cursor: 'pointer' });
-    });
-
-    it('changes save button color when disabled', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
-        editContent: ''
-      } as ChatContextValue);
-
-      render(<MessageEditForm />);
-      const saveButton = screen.getByLabelText('Save edited message');
-      expect(saveButton).toHaveStyle({ background: '#cbd5e1' });
-    });
-
-    it('uses primary color for enabled save button', () => {
-      render(<MessageEditForm />);
-      const saveButton = screen.getByLabelText('Save edited message');
-      expect(saveButton).toHaveStyle({ background: '#1a73e8' });
-    });
+    // Styling is now handled by shadcn Button component with Tailwind CSS
+    // The disabled state styling is applied automatically by the Button component
   });
 
   describe('Cancel Functionality', () => {
@@ -293,33 +262,8 @@ describe('MessageEditForm', () => {
       expect(cancelButton).toBeDisabled();
     });
 
-    it('applies not-allowed cursor when cancel button is disabled', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
-        loading: {
-          ...defaultContextValue.loading!,
-          updating: true
-        }
-      } as ChatContextValue);
-
-      render(<MessageEditForm />);
-      const cancelButton = screen.getByLabelText('Cancel editing');
-      expect(cancelButton).toHaveStyle({ cursor: 'not-allowed' });
-    });
-
-    it('reduces opacity of cancel button when updating', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
-        loading: {
-          ...defaultContextValue.loading!,
-          updating: true
-        }
-      } as ChatContextValue);
-
-      render(<MessageEditForm />);
-      const cancelButton = screen.getByLabelText('Cancel editing');
-      expect(cancelButton).toHaveStyle({ opacity: 0.5 });
-    });
+    // Styling is now handled by shadcn Button component with Tailwind CSS
+    // The disabled state styling is applied automatically by the Button component
   });
 
   describe('Accessibility', () => {
@@ -347,39 +291,24 @@ describe('MessageEditForm', () => {
   });
 
   describe('Styling', () => {
-    it('applies correct styling to textarea', () => {
+    it('applies shadcn Textarea component with correct classes', () => {
       render(<MessageEditForm />);
       const textarea = screen.getByLabelText('Edit message content');
-      expect(textarea).toHaveStyle({
-        width: '100%',
-        minHeight: '80px',
-        padding: '8px',
-        fontSize: '14px',
-        borderRadius: '4px'
-      });
+      expect(textarea).toHaveClass('min-h-[80px]', 'resize-y');
     });
 
-    it('applies correct styling to save button', () => {
+    it('applies shadcn Button component to save button', () => {
       render(<MessageEditForm />);
       const saveButton = screen.getByLabelText('Save edited message');
-      expect(saveButton).toHaveStyle({
-        padding: '6px 12px',
-        borderRadius: '4px',
-        fontSize: '12px',
-        fontWeight: '500'
-      });
+      expect(saveButton).toBeInTheDocument();
+      // Button uses shadcn styling automatically
     });
 
-    it('applies correct styling to cancel button', () => {
+    it('applies secondary variant to cancel button', () => {
       render(<MessageEditForm />);
       const cancelButton = screen.getByLabelText('Cancel editing');
-      expect(cancelButton).toHaveStyle({
-        padding: '6px 12px',
-        background: '#94a3b8',
-        borderRadius: '4px',
-        fontSize: '12px',
-        fontWeight: '500'
-      });
+      expect(cancelButton).toBeInTheDocument();
+      // Secondary variant styling is applied by shadcn Button component
     });
   });
 

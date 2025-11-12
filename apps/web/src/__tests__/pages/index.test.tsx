@@ -138,13 +138,19 @@ describe('Home page (Landing Page)', () => {
 
       render(<Home />);
 
+      // Get the header navigation element
+      const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
+
+      // Check that authenticated navigation links are present in the nav
+      // Note: The nav uses "hidden md:flex" so links won't be visible in default test viewport
+      // but they should still be in the DOM
       await waitFor(() => {
-        expect(screen.getByRole('link', { name: 'Chat' })).toBeInTheDocument();
+        expect(within(nav).getByText('Chat')).toBeInTheDocument();
       });
 
-      expect(screen.getByRole('link', { name: 'Chess' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Upload' })).toBeInTheDocument();
-      expect(await screen.findByRole('button', { name: /logout/i })).toBeInTheDocument();
+      expect(within(nav).getByText('Chess')).toBeInTheDocument();
+      expect(within(nav).getByText('Upload')).toBeInTheDocument();
+      expect(await within(nav).findByRole('button', { name: /logout/i })).toBeInTheDocument();
     });
 
     it('shows Admin link for admin users', async () => {

@@ -1,4 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Search, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export interface DiffSearchInputProps {
   value: string;
@@ -10,6 +13,7 @@ export interface DiffSearchInputProps {
 /**
  * Search input for filtering diff content
  * Debounced to avoid excessive re-renders
+ * Migrated to shadcn UI components
  */
 export function DiffSearchInput({
   value,
@@ -50,27 +54,32 @@ export function DiffSearchInput({
   };
 
   return (
-    <div className="diff-search-input">
-      <input
-        type="text"
-        value={localValue}
-        onChange={handleChange}
-        placeholder={placeholder}
-        className="diff-search-field"
-        aria-label="Search in diff"
-      />
-      {localValue && (
-        <button
-          onClick={handleClear}
-          className="diff-search-clear"
-          aria-label="Clear search"
-          title="Clear search"
-        >
-          ✕
-        </button>
-      )}
+    <div className="diff-search-input flex items-center gap-2">
+      <div className="relative flex-1">
+        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="text"
+          value={localValue}
+          onChange={handleChange}
+          placeholder={placeholder}
+          className="pl-8 pr-8"
+          aria-label="Search in diff"
+        />
+        {localValue && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClear}
+            className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2"
+            aria-label="Clear search"
+            title="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
       {matchCount !== undefined && matchCount > 0 && (
-        <span className="diff-search-count" aria-live="polite">
+        <span className="diff-search-count text-sm text-muted-foreground whitespace-nowrap" aria-live="polite">
           {matchCount} {matchCount === 1 ? 'match' : 'matches'}
         </span>
       )}

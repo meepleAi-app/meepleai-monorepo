@@ -8,6 +8,13 @@
 import React from 'react';
 import { useChatContext } from './ChatProvider';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function GameSelector() {
   const { games, selectedGameId, selectGame, loading } = useChatContext();
@@ -23,6 +30,10 @@ export function GameSelector() {
     );
   }
 
+  const placeholder = games.length === 0
+    ? 'Nessun gioco disponibile'
+    : 'Seleziona un gioco';
+
   return (
     <div style={{ marginBottom: 12 }}>
       <label
@@ -31,39 +42,30 @@ export function GameSelector() {
       >
         Cambia Gioco:
       </label>
-      <select
-        id="gameSelect"
+      <Select
         value={selectedGameId ?? ''}
-        onChange={(e) => {
-          const value = e.target.value;
+        onValueChange={(value) => {
           if (value) {
             void selectGame(value);
           }
         }}
         disabled={loading.games}
-        aria-busy={loading.games}
-        style={{
-          width: '100%',
-          padding: 8,
-          fontSize: 13,
-          borderRadius: 4,
-          border: '1px solid #dadce0',
-          cursor: loading.games ? 'not-allowed' : 'pointer'
-        }}
       >
-        {games.length === 0 ? (
-          <option value="">Nessun gioco disponibile</option>
-        ) : (
-          <>
-            <option value="">Seleziona un gioco</option>
-            {games.map((game) => (
-              <option key={game.id} value={game.id}>
-                {game.name}
-              </option>
-            ))}
-          </>
-        )}
-      </select>
+        <SelectTrigger
+          id="gameSelect"
+          aria-busy={loading.games}
+          className="w-full"
+        >
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {games.map((game) => (
+            <SelectItem key={game.id} value={game.id}>
+              {game.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

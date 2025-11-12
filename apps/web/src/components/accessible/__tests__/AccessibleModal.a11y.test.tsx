@@ -163,7 +163,7 @@ describe('AccessibleModal - Accessibility', () => {
     );
 
     let dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveClass('max-w-sm');
+    expect(dialog).toHaveClass('sm:max-w-[350px]');
 
     rerender(
       <AccessibleModal isOpen={true} onClose={() => {}} title="Test" size="lg">
@@ -172,6 +172,6 @@ describe('AccessibleModal - Accessibility', () => {
     );
 
     dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveClass('max-w-lg');
+    expect(dialog).toHaveClass('sm:max-w-[700px]');
   });
 });

@@ -464,7 +464,8 @@ describe('MessageInput Component', () => {
       render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
-      expect(button).toHaveStyle({ background: '#0070f3' });
+      expect(button).not.toBeDisabled();
+      expect(button).toBeEnabled();
     });
 
     it('shows disabled styling when cannot send', () => {
@@ -476,7 +477,7 @@ describe('MessageInput Component', () => {
       render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
-      expect(button).toHaveStyle({ background: '#dadce0' });
+      expect(button).toBeDisabled();
     });
 
     it('changes cursor when button is disabled', () => {
@@ -484,7 +485,8 @@ describe('MessageInput Component', () => {
       render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
-      expect(button).toHaveStyle({ cursor: 'not-allowed' });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('disabled');
     });
 
     it('has pointer cursor when button is enabled', () => {
@@ -496,7 +498,8 @@ describe('MessageInput Component', () => {
       render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
-      expect(button).toHaveStyle({ cursor: 'pointer' });
+      expect(button).not.toBeDisabled();
+      expect(button).toBeEnabled();
     });
   });
 

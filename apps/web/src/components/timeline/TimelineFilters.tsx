@@ -6,6 +6,8 @@ import {
   getEventTypeLabel,
   getEventTypeColor
 } from "@/lib/timeline-types";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface TimelineFiltersProps {
   filters: TimelineFiltersType;
@@ -75,43 +77,19 @@ export function TimelineFilters({
     return (
       <aside
         aria-label="Timeline filters (collapsed)"
-        style={{
-          width: 60,
-          background: "#f8f9fa",
-          borderRight: "1px solid #dadce0",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "16px 8px"
-        }}
+        className="w-[60px] bg-muted border-r flex flex-col items-center p-4"
       >
-        <button
+        <Button
           onClick={onToggleCollapse}
           aria-label="Show filters"
-          style={{
-            padding: 12,
-            background: "#1a73e8",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
-            cursor: "pointer",
-            fontSize: 20,
-            width: "100%"
-          }}
+          className="w-full text-xl"
           title="Mostra filtri"
         >
           ☰
-        </button>
+        </Button>
         <div
           aria-hidden="true"
-          style={{
-            marginTop: 16,
-            fontSize: 11,
-            color: "#64748b",
-            textAlign: "center",
-            writingMode: "vertical-rl",
-            transform: "rotate(180deg)"
-          }}
+          className="mt-4 text-xs text-muted-foreground text-center [writing-mode:vertical-rl] rotate-180"
         >
           Filtri
         </div>
@@ -132,56 +110,35 @@ export function TimelineFilters({
       }}
     >
       {/* Header */}
-      <div
-        style={{
-          padding: 16,
-          borderBottom: "1px solid #dadce0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Filtri Timeline</h3>
-        <button
+      <div className="p-4 border-b flex justify-between items-center">
+        <h3 className="m-0 text-base font-semibold">Filtri Timeline</h3>
+        <Button
           onClick={onToggleCollapse}
           aria-label="Hide filters"
-          style={{
-            padding: "6px 10px",
-            background: "#f1f3f4",
-            border: "none",
-            borderRadius: 4,
-            cursor: "pointer",
-            fontSize: 16
-          }}
+          variant="ghost"
+          size="sm"
+          className="text-base"
           title="Nascondi filtri"
         >
           ✕
-        </button>
+        </Button>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
         {/* Search */}
-        <div style={{ marginBottom: 24 }}>
+        <div className="mb-6">
           <label
             htmlFor="timeline-search"
-            style={{ display: "block", marginBottom: 8, fontSize: 13, fontWeight: 600 }}
+            className="block mb-2 text-sm font-semibold"
           >
             Cerca
           </label>
-          <input
+          <Input
             id="timeline-search"
             type="text"
             value={filters.searchText || ""}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Cerca nei messaggi, citazioni..."
-            style={{
-              width: "100%",
-              padding: 8,
-              fontSize: 13,
-              border: "1px solid #dadce0",
-              borderRadius: 4,
-              background: "white"
-            }}
           />
         </div>
 
@@ -195,38 +152,26 @@ export function TimelineFilters({
               marginBottom: 8
             }}
           >
-            <label style={{ fontSize: 13, fontWeight: 600 }}>Tipo Evento</label>
-            <div role="group" aria-label="Event type filter controls" style={{ display: "flex", gap: 4 }}>
-              <button
+            <label className="text-sm font-semibold">Tipo Evento</label>
+            <div role="group" aria-label="Event type filter controls" className="flex gap-1">
+              <Button
                 onClick={selectAllEventTypes}
                 aria-label="Select all event types"
-                style={{
-                  padding: "2px 6px",
-                  fontSize: 10,
-                  background: "#e8f0fe",
-                  color: "#1967d2",
-                  border: "none",
-                  borderRadius: 3,
-                  cursor: "pointer"
-                }}
+                variant="secondary"
+                size="sm"
+                className="text-xs"
               >
                 Tutti
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={deselectAllEventTypes}
                 aria-label="Deselect all event types"
-                style={{
-                  padding: "2px 6px",
-                  fontSize: 10,
-                  background: "#f1f3f4",
-                  color: "#64748b",
-                  border: "none",
-                  borderRadius: 3,
-                  cursor: "pointer"
-                }}
+                variant="ghost"
+                size="sm"
+                className="text-xs"
               >
                 Nessuno
-              </button>
+              </Button>
             </div>
           </div>
           {ALL_EVENT_TYPES.map((type) => {
@@ -279,38 +224,26 @@ export function TimelineFilters({
               marginBottom: 8
             }}
           >
-            <label style={{ fontSize: 13, fontWeight: 600 }}>Stato</label>
-            <div role="group" aria-label="Status filter controls" style={{ display: "flex", gap: 4 }}>
-              <button
+            <label className="text-sm font-semibold">Stato</label>
+            <div role="group" aria-label="Status filter controls" className="flex gap-1">
+              <Button
                 onClick={selectAllStatuses}
                 aria-label="Select all statuses"
-                style={{
-                  padding: "2px 6px",
-                  fontSize: 10,
-                  background: "#e8f0fe",
-                  color: "#1967d2",
-                  border: "none",
-                  borderRadius: 3,
-                  cursor: "pointer"
-                }}
+                variant="secondary"
+                size="sm"
+                className="text-xs"
               >
                 Tutti
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={deselectAllStatuses}
                 aria-label="Deselect all statuses"
-                style={{
-                  padding: "2px 6px",
-                  fontSize: 10,
-                  background: "#f1f3f4",
-                  color: "#64748b",
-                  border: "none",
-                  borderRadius: 3,
-                  cursor: "pointer"
-                }}
+                variant="ghost"
+                size="sm"
+                className="text-xs"
               >
                 Nessuno
-              </button>
+              </Button>
             </div>
           </div>
           {ALL_STATUSES.map((status) => {
@@ -351,7 +284,7 @@ export function TimelineFilters({
         </div>
 
         {/* Reset Button */}
-        <button
+        <Button
           onClick={() =>
             onFiltersChange({
               eventTypes: new Set(ALL_EVENT_TYPES),
@@ -360,20 +293,11 @@ export function TimelineFilters({
             })
           }
           aria-label="Reset all filters"
-          style={{
-            width: "100%",
-            padding: 10,
-            background: "#f1f3f4",
-            color: "#64748b",
-            border: "none",
-            borderRadius: 4,
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: "pointer"
-          }}
+          variant="ghost"
+          className="w-full"
         >
           Ripristina Filtri
-        </button>
+        </Button>
       </div>
     </aside>
   );

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { cn } from '@/lib/utils';
 
 /**
  * AI-14: Search mode enum matching backend SearchMode
@@ -59,126 +60,57 @@ export default function SearchModeToggle({
   ];
 
   return (
-    <div className={`search-mode-toggle ${className}`}>
-      <label className="search-mode-label">Search Mode:</label>
+    <div className={cn('flex flex-col gap-2 mb-4', className)}>
+      <label className="text-sm font-semibold text-gray-700 mb-1">Search Mode:</label>
       <div className="mode-buttons" role="group" aria-label="Search mode selection">
-        {modes.map(({ mode, label, description, icon }) => (
-          <button
-            key={mode}
-            type="button"
-            className={`mode-button ${value === mode ? 'active' : ''}`}
-            onClick={() => !disabled && onChange(mode)}
-            disabled={disabled}
-            title={description}
-            aria-pressed={value === mode}
-            aria-label={`${label} search mode: ${description}`}
-          >
-            <span className="mode-icon" aria-hidden="true">{icon}</span>
-            <span className="mode-text">{label}</span>
-            {value === mode && (
-              <span className="active-indicator" aria-label="Currently selected">
-                ✓
+        <ToggleGroup
+          type="single"
+          value={value}
+          onValueChange={(newValue) => {
+            // ToggleGroup allows deselecting, but we always want a value
+            if (newValue) {
+              onChange(newValue as SearchMode);
+            }
+          }}
+          disabled={disabled}
+          className="flex gap-2 flex-wrap sm:flex-nowrap"
+        >
+          {modes.map(({ mode, label, description, icon }) => (
+            <ToggleGroupItem
+              key={mode}
+              value={mode}
+              aria-label={`${label} search mode: ${description}`}
+              aria-pressed={value === mode}
+              title={description}
+              className={cn(
+                'mode-button',
+                'flex items-center gap-2 px-4 py-2',
+                'border-2 rounded-lg transition-all',
+                'text-sm font-medium',
+                'hover:border-blue-500 hover:bg-blue-50 hover:-translate-y-0.5',
+                'active:translate-y-0',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'focus:outline-2 focus:outline-blue-500 focus:outline-offset-2',
+                'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:border-ring',
+                'data-[state=on]:border-blue-500 data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:font-semibold',
+                'sm:w-auto w-full sm:justify-center justify-start',
+                value === mode ? 'active' : ''
+              )}
+              type="button"
+            >
+              <span className="mode-icon text-xl leading-none" aria-hidden="true">
+                {icon}
               </span>
-            )}
-          </button>
-        ))}
+              <span className="mode-text">{label}</span>
+              {value === mode && (
+                <span className="active-indicator ml-1 font-bold" aria-label="Currently selected">
+                  ✓
+                </span>
+              )}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </div>
-
-      <style jsx>{`
-        .search-mode-toggle {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-          margin-bottom: 1rem;
-        }
-
-        .search-mode-label {
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: #374151;
-          margin-bottom: 0.25rem;
-        }
-
-        .mode-buttons {
-          display: flex;
-          gap: 0.5rem;
-          flex-wrap: wrap;
-        }
-
-        .mode-button {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 1rem;
-          border: 2px solid #e5e7eb;
-          border-radius: 0.5rem;
-          background-color: white;
-          color: #374151;
-          font-size: 0.875rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          position: relative;
-        }
-
-        .mode-button:hover:not(:disabled) {
-          border-color: #3b82f6;
-          background-color: #eff6ff;
-          transform: translateY(-1px);
-        }
-
-        .mode-button:active:not(:disabled) {
-          transform: translateY(0);
-        }
-
-        .mode-button.active {
-          border-color: #3b82f6;
-          background-color: #3b82f6;
-          color: white;
-          font-weight: 600;
-        }
-
-        .mode-button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .mode-icon {
-          font-size: 1.25rem;
-          line-height: 1;
-        }
-
-        .mode-text {
-          font-family: inherit;
-        }
-
-        .active-indicator {
-          margin-left: 0.25rem;
-          font-weight: bold;
-        }
-
-        /* Responsive design for mobile */
-        @media (max-width: 640px) {
-          .mode-buttons {
-            flex-direction: column;
-          }
-
-          .mode-button {
-            width: 100%;
-            justify-content: flex-start;
-          }
-        }
-
-        /* Focus styles for accessibility */
-        .mode-button:focus {
-          outline: 2px solid #3b82f6;
-          outline-offset: 2px;
-        }
-
-        .mode-button:focus:not(:focus-visible) {
-          outline: none;
-        }
-      `}</style>
     </div>
   );
 }

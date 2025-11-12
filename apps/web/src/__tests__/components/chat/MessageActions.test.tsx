@@ -95,14 +95,15 @@ describe('MessageActions', () => {
       expect(screen.getByLabelText('Delete message')).toBeDisabled();
     });
 
-    it('applies not-allowed cursor when isUpdating', () => {
+    it('disables buttons visually when isUpdating', () => {
       render(<MessageActions {...defaultProps} isUpdating={true} />);
 
       const editButton = screen.getByLabelText('Edit message');
       const deleteButton = screen.getByLabelText('Delete message');
 
-      expect(editButton).toHaveStyle({ cursor: 'not-allowed' });
-      expect(deleteButton).toHaveStyle({ cursor: 'not-allowed' });
+      // Shadcn Button handles disabled state automatically via disabled prop
+      expect(editButton).toHaveClass('disabled:pointer-events-none');
+      expect(deleteButton).toHaveClass('disabled:pointer-events-none');
     });
 
     it('applies reduced opacity when isUpdating', () => {
@@ -111,8 +112,9 @@ describe('MessageActions', () => {
       const editButton = screen.getByLabelText('Edit message');
       const deleteButton = screen.getByLabelText('Delete message');
 
-      expect(editButton).toHaveStyle({ opacity: 0.5 });
-      expect(deleteButton).toHaveStyle({ opacity: 0.5 });
+      // Shadcn Button handles disabled state automatically via disabled prop
+      expect(editButton).toHaveClass('disabled:opacity-50');
+      expect(deleteButton).toHaveClass('disabled:opacity-50');
     });
 
     it('has title attributes for tooltips', () => {
@@ -181,7 +183,7 @@ describe('MessageActions', () => {
       render(<MessageActions {...assistantProps} message={messageWithFeedback} />);
 
       const helpfulButton = screen.getByLabelText('Mark as helpful');
-      expect(helpfulButton).toHaveStyle({ background: 'rgb(52, 168, 83)', color: 'rgb(255, 255, 255)' });
+      expect(helpfulButton).toHaveClass('bg-green-600', 'text-white');
     });
 
     it('highlights not-helpful button when feedback is "not-helpful"', () => {
@@ -192,7 +194,7 @@ describe('MessageActions', () => {
       render(<MessageActions {...assistantProps} message={messageWithFeedback} />);
 
       const notHelpfulButton = screen.getByLabelText('Mark as not helpful');
-      expect(notHelpfulButton).toHaveStyle({ background: 'rgb(234, 67, 53)', color: 'rgb(255, 255, 255)' });
+      expect(notHelpfulButton).toHaveClass('bg-red-600', 'text-white');
     });
 
     it('uses default styling when no feedback is provided', () => {
@@ -201,8 +203,8 @@ describe('MessageActions', () => {
       const helpfulButton = screen.getByLabelText('Mark as helpful');
       const notHelpfulButton = screen.getByLabelText('Mark as not helpful');
 
-      expect(helpfulButton).toHaveStyle({ background: '#f1f3f4', color: '#64748b' });
-      expect(notHelpfulButton).toHaveStyle({ background: '#f1f3f4', color: '#64748b' });
+      expect(helpfulButton).toHaveClass('bg-slate-100', 'text-slate-500');
+      expect(notHelpfulButton).toHaveClass('bg-slate-100', 'text-slate-500');
     });
 
     it('has aria-pressed attribute for helpful button', () => {
@@ -336,27 +338,29 @@ describe('MessageActions', () => {
     it('applies initial opacity to user actions container', () => {
       const { container } = render(<MessageActions {...defaultProps} />);
       const actionsContainer = container.querySelector('.message-actions');
-      expect(actionsContainer).toHaveStyle({ opacity: 0 });
+      expect(actionsContainer).toHaveClass('opacity-0');
     });
 
     it('applies correct styling to edit button', () => {
       render(<MessageActions {...defaultProps} />);
       const editButton = screen.getByLabelText('Edit message');
-      expect(editButton).toHaveStyle({
-        background: 'rgb(148, 163, 184)',
-        color: 'rgb(255, 255, 255)'
-      });
-      // Note: border and borderRadius are tested separately as they have browser-specific defaults
+      expect(editButton).toHaveClass('h-6', 'px-2', 'text-[10px]');
     });
 
     it('applies correct styling to delete button', () => {
       render(<MessageActions {...defaultProps} />);
       const deleteButton = screen.getByLabelText('Delete message');
-      expect(deleteButton).toHaveStyle({
-        background: 'rgb(148, 163, 184)',
-        color: 'rgb(255, 255, 255)'
-      });
-      // Note: border and borderRadius are tested separately as they have browser-specific defaults
+      expect(deleteButton).toHaveClass('h-6', 'px-2', 'text-[10px]');
+    });
+
+    it('uses secondary variant for user action buttons', () => {
+      render(<MessageActions {...defaultProps} />);
+      const editButton = screen.getByLabelText('Edit message');
+      const deleteButton = screen.getByLabelText('Delete message');
+
+      // Secondary variant applies bg-secondary class
+      expect(editButton).toHaveClass('bg-secondary');
+      expect(deleteButton).toHaveClass('bg-secondary');
     });
   });
 });

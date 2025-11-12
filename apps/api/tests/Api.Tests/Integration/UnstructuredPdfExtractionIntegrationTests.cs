@@ -116,11 +116,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test01_SimpleItalianPdf_SuccessfulExtraction()
     {
         // Arrange - Use Barrage rulebook (21MB, Italian)
-        if (!File.Exists(BarragePdfPath))
-        {
-            _output($"SKIP: Test PDF not found: {BarragePdfPath}");
-            return;
-        }
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
         _output($"Testing with Barrage rulebook ({new FileInfo(BarragePdfPath).Length / 1024 / 1024}MB)");
@@ -143,11 +139,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test02_ComplexMultiColumnPdf_SuccessfulExtraction()
     {
         // Arrange - Use Terraforming Mars rulebook (38MB, Italian, complex layout)
-        if (!File.Exists(TerraformingMarsPdfPath))
-        {
-            _output($"SKIP: Test PDF not found: {TerraformingMarsPdfPath}");
-            return;
-        }
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         _output($"Testing with Terraforming Mars rulebook ({new FileInfo(TerraformingMarsPdfPath).Length / 1024 / 1024}MB)");
@@ -171,11 +163,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test03_ItalianLanguageText_ExtractsCorrectly()
     {
         // Arrange
-        if (!File.Exists(BarragePdfPath))
-        {
-            _output($"SKIP: Test PDF not found");
-            return;
-        }
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -200,11 +188,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test04_TableDetection_ExtractsStructuredData()
     {
         // Arrange - Board game rulebooks typically have tables
-        if (!File.Exists(BarragePdfPath))
-        {
-            _output($"SKIP: Test PDF not found");
-            return;
-        }
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -227,11 +211,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test05_QualityScoreCalculation_MeetsThreshold()
     {
         // Arrange
-        if (!File.Exists(BarragePdfPath))
-        {
-            _output($"SKIP: Test PDF not found");
-            return;
-        }
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -266,11 +246,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         // and verify our client handles it correctly
 
         // Arrange - use small PDF to ensure it completes (testing timeout requires mock)
-        if (!File.Exists(BarragePdfPath))
-        {
-            _output($"SKIP: Test PDF not found");
-            return;
-        }
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -331,11 +307,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test09_LargeMultiPagePdf_ProcessesSuccessfully()
     {
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages)
-        if (!File.Exists(TerraformingMarsPdfPath))
-        {
-            _output($"SKIP: Test PDF not found");
-            return;
-        }
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         var fileSize = new FileInfo(TerraformingMarsPdfPath).Length;
@@ -356,11 +328,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test10_SemanticChunking_ProducesPagedResults()
     {
         // Arrange
-        if (!File.Exists(BarragePdfPath))
-        {
-            _output($"SKIP: Test PDF not found");
-            return;
-        }
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -387,11 +355,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test11_MetadataExtraction_IncludesPageNumbers()
     {
         // Arrange
-        if (!File.Exists(BarragePdfPath))
-        {
-            _output($"SKIP: Test PDF not found");
-            return;
-        }
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -422,11 +386,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test12_EndToEnd_Pipeline_WithRealPdf()
     {
         // Arrange - Full E2E test simulating actual usage
-        if (!File.Exists(TerraformingMarsPdfPath))
-        {
-            _output($"SKIP: Test PDF not found");
-            return;
-        }
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
 
         _output("=== E2E Pipeline Test ===");
 
@@ -454,8 +414,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         _output($"✓ Step 4: Text normalization verified");
 
         // Step 5: Verify paged extraction produces chunks
-        pdfStream.Position = 0;
-        var pagedResult = await _extractor.ExtractPagedTextAsync(pdfStream);
+        // Reopen stream (previous stream was disposed by ExtractTextAsync)
+        await using var pdfStream2 = File.OpenRead(TerraformingMarsPdfPath);
+        var pagedResult = await _extractor.ExtractPagedTextAsync(pdfStream2);
         Assert.True(pagedResult.Success, "Step 5: Paged extraction should succeed");
         Assert.NotEmpty(pagedResult.PageChunks);
         _output($"✓ Step 5: Paged extraction produced {pagedResult.PageChunks.Count} chunks");

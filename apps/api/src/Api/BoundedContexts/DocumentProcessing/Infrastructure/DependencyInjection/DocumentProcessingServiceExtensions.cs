@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -29,49 +30,74 @@ public static class DocumentProcessingServiceExtensions
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();
         services.AddScoped<IPdfValidator, DocnetPdfValidator>(); // PDF-09: DDD validation adapter
 
-        // BGAI-001-v2: Configure PDF text extractor based on provider setting
-        var extractorProvider = configuration["PdfProcessing:Extractor:Provider"] ?? "Docnet";
+        // BGAI-010: Register ALL 3 extractors for orchestrator (3-stage pipeline)
 
-        if (extractorProvider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase))
+        // Stage 1: Unstructured (primary - RAG-optimized, quality ≥0.80)
+        services.AddHttpClient("UnstructuredService", client =>
+            {
+                var baseUrl = configuration["PdfProcessing:Extractor:UnstructuredService:BaseUrl"]
+                              ?? "http://unstructured-service:8001";
+                client.BaseAddress = new Uri(baseUrl);
+
+                var timeoutSeconds = configuration.GetValue<int?>("PdfProcessing:Extractor:UnstructuredService:TimeoutSeconds") ?? 35;
+                client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+                client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
+            })
+            .AddPolicyHandler(GetRetryPolicy(configuration, "Unstructured"));
+
+        services.AddScoped<UnstructuredPdfTextExtractor>();
+
+        // Stage 2: SmolDocling (VLM fallback for complex layouts, quality ≥0.70)
+        services.AddHttpClient("SmolDoclingService", client =>
+            {
+                var baseUrl = configuration["PdfExtraction:SmolDocling:BaseUrl"]
+                              ?? "http://smoldocling-service:8002";
+                client.BaseAddress = new Uri(baseUrl);
+
+                var timeoutSeconds = configuration.GetValue<int?>("PdfExtraction:SmolDocling:TimeoutSeconds") ?? 60;
+                client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+                client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
+            })
+            .AddPolicyHandler(GetRetryPolicy(configuration, "SmolDocling"))
+            .AddPolicyHandler(GetCircuitBreakerPolicy(configuration));
+
+        services.AddScoped<SmolDoclingPdfTextExtractor>();
+
+        // Stage 3: Docnet (local fallback, best effort)
+        services.AddScoped<DocnetPdfTextExtractor>();
+
+        // BGAI-010: Enhanced PDF Processing Orchestrator (3-stage pipeline coordinator)
+        services.AddScoped<EnhancedPdfProcessingOrchestrator>(sp =>
         {
-            // Stage 1: Unstructured (primary - RAG-optimized)
-            services.AddHttpClient("UnstructuredService", client =>
-                {
-                    var baseUrl = configuration["PdfProcessing:Extractor:UnstructuredService:BaseUrl"]
-                                  ?? "http://unstructured-service:8001";
-                    client.BaseAddress = new Uri(baseUrl);
+            var unstructured = sp.GetRequiredService<UnstructuredPdfTextExtractor>();
+            var smoldocling = sp.GetRequiredService<SmolDoclingPdfTextExtractor>();
+            var docnet = sp.GetRequiredService<DocnetPdfTextExtractor>();
+            var logger = sp.GetRequiredService<ILogger<EnhancedPdfProcessingOrchestrator>>();
+            var config = sp.GetRequiredService<IConfiguration>();
 
-                    var timeoutSeconds = configuration.GetValue<int?>("PdfProcessing:Extractor:UnstructuredService:TimeoutSeconds") ?? 35;
-                    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+            return new EnhancedPdfProcessingOrchestrator(unstructured, smoldocling, docnet, logger, config);
+        });
 
-                    client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
-                })
-                .AddPolicyHandler(GetRetryPolicy(configuration, "Unstructured"));
+        // Legacy: Single extractor registration for backward compatibility
+        var extractorProvider = configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
 
+        if (extractorProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase))
+        {
+            // Use orchestrator as default (recommended)
+            services.AddScoped<IPdfTextExtractor>(sp => sp.GetRequiredService<UnstructuredPdfTextExtractor>());
+        }
+        else if (extractorProvider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase))
+        {
             services.AddScoped<IPdfTextExtractor, UnstructuredPdfTextExtractor>();
         }
         else if (extractorProvider.Equals("SmolDocling", StringComparison.OrdinalIgnoreCase))
         {
-            // Stage 2: SmolDocling (VLM fallback for complex layouts)
-            services.AddHttpClient("SmolDoclingService", client =>
-                {
-                    var baseUrl = configuration["PdfExtraction:SmolDocling:BaseUrl"]
-                                  ?? "http://smoldocling-service:8002";
-                    client.BaseAddress = new Uri(baseUrl);
-
-                    var timeoutSeconds = configuration.GetValue<int?>("PdfExtraction:SmolDocling:TimeoutSeconds") ?? 60;
-                    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-
-                    client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
-                })
-                .AddPolicyHandler(GetRetryPolicy(configuration, "SmolDocling"))
-                .AddPolicyHandler(GetCircuitBreakerPolicy(configuration));
-
             services.AddScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>();
         }
         else
         {
-            // Stage 3: Docnet (simple fallback)
             services.AddScoped<IPdfTextExtractor, DocnetPdfTextExtractor>();
         }
 

@@ -1,12 +1,33 @@
 # 📚 Planning Documentation Index
 
 **Created**: 2025-11-12
+**Last Updated**: 2025-11-12
 **Scope**: Board Game AI Implementation Roadmap
-**Status**: Ready for execution
+**Status**: 🟡 Month 4-6 IN PROGRESS - 27% Complete (23/86 closed)
 
 ---
 
 ## 📋 Available Documents
+
+### 0. 📊 **Issue Status Tracker** (CHECK FIRST - UPDATED 2025-11-12)
+**File**: `issue-status-tracker.md`
+
+**Purpose**: Real-time status of all 163 GitHub issues (63 BGAI + 100 other)
+
+**Contents**:
+- Current completion: 27% (23/86 BGAI closed)
+- Phase 0-3 COMPLETE ✅ (Architecture, PDF, LLM, Validation)
+- Month 4-6 IN PROGRESS 🟡 (31 issues remaining)
+- Milestone gate criteria and dates
+- Current sprint focus and priorities
+- Week-by-week execution plan
+
+**Audience**: Everyone - CHECK DAILY
+**Read Time**: 20 minuti
+
+**🎉 GOOD NEWS**: Foundation complete, on track for Week 28 launch!
+
+---
 
 ### 1. 🎯 **Executive Summary** (START HERE)
 **File**: `executive-summary-development-roadmap.md`
@@ -164,6 +185,7 @@
 
 | Document | Audience | Detail Level | Focus | Use Case |
 |----------|----------|--------------|-------|----------|
+| **Issue Status Tracker** | Everyone | Real-time | Current status | Daily tracking |
 | **Executive Summary** | Stakeholders | High-level | Strategy | Decision-making |
 | **Backend Plan** | Backend devs | Very detailed | Code | Implementation |
 | **Frontend Plan** | Frontend devs | Very detailed | Code | Implementation |

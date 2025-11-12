@@ -134,16 +134,61 @@ GET    /api/v1/search             → SearchQuery (hybrid)
 
 ---
 
+## PDF Processing Pipeline (BGAI - Production Ready)
+
+**3-Stage Fallback Architecture** (ADR-003):
+```
+PDF Upload → EnhancedPdfProcessingOrchestrator
+               ├─ Stage 1: Unstructured (≥0.80 quality) - 80% success, 1.3s avg
+               ├─ Stage 2: SmolDocling VLM (≥0.70 quality) - 15% fallback, 3-5s avg
+               └─ Stage 3: Docnet (best effort) - 5% fallback, fast
+                     ↓
+            PdfQualityValidationDomainService
+                     ↓
+            Quality Reports + Recommendations
+```
+
+**Components**:
+- `OrchestratedPdfTextExtractor`: IPdfTextExtractor adapter for orchestrator
+- `EnhancedPdfProcessingOrchestrator`: 3-stage coordinator with quality routing
+- `PdfQualityValidationDomainService`: Threshold enforcement + reporting
+- `UnstructuredPdfTextExtractor`: Stage 1 (Apache 2.0, RAG-optimized)
+- `SmolDoclingPdfTextExtractor`: Stage 2 (VLM 256M, complex layouts)
+- `DocnetPdfTextExtractor`: Stage 3 (local fallback)
+
+**Quality Metrics** (4-metric scoring):
+- Text coverage: 40% (chars/page ratio)
+- Structure detection: 20% (titles, headers, lists)
+- Table detection: 20% (game rules tables)
+- Page coverage: 20% (all pages processed)
+
+**Configuration**:
+```json
+"PdfProcessing": {
+  "Extractor": {
+    "Provider": "Orchestrator"  // Use 3-stage pipeline (recommended)
+  },
+  "Quality": {
+    "MinimumThreshold": 0.80,
+    "MinCharsPerPage": 500
+  }
+}
+```
+
+**Tests**: 50 PDF tests (8 integration + 10 orchestrator + 10 quality + 6 E2E + 16 validation)
+
+---
+
 ## Testing
 
 **Coverage**: 90%+ enforced (frontend 90.03%, backend 90%+)
 
 **Stack**:
-- Backend: xUnit + Moq + Testcontainers (Postgres, Qdrant)
+- Backend: xUnit + Moq + Testcontainers (Postgres, Qdrant, Unstructured, SmolDocling)
 - Frontend: Jest + React Testing Library + Playwright
 - CI: GitHub Actions (~14min, optimized)
 
-**Tests**: 4,033 frontend + 112 backend + 30 E2E = 4,175 total
+**Tests**: 4,033 frontend + 162 backend + 30 E2E = 4,225 total
 
 ---
 

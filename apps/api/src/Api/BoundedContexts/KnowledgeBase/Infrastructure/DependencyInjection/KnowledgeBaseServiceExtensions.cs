@@ -27,6 +27,9 @@ public static class KnowledgeBaseServiceExtensions
         // ISSUE-971: BGAI-029 - Citation Validation (verify source references)
         services.AddScoped<ICitationValidationService, CitationValidationService>(); // Scoped - uses DbContext
 
+        // ISSUE-972: BGAI-030 - Hallucination Detection (forbidden keywords, multilingual)
+        services.AddSingleton<IHallucinationDetectionService, HallucinationDetectionService>();
+
         // ISSUE-958: LLM Hybrid Architecture
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();

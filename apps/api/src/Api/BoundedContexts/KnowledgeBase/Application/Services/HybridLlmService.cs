@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -27,6 +29,7 @@ public class HybridLlmService : ILlmService
 {
     private readonly IEnumerable<ILlmClient> _clients;
     private readonly ILlmRoutingStrategy _routingStrategy;
+    private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<HybridLlmService> _logger;
 
     // Default LLM parameters
@@ -36,10 +39,12 @@ public class HybridLlmService : ILlmService
     public HybridLlmService(
         IEnumerable<ILlmClient> clients,
         ILlmRoutingStrategy routingStrategy,
+        ILlmCostLogRepository costLogRepository,
         ILogger<HybridLlmService> logger)
     {
         _clients = clients ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
+        _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         if (!_clients.Any())
@@ -48,7 +53,7 @@ public class HybridLlmService : ILlmService
         }
 
         _logger.LogInformation(
-            "HybridLlmService initialized with {ClientCount} providers: {Providers}",
+            "HybridLlmService initialized with {ClientCount} providers: {Providers} (cost tracking enabled)",
             _clients.Count(),
             string.Join(", ", _clients.Select(c => c.ProviderName)));
     }
@@ -96,6 +101,8 @@ public class HybridLlmService : ILlmService
             "Generating completion via {Provider} ({Model}) - Reason: {Reason}",
             client.ProviderName, decision.ModelId, decision.Reason);
 
+        var stopwatch = Stopwatch.StartNew();
+
         try
         {
             var result = await client.GenerateCompletionAsync(
@@ -106,6 +113,8 @@ public class HybridLlmService : ILlmService
                 DefaultMaxTokens,
                 ct);
 
+            stopwatch.Stop();
+
             // Add routing metadata
             if (result.Success && result.Metadata is Dictionary<string, string> metadata)
             {
@@ -114,13 +123,70 @@ public class HybridLlmService : ILlmService
                 metadata["selected_model"] = decision.ModelId;
             }
 
+            // ISSUE-960: Log cost to database (fire and forget - don't block response)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _costLogRepository.LogCostAsync(
+                        user?.Id,
+                        user?.Role.Value ?? "Anonymous",
+                        new Domain.Models.LlmCostCalculation
+                        {
+                            ModelId = result.Cost.ModelId,
+                            Provider = result.Cost.Provider,
+                            PromptTokens = result.Usage.PromptTokens,
+                            CompletionTokens = result.Usage.CompletionTokens,
+                            InputCost = result.Cost.InputCost,
+                            OutputCost = result.Cost.OutputCost
+                        },
+                        endpoint: "completion",
+                        success: result.Success,
+                        errorMessage: result.ErrorMessage,
+                        latencyMs: (int)stopwatch.ElapsedMilliseconds,
+                        ipAddress: null, // Not available here - would come from HTTP context
+                        userAgent: null,
+                        ct: CancellationToken.None);
+                }
+                catch (Exception logEx)
+                {
+                    _logger.LogWarning(logEx, "Failed to log LLM cost (non-blocking)");
+                }
+            }, CancellationToken.None);
+
             return result;
         }
         catch (Exception ex)
         {
+            stopwatch.Stop();
+
             _logger.LogError(ex,
                 "Error generating completion with {Provider} ({Model})",
                 client.ProviderName, decision.ModelId);
+
+            // ISSUE-960: Log failed request cost (fire and forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _costLogRepository.LogCostAsync(
+                        user?.Id,
+                        user?.Role.Value ?? "Anonymous",
+                        Domain.Models.LlmCostCalculation.Empty,
+                        endpoint: "completion",
+                        success: false,
+                        errorMessage: ex.Message,
+                        latencyMs: (int)stopwatch.ElapsedMilliseconds,
+                        ipAddress: null,
+                        userAgent: null,
+                        ct: CancellationToken.None);
+                }
+                catch (Exception logEx)
+                {
+                    _logger.LogWarning(logEx, "Failed to log LLM error cost (non-blocking)");
+                }
+            }, CancellationToken.None);
+
             return LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
         }
     }

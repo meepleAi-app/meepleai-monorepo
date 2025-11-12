@@ -1,42 +1,37 @@
 {
-  // Backend Worktree - Debug Configuration
   "version": "0.2.0",
   "configurations": [
     {
-      "name": ".NET Core Launch (API)",
-      "type": "coreclr",
+      "name": "Next.js: debug server-side",
+      "type": "node-terminal",
       "request": "launch",
-      "preLaunchTask": "build",
-      "program": "${workspaceFolder}/apps/api/src/Api/bin/Debug/net9.0/Api.dll",
-      "args": [],
-      "cwd": "${workspaceFolder}/apps/api/src/Api",
-      "stopAtEntry": false,
+      "command": "pnpm dev",
+      "cwd": "${workspaceFolder}/apps/web",
       "serverReadyAction": {
-        "action": "openExternally",
-        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
-        "uriFormat": "%s/health"
-      },
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "sourceFileMap": {
-        "/Views": "${workspaceFolder}/Views"
+        "pattern": "- Local:.+(https?://.+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome"
       }
     },
     {
-      "name": ".NET Core Attach",
-      "type": "coreclr",
-      "request": "attach"
+      "name": "Next.js: debug client-side",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/apps/web"
     },
     {
-      "name": ".NET Core Launch (Tests)",
-      "type": "coreclr",
+      "name": "Next.js: debug full stack",
+      "type": "node-terminal",
       "request": "launch",
-      "preLaunchTask": "test",
-      "program": "${workspaceFolder}/apps/api/tests/Api.Tests/bin/Debug/net9.0/Api.Tests.dll",
-      "args": [],
-      "cwd": "${workspaceFolder}/apps/api/tests/Api.Tests",
-      "stopAtEntry": false
+      "command": "pnpm dev",
+      "cwd": "${workspaceFolder}/apps/web",
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "pattern": "- Local:.+(https?://.+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome"
+      }
     }
   ]
 }

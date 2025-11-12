@@ -1,11 +1,12 @@
 {
   "recommendations": [
-    "ms-dotnettools.csdevkit",
-    "ms-dotnettools.csharp",
-    "ms-dotnettools.vscode-dotnet-runtime",
-    "humao.rest-client",
-    "eamodio.gitlens",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "Orta.vscode-jest",
     "usernamehw.errorlens",
-    "dotjoshjohnson.xml"
+    "eamodio.gitlens",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense"
   ]
 }

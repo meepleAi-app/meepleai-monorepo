@@ -1,25 +1,57 @@
 {
   "files.exclude": {
-    "apps/web": true,
-    "**/node_modules": true,
-    "**/.next": true
+    "apps/api": true,
+    "**/*.dll": true,
+    "**/bin": true,
+    "**/obj": true,
+    "**/*.csproj": true
   },
   "search.exclude": {
-    "apps/web": true,
+    "apps/api": true,
     "**/node_modules": true,
+    "**/.next": true,
     "**/bin": true,
     "**/obj": true
   },
-  "terminal.integrated.cwd": "${workspaceFolder}/apps/api",
+  "terminal.integrated.cwd": "${workspaceFolder}/apps/web",
   "editor.formatOnSave": true,
-  "[csharp]": {
-    "editor.defaultFormatter": "ms-dotnettools.csharp",
-    "editor.tabSize": 4
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
   },
-  "dotnet.defaultSolution": "apps/api/Api.sln",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "typescript.tsdk": "apps/web/node_modules/typescript/lib",
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\(([^)]*)\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+  ],
   "workbench.colorCustomizations": {
-    "statusBar.background": "#004494",
-    "statusBar.foreground": "#ffffff"
+    "statusBar.background": "#34a853",
+    "statusBar.foreground": "#ffffff",
+    "statusBar.noFolderBackground": "#34a853",
+    "statusBar.debuggingBackground": "#16a34a"
   },
-  "window.title": "Backend - ${rootName}${separator}${activeEditorShort}"
+  "window.title": "Frontend - ${rootName}${separator}${activeEditorShort}",
+  "git.ignoreLimitWarning": true,
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/bin/**": true,
+    "**/obj/**": true
+  },
+  "eslint.workingDirectories": ["apps/web"],
+  "jest.autoRun": "off"
 }

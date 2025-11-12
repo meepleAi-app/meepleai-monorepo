@@ -4,6 +4,8 @@
 
 **Stack**: ASP.NET 9, Next.js 16, React 19, PostgreSQL, Qdrant, Redis, OpenRouter, n8n
 
+**UI**: Shadcn/UI (Radix + Tailwind), Tailwind CSS 4
+
 ---
 
 ## Architecture (DDD - 99% Complete)
@@ -225,6 +227,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **OAuth Setup** | `docs/guide/oauth-setup-guide.md` |
 | **Security** | `docs/SECURITY.md`, `docs/security-scanning.md` |
 | **Testing** | `docs/testing/test-writing-guide.md` |
+| **Shadcn/UI** | `docs/frontend/shadcn-ui-installation.md` |
 
 ---
 

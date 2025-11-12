@@ -25,7 +25,7 @@ public static class KnowledgeBaseServiceExtensions
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();
 
-        // ISSUE-960: Cost Tracking
+        // ISSUE-960: Cost Tracking (from main)
         // Domain Services - Cost Calculator and Alerting
         services.AddSingleton<ILlmCostCalculator, LlmCostCalculator>();
         services.AddScoped<LlmCostAlertService>(); // Scoped - uses IAlertingService
@@ -36,6 +36,11 @@ public static class KnowledgeBaseServiceExtensions
 
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         services.AddScoped<ILlmService, HybridLlmService>();
+
+        // ISSUE-962 (BGAI-020): Provider Health Check Service (Singleton - background service)
+        services.AddHostedService<ProviderHealthCheckService>();
+        services.AddSingleton<ProviderHealthCheckService>(sp =>
+            sp.GetServices<IHostedService>().OfType<ProviderHealthCheckService>().First());
 
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();

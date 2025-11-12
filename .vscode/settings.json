@@ -1,24 +1,37 @@
 {
   "files.exclude": {
-    "apps/api": true,
+    // Remove "apps/api": true - we need to see the backend!
     "**/*.dll": true,
     "**/bin": true,
-    "**/obj": true,
-    "**/*.csproj": true
+    "**/obj": true
+    // Remove "**/*.csproj": true - needed for C# IntelliSense
   },
   "search.exclude": {
-    "apps/api": true,
+    // Remove "apps/api": true - need to search backend code!
     "**/node_modules": true,
     "**/.next": true,
     "**/bin": true,
     "**/obj": true
   },
-  "terminal.integrated.cwd": "${workspaceFolder}/apps/web",
+  
+  // C# Settings
+  "omnisharp.enableRoslynAnalyzers": true,
+  "omnisharp.enableEditorConfigSupport": true,
+  "omnisharp.enableImportCompletion": true,
+  "csharp.suppressDotnetRestoreNotification": true,
+  "dotnet.defaultSolution": "apps/api/MeepleAI.Api.sln",
+  
+  // Terminal defaults to root (not apps/api)
+  // "terminal.integrated.cwd": "${workspaceFolder}",
+  
+  // Editor settings
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
     "source.organizeImports": "explicit"
   },
+  
+  // TypeScript/React/JavaScript
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.tabSize": 2
@@ -34,17 +47,29 @@
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  
+  // C#
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp",
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+  },
+  
   "typescript.tsdk": "apps/web/node_modules/typescript/lib",
   "tailwindCSS.experimental.classRegex": [
-    ["cva\(([^)]*)\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
   ],
+  
+  // Workspace identification
   "workbench.colorCustomizations": {
     "statusBar.background": "#34a853",
     "statusBar.foreground": "#ffffff",
     "statusBar.noFolderBackground": "#34a853",
     "statusBar.debuggingBackground": "#16a34a"
   },
-  "window.title": "Frontend - ${rootName}${separator}${activeEditorShort}",
+  "window.title": "Backend - ${rootName}${separator}${activeEditorShort}",
+  
+  // Performance
   "git.ignoreLimitWarning": true,
   "files.watcherExclude": {
     "**/node_modules/**": true,
@@ -52,6 +77,8 @@
     "**/bin/**": true,
     "**/obj/**": true
   },
+  
+  // Frontend tooling
   "eslint.workingDirectories": ["apps/web"],
   "jest.autoRun": "off"
 }

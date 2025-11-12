@@ -108,8 +108,8 @@ public static class ApplicationServiceExtensions
 
     private static IServiceCollection AddAiServices(this IServiceCollection services)
     {
-        // AI-15-ALT: Use LlmService (OpenRouter with GPT-4o-mini model selection) instead of OllamaLlmService
-        services.AddScoped<ILlmService, LlmService>();
+        // ISSUE-958: ILlmService now registered in KnowledgeBaseServiceExtensions as HybridLlmService
+        // (Removed old LlmService registration to prevent duplicate)
 
         // AI-09: Language detection for multi-language support
         services.AddSingleton<ILanguageDetectionService, LanguageDetectionService>();

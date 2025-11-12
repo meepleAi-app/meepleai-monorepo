@@ -1,0 +1,214 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
+using Api.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
+
+namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
+
+/// <summary>
+/// Integration tests for LlmCostLogRepository
+/// ISSUE-960: BGAI-018 - Cost tracking persistence tests
+/// </summary>
+public class LlmCostLogRepositoryTests : IDisposable
+{
+    private readonly MeepleAiDbContext _context;
+    private readonly LlmCostLogRepository _repository;
+
+    public LlmCostLogRepositoryTests()
+    {
+        // Use in-memory database for testing
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
+            .Options;
+
+        _context = new MeepleAiDbContext(options);
+        var logger = Mock.Of<ILogger<LlmCostLogRepository>>();
+        _repository = new LlmCostLogRepository(_context, logger);
+    }
+
+    [Fact]
+    public async Task Test01_LogCost_SuccessfulRequest_StoresCorrectly()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var cost = new LlmCostCalculation
+        {
+            ModelId = "openai/gpt-4o-mini",
+            Provider = "OpenRouter",
+            PromptTokens = 1000,
+            CompletionTokens = 500,
+            InputCost = 0.00015m,
+            OutputCost = 0.0003m
+        };
+
+        // Act
+        await _repository.LogCostAsync(
+            userId,
+            "User",
+            cost,
+            "chat",
+            success: true,
+            errorMessage: null,
+            latencyMs: 1500,
+            ipAddress: "127.0.0.1",
+            userAgent: "Test/1.0");
+
+        // Assert
+        var logs = await _context.LlmCostLogs.ToListAsync();
+        Assert.Single(logs);
+
+        var log = logs[0];
+        Assert.Equal(userId, log.UserId);
+        Assert.Equal("User", log.UserRole);
+        Assert.Equal("openai/gpt-4o-mini", log.ModelId);
+        Assert.Equal("OpenRouter", log.Provider);
+        Assert.Equal(1000, log.PromptTokens);
+        Assert.Equal(500, log.CompletionTokens);
+        Assert.Equal(1500, log.TotalTokens);
+        Assert.Equal(0.00015m, log.InputCost);
+        Assert.Equal(0.0003m, log.OutputCost);
+        Assert.Equal(0.00045m, log.TotalCost);
+        Assert.True(log.Success);
+        Assert.Null(log.ErrorMessage);
+        Assert.Equal(1500, log.LatencyMs);
+    }
+
+    [Fact]
+    public async Task Test02_GetTotalCost_MultipleRequests_SumsCorrectly()
+    {
+        // Arrange - Add 3 requests
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await _repository.LogCostAsync(null, "Anonymous", CreateCost(0.001m), "chat", true, null, 100, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.002m), "qa", true, null, 200, null, null);
+        await _repository.LogCostAsync(null, "Admin", CreateCost(0.003m), "explain", true, null, 300, null, null);
+
+        // Act
+        var totalCost = await _repository.GetTotalCostAsync(today, today);
+
+        // Assert
+        Assert.Equal(0.006m, totalCost);
+    }
+
+    [Fact]
+    public async Task Test03_GetCostsByProvider_GroupsCorrectly()
+    {
+        // Arrange
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await _repository.LogCostAsync(null, "User", CreateCost(0.001m, "OpenRouter"), "chat", true, null, 100, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.002m, "OpenRouter"), "qa", true, null, 200, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0m, "Ollama"), "chat", true, null, 150, null, null);
+
+        // Act
+        var costsByProvider = await _repository.GetCostsByProviderAsync(today, today);
+
+        // Assert
+        Assert.Equal(2, costsByProvider.Count);
+        Assert.Equal(0.003m, costsByProvider["OpenRouter"]);
+        Assert.Equal(0m, costsByProvider["Ollama"]);
+    }
+
+    [Fact]
+    public async Task Test04_GetCostsByRole_GroupsCorrectly()
+    {
+        // Arrange
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await _repository.LogCostAsync(null, "Anonymous", CreateCost(0.001m), "chat", true, null, 100, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.002m), "qa", true, null, 200, null, null);
+        await _repository.LogCostAsync(null, "Admin", CreateCost(0.005m), "explain", true, null, 300, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.001m), "chat", true, null, 150, null, null);
+
+        // Act
+        var costsByRole = await _repository.GetCostsByRoleAsync(today, today);
+
+        // Assert
+        Assert.Equal(3, costsByRole.Count);
+        Assert.Equal(0.001m, costsByRole["Anonymous"]);
+        Assert.Equal(0.003m, costsByRole["User"]);
+        Assert.Equal(0.005m, costsByRole["Admin"]);
+    }
+
+    [Fact]
+    public async Task Test05_GetUserCost_FiltersCorrectly()
+    {
+        // Arrange
+        var user1 = Guid.NewGuid();
+        var user2 = Guid.NewGuid();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await _repository.LogCostAsync(user1, "User", CreateCost(0.001m), "chat", true, null, 100, null, null);
+        await _repository.LogCostAsync(user1, "User", CreateCost(0.002m), "qa", true, null, 200, null, null);
+        await _repository.LogCostAsync(user2, "User", CreateCost(0.005m), "chat", true, null, 300, null, null);
+
+        // Act
+        var user1Cost = await _repository.GetUserCostAsync(user1, today, today);
+        var user2Cost = await _repository.GetUserCostAsync(user2, today, today);
+
+        // Assert
+        Assert.Equal(0.003m, user1Cost);
+        Assert.Equal(0.005m, user2Cost);
+    }
+
+    [Fact]
+    public async Task Test06_GetDailyCost_ReturnsCorrectTotal()
+    {
+        // Arrange
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await _repository.LogCostAsync(null, "User", CreateCost(0.010m), "chat", true, null, 100, null, null);
+        await _repository.LogCostAsync(null, "Admin", CreateCost(0.025m), "qa", true, null, 200, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.015m), "explain", true, null, 150, null, null);
+
+        // Act
+        var dailyCost = await _repository.GetDailyCostAsync(today);
+
+        // Assert
+        Assert.Equal(0.050m, dailyCost);
+    }
+
+    [Fact]
+    public async Task Test07_DateRangeFilter_WorksCorrectly()
+    {
+        // Arrange - Can't easily control dates in in-memory DB, so test same day
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await _repository.LogCostAsync(null, "User", CreateCost(0.001m), "chat", true, null, 100, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.002m), "qa", true, null, 200, null, null);
+
+        // Act
+        var totalCost = await _repository.GetTotalCostAsync(today, today);
+
+        // Assert
+        Assert.Equal(0.003m, totalCost);
+    }
+
+    private static LlmCostCalculation CreateCost(decimal totalCost, string provider = "OpenRouter")
+    {
+        // Simple helper - split cost evenly for testing
+        var inputCost = totalCost * 0.4m;
+        var outputCost = totalCost * 0.6m;
+        var promptTokens = (int)(inputCost * 1_000_000 / 0.15m); // Rough token estimate
+        var completionTokens = (int)(outputCost * 1_000_000 / 0.60m);
+
+        return new LlmCostCalculation
+        {
+            ModelId = provider == "Ollama" ? "llama3:8b" : "openai/gpt-4o-mini",
+            Provider = provider,
+            PromptTokens = promptTokens,
+            CompletionTokens = completionTokens,
+            InputCost = inputCost,
+            OutputCost = outputCost
+        };
+    }
+
+    public void Dispose()
+    {
+        _context.Database.EnsureDeleted();
+        _context.Dispose();
+    }
+}

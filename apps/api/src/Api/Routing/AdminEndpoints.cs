@@ -1,5 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
@@ -2312,6 +2314,93 @@ public static class AdminEndpoints
             logger.LogInformation("Chess knowledge deletion completed successfully");
             return Results.Json(new { success = true });
         });
+
+        // ISSUE-960: BGAI-018 - LLM Cost Reporting
+        group.MapGet("/llm-costs/report", async (
+            HttpContext context,
+            IMediator mediator,
+            string? startDate,
+            string? endDate,
+            Guid? userId,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            // Default to last 30 days if not specified
+            var start = string.IsNullOrWhiteSpace(startDate)
+                ? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30))
+                : DateOnly.Parse(startDate);
+
+            var end = string.IsNullOrWhiteSpace(endDate)
+                ? DateOnly.FromDateTime(DateTime.UtcNow)
+                : DateOnly.Parse(endDate);
+
+            var query = new GetLlmCostReportQuery
+            {
+                StartDate = start,
+                EndDate = end,
+                UserId = userId
+            };
+
+            var report = await mediator.Send(query, ct);
+
+            return Results.Json(report);
+        })
+        .WithTags("Admin", "LLM", "Analytics")
+        .WithName("GetLlmCostReport");
+
+        group.MapGet("/llm-costs/daily", async (
+            HttpContext context,
+            IMediator mediator,
+            string? date,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var targetDate = string.IsNullOrWhiteSpace(date)
+                ? DateOnly.FromDateTime(DateTime.UtcNow)
+                : DateOnly.Parse(date);
+
+            var query = new GetLlmCostReportQuery
+            {
+                StartDate = targetDate,
+                EndDate = targetDate
+            };
+
+            var report = await mediator.Send(query, ct);
+
+            return Results.Json(new
+            {
+                date = targetDate,
+                totalCost = report.DailyCost,
+                exceedsThreshold = report.ExceedsThreshold,
+                threshold = report.ThresholdAmount,
+                costsByProvider = report.CostsByProvider,
+                costsByRole = report.CostsByRole
+            });
+        })
+        .WithTags("Admin", "LLM", "Analytics")
+        .WithName("GetDailyLlmCost");
+
+        group.MapPost("/llm-costs/check-alerts", async (
+            HttpContext context,
+            LlmCostAlertService alertService,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            // Check all thresholds (daily, weekly, monthly projection)
+            await alertService.CheckDailyCostThresholdAsync(ct);
+            await alertService.CheckWeeklyCostThresholdAsync(ct);
+            await alertService.CheckMonthlyCostProjectionAsync(ct);
+
+            return Results.Json(new { success = true, message = "Cost threshold checks completed" });
+        })
+        .WithTags("Admin", "LLM", "Alerts")
+        .WithName("CheckLlmCostAlerts");
 
         // UI-01: Chat management endpoints
         return group;

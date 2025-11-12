@@ -1,6 +1,36 @@
 {
   "version": "0.2.0",
   "configurations": [
+    // .NET API Backend
+    {
+      "name": ".NET API: Launch",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-api",
+      "program": "${workspaceFolder}/apps/api/src/Api/bin/Debug/net9.0/MeepleAI.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/apps/api/src/Api",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:8080"
+      },
+      "sourceFileMap": {
+        "/Views": "${workspaceFolder}/apps/api/src/Api/Views"
+      }
+    },
+    {
+      "name": ".NET API: Attach",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    },
+    
+    // Next.js Frontend
     {
       "name": "Next.js: debug server-side",
       "type": "node-terminal",
@@ -31,6 +61,18 @@
         "pattern": "- Local:.+(https?://.+)",
         "uriFormat": "%s",
         "action": "debugWithChrome"
+      }
+    },
+    
+    // Full Stack (API + Frontend)
+    {
+      "name": "Full Stack: API + Frontend",
+      "type": "compound",
+      "configurations": [".NET API: Launch", "Next.js: debug server-side"],
+      "presentation": {
+        "hidden": false,
+        "group": "full-stack",
+        "order": 1
       }
     }
   ]

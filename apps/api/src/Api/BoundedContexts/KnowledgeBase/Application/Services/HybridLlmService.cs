@@ -120,9 +120,17 @@ public class HybridLlmService : ILlmService
                 "No available provider found (circuit breakers may be open), using first client as fallback");
             client = _clients.First();
 
-            // Update decision for fallback provider
-            decision = _routingStrategy.SelectProvider(user); // Will select based on user, but we override below
-            // TODO: Better approach - create decision specifically for fallback provider
+            // P1 FIX: Create decision specifically for fallback provider
+            var originalProvider = decision.ProviderName;
+            decision = new LlmRoutingDecision(
+                ProviderName: client.ProviderName,
+                ModelId: GetDefaultModelForProvider(client.ProviderName),
+                Reason: $"Emergency fallback from {originalProvider} (all providers unavailable)"
+            );
+
+            _logger.LogWarning(
+                "Created emergency fallback decision: {Provider} ({Model})",
+                decision.ProviderName, decision.ModelId);
         }
         else if (client.ProviderName != decision.ProviderName)
         {

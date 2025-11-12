@@ -104,7 +104,7 @@ public class OllamaLlmService : ILlmService
 
             _logger.LogInformation("Successfully generated chat completion using Ollama");
 
-            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, metadata);
+            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, LlmCost.Empty, metadata);
         }
         catch (TaskCanceledException ex)
         {

@@ -112,38 +112,45 @@ export default function Home() {
             <span className="text-4xl">🎲</span>
             <span className="text-2xl font-bold gradient-text">MeepleAI</span>
           </Link>
-          <nav aria-label="Main navigation" className="hidden md:flex items-center gap-6">
+
+          {/* Navigation and theme switcher */}
+          <div className="flex items-center gap-4">
+            {/* Theme switcher - always visible on all screen sizes */}
             <ThemeSwitcher />
-            {authUser ? (
-              <>
-                <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
-                  Chat
-                </Link>
-                <Link href="/chess" className="text-slate-300 hover:text-white transition-colors">
-                  Chess
-                </Link>
-                <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">
-                  Upload
-                </Link>
-                {authUser.role === "Admin" && (
-                  <Link href="/admin" className="text-slate-300 hover:text-white transition-colors">
-                    Admin
+
+            {/* Navigation links - hidden on mobile */}
+            <nav aria-label="Main navigation" className="hidden md:flex items-center gap-6">
+              {authUser ? (
+                <>
+                  <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
+                    Chat
                   </Link>
-                )}
-                <button
-                  onClick={logout}
-                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 py-2 px-4"
-                  aria-label="Logout from MeepleAI"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <Button onClick={() => setShowAuthModal(true)} data-testid="nav-get-started">
-                Get Started
-              </Button>
-            )}
-          </nav>
+                  <Link href="/chess" className="text-slate-300 hover:text-white transition-colors">
+                    Chess
+                  </Link>
+                  <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">
+                    Upload
+                  </Link>
+                  {authUser.role === "Admin" && (
+                    <Link href="/admin" className="text-slate-300 hover:text-white transition-colors">
+                      Admin
+                    </Link>
+                  )}
+                  <button
+                    onClick={logout}
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 py-2 px-4"
+                    aria-label="Logout from MeepleAI"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Button onClick={() => setShowAuthModal(true)} data-testid="nav-get-started">
+                  Get Started
+                </Button>
+              )}
+            </nav>
+          </div>
         </div>
       </header>
 

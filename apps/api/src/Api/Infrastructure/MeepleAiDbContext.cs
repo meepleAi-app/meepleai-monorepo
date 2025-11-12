@@ -42,6 +42,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AlertEntity> Alerts => Set<AlertEntity>(); // OPS-07
     public DbSet<UserBackupCodeEntity> UserBackupCodes => Set<UserBackupCodeEntity>(); // AUTH-07
     public DbSet<TempSessionEntity> TempSessions => Set<TempSessionEntity>(); // AUTH-07
+    public DbSet<LlmCostLogEntity> LlmCostLogs => Set<LlmCostLogEntity>(); // ISSUE-960: BGAI-018
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -321,8 +321,8 @@ public class EnhancedPdfProcessingOrchestrator
         var stageStopwatch = Stopwatch.StartNew();
 
         _logger.LogInformation(
-            "[{RequestId}] Attempting paged Stage {Stage} ({StageName})",
-            requestId, stageNumber, stageName);
+            "[{RequestId}] Attempting paged Stage {Stage} ({StageName}) - Quality threshold: {Threshold:F2}",
+            requestId, stageNumber, stageName, qualityThreshold);
 
         try
         {
@@ -348,11 +348,25 @@ public class EnhancedPdfProcessingOrchestrator
                 return null;
             }
 
-            _logger.LogInformation(
-                "[{RequestId}] Paged Stage {Stage} ({StageName}) succeeded in {DurationMs}ms - Chunks: {Count}",
-                requestId, stageNumber, stageName, stageStopwatch.Elapsed.TotalMilliseconds, result.PageChunks.Count);
+            // Calculate quality score based on text coverage (similar to PdfQualityValidationDomainService)
+            // This ensures paged extraction honors the same quality thresholds as non-paged
+            var qualityScore = CalculatePagedQualityScore(result);
 
-            return result;
+            if (qualityScore >= qualityThreshold)
+            {
+                _logger.LogInformation(
+                    "[{RequestId}] Paged Stage {Stage} ({StageName}) succeeded in {DurationMs}ms - Chunks: {Count}, Quality Score: {Score:F2} (≥ {Threshold:F2})",
+                    requestId, stageNumber, stageName, stageStopwatch.Elapsed.TotalMilliseconds, 
+                    result.PageChunks.Count, qualityScore, qualityThreshold);
+
+                return result;
+            }
+
+            _logger.LogWarning(
+                "[{RequestId}] Paged Stage {Stage} ({StageName}) quality below threshold - Score: {Score:F2} < {Threshold:F2}, falling back to next stage",
+                requestId, stageNumber, stageName, qualityScore, qualityThreshold);
+
+            return null;
         }
         catch (Exception ex)
         {
@@ -362,6 +376,46 @@ public class EnhancedPdfProcessingOrchestrator
                 requestId, stageNumber, stageName, ex.Message);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Calculates quality score for paged extraction using linear interpolation
+    /// </summary>
+    /// <remarks>
+    /// Uses same logic as PdfQualityValidationDomainService.CalculateTextCoverage:
+    /// - minChars = 500 (default from ADR-003)
+    /// - idealChars = 1000 (minChars * 2)
+    ///
+    /// Scoring (linear interpolation):
+    /// - &lt;500 cpp: 0.0 → 0.5 (e.g., 250 cpp → 0.25, 400 cpp → 0.40)
+    /// - 500-1000 cpp: 0.5 → 1.0 (e.g., 800 cpp → 0.80 ✅ passes Stage 1, 900 cpp → 0.90)
+    /// - ≥1000 cpp: 1.0
+    ///
+    /// This ensures 800 cpp meets Stage 1 threshold (0.80), matching domain service behavior.
+    /// </remarks>
+    private static double CalculatePagedQualityScore(PagedTextExtractionResult result)
+    {
+        if (result.TotalPages == 0)
+            return 0.0;
+
+        var charsPerPage = (double)result.TotalCharacters / result.TotalPages;
+        const int minChars = 500;    // From ADR-003: MinCharsPerPage default
+        const int idealChars = 1000; // minChars * 2
+
+        // Below minimum: linear interpolation from 0.0 to 0.5
+        if (charsPerPage < minChars)
+        {
+            return Math.Min(charsPerPage / minChars * 0.5, 0.5);
+        }
+
+        // At or above ideal: maximum score
+        if (charsPerPage >= idealChars)
+        {
+            return 1.0;
+        }
+
+        // Between minimum and ideal: linear interpolation from 0.5 to 1.0
+        return 0.5 + (charsPerPage - minChars) / (idealChars - minChars) * 0.5;
     }
 
     /// <summary>

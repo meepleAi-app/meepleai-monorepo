@@ -19,6 +19,7 @@
 - API Specification + Architecture Decision Records (ADRs)
 - Testing Strategy (unit + integration patterns)
 - Deployment Guide (local setup instructions)
+- Legacy Code Removal Dashboard (refactoring priorities)
 
 **Business Stakeholders** → Focus on:
 - Strategic Roadmap (market analysis, business model)
@@ -97,6 +98,27 @@
 - Quality gates (PR → pre-production)
 - Testing tools and infrastructure
 - **Audience**: QA engineers, developers, quality assurance team
+
+---
+
+### 🔧 Implementation & Refactoring
+
+**[Legacy Code Inventory & Removal Plan](./implementation/legacy-code-inventory-and-removal-plan.md)** (150+ pages)
+- Complete inventory of legacy services and endpoints
+- DDD refactoring status (99% → 100%)
+- Migration guidelines and patterns
+- Bounded context breakdown (~7 contexts)
+- Service removal checklist and procedures
+- 20-week timeline with priorities
+- **Audience**: Engineers, technical leadership, refactoring team
+
+**[Legacy Code Removal Dashboard](./implementation/legacy-code-removal-dashboard.md)** (Quick reference)
+- Visual progress tracking (endpoints, services, code lines)
+- Weekly checklist and metrics
+- Top 3 legacy hotspots
+- Bounded context status matrix
+- Definition of done
+- **Audience**: Engineers, project managers, daily standup
 
 ---
 
@@ -249,7 +271,7 @@ A: Web-first faster to iterate (no app store approval delays). Progressive Web A
 ---
 
 **Index Metadata**:
-- **Version**: 1.0
+- **Version**: 1.1
 - **Maintainer**: Documentation Team
-- **Last Updated**: 2025-01-15
-- **Next Update**: 2025-02-15 (monthly)
+- **Last Updated**: 2025-11-13
+- **Next Update**: 2025-12-13 (monthly)

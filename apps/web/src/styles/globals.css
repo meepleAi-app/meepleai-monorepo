@@ -2,6 +2,9 @@
 
 @plugin "tailwindcss-animate";
 
+/* Import design system tokens */
+@import "./design-tokens.css";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {

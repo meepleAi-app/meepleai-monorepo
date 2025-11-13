@@ -1,0 +1,1756 @@
+{
+  "total": 172,
+  "by_epic": {
+    "Frontend Refactor": 11,
+    "MVP Sprints": 25,
+    "BGAI": 56,
+    "Other": 31,
+    "Admin Console": 49
+  },
+  "by_priority": {
+    "priority-critical": 2,
+    "priority-high": 74,
+    "priority-medium": 22,
+    "priority-low": 74
+  },
+  "by_milestone": {
+    "No Milestone": 34,
+    "MVP Sprint 1": 5,
+    "MVP Sprint 2": 4,
+    "MVP Sprint 3": 6,
+    "MVP Sprint 4": 5,
+    "MVP Sprint 5": 5,
+    "Month 1: PDF Processing": 1,
+    "Month 2: LLM Integration": 6,
+    "Month 3: Multi-Model Validation": 10,
+    "Month 4: Quality Framework": 11,
+    "Month 5: Golden Dataset": 14,
+    "Month 6: Italian UI": 22,
+    "FASE 1: Dashboard Overview": 16,
+    "FASE 2: Infrastructure Monitoring": 13,
+    "FASE 3: Enhanced Management": 12,
+    "FASE 4: Advanced Features": 8
+  },
+  "top_20": [
+    {
+      "number": 1090,
+      "title": "[REFACTOR] Split ChatProvider into Multiple Contexts",
+      "priority": "priority-critical",
+      "epic": "Frontend Refactor",
+      "milestone": "No Milestone",
+      "dependencies": []
+    },
+    {
+      "number": 1091,
+      "title": "[REFACTOR] Eliminate Inline Styles and Standardize with Design System",
+      "priority": "priority-critical",
+      "epic": "Frontend Refactor",
+      "milestone": "No Milestone",
+      "dependencies": []
+    },
+    {
+      "number": 846,
+      "title": "[SPRINT-1] OAuth Integration Complete",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 1",
+      "dependencies": []
+    },
+    {
+      "number": 850,
+      "title": "[SPRINT-1] Unit Test Suite - Authentication Module",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 1",
+      "dependencies": []
+    },
+    {
+      "number": 852,
+      "title": "[SPRINT-2] GameService CRUD Implementation",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 2",
+      "dependencies": [
+        923
+      ]
+    },
+    {
+      "number": 853,
+      "title": "[SPRINT-2] PDF Upload & Processing Pipeline",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 2",
+      "dependencies": []
+    },
+    {
+      "number": 854,
+      "title": "[SPRINT-2] Game Search & Filter UI",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 2",
+      "dependencies": []
+    },
+    {
+      "number": 856,
+      "title": "[SPRINT-3] Chat Thread Management",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 3",
+      "dependencies": []
+    },
+    {
+      "number": 857,
+      "title": "[SPRINT-3] Game-Specific Chat Context",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 3",
+      "dependencies": []
+    },
+    {
+      "number": 858,
+      "title": "[SPRINT-3] Chat UI with Thread Sidebar",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 3",
+      "dependencies": [
+        924
+      ]
+    },
+    {
+      "number": 861,
+      "title": "[SPRINT-4] Game Session Entity & Database",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 4",
+      "dependencies": []
+    },
+    {
+      "number": 862,
+      "title": "[SPRINT-4] GameSessionService Implementation",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 4",
+      "dependencies": []
+    },
+    {
+      "number": 863,
+      "title": "[SPRINT-4] Session Setup Modal & UI",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 4",
+      "dependencies": []
+    },
+    {
+      "number": 866,
+      "title": "[SPRINT-5] AI Agents Entity & Configuration",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 5",
+      "dependencies": []
+    },
+    {
+      "number": 867,
+      "title": "[SPRINT-5] Game Master Agent Integration",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 5",
+      "dependencies": []
+    },
+    {
+      "number": 870,
+      "title": "[SPRINT-5] Integration Test Suite - Full Stack",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 5",
+      "dependencies": []
+    },
+    {
+      "number": 871,
+      "title": "[CI/CD] GitHub Actions - Test Automation Pipeline",
+      "priority": "priority-high",
+      "epic": "MVP Sprints",
+      "milestone": "MVP Sprint 1",
+      "dependencies": []
+    },
+    {
+      "number": 955,
+      "title": "[BGAI-013] Bug fixes and edge cases for PDF pipeline",
+      "priority": "priority-high",
+      "epic": "BGAI",
+      "milestone": "Month 1: PDF Processing",
+      "dependencies": []
+    },
+    {
+      "number": 963,
+      "title": "[BGAI-021] Feature flag AI:Provider configuration",
+      "priority": "priority-high",
+      "epic": "BGAI",
+      "milestone": "Month 2: LLM Integration",
+      "dependencies": []
+    },
+    {
+      "number": 964,
+      "title": "[BGAI-022] Integration tests for adaptive LLM routing",
+      "priority": "priority-high",
+      "epic": "BGAI",
+      "milestone": "Month 2: LLM Integration",
+      "dependencies": []
+    }
+  ],
+  "all_issues": [
+    {
+      "number": 1090,
+      "title": "[REFACTOR] Split ChatProvider into Multiple Contexts",
+      "priority": "priority-critical",
+      "milestone": "No Milestone",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1091,
+      "title": "[REFACTOR] Eliminate Inline Styles and Standardize with Design System",
+      "priority": "priority-critical",
+      "milestone": "No Milestone",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 846,
+      "title": "[SPRINT-1] OAuth Integration Complete",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 1",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 850,
+      "title": "[SPRINT-1] Unit Test Suite - Authentication Module",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 1",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 852,
+      "title": "[SPRINT-2] GameService CRUD Implementation",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 2",
+      "epic": "MVP Sprints",
+      "dependencies": [
+        923
+      ],
+      "url": ""
+    },
+    {
+      "number": 853,
+      "title": "[SPRINT-2] PDF Upload & Processing Pipeline",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 2",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 854,
+      "title": "[SPRINT-2] Game Search & Filter UI",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 2",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 856,
+      "title": "[SPRINT-3] Chat Thread Management",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 3",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 857,
+      "title": "[SPRINT-3] Game-Specific Chat Context",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 3",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 858,
+      "title": "[SPRINT-3] Chat UI with Thread Sidebar",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 3",
+      "epic": "MVP Sprints",
+      "dependencies": [
+        924
+      ],
+      "url": ""
+    },
+    {
+      "number": 861,
+      "title": "[SPRINT-4] Game Session Entity & Database",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 4",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 862,
+      "title": "[SPRINT-4] GameSessionService Implementation",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 4",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 863,
+      "title": "[SPRINT-4] Session Setup Modal & UI",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 4",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 866,
+      "title": "[SPRINT-5] AI Agents Entity & Configuration",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 5",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 867,
+      "title": "[SPRINT-5] Game Master Agent Integration",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 5",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 870,
+      "title": "[SPRINT-5] Integration Test Suite - Full Stack",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 5",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 871,
+      "title": "[CI/CD] GitHub Actions - Test Automation Pipeline",
+      "priority": "priority-high",
+      "milestone": "MVP Sprint 1",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 955,
+      "title": "[BGAI-013] Bug fixes and edge cases for PDF pipeline",
+      "priority": "priority-high",
+      "milestone": "Month 1: PDF Processing",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 963,
+      "title": "[BGAI-021] Feature flag AI:Provider configuration",
+      "priority": "priority-high",
+      "milestone": "Month 2: LLM Integration",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 964,
+      "title": "[BGAI-022] Integration tests for adaptive LLM routing",
+      "priority": "priority-high",
+      "milestone": "Month 2: LLM Integration",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 973,
+      "title": "[BGAI-031] Unit tests for 3 validation layers",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 974,
+      "title": "[BGAI-032] MultiModelValidationService (GPT-4 + Claude consensus)",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 975,
+      "title": "[BGAI-033] Consensus similarity calculation (cosine ≥0.90)",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 976,
+      "title": "[BGAI-034] Unit tests for consensus validation (18 tests)",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 977,
+      "title": "[BGAI-035] Wire all 5 validation layers in RAG pipeline",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 978,
+      "title": "[BGAI-036] End-to-end testing (question → validated response)",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 979,
+      "title": "[BGAI-037] Performance optimization (parallel validation)",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 980,
+      "title": "[BGAI-038] Bug fixes for validation edge cases",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 981,
+      "title": "[BGAI-039] Accuracy baseline measurement (target 80%+)",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 982,
+      "title": "[BGAI-040] Update ADRs with validation implementation",
+      "priority": "priority-high",
+      "milestone": "Month 3: Multi-Model Validation",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 983,
+      "title": "[BGAI-041] Extend PromptEvaluationService (5-metric framework)",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 984,
+      "title": "[BGAI-042] Automated evaluation job (weekly cron)",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 985,
+      "title": "[BGAI-043] Prometheus metrics (Board Game AI specific)",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 986,
+      "title": "[BGAI-044] Grafana dashboard (5-metric gauges)",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 987,
+      "title": "[BGAI-045] Quality framework integration tests",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 989,
+      "title": "[BGAI-048] Base components (Button, Card, Input, Form)",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 990,
+      "title": "[BGAI-049] i18n setup (React Intl, it.json)",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 992,
+      "title": "[BGAI-051] Frontend component testing (Jest 90%+)",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 993,
+      "title": "[BGAI-052] Responsive design testing (320px-1920px)",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 994,
+      "title": "[BGAI-054] Frontend build optimization",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 995,
+      "title": "[BGAI-055] Month 4 integration testing",
+      "priority": "priority-high",
+      "milestone": "Month 4: Quality Framework",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 996,
+      "title": "[BGAI-056] Annotation: Terraforming Mars (20 Q&A pairs)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 997,
+      "title": "[BGAI-057] Annotation: Wingspan (15 Q&A pairs)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 998,
+      "title": "[BGAI-058] Annotation: Azul (15 Q&A pairs)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 999,
+      "title": "[BGAI-059] Quality test implementation (accuracy validation)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1000,
+      "title": "[BGAI-060] Run first accuracy test (baseline measurement)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1001,
+      "title": "[BGAI-061] QuestionInputForm component (frontend)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1002,
+      "title": "[BGAI-062] ResponseCard component (answer, confidence, citations)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1003,
+      "title": "[BGAI-063] GameSelector dropdown component",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1004,
+      "title": "[BGAI-064] Loading and error states (UI/UX)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1005,
+      "title": "[BGAI-065] Jest tests for Q&A components (20 tests)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1006,
+      "title": "[BGAI-066] Backend API integration (/api/v1/board-game-ai/ask)",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1007,
+      "title": "[BGAI-067] Streaming SSE support for real-time responses",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1008,
+      "title": "[BGAI-068] Error handling and retry logic",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1009,
+      "title": "[BGAI-069] Month 5 E2E testing",
+      "priority": "priority-high",
+      "milestone": "Month 5: Golden Dataset",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1010,
+      "title": "[BGAI-070] Annotation: Scythe, Catan, Pandemic (30 Q&A)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1011,
+      "title": "[BGAI-071] Annotation: 7 Wonders, Agricola, Splendor (30 Q&A)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1012,
+      "title": "[BGAI-072] Adversarial dataset (50 synthetic queries)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1013,
+      "title": "[BGAI-073] PDF viewer integration (react-pdf)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1014,
+      "title": "[BGAI-074] Citation click → jump to page functionality",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1015,
+      "title": "[BGAI-076] PDF viewer tests (Jest + Playwright)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1016,
+      "title": "[BGAI-077] Complete Italian UI strings (200+ translations)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1017,
+      "title": "[BGAI-078] Game catalog page (/board-game-ai/games)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1018,
+      "title": "[BGAI-080] End-to-end testing (question → PDF citation)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1019,
+      "title": "[BGAI-081] Accuracy validation (80% target on 100 Q&A)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1020,
+      "title": "[BGAI-082] Performance testing (P95 latency <3s)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1021,
+      "title": "[BGAI-083] Final bug fixes and polish",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1022,
+      "title": "[BGAI-084] Documentation updates (user guide, README)",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1023,
+      "title": "[BGAI-085] Phase 1A completion checklist",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1078,
+      "title": "FE-IMP-002 — Server Actions per Auth & Export",
+      "priority": "priority-high",
+      "milestone": "Month 6: Italian UI",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1092,
+      "title": "[ENHANCEMENT] Mobile-First Responsive Improvements",
+      "priority": "priority-high",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1093,
+      "title": "[PERFORMANCE] Optimize Re-renders and Bundle Size",
+      "priority": "priority-high",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1094,
+      "title": "[A11Y] Accessibility Audit and Fixes",
+      "priority": "priority-high",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1095,
+      "title": "[REFACTOR] Unified Error Handling System",
+      "priority": "priority-high",
+      "milestone": "No Milestone",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1096,
+      "title": "[ENHANCEMENT] Standardize Loading States",
+      "priority": "priority-high",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1110,
+      "title": "[BGAI-086] PDF Processing Configuration Validation Service",
+      "priority": "priority-high",
+      "milestone": "Month 2: LLM Integration",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 575,
+      "title": "AUTH-08: Admin Override for 2FA Locked-Out Users",
+      "priority": "priority-medium",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 576,
+      "title": "SEC-05: AUTH-07 Security Penetration Testing",
+      "priority": "priority-medium",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 847,
+      "title": "[SPRINT-1] 2FA/TOTP Management UI",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 1",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 855,
+      "title": "[SPRINT-2] Game Detail Page - 4 Tabs",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 2",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 859,
+      "title": "[SPRINT-3] PDF Citation Display Enhancement",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 3",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 860,
+      "title": "[SPRINT-3] Chat Export Functionality",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 3",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 864,
+      "title": "[SPRINT-4] Active Session Management UI",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 4",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 865,
+      "title": "[SPRINT-4] Session History & Statistics",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 4",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 868,
+      "title": "[SPRINT-5] Agent Selection UI",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 5",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 869,
+      "title": "[SPRINT-5] Move Validation (RuleSpec v2 Integration)",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 5",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 872,
+      "title": "[CI/CD] Coverage Reporting & Gates",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 1",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 873,
+      "title": "[TESTING] Performance Test Suite",
+      "priority": "priority-medium",
+      "milestone": "MVP Sprint 3",
+      "epic": "MVP Sprints",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 936,
+      "title": "🔬 Spike: POC Infisical Secret Rotation (Phase 2)",
+      "priority": "priority-medium",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1097,
+      "title": "[DX] Set Up Storybook for Component Documentation",
+      "priority": "priority-medium",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1098,
+      "title": "[TESTING] Comprehensive Component Unit Tests",
+      "priority": "priority-medium",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1099,
+      "title": "[POLISH] Landing Page Performance and UX",
+      "priority": "priority-medium",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1100,
+      "title": "[ENHANCEMENT] Keyboard Shortcuts System",
+      "priority": "priority-medium",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1101,
+      "title": "[FEATURE] Advanced Search and Filters",
+      "priority": "priority-medium",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1102,
+      "title": "[FEATURE] Theme Customization System",
+      "priority": "priority-medium",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1111,
+      "title": "[BGAI-087] Large PDF Streaming Optimization (>50MB)",
+      "priority": "priority-medium",
+      "milestone": "Month 2: LLM Integration",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1112,
+      "title": "[BGAI-088] Explicit File Size Limit in PDF Orchestrator (Defense in Depth)",
+      "priority": "priority-medium",
+      "milestone": "Month 2: LLM Integration",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1113,
+      "title": "[BGAI-088] Explicit File Size Limit in PDF Orchestrator (Defense in Depth)",
+      "priority": "priority-medium",
+      "milestone": "Month 2: LLM Integration",
+      "epic": "BGAI",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 701,
+      "title": "⚡ Add resource limits to all Docker services",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 702,
+      "title": "🎯 Implement Docker Compose profiles for selective service startup",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 703,
+      "title": "🌐 Add Traefik reverse proxy layer",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 704,
+      "title": "💾 Create backup automation scripts",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 705,
+      "title": "📊 Add infrastructure monitoring (cAdvisor + node-exporter)",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 706,
+      "title": "📖 Create operational runbooks documentation",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 707,
+      "title": "🔧 Add docker-compose.override.yml example for local customization",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 709,
+      "title": "📖 Create operational runbooks documentation",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 818,
+      "title": "security: Establish quarterly security scan review process",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 841,
+      "title": "test(a11y): Implement automated accessibility testing with axe-core",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 842,
+      "title": "test(perf): Implement automated performance testing with Lighthouse CI",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 844,
+      "title": "epic: UI/UX Automated Testing Roadmap 2025",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 874,
+      "title": "FASE 1: Dashboard Overview - Centralized Admin Dashboard",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 875,
+      "title": "[Backend] AdminDashboardService.cs - GetSystemStatsAsync()",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [
+        874
+      ],
+      "url": ""
+    },
+    {
+      "number": 876,
+      "title": "[Backend] Aggregate metrics from existing services",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 877,
+      "title": "[Backend] GET /api/v1/admin/dashboard/stats endpoint",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 878,
+      "title": "[Backend] Activity Feed Service - GetRecentActivityAsync()",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 879,
+      "title": "[Backend] HybridCache for dashboard stats (1min TTL)",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 880,
+      "title": "[Testing] Unit tests AdminDashboardService (90%+ coverage)",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 881,
+      "title": "[Frontend] AdminLayout component (sidebar, header, breadcrumbs)",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 882,
+      "title": "[Frontend] StatCard reusable component",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 883,
+      "title": "[Frontend] MetricsGrid component (4x3 grid)",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 884,
+      "title": "[Frontend] ActivityFeed component",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 885,
+      "title": "[Frontend] /pages/admin/index.tsx - Dashboard page",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 886,
+      "title": "[Frontend] Dashboard API integration + 30s polling",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 887,
+      "title": "[Testing] Jest tests dashboard components (90%+ coverage)",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 888,
+      "title": "[Testing] E2E Playwright test - Dashboard flow",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 889,
+      "title": "[Testing] Performance (<1s) + Accessibility (WCAG AA)",
+      "priority": "priority-low",
+      "milestone": "FASE 1: Dashboard Overview",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 890,
+      "title": "FASE 2: Infrastructure Monitoring - Multi-Service Health Checks",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 891,
+      "title": "[Backend] InfrastructureMonitoringService.cs",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 892,
+      "title": "[Backend] Extend /health endpoints with detailed metrics",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 893,
+      "title": "[Backend] Prometheus client integration",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 894,
+      "title": "[Backend] GET /api/v1/admin/infrastructure/details",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 895,
+      "title": "[Testing] Unit tests InfrastructureMonitoringService (90%+)",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 896,
+      "title": "[Frontend] ServiceHealthMatrix component",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 897,
+      "title": "[Frontend] ServiceCard component (health, metrics, actions)",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 898,
+      "title": "[Frontend] MetricsChart component (Chart.js)",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 899,
+      "title": "[Frontend] /pages/admin/infrastructure.tsx",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 900,
+      "title": "[Testing] Jest tests infrastructure components (90%+)",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 901,
+      "title": "[Integration] Grafana embed iframe setup",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 902,
+      "title": "[Testing] E2E test + Load test (100 concurrent users)",
+      "priority": "priority-low",
+      "milestone": "FASE 2: Infrastructure Monitoring",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 903,
+      "title": "FASE 3: Enhanced Management - API Keys + User Management + Bulk Ops",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 904,
+      "title": "[Backend] ApiKeyManagementService - Usage statistics",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 905,
+      "title": "[Backend] UserManagementService - Bulk operations",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 906,
+      "title": "[Backend] CSV import/export utility",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 907,
+      "title": "[Testing] Unit tests bulk operations (90%+)",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 908,
+      "title": "[Frontend] /pages/admin/api-keys.tsx - API key management UI",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 909,
+      "title": "[Frontend] API key creation modal with scopes",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 910,
+      "title": "[Frontend] FilterPanel component - Reusable advanced filters",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 911,
+      "title": "[Frontend] UserActivityTimeline component",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 912,
+      "title": "[Frontend] BulkActionBar component",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 913,
+      "title": "[Testing] Jest tests management components (90%+)",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 914,
+      "title": "[Testing] E2E + Security audit + Stress test (1000+ users)",
+      "priority": "priority-low",
+      "milestone": "FASE 3: Enhanced Management",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 915,
+      "title": "FASE 4: Advanced Features - Reporting System + Advanced Alerting",
+      "priority": "priority-low",
+      "milestone": "FASE 4: Advanced Features",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 916,
+      "title": "[Backend] ReportingService.cs - Generation + Scheduling",
+      "priority": "priority-low",
+      "milestone": "FASE 4: Advanced Features",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 917,
+      "title": "[Backend] Report templates - 4 predefined templates",
+      "priority": "priority-low",
+      "milestone": "FASE 4: Advanced Features",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 918,
+      "title": "[Backend] Email delivery integration for reports",
+      "priority": "priority-low",
+      "milestone": "FASE 4: Advanced Features",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 919,
+      "title": "[Testing] Unit tests ReportingService (90%+)",
+      "priority": "priority-low",
+      "milestone": "FASE 4: Advanced Features",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 920,
+      "title": "[Frontend] /pages/admin/reports.tsx - Report builder",
+      "priority": "priority-low",
+      "milestone": "FASE 4: Advanced Features",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 921,
+      "title": "[Frontend] Enhanced alert configuration UI",
+      "priority": "priority-low",
+      "milestone": "FASE 4: Advanced Features",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 922,
+      "title": "[Testing] E2E report generation + Email validation",
+      "priority": "priority-low",
+      "milestone": "FASE 4: Advanced Features",
+      "epic": "Admin Console",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 926,
+      "title": "[FRONTEND-1] Epic: Foundation & Quick Wins (Phase 1)",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 931,
+      "title": "[FRONTEND-7] Epic: React 19 Optimization (Phase 2)",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 932,
+      "title": "[FRONTEND-19] Epic: Advanced Features (Phase 4)",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 933,
+      "title": "[FRONTEND-12] Epic: App Router Migration (Phase 3)",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 934,
+      "title": "[FRONTEND-24] Epic: Design Polish (Phase 5)",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 935,
+      "title": "[FRONTEND-29] Epic: Performance & Accessibility (Phase 6)",
+      "priority": "priority-low",
+      "milestone": "No Milestone",
+      "epic": "Other",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1077,
+      "title": "FE-IMP-001 — Bootstrap App Router + Shared Providers",
+      "priority": "priority-low",
+      "milestone": "Month 6: Italian UI",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1079,
+      "title": "FE-IMP-003 — TanStack Query Data Layer",
+      "priority": "priority-low",
+      "milestone": "Month 6: Italian UI",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1080,
+      "title": "FE-IMP-004 — AuthContext + Edge Middleware",
+      "priority": "priority-low",
+      "milestone": "Month 6: Italian UI",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1081,
+      "title": "FE-IMP-005 — API SDK modulare con Zod",
+      "priority": "priority-low",
+      "milestone": "Month 6: Italian UI",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1082,
+      "title": "FE-IMP-006 — Form System (RHF + Zod)",
+      "priority": "priority-low",
+      "milestone": "Month 6: Italian UI",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1083,
+      "title": "FE-IMP-007 — Chat Store con Zustand + Streaming Hook",
+      "priority": "priority-low",
+      "milestone": "Month 6: Italian UI",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    },
+    {
+      "number": 1084,
+      "title": "FE-IMP-008 — Upload Queue Off-Main-Thread",
+      "priority": "priority-low",
+      "milestone": "Month 6: Italian UI",
+      "epic": "Frontend Refactor",
+      "dependencies": [],
+      "url": ""
+    }
+  ]
+}

@@ -181,7 +181,9 @@ describe('useGames', () => {
         });
       }).rejects.toThrow();
 
-      expect(result.current.error).toBe('Unable to create game. Please try again.');
+      await waitFor(() => {
+        expect(result.current.error).toBe('Unable to create game. Please try again.');
+      });
     });
 
     it('logs error when creation fails', async () => {

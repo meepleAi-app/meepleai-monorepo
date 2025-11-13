@@ -90,11 +90,7 @@ describe('UploadQueue Component', () => {
 
       const emptyStateText = screen.getByText(/No files in queue/i);
       const emptyState = emptyStateText.closest('div');
-      expect(emptyState).toHaveStyle({
-        textAlign: 'center',
-        border: '2px dashed #dadce0',
-        backgroundColor: '#fafafa'
-      });
+      expect(emptyState).toHaveClass('text-center', 'border-2', 'border-dashed', 'bg-gray-50');
     });
   });
 

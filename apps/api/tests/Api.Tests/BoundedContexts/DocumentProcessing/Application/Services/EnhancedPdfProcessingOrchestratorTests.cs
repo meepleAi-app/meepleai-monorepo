@@ -19,6 +19,7 @@ public class EnhancedPdfProcessingOrchestratorTests
 {
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IConfiguration _configuration;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public EnhancedPdfProcessingOrchestratorTests()
     {
@@ -40,7 +41,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -70,7 +71,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -98,7 +99,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -125,7 +126,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -151,7 +152,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert - Returns Stage 3 result (even if failed)
         Assert.False(result.Success);
@@ -178,7 +179,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert - Should fallback to Stage 2 after catching exception
         Assert.True(result.Success);
@@ -200,7 +201,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -228,7 +229,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -257,7 +258,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -289,7 +290,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -319,7 +320,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -348,7 +349,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         await using var pdfStream = CreateDummyPdfStream();
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert - Performance tracking
         Assert.True(result.TotalDurationMs >= 0, "Total duration should be recorded (can be 0 for fast ops)");
@@ -378,7 +379,7 @@ public class EnhancedPdfProcessingOrchestratorTests
                 stage1, stage2, stage3, _logger, _configuration);
 
             await using var pdfStream = CreateDummyPdfStream();
-            var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+            var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
             if (shouldAccept)
             {

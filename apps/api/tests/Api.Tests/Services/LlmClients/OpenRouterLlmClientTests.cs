@@ -17,6 +17,8 @@ namespace Api.Tests.Services.LlmClients;
 /// </summary>
 public class OpenRouterLlmClientTests
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     [Fact]
     public void Test01_SupportsModel_OpenRouterModel_ReturnsTrue()
     {
@@ -89,7 +91,8 @@ public class OpenRouterLlmClientTests
             "You are helpful",
             "Hello",
             0.7,
-            100);
+            100,
+            TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -119,7 +122,7 @@ public class OpenRouterLlmClientTests
 
         // Act
         var result = await client.GenerateCompletionAsync(
-            "openai/gpt-4o-mini", "system", "prompt", 0.7, 100);
+            "openai/gpt-4o-mini", "system", "prompt", 0.7, 100, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -142,7 +145,7 @@ public class OpenRouterLlmClientTests
 
         // Act
         var result = await client.GenerateCompletionAsync(
-            "openai/gpt-4o-mini", "system", "prompt", 0.7, 100);
+            "openai/gpt-4o-mini", "system", "prompt", 0.7, 100, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -177,7 +180,7 @@ public class OpenRouterLlmClientTests
         // Act
         var chunks = new List<string>();
         await foreach (var chunk in client.GenerateCompletionStreamAsync(
-            "openai/gpt-4o-mini", "system", "prompt", 0.7, 100))
+            "openai/gpt-4o-mini", "system", "prompt", 0.7, 100, TestCancellationToken))
         {
             chunks.Add(chunk);
         }
@@ -230,7 +233,8 @@ public class OpenRouterLlmClientTests
             "Sei un esperto di scacchi",
             "Come si muove il cavallo?",
             0.7,
-            100);
+            100,
+            TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -265,7 +269,7 @@ public class OpenRouterLlmClientTests
         // Act - 5 concurrent
         var tasks = Enumerable.Range(0, 5)
             .Select(_ => client.GenerateCompletionAsync(
-                "openai/gpt-4o-mini", "sys", "prompt", 0.7, 100))
+                "openai/gpt-4o-mini", "sys", "prompt", 0.7, 100, TestCancellationToken))
             .ToArray();
 
         var results = await Task.WhenAll(tasks);

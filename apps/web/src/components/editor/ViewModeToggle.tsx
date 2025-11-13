@@ -16,46 +16,25 @@ type ViewModeToggleProps = {
  */
 export default function ViewModeToggle({ mode, onModeChange }: ViewModeToggleProps) {
   return (
-    <div
-      style={{
-        display: "inline-flex",
-        background: "#f0f0f0",
-        borderRadius: 4,
-        padding: 2
-      }}
-    >
+    <div className="inline-flex bg-gray-100 rounded p-0.5 gap-0.5">
       <button
         onClick={() => onModeChange("rich")}
-        style={{
-          padding: "6px 16px",
-          background: mode === "rich" ? "white" : "transparent",
-          color: mode === "rich" ? "#0070f3" : "#666",
-          border: "none",
-          borderRadius: 3,
-          cursor: "pointer",
-          fontSize: 14,
-          fontWeight: mode === "rich" ? "bold" : "normal",
-          transition: "all 0.15s ease",
-          boxShadow: mode === "rich" ? "0 1px 3px rgba(0,0,0,0.1)" : "none"
-        }}
+        className={`px-4 py-1.5 rounded text-sm transition-all duration-150 ${
+          mode === "rich"
+            ? "bg-white text-blue-600 font-bold shadow-sm"
+            : "bg-transparent text-gray-600 font-normal"
+        }`}
         title="Editor visuale con formattazione"
       >
         📝 Editor Visuale
       </button>
       <button
         onClick={() => onModeChange("json")}
-        style={{
-          padding: "6px 16px",
-          background: mode === "json" ? "white" : "transparent",
-          color: mode === "json" ? "#0070f3" : "#666",
-          border: "none",
-          borderRadius: 3,
-          cursor: "pointer",
-          fontSize: 14,
-          fontWeight: mode === "json" ? "bold" : "normal",
-          transition: "all 0.15s ease",
-          boxShadow: mode === "json" ? "0 1px 3px rgba(0,0,0,0.1)" : "none"
-        }}
+        className={`px-4 py-1.5 rounded text-sm transition-all duration-150 ${
+          mode === "json"
+            ? "bg-white text-blue-600 font-bold shadow-sm"
+            : "bg-transparent text-gray-600 font-normal"
+        }`}
         title="Visualizza e modifica JSON direttamente"
       >
         {"{ }"} Codice JSON

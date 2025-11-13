@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, CacheStats } from "../../lib/api";
+import { cn } from "../../lib/utils";
 
 type Game = {
   id: string;
@@ -168,7 +169,7 @@ export default function CacheDashboard() {
 
   if (loading) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
+      <main className="p-6 font-sans max-w-7xl mx-auto">
         <h1>Loading...</h1>
       </main>
     );
@@ -176,10 +177,10 @@ export default function CacheDashboard() {
 
   if (error) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
+      <main className="p-6 font-sans max-w-7xl mx-auto">
         <h1>Error</h1>
-        <p style={{ color: "#d93025" }}>{error}</p>
-        <Link href="/admin" style={{ color: "#1a73e8" }}>
+        <p className="text-red-600">{error}</p>
+        <Link href="/admin" className="text-blue-600">
           Back to Admin Dashboard
         </Link>
       </main>
@@ -188,57 +189,33 @@ export default function CacheDashboard() {
 
   if (!stats) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
+      <main className="p-6 font-sans max-w-7xl mx-auto">
         <h1>Loading...</h1>
       </main>
     );
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
+    <main className="p-6 font-sans max-w-7xl mx-auto">
       {/* Toast Notifications */}
-      <div
-        style={{
-          position: "fixed",
-          top: 24,
-          right: 24,
-          zIndex: 1000,
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          maxWidth: 400
-        }}
-      >
+      <div className="fixed top-6 right-6 z-[1000] flex flex-col gap-3 max-w-md">
         {toasts.map((toast) => (
           <div
             key={toast.id}
             role="alert"
             aria-live="polite"
-            style={{
-              padding: "16px 20px",
-              background: toast.type === "success" ? "#0f9d58" : toast.type === "error" ? "#d93025" : "#1a73e8",
-              color: "white",
-              borderRadius: 8,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 12
-            }}
+            className={cn(
+              "px-5 py-4 text-white rounded-lg shadow-lg flex justify-between items-center gap-3",
+              toast.type === "success" && "bg-green-600",
+              toast.type === "error" && "bg-red-600",
+              toast.type === "info" && "bg-blue-600"
+            )}
           >
-            <span style={{ flex: 1 }}>{toast.message}</span>
+            <span className="flex-1">{toast.message}</span>
             <button
               onClick={() => removeToast(toast.id)}
               aria-label="Close notification"
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "white",
-                cursor: "pointer",
-                fontSize: 20,
-                padding: 0,
-                lineHeight: 1
-              }}
+              className="bg-transparent border-none text-white cursor-pointer text-xl p-0 leading-none"
             >
               ×
             </button>
@@ -252,61 +229,23 @@ export default function CacheDashboard() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="dialog-title"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1001
-          }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001]"
         >
-          <div
-            style={{
-              background: "white",
-              borderRadius: 8,
-              padding: 24,
-              maxWidth: 500,
-              width: "90%",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.2)"
-            }}
-          >
-            <h2 id="dialog-title" style={{ marginTop: 0, marginBottom: 16 }}>
+          <div className="bg-white rounded-lg p-6 max-w-lg w-[90%] shadow-2xl">
+            <h2 id="dialog-title" className="mt-0 mb-4">
               {confirmation.title}
             </h2>
-            <p style={{ marginBottom: 24, color: "#64748b" }}>{confirmation.message}</p>
-            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <p className="mb-6 text-gray-500">{confirmation.message}</p>
+            <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setConfirmation({ ...confirmation, isOpen: false })}
-                style={{
-                  padding: "10px 20px",
-                  background: "#f8f9fa",
-                  color: "#64748b",
-                  border: "1px solid #dadce0",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  fontSize: 14,
-                  fontWeight: 600
-                }}
+                className="px-5 py-2 bg-gray-50 text-gray-500 border border-gray-300 rounded cursor-pointer text-sm font-semibold hover:bg-gray-100"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmation.onConfirm}
-                style={{
-                  padding: "10px 20px",
-                  background: "#d93025",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  fontSize: 14,
-                  fontWeight: 600
-                }}
+                className="px-5 py-2 bg-red-600 text-white border-none rounded cursor-pointer text-sm font-semibold hover:bg-red-700"
               >
                 Confirm
               </button>
@@ -316,42 +255,24 @@ export default function CacheDashboard() {
       )}
 
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 style={{ margin: 0 }}>Cache Management Dashboard</h1>
-          <p style={{ margin: "8px 0 0 0", color: "#64748b" }}>
+          <h1 className="m-0">Cache Management Dashboard</h1>
+          <p className="mt-2 mb-0 text-gray-500">
             Monitor cache performance and manage cached responses
           </p>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div className="flex gap-3">
           <button
             onClick={handleRefresh}
             aria-label="Refresh cache statistics"
-            style={{
-              padding: "8px 16px",
-              background: "#1a73e8",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: 600
-            }}
+            className="px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer text-sm font-semibold hover:bg-blue-700"
           >
             Refresh
           </button>
           <Link
             href="/admin"
-            style={{
-              padding: "8px 16px",
-              background: "#64748b",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              display: "inline-block",
-              fontSize: 14,
-              fontWeight: 600
-            }}
+            className="px-4 py-2 bg-gray-500 text-white no-underline rounded inline-block text-sm font-semibold hover:bg-gray-600"
           >
             Back to Admin
           </Link>
@@ -359,22 +280,15 @@ export default function CacheDashboard() {
       </div>
 
       {/* Game Filter */}
-      <div style={{ marginBottom: 24 }}>
-        <label htmlFor="game-filter" style={{ display: "block", fontSize: 14, marginBottom: 8, fontWeight: 600 }}>
+      <div className="mb-6">
+        <label htmlFor="game-filter" className="block text-sm mb-2 font-semibold">
           Filter by Game
         </label>
         <select
           id="game-filter"
           value={selectedGameId}
           onChange={(e) => setSelectedGameId(e.target.value)}
-          style={{
-            padding: 12,
-            fontSize: 14,
-            border: "1px solid #dadce0",
-            borderRadius: 4,
-            background: "white",
-            minWidth: 300
-          }}
+          className="p-3 text-sm border border-gray-300 rounded bg-white min-w-[300px]"
         >
           <option value="all">All Games</option>
           {games.map((game) => (
@@ -387,54 +301,53 @@ export default function CacheDashboard() {
 
       {/* Statistics Cards */}
       {stats && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16, marginBottom: 24 }}>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 mb-6">
           {/* Cache Hit Rate */}
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>Cache Hit Rate</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: getHitRateColor(stats.hitRate ?? 0), marginBottom: 12 }}>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <div className="text-xs text-gray-500 mb-2 font-semibold">Cache Hit Rate</div>
+            <div className="text-3xl font-semibold mb-3" style={{ color: getHitRateColor(stats.hitRate ?? 0) }}>
               {formatPercentage(stats.hitRate ?? 0)}
             </div>
-            <div style={{ background: "#f0f0f0", height: 8, borderRadius: 4, overflow: "hidden" }}>
+            <div className="bg-gray-200 h-2 rounded overflow-hidden">
               <div
                 role="progressbar"
                 aria-valuenow={(stats.hitRate ?? 0) * 100}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-label="Cache hit rate"
+                className="h-full transition-all duration-300"
                 style={{
                   width: `${(stats.hitRate ?? 0) * 100}%`,
-                  height: "100%",
-                  background: getHitRateColor(stats.hitRate ?? 0),
-                  transition: "width 0.3s ease"
+                  background: getHitRateColor(stats.hitRate ?? 0)
                 }}
               />
             </div>
-            <div style={{ marginTop: 8, fontSize: 12, color: "#64748b" }}>
+            <div className="mt-2 text-xs text-gray-500">
               Miss Rate: {formatPercentage(1 - (stats.hitRate ?? 0))}
             </div>
           </div>
 
           {/* Total Requests */}
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>Total Requests</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <div className="text-xs text-gray-500 mb-2 font-semibold">Total Requests</div>
+            <div className="text-3xl font-semibold">
               {((stats.totalHits ?? 0) + (stats.totalMisses ?? 0)).toLocaleString()}
             </div>
-            <div style={{ marginTop: 12, fontSize: 13 }}>
-              <div style={{ color: "#0f9d58", fontWeight: 600 }}>
+            <div className="mt-3 text-sm">
+              <div className="text-green-600 font-semibold">
                 Cached: {(stats.totalHits ?? 0).toLocaleString()}
               </div>
-              <div style={{ color: "#d93025", fontWeight: 600 }}>
+              <div className="text-red-600 font-semibold">
                 Not Cached: {(stats.totalMisses ?? 0).toLocaleString()}
               </div>
             </div>
           </div>
 
           {/* Cache Size */}
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>Cache Size</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{formatCacheSize(stats.cacheSizeBytes ?? 0)}</div>
-            <div style={{ marginTop: 12, fontSize: 13, color: "#64748b" }}>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <div className="text-xs text-gray-500 mb-2 font-semibold">Cache Size</div>
+            <div className="text-3xl font-semibold">{formatCacheSize(stats.cacheSizeBytes ?? 0)}</div>
+            <div className="mt-3 text-sm text-gray-500">
               {stats.totalKeys ?? 0} cached keys
             </div>
           </div>
@@ -442,11 +355,11 @@ export default function CacheDashboard() {
       )}
 
       {/* Cache Management Actions */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: 16, marginBottom: 24 }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-4 mb-6">
         {/* Invalidate by Game */}
-        <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Invalidate Game Cache</h3>
-          <p style={{ fontSize: 14, color: "#64748b", marginBottom: 16 }}>
+        <div className="p-6 border border-gray-300 rounded-lg bg-white">
+          <h3 className="mt-0 mb-4">Invalidate Game Cache</h3>
+          <p className="text-sm text-gray-500 mb-4">
             Clear all cached responses for a specific game
           </p>
           {selectedGameId !== "all" ? (
@@ -457,34 +370,24 @@ export default function CacheDashboard() {
                   handleInvalidateGameCache(game.id, game.name);
                 }
               }}
-              style={{
-                padding: "10px 20px",
-                background: "#d93025",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 600,
-                width: "100%"
-              }}
+              className="w-full px-5 py-2 bg-red-600 text-white border-none rounded cursor-pointer text-sm font-semibold hover:bg-red-700"
             >
               Invalidate Cache for {games.find((g) => g.id === selectedGameId)?.name}
             </button>
           ) : (
-            <p style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>
+            <p className="text-sm text-gray-500 italic">
               Select a specific game to invalidate its cache
             </p>
           )}
         </div>
 
         {/* Invalidate by Tag */}
-        <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Invalidate by Tag</h3>
-          <p style={{ fontSize: 14, color: "#64748b", marginBottom: 16 }}>
+        <div className="p-6 border border-gray-300 rounded-lg bg-white">
+          <h3 className="mt-0 mb-4">Invalidate by Tag</h3>
+          <p className="text-sm text-gray-500 mb-4">
             Clear cached responses associated with a specific tag
           </p>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="flex gap-2">
             <input
               type="text"
               placeholder="Enter tag (e.g., qa, setup)"
@@ -496,28 +399,18 @@ export default function CacheDashboard() {
                 }
               }}
               aria-label="Tag to invalidate"
-              style={{
-                flex: 1,
-                padding: "10px 12px",
-                fontSize: 14,
-                border: "1px solid #dadce0",
-                borderRadius: 4
-              }}
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded"
             />
             <button
               onClick={handleInvalidateByTag}
               disabled={!tagInput.trim()}
               aria-label="Invalidate cache by tag"
-              style={{
-                padding: "10px 20px",
-                background: !tagInput.trim() ? "#f8f9fa" : "#d93025",
-                color: !tagInput.trim() ? "#64748b" : "white",
-                border: !tagInput.trim() ? "1px solid #dadce0" : "none",
-                borderRadius: 4,
-                cursor: !tagInput.trim() ? "not-allowed" : "pointer",
-                fontSize: 14,
-                fontWeight: 600
-              }}
+              className={cn(
+                "px-5 py-2 text-sm font-semibold rounded",
+                !tagInput.trim()
+                  ? "bg-gray-50 text-gray-500 border border-gray-300 cursor-not-allowed"
+                  : "bg-red-600 text-white border-none cursor-pointer hover:bg-red-700"
+              )}
             >
               Invalidate
             </button>
@@ -527,32 +420,15 @@ export default function CacheDashboard() {
 
       {/* Top Questions Table */}
       {stats && stats.topQuestions.length > 0 && (
-        <div style={{ border: "1px solid #dadce0", borderRadius: 8, overflow: "hidden" }}>
-          <div
-            style={{
-              padding: 16,
-              background: "#f8f9fa",
-              borderBottom: "1px solid #dadce0"
-            }}
-          >
-            <h3 style={{ margin: 0 }}>Top Cached Questions</h3>
-            <p style={{ margin: "8px 0 0 0", fontSize: 14, color: "#64748b" }}>
+        <div className="border border-gray-300 rounded-lg overflow-hidden">
+          <div className="p-4 bg-gray-50 border-b border-gray-300">
+            <h3 className="m-0">Top Cached Questions</h3>
+            <p className="mt-2 mb-0 text-sm text-gray-500">
               Most frequently accessed questions from the cache
             </p>
           </div>
-          <div
-            style={{
-              padding: 16,
-              background: "#f8f9fa",
-              borderBottom: "1px solid #dadce0",
-              display: "grid",
-              gridTemplateColumns: "1fr 120px 200px",
-              gap: 16,
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#64748b",
-              textTransform: "uppercase"
-            }}
+          <div className="p-4 bg-gray-50 border-b border-gray-300 grid gap-4 text-xs font-semibold text-gray-500 uppercase"
+            style={{ gridTemplateColumns: "1fr 120px 200px" }}
           >
             <div>Question Hash</div>
             <div>Hit Count</div>
@@ -562,23 +438,19 @@ export default function CacheDashboard() {
           {stats.topQuestions.map((question, index) => (
             <div
               key={`${question.questionHash}-${index}`}
-              style={{
-                padding: 16,
-                borderBottom: index < stats.topQuestions.length - 1 ? "1px solid #f0f0f0" : "none",
-                display: "grid",
-                gridTemplateColumns: "1fr 120px 200px",
-                gap: 16,
-                fontSize: 14,
-                alignItems: "start"
-              }}
+              className={cn(
+                "p-4 grid gap-4 text-sm items-start",
+                index < stats.topQuestions.length - 1 && "border-b border-gray-100"
+              )}
+              style={{ gridTemplateColumns: "1fr 120px 200px" }}
             >
-              <div style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              <div className="overflow-hidden text-ellipsis">
                 {question.questionHash}
               </div>
-              <div style={{ fontWeight: 600, color: "#1a73e8" }}>
+              <div className="font-semibold text-blue-600">
                 {question.hitCount}
               </div>
-              <div style={{ fontSize: 12, color: "#64748b", fontFamily: "monospace" }}>
+              <div className="text-xs text-gray-500 font-mono">
                 {question.lastHitAt ? formatDate(question.lastHitAt) : 'N/A'}
               </div>
             </div>
@@ -588,8 +460,8 @@ export default function CacheDashboard() {
 
       {/* Empty State */}
       {stats && stats.topQuestions.length === 0 && (
-        <div style={{ padding: 48, textAlign: "center", border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-          <p style={{ fontSize: 16, color: "#64748b", margin: 0 }}>
+        <div className="p-12 text-center border border-gray-300 rounded-lg bg-white">
+          <p className="text-base text-gray-500 m-0">
             No cached questions found. Cache will populate as users interact with the system.
           </p>
         </div>

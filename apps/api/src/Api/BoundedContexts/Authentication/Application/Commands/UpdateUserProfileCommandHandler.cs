@@ -24,7 +24,7 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Unit> Handle(UpdateUserProfileCommand command, CancellationToken cancellationToken)
+    public async Task Handle(UpdateUserProfileCommand command, CancellationToken cancellationToken)
     {
         // Retrieve user
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
@@ -62,6 +62,5 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         // Persist updates
         await _userRepository.UpdateAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Unit.Value;
     }
 }

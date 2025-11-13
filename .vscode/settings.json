@@ -45,7 +45,10 @@
   },
   "typescript.tsdk": "apps/web/node_modules/typescript/lib",
   "tailwindCSS.experimental.classRegex": [
-    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+    [
+      "cva\\(([^)]*)\\)",
+      "[\"'`]([^\"'`]*).*?[\"'`]"
+    ]
   ],
   "workbench.colorCustomizations": {
     "statusBar.background": "#34a853",

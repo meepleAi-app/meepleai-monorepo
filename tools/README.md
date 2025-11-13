@@ -486,3 +486,72 @@ curl http://localhost:8080/health
 - **Guida sviluppatori**: `../CLAUDE.md`
 - **Code coverage**: `../docs/code-coverage.md`
 - **OpenAPI/Swagger**: Disponibile a `/api/docs` in development mode
+
+### 17. GitHub Issues Strategic Triage
+
+**File**: `run-issue-triage.sh` (master script)
+
+Sistema completo per analisi strategica e pulizia issue GitHub con decisioni data-driven.
+
+**Componenti**:
+- `run-issue-triage.sh` - Script master (esegue tutti gli step)
+- `cleanup-duplicate-issues.sh` - Chiude issue duplicate
+- `assign-infrastructure-milestones.sh` - Assegna milestone a 11 issue
+- `phase-2-issue-labels.sh` - Assicura label consistency
+
+**Documentazione**:
+- `EXECUTIVE_SUMMARY_ISSUE_TRIAGE.md` (316 righe) - Overview esecutivo
+- `issue-triage-analysis.md` (262 righe) - Analisi dettagliata
+- `TRIAGE_QUICKREF.md` (128 righe) - Quick reference
+- `triage-summary.txt` - Summary visuale ASCII
+
+**Uso Quick Start**:
+
+```bash
+# Esegui triage completo (5 minuti, interattivo)
+cd D:/Repositories/meepleai-monorepo-backend
+bash tools/run-issue-triage.sh
+```
+
+**Cosa fa**:
+1. Crea milestone (Month 3, 4, 6, Phase 2)
+2. Chiude #709 come duplicate di #706
+3. Assegna 11 issue infrastructure a milestone
+4. Assicura label `deferred` e `priority-low` su issue Phase 2
+5. Mostra metriche before/after
+
+**Risultati Attesi**:
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Issues senza milestone | 19 | 0 |
+| Issue duplicate | 1 | 0 |
+| Milestone assignments | 0 | 11 |
+
+**Analisi Strategiche**:
+- **Admin Console**: 49 issue (330h, 8.2 settimane) - Defer to Phase 2
+- **Infrastructure**: 11 issue (92h) - Schedule Month 3-6 + Phase 2
+- **Timeline Impact**: Risparmio 8.2 settimane in Phase 1 (50%)
+
+**Verification**:
+
+```bash
+# Verifica 0 issue senza milestone
+gh issue list --search "is:open no:milestone"
+
+# Verifica issue deferred
+gh issue list --search "label:deferred is:open"
+
+# Verifica Phase 2 work
+gh issue list --search "milestone:'Phase 2' is:open"
+```
+
+**Quando usarlo**:
+- Strategic planning session (trimestrale)
+- Issue accumulation >50 senza milestone
+- Pre-planning Phase 2
+- Repository cleanup prima di milestone review
+
+**Prerequisiti**: GitHub CLI (`gh`) installato e autenticato
+
+**Documentazione Completa**: Vedi `EXECUTIVE_SUMMARY_ISSUE_TRIAGE.md`

@@ -114,12 +114,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       await api.post('/api/v1/auth/logout');
-      setUser(null);
     } catch (err) {
       console.error('Logout failed:', err);
       setError(err instanceof Error ? err.message : 'Logout failed');
-      throw err;
     } finally {
+      // Always clear user, even if API call fails
+      setUser(null);
       setLoading(false);
     }
   }, []);

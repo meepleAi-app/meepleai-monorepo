@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialSchema : Migration
+    public partial class DDD_InitialGuidSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -128,12 +128,6 @@ namespace Api.Migrations
                     Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
                     Name = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Publisher = table.Column<string>(type: "text", nullable: true),
-                    YearPublished = table.Column<int>(type: "integer", nullable: true),
-                    MinPlayers = table.Column<int>(type: "integer", nullable: true),
-                    MaxPlayers = table.Column<int>(type: "integer", nullable: true),
-                    MinPlayTimeMinutes = table.Column<int>(type: "integer", nullable: true),
-                    MaxPlayTimeMinutes = table.Column<int>(type: "integer", nullable: true),
                     BggId = table.Column<int>(type: "integer", nullable: true),
                     BggMetadata = table.Column<string>(type: "text", nullable: true)
                 },
@@ -227,51 +221,6 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ChatThreads",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Title = table.Column<string>(type: "text", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    LastMessageAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    MessagesJson = table.Column<string>(type: "text", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ChatThreads", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ChatThreads_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "GameSessions",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Status = table.Column<string>(type: "text", nullable: false),
-                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    WinnerName = table.Column<string>(type: "text", nullable: true),
-                    Notes = table.Column<string>(type: "text", nullable: true),
-                    PlayersJson = table.Column<string>(type: "text", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GameSessions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_GameSessions_games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "api_keys",
                 columns: table => new
                 {
@@ -304,41 +253,6 @@ namespace Api.Migrations
                         principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "llm_cost_logs",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    user_role = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    model_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    provider = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    prompt_tokens = table.Column<int>(type: "integer", nullable: false),
-                    completion_tokens = table.Column<int>(type: "integer", nullable: false),
-                    total_tokens = table.Column<int>(type: "integer", nullable: false),
-                    input_cost_usd = table.Column<decimal>(type: "numeric(18,6)", nullable: false),
-                    output_cost_usd = table.Column<decimal>(type: "numeric(18,6)", nullable: false),
-                    total_cost_usd = table.Column<decimal>(type: "numeric(18,6)", nullable: false),
-                    endpoint = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    success = table.Column<bool>(type: "boolean", nullable: false),
-                    error_message = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    latency_ms = table.Column<int>(type: "integer", nullable: false),
-                    ip_address = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
-                    user_agent = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    request_date = table.Column<DateOnly>(type: "date", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_llm_cost_logs", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_llm_cost_logs_users_user_id",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1051,45 +965,10 @@ namespace Api.Migrations
                 columns: new[] { "UserId", "LastMessageAt" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatThreads_GameId",
-                table: "ChatThreads",
-                column: "GameId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_games_Name",
                 table: "games",
                 column: "Name",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_GameSessions_GameId",
-                table: "GameSessions",
-                column: "GameId");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_llm_cost_logs_created_at",
-                table: "llm_cost_logs",
-                column: "created_at");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_llm_cost_logs_provider_date",
-                table: "llm_cost_logs",
-                columns: new[] { "provider", "request_date" });
-
-            migrationBuilder.CreateIndex(
-                name: "ix_llm_cost_logs_request_date",
-                table: "llm_cost_logs",
-                column: "request_date");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_llm_cost_logs_role_date",
-                table: "llm_cost_logs",
-                columns: new[] { "user_role", "request_date" });
-
-            migrationBuilder.CreateIndex(
-                name: "ix_llm_cost_logs_user_id",
-                table: "llm_cost_logs",
-                column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_n8n_configs_CreatedByUserId",
@@ -1448,15 +1327,6 @@ namespace Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "chat_logs");
-
-            migrationBuilder.DropTable(
-                name: "ChatThreads");
-
-            migrationBuilder.DropTable(
-                name: "GameSessions");
-
-            migrationBuilder.DropTable(
-                name: "llm_cost_logs");
 
             migrationBuilder.DropTable(
                 name: "n8n_configs");

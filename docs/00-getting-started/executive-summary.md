@@ -54,7 +54,7 @@
 
 **Tech Stack** (Integrated into Existing MeepleAI):
 - **Backend**: ASP.NET Core 9.0 (C#, DDD architecture, 90%+ coverage)
-- **PDF Processing**: LLMWhisperer → SmolDocling (Python microservice) → Docnet.Core (existing fallback)
+- **PDF Processing**: Unstructured (Apache 2.0, self-hosted) → SmolDocling (Python microservice) → Docnet.Core (existing fallback)
 - **Embeddings**: OpenRouter API (feature-flagged) + Ollama nomic-embed-text (free fallback)
 - **Vector DB**: Qdrant (existing, hybrid search v1.7+)
 - **LLM**: OpenRouter (gpt-4-turbo primary + claude-3.5-sonnet validation) + Ollama (mistral:7b + llama3.1:8b free fallback)
@@ -287,7 +287,7 @@ Layer 5: User Feedback (negative reports → admin review → improvement)
 ### Week 2-3: Prototyping
 - [ ] Docker Compose stack (PostgreSQL, Weaviate, Redis)
 - [ ] FastAPI skeleton + health check endpoint
-- [ ] LLMWhisperer trial (validate on 5 sample rulebooks)
+- [ ] Unstructured library setup (validate on 5 sample rulebooks)
 - [ ] OpenAI API access (GPT-4 Turbo verification)
 
 ### Week 4: Community Outreach

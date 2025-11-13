@@ -660,7 +660,7 @@ Check indexing job status.
       "rulebook_id": "rb_h5m0j69i1k2l4m5h",
       "pages": 12,
       "chunks": 47,
-      "processing_method": "llmwhisperer",
+      "processing_method": "unstructured",
       "quality_score": 0.94,
       "indexed_at": "2025-01-15T13:12:15Z"
     },
@@ -684,7 +684,7 @@ Check indexing job status.
       "message": "PDF text extraction failed. File may be corrupted or scanned with poor quality.",
       "details": {
         "step": "text_extraction",
-        "method_tried": ["llmwhisperer", "smoldocling", "dots_ocr"],
+        "method_tried": ["unstructured", "smoldocling", "docnet"],
         "extracted_text_length": 23
       }
     },

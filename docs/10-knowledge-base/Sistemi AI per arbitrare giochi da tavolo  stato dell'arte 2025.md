@@ -1,5 +1,9 @@
 # Sistemi AI per arbitrare giochi da tavolo: stato dell'arte 2025
 
+**⚠️ Implementation Note (2025-01-15)**: This research document describes various technologies including LLMWhisperer for PDF processing. However, for the actual MeepleAI implementation, we selected **Unstructured library (Apache 2.0)** instead of LLMWhisperer to eliminate API costs and vendor lock-in while maintaining high quality. See [ADR-003b](../01-architecture/adr/adr-003b-unstructured-pdf.md) for the implementation decision.
+
+---
+
 **Il mercato degli assistenti AI per regolamenti di board games è emerso nel 2023-2024 con oltre 10 piattaforme commerciali attive, ma soffre di limitazioni critiche**: accuratezza insufficiente per il gioco competitivo (solo il 45-75% di precisione nei test reali), copertura limitata dei giochi, e assenza quasi totale di soluzioni multilingua robuste. La tecnologia dominante è RAG (Retrieval Augmented Generation) con vector databases, ma la ricerca accademica specifica sui regolamenti resta scarsa—solo una tesi rilevante (Mills 2013) e lavori recenti con LLM dal 2024. **L'opportunità principale risiede nei mercati non anglofoni**: nessun sistema dedicato italiano è stato identificato nonostante una community attiva.
 
 ## Prodotti commerciali disponibili dominati da startup bootstrap

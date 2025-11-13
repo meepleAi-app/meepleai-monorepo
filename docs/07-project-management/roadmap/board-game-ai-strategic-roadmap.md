@@ -103,8 +103,8 @@ This roadmap describes **Board Game AI features integrated into the existing Mee
 **Goal**: Validate product-market fit con 100 beta users e accuracy >80% su dataset limitato
 
 **Milestones** (Integrated into Existing ASP.NET Core System):
-- **Sprint 1-2**: LLMWhisperer C# client + SmolDocling Python microservice integration
-- **Sprint 3-4**: 3-stage PDF pipeline (LLMWhisperer → SmolDocling → Docnet.Core fallback)
+- **Sprint 1-2**: Unstructured C# client + SmolDocling Python microservice integration
+- **Sprint 3-4**: 3-stage PDF pipeline (Unstructured → SmolDocling → Docnet.Core fallback)
 - **Sprint 5-6**: Multi-model validation (OpenRouter: GPT-4 + Claude consensus)
 - **Sprint 7-8**: 5-metric quality framework + Italian localization
 - **Sprint 9-10**: Frontend enhancements (Italian UI, citation viewer, mobile-optimized)

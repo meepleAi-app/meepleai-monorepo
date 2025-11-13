@@ -59,7 +59,7 @@ ___________________________________________________
 **Coverage Target**: ≥90% code coverage
 
 **Scope**:
-- PDF processing functions (LLMWhisperer, SmolDocling, dots.ocr adapters)
+- PDF processing functions (Unstructured, SmolDocling, Docnet adapters)
 - Chunking logic (sentence-aware boundary detection)
 - Embedding generation (multilingual-e5-large adapter)
 - Citation extraction (page number parser)

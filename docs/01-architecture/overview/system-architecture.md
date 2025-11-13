@@ -102,7 +102,7 @@ MeepleAI è un sistema AI per assistenza su regolamenti di giochi da tavolo, con
 **Principle**: Core RAG pipeline open-source (community trust), premium features proprietary (sustainable monetization).
 
 **Open-Source Components** (Apache 2.0):
-- PDF processing pipeline (LLMWhisperer → SmolDocling → chunking)
+- PDF processing pipeline (Unstructured → SmolDocling → Docnet fallback)
 - Embedding generation (multilingual-e5-large adapter)
 - Vector search (Weaviate integration)
 - Multi-model validation framework
@@ -179,7 +179,6 @@ MeepleAI è un sistema AI per assistenza su regolamenti di giochi da tavolo, con
 External Dependencies:
 - OpenAI API (GPT-4 Turbo primary)
 - Anthropic API (Claude 3.5 Sonnet validation)
-- LLMWhisperer (PDF processing free tier)
 ```
 
 ### Logical Architecture Layers
@@ -397,7 +396,7 @@ class ValidationService:
 
 **Responsibilities**:
 - Accept PDF upload
-- Extract text (multi-stage fallback: LLMWhisperer → SmolDocling → dots.ocr)
+- Extract text (multi-stage fallback: Unstructured → SmolDocling → Docnet)
 - Chunk text (sentence-aware, 256-768 chars)
 - Generate embeddings (multilingual-e5-large)
 - Index to vector DB (Weaviate)
@@ -409,23 +408,23 @@ class ValidationService:
 ```python
 class PdfProcessingPipeline:
     def process(self, pdf_path: str, game_id: str) -> ProcessingResult:
-        # Stage 1: LLMWhisperer (preserves layout)
+        # Stage 1: Unstructured (Apache 2.0, RAG-optimized)
         try:
-            text = self.llm_whisperer.extract(pdf_path)
-            method = 'llmwhisperer'
+            text = self.unstructured.extract(pdf_path)
+            method = 'unstructured'
         except Exception as e:
-            logger.warning(f"LLMWhisperer failed: {e}, falling back to SmolDocling")
+            logger.warning(f"Unstructured failed: {e}, falling back to SmolDocling")
 
             # Stage 2: SmolDocling (vision-language model)
             try:
                 text = self.smol_docling.extract(pdf_path)
                 method = 'smoldocling'
             except Exception as e2:
-                logger.warning(f"SmolDocling failed: {e2}, falling back to dots.ocr")
+                logger.warning(f"SmolDocling failed: {e2}, falling back to Docnet")
 
-                # Stage 3: dots.ocr (multilingual OCR)
-                text = self.dots_ocr.extract(pdf_path)
-                method = 'dots_ocr'
+                # Stage 3: Docnet (existing fallback)
+                text = self.docnet.extract(pdf_path)
+                method = 'docnet'
 
         # Validate extraction quality
         if len(text) < 100:
@@ -587,7 +586,7 @@ class EmbeddingService:
    └─> Server validates: File size ≤ 50 MB ✅, Extension .pdf ✅
 
 2. PDF Processing (Multi-Stage Fallback)
-   ├─> Stage 1: LLMWhisperer (success, 60s)
+   ├─> Stage 1: Unstructured (success, 1.3s)
    │   └─> Text: "Regolamento di Terraforming Mars\n\nIntroduzione\nNel 2400..." (23,450 chars)
    │   └─> Quality Score: 0.92 (high)
    │
@@ -618,7 +617,7 @@ class EmbeddingService:
         filename: "terraforming_mars_italiano.pdf",
         page_count: 24,
         chunk_count: 89,
-        processing_method: "llmwhisperer",
+        processing_method: "unstructured",
         quality_score: 0.92,
         indexed_at: "2025-01-15T10:30:00Z"
    }
@@ -638,7 +637,7 @@ class EmbeddingService:
 |-----------|-----------|-----------|
 | **Backend Framework** | ASP.NET Core 9.0 (C#) | Existing system, DDD architecture, 90%+ test coverage, production-ready |
 | **Frontend Framework** | Next.js 16 + React 19 | Latest stable, existing infrastructure, SSR/SSG capabilities |
-| **PDF Processing** | LLMWhisperer (primary) | Layout preservation for LLM, free tier 100 pages/day |
+| **PDF Processing** | Unstructured (primary) | Apache 2.0, RAG-optimized, 1.3s avg, self-hosted |
 | | SmolDocling (fallback) | Vision-language model (Python microservice), GPU-accelerated |
 | | Docnet.Core + iText7 (final) | Existing implementation, proven fallback, table extraction |
 | **Embeddings** | OpenRouter API (feature-flagged) | text-embedding-3-large via unified API |

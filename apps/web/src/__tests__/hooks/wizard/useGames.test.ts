@@ -198,7 +198,9 @@ describe('useGames', () => {
         await act(async () => {
           await result.current.createGame('Azul');
         });
-      } catch {}
+      } catch {
+        // Expected to throw
+      }
 
       expect(consoleSpy).toHaveBeenCalledWith('Failed to create game', expect.any(Error));
       consoleSpy.mockRestore();

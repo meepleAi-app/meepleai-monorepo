@@ -77,7 +77,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   // Load games on mount
   useEffect(() => {
     void loadGames();
-  }, []);
+  }, [loadGames]);
 
   // Load agents when game changes
   useEffect(() => {
@@ -94,12 +94,16 @@ export function GameProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       const gamesList = await api.get<Game[]>('/api/v1/games');
-      setGames(gamesList ?? []);
+      setGames((prevGames) => {
+        const games = gamesList ?? [];
 
-      // Auto-select first game if available and no game selected
-      if (gamesList && gamesList.length > 0 && !selectedGameId) {
-        setSelectedGameId(gamesList[0].id);
-      }
+        // Auto-select first game if available and no game currently selected
+        if (games.length > 0 && !selectedGameId) {
+          setSelectedGameId(games[0].id);
+        }
+
+        return games;
+      });
     } catch (err) {
       console.error('Failed to load games:', err);
       setError('Failed to load games');
@@ -107,7 +111,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     } finally {
       setLoading((prev) => ({ ...prev, games: false }));
     }
-  }, [selectedGameId]);
+  }, []); // Stable function, only runs on mount
 
   const loadAgents = useCallback(async (gameId: string) => {
     setLoading((prev) => ({ ...prev, agents: true }));

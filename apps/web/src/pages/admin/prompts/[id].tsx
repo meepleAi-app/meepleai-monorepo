@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../../../lib/api";
 import PromptVersionCard from "../../../components/PromptVersionCard";
+import { cn } from "../../../lib/utils";
 
 type PromptTemplate = {
   id: string;
@@ -89,21 +90,21 @@ export default function PromptTemplateDetail() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center", color: "#6b7280" }}>Loading...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-gray-500">Loading...</div>
       </div>
     );
   }
 
   if (error || !template) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ color: "#991b1b", marginBottom: "1rem", fontSize: "1.125rem" }}>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-800 mb-4 text-lg">
             {error || "Template not found"}
           </div>
           <Link href="/admin/prompts">
-            <button style={{ padding: "0.5rem 1rem", background: "#667eea", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+            <button className="px-4 py-2 bg-indigo-500 text-white border-none rounded-lg cursor-pointer hover:bg-indigo-600">
               Back to Templates
             </button>
           </Link>
@@ -113,38 +114,38 @@ export default function PromptTemplateDetail() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
-        <div style={{ background: "white", borderRadius: "12px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="max-w-7xl mx-auto p-8">
+        <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
           {/* Header */}
-          <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "2rem", color: "white" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+            <div className="flex items-center justify-between mb-4">
               <Link href="/admin/prompts">
-                <button style={{ padding: "0.5rem 1rem", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+                <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer hover:bg-white/30">
                   ← Back
                 </button>
               </Link>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div className="flex gap-2">
                 <Link href={`/admin/prompts/${id}/versions/new`}>
-                  <button style={{ padding: "0.5rem 1rem", background: "white", color: "#667eea", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}>
+                  <button className="px-4 py-2 bg-white text-indigo-500 border-none rounded-lg cursor-pointer font-semibold hover:bg-gray-100">
                     New Version
                   </button>
                 </Link>
                 <Link href={`/admin/prompts/${id}/compare`}>
-                  <button style={{ padding: "0.5rem 1rem", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+                  <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer hover:bg-white/30">
                     Compare Versions
                   </button>
                 </Link>
                 <Link href={`/admin/prompts/${id}/audit`}>
-                  <button style={{ padding: "0.5rem 1rem", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+                  <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer hover:bg-white/30">
                     Audit Log
                   </button>
                 </Link>
               </div>
             </div>
-            <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.5rem" }}>{template.name}</h1>
-            <p style={{ opacity: 0.9 }}>{template.description}</p>
-            <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", fontSize: "0.875rem" }}>
+            <h1 className="text-3xl font-bold mb-2">{template.name}</h1>
+            <p className="opacity-90">{template.description}</p>
+            <div className="flex gap-4 mt-4 text-sm">
               <span>Category: <strong>{template.category}</strong></span>
               <span>Created: <strong>{new Date(template.createdAt).toLocaleDateString()}</strong></span>
               <span>Updated: <strong>{new Date(template.updatedAt).toLocaleDateString()}</strong></span>
@@ -152,15 +153,15 @@ export default function PromptTemplateDetail() {
           </div>
 
           {/* Version History */}
-          <div style={{ padding: "2rem" }}>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1.5rem" }}>Version History</h2>
+          <div className="p-8">
+            <h2 className="text-2xl font-bold mb-6">Version History</h2>
 
             {versions.length === 0 && (
-              <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>
-                <p style={{ fontSize: "1.125rem", marginBottom: "0.5rem" }}>No versions yet</p>
-                <p style={{ fontSize: "0.875rem", marginBottom: "1rem" }}>Create your first version to get started</p>
+              <div className="text-center p-12 text-gray-500">
+                <p className="text-lg mb-2">No versions yet</p>
+                <p className="text-sm mb-4">Create your first version to get started</p>
                 <Link href={`/admin/prompts/${id}/versions/new`}>
-                  <button style={{ padding: "0.5rem 1.5rem", background: "#667eea", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}>
+                  <button className="px-6 py-2 bg-indigo-500 text-white border-none rounded-lg cursor-pointer font-semibold hover:bg-indigo-600">
                     Create Version
                   </button>
                 </Link>
@@ -168,7 +169,7 @@ export default function PromptTemplateDetail() {
             )}
 
             {versions.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: "1.5rem" }}>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-6">
                 {versions.map((version) => (
                   <PromptVersionCard
                     key={version.id}
@@ -187,18 +188,10 @@ export default function PromptTemplateDetail() {
       {/* Toast */}
       {toast.show && (
         <div
-          style={{
-            position: "fixed",
-            bottom: "2rem",
-            right: "2rem",
-            padding: "1rem 1.5rem",
-            background: toast.type === "success" ? "#10b981" : "#ef4444",
-            color: "white",
-            borderRadius: "8px",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-            zIndex: 100,
-            fontWeight: "500",
-          }}
+          className={cn(
+            "fixed bottom-8 right-8 px-6 py-4 rounded-lg shadow-2xl z-[100] font-medium",
+            toast.type === "success" ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
+          )}
         >
           {toast.message}
         </div>

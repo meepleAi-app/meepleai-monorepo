@@ -37,36 +37,22 @@ export function CommentForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
+    <form onSubmit={handleSubmit} className="mb-4">
       <textarea
         value={commentText}
         onChange={(e) => setCommentText(e.target.value)}
         placeholder={placeholder}
         disabled={isDisabled}
-        style={{
-          width: "100%",
-          minHeight: 80,
-          padding: 12,
-          border: "1px solid #ccc",
-          borderRadius: 4,
-          fontSize: 14,
-          fontFamily: "inherit",
-          marginBottom: 8,
-          resize: "vertical"
-        }}
+        className="w-full min-h-20 p-3 border border-gray-300 rounded text-sm font-inherit mb-2 resize-vertical"
       />
       <button
         type="submit"
         disabled={isDisabled || !commentText.trim()}
-        style={{
-          padding: "8px 16px",
-          background: isDisabled || !commentText.trim() ? "#ccc" : "#0070f3",
-          color: "white",
-          border: "none",
-          borderRadius: 4,
-          cursor: isDisabled || !commentText.trim() ? "not-allowed" : "pointer",
-          fontSize: 14
-        }}
+        className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+          isDisabled || !commentText.trim()
+            ? "bg-gray-300 text-white cursor-not-allowed"
+            : "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+        }`}
       >
         {isSubmitting ? "Invio in corso..." : "Aggiungi Commento"}
       </button>

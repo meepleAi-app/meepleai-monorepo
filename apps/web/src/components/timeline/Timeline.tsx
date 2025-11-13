@@ -44,36 +44,15 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
     <aside
       role="region"
       aria-label="RAG Timeline with conversation events and metrics"
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: "white",
-        zIndex: 1000,
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "sans-serif"
-      }}
+      className="fixed inset-0 bg-white z-[1000] flex flex-col font-sans"
     >
       {/* Timeline Header */}
-      <header
-        style={{
-          padding: 16,
-          borderBottom: "1px solid #dadce0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          background: "white",
-          zIndex: 10
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span aria-hidden="true" style={{ fontSize: 28 }}>📊</span>
+      <header className="p-4 border-b border-gray-300 flex justify-between items-center bg-white z-10">
+        <div className="flex items-center gap-3">
+          <span aria-hidden="true" className="text-3xl">📊</span>
           <div>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Timeline RAG</h1>
-            <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "#64748b" }}>
+            <h1 className="m-0 text-xl font-semibold">Timeline RAG</h1>
+            <p className="my-1 text-[13px] text-slate-500">
               Cronologia eventi e metriche conversazione
             </p>
           </div>
@@ -90,7 +69,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
       </header>
 
       {/* Multi-pane Layout */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div className="flex-1 flex overflow-hidden">
         {/* Left: Filters Sidebar */}
         <TimelineFiltersComponent
           filters={filters}
@@ -100,14 +79,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
         />
 
         {/* Center: Event List */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            background: "#ffffff",
-            borderRight: "1px solid #dadce0"
-          }}
-        >
+        <div className="flex-1 overflow-y-auto bg-white border-r border-gray-300">
           <TimelineEventList
             events={events}
             filters={filters}
@@ -129,34 +101,26 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
         <footer
           role="status"
           aria-label="Timeline statistics"
-          style={{
-            padding: "8px 16px",
-            borderTop: "1px solid #dadce0",
-            background: "#f8f9fa",
-            display: "flex",
-            gap: 24,
-            fontSize: 12,
-            color: "#64748b"
-          }}
+          className="py-2 px-4 border-t border-gray-300 bg-gray-50 flex gap-6 text-xs text-slate-500"
         >
           <div>
-            <strong style={{ color: "#202124" }}>{events.length}</strong> eventi totali
+            <strong className="text-gray-900">{events.length}</strong> eventi totali
           </div>
           <div>
-            <strong style={{ color: "#202124" }}>
+            <strong className="text-gray-900">
               {events.filter((e) => e.status === "success").length}
             </strong>{" "}
             completati
           </div>
           <div>
-            <strong style={{ color: "#d93025" }}>
+            <strong className="text-red-600">
               {events.filter((e) => e.status === "error").length}
             </strong>{" "}
             {events.filter((e) => e.status === "error").length === 1 ? "errore" : "errori"}
           </div>
           {events.some((e) => e.data.metrics?.totalTokens) && (
             <div>
-              <strong style={{ color: "#202124" }}>
+              <strong className="text-gray-900">
                 {events
                   .reduce((sum, e) => sum + (e.data.metrics?.totalTokens || 0), 0)
                   .toLocaleString()}

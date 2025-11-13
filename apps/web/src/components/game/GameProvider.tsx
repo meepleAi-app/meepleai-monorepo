@@ -74,21 +74,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     [agents, selectedAgentId]
   );
 
-  // Load games on mount
-  useEffect(() => {
-    void loadGames();
-  }, [loadGames]);
-
-  // Load agents when game changes
-  useEffect(() => {
-    if (selectedGameId) {
-      void loadAgents(selectedGameId);
-    } else {
-      setAgents([]);
-      setSelectedAgentId(null);
-    }
-  }, [selectedGameId]);
-
+  // Define functions before using them in useEffect
   const loadGames = useCallback(async () => {
     setLoading((prev) => ({ ...prev, games: true }));
     setError(null);
@@ -111,7 +97,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     } finally {
       setLoading((prev) => ({ ...prev, games: false }));
     }
-  }, []); // Stable function, only runs on mount
+  }, [selectedGameId]);
 
   const loadAgents = useCallback(async (gameId: string) => {
     setLoading((prev) => ({ ...prev, agents: true }));
@@ -135,6 +121,21 @@ export function GameProvider({ children }: PropsWithChildren) {
       setLoading((prev) => ({ ...prev, agents: false }));
     }
   }, []);
+
+  // Load games on mount
+  useEffect(() => {
+    void loadGames();
+  }, [loadGames]);
+
+  // Load agents when game changes
+  useEffect(() => {
+    if (selectedGameId) {
+      void loadAgents(selectedGameId);
+    } else {
+      setAgents([]);
+      setSelectedAgentId(null);
+    }
+  }, [selectedGameId, loadAgents]);
 
   const selectGame = useCallback(async (gameId: string) => {
     setSelectedGameId(gameId);

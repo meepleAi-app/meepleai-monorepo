@@ -181,7 +181,9 @@ describe('useGames', () => {
         });
       }).rejects.toThrow();
 
-      expect(result.current.error).toBe('Unable to create game. Please try again.');
+      await waitFor(() => {
+        expect(result.current.error).toBe('Unable to create game. Please try again.');
+      });
     });
 
     it('logs error when creation fails', async () => {
@@ -198,7 +200,9 @@ describe('useGames', () => {
         await act(async () => {
           await result.current.createGame('Azul');
         });
-      } catch {}
+      } catch {
+        // Expected to throw
+      }
 
       expect(consoleSpy).toHaveBeenCalledWith('Failed to create game', expect.any(Error));
       consoleSpy.mockRestore();

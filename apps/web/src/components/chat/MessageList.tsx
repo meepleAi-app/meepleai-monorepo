@@ -25,15 +25,10 @@ export function MessageList() {
       <div
         role="region"
         aria-label="Chat messages"
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: 24,
-          background: '#ffffff'
-        }}
+        className="flex-1 overflow-y-auto p-6 bg-white"
       >
-        <div role="status" aria-live="polite" style={{ textAlign: 'center' }}>
-          <div style={{ marginBottom: 12, fontSize: 14, color: '#64748b' }}>
+        <div role="status" aria-live="polite" className="text-center">
+          <div className="mb-3 text-sm text-[#64748b]">
             Caricamento messaggi...
           </div>
           <SkeletonLoader variant="message" count={3} ariaLabel="Caricamento messaggi" />
@@ -48,16 +43,11 @@ export function MessageList() {
       <div
         role="region"
         aria-label="Chat messages"
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: 24,
-          background: '#ffffff'
-        }}
+        className="flex-1 overflow-y-auto p-6 bg-white"
       >
-        <div style={{ textAlign: 'center', padding: 48, color: '#64748b' }}>
-          <p style={{ fontSize: 16, marginBottom: 8 }}>Nessun messaggio ancora.</p>
-          <p style={{ fontSize: 14 }}>
+        <div className="text-center p-12 text-[#64748b]">
+          <p className="text-base mb-2">Nessun messaggio ancora.</p>
+          <p className="text-sm">
             {activeChatId
               ? 'Inizia facendo una domanda!'
               : 'Seleziona una chat esistente o creane una nuova per iniziare.'}
@@ -72,22 +62,13 @@ export function MessageList() {
     <div
       role="region"
       aria-label="Chat messages"
-      style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: 24,
-        background: '#ffffff'
-      }}
+      className="flex-1 overflow-y-auto p-6 bg-white"
     >
       <ul
         role="log"
         aria-live="polite"
         aria-atomic="false"
-        style={{
-          listStyle: 'none',
-          margin: 0,
-          padding: 0
-        }}
+        className="list-none m-0 p-0"
       >
         {messages.map((msg) => (
           <Message

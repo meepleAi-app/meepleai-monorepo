@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import type { RuleSpecComment } from "../lib/api";
 import { MentionInput } from "./MentionInput";
+import { cn } from "@/lib/utils";
 
 interface CommentItemProps {
   comment: RuleSpecComment;
@@ -136,11 +137,7 @@ export function CommentItem({
         return (
           <span
             key={i}
-            style={{
-              color: "#0070f3",
-              fontWeight: "bold",
-              cursor: "pointer"
-            }}
+            className="text-blue-500 font-bold cursor-pointer"
             title={`Mentioned user: ${part}`}
           >
             @{part}
@@ -153,45 +150,34 @@ export function CommentItem({
 
   return (
     <div
-      style={{
-        padding: 12,
-        background: comment.isResolved ? "#f5f5f5" : "#f9f9f9",
-        border: "1px solid #ddd",
-        borderRadius: 4,
-        marginBottom: 12,
-        opacity: comment.isResolved ? 0.7 : 1
-      }}
+      className={cn(
+        "p-3 border border-gray-300 rounded mb-3",
+        comment.isResolved ? "bg-gray-100 opacity-70" : "bg-gray-50"
+      )}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+      <div className="flex justify-between items-start mb-2">
         <div>
-          <strong style={{ fontSize: 14 }}>{comment.userDisplayName}</strong>
+          <strong className="text-sm">{comment.userDisplayName}</strong>
           {comment.atomId && (
-            <span style={{ marginLeft: 8, fontSize: 12, color: "#666", background: "#e3f2fd", padding: "2px 6px", borderRadius: 3 }}>
+            <span className="ml-2 text-xs text-gray-600 bg-blue-50 px-1.5 py-0.5 rounded-sm">
               Regola: {comment.atomId}
             </span>
           )}
           {comment.lineNumber !== null && (
-            <span style={{ marginLeft: 8, fontSize: 12, color: "#666", background: "#fff3e0", padding: "2px 6px", borderRadius: 3 }}>
+            <span className="ml-2 text-xs text-gray-600 bg-orange-50 px-1.5 py-0.5 rounded-sm">
               Line {comment.lineNumber}
             </span>
           )}
           {comment.isResolved && (
             <span
-              style={{
-                marginLeft: 8,
-                padding: "2px 8px",
-                background: "#e8f5e9",
-                color: "#2e7d32",
-                borderRadius: 4,
-                fontSize: 12
-              }}
+              className="ml-2 px-2 py-0.5 bg-green-50 text-green-800 rounded text-xs"
               title={`Resolved by ${comment.resolvedByDisplayName || "Unknown"} on ${comment.resolvedAt ? new Date(comment.resolvedAt).toLocaleString() : "Unknown"}`}
             >
               ✓ Resolved
             </span>
           )}
         </div>
-        <div style={{ fontSize: 12, color: "#999" }}>
+        <div className="text-xs text-gray-600">
           {new Date(comment.createdAt).toLocaleString()}
           {comment.updatedAt && " (modificato)"}
         </div>
@@ -203,46 +189,28 @@ export function CommentItem({
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             disabled={isDisabled}
-            style={{
-              width: "100%",
-              minHeight: 80,
-              padding: 8,
-              border: "1px solid #ccc",
-              borderRadius: 4,
-              fontSize: 14,
-              fontFamily: "inherit",
-              marginBottom: 8,
-              resize: "vertical"
-            }}
+            className="w-full min-h-[80px] p-2 border border-gray-400 rounded text-sm font-[inherit] mb-2 resize-y"
           />
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="flex gap-2">
             <button
               onClick={handleSaveEdit}
               disabled={isDisabled || !editText.trim()}
-              style={{
-                padding: "6px 12px",
-                background: isDisabled || !editText.trim() ? "#ccc" : "#4caf50",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: isDisabled || !editText.trim() ? "not-allowed" : "pointer",
-                fontSize: 13
-              }}
+              className={cn(
+                "px-3 py-1.5 text-white border-0 rounded text-sm",
+                isDisabled || !editText.trim()
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-600 cursor-pointer hover:bg-green-700"
+              )}
             >
               {isSubmitting ? "Salvataggio..." : "Salva"}
             </button>
             <button
               onClick={handleCancelEdit}
               disabled={isDisabled}
-              style={{
-                padding: "6px 12px",
-                background: "#666",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: isDisabled ? "not-allowed" : "pointer",
-                fontSize: 13
-              }}
+              className={cn(
+                "px-3 py-1.5 bg-gray-600 text-white border-0 rounded text-sm",
+                isDisabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-gray-700"
+              )}
             >
               Annulla
             </button>
@@ -252,58 +220,40 @@ export function CommentItem({
         <div>
           {/* Line context snippet if available */}
           {comment.lineContext && (
-            <div
-              style={{
-                padding: 8,
-                background: "#fff",
-                border: "1px solid #e0e0e0",
-                borderRadius: 4,
-                marginBottom: 8,
-                fontSize: 13,
-                fontFamily: "monospace",
-                color: "#666"
-              }}
-            >
+            <div className="p-2 bg-white border border-gray-300 rounded mb-2 text-sm font-mono text-gray-600">
               {comment.lineContext}
             </div>
           )}
 
           {/* Comment text with mention rendering */}
           <p
-            style={{
-              margin: "0 0 8px 0",
-              fontSize: 14,
-              lineHeight: 1.5,
-              textDecoration: comment.isResolved ? "line-through" : "none"
-            }}
+            className={cn(
+              "m-0 mb-2 text-sm leading-normal",
+              comment.isResolved && "line-through"
+            )}
           >
             {renderTextWithMentions(comment.commentText)}
           </p>
 
           {/* Mentioned users display */}
           {comment.mentionedUserIds && comment.mentionedUserIds.length > 0 && (
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
-              <span style={{ fontStyle: "italic" }}>
+            <div className="text-xs text-gray-600 mb-2">
+              <span className="italic">
                 Mentioned: {comment.mentionedUserIds.length} user(s)
               </span>
             </div>
           )}
 
           {/* Action buttons */}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+          <div className="flex gap-2 flex-wrap mt-2">
             {canEdit && (
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={isDisabled}
-                style={{
-                  padding: "4px 10px",
-                  background: isDisabled ? "#ccc" : "#0070f3",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: isDisabled ? "not-allowed" : "pointer",
-                  fontSize: 12
-                }}
+                className={cn(
+                  "px-2.5 py-1 text-white border-0 rounded text-xs",
+                  isDisabled ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 cursor-pointer hover:bg-blue-600"
+                )}
                 aria-label="Edit comment"
               >
                 Modifica
@@ -313,15 +263,10 @@ export function CommentItem({
               <button
                 onClick={handleDelete}
                 disabled={isDisabled}
-                style={{
-                  padding: "4px 10px",
-                  background: isDisabled ? "#ccc" : "#d93025",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: isDisabled ? "not-allowed" : "pointer",
-                  fontSize: 12
-                }}
+                className={cn(
+                  "px-2.5 py-1 text-white border-0 rounded text-xs",
+                  isDisabled ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 cursor-pointer hover:bg-red-700"
+                )}
                 aria-label="Delete comment"
               >
                 {isSubmitting ? "Eliminazione..." : "Elimina"}
@@ -332,15 +277,10 @@ export function CommentItem({
               <button
                 onClick={() => setIsReplying(!isReplying)}
                 disabled={isDisabled}
-                style={{
-                  padding: "4px 10px",
-                  background: isDisabled ? "#ccc" : "#0070f3",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: isDisabled ? "not-allowed" : "pointer",
-                  fontSize: 12
-                }}
+                className={cn(
+                  "px-2.5 py-1 text-white border-0 rounded text-xs",
+                  isDisabled ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 cursor-pointer hover:bg-blue-600"
+                )}
                 aria-label="Reply to comment"
               >
                 {isReplying ? "Annulla" : "Rispondi"}
@@ -351,15 +291,14 @@ export function CommentItem({
               <button
                 onClick={comment.isResolved ? handleUnresolve : handleResolve}
                 disabled={isDisabled}
-                style={{
-                  padding: "4px 10px",
-                  background: isDisabled ? "#ccc" : comment.isResolved ? "#666" : "#4caf50",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: isDisabled ? "not-allowed" : "pointer",
-                  fontSize: 12
-                }}
+                className={cn(
+                  "px-2.5 py-1 text-white border-0 rounded text-xs",
+                  isDisabled
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : comment.isResolved
+                      ? "bg-gray-600 cursor-pointer hover:bg-gray-700"
+                      : "bg-green-600 cursor-pointer hover:bg-green-700"
+                )}
                 aria-label={comment.isResolved ? "Reopen comment" : "Mark as resolved"}
               >
                 {isSubmitting
@@ -375,41 +314,33 @@ export function CommentItem({
 
       {/* Reply form */}
       {isReplying && (
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #ddd" }}>
+        <div className="mt-3 pt-3 border-t border-gray-300">
           <MentionInput
             value={replyText}
             onChange={setReplyText}
             placeholder="Scrivi una risposta..."
             disabled={isDisabled}
           />
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <div className="flex gap-2 mt-2">
             <button
               onClick={handleReply}
               disabled={isDisabled || !replyText.trim()}
-              style={{
-                padding: "6px 12px",
-                background: isDisabled || !replyText.trim() ? "#ccc" : "#4caf50",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: isDisabled || !replyText.trim() ? "not-allowed" : "pointer",
-                fontSize: 13
-              }}
+              className={cn(
+                "px-3 py-1.5 text-white border-0 rounded text-sm",
+                isDisabled || !replyText.trim()
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-600 cursor-pointer hover:bg-green-700"
+              )}
             >
               {isSubmitting ? "Invio..." : "Invia risposta"}
             </button>
             <button
               onClick={handleCancelReply}
               disabled={isDisabled}
-              style={{
-                padding: "6px 12px",
-                background: "#666",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: isDisabled ? "not-allowed" : "pointer",
-                fontSize: 13
-              }}
+              className={cn(
+                "px-3 py-1.5 bg-gray-600 text-white border-0 rounded text-sm",
+                isDisabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-gray-700"
+              )}
             >
               Annulla
             </button>
@@ -419,14 +350,7 @@ export function CommentItem({
 
       {/* Threaded replies (recursive rendering) */}
       {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
-        <div
-          style={{
-            marginLeft: 20,
-            marginTop: 12,
-            borderLeft: "2px solid #ddd",
-            paddingLeft: 12
-          }}
-        >
+        <div className="ml-5 mt-3 border-l-2 border-gray-300 pl-3">
           {comment.replies.map((reply) => (
             <CommentItem
               key={reply.id}

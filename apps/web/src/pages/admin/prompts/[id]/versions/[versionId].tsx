@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../../../../../lib/api";
+import { cn } from "../../../../../lib/utils";
 import PromptEditor from "../../../../../components/PromptEditor";
 
 type PromptVersion = {
@@ -73,21 +74,21 @@ export default function PromptVersionDetail() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center", color: "#6b7280" }}>Loading...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-gray-500">Loading...</div>
       </div>
     );
   }
 
   if (error || !version) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ color: "#991b1b", marginBottom: "1rem", fontSize: "1.125rem" }}>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-800 mb-4 text-lg">
             {error || "Version not found"}
           </div>
           <Link href={`/admin/prompts/${id}`}>
-            <button style={{ padding: "0.5rem 1rem", background: "#667eea", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+            <button className="px-4 py-2 bg-[#667eea] text-white border-none rounded-lg cursor-pointer">
               Back to Template
             </button>
           </Link>
@@ -97,51 +98,51 @@ export default function PromptVersionDetail() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
-        <div style={{ background: "white", borderRadius: "12px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="max-w-[1400px] mx-auto p-8">
+        <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden">
           {/* Header */}
-          <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "2rem", color: "white" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+            <div className="flex items-center justify-between mb-4">
               <Link href={`/admin/prompts/${id}`}>
-                <button style={{ padding: "0.5rem 1rem", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+                <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer">
                   ← Back to Template
                 </button>
               </Link>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div className="flex gap-2">
                 {!version.isActive && (
                   <button
                     onClick={handleActivate}
-                    style={{ padding: "0.5rem 1.5rem", background: "white", color: "#667eea", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}
+                    className="px-6 py-2 bg-white text-[#667eea] border-none rounded-lg cursor-pointer font-semibold"
                   >
                     Activate Version
                   </button>
                 )}
                 <Link href={`/admin/prompts/${id}/compare?versions=${versionId}`}>
-                  <button style={{ padding: "0.5rem 1rem", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+                  <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer">
                     Compare
                   </button>
                 </Link>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-              <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Version {version.versionNumber}</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold">Version {version.versionNumber}</h1>
               {version.isActive && (
-                <span style={{ padding: "0.5rem 1rem", background: "rgba(16, 185, 129, 0.2)", color: "#d1fae5", borderRadius: "9999px", fontSize: "0.875rem", fontWeight: "600" }}>
+                <span className="px-4 py-2 bg-emerald-500/20 text-emerald-200 rounded-full text-sm font-semibold">
                   ✓ Active
                 </span>
               )}
             </div>
-            <div style={{ display: "flex", gap: "2rem", marginTop: "1rem", fontSize: "0.875rem", opacity: 0.9 }}>
+            <div className="flex gap-8 mt-4 text-sm opacity-90">
               <span>Created by: <strong>{version.createdByEmail}</strong></span>
               <span>Created: <strong>{new Date(version.createdAt).toLocaleString()}</strong></span>
             </div>
           </div>
 
           {/* Content */}
-          <div style={{ padding: "2rem" }}>
-            <div style={{ marginBottom: "2rem" }}>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Prompt Content</h2>
+          <div className="p-8">
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Prompt Content</h2>
               <PromptEditor
                 value={version.content}
                 readonly={true}
@@ -151,18 +152,8 @@ export default function PromptVersionDetail() {
 
             {version.metadata && Object.keys(version.metadata).length > 0 && (
               <div>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Metadata</h2>
-                <pre
-                  style={{
-                    background: "#f9fafb",
-                    padding: "1.5rem",
-                    borderRadius: "8px",
-                    border: "1px solid #e5e7eb",
-                    overflow: "auto",
-                    fontSize: "0.875rem",
-                    fontFamily: "monospace",
-                  }}
-                >
+                <h2 className="text-xl font-semibold mb-4">Metadata</h2>
+                <pre className="bg-gray-50 p-6 rounded-lg border border-gray-200 overflow-auto text-sm font-mono">
                   {JSON.stringify(version.metadata, null, 2)}
                 </pre>
               </div>
@@ -174,18 +165,10 @@ export default function PromptVersionDetail() {
       {/* Toast */}
       {toast.show && (
         <div
-          style={{
-            position: "fixed",
-            bottom: "2rem",
-            right: "2rem",
-            padding: "1rem 1.5rem",
-            background: toast.type === "success" ? "#10b981" : "#ef4444",
-            color: "white",
-            borderRadius: "8px",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-            zIndex: 100,
-            fontWeight: "500",
-          }}
+          className={cn(
+            "fixed bottom-8 right-8 px-6 py-4 text-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.3)] z-[100] font-medium",
+            toast.type === "success" ? "bg-emerald-500" : "bg-red-500"
+          )}
         >
           {toast.message}
         </div>

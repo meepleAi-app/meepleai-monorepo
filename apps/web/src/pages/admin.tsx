@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
 import { EndpointDistributionChart, LatencyDistributionChart, RequestsTimeSeriesChart, FeedbackChart } from "../components/AdminCharts";
+import { cn } from "../lib/utils";
 
 type AiRequest = {
   id: string;
@@ -184,7 +185,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
+      <main className="p-6 font-sans max-w-7xl mx-auto">
         <h1>Loading...</h1>
       </main>
     );
@@ -192,99 +193,57 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
+      <main className="p-6 font-sans max-w-7xl mx-auto">
         <h1>Error</h1>
-        <p style={{ color: "#d93025" }}>{error}</p>
-        <Link href="/" style={{ color: "#1a73e8" }}>Back to Home</Link>
+        <p className="text-red-600">{error}</p>
+        <Link href="/" className="text-blue-600">Back to Home</Link>
       </main>
     );
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+    <main className="p-6 font-sans max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
-          <p style={{ margin: "8px 0 0 0", color: "#64748b" }}>
+          <h1 className="m-0">Admin Dashboard</h1>
+          <p className="mt-2 mb-0 text-gray-500">
             Monitor AI requests, latency, and token usage
           </p>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div className="flex gap-3">
           <Link
             href="/admin/prompts"
-            style={{
-              padding: "8px 16px",
-              background: "#667eea",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              display: "inline-block"
-            }}
+            className="px-4 py-2 bg-indigo-500 text-white no-underline rounded inline-block hover:bg-indigo-600 transition-colors"
           >
             Prompt Management
           </Link>
           <Link
             href="/admin/users"
-            style={{
-              padding: "8px 16px",
-              background: "#4338ca",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              display: "inline-block"
-            }}
+            className="px-4 py-2 bg-indigo-700 text-white no-underline rounded inline-block hover:bg-indigo-800 transition-colors"
           >
             Users
           </Link>
           <Link
             href="/admin/analytics"
-            style={{
-              padding: "8px 16px",
-              background: "#7c3aed",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              display: "inline-block"
-            }}
+            className="px-4 py-2 bg-purple-600 text-white no-underline rounded inline-block hover:bg-purple-700 transition-colors"
           >
             Analytics
           </Link>
           <Link
             href="/admin/cache"
-            style={{
-              padding: "8px 16px",
-              background: "#059669",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              display: "inline-block"
-            }}
+            className="px-4 py-2 bg-emerald-600 text-white no-underline rounded inline-block hover:bg-emerald-700 transition-colors"
           >
             Cache
           </Link>
           <button
             onClick={exportToCSV}
-            style={{
-              padding: "8px 16px",
-              background: "#0f9d58",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer"
-            }}
+            className="px-4 py-2 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700 transition-colors"
           >
             Export CSV
           </button>
           <Link
             href="/"
-            style={{
-              padding: "8px 16px",
-              background: "#1a73e8",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              display: "inline-block"
-            }}
+            className="px-4 py-2 bg-blue-600 text-white no-underline rounded inline-block hover:bg-blue-700 transition-colors"
           >
             Back to Home
           </Link>
@@ -293,29 +252,29 @@ export default function AdminDashboard() {
 
       {/* Statistics Cards */}
       {stats && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Total Requests</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalRequests}</div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-6">
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <div className="text-xs text-gray-500 mb-2">Total Requests</div>
+            <div className="text-3xl font-semibold">{stats.totalRequests}</div>
           </div>
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Avg Latency</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{Math.round(stats.avgLatencyMs)}ms</div>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <div className="text-xs text-gray-500 mb-2">Avg Latency</div>
+            <div className="text-3xl font-semibold">{Math.round(stats.avgLatencyMs)}ms</div>
           </div>
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Total Tokens</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalTokens}</div>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <div className="text-xs text-gray-500 mb-2">Total Tokens</div>
+            <div className="text-3xl font-semibold">{stats.totalTokens}</div>
           </div>
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Success Rate</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{(stats.successRate * 100).toFixed(1)}%</div>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <div className="text-xs text-gray-500 mb-2">Success Rate</div>
+            <div className="text-3xl font-semibold">{(stats.successRate * 100).toFixed(1)}%</div>
           </div>
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Feedback Totali</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalFeedback}</div>
-            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
-              <span style={{ color: "#34a853", fontWeight: 600 }}>Utile: {helpfulCount}</span>
-              <span style={{ color: "#ea4335", fontWeight: 600 }}>Non utile: {notHelpfulCount}</span>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <div className="text-xs text-gray-500 mb-2">Feedback Totali</div>
+            <div className="text-3xl font-semibold">{stats.totalFeedback}</div>
+            <div className="mt-3 flex flex-col gap-1 text-sm">
+              <span className="text-green-600 font-semibold">Utile: {helpfulCount}</span>
+              <span className="text-red-600 font-semibold">Non utile: {notHelpfulCount}</span>
             </div>
           </div>
         </div>
@@ -323,24 +282,24 @@ export default function AdminDashboard() {
 
       {/* Charts Section */}
       {stats && requests.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(500px, 1fr))", gap: 16, marginBottom: 24 }}>
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Endpoint Distribution</h3>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(500px,1fr))] gap-4 mb-6">
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <h3 className="mt-0 mb-4">Endpoint Distribution</h3>
             <EndpointDistributionChart endpointCounts={stats.endpointCounts} />
           </div>
 
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Latency Distribution</h3>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <h3 className="mt-0 mb-4">Latency Distribution</h3>
             <LatencyDistributionChart requests={filteredRequests.map(r => ({ latencyMs: r.latencyMs, endpoint: r.endpoint, createdAt: r.createdAt }))} />
           </div>
 
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Requests Over Time</h3>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <h3 className="mt-0 mb-4">Requests Over Time</h3>
             <RequestsTimeSeriesChart requests={filteredRequests.map(r => ({ createdAt: r.createdAt, status: r.status }))} />
           </div>
 
-          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <h3 style={{ marginTop: 0, marginBottom: 16 }}>User Feedback</h3>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white">
+            <h3 className="mt-0 mb-4">User Feedback</h3>
             <FeedbackChart feedbackCounts={stats.feedbackCounts} />
           </div>
         </div>
@@ -348,23 +307,19 @@ export default function AdminDashboard() {
 
       {/* Endpoint Breakdown */}
       {stats && (
-        <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white", marginBottom: 24 }}>
-          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Requests by Endpoint</h3>
-          <div style={{ display: "flex", gap: 24 }}>
+        <div className="p-6 border border-gray-300 rounded-lg bg-white mb-6">
+          <h3 className="mt-0 mb-4">Requests by Endpoint</h3>
+          <div className="flex gap-6">
             {Object.entries(stats.endpointCounts).map(([endpoint, count]) => (
-              <div key={endpoint} style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <div key={endpoint} className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
                   <div
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: "50%",
-                      background: getEndpointColor(endpoint)
-                    }}
+                    className="w-3 h-3 rounded-full"
+                    style={{ background: getEndpointColor(endpoint) }}
                   />
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{endpoint}</div>
+                  <div className="text-sm font-semibold">{endpoint}</div>
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 600, color: getEndpointColor(endpoint) }}>{count}</div>
+                <div className="text-2xl font-semibold" style={{ color: getEndpointColor(endpoint) }}>{count}</div>
               </div>
             ))}
           </div>
@@ -372,30 +327,18 @@ export default function AdminDashboard() {
       )}
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+      <div className="flex gap-3 mb-4">
         <input
           type="text"
           placeholder="Filter by query, endpoint, user ID, or game ID..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          style={{
-            flex: 1,
-            padding: 12,
-            fontSize: 14,
-            border: "1px solid #dadce0",
-            borderRadius: 4
-          }}
+          className="flex-1 p-3 text-sm border border-gray-300 rounded"
         />
         <select
           value={endpointFilter}
           onChange={(e) => setEndpointFilter(e.target.value)}
-          style={{
-            padding: 12,
-            fontSize: 14,
-            border: "1px solid #dadce0",
-            borderRadius: 4,
-            background: "white"
-          }}
+          className="p-3 text-sm border border-gray-300 rounded bg-white"
         >
           <option value="all">All Endpoints</option>
           <option value="qa">QA</option>
@@ -405,9 +348,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* Date Range Filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
-        <div style={{ flex: 1 }}>
-          <label htmlFor="start-date-input" style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#64748b", fontWeight: 600 }}>
+      <div className="flex gap-3 mb-6">
+        <div className="flex-1">
+          <label htmlFor="start-date-input" className="block text-xs mb-1 text-gray-500 font-semibold">
             Start Date
           </label>
           <input
@@ -415,17 +358,11 @@ export default function AdminDashboard() {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            style={{
-              width: "100%",
-              padding: 12,
-              fontSize: 14,
-              border: "1px solid #dadce0",
-              borderRadius: 4
-            }}
+            className="w-full p-3 text-sm border border-gray-300 rounded"
           />
         </div>
-        <div style={{ flex: 1 }}>
-          <label htmlFor="end-date-input" style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#64748b", fontWeight: 600 }}>
+        <div className="flex-1">
+          <label htmlFor="end-date-input" className="block text-xs mb-1 text-gray-500 font-semibold">
             End Date
           </label>
           <input
@@ -433,48 +370,28 @@ export default function AdminDashboard() {
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            style={{
-              width: "100%",
-              padding: 12,
-              fontSize: 14,
-              border: "1px solid #dadce0",
-              borderRadius: 4
-            }}
+            className="w-full p-3 text-sm border border-gray-300 rounded"
           />
         </div>
         <button
           onClick={() => { setStartDate(""); setEndDate(""); }}
           disabled={!startDate && !endDate}
-          style={{
-            padding: "28px 16px 12px 16px",
-            background: !startDate && !endDate ? "#f8f9fa" : "#f8f9fa",
-            color: "#64748b",
-            border: "1px solid #dadce0",
-            borderRadius: 4,
-            cursor: !startDate && !endDate ? "not-allowed" : "pointer",
-            alignSelf: "flex-start",
-            fontSize: 14
-          }}
+          className={cn(
+            "px-4 text-sm border border-gray-300 rounded self-start",
+            "pt-7 pb-3",
+            !startDate && !endDate
+              ? "bg-gray-50 text-gray-500 cursor-not-allowed"
+              : "bg-gray-50 text-gray-500 cursor-pointer hover:bg-gray-100"
+          )}
         >
           Clear Dates
         </button>
       </div>
 
       {/* Requests Table */}
-      <div style={{ border: "1px solid #dadce0", borderRadius: 8, overflow: "hidden" }}>
-        <div
-          style={{
-            padding: 16,
-            background: "#f8f9fa",
-            borderBottom: "1px solid #dadce0",
-            display: "grid",
-            gridTemplateColumns: "140px 80px 100px 80px 90px 110px 90px 100px 160px 1fr 100px",
-            gap: 16,
-            fontSize: 12,
-            fontWeight: 600,
-            color: "#64748b",
-            textTransform: "uppercase"
-          }}
+      <div className="border border-gray-300 rounded-lg overflow-hidden">
+        <div className="p-4 bg-gray-50 border-b border-gray-300 grid gap-4 text-xs font-semibold text-gray-500 uppercase"
+          style={{ gridTemplateColumns: "140px 80px 100px 80px 90px 110px 90px 100px 160px 1fr 100px" }}
         >
           <div>Timestamp</div>
           <div>Endpoint</div>
@@ -490,58 +407,39 @@ export default function AdminDashboard() {
         </div>
 
         {filteredRequests.length === 0 ? (
-          <div style={{ padding: 48, textAlign: "center", color: "#64748b" }}>
+          <div className="p-12 text-center text-gray-500">
             <p>No AI requests found.</p>
           </div>
         ) : (
           filteredRequests.map((req) => (
             <div
               key={req.id}
-              style={{
-                padding: 16,
-                borderBottom: "1px solid #f0f0f0",
-                display: "grid",
-                gridTemplateColumns: "140px 80px 100px 80px 90px 110px 90px 100px 160px 1fr 100px",
-                gap: 16,
-                fontSize: 13,
-                alignItems: "start"
-              }}
+              className="p-4 border-b border-gray-100 grid gap-4 text-sm items-start"
+              style={{ gridTemplateColumns: "140px 80px 100px 80px 90px 110px 90px 100px 160px 1fr 100px" }}
             >
-              <div style={{ color: "#64748b", fontSize: 11, fontFamily: "monospace" }}>
+              <div className="text-gray-500 text-xs font-mono">
                 {new Date(req.createdAt).toLocaleString()}
               </div>
-              <div
-                style={{
-                  color: getEndpointColor(req.endpoint),
-                  fontWeight: 600,
-                  fontSize: 12
-                }}
-              >
+              <div className="font-semibold text-xs" style={{ color: getEndpointColor(req.endpoint) }}>
                 {req.endpoint}
               </div>
-              <div style={{ fontSize: 11, fontFamily: "monospace", color: "#64748b" }}>
+              <div className="text-xs font-mono text-gray-500">
                 {req.gameId?.substring(0, 8) || "-"}
               </div>
-              <div style={{ fontSize: 12, fontFamily: "monospace" }}>{req.latencyMs}ms</div>
-              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#64748b" }}>
-                {req.promptTokens}
-              </div>
-              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#64748b" }}>
-                {req.completionTokens}
-              </div>
-              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#64748b" }}>
-                {req.tokenCount}
-              </div>
-              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#64748b" }}>
+              <div className="text-xs font-mono">{req.latencyMs}ms</div>
+              <div className="text-xs font-mono text-gray-500">{req.promptTokens}</div>
+              <div className="text-xs font-mono text-gray-500">{req.completionTokens}</div>
+              <div className="text-xs font-mono text-gray-500">{req.tokenCount}</div>
+              <div className="text-xs font-mono text-gray-500">
                 {req.confidence !== null && req.confidence !== undefined ? req.confidence.toFixed(2) : "-"}
               </div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>
+              <div className="text-xs text-gray-500">
                 {req.model ? `${req.model}${req.finishReason ? ` (${req.finishReason})` : ""}` : "-"}
               </div>
-              <div style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div className="text-xs overflow-hidden text-ellipsis whitespace-nowrap">
                 {req.query || "-"}
               </div>
-              <div style={{ color: getStatusColor(req.status), fontWeight: 600, fontSize: 12 }}>
+              <div className="font-semibold text-xs" style={{ color: getStatusColor(req.status) }}>
                 {req.status}
               </div>
             </div>
@@ -550,43 +448,35 @@ export default function AdminDashboard() {
 
         {/* Pagination Controls */}
         {totalCount > 0 && (
-          <div style={{ padding: 16, borderTop: "1px solid #dadce0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa" }}>
-            <div style={{ fontSize: 13, color: "#64748b" }}>
+          <div className="p-4 border-t border-gray-300 flex justify-between items-center bg-gray-50">
+            <div className="text-sm text-gray-500">
               Showing {Math.min((page - 1) * pageSize + 1, totalCount)}-{Math.min(page * pageSize, totalCount)} of {totalCount} requests
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div className="flex gap-2 items-center">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                style={{
-                  padding: "8px 16px",
-                  background: page === 1 ? "#f8f9fa" : "#1a73e8",
-                  color: page === 1 ? "#64748b" : "white",
-                  border: page === 1 ? "1px solid #dadce0" : "none",
-                  borderRadius: 4,
-                  cursor: page === 1 ? "not-allowed" : "pointer",
-                  fontSize: 14,
-                  fontWeight: 600
-                }}
+                className={cn(
+                  "px-4 py-2 text-sm font-semibold rounded",
+                  page === 1
+                    ? "bg-gray-50 text-gray-500 border border-gray-300 cursor-not-allowed"
+                    : "bg-blue-600 text-white border-none cursor-pointer hover:bg-blue-700"
+                )}
               >
                 Previous
               </button>
-              <span style={{ fontSize: 13, color: "#64748b", padding: "0 8px" }}>
+              <span className="text-sm text-gray-500 px-2">
                 Page {page} of {Math.ceil(totalCount / pageSize)}
               </span>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={page * pageSize >= totalCount}
-                style={{
-                  padding: "8px 16px",
-                  background: page * pageSize >= totalCount ? "#f8f9fa" : "#1a73e8",
-                  color: page * pageSize >= totalCount ? "#64748b" : "white",
-                  border: page * pageSize >= totalCount ? "1px solid #dadce0" : "none",
-                  borderRadius: 4,
-                  cursor: page * pageSize >= totalCount ? "not-allowed" : "pointer",
-                  fontSize: 14,
-                  fontWeight: 600
-                }}
+                className={cn(
+                  "px-4 py-2 text-sm font-semibold rounded",
+                  page * pageSize >= totalCount
+                    ? "bg-gray-50 text-gray-500 border border-gray-300 cursor-not-allowed"
+                    : "bg-blue-600 text-white border-none cursor-pointer hover:bg-blue-700"
+                )}
               >
                 Next
               </button>

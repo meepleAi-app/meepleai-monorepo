@@ -67,32 +67,21 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
   return (
     <div
       data-testid={`upload-queue-item-${id}`}
+      className="p-4 border border-gray-300 rounded-md mb-3 transition-colors duration-300"
       style={{
-        padding: '16px',
-        border: '1px solid #e0e0e0',
-        borderRadius: '6px',
-        backgroundColor: statusBgColor,
-        marginBottom: '12px',
-        transition: 'background-color 0.3s ease'
+        backgroundColor: statusBgColor
       }}
     >
       {/* Header: Filename and Status */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex-1 min-w-0">
           <div
-            style={{
-              fontSize: '15px',
-              fontWeight: 600,
-              color: '#202124',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
+            className="text-sm font-semibold text-gray-900 overflow-hidden text-ellipsis whitespace-nowrap"
             title={file.name}
           >
             {file.name}
           </div>
-          <div style={{ fontSize: '13px', color: '#5f6368', marginTop: '2px' }}>
+          <div className="text-xs text-gray-600 mt-0.5">
             {formatFileSize(file.size)}
             {retryCount > 0 && ` • Retry ${retryCount}`}
           </div>
@@ -116,7 +105,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
             className="h-2 mb-2"
             aria-label={`Upload progress for ${file.name}`}
           />
-          <div style={{ fontSize: '13px', color: '#5f6368', marginBottom: '8px' }}>
+          <div className="text-xs text-gray-600 mb-2">
             {progress}% complete
           </div>
         </>
@@ -127,19 +116,11 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
         <div
           role="alert"
           data-testid={`upload-error-${id}`}
-          style={{
-            fontSize: '13px',
-            color: '#d93025',
-            padding: '8px 12px',
-            backgroundColor: 'white',
-            border: '1px solid #d93025',
-            borderRadius: '4px',
-            marginBottom: '8px'
-          }}
+          className="text-xs text-red-600 p-2 bg-white border border-red-600 rounded mb-2"
         >
           <div>Error: {error}</div>
           {correlationId && (
-            <div style={{ marginTop: '4px', fontSize: '12px' }}>
+            <div className="mt-1 text-[11px]">
               Error ID: {correlationId}
             </div>
           )}
@@ -147,7 +128,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
       )}
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+      <div className="flex gap-2 mt-3">
         {showCancelButton && (
           <Button
             onClick={() => onCancel(id)}

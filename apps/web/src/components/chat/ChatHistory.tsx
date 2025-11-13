@@ -26,9 +26,9 @@ export function ChatHistory() {
 
   if (loading.chats) {
     return (
-      <nav aria-label="Chat history" style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
-        <div role="status" aria-live="polite" style={{ padding: 16, textAlign: 'center' }}>
-          <div style={{ marginBottom: 12, fontSize: 13, color: '#64748b' }}>Caricamento chat...</div>
+      <nav aria-label="Chat history" className="flex-1 overflow-y-auto p-2">
+        <div role="status" aria-live="polite" className="p-4 text-center">
+          <div className="mb-3 text-[13px] text-[#64748b]">Caricamento chat...</div>
           <SkeletonLoader variant="chatHistory" count={5} ariaLabel="Caricamento cronologia chat" />
         </div>
       </nav>
@@ -37,8 +37,8 @@ export function ChatHistory() {
 
   if (chats.length === 0) {
     return (
-      <nav aria-label="Chat history" style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
-        <div style={{ padding: 16, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+      <nav aria-label="Chat history" className="flex-1 overflow-y-auto p-2">
+        <div className="p-4 text-center text-[#64748b] text-[13px]">
           Nessuna chat. Creane una nuova!
         </div>
       </nav>
@@ -46,8 +46,8 @@ export function ChatHistory() {
   }
 
   return (
-    <nav aria-label="Chat history" style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
-      <ul role="list" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+    <nav aria-label="Chat history" className="flex-1 overflow-y-auto p-2">
+      <ul role="list" className="list-none m-0 p-0">
         {chats.map((chat) => (
           <ChatHistoryItem
             key={chat.id}

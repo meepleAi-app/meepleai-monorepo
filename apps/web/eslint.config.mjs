@@ -111,6 +111,17 @@ export default [
       "react/prop-types": "off",
       "react/jsx-uses-react": "error",
       "react/jsx-uses-vars": "error",
+      "react/forbid-dom-props": [
+        "warn",
+        {
+          forbid: [
+            {
+              propName: "style",
+              message: "Avoid inline styles. Use Tailwind CSS classes instead. Only use style prop for truly dynamic values (animations, calculated positions, library requirements).",
+            },
+          ],
+        },
+      ],
 
       // React Hooks rules
       "react-hooks/rules-of-hooks": "error",

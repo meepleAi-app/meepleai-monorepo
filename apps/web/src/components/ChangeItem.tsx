@@ -76,16 +76,15 @@ export function ChangeItem({ change }: ChangeItemProps) {
 
   return (
     <div
+      className="p-4 rounded border-2"
       style={{
-        padding: 16,
         background: getBgColor(),
-        border: `2px solid ${getBorderColor()}`,
-        borderRadius: 4
+        borderColor: getBorderColor()
       }}
       data-testid={`change-item-${change.type.toLowerCase()}`}
     >
-      <div style={{ marginBottom: 12 }}>
-        <strong style={{ fontSize: 16 }}>
+      <div className="mb-3">
+        <strong className="text-base">
           {getIcon()}
           {change.type}: {change.newAtom || change.oldAtom}
         </strong>
@@ -93,16 +92,16 @@ export function ChangeItem({ change }: ChangeItemProps) {
 
       {change.type === "Added" && change.newValue && (
         <div data-testid="change-added-content">
-          <div style={{ fontSize: 14, marginBottom: 8 }}>
+          <div className="text-sm mb-2">
             <strong>Testo:</strong> {change.newValue.text}
           </div>
           {change.newValue.section && (
-            <div style={{ fontSize: 12, color: "#666" }}>
+            <div className="text-xs text-gray-600">
               Sezione: {change.newValue.section}
             </div>
           )}
           {change.newValue.page && (
-            <div style={{ fontSize: 12, color: "#666" }}>
+            <div className="text-xs text-gray-600">
               Pagina: {change.newValue.page}
             </div>
           )}
@@ -111,16 +110,16 @@ export function ChangeItem({ change }: ChangeItemProps) {
 
       {change.type === "Deleted" && change.oldValue && (
         <div data-testid="change-deleted-content">
-          <div style={{ fontSize: 14, marginBottom: 8, textDecoration: "line-through" }}>
+          <div className="text-sm mb-2 line-through">
             <strong>Testo:</strong> {change.oldValue.text}
           </div>
           {change.oldValue.section && (
-            <div style={{ fontSize: 12, color: "#666", textDecoration: "line-through" }}>
+            <div className="text-xs text-gray-600 line-through">
               Sezione: {change.oldValue.section}
             </div>
           )}
           {change.oldValue.page && (
-            <div style={{ fontSize: 12, color: "#666", textDecoration: "line-through" }}>
+            <div className="text-xs text-gray-600 line-through">
               Pagina: {change.oldValue.page}
             </div>
           )}
@@ -130,18 +129,18 @@ export function ChangeItem({ change }: ChangeItemProps) {
       {change.type === "Modified" && change.fieldChanges && (
         <div data-testid="change-modified-content">
           {change.fieldChanges.map((fieldChange, idx) => (
-            <div key={idx} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: "bold", marginBottom: 4 }}>
+            <div key={idx} className="mb-3">
+              <div className="text-sm font-bold mb-1">
                 {fieldChange.fieldName}:
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div style={{ padding: 8, background: "#fce4e4", borderRadius: 4 }}>
-                  <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Prima:</div>
-                  <div style={{ fontSize: 14 }}>{fieldChange.oldValue || "(vuoto)"}</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-2 bg-red-50 rounded">
+                  <div className="text-xs text-gray-600 mb-1">Prima:</div>
+                  <div className="text-sm">{fieldChange.oldValue || "(vuoto)"}</div>
                 </div>
-                <div style={{ padding: 8, background: "#e7f5e7", borderRadius: 4 }}>
-                  <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Dopo:</div>
-                  <div style={{ fontSize: 14 }}>{fieldChange.newValue || "(vuoto)"}</div>
+                <div className="p-2 bg-green-50 rounded">
+                  <div className="text-xs text-gray-600 mb-1">Dopo:</div>
+                  <div className="text-sm">{fieldChange.newValue || "(vuoto)"}</div>
                 </div>
               </div>
             </div>
@@ -151,7 +150,7 @@ export function ChangeItem({ change }: ChangeItemProps) {
 
       {change.type === "Unchanged" && change.oldValue && (
         <div data-testid="change-unchanged-content">
-          <div style={{ fontSize: 14, color: "#666" }}>
+          <div className="text-sm text-gray-600">
             {change.oldValue.text}
           </div>
         </div>

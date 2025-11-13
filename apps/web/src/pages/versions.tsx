@@ -6,6 +6,7 @@ import { CommentThread } from "../components/CommentThread";
 import { DiffViewerEnhanced } from "../components/DiffViewerEnhanced";
 import { VersionTimeline } from "../components/VersionTimeline";
 import { VersionTimelineFilters } from "../components/VersionTimelineFilters";
+import { cn } from "../lib/utils";
 
 type AuthUser = {
   id: string;
@@ -226,10 +227,10 @@ export default function VersionHistory() {
 
   if (!authUser) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif" }}>
+      <main className="p-6 font-sans">
         <h1>Storico Versioni RuleSpec</h1>
         <p>Devi effettuare l&apos;accesso per visualizzare lo storico.</p>
-        <Link href="/" style={{ color: "#0070f3" }}>
+        <Link href="/" className="text-blue-600">
           Torna alla home
         </Link>
       </main>
@@ -238,10 +239,10 @@ export default function VersionHistory() {
 
   if (!gameId) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif" }}>
+      <main className="p-6 font-sans">
         <h1>Storico Versioni RuleSpec</h1>
         <p>Specifica un gameId nella query string: ?gameId=demo-chess</p>
-        <Link href="/" style={{ color: "#0070f3" }}>
+        <Link href="/" className="text-blue-600">
           Torna alla home
         </Link>
       </main>
@@ -249,38 +250,24 @@ export default function VersionHistory() {
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1600, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+    <main className="p-6 font-sans max-w-[1600px] mx-auto">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 style={{ margin: 0 }}>Storico Versioni RuleSpec</h1>
-          <p style={{ margin: "8px 0 0 0", color: "#666" }}>
+          <h1 className="m-0">Storico Versioni RuleSpec</h1>
+          <p className="my-2 mx-0 text-gray-600">
             Game: <strong>{gameId}</strong>
           </p>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div className="flex gap-3">
           <Link
             href={`/editor?gameId=${gameId}`}
-            style={{
-              padding: "8px 16px",
-              background: "#0070f3",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              fontSize: 14
-            }}
+            className="px-4 py-2 bg-blue-600 text-white no-underline rounded text-sm"
           >
             Editor
           </Link>
           <Link
             href="/"
-            style={{
-              padding: "8px 16px",
-              background: "#666",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              fontSize: 14
-            }}
+            className="px-4 py-2 bg-gray-600 text-white no-underline rounded text-sm"
           >
             Home
           </Link>
@@ -288,49 +275,39 @@ export default function VersionHistory() {
       </div>
 
       {statusMessage && (
-        <div style={{ padding: 12, background: "#e7f5e7", border: "1px solid #4caf50", borderRadius: 4, marginBottom: 16 }}>
+        <div className="p-3 bg-green-50 border border-green-600 rounded mb-4">
           {statusMessage}
         </div>
       )}
 
       {errorMessage && (
-        <div style={{ padding: 12, background: "#fce4e4", border: "1px solid #d93025", borderRadius: 4, marginBottom: 16 }}>
+        <div className="p-3 bg-red-50 border border-red-600 rounded mb-4">
           {errorMessage}
         </div>
       )}
 
-      {/* EDIT-06: View mode toggle */}
-      <div style={{ marginBottom: 16, borderBottom: "2px solid #ddd" }}>
-        <div style={{ display: "flex", gap: 0 }}>
+      {/* View mode toggle */}
+      <div className="mb-4 border-b-2 border-gray-300">
+        <div className="flex gap-0">
           <button
             onClick={() => setViewMode("list")}
-            style={{
-              padding: "12px 24px",
-              background: viewMode === "list" ? "#0070f3" : "transparent",
-              color: viewMode === "list" ? "white" : "#666",
-              border: "none",
-              borderBottom: viewMode === "list" ? "2px solid #0070f3" : "2px solid transparent",
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: viewMode === "list" ? "bold" : "normal",
-              transition: "all 0.2s"
-            }}
+            className={cn(
+              "px-6 py-3 border-none cursor-pointer text-sm transition-all duration-200",
+              viewMode === "list"
+                ? "bg-blue-600 text-white border-b-2 border-blue-600 font-bold"
+                : "bg-transparent text-gray-600 border-b-2 border-transparent"
+            )}
           >
             📋 List View
           </button>
           <button
             onClick={() => setViewMode("timeline")}
-            style={{
-              padding: "12px 24px",
-              background: viewMode === "timeline" ? "#0070f3" : "transparent",
-              color: viewMode === "timeline" ? "white" : "#666",
-              border: "none",
-              borderBottom: viewMode === "timeline" ? "2px solid #0070f3" : "2px solid transparent",
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: viewMode === "timeline" ? "bold" : "normal",
-              transition: "all 0.2s"
-            }}
+            className={cn(
+              "px-6 py-3 border-none cursor-pointer text-sm transition-all duration-200",
+              viewMode === "timeline"
+                ? "bg-blue-600 text-white border-b-2 border-blue-600 font-bold"
+                : "bg-transparent text-gray-600 border-b-2 border-transparent"
+            )}
           >
             🕒 Timeline View
           </button>
@@ -340,7 +317,7 @@ export default function VersionHistory() {
       {isLoadingHistory ? (
         <p>Caricamento storico...</p>
       ) : viewMode === "timeline" ? (
-        // EDIT-06: Timeline view
+        // Timeline view
         <div>
           <VersionTimelineFilters
             authors={timelineAuthors}
@@ -357,48 +334,38 @@ export default function VersionHistory() {
           />
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24 }}>
+        <div className="grid grid-cols-[300px_1fr] gap-6">
           {/* Left sidebar: Version list */}
           <div>
-            <h2 style={{ marginTop: 0 }}>Versioni ({history?.totalVersions || 0})</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <h2 className="mt-0">Versioni ({history?.totalVersions || 0})</h2>
+            <div className="flex flex-col gap-2">
               {history?.versions.map((version, index) => (
                 <div
                   key={version.version}
-                  style={{
-                    padding: 12,
-                    background: "white",
-                    border: "1px solid #ddd",
-                    borderRadius: 4,
-                    fontSize: 14
-                  }}
+                  className="p-3 bg-white border border-gray-300 rounded text-sm"
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <strong style={{ color: index === 0 ? "#4caf50" : "#333" }}>
+                  <div className="flex justify-between items-center mb-2">
+                    <strong className={index === 0 ? "text-green-600" : "text-gray-900"}>
                       {version.version}
-                      {index === 0 && <span style={{ marginLeft: 8, fontSize: 12, color: "#4caf50" }}>(corrente)</span>}
+                      {index === 0 && <span className="ml-2 text-xs text-green-600">(corrente)</span>}
                     </strong>
                   </div>
-                  <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
+                  <div className="text-xs text-gray-600 mb-2">
                     {new Date(version.createdAt).toLocaleString()}
                   </div>
-                  <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
+                  <div className="text-xs text-gray-600 mb-2">
                     {version.ruleCount} regole
                   </div>
                   {authUser.role === "Admin" || authUser.role === "Editor" ? (
                     <button
                       onClick={() => handleRestoreVersion(version.version)}
                       disabled={isRestoring || index === 0}
-                      style={{
-                        width: "100%",
-                        padding: "6px 12px",
-                        background: index === 0 || isRestoring ? "#ccc" : "#ff9800",
-                        color: "white",
-                        border: "none",
-                        borderRadius: 4,
-                        cursor: index === 0 || isRestoring ? "not-allowed" : "pointer",
-                        fontSize: 12
-                      }}
+                      className={cn(
+                        "w-full px-3 py-1.5 text-white border-none rounded text-xs",
+                        index === 0 || isRestoring
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : "bg-orange-500 cursor-pointer"
+                      )}
                     >
                       {isRestoring ? "Ripristino..." : "Ripristina"}
                     </button>
@@ -410,24 +377,18 @@ export default function VersionHistory() {
 
           {/* Right content: Diff viewer */}
           <div>
-            <div style={{ marginBottom: 16 }}>
-              <h2 style={{ marginTop: 0, marginBottom: 12 }}>Confronta Versioni</h2>
-              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label htmlFor="from-version" style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: "bold" }}>
+            <div className="mb-4">
+              <h2 className="mt-0 mb-3">Confronta Versioni</h2>
+              <div className="flex gap-3 items-center mb-3">
+                <div className="flex-1">
+                  <label htmlFor="from-version" className="block mb-1 text-sm font-bold">
                     Da versione:
                   </label>
                   <select
                     id="from-version"
                     value={selectedFromVersion}
                     onChange={(e) => setSelectedFromVersion(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: 8,
-                      border: "1px solid #ccc",
-                      borderRadius: 4,
-                      fontSize: 14
-                    }}
+                    className="w-full p-2 border border-gray-300 rounded text-sm"
                   >
                     <option value="">Seleziona versione</option>
                     {history?.versions.map((version) => (
@@ -437,21 +398,15 @@ export default function VersionHistory() {
                     ))}
                   </select>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label htmlFor="to-version" style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: "bold" }}>
+                <div className="flex-1">
+                  <label htmlFor="to-version" className="block mb-1 text-sm font-bold">
                     A versione:
                   </label>
                   <select
                     id="to-version"
                     value={selectedToVersion}
                     onChange={(e) => setSelectedToVersion(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: 8,
-                      border: "1px solid #ccc",
-                      borderRadius: 4,
-                      fontSize: 14
-                    }}
+                    className="w-full p-2 border border-gray-300 rounded text-sm"
                   >
                     <option value="">Seleziona versione</option>
                     {history?.versions.map((version) => (
@@ -462,8 +417,8 @@ export default function VersionHistory() {
                   </select>
                 </div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+              <div className="mb-3">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
                     type="checkbox"
                     checked={showOnlyChanges}
@@ -482,7 +437,7 @@ export default function VersionHistory() {
 
                 {/* Comments section for the selected "to" version */}
                 {selectedToVersion && authUser && (
-                  <div style={{ marginTop: 32, borderTop: "2px solid #ddd", paddingTop: 24 }}>
+                  <div className="mt-8 border-t-2 border-gray-300 pt-6">
                     <CommentThread
                       gameId={gameId as string}
                       version={selectedToVersion}
@@ -493,7 +448,7 @@ export default function VersionHistory() {
                 )}
               </>
             ) : (
-              <p style={{ color: "#999" }}>Seleziona due versioni per visualizzare le differenze</p>
+              <p className="text-gray-400">Seleziona due versioni per visualizzare le differenze</p>
             )}
           </div>
         </div>
@@ -501,4 +456,3 @@ export default function VersionHistory() {
     </main>
   );
 }
-

@@ -229,20 +229,17 @@ export function MultiFileUpload({
   }, []);
 
   return (
-    <div data-testid="multi-file-upload" data-game-id={gameId} data-game-name={gameName} style={{ marginTop: '24px' }}>
-      <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: 600 }}>
+    <div data-testid="multi-file-upload" data-game-id={gameId} data-game-name={gameName} className="mt-6">
+      <h3 className="mb-4 text-lg font-semibold">
         Multi-File Upload
       </h3>
 
       {/* Game Info */}
       <div
         data-testid="game-info-badge"
-        style={{
-          padding: '12px 16px',
-          marginBottom: '16px'
-        }}
+        className="p-3 mb-4"
       >
-        <Badge variant="default" style={{ fontSize: '14px', padding: '8px 16px' }}>
+        <Badge variant="default" className="text-sm px-4 py-2">
           Target Game: {gameName} ({gameId})
         </Badge>
       </div>
@@ -251,18 +248,12 @@ export function MultiFileUpload({
       {validationErrors.length > 0 && (
         <div
           role="alert"
-          style={{
-            padding: '12px 16px',
-            backgroundColor: '#ffebee',
-            border: '1px solid #d93025',
-            borderRadius: '6px',
-            marginBottom: '16px'
-          }}
+          className="p-3 bg-red-50 border border-red-600 rounded-md mb-4"
         >
-          <div style={{ fontSize: '14px', fontWeight: 600, color: '#d93025', marginBottom: '8px' }}>
+          <div className="text-sm font-semibold text-red-600 mb-2">
             Validation Errors:
           </div>
-          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#d93025' }}>
+          <ul className="m-0 pl-5 text-xs text-red-600">
             {validationErrors.map((error, index) => (
               <li key={index}>{error}</li>
             ))}
@@ -276,15 +267,10 @@ export function MultiFileUpload({
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
+        className="p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-all mb-6"
         style={{
-          padding: '40px',
-          border: `2px dashed ${isDragging ? '#0070f3' : '#dadce0'}`,
-          borderRadius: '8px',
-          backgroundColor: isDragging ? '#e3f2fd' : '#fafafa',
-          textAlign: 'center',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          marginBottom: '24px'
+          borderColor: isDragging ? '#0070f3' : '#dadce0',
+          backgroundColor: isDragging ? '#e3f2fd' : '#fafafa'
         }}
         onClick={handleBrowseClick}
         role="button"
@@ -298,19 +284,18 @@ export function MultiFileUpload({
         }}
       >
         <div
+          className="text-5xl mb-4"
           style={{
-            fontSize: '48px',
-            marginBottom: '16px',
             color: isDragging ? '#0070f3' : '#5f6368'
           }}
           aria-hidden="true"
         >
           📁
         </div>
-        <div style={{ fontSize: '16px', fontWeight: 600, color: '#202124', marginBottom: '8px' }}>
+        <div className="text-base font-semibold text-gray-900 mb-2">
           {isDragging ? 'Drop files here' : 'Drag and drop PDF files here'}
         </div>
-        <div style={{ fontSize: '14px', color: '#5f6368', marginBottom: '16px' }}>
+        <div className="text-sm text-gray-600 mb-4">
           or click to browse (up to {MAX_FILES_PER_BATCH} files, max 100 MB each)
         </div>
         <Button
@@ -335,13 +320,13 @@ export function MultiFileUpload({
 
       {/* Manual Upload Button (shown when autoUpload disabled and files pending) */}
       {!autoUpload && stats.pending > 0 && (
-        <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+        <div className="mb-4 text-center">
           <Button
             type="button"
             onClick={() => void startUpload()}
             data-testid="start-upload-button"
             size="lg"
-            style={{ backgroundColor: '#34a853' }}
+            className="bg-green-600"
           >
             Start Upload ({stats.pending} file{stats.pending > 1 ? 's' : ''})
           </Button>

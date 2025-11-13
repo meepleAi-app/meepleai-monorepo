@@ -37,16 +37,7 @@ export function MessageInput() {
   const isSendDisabled = !inputValue.trim() || isDisabled;
 
   return (
-    <div
-      style={{
-        padding: 16,
-        borderTop: '1px solid #dadce0',
-        background: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12
-      }}
-    >
+    <div className="p-4 border-t border-[#dadce0] bg-white flex flex-col gap-3">
       {/* AI-14: Search Mode Toggle */}
       <SearchModeToggle
         value={searchMode as SearchMode}
@@ -55,13 +46,7 @@ export function MessageInput() {
       />
 
       {/* Message Input Form */}
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: 'flex',
-          gap: 8
-        }}
-      >
+      <form onSubmit={handleSubmit} className="flex gap-2">
         <label htmlFor="message-input" className="sr-only">
           Ask a question about the game
         </label>

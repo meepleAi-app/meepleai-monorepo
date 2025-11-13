@@ -16,6 +16,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// </summary>
 public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaResponseDto>
 {
+    private const string DefaultSystemPrompt =
+        "You are MeepleAI, a helpful board game assistant. Answer using only the provided context. "
+        + "Cite page numbers, stay concise, and say \"I don't know\" when the context is insufficient.";
+
     private readonly SearchQueryHandler _searchQueryHandler;
     private readonly QualityTrackingDomainService _qualityTrackingService;
     private readonly ILlmService _llmService;
@@ -71,7 +75,8 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         var searchConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
 
         // Step 2: Build LLM prompt with context
-        var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt");
+        var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt")
+            ?? DefaultSystemPrompt;
         var context = string.Join("\n\n", searchResults.Select(sr =>
             $"[Page {sr.PageNumber}] {sr.TextContent}"));
 

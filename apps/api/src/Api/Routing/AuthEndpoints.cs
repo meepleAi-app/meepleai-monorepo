@@ -35,10 +35,14 @@ public static class AuthEndpoints
         {
             try
             {
+                var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
+                    ? payload.Email.Split('@')[0]
+                    : payload.DisplayName.Trim();
+
                 var command = new DddRegisterCommand(
                     Email: payload.Email,
                     Password: payload.Password,
-                    DisplayName: payload.DisplayName,
+                    DisplayName: displayName,
                     Role: payload.Role,
                     IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                     UserAgent: context.Request.Headers.UserAgent.ToString());

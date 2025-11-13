@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using MediatR;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
@@ -27,12 +28,16 @@ public class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComman
     {
         // Validate new password is not empty
         if (string.IsNullOrWhiteSpace(command.NewPassword))
+        {
             throw new ValidationException(nameof(command.NewPassword), "New password cannot be empty");
+        }
 
         // Retrieve user
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
         if (user == null)
+        {
             throw new DomainException("User not found");
+        }
 
         // Create new password hash
         var newPasswordHash = PasswordHash.Create(command.NewPassword);
@@ -40,7 +45,8 @@ public class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComman
         // Change password (domain method verifies current password)
         user.ChangePassword(command.CurrentPassword, newPasswordHash);
 
-        // Save changes
+        // Persist updates
+        await _userRepository.UpdateAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

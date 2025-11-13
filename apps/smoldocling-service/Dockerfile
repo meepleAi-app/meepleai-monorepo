@@ -27,7 +27,7 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
 
 # Copy requirements first for better caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
 # Download model weights at build time (optional - speeds up first startup)
 # Comment out if you prefer on-demand download

@@ -35,6 +35,7 @@ public class RagServiceIntegrationTests : IDisposable
     private readonly Mock<IQueryExpansionService> _mockQueryExpansion;
     private readonly Mock<ISearchResultReranker> _mockReranker;
     private readonly Mock<ICitationExtractorService> _mockCitationExtractor;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public RagServiceIntegrationTests()
     {
@@ -83,7 +84,7 @@ public class RagServiceIntegrationTests : IDisposable
         SetupRerankerMock();
 
         // Act
-        var result = await ragService.AskAsync(gameId, query);
+        var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert - QaResponse is a record with lowercase parameters
         Assert.NotNull(result);
@@ -113,7 +114,7 @@ public class RagServiceIntegrationTests : IDisposable
         SetupCacheMock();
 
         // Act
-        var result = await ragService.ExplainAsync(gameId, topic);
+        var result = await ragService.ExplainAsync(gameId, topic, cancellationToken: TestCancellationToken);
 
         // Assert - ExplainResponse is a record with lowercase parameters
         Assert.NotNull(result);
@@ -147,7 +148,8 @@ public class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskWithHybridSearchAsync(
             gameId.ToString(),
             query,
-            SearchMode.Hybrid);
+            SearchMode.Hybrid,
+            cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -168,7 +170,7 @@ public class RagServiceIntegrationTests : IDisposable
         var gameId = Guid.NewGuid().ToString();
 
         // Act
-        var result = await ragService.AskAsync(gameId, "");
+        var result = await ragService.AskAsync(gameId, "", cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -193,7 +195,7 @@ public class RagServiceIntegrationTests : IDisposable
         SetupQueryExpansionMock(query);
 
         // Act
-        var result = await ragService.AskAsync(gameId, query);
+        var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -220,7 +222,7 @@ public class RagServiceIntegrationTests : IDisposable
         SetupCacheHitMock(cachedResponse);
 
         // Act
-        var result = await ragService.AskAsync(gameId, query);
+        var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);

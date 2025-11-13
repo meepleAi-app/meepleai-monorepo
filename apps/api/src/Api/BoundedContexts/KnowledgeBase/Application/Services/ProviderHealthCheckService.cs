@@ -57,7 +57,7 @@ public sealed class ProviderHealthCheckService : BackgroundService
     /// <summary>
     /// Initialize health status tracking for all providers
     /// </summary>
-    private async Task InitializeHealthStatuses(CancellationToken ct)
+    private Task InitializeHealthStatuses(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var clients = scope.ServiceProvider.GetRequiredService<IEnumerable<ILlmClient>>();
@@ -76,6 +76,8 @@ public sealed class ProviderHealthCheckService : BackgroundService
         _logger.LogInformation(
             "ProviderHealthCheckService initialized with {Count} providers",
             _healthStatuses.Count);
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

@@ -28,6 +28,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     private IContainer? _smoldoclingContainer;
     private readonly IConfiguration _configuration;
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Test PDF paths
     private const string BarragePdfPath = "../../../../data/barrage_rulebook.pdf";
@@ -52,13 +53,13 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 
         if (_unstructuredContainer != null)
         {
-            await _unstructuredContainer.StopAsync();
+            await _unstructuredContainer.StopAsync(TestCancellationToken);
             await _unstructuredContainer.DisposeAsync();
         }
 
         if (_smoldoclingContainer != null)
         {
-            await _smoldoclingContainer.StopAsync();
+            await _smoldoclingContainer.StopAsync(TestCancellationToken);
             await _smoldoclingContainer.DisposeAsync();
         }
 
@@ -82,7 +83,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 1: Happy path - Stage 1 high quality");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success, "Happy path should succeed");
@@ -118,7 +119,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 2: Fallback - Stage 1 low quality → Stage 2");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -153,7 +154,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 3: Fallback - Stage 1&2 fail → Stage 3");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -187,7 +188,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 4: Quality gate - Stage 1 (0.50) rejected, Stage 2 (0.85) accepted");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert - Quality gate should trigger fallback
         Assert.True(result.Success);
@@ -221,7 +222,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output("Test 5: All stages fail - error handling");
 
         // Act
-        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert - Returns Stage 3 result (even if failed)
         Assert.False(result.Success);
@@ -264,7 +265,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
                     .ForStatusCode(System.Net.HttpStatusCode.OK)))
             .Build();
 
-        await _unstructuredContainer.StartAsync();
+        await _unstructuredContainer.StartAsync(TestCancellationToken);
         var unstructuredPort = _unstructuredContainer.GetMappedPublicPort(8001);
         _output($"✓ Unstructured service started on port {unstructuredPort}");
 
@@ -296,7 +297,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
             await using var pdfStream = File.OpenRead(BarragePdfPath);
             var sw = Stopwatch.StartNew();
 
-            var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+            var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
 
             sw.Stop();
             latencies.Add(sw.ElapsedMilliseconds);

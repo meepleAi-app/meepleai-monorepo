@@ -84,6 +84,26 @@ export interface TwoFactorStatusResponse {
   backupCodesCount: number;
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  createdAt: string;
+  isTwoFactorEnabled: boolean;
+  twoFactorEnabledAt: string | null;
+}
+
+export interface UpdateProfileRequest {
+  displayName?: string | null;
+  email?: string | null;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // AI-13: BoardGameGeek API types
 export interface BggSearchResult {
   bggId: number;
@@ -772,6 +792,21 @@ export const api = {
       // Clean up
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+    }
+  },
+
+  // User profile API
+  profile: {
+    async get(): Promise<UserProfile | null> {
+      return api.get<UserProfile>('/api/v1/users/profile');
+    },
+
+    async update(payload: UpdateProfileRequest): Promise<{ ok: boolean; message: string }> {
+      return api.put<{ ok: boolean; message: string }>('/api/v1/users/profile', payload);
+    },
+
+    async changePassword(request: ChangePasswordRequest): Promise<{ ok: boolean; message: string }> {
+      return api.put<{ ok: boolean; message: string }>('/api/v1/users/profile/password', request);
     }
   },
 

@@ -30,6 +30,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     private SmolDoclingPdfTextExtractor? _extractor;
     private const string ContainerImage = "infra-smoldocling-service:latest";
     private const int ServicePort = 8002;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Test PDF paths
     private const string BarragePdfPath = "../../../../data/barrage_rulebook.pdf";
@@ -62,7 +63,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
             .Build();
 
         // Start container
-        await _smoldoclingContainer.StartAsync();
+        await _smoldoclingContainer.StartAsync(TestCancellationToken);
 
         var containerPort = _smoldoclingContainer.GetMappedPublicPort(ServicePort);
         var baseUrl = $"http://localhost:{containerPort}";
@@ -113,7 +114,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         if (_smoldoclingContainer != null)
         {
-            await _smoldoclingContainer.StopAsync();
+            await _smoldoclingContainer.StopAsync(TestCancellationToken);
             await _smoldoclingContainer.DisposeAsync();
         }
 
@@ -133,7 +134,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         _output($"Testing SmolDocling extraction with Barrage ({fileSize / 1024 / 1024}MB)");
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(pdfStream);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Extraction failed: {result.ErrorMessage}");
@@ -168,7 +169,8 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
 
         // Should complete within 120s for integration test
-        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: cts.Token);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: linkedCts.Token);
 
         // Assert - should complete successfully (not timeout)
         Assert.True(result.Success, "Normal PDFs should complete within timeout");
@@ -189,8 +191,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         cts.Cancel(); // Cancel before calling
 
         // Assert - should throw TaskCanceledException
-        await Assert.ThrowsAsync<TaskCanceledException>(async () =>
-            await _extractor!.ExtractTextAsync(pdfStream, ct: cts.Token));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
+        await Assert.ThrowsAsync<TaskCanceledException>(() =>
+            _extractor!.ExtractTextAsync(pdfStream, ct: linkedCts.Token));
 
         _output("✓ User cancellation propagated correctly");
     }
@@ -230,7 +233,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         await using var pdfStream = new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }); // Minimal PDF header
 
         // Act
-        var result = await unavailableExtractor.ExtractTextAsync(pdfStream);
+        var result = await unavailableExtractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.False(result.Success, "Should fail when service unavailable");
@@ -256,7 +259,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         _output("Testing invalid PDF error handling");
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(invalidStream);
+        var result = await _extractor!.ExtractTextAsync(invalidStream, ct: TestCancellationToken);
 
         // Assert - Service may fail gracefully OR process with very low quality
         if (!result.Success)
@@ -300,7 +303,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         _output($"Testing large PDF processing: {fileSize / 1024 / 1024}MB");
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(pdfStream);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Large PDF extraction failed: {result.ErrorMessage}");
@@ -334,7 +337,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
             {
                 await using var pdfStream = File.OpenRead(BarragePdfPath);
                 _output($"  Request {i + 1} starting...");
-                var result = await _extractor!.ExtractTextAsync(pdfStream);
+                var result = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
                 _output($"  Request {i + 1} completed: Success={result.Success}, Pages={result.PageCount}");
                 return result;
             })
@@ -366,21 +369,21 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         await using var pdfStream1 = File.OpenRead(BarragePdfPath);
         _output("Step 1: Testing baseline extraction before restart");
 
-        var result1 = await _extractor!.ExtractTextAsync(pdfStream1);
+        var result1 = await _extractor!.ExtractTextAsync(pdfStream1, ct: TestCancellationToken);
         Assert.True(result1.Success, "Baseline extraction should succeed");
         _output($"✓ Baseline extraction successful: {result1.PageCount} pages");
 
         // Act - Simulate service restart by stopping and starting container
         _output("Step 2: Simulating service restart...");
-        await _smoldoclingContainer!.StopAsync();
-        await Task.Delay(2000); // Wait for full stop
+        await _smoldoclingContainer!.StopAsync(TestCancellationToken);
+        await Task.Delay(2000, TestCancellationToken); // Wait for full stop
 
         _output("Step 3: Restarting service...");
-        await _smoldoclingContainer.StartAsync();
-        await Task.Delay(3000); // Wait for service warmup
+        await _smoldoclingContainer.StartAsync(TestCancellationToken);
+        await Task.Delay(3000, TestCancellationToken); // Wait for service warmup
 
         // Verify service is back online
-        var healthResponse = await _httpClient!.GetAsync("/health");
+        var healthResponse = await _httpClient!.GetAsync("/health", TestCancellationToken);
         Assert.True(healthResponse.IsSuccessStatusCode, "Service should be healthy after restart");
         _output("✓ Service restarted and health check passed");
 
@@ -388,7 +391,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         await using var pdfStream2 = File.OpenRead(BarragePdfPath);
         _output("Step 4: Testing extraction after restart");
 
-        var result2 = await _extractor.ExtractTextAsync(pdfStream2);
+        var result2 = await _extractor.ExtractTextAsync(pdfStream2, ct: TestCancellationToken);
 
         // Assert - Extraction should succeed after restart
         Assert.True(result2.Success, $"Extraction after restart failed: {result2.ErrorMessage}");

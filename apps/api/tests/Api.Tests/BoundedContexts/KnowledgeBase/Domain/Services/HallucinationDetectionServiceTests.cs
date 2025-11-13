@@ -12,6 +12,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 public class HallucinationDetectionServiceTests
 {
     private readonly HallucinationDetectionService _service;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public HallucinationDetectionServiceTests()
     {
@@ -25,7 +26,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test01_English_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "The game supports 2-4 players.", "en");
+            "The game supports 2-4 players.", "en", TestCancellationToken);
 
         Assert.True(result.IsValid);
         Assert.Empty(result.DetectedKeywords);
@@ -37,7 +38,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test02_English_ContainsDontKnow_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "I don't know how many players can play.", "en");
+            "I don't know how many players can play.", "en", TestCancellationToken);
 
         Assert.False(result.IsValid);
         Assert.Contains("I don't know", result.DetectedKeywords);
@@ -48,7 +49,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test03_English_ContainsNotSure_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "I'm not sure about the setup rules.", "en");
+            "I'm not sure about the setup rules.", "en", TestCancellationToken);
 
         Assert.False(result.IsValid);
         Assert.Contains("I'm not sure", result.DetectedKeywords);
@@ -60,7 +61,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test04_Italian_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "Il gioco supporta da 2 a 4 giocatori.", "it");
+            "Il gioco supporta da 2 a 4 giocatori.", "it", TestCancellationToken);
 
         Assert.True(result.IsValid);
         Assert.Empty(result.DetectedKeywords);
@@ -71,7 +72,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test05_Italian_ContainsNonLoSo_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "Non lo so quanti giocatori possono giocare.", "it");
+            "Non lo so quanti giocatori possono giocare.", "it", TestCancellationToken);
 
         Assert.False(result.IsValid);
         Assert.Contains("non lo so", result.DetectedKeywords);
@@ -82,7 +83,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test06_Italian_ContainsPocoChiaro_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "La regola è poco chiaro nel manuale.", "it");
+            "La regola è poco chiaro nel manuale.", "it", TestCancellationToken);
 
         Assert.False(result.IsValid);
         Assert.Contains("poco chiaro", result.DetectedKeywords);
@@ -94,7 +95,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test07_German_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "Das Spiel unterstützt 2-4 Spieler.", "de");
+            "Das Spiel unterstützt 2-4 Spieler.", "de", TestCancellationToken);
 
         Assert.True(result.IsValid);
         Assert.Equal("de", result.Language);
@@ -104,7 +105,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test08_German_ContainsIchWeissNicht_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "Ich weiß nicht wie viele Spieler.", "de");
+            "Ich weiß nicht wie viele Spieler.", "de", TestCancellationToken);
 
         Assert.False(result.IsValid);
         Assert.Contains("Ich weiß nicht", result.DetectedKeywords);
@@ -116,7 +117,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test09_French_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "Le jeu supporte 2-4 joueurs.", "fr");
+            "Le jeu supporte 2-4 joueurs.", "fr", TestCancellationToken);
 
         Assert.True(result.IsValid);
         Assert.Equal("fr", result.Language);
@@ -126,7 +127,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test10_French_ContainsJeNeSaisPas_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "Je ne sais pas combien de joueurs.", "fr");
+            "Je ne sais pas combien de joueurs.", "fr", TestCancellationToken);
 
         Assert.False(result.IsValid);
         Assert.Contains("Je ne sais pas", result.DetectedKeywords);
@@ -138,7 +139,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test11_Spanish_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "El juego admite de 2 a 4 jugadores.", "es");
+            "El juego admite de 2 a 4 jugadores.", "es", TestCancellationToken);
 
         Assert.True(result.IsValid);
         Assert.Equal("es", result.Language);
@@ -148,7 +149,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test12_Spanish_ContainsNoLoSe_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "No lo sé cuántos jugadores pueden jugar.", "es");
+            "No lo sé cuántos jugadores pueden jugar.", "es", TestCancellationToken);
 
         Assert.False(result.IsValid);
         Assert.Contains("No lo sé", result.DetectedKeywords);
@@ -159,7 +160,7 @@ public class HallucinationDetectionServiceTests
     [Fact]
     public async Task Test13_EmptyText_ReturnsValid()
     {
-        var result = await _service.DetectHallucinationsAsync("", "en");
+        var result = await _service.DetectHallucinationsAsync("", "en", TestCancellationToken);
 
         Assert.True(result.IsValid);
         Assert.Empty(result.DetectedKeywords);
@@ -169,7 +170,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test14_NullLanguage_DefaultsToEnglish()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "Valid response", language: null);
+            "Valid response", language: null, TestCancellationToken);
 
         Assert.Equal("en", result.Language);
     }
@@ -178,7 +179,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test15_MultipleKeywords_CalculatesSeverity()
     {
         var text = "I'm not sure, unclear, and possibly incorrect.";
-        var result = await _service.DetectHallucinationsAsync(text, "en");
+        var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
 
         Assert.False(result.IsValid);
         Assert.Equal(3, result.DetectedKeywords.Count);
@@ -189,7 +190,7 @@ public class HallucinationDetectionServiceTests
     public async Task Test16_CaseInsensitive_DetectsKeywords()
     {
         var result = await _service.DetectHallucinationsAsync(
-            "I DON'T KNOW the answer.", "en");
+            "I DON'T KNOW the answer.", "en", TestCancellationToken);
 
         Assert.False(result.IsValid);
         Assert.Single(result.DetectedKeywords);

@@ -17,6 +17,8 @@ namespace Api.Tests.Services.LlmClients;
 /// </summary>
 public class OllamaLlmClientTests
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     [Fact]
     public void Test01_SupportsModel_LocalModel_ReturnsTrue()
     {
@@ -82,7 +84,8 @@ public class OllamaLlmClientTests
             "You are a helpful assistant",
             "Hello",
             0.7,
-            100);
+            100,
+            TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -111,7 +114,8 @@ public class OllamaLlmClientTests
             "system",
             "user prompt",
             0.7,
-            100);
+            100,
+            TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -142,7 +146,8 @@ public class OllamaLlmClientTests
             "system",
             "prompt",
             0.7,
-            100);
+            100,
+            TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -177,7 +182,7 @@ public class OllamaLlmClientTests
         // Act
         var chunks = new List<string>();
         await foreach (var chunk in client.GenerateCompletionStreamAsync(
-            "llama3:8b", "system", "prompt", 0.7, 100))
+            "llama3:8b", "system", "prompt", 0.7, 100, TestCancellationToken))
         {
             chunks.Add(chunk);
         }
@@ -223,7 +228,8 @@ public class OllamaLlmClientTests
             "Sei un assistente per regole di giochi da tavolo",
             "Come si muove il cavallo negli scacchi?",
             0.7,
-            100);
+            100,
+            TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -258,7 +264,7 @@ public class OllamaLlmClientTests
         // Act - 5 concurrent requests
         var tasks = Enumerable.Range(0, 5)
             .Select(_ => client.GenerateCompletionAsync(
-                "llama3:8b", "system", "prompt", 0.7, 100))
+                "llama3:8b", "system", "prompt", 0.7, 100, TestCancellationToken))
             .ToArray();
 
         var results = await Task.WhenAll(tasks);
@@ -288,7 +294,7 @@ public class OllamaLlmClientTests
 
         // Act
         var result = await client.GenerateCompletionAsync(
-            "llama3:8b", "system", "prompt", 0.7, 100);
+            "llama3:8b", "system", "prompt", 0.7, 100, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -303,7 +309,7 @@ public class OllamaLlmClientTests
 
         // Act
         var result = await client.GenerateCompletionAsync(
-            "llama3:8b", "system", "", 0.7, 100);
+            "llama3:8b", "system", "", 0.7, 100, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -326,7 +332,7 @@ public class OllamaLlmClientTests
 
         // Act
         var result = await client.GenerateCompletionAsync(
-            "llama3:8b", "system", "prompt", 0.7, 100);
+            "llama3:8b", "system", "prompt", 0.7, 100, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);

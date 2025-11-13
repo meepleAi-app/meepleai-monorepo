@@ -23,6 +23,7 @@ public class RagServicePerformanceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Action<string> _output;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public RagServicePerformanceTests()
     {
@@ -66,7 +67,7 @@ public class RagServicePerformanceTests : IDisposable
             var ragService = CreateRagServiceWithRealisticLatency();
 
             var sw = Stopwatch.StartNew();
-            var result = await ragService.AskAsync(gameId, query);
+            var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
             sw.Stop();
 
             latencies.Add(sw.ElapsedMilliseconds);
@@ -125,7 +126,7 @@ public class RagServicePerformanceTests : IDisposable
             var ragService = CreateRagServiceWithRealisticLatency();
 
             var sw = Stopwatch.StartNew();
-            var result = await ragService.ExplainAsync(gameId, topic);
+            var result = await ragService.ExplainAsync(gameId, topic, cancellationToken: TestCancellationToken);
             sw.Stop();
 
             latencies.Add(sw.ElapsedMilliseconds);
@@ -187,7 +188,8 @@ public class RagServicePerformanceTests : IDisposable
             var result = await ragService.AskWithHybridSearchAsync(
                 gameId.ToString(),
                 query,
-                SearchMode.Hybrid);
+                SearchMode.Hybrid,
+                cancellationToken: TestCancellationToken);
             sw.Stop();
 
             latencies.Add(sw.ElapsedMilliseconds);

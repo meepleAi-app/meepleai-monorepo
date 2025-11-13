@@ -21,11 +21,12 @@ public static class KnowledgeBaseServiceExtensions
         services.AddSingleton<RrfFusionDomainService>();
         services.AddSingleton<QualityTrackingDomainService>();
 
-        // ISSUE-970: BGAI-028 - Confidence Validation (threshold ≥0.70)
+        // ISSUE-970: BGAI-028 - Confidence Validation (threshold >= 0.70)
         services.AddSingleton<IConfidenceValidationService, ConfidenceValidationService>();
 
         // ISSUE-971: BGAI-029 - Citation Validation (verify source references)
         services.AddScoped<ICitationValidationService, CitationValidationService>(); // Scoped - uses DbContext
+
         // ISSUE-972: BGAI-030 - Hallucination Detection (forbidden keywords, multilingual)
         services.AddSingleton<IHallucinationDetectionService, HallucinationDetectionService>();
 

@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../../../../../lib/api";
+import { cn } from "../../../../../lib/utils";
 import PromptEditor from "../../../../../components/PromptEditor";
 
 type ToastState = {
@@ -90,29 +91,29 @@ export default function NewPromptVersion() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
-        <div style={{ background: "white", borderRadius: "12px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="max-w-[1400px] mx-auto p-8">
+        <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden">
           {/* Header */}
-          <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "2rem", color: "white" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+            <div className="flex items-center justify-between mb-4">
               <Link href={`/admin/prompts/${id}`}>
-                <button style={{ padding: "0.5rem 1rem", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+                <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer">
                   ← Back to Template
                 </button>
               </Link>
             </div>
-            <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Create New Version</h1>
-            <p style={{ opacity: 0.9 }}>Create a new version of this prompt template</p>
+            <h1 className="text-3xl font-bold mb-2">Create New Version</h1>
+            <p className="opacity-90">Create a new version of this prompt template</p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} style={{ padding: "2rem" }}>
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "1.125rem" }}>
-                Prompt Content <span style={{ color: "#dc2626" }}>*</span>
+          <form onSubmit={handleSubmit} className="p-8">
+            <div className="mb-6">
+              <label className="block mb-2 font-semibold text-lg">
+                Prompt Content <span className="text-red-600">*</span>
               </label>
-              <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+              <p className="text-sm text-gray-500 mb-2">
                 Enter the prompt content using Markdown formatting
               </p>
               <PromptEditor
@@ -122,17 +123,17 @@ export default function NewPromptVersion() {
                 placeholder="Enter your prompt content here..."
               />
               {errors.content && (
-                <div style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.5rem" }}>
+                <div className="text-red-600 text-sm mt-2">
                   {errors.content}
                 </div>
               )}
             </div>
 
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "1.125rem" }}>
+            <div className="mb-6">
+              <label className="block mb-2 font-semibold text-lg">
                 Metadata (Optional)
               </label>
-              <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+              <p className="text-sm text-gray-500 mb-2">
                 Provide additional metadata as JSON (e.g., model parameters, tags)
               </p>
               <textarea
@@ -140,50 +141,35 @@ export default function NewPromptVersion() {
                 onChange={(e) => setMetadata(e.target.value)}
                 rows={6}
                 placeholder='{\n  "temperature": 0.7,\n  "max_tokens": 1000,\n  "tags": ["production"]\n}'
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  fontFamily: "monospace",
-                  fontSize: "0.875rem",
-                }}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg font-mono text-sm"
               />
               {errors.metadata && (
-                <div style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.5rem" }}>
+                <div className="text-red-600 text-sm mt-2">
                   {errors.metadata}
                 </div>
               )}
             </div>
 
-            <div style={{ marginBottom: "2rem" }}>
-              <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+            <div className="mb-8">
+              <label className="flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={activateImmediately}
                   onChange={(e) => setActivateImmediately(e.target.checked)}
-                  style={{ marginRight: "0.5rem", width: "18px", height: "18px", cursor: "pointer" }}
+                  className="mr-2 w-[18px] h-[18px] cursor-pointer"
                 />
-                <span style={{ fontWeight: "500" }}>Activate this version immediately</span>
+                <span className="font-medium">Activate this version immediately</span>
               </label>
-              <p style={{ fontSize: "0.875rem", color: "#6b7280", marginLeft: "1.75rem" }}>
+              <p className="text-sm text-gray-500 ml-7">
                 This will make this version the active prompt for all services using this template
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end", borderTop: "1px solid #e5e7eb", paddingTop: "1.5rem" }}>
+            <div className="flex gap-4 justify-end border-t border-gray-200 pt-6">
               <Link href={`/admin/prompts/${id}`}>
                 <button
                   type="button"
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    background: "#e5e7eb",
-                    color: "#374151",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontWeight: "600",
-                  }}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 border-none rounded-lg cursor-pointer font-semibold"
                 >
                   Cancel
                 </button>
@@ -191,15 +177,10 @@ export default function NewPromptVersion() {
               <button
                 type="submit"
                 disabled={loading}
-                style={{
-                  padding: "0.75rem 1.5rem",
-                  background: loading ? "#9ca3af" : "#667eea",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  fontWeight: "600",
-                }}
+                className={cn(
+                  "px-6 py-3 text-white border-none rounded-lg font-semibold",
+                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#667eea] cursor-pointer"
+                )}
               >
                 {loading ? "Creating..." : "Create Version"}
               </button>
@@ -211,18 +192,10 @@ export default function NewPromptVersion() {
       {/* Toast */}
       {toast.show && (
         <div
-          style={{
-            position: "fixed",
-            bottom: "2rem",
-            right: "2rem",
-            padding: "1rem 1.5rem",
-            background: toast.type === "success" ? "#10b981" : "#ef4444",
-            color: "white",
-            borderRadius: "8px",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-            zIndex: 100,
-            fontWeight: "500",
-          }}
+          className={cn(
+            "fixed bottom-8 right-8 px-6 py-4 text-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.3)] z-[100] font-medium",
+            toast.type === "success" ? "bg-emerald-500" : "bg-red-500"
+          )}
         >
           {toast.message}
         </div>

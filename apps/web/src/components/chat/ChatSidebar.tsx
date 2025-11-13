@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { useChatContext } from './ChatProvider';
 import { GameSelector } from './GameSelector';
 import { AgentSelector } from './AgentSelector';
@@ -26,36 +27,24 @@ export function ChatSidebar() {
     void createChat();
   };
 
+  const isDisabled = !selectedGameId || !selectedAgentId || loading.creating;
+
   return (
     <aside
       aria-label="Chat sidebar with game selection and chat history"
-      style={{
-        width: sidebarCollapsed ? 0 : 320,
-        minWidth: sidebarCollapsed ? 0 : 320,
-        background: '#f8f9fa',
-        borderRight: '1px solid #dadce0',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        transition: 'width 0.3s ease, min-width 0.3s ease'
-      }}
+      className={cn(
+        "bg-[#f8f9fa] border-r border-[#dadce0] flex flex-col overflow-hidden transition-[width,min-width] duration-300 ease-in-out",
+        sidebarCollapsed ? "w-0 min-w-0" : "w-80 min-w-[320px]"
+      )}
     >
       {/* Sidebar Header */}
-      <div style={{ padding: 16, borderBottom: '1px solid #dadce0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>MeepleAI Chat</h2>
+      <div className="p-4 border-b border-[#dadce0]">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="m-0 text-lg">MeepleAI Chat</h2>
           {/* Game context badge */}
           {selectedGameId && (
             <div
-              style={{
-                padding: '4px 12px',
-                background: '#e8f0fe',
-                color: '#1a73e8',
-                borderRadius: 12,
-                fontSize: 11,
-                fontWeight: 600,
-                border: '1px solid #1a73e8'
-              }}
+              className="px-3 py-1 bg-[#e8f0fe] text-[#1a73e8] rounded-xl text-[11px] font-semibold border border-[#1a73e8]"
               title={`Currently chatting about: ${games.find(g => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
               aria-label={`Active game context: ${games.find(g => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
             >
@@ -75,19 +64,14 @@ export function ChatSidebar() {
           isLoading={loading.creating}
           loadingText="Creazione..."
           onClick={handleCreateChat}
-          disabled={!selectedGameId || !selectedAgentId}
+          disabled={isDisabled}
           aria-label="Create new chat"
-          style={{
-            width: '100%',
-            padding: 10,
-            background: !selectedGameId || !selectedAgentId || loading.creating ? '#dadce0' : '#1a73e8',
-            color: 'white',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: 14,
-            fontWeight: 500,
-            cursor: !selectedGameId || !selectedAgentId || loading.creating ? 'not-allowed' : 'pointer'
-          }}
+          className={cn(
+            "w-full py-2.5 text-white border-none rounded text-sm font-medium",
+            isDisabled
+              ? "bg-[#dadce0] cursor-not-allowed"
+              : "bg-[#1a73e8] cursor-pointer"
+          )}
         >
           + Nuova Chat
         </LoadingButton>

@@ -152,7 +152,7 @@ describe('PdfTable', () => {
       const retryButtons = screen.getAllByRole('button', { name: /Retry/i });
       await user.click(retryButtons[0]);
 
-      expect(mockProps.onRetryParsing).toHaveBeenCalledWith(mockPdfs[1]);
+      expect(mockProps.onRetryParsing).toHaveBeenCalledWith(mockPdfs[0]);
     });
 
     it('shows spinning icon when retrying', () => {
@@ -234,7 +234,7 @@ describe('PdfTable', () => {
       render(<PdfTable {...mockProps} pdfs={[pdfWithoutLog]} onOpenLog={mockProps.onOpenLog} />);
 
       const logButtons = screen.getAllByRole('button', { name: /Log/i });
-      expect(logButtons).toHaveLength(3); // Still renders button
+      expect(logButtons).toHaveLength(1); // Still renders button even without logUrl
     });
 
     it('does not render action buttons when handlers not provided', () => {

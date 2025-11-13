@@ -8,6 +8,7 @@ import {
 } from "@/lib/timeline-types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface TimelineFiltersProps {
   filters: TimelineFiltersType;
@@ -100,14 +101,7 @@ export function TimelineFilters({
   return (
     <aside
       aria-label="Timeline filters"
-      style={{
-        width: 280,
-        background: "#f8f9fa",
-        borderRight: "1px solid #dadce0",
-        display: "flex",
-        flexDirection: "column",
-        overflowY: "auto"
-      }}
+      className="w-[280px] bg-gray-50 border-r border-gray-300 flex flex-col overflow-y-auto"
     >
       {/* Header */}
       <div className="p-4 border-b flex justify-between items-center">
@@ -124,7 +118,7 @@ export function TimelineFilters({
         </Button>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+      <div className="flex-1 overflow-y-auto p-4">
         {/* Search */}
         <div className="mb-6">
           <label
@@ -143,15 +137,8 @@ export function TimelineFilters({
         </div>
 
         {/* Event Types */}
-        <div style={{ marginBottom: 24 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 8
-            }}
-          >
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
             <label className="text-sm font-semibold">Tipo Evento</label>
             <div role="group" aria-label="Event type filter controls" className="flex gap-1">
               <Button
@@ -180,50 +167,31 @@ export function TimelineFilters({
             return (
               <label
                 key={type}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: 8,
-                  marginBottom: 4,
-                  background: isChecked ? "#e8f0fe" : "white",
-                  border: `1px solid ${isChecked ? color : "#dadce0"}`,
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  fontSize: 12,
-                  transition: "all 0.2s ease"
-                }}
+                className={cn(
+                  "flex items-center gap-2 p-2 mb-1 rounded cursor-pointer text-xs transition-all",
+                  isChecked ? "bg-blue-50" : "bg-white"
+                )}
+                style={isChecked ? { borderColor: color, borderWidth: "1px", borderStyle: "solid" } : { border: "1px solid #dadce0" }}
               >
                 <input
                   type="checkbox"
                   checked={isChecked}
                   onChange={() => toggleEventType(type)}
-                  style={{ cursor: "pointer" }}
+                  className="cursor-pointer"
                 />
                 <div
-                  style={{
-                    width: 12,
-                    height: 12,
-                    background: color,
-                    borderRadius: "50%"
-                  }}
+                  className="w-3 h-3 rounded-full"
+                  style={{ background: color }}
                 />
-                <span style={{ flex: 1 }}>{getEventTypeLabel(type)}</span>
+                <span className="flex-1">{getEventTypeLabel(type)}</span>
               </label>
             );
           })}
         </div>
 
         {/* Statuses */}
-        <div style={{ marginBottom: 24 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 8
-            }}
-          >
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
             <label className="text-sm font-semibold">Stato</label>
             <div role="group" aria-label="Status filter controls" className="flex gap-1">
               <Button
@@ -257,27 +225,19 @@ export function TimelineFilters({
             return (
               <label
                 key={status}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: 8,
-                  marginBottom: 4,
-                  background: isChecked ? "#e8f0fe" : "white",
-                  border: `1px solid ${isChecked ? "#1a73e8" : "#dadce0"}`,
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  fontSize: 12,
-                  transition: "all 0.2s ease"
-                }}
+                className={cn(
+                  "flex items-center gap-2 p-2 mb-1 rounded cursor-pointer text-xs transition-all",
+                  isChecked ? "bg-blue-50 border-blue-600" : "bg-white border-gray-300",
+                  "border"
+                )}
               >
                 <input
                   type="checkbox"
                   checked={isChecked}
                   onChange={() => toggleStatus(status)}
-                  style={{ cursor: "pointer" }}
+                  className="cursor-pointer"
                 />
-                <span style={{ flex: 1 }}>{statusLabels[status]}</span>
+                <span className="flex-1">{statusLabels[status]}</span>
               </label>
             );
           })}

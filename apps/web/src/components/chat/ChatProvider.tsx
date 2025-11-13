@@ -154,7 +154,12 @@ export function ChatProvider({ children }: PropsWithChildren) {
 
   // Derived values for current game
   const chats = useMemo(
-    () => (selectedGameId ? state.chatsByGame[selectedGameId] ?? [] : []),
+    () => {
+      if (!selectedGameId) return [];
+      const gameChats = state.chatsByGame[selectedGameId];
+      // Defensive: ensure gameChats is an array (protect against corrupted localStorage)
+      return Array.isArray(gameChats) ? gameChats : [];
+    },
     [state.chatsByGame, selectedGameId]
   );
 

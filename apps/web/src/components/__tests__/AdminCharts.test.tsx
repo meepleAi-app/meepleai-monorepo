@@ -138,7 +138,9 @@ describe('EndpointDistributionChart', () => {
       render(<EndpointDistributionChart endpointCounts={{}} />);
 
       const emptyMessage = screen.getByText('No endpoint data available');
-      expect(emptyMessage).toHaveStyle({ padding: '48px', textAlign: 'center', color: '#64748b' });
+      expect(emptyMessage).toHaveClass('p-12');
+      expect(emptyMessage).toHaveClass('text-center');
+      expect(emptyMessage).toHaveClass('text-gray-500');
     });
   });
 
@@ -304,7 +306,9 @@ describe('LatencyDistributionChart', () => {
       render(<LatencyDistributionChart requests={[]} />);
 
       const emptyMessage = screen.getByText('No latency data available');
-      expect(emptyMessage).toHaveStyle({ padding: '48px', textAlign: 'center', color: '#64748b' });
+      expect(emptyMessage).toHaveClass('p-12');
+      expect(emptyMessage).toHaveClass('text-center');
+      expect(emptyMessage).toHaveClass('text-gray-500');
     });
   });
 });
@@ -453,7 +457,9 @@ describe('RequestsTimeSeriesChart', () => {
       render(<RequestsTimeSeriesChart requests={[]} />);
 
       const emptyMessage = screen.getByText('No time series data available');
-      expect(emptyMessage).toHaveStyle({ padding: '48px', textAlign: 'center', color: '#64748b' });
+      expect(emptyMessage).toHaveClass('p-12');
+      expect(emptyMessage).toHaveClass('text-center');
+      expect(emptyMessage).toHaveClass('text-gray-500');
     });
   });
 });
@@ -607,7 +613,9 @@ describe('FeedbackChart', () => {
       render(<FeedbackChart feedbackCounts={{}} />);
 
       const emptyMessage = screen.getByText('No feedback data available');
-      expect(emptyMessage).toHaveStyle({ padding: '48px', textAlign: 'center', color: '#64748b' });
+      expect(emptyMessage).toHaveClass('p-12');
+      expect(emptyMessage).toHaveClass('text-center');
+      expect(emptyMessage).toHaveClass('text-gray-500');
     });
   });
 

@@ -15,8 +15,8 @@ export default function ChatPage() {
   // Show loading state while checking auth
   if (loading) {
     return (
-      <main id="main-content" style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
-        <div style={{ textAlign: "center", marginTop: 48 }}>
+      <main id="main-content" className="p-6 max-w-4xl mx-auto font-sans">
+        <div className="text-center mt-12">
           <p>Loading...</p>
         </div>
       </main>
@@ -26,32 +26,16 @@ export default function ChatPage() {
   // Render login required state
   if (!authUser) {
     return (
-      <main id="main-content" style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
-        <Link href="/" style={{ color: "#3391ff", textDecoration: "none" }}>
+      <main id="main-content" className="p-6 max-w-4xl mx-auto font-sans">
+        <Link href="/" className="text-[#3391ff] no-underline">
           ← Torna alla Home
         </Link>
-        <div
-          style={{
-            marginTop: 24,
-            padding: 32,
-            textAlign: "center",
-            border: "1px solid #dadce0",
-            borderRadius: 8
-          }}
-        >
+        <div className="mt-6 p-8 text-center border border-[#dadce0] rounded-lg">
           <h2>Accesso richiesto</h2>
           <p>Devi effettuare l&apos;accesso per utilizzare la chat.</p>
           <Link
             href="/"
-            style={{
-              display: "inline-block",
-              marginTop: 16,
-              padding: "8px 16px",
-              background: "#0070f3",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4
-            }}
+            className="inline-block mt-4 px-4 py-2 bg-[#0070f3] text-white no-underline rounded"
           >
             Vai al Login
           </Link>
@@ -65,15 +49,7 @@ export default function ChatPage() {
     <GameProvider>
       <ChatProvider>
         <UIProvider>
-          <main
-            id="main-content"
-            style={{
-              display: "flex",
-              height: "100vh",
-              fontFamily: "sans-serif",
-              overflow: "hidden"
-            }}
-          >
+          <main id="main-content" className="flex h-screen font-sans overflow-hidden">
             <ChatSidebar />
             <ChatContent />
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../../../../lib/api";
+import { cn } from "../../../../lib/utils";
 
 type PromptAuditLog = {
   id: string;
@@ -74,30 +75,30 @@ export default function AuditLog() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
-        <div style={{ background: "white", borderRadius: "12px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="max-w-7xl mx-auto p-8">
+        <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
           {/* Header */}
-          <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "2rem", color: "white" }}>
-            <div style={{ marginBottom: "1rem" }}>
+          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+            <div className="mb-4">
               <Link href={`/admin/prompts/${id}`}>
-                <button style={{ padding: "0.5rem 1rem", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+                <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer hover:bg-white/30">
                   ← Back to Template
                 </button>
               </Link>
             </div>
-            <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Audit Log</h1>
-            <p style={{ opacity: 0.9 }}>View all changes and actions performed on this template</p>
+            <h1 className="text-3xl font-bold mb-2">Audit Log</h1>
+            <p className="opacity-90">View all changes and actions performed on this template</p>
           </div>
 
           {/* Filters */}
-          <div style={{ padding: "1.5rem", borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-              <label style={{ fontWeight: "500" }}>Filter by action:</label>
+          <div className="p-6 border-b border-gray-200 bg-gray-50">
+            <div className="flex gap-4 items-center">
+              <label className="font-medium">Filter by action:</label>
               <select
                 value={actionFilter}
                 onChange={(e) => setActionFilter(e.target.value)}
-                style={{ padding: "0.5rem 1rem", border: "1px solid #d1d5db", borderRadius: "8px", minWidth: "200px" }}
+                className="px-4 py-2 border border-gray-300 rounded-lg min-w-[200px]"
               >
                 <option value="">All Actions</option>
                 <option value="create">Create</option>
@@ -109,82 +110,65 @@ export default function AuditLog() {
           </div>
 
           {/* Content */}
-          <div style={{ padding: "1.5rem" }}>
-            {loading && <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>Loading...</div>}
+          <div className="p-6">
+            {loading && <div className="text-center p-8 text-gray-500">Loading...</div>}
 
             {error && (
-              <div style={{ padding: "1rem", background: "#fee2e2", color: "#991b1b", borderRadius: "8px", marginBottom: "1rem" }}>
+              <div className="p-4 bg-red-100 text-red-800 rounded-lg mb-4">
                 {error}
               </div>
             )}
 
             {!loading && logs.length === 0 && (
-              <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>
-                <p style={{ fontSize: "1.125rem", marginBottom: "0.5rem" }}>No audit logs found</p>
-                <p style={{ fontSize: "0.875rem" }}>Actions performed on this template will appear here</p>
+              <div className="text-center p-12 text-gray-500">
+                <p className="text-lg mb-2">No audit logs found</p>
+                <p className="text-sm">Actions performed on this template will appear here</p>
               </div>
             )}
 
             {!loading && logs.length > 0 && (
               <>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
                     <thead>
-                      <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
-                        <th style={{ padding: "1rem", textAlign: "left", fontWeight: "600" }}>Timestamp</th>
-                        <th style={{ padding: "1rem", textAlign: "left", fontWeight: "600" }}>Action</th>
-                        <th style={{ padding: "1rem", textAlign: "left", fontWeight: "600" }}>User</th>
-                        <th style={{ padding: "1rem", textAlign: "left", fontWeight: "600" }}>Details</th>
+                      <tr className="bg-gray-50 border-b-2 border-gray-200">
+                        <th className="p-4 text-left font-semibold">Timestamp</th>
+                        <th className="p-4 text-left font-semibold">Action</th>
+                        <th className="p-4 text-left font-semibold">User</th>
+                        <th className="p-4 text-left font-semibold">Details</th>
                       </tr>
                     </thead>
                     <tbody>
                       {logs.map((log) => (
-                        <tr key={log.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                          <td style={{ padding: "1rem", color: "#6b7280", fontSize: "0.875rem" }}>
+                        <tr key={log.id} className="border-b border-gray-200">
+                          <td className="p-4 text-gray-500 text-sm">
                             {new Date(log.timestamp).toLocaleString()}
                           </td>
-                          <td style={{ padding: "1rem" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
                               <span
+                                className="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-sm"
                                 style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  width: "24px",
-                                  height: "24px",
-                                  borderRadius: "50%",
                                   background: `${getActionColor(log.action)}20`,
-                                  color: getActionColor(log.action),
-                                  fontWeight: "bold",
-                                  fontSize: "0.875rem",
+                                  color: getActionColor(log.action)
                                 }}
                               >
                                 {getActionIcon(log.action)}
                               </span>
-                              <span style={{ fontWeight: "500", textTransform: "capitalize" }}>{log.action}</span>
+                              <span className="font-medium capitalize">{log.action}</span>
                             </div>
                           </td>
-                          <td style={{ padding: "1rem", color: "#374151" }}>{log.userEmail}</td>
-                          <td style={{ padding: "1rem", color: "#6b7280", fontSize: "0.875rem" }}>
+                          <td className="p-4 text-gray-700">{log.userEmail}</td>
+                          <td className="p-4 text-gray-500 text-sm">
                             {log.details && Object.keys(log.details).length > 0 ? (
                               <details>
-                                <summary style={{ cursor: "pointer", color: "#4338ca", fontWeight: "500" }}>View details</summary>
-                                <pre
-                                  style={{
-                                    marginTop: "0.5rem",
-                                    padding: "0.5rem",
-                                    background: "#f9fafb",
-                                    borderRadius: "4px",
-                                    fontSize: "0.75rem",
-                                    overflow: "auto",
-                                    maxWidth: "400px",
-                                  }}
-                                >
+                                <summary className="cursor-pointer text-indigo-700 font-medium">View details</summary>
+                                <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-auto max-w-md">
                                   {JSON.stringify(log.details, null, 2)}
                                 </pre>
                               </details>
                             ) : (
-                              <span style={{ color: "#9ca3af" }}>No additional details</span>
+                              <span className="text-gray-400">No additional details</span>
                             )}
                           </td>
                         </tr>
@@ -194,37 +178,31 @@ export default function AuditLog() {
                 </div>
 
                 {/* Pagination */}
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "1rem", marginTop: "1.5rem" }}>
+                <div className="flex justify-center items-center gap-4 mt-6">
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      background: page === 1 ? "#e5e7eb" : "#667eea",
-                      color: page === 1 ? "#9ca3af" : "white",
-                      border: "none",
-                      borderRadius: "8px",
-                      cursor: page === 1 ? "not-allowed" : "pointer",
-                      fontWeight: "500",
-                    }}
+                    className={cn(
+                      "px-4 py-2 border-none rounded-lg font-medium",
+                      page === 1
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-indigo-500 text-white cursor-pointer hover:bg-indigo-600"
+                    )}
                   >
                     Previous
                   </button>
-                  <span style={{ color: "#6b7280", fontWeight: "500" }}>
+                  <span className="text-gray-500 font-medium">
                     Page {page} of {totalPages}
                   </span>
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      background: page === totalPages ? "#e5e7eb" : "#667eea",
-                      color: page === totalPages ? "#9ca3af" : "white",
-                      border: "none",
-                      borderRadius: "8px",
-                      cursor: page === totalPages ? "not-allowed" : "pointer",
-                      fontWeight: "500",
-                    }}
+                    className={cn(
+                      "px-4 py-2 border-none rounded-lg font-medium",
+                      page === totalPages
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-indigo-500 text-white cursor-pointer hover:bg-indigo-600"
+                    )}
                   >
                     Next
                   </button>

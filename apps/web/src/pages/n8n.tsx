@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { cn } from "../lib/utils";
 
 type N8nConfig = {
   id: string;
@@ -180,7 +181,7 @@ export default function N8nWorkflowManagement() {
 
   if (loading) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
+      <main className="p-6 font-sans max-w-7xl mx-auto">
         <h1>Loading...</h1>
       </main>
     );
@@ -188,51 +189,40 @@ export default function N8nWorkflowManagement() {
 
   if (error) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
+      <main className="p-6 font-sans max-w-7xl mx-auto">
         <h1>Error</h1>
-        <p style={{ color: "#d93025" }}>{error}</p>
-        <Link href="/" style={{ color: "#1a73e8" }}>Back to Home</Link>
+        <p className="text-red-600">{error}</p>
+        <Link href="/" className="text-blue-600 hover:underline">Back to Home</Link>
       </main>
     );
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+    <main className="p-6 font-sans max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 style={{ margin: 0 }}>n8n Workflow Management</h1>
-          <p style={{ margin: "8px 0 0 0", color: "#64748b" }}>
+          <h1 className="m-0">n8n Workflow Management</h1>
+          <p className="mt-2 mb-0 text-slate-500">
             Configure n8n endpoints and credentials for workflow automation
           </p>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div className="flex gap-3">
           <button
             onClick={() => {
               setEditingConfig(null);
               setFormData({ name: "", baseUrl: "", apiKey: "", webhookUrl: "" });
               setShowForm(!showForm);
             }}
-            style={{
-              padding: "8px 16px",
-              background: showForm ? "#64748b" : "#0f9d58",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer"
-            }}
+            className={cn(
+              "px-4 py-2 text-white border-none rounded cursor-pointer",
+              showForm ? "bg-slate-500" : "bg-green-600 hover:bg-green-700"
+            )}
           >
             {showForm ? "Cancel" : "Add Configuration"}
           </button>
           <Link
             href="/"
-            style={{
-              padding: "8px 16px",
-              background: "#1a73e8",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              display: "inline-block"
-            }}
+            className="px-4 py-2 bg-blue-600 text-white no-underline rounded inline-block hover:bg-blue-700"
           >
             Back to Home
           </Link>
@@ -240,11 +230,11 @@ export default function N8nWorkflowManagement() {
       </div>
 
       {showForm && (
-        <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white", marginBottom: 24 }}>
-          <h3 style={{ marginTop: 0 }}>{editingConfig ? "Edit Configuration" : "New Configuration"}</h3>
+        <div className="p-6 border border-gray-300 rounded-lg bg-white mb-6">
+          <h3 className="mt-0">{editingConfig ? "Edit Configuration" : "New Configuration"}</h3>
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 600 }}>
+            <div className="mb-4">
+              <label className="block mb-1 text-sm font-semibold">
                 Name *
               </label>
               <input
@@ -252,19 +242,13 @@ export default function N8nWorkflowManagement() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                style={{
-                  width: "100%",
-                  padding: 12,
-                  fontSize: 14,
-                  border: "1px solid #dadce0",
-                  borderRadius: 4
-                }}
+                className="w-full p-3 text-sm border border-gray-300 rounded"
                 placeholder="Production n8n"
               />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 600 }}>
+            <div className="mb-4">
+              <label className="block mb-1 text-sm font-semibold">
                 Base URL *
               </label>
               <input
@@ -272,19 +256,13 @@ export default function N8nWorkflowManagement() {
                 value={formData.baseUrl}
                 onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
                 required
-                style={{
-                  width: "100%",
-                  padding: 12,
-                  fontSize: 14,
-                  border: "1px solid #dadce0",
-                  borderRadius: 4
-                }}
+                className="w-full p-3 text-sm border border-gray-300 rounded"
                 placeholder="http://localhost:5678"
               />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 600 }}>
+            <div className="mb-4">
+              <label className="block mb-1 text-sm font-semibold">
                 API Key {editingConfig ? "(leave empty to keep current)" : "*"}
               </label>
               <input
@@ -292,48 +270,27 @@ export default function N8nWorkflowManagement() {
                 value={formData.apiKey}
                 onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
                 required={!editingConfig}
-                style={{
-                  width: "100%",
-                  padding: 12,
-                  fontSize: 14,
-                  border: "1px solid #dadce0",
-                  borderRadius: 4
-                }}
+                className="w-full p-3 text-sm border border-gray-300 rounded"
                 placeholder="n8n API key"
               />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 600 }}>
+            <div className="mb-4">
+              <label className="block mb-1 text-sm font-semibold">
                 Webhook URL (optional)
               </label>
               <input
                 type="url"
                 value={formData.webhookUrl}
                 onChange={(e) => setFormData({ ...formData, webhookUrl: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: 12,
-                  fontSize: 14,
-                  border: "1px solid #dadce0",
-                  borderRadius: 4
-                }}
+                className="w-full p-3 text-sm border border-gray-300 rounded"
                 placeholder="http://localhost:5678/webhook"
               />
             </div>
 
             <button
               type="submit"
-              style={{
-                padding: "8px 16px",
-                background: "#1a73e8",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 600
-              }}
+              className="px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer text-sm font-semibold hover:bg-blue-700"
             >
               {editingConfig ? "Update Configuration" : "Create Configuration"}
             </button>
@@ -342,103 +299,73 @@ export default function N8nWorkflowManagement() {
       )}
 
       {configs.length === 0 ? (
-        <div style={{ padding: 48, textAlign: "center", color: "#64748b", border: "1px solid #dadce0", borderRadius: 8 }}>
+        <div className="p-12 text-center text-slate-500 border border-gray-300 rounded-lg">
           <p>No n8n configurations found. Click &quot;Add Configuration&quot; to create one.</p>
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 16 }}>
+        <div className="grid gap-4">
           {configs.map((config) => (
             <div
               key={config.id}
-              style={{
-                padding: 24,
-                border: "1px solid #dadce0",
-                borderRadius: 8,
-                background: "white"
-              }}
+              className="p-6 border border-gray-300 rounded-lg bg-white"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 16 }}>
+              <div className="flex justify-between items-start mb-4">
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                    <h3 style={{ margin: 0 }}>{config.name}</h3>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="m-0">{config.name}</h3>
                     <span
-                      style={{
-                        padding: "4px 8px",
-                        background: config.isActive ? "#e8f5e9" : "#f5f5f5",
-                        color: config.isActive ? "#0f9d58" : "#64748b",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        borderRadius: 4
-                      }}
+                      className={cn(
+                        "px-2 py-1 text-xs font-semibold rounded",
+                        config.isActive
+                          ? "bg-green-100 text-green-600"
+                          : "bg-gray-100 text-slate-500"
+                      )}
                     >
                       {config.isActive ? "Active" : "Inactive"}
                     </span>
                   </div>
-                  <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: 14 }}>
+                  <p className="mt-1 mb-0 text-slate-500 text-sm">
                     {config.baseUrl}
                   </p>
                   {config.webhookUrl && (
-                    <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: 14 }}>
+                    <p className="mt-1 mb-0 text-slate-500 text-sm">
                       Webhook: {config.webhookUrl}
                     </p>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleTest(config.id)}
                     disabled={testing === config.id}
-                    style={{
-                      padding: "6px 12px",
-                      background: "#f9ab00",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 4,
-                      cursor: testing === config.id ? "not-allowed" : "pointer",
-                      fontSize: 13,
-                      opacity: testing === config.id ? 0.6 : 1
-                    }}
+                    className={cn(
+                      "px-3 py-1.5 bg-yellow-500 text-white border-none rounded text-[13px]",
+                      testing === config.id
+                        ? "cursor-not-allowed opacity-60"
+                        : "cursor-pointer hover:bg-yellow-600"
+                    )}
                   >
                     {testing === config.id ? "Testing..." : "Test"}
                   </button>
                   <button
                     onClick={() => handleToggleActive(config)}
-                    style={{
-                      padding: "6px 12px",
-                      background: config.isActive ? "#64748b" : "#0f9d58",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                      fontSize: 13
-                    }}
+                    className={cn(
+                      "px-3 py-1.5 text-white border-none rounded cursor-pointer text-[13px]",
+                      config.isActive
+                        ? "bg-slate-500 hover:bg-slate-600"
+                        : "bg-green-600 hover:bg-green-700"
+                    )}
                   >
                     {config.isActive ? "Deactivate" : "Activate"}
                   </button>
                   <button
                     onClick={() => handleEdit(config)}
-                    style={{
-                      padding: "6px 12px",
-                      background: "#1a73e8",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                      fontSize: 13
-                    }}
+                    className="px-3 py-1.5 bg-blue-600 text-white border-none rounded cursor-pointer text-[13px] hover:bg-blue-700"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(config.id)}
-                    style={{
-                      padding: "6px 12px",
-                      background: "#d93025",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                      fontSize: 13
-                    }}
+                    className="px-3 py-1.5 bg-red-600 text-white border-none rounded cursor-pointer text-[13px] hover:bg-red-700"
                   >
                     Delete
                   </button>
@@ -446,16 +373,17 @@ export default function N8nWorkflowManagement() {
               </div>
 
               {config.lastTestedAt && (
-                <div style={{ padding: 12, background: "#f8f9fa", borderRadius: 4 }}>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+                <div className="p-3 bg-gray-50 rounded">
+                  <div className="text-xs text-slate-500 mb-1">
                     Last tested: {new Date(config.lastTestedAt).toLocaleString()}
                   </div>
                   <div
-                    style={{
-                      fontSize: 13,
-                      color: config.lastTestResult?.includes("successful") ? "#0f9d58" : "#d93025",
-                      fontWeight: 600
-                    }}
+                    className={cn(
+                      "text-[13px] font-semibold",
+                      config.lastTestResult?.includes("successful")
+                        ? "text-green-600"
+                        : "text-red-600"
+                    )}
                   >
                     {config.lastTestResult}
                   </div>

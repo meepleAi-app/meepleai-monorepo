@@ -807,7 +807,6 @@ export const api = {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     }
-<<<<<<< HEAD
   },
 
   // User profile API
@@ -829,10 +828,7 @@ export const api = {
   twoFactor: {
     async getStatus(): Promise<TwoFactorStatusResponse> {
       return api.get<TwoFactorStatusResponse>('/api/v1/users/me/2fa/status') as Promise<TwoFactorStatusResponse>;
-=======
-  },
-
-  // User profile API
+    },
 
     async setup(): Promise<TotpSetupResponse> {
       return api.post<TotpSetupResponse>('/api/v1/auth/2fa/setup');

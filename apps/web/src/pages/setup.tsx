@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
+import { cn } from "../lib/utils";
 
 // Type definitions
 type AuthUser = {
@@ -55,76 +56,39 @@ function CitationModal({
 }) {
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: "rgba(0, 0, 0, 0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-        padding: 24
-      }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-6"
       onClick={onClose}
     >
       <div
-        style={{
-          background: "white",
-          borderRadius: 8,
-          maxWidth: 800,
-          maxHeight: "80vh",
-          overflow: "auto",
-          padding: 24,
-          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.15)"
-        }}
+        className="bg-white rounded-lg max-w-[800px] max-h-[80vh] overflow-auto p-6 shadow-[0_4px_24px_rgba(0,0,0,0.15)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>References</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="m-0 text-lg font-semibold">References</h3>
           <button
             onClick={onClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              fontSize: 24,
-              cursor: "pointer",
-              color: "#64748b",
-              padding: 0,
-              width: 32,
-              height: 32,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}
+            className="bg-transparent border-none text-2xl cursor-pointer text-slate-500 p-0 w-8 h-8 flex items-center justify-center"
             title="Close"
           >
             ×
           </button>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="flex flex-col gap-3">
           {snippets.map((snippet, idx) => (
             <div
               key={idx}
-              style={{
-                padding: 12,
-                border: "1px solid #dadce0",
-                borderRadius: 6,
-                background: "#f8f9fa"
-              }}
+              className="p-3 border border-gray-300 rounded-md bg-gray-50"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontWeight: 500, fontSize: 14, color: "#202124" }}>
+              <div className="flex justify-between mb-2">
+                <span className="font-medium text-sm text-gray-900">
                   {snippet.source}
                 </span>
-                <span style={{ fontSize: 12, color: "#64748b" }}>
+                <span className="text-xs text-slate-500">
                   Page {snippet.page}
                 </span>
               </div>
-              <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>
+              <div className="text-[13px] text-slate-500 leading-relaxed">
                 {snippet.text}
               </div>
             </div>
@@ -149,49 +113,31 @@ function SetupStepCard({
 }) {
   return (
     <div
-      style={{
-        border: "1px solid #dadce0",
-        borderRadius: 8,
-        padding: 20,
-        background: isCompleted ? "#f0f7f4" : "white",
-        transition: "all 0.2s ease",
-        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-      }}
+      className={cn(
+        "border border-gray-300 rounded-lg p-5 transition-all duration-200 shadow-sm",
+        isCompleted ? "bg-green-50" : "bg-white"
+      )}
     >
-      <div style={{ display: "flex", alignItems: "start", gap: 16 }}>
+      <div className="flex items-start gap-4">
         {/* Checkbox */}
         <input
           type="checkbox"
           checked={isCompleted}
           onChange={onToggleComplete}
-          style={{
-            width: 20,
-            height: 20,
-            marginTop: 2,
-            cursor: "pointer",
-            accentColor: "#34a853"
-          }}
+          className="w-5 h-5 mt-0.5 cursor-pointer"
+          style={{ accentColor: "#34a853" }}
           aria-label={`Mark step ${step.stepNumber} as ${isCompleted ? "incomplete" : "complete"}`}
         />
 
         {/* Content */}
-        <div style={{ flex: 1 }}>
+        <div className="flex-1">
           {/* Header */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{ fontWeight: 600, fontSize: 16, color: "#202124" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-semibold text-base text-gray-900">
               {step.stepNumber}. {step.title}
             </span>
             {step.isOptional && (
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                  padding: "2px 8px",
-                  background: "#e8eaed",
-                  color: "#64748b",
-                  borderRadius: 12
-                }}
-              >
+              <span className="text-[11px] font-medium px-2 py-0.5 bg-gray-200 text-slate-500 rounded-xl">
                 OPTIONAL
               </span>
             )}
@@ -199,14 +145,10 @@ function SetupStepCard({
 
           {/* Instruction */}
           <div
-            style={{
-              fontSize: 14,
-              color: "#64748b",
-              lineHeight: 1.6,
-              marginBottom: 12,
-              textDecoration: isCompleted ? "line-through" : "none",
-              opacity: isCompleted ? 0.7 : 1
-            }}
+            className={cn(
+              "text-sm text-slate-500 leading-relaxed mb-3",
+              isCompleted && "line-through opacity-70"
+            )}
           >
             {step.instruction}
           </div>
@@ -215,19 +157,7 @@ function SetupStepCard({
           {step.references.length > 0 && (
             <button
               onClick={onViewReferences}
-              style={{
-                background: "transparent",
-                border: "1px solid #1a73e8",
-                color: "#1a73e8",
-                padding: "6px 12px",
-                borderRadius: 4,
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6
-              }}
+              className="bg-transparent border border-blue-600 text-blue-600 px-3 py-1.5 rounded text-xs font-medium cursor-pointer flex items-center gap-1.5"
             >
               <span>📖</span>
               <span>View {step.references.length} Reference{step.references.length > 1 ? "s" : ""}</span>
@@ -361,32 +291,16 @@ export default function SetupPage() {
   // Render login required state
   if (!authUser) {
     return (
-      <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
-        <Link href="/" style={{ color: "#3391ff", textDecoration: "none" }}>
+      <main className="p-6 max-w-[900px] mx-auto font-sans">
+        <Link href="/" className="text-blue-500 no-underline">
           ← Back to Home
         </Link>
-        <div
-          style={{
-            marginTop: 24,
-            padding: 32,
-            textAlign: "center",
-            border: "1px solid #dadce0",
-            borderRadius: 8
-          }}
-        >
+        <div className="mt-6 p-8 text-center border border-gray-300 rounded-lg">
           <h2>Accesso richiesto</h2>
           <p>Devi effettuare l'accesso per utilizzare la guida alla configurazione.</p>
           <Link
             href="/"
-            style={{
-              display: "inline-block",
-              marginTop: 16,
-              padding: "8px 16px",
-              background: "#0051a8",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4
-            }}
+            className="inline-block mt-4 px-4 py-2 bg-blue-800 text-white no-underline rounded"
           >
             Vai al Login
           </Link>
@@ -397,37 +311,14 @@ export default function SetupPage() {
 
   // Main setup guide interface
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f8f9fa",
-        fontFamily: "sans-serif"
-      }}
-    >
+    <main className="min-h-screen bg-gray-50 font-sans">
       {/* Header */}
-      <div
-        style={{
-          background: "white",
-          borderBottom: "1px solid #dadce0",
-          padding: "16px 24px",
-          position: "sticky",
-          top: 0,
-          zIndex: 100
-        }}
-      >
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Game Setup Guide</h1>
+      <div className="bg-white border-b border-gray-300 p-4 sticky top-0 z-[100]">
+        <div className="max-w-[900px] mx-auto flex justify-between items-center">
+          <h1 className="m-0 text-2xl font-semibold">Game Setup Guide</h1>
           <Link
             href="/"
-            style={{
-              padding: "8px 16px",
-              background: "#1a73e8",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              fontSize: 14,
-              fontWeight: 500
-            }}
+            className="px-4 py-2 bg-blue-600 text-white no-underline rounded text-sm font-medium"
           >
             Home
           </Link>
@@ -435,24 +326,16 @@ export default function SetupPage() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: 24 }}>
+      <div className="max-w-[900px] mx-auto p-6">
         {/* Game Selection Card */}
-        <div
-          style={{
-            background: "white",
-            border: "1px solid #dadce0",
-            borderRadius: 8,
-            padding: 24,
-            marginBottom: 24
-          }}
-        >
-          <h2 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 600 }}>Select Game</h2>
+        <div className="bg-white border border-gray-300 rounded-lg p-6 mb-6">
+          <h2 className="m-0 mb-4 text-lg font-semibold">Select Game</h2>
 
-          <form onSubmit={loadSetupGuide} style={{ display: "flex", gap: 12, alignItems: "end" }}>
-            <div style={{ flex: 1 }}>
+          <form onSubmit={loadSetupGuide} className="flex gap-3 items-end">
+            <div className="flex-1">
               <label
                 htmlFor="gameSelect"
-                style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: "#64748b" }}
+                className="block mb-2 font-medium text-sm text-slate-500"
               >
                 Game:
               </label>
@@ -461,14 +344,7 @@ export default function SetupPage() {
                 value={selectedGameId ?? ""}
                 onChange={(e) => setSelectedGameId(e.target.value || null)}
                 disabled={isLoadingGames || isLoadingGuide}
-                style={{
-                  width: "100%",
-                  padding: 12,
-                  fontSize: 14,
-                  border: "1px solid #dadce0",
-                  borderRadius: 4,
-                  background: "white"
-                }}
+                className="w-full p-3 text-sm border border-gray-300 rounded bg-white"
               >
                 <option value="">Select a game...</option>
                 {games.map((game) => (
@@ -482,16 +358,12 @@ export default function SetupPage() {
             <button
               type="submit"
               disabled={!selectedGameId || isLoadingGuide}
-              style={{
-                padding: "12px 24px",
-                background: !selectedGameId || isLoadingGuide ? "#dadce0" : "#34a853",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: !selectedGameId || isLoadingGuide ? "not-allowed" : "pointer"
-              }}
+              className={cn(
+                "px-6 py-3 text-white border-none rounded text-sm font-medium",
+                !selectedGameId || isLoadingGuide
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-green-600 cursor-pointer"
+              )}
             >
               {isLoadingGuide ? "Generating..." : "Generate Setup Guide"}
             </button>
@@ -500,36 +372,18 @@ export default function SetupPage() {
 
         {/* Error Message */}
         {errorMessage && (
-          <div
-            style={{
-              margin: "0 0 24px 0",
-              padding: 16,
-              background: "#fce8e6",
-              color: "#d93025",
-              borderRadius: 8,
-              fontSize: 14,
-              border: "1px solid #f5c6cb"
-            }}
-          >
+          <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-lg text-sm border border-red-200">
             {errorMessage}
           </div>
         )}
 
         {/* Loading State */}
         {isLoadingGuide && (
-          <div
-            style={{
-              background: "white",
-              border: "1px solid #dadce0",
-              borderRadius: 8,
-              padding: 48,
-              textAlign: "center"
-            }}
-          >
-            <div style={{ fontSize: 16, color: "#64748b", marginBottom: 16 }}>
+          <div className="bg-white border border-gray-300 rounded-lg p-12 text-center">
+            <div className="text-base text-slate-500 mb-4">
               Generating your setup guide...
             </div>
-            <div style={{ fontSize: 14, color: "#64748b" }}>
+            <div className="text-sm text-slate-500">
               This may take a few moments while we retrieve the best instructions from the rulebook.
             </div>
           </div>
@@ -539,37 +393,25 @@ export default function SetupPage() {
         {setupGuide && !isLoadingGuide && (
           <>
             {/* Progress Card */}
-            <div
-              style={{
-                background: "white",
-                border: "1px solid #dadce0",
-                borderRadius: 8,
-                padding: 24,
-                marginBottom: 24
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div className="bg-white border border-gray-300 rounded-lg p-6 mb-6">
+              <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h2 style={{ margin: "0 0 8px 0", fontSize: 20, fontWeight: 600 }}>
+                  <h2 className="m-0 mb-2 text-xl font-semibold">
                     {setupGuide.gameTitle}
                   </h2>
-                  <div style={{ fontSize: 14, color: "#64748b" }}>
+                  <div className="text-sm text-slate-500">
                     Estimated setup time: {setupGuide.estimatedSetupTimeMinutes} minutes
                   </div>
                 </div>
                 <button
                   onClick={resetProgress}
                   disabled={completedSteps.size === 0}
-                  style={{
-                    padding: "8px 16px",
-                    background: completedSteps.size === 0 ? "#e8eaed" : "#ea4335",
-                    color: completedSteps.size === 0 ? "#64748b" : "white",
-                    border: "none",
-                    borderRadius: 4,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: completedSteps.size === 0 ? "not-allowed" : "pointer"
-                  }}
+                  className={cn(
+                    "px-4 py-2 border-none rounded text-[13px] font-medium",
+                    completedSteps.size === 0
+                      ? "bg-gray-200 text-slate-500 cursor-not-allowed"
+                      : "bg-red-600 text-white cursor-pointer"
+                  )}
                 >
                   Reset Progress
                 </button>
@@ -577,29 +419,20 @@ export default function SetupPage() {
 
               {/* Progress Bar */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 500, color: "#202124" }}>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-900">
                     Progress: {completedSteps.size} / {setupGuide.steps.length} steps
                   </span>
-                  <span style={{ fontSize: 14, fontWeight: 500, color: "#34a853" }}>
+                  <span className="text-sm font-medium text-green-600">
                     {progressPercentage}%
                   </span>
                 </div>
-                <div
-                  style={{
-                    width: "100%",
-                    height: 8,
-                    background: "#e8eaed",
-                    borderRadius: 4,
-                    overflow: "hidden"
-                  }}
-                >
+                <div className="w-full h-2 bg-gray-200 rounded overflow-hidden">
                   <div
+                    className="h-full transition-all duration-300"
                     style={{
                       width: `${progressPercentage}%`,
-                      height: "100%",
-                      background: progressPercentage === 100 ? "#34a853" : "#1a73e8",
-                      transition: "width 0.3s ease"
+                      background: progressPercentage === 100 ? "#34a853" : "#1a73e8"
                     }}
                   />
                 </div>
@@ -607,21 +440,8 @@ export default function SetupPage() {
 
               {/* Completion Message */}
               {progressPercentage === 100 && (
-                <div
-                  style={{
-                    marginTop: 16,
-                    padding: 16,
-                    background: "#e6f4ea",
-                    border: "1px solid #34a853",
-                    borderRadius: 6,
-                    fontSize: 14,
-                    color: "#137333",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>🎉</span>
+                <div className="mt-4 p-4 bg-green-50 border border-green-600 rounded-md text-sm text-green-800 flex items-center gap-3">
+                  <span className="text-2xl">🎉</span>
                   <span>
                     <strong>Setup Complete!</strong> Your game is ready to play. Have fun!
                   </span>
@@ -630,14 +450,14 @@ export default function SetupPage() {
 
               {/* AI Confidence */}
               {setupGuide.confidence !== null && (
-                <div style={{ marginTop: 12, fontSize: 12, color: "#64748b" }}>
+                <div className="mt-3 text-xs text-slate-500">
                   AI Confidence: {Math.round(setupGuide.confidence * 100)}%
                 </div>
               )}
             </div>
 
             {/* Steps List */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="flex flex-col gap-4">
               {setupGuide.steps.map((step) => (
                 <SetupStepCard
                   key={step.stepNumber}
@@ -653,20 +473,12 @@ export default function SetupPage() {
 
         {/* Empty State */}
         {!setupGuide && !isLoadingGuide && !errorMessage && (
-          <div
-            style={{
-              background: "white",
-              border: "1px dashed #dadce0",
-              borderRadius: 8,
-              padding: 48,
-              textAlign: "center"
-            }}
-          >
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🎲</div>
-            <h3 style={{ margin: "0 0 8px 0", fontSize: 18, color: "#202124" }}>
+          <div className="bg-white border border-dashed border-gray-300 rounded-lg p-12 text-center">
+            <div className="text-5xl mb-4">🎲</div>
+            <h3 className="m-0 mb-2 text-lg text-gray-900">
               No Setup Guide Yet
             </h3>
-            <p style={{ margin: 0, fontSize: 14, color: "#64748b" }}>
+            <p className="m-0 text-sm text-slate-500">
               Select a game and click &quot;Generate Setup Guide&quot; to get started with step-by-step instructions.
             </p>
           </div>

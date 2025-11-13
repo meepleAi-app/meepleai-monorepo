@@ -11,6 +11,7 @@
  * the old monolithic ChatProvider context.
  */
 
+import React from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useGame } from '@/components/game/GameProvider';
 import { useChat } from '@/components/chat/ChatProvider';
@@ -84,63 +85,102 @@ export function useChatContext(): ChatContextValue {
   const chat = useChat();
   const ui = useUI();
 
-  return {
-    // Authentication
-    authUser: auth.user,
+  // Memoize to prevent unnecessary re-renders in consuming components
+  return React.useMemo<ChatContextValue>(
+    () => ({
+      // Authentication
+      authUser: auth.user,
 
-    // Game & Agent Selection
-    games: game.games,
-    selectedGameId: game.selectedGameId,
-    agents: game.agents,
-    selectedAgentId: game.selectedAgentId,
-    selectGame: game.selectGame,
-    selectAgent: game.selectAgent,
+      // Game & Agent Selection
+      games: game.games,
+      selectedGameId: game.selectedGameId,
+      agents: game.agents,
+      selectedAgentId: game.selectedAgentId,
+      selectGame: game.selectGame,
+      selectAgent: game.selectAgent,
 
-    // Chat Management
-    chats: chat.chats,
-    activeChatId: chat.activeChatId,
-    messages: chat.messages,
-    createChat: chat.createChat,
-    deleteChat: chat.deleteChat,
-    selectChat: chat.selectChat,
+      // Chat Management
+      chats: chat.chats,
+      activeChatId: chat.activeChatId,
+      messages: chat.messages,
+      createChat: chat.createChat,
+      deleteChat: chat.deleteChat,
+      selectChat: chat.selectChat,
 
-    // Messaging
-    sendMessage: chat.sendMessage,
-    setMessageFeedback: chat.setMessageFeedback,
-    editMessage: chat.editMessage,
-    deleteMessage: chat.deleteMessage,
+      // Messaging
+      sendMessage: chat.sendMessage,
+      setMessageFeedback: chat.setMessageFeedback,
+      editMessage: chat.editMessage,
+      deleteMessage: chat.deleteMessage,
 
-    // UI State
-    loading: {
-      games: game.loading.games,
-      agents: game.loading.agents,
-      chats: chat.loading.chats,
-      messages: chat.loading.messages,
-      sending: chat.loading.sending,
-      creating: chat.loading.creating,
-      updating: chat.loading.updating,
-      deleting: chat.loading.deleting,
-    },
-    errorMessage: chat.error ?? game.error ?? auth.error ?? '',
-    sidebarCollapsed: ui.sidebarCollapsed,
-    toggleSidebar: ui.toggleSidebar,
+      // UI State
+      loading: {
+        games: game.loading.games,
+        agents: game.loading.agents,
+        chats: chat.loading.chats,
+        messages: chat.loading.messages,
+        sending: chat.loading.sending,
+        creating: chat.loading.creating,
+        updating: chat.loading.updating,
+        deleting: chat.loading.deleting,
+      },
+      errorMessage: chat.error ?? game.error ?? auth.error ?? '',
+      sidebarCollapsed: ui.sidebarCollapsed,
+      toggleSidebar: ui.toggleSidebar,
 
-    // Message Edit State
-    editingMessageId: ui.editingMessageId,
-    editContent: ui.editContent,
-    setEditContent: ui.setEditContent,
-    startEditMessage: ui.startEdit,
-    cancelEdit: ui.cancelEdit,
-    saveEdit: async () => {
-      await ui.saveEdit(chat.editMessage);
-    },
+      // Message Edit State
+      editingMessageId: ui.editingMessageId,
+      editContent: ui.editContent,
+      setEditContent: ui.setEditContent,
+      startEditMessage: ui.startEdit,
+      cancelEdit: ui.cancelEdit,
+      saveEdit: async () => {
+        await ui.saveEdit(chat.editMessage);
+      },
 
-    // Input State
-    inputValue: ui.inputValue,
-    setInputValue: ui.setInputValue,
+      // Input State
+      inputValue: ui.inputValue,
+      setInputValue: ui.setInputValue,
 
-    // Search Mode State
-    searchMode: ui.searchMode,
-    setSearchMode: ui.setSearchMode,
-  };
+      // Search Mode State
+      searchMode: ui.searchMode,
+      setSearchMode: ui.setSearchMode,
+    }),
+    [
+      auth.user,
+      auth.error,
+      game.games,
+      game.selectedGameId,
+      game.agents,
+      game.selectedAgentId,
+      game.selectGame,
+      game.selectAgent,
+      game.loading,
+      game.error,
+      chat.chats,
+      chat.activeChatId,
+      chat.messages,
+      chat.createChat,
+      chat.deleteChat,
+      chat.selectChat,
+      chat.sendMessage,
+      chat.setMessageFeedback,
+      chat.editMessage,
+      chat.deleteMessage,
+      chat.loading,
+      chat.error,
+      ui.sidebarCollapsed,
+      ui.toggleSidebar,
+      ui.editingMessageId,
+      ui.editContent,
+      ui.setEditContent,
+      ui.startEdit,
+      ui.cancelEdit,
+      ui.saveEdit,
+      ui.inputValue,
+      ui.setInputValue,
+      ui.searchMode,
+      ui.setSearchMode,
+    ]
+  );
 }

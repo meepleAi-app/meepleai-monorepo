@@ -62,7 +62,7 @@ export const InlineCommentIndicator: React.FC<InlineCommentIndicatorProps> = ({
   const ariaLabel = `View ${commentCount} comment${commentCount !== 1 ? 's' : ''} on line ${lineNumber}`;
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div className="relative inline-block">
       <button
         role="button"
         aria-label={ariaLabel}
@@ -72,22 +72,11 @@ export const InlineCommentIndicator: React.FC<InlineCommentIndicatorProps> = ({
         onKeyDown={handleKeyDown}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        className="relative w-8 h-8 rounded-full border cursor-pointer transition-all duration-200 flex items-center justify-center p-0 outline-none"
         style={{
-          position: 'relative',
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-          border: '1px solid',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           background: hasUnresolved ? '#fff3cd' : '#f5f5f5',
           borderColor: hasUnresolved ? '#ff9800' : '#ddd',
-          color: hasUnresolved ? '#ff9800' : '#666',
-          padding: 0,
-          outline: 'none',
+          color: hasUnresolved ? '#ff9800' : '#666'
         }}
         onMouseOver={(e) => {
           e.currentTarget.style.transform = 'scale(1.1)';
@@ -121,21 +110,9 @@ export const InlineCommentIndicator: React.FC<InlineCommentIndicatorProps> = ({
         {/* Count badge (only show if count > 1) */}
         {commentCount > 1 && (
           <span
+            className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center leading-none"
             style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              width: '16px',
-              height: '16px',
-              borderRadius: '50%',
-              background: hasUnresolved ? '#ff9800' : '#0070f3',
-              color: 'white',
-              fontSize: '10px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              lineHeight: 1,
+              background: hasUnresolved ? '#ff9800' : '#0070f3'
             }}
           >
             {commentCount}
@@ -161,16 +138,9 @@ export const InlineCommentIndicator: React.FC<InlineCommentIndicatorProps> = ({
             </style>
             <span
               data-testid="inline-comment-unresolved-dot"
+              className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-600 border-2 border-white"
               style={{
-                position: 'absolute',
-                bottom: '-2px',
-                right: '-2px',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                background: '#d93025',
-                border: '2px solid white',
-                animation: 'pulse 2s ease-in-out infinite',
+                animation: 'pulse 2s ease-in-out infinite'
               }}
             />
           </>
@@ -180,39 +150,12 @@ export const InlineCommentIndicator: React.FC<InlineCommentIndicatorProps> = ({
       {/* Hover tooltip */}
       {showTooltip && truncatedPreview && (
         <div
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            marginBottom: '8px',
-            maxWidth: '300px',
-            padding: '8px 12px',
-            background: '#333',
-            color: 'white',
-            fontSize: '12px',
-            borderRadius: '4px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            zIndex: 1000,
-            pointerEvents: 'none',
-          }}
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 max-w-[300px] px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-normal break-words z-[1000] pointer-events-none"
         >
           {truncatedPreview}
           {/* Tooltip arrow */}
           <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 0,
-              height: 0,
-              borderLeft: '6px solid transparent',
-              borderRight: '6px solid transparent',
-              borderTop: '6px solid #333',
-            }}
+            className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-800"
           />
         </div>
       )}

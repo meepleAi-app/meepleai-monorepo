@@ -78,5 +78,15 @@
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "disabledMcpjsonServers": [
+    "github-project-manager",
+    "n8n",
+    "aakarsh-sasi-memory-bank-mcp",
+    "sequential",
+    "playwright",
+    "magic",
+    "claude-context",
+    "knowledge-graph"
+  ]
 }

@@ -3,8 +3,26 @@ name: Security Scanning
 on:
   push:
     branches: [main]
+    paths:
+      - 'apps/**'
+      - 'infra/**'
+      - 'schemas/**'
+      - 'tools/**'
+      - '.github/workflows/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'global.json'
   pull_request:
     branches: [main]
+    paths:
+      - 'apps/**'
+      - 'infra/**'
+      - 'schemas/**'
+      - 'tools/**'
+      - '.github/workflows/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'global.json'
   schedule:
     # Run weekly security scans on Mondays at 00:00 UTC
     - cron: '0 0 * * 1'

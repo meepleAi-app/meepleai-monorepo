@@ -11,9 +11,9 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class GetAdminStatsQueryHandler : IQueryHandler<GetAdminStatsQuery, DashboardStatsDto>
 {
-    private readonly AdminStatsService _adminStatsService;
+    private readonly IAdminStatsService _adminStatsService;
 
-    public GetAdminStatsQueryHandler(AdminStatsService adminStatsService)
+    public GetAdminStatsQueryHandler(IAdminStatsService adminStatsService)
     {
         _adminStatsService = adminStatsService;
     }

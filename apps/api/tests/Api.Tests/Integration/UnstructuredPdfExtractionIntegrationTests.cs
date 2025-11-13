@@ -28,6 +28,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     private UnstructuredPdfTextExtractor? _extractor;
     private const string ContainerImage = "infra-unstructured-service:latest";
     private const int ServicePort = 8001;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Test PDF paths
     private const string BarragePdfPath = "../../../../data/barrage_rulebook.pdf";
@@ -58,7 +59,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
             .Build();
 
         // Start container
-        await _unstructuredContainer.StartAsync();
+        await _unstructuredContainer.StartAsync(TestCancellationToken);
 
         var containerPort = _unstructuredContainer.GetMappedPublicPort(ServicePort);
         var baseUrl = $"http://localhost:{containerPort}";
@@ -105,7 +106,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
 
         if (_unstructuredContainer != null)
         {
-            await _unstructuredContainer.StopAsync();
+            await _unstructuredContainer.StopAsync(TestCancellationToken);
             await _unstructuredContainer.DisposeAsync();
         }
 
@@ -122,7 +123,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         _output($"Testing with Barrage rulebook ({new FileInfo(BarragePdfPath).Length / 1024 / 1024}MB)");
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(pdfStream);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Extraction failed: {result.ErrorMessage}");
@@ -145,7 +146,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         _output($"Testing with Terraforming Mars rulebook ({new FileInfo(TerraformingMarsPdfPath).Length / 1024 / 1024}MB)");
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(pdfStream);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Extraction failed: {result.ErrorMessage}");
@@ -168,7 +169,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(pdfStream);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -193,7 +194,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(pdfStream);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -216,7 +217,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(pdfStream);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -252,9 +253,10 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
 
         // Act with short cancellation token
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Should complete within 120s for integration test
-        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: cts.Token);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: linkedCts.Token);
 
         // Assert - should complete successfully (not timeout)
         Assert.True(result.Success, "Normal PDFs should complete within timeout");
@@ -266,13 +268,13 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     public async Task Test07_ServiceHealthCheck_RespondsCorrectly()
     {
         // Arrange & Act
-        var response = await _httpClient!.GetAsync("/health");
+        var response = await _httpClient!.GetAsync("/health", TestCancellationToken);
 
         // Assert
         Assert.True(response.IsSuccessStatusCode,
             $"Health check failed: {response.StatusCode}");
 
-        var healthData = await response.Content.ReadAsStringAsync();
+        var healthData = await response.Content.ReadAsStringAsync(TestCancellationToken);
         Assert.Contains("healthy", healthData, StringComparison.OrdinalIgnoreCase);
 
         _output($"Health check passed: {response.StatusCode}");
@@ -286,7 +288,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         await using var invalidStream = new MemoryStream(invalidPdfBytes);
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(invalidStream);
+        var result = await _extractor!.ExtractTextAsync(invalidStream, ct: TestCancellationToken);
 
         // Assert - Service may either fail or return empty/low-quality extraction
         if (!result.Success)
@@ -314,7 +316,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         _output($"Testing large PDF: {fileSize / 1024 / 1024}MB");
 
         // Act
-        var result = await _extractor!.ExtractTextAsync(pdfStream);
+        var result = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Large PDF extraction failed: {result.ErrorMessage}");
@@ -333,7 +335,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
         // Act
-        var result = await _extractor!.ExtractPagedTextAsync(pdfStream);
+        var result = await _extractor!.ExtractPagedTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Paged extraction failed: {result.ErrorMessage}");
@@ -360,7 +362,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
         // Act
-        var result = await _extractor!.ExtractPagedTextAsync(pdfStream);
+        var result = await _extractor!.ExtractPagedTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -392,7 +394,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
 
         // Step 1: Extract text
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
-        var extractionResult = await _extractor!.ExtractTextAsync(pdfStream);
+        var extractionResult = await _extractor!.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         Assert.True(extractionResult.Success, "Step 1: Extraction should succeed");
         _output($"✓ Step 1: Extracted {extractionResult.CharacterCount:N0} chars from {extractionResult.PageCount} pages");
@@ -416,7 +418,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         // Step 5: Verify paged extraction produces chunks
         // Reopen stream (previous stream was disposed by ExtractTextAsync)
         await using var pdfStream2 = File.OpenRead(TerraformingMarsPdfPath);
-        var pagedResult = await _extractor.ExtractPagedTextAsync(pdfStream2);
+        var pagedResult = await _extractor.ExtractPagedTextAsync(pdfStream2, ct: TestCancellationToken);
         Assert.True(pagedResult.Success, "Step 5: Paged extraction should succeed");
         Assert.NotEmpty(pagedResult.PageChunks);
         _output($"✓ Step 5: Paged extraction produced {pagedResult.PageChunks.Count} chunks");

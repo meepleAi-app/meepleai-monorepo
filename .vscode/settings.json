@@ -1,84 +1,59 @@
 {
   "files.exclude": {
-    // Remove "apps/api": true - we need to see the backend!
+    "apps/web": true,
     "**/*.dll": true,
     "**/bin": true,
-    "**/obj": true
-    // Remove "**/*.csproj": true - needed for C# IntelliSense
+    "**/obj": true,
+    "**/.next": true,
+    "**/node_modules": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.pytest_cache": true
   },
   "search.exclude": {
-    // Remove "apps/api": true - need to search backend code!
+    "apps/web": true,
     "**/node_modules": true,
     "**/.next": true,
     "**/bin": true,
-    "**/obj": true
+    "**/obj": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true
   },
-  
-  // C# Settings
-  "omnisharp.enableRoslynAnalyzers": true,
-  "omnisharp.enableEditorConfigSupport": true,
-  "omnisharp.enableImportCompletion": true,
-  "csharp.suppressDotnetRestoreNotification": true,
-  "dotnet.defaultSolution": "apps/api/MeepleAI.Api.sln",
-  
-  // Terminal defaults to root (not apps/api)
-  // "terminal.integrated.cwd": "${workspaceFolder}",
-  
-  // Editor settings
+  "terminal.integrated.cwd": "${workspaceFolder}/apps/api/src/Api",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit",
+    "source.fixAll": "explicit",
     "source.organizeImports": "explicit"
   },
-  
-  // TypeScript/React/JavaScript
-  "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp",
+    "editor.tabSize": 4
   },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
-  },
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.tabSize": 4
   },
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  
-  // C#
-  "[csharp]": {
-    "editor.defaultFormatter": "ms-dotnettools.csharp",
-    "editor.tabSize": 4,
-    "editor.insertSpaces": true
-  },
-  
-  "typescript.tsdk": "apps/web/node_modules/typescript/lib",
-  "tailwindCSS.experimental.classRegex": [
-    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
-  ],
-  
-  // Workspace identification
+  "omnisharp.enableEditorConfigSupport": true,
+  "omnisharp.enableRoslynAnalyzers": true,
+  "omnisharp.organizeImportsOnFormat": true,
+  "dotnet.defaultSolution": "apps/api/BoardGameAI.sln",
+  "python.analysis.typeCheckingMode": "basic",
   "workbench.colorCustomizations": {
-    "statusBar.background": "#34a853",
+    "statusBar.background": "#4285f4",
     "statusBar.foreground": "#ffffff",
-    "statusBar.noFolderBackground": "#34a853",
-    "statusBar.debuggingBackground": "#16a34a"
+    "statusBar.noFolderBackground": "#4285f4",
+    "statusBar.debuggingBackground": "#1967d2"
   },
   "window.title": "Backend - ${rootName}${separator}${activeEditorShort}",
-  
-  // Performance
   "git.ignoreLimitWarning": true,
   "files.watcherExclude": {
     "**/node_modules/**": true,
     "**/.next/**": true,
     "**/bin/**": true,
-    "**/obj/**": true
-  },
-  
-  // Frontend tooling
-  "eslint.workingDirectories": ["apps/web"],
-  "jest.autoRun": "off"
+    "**/obj/**": true,
+    "**/__pycache__/**": true
+  }
 }

@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using MediatR;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
@@ -28,28 +29,38 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         // Retrieve user
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
         if (user == null)
+        {
             throw new DomainException("User not found");
+        }
 
         // Update display name if provided
         if (!string.IsNullOrWhiteSpace(command.DisplayName))
         {
-            user.UpdateDisplayName(command.DisplayName.Trim());
+            var trimmedDisplayName = command.DisplayName!.Trim();
+            if (!string.IsNullOrWhiteSpace(trimmedDisplayName))
+            {
+                user.UpdateDisplayName(trimmedDisplayName);
+            }
         }
 
         // Update email if provided
         if (!string.IsNullOrWhiteSpace(command.Email))
         {
-            var newEmail = new Email(command.Email);
+            var normalizedEmail = command.Email!.Trim();
+            var newEmail = new Email(normalizedEmail);
 
             // Check if email is already in use by another user
             var existingUser = await _userRepository.GetByEmailAsync(newEmail, cancellationToken);
             if (existingUser != null && existingUser.Id != user.Id)
+            {
                 throw new DomainException("Email is already in use");
+            }
 
             user.UpdateEmail(newEmail);
         }
 
-        // Save changes
+        // Persist updates
+        await _userRepository.UpdateAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

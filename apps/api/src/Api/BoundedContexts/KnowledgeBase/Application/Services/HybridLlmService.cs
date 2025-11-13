@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -181,36 +182,32 @@ public class HybridLlmService : ILlmService
                 metadata["circuit_state"] = GetCircuitState(client.ProviderName);
             }
 
-            // ISSUE-960: Log cost to database (fire and forget - don't block response)
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await _costLogRepository.LogCostAsync(
-                        user?.Id,
-                        user?.Role.Value ?? "Anonymous",
-                        new Domain.Models.LlmCostCalculation
-                        {
-                            ModelId = result.Cost.ModelId,
-                            Provider = result.Cost.Provider,
-                            PromptTokens = result.Usage.PromptTokens,
-                            CompletionTokens = result.Usage.CompletionTokens,
-                            InputCost = result.Cost.InputCost,
-                            OutputCost = result.Cost.OutputCost
-                        },
-                        endpoint: "completion",
-                        success: result.Success,
-                        errorMessage: result.ErrorMessage,
-                        latencyMs: (int)stopwatch.ElapsedMilliseconds,
-                        ipAddress: null, // Not available here - would come from HTTP context
-                        userAgent: null,
-                        ct: CancellationToken.None);
-                }
-                catch (Exception logEx)
-                {
-                    _logger.LogWarning(logEx, "Failed to log LLM cost (non-blocking)");
-                }
-            }, CancellationToken.None);
+                await _costLogRepository.LogCostAsync(
+                    user?.Id,
+                    user?.Role.Value ?? "Anonymous",
+                    new LlmCostCalculation
+                    {
+                        ModelId = result.Cost.ModelId,
+                        Provider = result.Cost.Provider,
+                        PromptTokens = result.Usage.PromptTokens,
+                        CompletionTokens = result.Usage.CompletionTokens,
+                        InputCost = result.Cost.InputCost,
+                        OutputCost = result.Cost.OutputCost
+                    },
+                    endpoint: "completion",
+                    success: result.Success,
+                    errorMessage: result.ErrorMessage,
+                    latencyMs: (int)stopwatch.ElapsedMilliseconds,
+                    ipAddress: null, // Not available here - would come from HTTP context
+                    userAgent: null,
+                    ct: ct);
+            }
+            catch (Exception logEx)
+            {
+                _logger.LogWarning(logEx, "Failed to log LLM cost");
+            }
 
             return result;
         }
@@ -225,28 +222,24 @@ public class HybridLlmService : ILlmService
                 "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
                 client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
 
-            // ISSUE-960: Log failed request cost (fire and forget)
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await _costLogRepository.LogCostAsync(
-                        user?.Id,
-                        user?.Role.Value ?? "Anonymous",
-                        Domain.Models.LlmCostCalculation.Empty,
-                        endpoint: "completion",
-                        success: false,
-                        errorMessage: ex.Message,
-                        latencyMs: (int)stopwatch.ElapsedMilliseconds,
-                        ipAddress: null,
-                        userAgent: null,
-                        ct: CancellationToken.None);
-                }
-                catch (Exception logEx)
-                {
-                    _logger.LogWarning(logEx, "Failed to log LLM error cost (non-blocking)");
-                }
-            }, CancellationToken.None);
+                await _costLogRepository.LogCostAsync(
+                    user?.Id,
+                    user?.Role.Value ?? "Anonymous",
+                    LlmCostCalculation.Empty,
+                    endpoint: "completion",
+                    success: false,
+                    errorMessage: ex.Message,
+                    latencyMs: (int)stopwatch.ElapsedMilliseconds,
+                    ipAddress: null,
+                    userAgent: null,
+                    ct: ct);
+            }
+            catch (Exception logEx)
+            {
+                _logger.LogWarning(logEx, "Failed to log LLM error cost");
+            }
 
             return LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
         }

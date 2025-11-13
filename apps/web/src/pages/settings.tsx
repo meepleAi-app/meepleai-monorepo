@@ -1,13 +1,31 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { QRCodeSVG } from "qrcode.react";
-import { api, type TotpSetupResponse, type TwoFactorStatusResponse } from "@/lib/api";
+import { ApiError, api, type TotpSetupResponse, type TwoFactorStatusResponse, type UserProfile } from "@/lib/api";
 
 export default function SettingsPage() {
   const router = useRouter();
   const [status, setStatus] = useState<TwoFactorStatusResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // Profile state
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileForm, setProfileForm] = useState({ displayName: "", email: "" });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Password change state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   // 2FA Setup state
   const [setup, setSetup] = useState<TotpSetupResponse | null>(null);
@@ -19,41 +37,131 @@ export default function SettingsPage() {
   const [disableCode, setDisableCode] = useState("");
 
   useEffect(() => {
-    loadStatus();
+    const bootstrap = async () => {
+      setInitialLoading(true);
+      await Promise.allSettled([loadStatus(), loadProfile()]);
+      setInitialLoading(false);
+    };
+
+    void bootstrap();
   }, []);
 
   const loadStatus = async () => {
     try {
-      setLoading(true);
       const statusResponse = await api.twoFactor.getStatus();
       setStatus(statusResponse);
-      setError(null);
+      setTwoFactorError(null);
     } catch (err) {
       console.error("Failed to load 2FA status:", err);
-      setError("Failed to load 2FA status");
+      setTwoFactorError("Failed to load 2FA status");
+    }
+  };
+
+  const loadProfile = async () => {
+    try {
+      const profileResponse = await api.profile.get();
+      if (profileResponse) {
+        setProfile(profileResponse);
+        setProfileForm({
+          displayName: profileResponse.displayName ?? "",
+          email: profileResponse.email ?? ""
+        });
+      }
+      setProfileError(null);
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+      setProfileError("Failed to load profile");
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    setProfileSuccess(null);
+    setProfileError(null);
+
+    if (!profile) {
+      setProfileError("Profile data is still loading. Please try again in a moment.");
+      return;
+    }
+
+    const displayName = (profileForm.displayName ?? "").trim();
+    const email = (profileForm.email ?? "").trim();
+
+    if (!displayName) {
+      setProfileError("Display name cannot be empty.");
+      return;
+    }
+
+    if (displayName === profile.displayName && email === profile.email) {
+      setProfileError("Update at least one field before saving.");
+      return;
+    }
+
+    try {
+      setProfileSaving(true);
+      await api.profile.update({
+        displayName: displayName || undefined,
+        email: email || undefined
+      });
+      setProfileSuccess("Profile updated successfully.");
+      await loadProfile();
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+      const message = err instanceof ApiError ? err.message : "Failed to update profile.";
+      setProfileError(message);
     } finally {
-      setLoading(false);
+      setProfileSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!passwordForm.currentPassword.trim() || !passwordForm.newPassword.trim()) {
+      setPasswordError("Provide both your current and new password.");
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+
+    try {
+      setPasswordSaving(true);
+      await api.profile.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+      setPasswordSuccess("Password changed successfully.");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      console.error("Failed to change password:", err);
+      const message = err instanceof ApiError ? err.message : "Failed to change password.";
+      setPasswordError(message);
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
   const handleSetup = async () => {
     try {
-      setLoading(true);
+      setTwoFactorLoading(true);
       const setupResponse = await api.twoFactor.setup();
       setSetup(setupResponse);
       setShowBackupCodes(true);
-      setError(null);
+      setTwoFactorError(null);
     } catch (err) {
       console.error("Failed to setup 2FA:", err);
-      setError("Failed to setup 2FA");
+      setTwoFactorError("Failed to setup 2FA");
     } finally {
-      setLoading(false);
+      setTwoFactorLoading(false);
     }
   };
 
   const handleEnable = async () => {
     try {
-      setLoading(true);
+      setTwoFactorLoading(true);
       await api.twoFactor.enable(verificationCode);
       alert("Two-factor authentication enabled successfully!");
       setSetup(null);
@@ -62,9 +170,9 @@ export default function SettingsPage() {
       await loadStatus();
     } catch (err) {
       console.error("Failed to enable 2FA:", err);
-      setError("Invalid verification code. Please try again.");
+      setTwoFactorError("Invalid verification code. Please try again.");
     } finally {
-      setLoading(false);
+      setTwoFactorLoading(false);
     }
   };
 
@@ -74,7 +182,7 @@ export default function SettingsPage() {
     }
 
     try {
-      setLoading(true);
+      setTwoFactorLoading(true);
       await api.twoFactor.disable(disablePassword, disableCode);
       alert("Two-factor authentication disabled.");
       setDisablePassword("");
@@ -82,9 +190,9 @@ export default function SettingsPage() {
       await loadStatus();
     } catch (err) {
       console.error("Failed to disable 2FA:", err);
-      setError("Failed to disable 2FA. Check your password and code.");
+      setTwoFactorError("Failed to disable 2FA. Check your password and code.");
     } finally {
-      setLoading(false);
+      setTwoFactorLoading(false);
     }
   };
 
@@ -101,7 +209,7 @@ export default function SettingsPage() {
     URL.revokeObjectURL(url);
   };
 
-  if (loading && !status) {
+  if (initialLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-3xl mx-auto">
@@ -117,13 +225,114 @@ export default function SettingsPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <h1 className="text-2xl font-bold mb-6">Account Settings</h1>
 
-          {error && (
+          {twoFactorError && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-6">
-              {error}
+              {twoFactorError}
             </div>
           )}
 
           <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Profile Information</h2>
+            {profileSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
+                {profileSuccess}
+              </div>
+            )}
+            {profileError && (
+              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+                {profileError}
+              </div>
+            )}
+            {profile ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                  <input
+                    type="text"
+                    value={profileForm.displayName}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, displayName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={profileForm.email}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="text-sm text-gray-500">
+                  <p>
+                    Role: <span className="font-medium capitalize">{profile.role.toLowerCase()}</span>
+                  </p>
+                  <p>Member since {new Date(profile.createdAt).toLocaleDateString()}</p>
+                </div>
+                <button
+                  onClick={handleUpdateProfile}
+                  disabled={!profile || profileSaving}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {profileSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">Profile details are unavailable right now.</p>
+            )}
+          </section>
+
+          <section className="mb-8 border-t border-gray-200 pt-6">
+            <h2 className="text-xl font-semibold mb-4">Change Password</h2>
+            {passwordSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
+                {passwordSuccess}
+              </div>
+            )}
+            {passwordError && (
+              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+                {passwordError}
+              </div>
+            )}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                onClick={handleChangePassword}
+                disabled={passwordSaving}
+                className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-50"
+              >
+                {passwordSaving ? "Updating..." : "Change Password"}
+              </button>
+            </div>
+          </section>
+
+          <section className="mb-8 border-t border-gray-200 pt-6">
             <h2 className="text-xl font-semibold mb-4">Two-Factor Authentication</h2>
 
             {status?.isTwoFactorEnabled ? (
@@ -141,7 +350,7 @@ export default function SettingsPage() {
                 {status.backupCodesCount < 3 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
                     <p className="text-sm text-yellow-800">
-                      ⚠️ Warning: You have only {status.backupCodesCount} backup codes remaining.
+                      Warning: You have only {status.backupCodesCount} backup codes remaining.
                       Consider disabling and re-enabling 2FA to generate new backup codes.
                     </p>
                   </div>
@@ -176,10 +385,10 @@ export default function SettingsPage() {
                     </div>
                     <button
                       onClick={handleDisable}
-                      disabled={loading || !disablePassword || !disableCode}
+                      disabled={twoFactorLoading || !disablePassword || !disableCode}
                       className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {loading ? "Disabling..." : "Disable 2FA"}
+                      {twoFactorLoading ? "Disabling..." : "Disable 2FA"}
                     </button>
                   </div>
                 </div>
@@ -194,10 +403,10 @@ export default function SettingsPage() {
                     </p>
                     <button
                       onClick={handleSetup}
-                      disabled={loading}
+                      disabled={twoFactorLoading}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                     >
-                      {loading ? "Setting up..." : "Enable Two-Factor Authentication"}
+                      {twoFactorLoading ? "Setting up..." : "Enable Two-Factor Authentication"}
                     </button>
                   </div>
                 ) : (
@@ -227,7 +436,7 @@ export default function SettingsPage() {
                       <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
                         <h3 className="font-medium text-yellow-900 mb-2">Step 2: Save Backup Codes</h3>
                         <p className="text-sm text-yellow-800 mb-3">
-                          ⚠️ Save these codes in a secure location. Each code can only be used once.
+                          Important: Save these codes in a secure location. Each code can only be used once.
                           You won&apos;t be able to see them again!
                         </p>
                         <div className="grid grid-cols-2 gap-2 mb-4">
@@ -274,10 +483,10 @@ export default function SettingsPage() {
                           />
                           <button
                             onClick={handleEnable}
-                            disabled={loading || verificationCode.length !== 6}
+                            disabled={twoFactorLoading || verificationCode.length !== 6}
                             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {loading ? "Verifying..." : "Verify & Enable"}
+                            {twoFactorLoading ? "Verifying..." : "Verify & Enable"}
                           </button>
                         </div>
                       </div>
@@ -304,7 +513,7 @@ export default function SettingsPage() {
               onClick={() => router.push("/")}
               className="text-blue-600 hover:text-blue-800"
             >
-              ← Back to Home
+              Back to Home
             </button>
           </div>
         </div>

@@ -16,6 +16,7 @@ public class LlmCostLogRepositoryTests : IDisposable
 {
     private readonly MeepleAiDbContext _context;
     private readonly LlmCostLogRepository _repository;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public LlmCostLogRepositoryTests()
     {
@@ -54,10 +55,11 @@ public class LlmCostLogRepositoryTests : IDisposable
             errorMessage: null,
             latencyMs: 1500,
             ipAddress: "127.0.0.1",
-            userAgent: "Test/1.0");
+            userAgent: "Test/1.0",
+            ct: TestCancellationToken);
 
         // Assert
-        var logs = await _context.LlmCostLogs.ToListAsync();
+        var logs = await _context.LlmCostLogs.ToListAsync(TestCancellationToken);
         Assert.Single(logs);
 
         var log = logs[0];
@@ -82,12 +84,12 @@ public class LlmCostLogRepositoryTests : IDisposable
         // Arrange - Add 3 requests
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        await _repository.LogCostAsync(null, "Anonymous", CreateCost(0.001m), "chat", true, null, 100, null, null);
-        await _repository.LogCostAsync(null, "User", CreateCost(0.002m), "qa", true, null, 200, null, null);
-        await _repository.LogCostAsync(null, "Admin", CreateCost(0.003m), "explain", true, null, 300, null, null);
+        await _repository.LogCostAsync(null, "Anonymous", CreateCost(0.001m), "chat", true, null, 100, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.002m), "qa", true, null, 200, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "Admin", CreateCost(0.003m), "explain", true, null, 300, null, null, ct: TestCancellationToken);
 
         // Act
-        var totalCost = await _repository.GetTotalCostAsync(today, today);
+        var totalCost = await _repository.GetTotalCostAsync(today, today, ct: TestCancellationToken);
 
         // Assert
         Assert.Equal(0.006m, totalCost);
@@ -99,12 +101,12 @@ public class LlmCostLogRepositoryTests : IDisposable
         // Arrange
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        await _repository.LogCostAsync(null, "User", CreateCost(0.001m, "OpenRouter"), "chat", true, null, 100, null, null);
-        await _repository.LogCostAsync(null, "User", CreateCost(0.002m, "OpenRouter"), "qa", true, null, 200, null, null);
-        await _repository.LogCostAsync(null, "User", CreateCost(0m, "Ollama"), "chat", true, null, 150, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.001m, "OpenRouter"), "chat", true, null, 100, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.002m, "OpenRouter"), "qa", true, null, 200, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "User", CreateCost(0m, "Ollama"), "chat", true, null, 150, null, null, ct: TestCancellationToken);
 
         // Act
-        var costsByProvider = await _repository.GetCostsByProviderAsync(today, today);
+        var costsByProvider = await _repository.GetCostsByProviderAsync(today, today, ct: TestCancellationToken);
 
         // Assert
         Assert.Equal(2, costsByProvider.Count);
@@ -118,13 +120,13 @@ public class LlmCostLogRepositoryTests : IDisposable
         // Arrange
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        await _repository.LogCostAsync(null, "Anonymous", CreateCost(0.001m), "chat", true, null, 100, null, null);
-        await _repository.LogCostAsync(null, "User", CreateCost(0.002m), "qa", true, null, 200, null, null);
-        await _repository.LogCostAsync(null, "Admin", CreateCost(0.005m), "explain", true, null, 300, null, null);
-        await _repository.LogCostAsync(null, "User", CreateCost(0.001m), "chat", true, null, 150, null, null);
+        await _repository.LogCostAsync(null, "Anonymous", CreateCost(0.001m), "chat", true, null, 100, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.002m), "qa", true, null, 200, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "Admin", CreateCost(0.005m), "explain", true, null, 300, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.001m), "chat", true, null, 150, null, null, ct: TestCancellationToken);
 
         // Act
-        var costsByRole = await _repository.GetCostsByRoleAsync(today, today);
+        var costsByRole = await _repository.GetCostsByRoleAsync(today, today, ct: TestCancellationToken);
 
         // Assert
         Assert.Equal(3, costsByRole.Count);
@@ -141,13 +143,13 @@ public class LlmCostLogRepositoryTests : IDisposable
         var user2 = Guid.NewGuid();
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        await _repository.LogCostAsync(user1, "User", CreateCost(0.001m), "chat", true, null, 100, null, null);
-        await _repository.LogCostAsync(user1, "User", CreateCost(0.002m), "qa", true, null, 200, null, null);
-        await _repository.LogCostAsync(user2, "User", CreateCost(0.005m), "chat", true, null, 300, null, null);
+        await _repository.LogCostAsync(user1, "User", CreateCost(0.001m), "chat", true, null, 100, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(user1, "User", CreateCost(0.002m), "qa", true, null, 200, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(user2, "User", CreateCost(0.005m), "chat", true, null, 300, null, null, ct: TestCancellationToken);
 
         // Act
-        var user1Cost = await _repository.GetUserCostAsync(user1, today, today);
-        var user2Cost = await _repository.GetUserCostAsync(user2, today, today);
+        var user1Cost = await _repository.GetUserCostAsync(user1, today, today, ct: TestCancellationToken);
+        var user2Cost = await _repository.GetUserCostAsync(user2, today, today, ct: TestCancellationToken);
 
         // Assert
         Assert.Equal(0.003m, user1Cost);
@@ -160,12 +162,12 @@ public class LlmCostLogRepositoryTests : IDisposable
         // Arrange
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        await _repository.LogCostAsync(null, "User", CreateCost(0.010m), "chat", true, null, 100, null, null);
-        await _repository.LogCostAsync(null, "Admin", CreateCost(0.025m), "qa", true, null, 200, null, null);
-        await _repository.LogCostAsync(null, "User", CreateCost(0.015m), "explain", true, null, 150, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.010m), "chat", true, null, 100, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "Admin", CreateCost(0.025m), "qa", true, null, 200, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.015m), "explain", true, null, 150, null, null, ct: TestCancellationToken);
 
         // Act
-        var dailyCost = await _repository.GetDailyCostAsync(today);
+        var dailyCost = await _repository.GetDailyCostAsync(today, ct: TestCancellationToken);
 
         // Assert
         Assert.Equal(0.050m, dailyCost);
@@ -177,11 +179,11 @@ public class LlmCostLogRepositoryTests : IDisposable
         // Arrange - Can't easily control dates in in-memory DB, so test same day
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        await _repository.LogCostAsync(null, "User", CreateCost(0.001m), "chat", true, null, 100, null, null);
-        await _repository.LogCostAsync(null, "User", CreateCost(0.002m), "qa", true, null, 200, null, null);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.001m), "chat", true, null, 100, null, null, ct: TestCancellationToken);
+        await _repository.LogCostAsync(null, "User", CreateCost(0.002m), "qa", true, null, 200, null, null, ct: TestCancellationToken);
 
         // Act
-        var totalCost = await _repository.GetTotalCostAsync(today, today);
+        var totalCost = await _repository.GetTotalCostAsync(today, today, ct: TestCancellationToken);
 
         // Assert
         Assert.Equal(0.003m, totalCost);

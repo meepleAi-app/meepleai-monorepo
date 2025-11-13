@@ -109,6 +109,75 @@ services:
     networks:
       - meepleai
 
+  # BGAI-001-v2: Unstructured PDF extraction service (Stage 1)
+  unstructured-service:
+    build:
+      context: ../apps/unstructured-service
+      dockerfile: ./Dockerfile
+    container_name: meepleai-unstructured
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - LOG_LEVEL=INFO
+      - MAX_FILE_SIZE=52428800  # 50MB
+      - TIMEOUT=30
+      - UNSTRUCTURED_STRATEGY=fast
+      - LANGUAGE=ita
+      - CHUNK_MAX_CHARACTERS=2000
+      - CHUNK_OVERLAP=200
+      - QUALITY_THRESHOLD=0.80
+      - MIN_CHARS_PER_PAGE=500
+      - ENABLE_METRICS=true
+      - ENABLE_STRUCTURED_LOGGING=true
+    volumes:
+      - unstructured-temp:/tmp/pdf-extraction
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - meepleai
+
+  # BGAI-005: SmolDocling VLM service (Stage 2 - complex layouts fallback)
+  smoldocling-service:
+    build:
+      context: ../apps/smoldocling-service
+      dockerfile: ./Dockerfile
+    container_name: meepleai-smoldocling
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      - LOG_LEVEL=INFO
+      - MAX_FILE_SIZE=52428800  # 50MB
+      - MAX_PAGES_PER_REQUEST=20
+      - TIMEOUT=60
+      - DEVICE=cpu
+      - MODEL_NAME=docling-project/SmolDocling-256M-preview
+      - MAX_NEW_TOKENS=2048
+      - TORCH_DTYPE=bfloat16
+      - IMAGE_DPI=300
+      - IMAGE_FORMAT=PNG
+      - QUALITY_THRESHOLD=0.70
+      - MIN_CHARS_PER_PAGE=300
+      - ENABLE_METRICS=true
+      - ENABLE_STRUCTURED_LOGGING=true
+      - ENABLE_MODEL_WARMUP=false
+    volumes:
+      - smoldocling-temp:/tmp/pdf-processing
+      - smoldocling-models:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
+    networks:
+      - meepleai
+
   seq:
     image: datalust/seq:2025.1
     restart: unless-stopped
@@ -559,6 +628,9 @@ volumes:
   qdrantdata:
   seqdata:
   ollamadata:
+  unstructured-temp:
+  smoldocling-temp:
+  smoldocling-models:
   prometheusdata:
   grafanadata:
   alertmanagerdata:

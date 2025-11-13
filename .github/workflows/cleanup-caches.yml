@@ -7,8 +7,7 @@ on:
   workflow_dispatch: # Allow manual triggering
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   cleanup:
@@ -98,60 +97,6 @@ jobs:
           name: cleanup-report-${{ github.run_id }}
           path: cleanup-report.md
           retention-days: 90
-
-      - name: Create PR with cleanup results
-        if: steps.summary.outputs.freed_mb > 0
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Create branch
-          BRANCH_NAME="chore/automated-cache-cleanup-$(date +%Y%m%d)"
-          git checkout -b "$BRANCH_NAME"
-
-          # Stage and commit changes (if any)
-          git add -A
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: Automated cache cleanup - freed ${{ steps.summary.outputs.freed_mb }} MB
-
-          🤖 This is an automated cleanup performed by the Cache Cleanup workflow.
-
-          Space freed: ${{ steps.summary.outputs.freed_mb }} MB
-
-          Directories cleaned:
-          - .serena/ (Serena MCP cache)
-          - codeql-db/ (CodeQL database)
-          - .playwright-mcp/ (Playwright MCP cache)
-          - apps/api/obj, apps/api/bin (.NET build artifacts)
-          - apps/web/.next (Next.js cache)
-
-          See cleanup report artifact for detailed log."
-
-            # Push branch
-            git push origin "$BRANCH_NAME"
-
-            # Create PR
-            gh pr create \
-              --title "chore: Automated cache cleanup - $(date +%Y-%m-%d)" \
-              --body "$(cat cleanup-report.md)" \
-              --label "maintenance" \
-              --label "automated" \
-              --base main
-
-            echo "✅ PR created successfully"
-          fi
-
-      - name: Comment on existing PR (if any changes)
-        if: steps.summary.outputs.freed_mb > 0 && github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "💡 If running manually, consider reviewing the cleanup report before merging."
 
       - name: Cleanup artifacts
         if: always()

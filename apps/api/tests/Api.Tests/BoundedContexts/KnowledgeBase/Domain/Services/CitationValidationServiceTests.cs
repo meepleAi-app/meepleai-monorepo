@@ -20,6 +20,7 @@ public class CitationValidationServiceTests : IDisposable
     private readonly Guid _gameId;
     private readonly Guid _pdf1Id;
     private readonly Guid _pdf2Id;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public CitationValidationServiceTests()
     {
@@ -87,7 +88,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString());
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -106,7 +107,7 @@ public class CitationValidationServiceTests : IDisposable
         var snippets = new List<Snippet>();
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString());
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -127,7 +128,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString());
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -148,7 +149,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString());
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -169,7 +170,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString());
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -187,7 +188,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString());
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -206,7 +207,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString());
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -227,7 +228,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString());
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid); // Not all valid
@@ -252,7 +253,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString());
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -267,7 +268,7 @@ public class CitationValidationServiceTests : IDisposable
         var snippet = new Snippet("text", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.9f);
 
         // Act
-        var result = await _service.ValidateSingleCitationAsync(snippet, _gameId.ToString());
+        var result = await _service.ValidateSingleCitationAsync(snippet, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result);
@@ -281,7 +282,7 @@ public class CitationValidationServiceTests : IDisposable
         var snippet = new Snippet("text", $"PDF:{nonExistentPdfId}", page: 1, line: 0, score: 0.9f);
 
         // Act
-        var result = await _service.ValidateSingleCitationAsync(snippet, _gameId.ToString());
+        var result = await _service.ValidateSingleCitationAsync(snippet, _gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result);
@@ -297,7 +298,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, "invalid-game-id");
+        var result = await _service.ValidateCitationsAsync(snippets, "invalid-game-id", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);

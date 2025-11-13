@@ -11,9 +11,9 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class GetAlertHistoryQueryHandler : IQueryHandler<GetAlertHistoryQuery, List<AlertDto>>
 {
-    private readonly AlertingService _alertingService;
+    private readonly IAlertingService _alertingService;
 
-    public GetAlertHistoryQueryHandler(AlertingService alertingService)
+    public GetAlertHistoryQueryHandler(IAlertingService alertingService)
     {
         _alertingService = alertingService;
     }

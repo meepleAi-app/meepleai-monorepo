@@ -16,6 +16,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 /// </summary>
 public class ProviderHealthCheckServiceTests
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     [Fact]
     public void Constructor_WithValidDependencies_Succeeds()
     {
@@ -108,12 +110,13 @@ public class ProviderHealthCheckServiceTests
 
         // Simulate initialization (normally done by StartAsync)
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Act
-        await service.StartAsync(cts.Token);
+        await service.StartAsync(linkedCts.Token);
 
         // Give time for initialization
-        await Task.Delay(100);
+        await Task.Delay(100, TestCancellationToken);
 
         var allHealth = service.GetAllProviderHealth();
 
@@ -124,7 +127,7 @@ public class ProviderHealthCheckServiceTests
         Assert.Contains("OpenRouter", allHealth.Keys);
 
         // Cleanup
-        await service.StopAsync(CancellationToken.None);
+        await service.StopAsync(TestCancellationToken);
     }
 
     [Fact(Skip = "Requires 10s warmup - integration test")]
@@ -146,15 +149,16 @@ public class ProviderHealthCheckServiceTests
         var service = new ProviderHealthCheckService(serviceScopeFactory, logger.Object);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Act
-        await service.StartAsync(cts.Token);
-        await Task.Delay(11000); // Wait for 10s warmup + first check
+        await service.StartAsync(linkedCts.Token);
+        await Task.Delay(11000, TestCancellationToken); // Wait for 10s warmup + first check
 
         var health = service.GetProviderHealth("Ollama");
 
         // Cleanup
-        await service.StopAsync(CancellationToken.None);
+        await service.StopAsync(TestCancellationToken);
 
         // Assert
         Assert.NotNull(health);
@@ -180,15 +184,16 @@ public class ProviderHealthCheckServiceTests
         var service = new ProviderHealthCheckService(serviceScopeFactory, logger.Object);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Act
-        await service.StartAsync(cts.Token);
-        await Task.Delay(11000); // Wait for 10s warmup + first check
+        await service.StartAsync(linkedCts.Token);
+        await Task.Delay(11000, TestCancellationToken); // Wait for 10s warmup + first check
 
         var health = service.GetProviderHealth("Ollama");
 
         // Cleanup
-        await service.StopAsync(CancellationToken.None);
+        await service.StopAsync(TestCancellationToken);
 
         // Assert
         Assert.NotNull(health);
@@ -218,15 +223,16 @@ public class ProviderHealthCheckServiceTests
         var service = new ProviderHealthCheckService(serviceScopeFactory, logger.Object);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(16));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Act
-        await service.StartAsync(cts.Token);
-        await Task.Delay(16000); // Wait for warmup + first check with timeout
+        await service.StartAsync(linkedCts.Token);
+        await Task.Delay(16000, TestCancellationToken); // Wait for warmup + first check with timeout
 
         var health = service.GetProviderHealth("Ollama");
 
         // Cleanup
-        await service.StopAsync(CancellationToken.None);
+        await service.StopAsync(TestCancellationToken);
 
         // Assert
         Assert.NotNull(health);
@@ -252,9 +258,9 @@ public class ProviderHealthCheckServiceTests
         var service = new ProviderHealthCheckService(serviceScopeFactory, logger.Object);
 
         // Act
-        await service.StartAsync(CancellationToken.None);
-        await Task.Delay(100); // Let it run briefly
-        await service.StopAsync(CancellationToken.None);
+        await service.StartAsync(TestCancellationToken);
+        await Task.Delay(100, TestCancellationToken); // Let it run briefly
+        await service.StopAsync(TestCancellationToken);
 
         // Assert - No exception thrown, service stopped gracefully
         Assert.True(true);

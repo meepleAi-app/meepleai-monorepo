@@ -15,6 +15,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
     private readonly Mock<IOcrService> _mockOcrService;
     private readonly DocnetPdfTextExtractor _sut;
     private readonly List<string> _tempFilesToCleanup;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public DocnetPdfTextExtractorTests()
     {
@@ -68,7 +69,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var pdfStream = CreateSimpleTestPdfStream();
 
         // Act
-        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: false);
+        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -84,7 +85,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var emptyStream = new MemoryStream();
 
         // Act
-        var result = await _sut.ExtractTextAsync(emptyStream, enableOcrFallback: false);
+        var result = await _sut.ExtractTextAsync(emptyStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -110,7 +111,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
             });
 
         // Act
-        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: true);
+        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -127,7 +128,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var pdfStream = CreateMinimalTextPdfStream();
 
         // Act
-        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: false);
+        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -155,7 +156,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
             });
 
         // Act
-        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: true);
+        var result = await _sut.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
 
         // Assert
         Assert.True(result.Success, "Should fallback to standard extraction");
@@ -169,7 +170,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var corruptStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
 
         // Act
-        var result = await _sut.ExtractTextAsync(corruptStream, enableOcrFallback: false);
+        var result = await _sut.ExtractTextAsync(corruptStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -187,7 +188,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var pdfStream = CreateSimpleTestPdfStream();
 
         // Act
-        var result = await _sut.ExtractPagedTextAsync(pdfStream, enableOcrFallback: false);
+        var result = await _sut.ExtractPagedTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -202,7 +203,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var pdfStream = CreateMultiPageTestPdfStream(3);
 
         // Act
-        var result = await _sut.ExtractPagedTextAsync(pdfStream, enableOcrFallback: false);
+        var result = await _sut.ExtractPagedTextAsync(pdfStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -217,7 +218,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var emptyStream = new MemoryStream();
 
         // Act
-        var result = await _sut.ExtractPagedTextAsync(emptyStream, enableOcrFallback: false);
+        var result = await _sut.ExtractPagedTextAsync(emptyStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -231,7 +232,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
         var corruptStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
 
         // Act
-        var result = await _sut.ExtractPagedTextAsync(corruptStream, enableOcrFallback: false);
+        var result = await _sut.ExtractPagedTextAsync(corruptStream, enableOcrFallback: false, TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -252,7 +253,7 @@ public class DocnetPdfTextExtractorTests : IDisposable
 
         // Act: Execute all extractions in parallel
         var tasks = pdfStreams.Select(stream =>
-            _sut.ExtractTextAsync(stream, enableOcrFallback: false));
+            _sut.ExtractTextAsync(stream, enableOcrFallback: false, TestCancellationToken));
 
         var results = await Task.WhenAll(tasks);
 

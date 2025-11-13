@@ -93,14 +93,32 @@ public class UserRepository : IUserRepository
     /// </summary>
     private static User MapToDomain(Api.Infrastructure.Entities.UserEntity entity)
     {
+        if (string.IsNullOrWhiteSpace(entity.Email))
+        {
+            throw new InvalidOperationException("Persisted user record is missing an Email value.");
+        }
+
+        if (string.IsNullOrWhiteSpace(entity.PasswordHash))
+        {
+            throw new InvalidOperationException($"Persisted user record {entity.Id} is missing a password hash.");
+        }
+
+        if (string.IsNullOrWhiteSpace(entity.Role))
+        {
+            throw new InvalidOperationException($"Persisted user record {entity.Id} is missing a role.");
+        }
+
         var email = new Email(entity.Email);
         var passwordHash = PasswordHash.FromStored(entity.PasswordHash);
         var role = Role.Parse(entity.Role);
+        var displayName = string.IsNullOrWhiteSpace(entity.DisplayName)
+            ? entity.Email
+            : entity.DisplayName ?? entity.Email;
 
         var user = new User(
             id: entity.Id,
             email: email,
-            displayName: entity.DisplayName,
+            displayName: displayName,
             passwordHash: passwordHash,
             role: role
         );

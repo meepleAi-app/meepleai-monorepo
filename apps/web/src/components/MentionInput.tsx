@@ -269,7 +269,7 @@ export function MentionInput({
     return (
       <>
         {text.substring(0, index)}
-        <strong style={{ background: '#fff3cd' }}>
+        <strong className="bg-yellow-100">
           {text.substring(index, index + query.length)}
         </strong>
         {text.substring(index + query.length)}
@@ -278,7 +278,7 @@ export function MentionInput({
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div className="relative w-full">
       <textarea
         ref={textareaRef}
         value={value}
@@ -295,17 +295,7 @@ export function MentionInput({
             ? `mention-option-${mentionState.selectedIndex}`
             : undefined
         }
-        style={{
-          width: "100%",
-          minHeight: 80,
-          padding: 12,
-          border: "1px solid #ccc",
-          borderRadius: 4,
-          fontSize: 14,
-          fontFamily: "inherit",
-          marginBottom: 8,
-          resize: "vertical"
-        }}
+        className="w-full min-h-[80px] p-3 border border-gray-400 rounded text-sm font-inherit mb-2 resize-y"
       />
 
       {/* Dropdown for mention autocomplete */}
@@ -314,27 +304,18 @@ export function MentionInput({
           id="mention-dropdown"
           ref={dropdownRef}
           role="listbox"
+          className="fixed z-[1000] bg-white border border-gray-400 rounded shadow-lg max-h-[200px] overflow-y-auto min-w-[250px] max-w-[400px]"
           style={{
-            position: 'fixed',
             top: dropdownPosition.top,
-            left: dropdownPosition.left,
-            zIndex: 1000,
-            background: 'white',
-            border: '1px solid #ccc',
-            borderRadius: 4,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            maxHeight: 200,
-            overflowY: 'auto',
-            minWidth: 250,
-            maxWidth: 400
+            left: dropdownPosition.left
           }}
         >
           {isSearching ? (
-            <div style={{ padding: 12, fontSize: 14, color: '#666' }}>
+            <div className="p-3 text-sm text-gray-600">
               Searching users...
             </div>
           ) : searchResults.length === 0 ? (
-            <div style={{ padding: 12, fontSize: 14, color: '#666' }}>
+            <div className="p-3 text-sm text-gray-600">
               No users found
             </div>
           ) : (
@@ -346,18 +327,16 @@ export function MentionInput({
                 aria-selected={index === mentionState.selectedIndex}
                 onClick={() => selectUser(user)}
                 onMouseEnter={() => setMentionState(prev => ({ ...prev, selectedIndex: index }))}
+                className="p-2.5 cursor-pointer transition-colors"
                 style={{
-                  padding: '10px 12px',
-                  cursor: 'pointer',
                   background: index === mentionState.selectedIndex ? '#e3f2fd' : 'transparent',
-                  borderBottom: index < searchResults.length - 1 ? '1px solid #f0f0f0' : 'none',
-                  transition: 'background 0.1s'
+                  borderBottom: index < searchResults.length - 1 ? '1px solid #f0f0f0' : 'none'
                 }}
               >
-                <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>
+                <div className="text-sm font-medium mb-0.5">
                   {highlightMatch(user.displayName, mentionState.query)}
                 </div>
-                <div style={{ fontSize: 12, color: '#666' }}>
+                <div className="text-xs text-gray-600">
                   {highlightMatch(user.email, mentionState.query)}
                 </div>
               </div>

@@ -1,32 +1,33 @@
 {
   "files.exclude": {
-    // Remove "apps/api": true - we need to see the backend!
+    "apps/api": true,
+    "apps/embedding-service": true,
+    "apps/smoldocling-service": true,
+    "apps/unstructured-service": true,
     "**/*.dll": true,
     "**/bin": true,
-    "**/obj": true
-    // Remove "**/*.csproj": true - needed for C# IntelliSense
+    "**/obj": true,
+    "**/*.csproj": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true
   },
   "search.exclude": {
-    // Remove "apps/api": true - need to search backend code!
+    "apps/api": true,
+    "apps/embedding-service": true,
+    "apps/smoldocling-service": true,
+    "apps/unstructured-service": true,
     "**/node_modules": true,
     "**/.next": true,
     "**/bin": true,
-    "**/obj": true
+    "**/obj": true,
+    "**/__pycache__": true
   },
-  // C# Settings
-  "omnisharp.enableRoslynAnalyzers": true,
-  "omnisharp.enableEditorConfigSupport": true,
-  "csharp.suppressDotnetRestoreNotification": true,
-  "dotnet.defaultSolution": "apps/api/MeepleAI.Api.sln",
-  // Terminal defaults to root (not apps/api)
-  // "terminal.integrated.cwd": "${workspaceFolder}",
-  // Editor settings
+  "terminal.integrated.cwd": "${workspaceFolder}/apps/web",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
     "source.organizeImports": "explicit"
   },
-  // TypeScript/React/JavaScript
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.tabSize": 2
@@ -42,12 +43,6 @@
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  // C#
-  "[csharp]": {
-    "editor.defaultFormatter": "ms-dotnettools.csharp",
-    "editor.tabSize": 4,
-    "editor.insertSpaces": true
-  },
   "typescript.tsdk": "apps/web/node_modules/typescript/lib",
   "tailwindCSS.experimental.classRegex": [
     [
@@ -55,15 +50,13 @@
       "[\"'`]([^\"'`]*).*?[\"'`]"
     ]
   ],
-  // Workspace identification
   "workbench.colorCustomizations": {
     "statusBar.background": "#34a853",
     "statusBar.foreground": "#ffffff",
     "statusBar.noFolderBackground": "#34a853",
     "statusBar.debuggingBackground": "#16a34a"
   },
-  "window.title": "Backend - ${rootName}${separator}${activeEditorShort}",
-  // Performance
+  "window.title": "Frontend - ${rootName}${separator}${activeEditorShort}",
   "git.ignoreLimitWarning": true,
   "files.watcherExclude": {
     "**/node_modules/**": true,
@@ -71,10 +64,6 @@
     "**/bin/**": true,
     "**/obj/**": true
   },
-  // Frontend tooling
-  "eslint.workingDirectories": [
-    "apps/web"
-  ],
-  "jest.autoRun": "off",
-  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true
+  "eslint.workingDirectories": ["apps/web"],
+  "jest.autoRun": "off"
 }

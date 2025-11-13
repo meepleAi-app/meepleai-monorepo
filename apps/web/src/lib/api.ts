@@ -84,6 +84,7 @@ export interface TwoFactorStatusResponse {
   backupCodesCount: number;
 }
 
+// SPRINT-1: Settings Pages types (Issue #848)
 export interface UserProfile {
   id: string;
   email: string;
@@ -94,9 +95,23 @@ export interface UserProfile {
   twoFactorEnabledAt: string | null;
 }
 
+export interface UserPreferences {
+  language: string;
+  emailNotifications: boolean;
+  theme: 'light' | 'dark' | 'system';
+  dataRetentionDays: number;
+}
+
 export interface UpdateProfileRequest {
   displayName?: string | null;
   email?: string | null;
+}
+
+export interface UpdatePreferencesRequest {
+  language?: string;
+  emailNotifications?: boolean;
+  theme?: 'light' | 'dark' | 'system';
+  dataRetentionDays?: number;
 }
 
 export interface ChangePasswordRequest {
@@ -112,7 +127,6 @@ export interface BggSearchResult {
   thumbnailUrl: string | null;
   type: string; // "boardgame", "boardgameexpansion", etc.
 }
-
 export interface BggSearchResponse {
   results: BggSearchResult[];
 }
@@ -793,6 +807,7 @@ export const api = {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     }
+<<<<<<< HEAD
   },
 
   // User profile API
@@ -814,7 +829,10 @@ export const api = {
   twoFactor: {
     async getStatus(): Promise<TwoFactorStatusResponse> {
       return api.get<TwoFactorStatusResponse>('/api/v1/users/me/2fa/status') as Promise<TwoFactorStatusResponse>;
-    },
+=======
+  },
+
+  // User profile API
 
     async setup(): Promise<TotpSetupResponse> {
       return api.post<TotpSetupResponse>('/api/v1/auth/2fa/setup');

@@ -1,51 +1,27 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { api } from "../lib/api";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { GameProvider } from "@/components/game/GameProvider";
 import { ChatProvider } from "@/components/chat/ChatProvider";
+import { UIProvider } from "@/components/ui/UIProvider";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatContent } from "@/components/chat/ChatContent";
 import { ExportChatModal } from "@/components/ExportChatModal";
 
-// Type definitions
-type AuthUser = {
-  id: string;
-  email: string;
-  displayName?: string | null;
-  role: string;
-};
-
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
-};
-
-type Game = {
-  id: string;
-  name: string;
-};
-
 export default function ChatPage() {
-  // Authentication
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const { user: authUser, loading } = useAuth();
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // Load current user on mount
-  useEffect(() => {
-    void loadCurrentUser();
-  }, []);
-
-  const loadCurrentUser = async () => {
-    try {
-      const res = await api.get<AuthResponse>("/api/v1/auth/me");
-      if (res) {
-        setAuthUser(res.user);
-      } else {
-        setAuthUser(null);
-      }
-    } catch {
-      setAuthUser(null);
-    }
-  };
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <main id="main-content" style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
+        <div style={{ textAlign: "center", marginTop: 48 }}>
+          <p>Loading...</p>
+        </div>
+      </main>
+    );
+  }
 
   // Render login required state
   if (!authUser) {
@@ -84,29 +60,33 @@ export default function ChatPage() {
     );
   }
 
-  // Main chat interface with new component architecture
+  // Main chat interface with new provider hierarchy
   return (
-    <ChatProvider>
-      <main
-        id="main-content"
-        style={{
-          display: "flex",
-          height: "100vh",
-          fontFamily: "sans-serif",
-          overflow: "hidden"
-        }}
-      >
-        <ChatSidebar />
-        <ChatContent />
+    <GameProvider>
+      <ChatProvider>
+        <UIProvider>
+          <main
+            id="main-content"
+            style={{
+              display: "flex",
+              height: "100vh",
+              fontFamily: "sans-serif",
+              overflow: "hidden"
+            }}
+          >
+            <ChatSidebar />
+            <ChatContent />
 
-        {/* Export Chat Modal - will be integrated into ChatContent in future */}
-        <ExportChatModal
-          isOpen={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          chatId={"temp-placeholder"}
-          gameName={"placeholder"}
-        />
-      </main>
-    </ChatProvider>
+            {/* Export Chat Modal - will be integrated into ChatContent in future */}
+            <ExportChatModal
+              isOpen={showExportModal}
+              onClose={() => setShowExportModal(false)}
+              chatId={"temp-placeholder"}
+              gameName={"placeholder"}
+            />
+          </main>
+        </UIProvider>
+      </ChatProvider>
+    </GameProvider>
   );
 }

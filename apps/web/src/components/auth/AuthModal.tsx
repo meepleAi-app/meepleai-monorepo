@@ -62,7 +62,7 @@ export function AuthModal({
   // Handle login submission
   const handleLogin = async (data: LoginFormData) => {
     try {
-      const user = await login(data);
+      const user = await login(data.email, data.password);
       onSuccess?.(user);
       onClose();
       await router.push('/chat');
@@ -140,7 +140,7 @@ export function AuthModal({
             <LoginForm
               onSubmit={handleLogin}
               loading={loading}
-              error={error}
+              error={error ?? undefined}
               onErrorDismiss={clearError}
             />
           </TabsContent>
@@ -150,7 +150,7 @@ export function AuthModal({
             <RegisterForm
               onSubmit={handleRegister}
               loading={loading}
-              error={error}
+              error={error ?? undefined}
               onErrorDismiss={clearError}
               showRoleSelector={false}
             />

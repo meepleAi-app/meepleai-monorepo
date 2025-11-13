@@ -32,66 +32,36 @@ export function ChatContent() {
   const activeChat = chats.find(c => c.id === activeChatId);
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#ffffff'
-      }}
-    >
+    <div className="flex-1 flex flex-col bg-white">
       {/* Header */}
-      <div
-        style={{
-          padding: 16,
-          borderBottom: '1px solid #dadce0',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: 'white'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="p-4 border-b border-[#dadce0] flex justify-between items-center bg-white">
+        <div className="flex items-center gap-3">
           <button
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
             aria-expanded={!sidebarCollapsed}
-            style={{
-              padding: '8px 12px',
-              background: '#f1f3f4',
-              border: 'none',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontSize: 18
-            }}
+            className="px-3 py-2 bg-[#f1f3f4] border-none rounded cursor-pointer text-lg"
             title={sidebarCollapsed ? 'Mostra sidebar' : 'Nascondi sidebar'}
           >
             {sidebarCollapsed ? '☰' : '✕'}
           </button>
           <div>
-            <h1 style={{ margin: 0, fontSize: 20 }}>
+            <h1 className="m-0 text-xl">
               {activeChatId
                 ? activeChat?.agentName ?? 'Chat'
                 : 'Seleziona o crea una chat'}
             </h1>
-            <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: 13 }}>
+            <p className="mt-1 mb-0 text-[#64748b] text-[13px]">
               {selectedGameId
                 ? selectedGame?.name ?? ''
                 : 'Nessun gioco selezionato'}
             </p>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="flex items-center gap-2">
           <Link
             href="/"
-            style={{
-              padding: '8px 16px',
-              background: '#1a73e8',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: 4,
-              fontSize: 14
-            }}
+            className="px-4 py-2 bg-[#1a73e8] text-white no-underline rounded text-sm"
           >
             Home
           </Link>
@@ -103,14 +73,7 @@ export function ChatContent() {
         <div
           role="alert"
           aria-live="polite"
-          style={{
-            margin: 16,
-            padding: 12,
-            background: '#fce8e6',
-            color: '#d93025',
-            borderRadius: 4,
-            fontSize: 14
-          }}
+          className="m-4 p-3 bg-[#fce8e6] text-[#d93025] rounded text-sm"
         >
           {errorMessage}
         </div>

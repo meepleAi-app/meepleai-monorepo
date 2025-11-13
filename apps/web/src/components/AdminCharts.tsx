@@ -34,7 +34,7 @@ export function EndpointDistributionChart({ endpointCounts }: EndpointChartProps
 
   if (data.length === 0) {
     return (
-      <div className="p-12 text-center text-slate-600">
+      <div className="p-12 text-center text-gray-500">
         No endpoint data available
       </div>
     );
@@ -66,7 +66,7 @@ export function EndpointDistributionChart({ endpointCounts }: EndpointChartProps
 export function LatencyDistributionChart({ requests }: LatencyChartProps) {
   if (requests.length === 0) {
     return (
-      <div className="p-12 text-center text-slate-600">
+      <div className="p-12 text-center text-gray-500">
         No latency data available
       </div>
     );
@@ -100,7 +100,7 @@ export function LatencyDistributionChart({ requests }: LatencyChartProps) {
 export function RequestsTimeSeriesChart({ requests }: TimeSeriesChartProps) {
   if (requests.length === 0) {
     return (
-      <div className="p-12 text-center text-slate-600">
+      <div className="p-12 text-center text-gray-500">
         No time series data available
       </div>
     );
@@ -157,7 +157,7 @@ export function FeedbackChart({ feedbackCounts }: FeedbackChartProps) {
 
   if (data.length === 0 || data.every(d => d.value === 0)) {
     return (
-      <div className="p-12 text-center text-slate-600">
+      <div className="p-12 text-center text-gray-500">
         No feedback data available
       </div>
     );

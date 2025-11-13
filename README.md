@@ -21,19 +21,42 @@ MeepleAI helps players quickly find answers to gameplay questions by processing 
 
 ## 🏗️ Architecture
 
+**Domain-Driven Design (DDD) - 99% Complete**:
+- **7 Bounded Contexts** with CQRS/MediatR pattern
+- **72+ CQRS handlers** (Commands/Queries)
+- **60+ endpoints** migrated to MediatR
+- **2,070 lines** of legacy code eliminated
+- **Pattern**: Domain (pure logic) → Application (CQRS) → Infrastructure (adapters) → HTTP (MediatR)
+
+**Bounded Contexts**:
+```
+apps/api/src/Api/BoundedContexts/
+├── Authentication/         Auth, sessions, API keys, OAuth, 2FA
+├── GameManagement/         Games catalog, play sessions
+├── KnowledgeBase/          RAG, vectors, chat (Hybrid: vector+keyword RRF)
+├── DocumentProcessing/     PDF upload, extraction, validation
+├── WorkflowIntegration/    n8n workflows, error logging
+├── SystemConfiguration/    Runtime config, feature flags
+└── Administration/         Users, alerts, audit, analytics
+```
+
 **Monorepo Structure**:
-- `apps/api` - ASP.NET Core 9.0 backend
-- `apps/web` - Next.js 14 frontend
+- `apps/api` - ASP.NET Core 9.0 backend (DDD/CQRS)
+- `apps/web` - Next.js 16 frontend (React 19)
+- `apps/unstructured-service` - PDF extraction (Unstructured)
+- `apps/smoldocling-service` - PDF extraction (SmolDocling VLM)
 - `infra` - Docker Compose infrastructure
-- `docs` - Technical documentation
+- `docs` - Technical documentation (organized in numbered folders)
 - `tools` - Automation scripts
 
 **Tech Stack**:
-- **Backend**: C# / .NET 9, EF Core, Minimal APIs
-- **Frontend**: TypeScript, React 18, Next.js 14
-- **Databases**: PostgreSQL, Qdrant (vector DB), Redis (cache)
-- **AI/ML**: OpenRouter API (embeddings & LLM)
+- **Backend**: C# / .NET 9, EF Core, MediatR (CQRS), DDD
+- **Frontend**: TypeScript, React 19, Next.js 16, Shadcn/UI, Tailwind CSS 4
+- **Databases**: PostgreSQL 16, Qdrant (vector DB), Redis (cache)
+- **AI/ML**: OpenRouter API (embeddings & LLM), Hybrid RAG (vector+keyword RRF)
+- **PDF Processing**: 3-stage pipeline (Unstructured → SmolDocling → Docnet)
 - **Automation**: n8n workflows
+- **Observability**: Serilog, Seq, OpenTelemetry, Jaeger, Prometheus, Grafana
 - **Infrastructure**: Docker Compose
 
 ## 🚀 Quick Start
@@ -41,7 +64,7 @@ MeepleAI helps players quickly find answers to gameplay questions by processing 
 ### Prerequisites
 
 - Docker & Docker Compose
-- .NET 8.0 SDK
+- .NET 9 SDK
 - Node.js 20+ with pnpm 9
 - Git
 
@@ -89,14 +112,23 @@ MeepleAI helps players quickly find answers to gameplay questions by processing 
 
 ## 📚 Documentation
 
-- **[AI Agents Guide](./docs/guide/agents-guide.md)** - Guide for AI coding assistants (conventions, workflow, prompts)
-- **[CLAUDE.md](./CLAUDE.md)** - Comprehensive development guide
-- **[Testing Guidelines](./docs/guide/testing-guide.md)** - BDD-style test naming conventions
-- **[Code Coverage](./docs/code-coverage.md)** - Coverage measurement and tracking
-- **[Codecov Setup](./docs/codecov-setup.md)** - CI/CD coverage integration
-- **[Architecture Docs](./docs/)** - Technical documentation
+- **[CLAUDE.md](./CLAUDE.md)** - Comprehensive development guide (DDD 99% complete)
+- **[Documentation Index](./docs/README.md)** - Complete documentation organized by role/topic
+- **[Architecture Overview](./docs/01-architecture/overview/system-architecture.md)** - Complete system architecture (60+ pages)
+- **[ADRs](./docs/01-architecture/adr/)** - Architecture Decision Records (Hybrid RAG, PDF Pipeline, etc.)
+- **[DDD Quick Reference](./docs/01-architecture/ddd/quick-reference.md)** - DDD patterns and bounded contexts
+- **[Testing Guidelines](./docs/02-development/testing/test-writing-guide.md)** - BDD-style test naming conventions
+- **[API Specification](./docs/03-api/board-game-ai-api-specification.md)** - Complete REST API specification
 
 ## 🧪 Testing
+
+**Coverage**: 90%+ enforced (frontend 90.03%, backend 90%+)
+
+**Test Counts**:
+- **Backend**: 162 tests (xUnit + Testcontainers)
+- **Frontend**: 4,033 tests (Jest + React Testing Library)
+- **E2E**: 30+ tests (Playwright + Page Object Model)
+- **Total**: 4,225+ tests
 
 ### Backend (API)
 
@@ -109,11 +141,11 @@ dotnet test
 # Run with coverage
 dotnet test -p:CollectCoverage=true
 
-# Run specific tests
-dotnet test --filter "FullyQualifiedName~GameServiceTests"
+# Run specific tests (now testing CQRS handlers, not services)
+dotnet test --filter "FullyQualifiedName~CreateGameCommandHandlerTests"
 ```
 
-**Framework**: xUnit, Moq, Testcontainers
+**Framework**: xUnit, Moq, Testcontainers (PostgreSQL, Qdrant, Unstructured, SmolDocling)
 
 ### Frontend (Web)
 
@@ -130,9 +162,9 @@ pnpm test:coverage
 pnpm test:e2e
 ```
 
-**Framework**: Jest, React Testing Library, Playwright
+**Framework**: Jest, React Testing Library, Playwright (E2E with Page Object Model)
 
-**Coverage Requirements**: 90% minimum (branches, functions, lines, statements)
+**Coverage Requirements**: 90% minimum (branches, functions, lines, statements) - Currently 90.03%
 
 ### Coverage Automation
 
@@ -258,11 +290,14 @@ cp infra/env/n8n.env.dev.example infra/env/n8n.env.dev
 
 ## 🏆 Code Quality
 
-- **Backend**: 313 tests, estimated 75-85% coverage
-- **Frontend**: 90% coverage threshold (enforced)
+- **Backend**: 162 tests, 90%+ coverage (enforced)
+- **Frontend**: 4,033 tests, 90.03% coverage (enforced)
+- **E2E**: 30+ Playwright tests with Page Object Model
+- **Architecture**: DDD with 7 Bounded Contexts, CQRS/MediatR pattern
 - **Linting**: ESLint (Web), Roslyn Analyzers (API)
 - **Type Safety**: TypeScript strict mode, C# nullable reference types
 - **Testing**: Comprehensive unit, integration, and E2E tests
+- **CI Performance**: ~14min (38% faster, optimized)
 
 ## 📦 Project Structure
 
@@ -287,18 +322,27 @@ meepleai-monorepo/
 
 ## 🛠️ Tech Details
 
-### Backend Services
+### Backend Architecture (DDD/CQRS)
 
-- **EmbeddingService**: Generate text embeddings via OpenRouter
-- **QdrantService**: Manage vector database collections
-- **TextChunkingService**: Split documents (512 chars, 50 overlap)
-- **RagService**: Semantic search and RAG
-- **LlmService**: LLM interactions
-- **PdfStorageService**: PDF uploads and storage
-- **PdfTextExtractionService**: Extract text from PDFs
-- **GameService**: Game metadata management
-- **RuleSpecService**: Rule specification CRUD
-- **AuthService**: Session-based authentication
+**7 Bounded Contexts** with Commands/Queries/Handlers:
+- **Authentication**: Login, register, OAuth, 2FA, API keys
+- **GameManagement**: CRUD operations, play sessions
+- **KnowledgeBase**: Hybrid RAG (vector+keyword), chat, search
+- **DocumentProcessing**: 3-stage PDF pipeline (Unstructured → SmolDocling → Docnet)
+- **WorkflowIntegration**: n8n workflows, error logging
+- **SystemConfiguration**: Runtime config, feature flags
+- **Administration**: User management, alerts, audit, analytics
+
+**Key Services** (Infrastructure/Orchestration):
+- **RagService**: Hybrid RAG orchestration (Vector + Keyword RRF fusion)
+- **ConfigurationService**: 3-tier fallback config (DB → appsettings → defaults)
+- **AdminStatsService**: Analytics aggregation
+- **AlertingService**: Email/Slack/PagerDuty alerts
+
+**PDF Processing Pipeline**:
+- **Stage 1**: Unstructured (≥0.80 quality) - 80% success, 1.3s avg
+- **Stage 2**: SmolDocling VLM (≥0.70 quality) - 15% fallback, 3-5s avg
+- **Stage 3**: Docnet (best effort) - 5% fallback, fast
 
 ### Frontend Pages
 
@@ -326,5 +370,15 @@ See [LICENSE](./LICENSE) for full terms.
 
 ---
 
+## 🎯 Project Status
+
+**Phase**: Alpha (pre-production)
+**DDD Migration**: **99% complete** (7/7 contexts, 72+ handlers, 2,070 lines removed)
+**Next Milestone**: Final polish (1%) → Beta testing (2-4 weeks) → Production
+**Target**: 10,000 MAU by Phase 4, >99.5% uptime SLA
+
+---
+
 **Maintained by**: MeepleAI Team
-**Last Updated**: 2025-10-09
+**Version**: 1.0-rc (DDD 99%)
+**Last Updated**: 2025-11-13

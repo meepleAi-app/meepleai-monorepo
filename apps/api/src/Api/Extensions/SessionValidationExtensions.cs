@@ -36,13 +36,13 @@ public static class SessionValidationExtensions
     /// if (!authenticated) return error!;
     /// // Use session...
     /// </example>
-    public static (bool IsAuthenticated, ActiveSession? Session, IResult? ErrorResult)
+    public static (bool IsAuthenticated, ActiveSession Session, IResult? ErrorResult)
         TryGetActiveSession(this HttpContext context)
     {
         if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) ||
             value is not ActiveSession session)
         {
-            return (false, null, Results.Unauthorized());
+            return (false, default!, Results.Unauthorized());
         }
 
         return (true, session, null);
@@ -177,14 +177,14 @@ public static class SessionValidationExtensions
     /// if (!authorized) return error!;
     /// // Use session...
     /// </example>
-    public static (bool IsAuthorized, ActiveSession? Session, IResult? ErrorResult)
+    public static (bool IsAuthorized, ActiveSession Session, IResult? ErrorResult)
         RequireSessionWithRole(this HttpContext context, UserRole requiredRole)
     {
         var (authenticated, session, authError) = context.TryGetActiveSession();
-        if (!authenticated) return (false, null, authError);
+        if (!authenticated) return (false, default!, authError);
 
-        var (authorized, roleError) = session!.RequireRole(requiredRole);
-        if (!authorized) return (false, null, roleError);
+        var (authorized, roleError) = session.RequireRole(requiredRole);
+        if (!authorized) return (false, default!, roleError);
 
         return (true, session, null);
     }
@@ -205,7 +205,7 @@ public static class SessionValidationExtensions
     /// if (!authorized) return error!;
     /// // Use session...
     /// </example>
-    public static (bool IsAuthorized, ActiveSession? Session, IResult? ErrorResult)
+    public static (bool IsAuthorized, ActiveSession Session, IResult? ErrorResult)
         RequireAdminSession(this HttpContext context)
     {
         return context.RequireSessionWithRole(UserRole.Admin);
@@ -227,14 +227,14 @@ public static class SessionValidationExtensions
     /// if (!authorized) return error!;
     /// // Use session...
     /// </example>
-    public static (bool IsAuthorized, ActiveSession? Session, IResult? ErrorResult)
+    public static (bool IsAuthorized, ActiveSession Session, IResult? ErrorResult)
         RequireAdminOrEditorSession(this HttpContext context)
     {
         var (authenticated, session, authError) = context.TryGetActiveSession();
-        if (!authenticated) return (false, null, authError);
+        if (!authenticated) return (false, default!, authError);
 
-        var (authorized, roleError) = session!.RequireAdminOrEditorRole();
-        if (!authorized) return (false, null, roleError);
+        var (authorized, roleError) = session.RequireAdminOrEditorRole();
+        if (!authorized) return (false, default!, roleError);
 
         return (true, session, null);
     }

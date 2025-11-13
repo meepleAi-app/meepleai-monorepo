@@ -810,6 +810,21 @@ export const api = {
     }
   },
 
+  // User profile API
+  profile: {
+    async get(): Promise<UserProfile | null> {
+      return api.get<UserProfile>('/api/v1/users/profile');
+    },
+
+    async update(payload: UpdateProfileRequest): Promise<{ ok: boolean; message: string }> {
+      return api.put<{ ok: boolean; message: string }>('/api/v1/users/profile', payload);
+    },
+
+    async changePassword(request: ChangePasswordRequest): Promise<{ ok: boolean; message: string }> {
+      return api.put<{ ok: boolean; message: string }>('/api/v1/users/profile/password', request);
+    }
+  },
+
   // AUTH-07: Two-Factor Authentication API
   twoFactor: {
     async getStatus(): Promise<TwoFactorStatusResponse> {

@@ -11,9 +11,9 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class ExportStatsCommandHandler : ICommandHandler<ExportStatsCommand, string>
 {
-    private readonly AdminStatsService _adminStatsService;
+    private readonly IAdminStatsService _adminStatsService;
 
-    public ExportStatsCommandHandler(AdminStatsService adminStatsService)
+    public ExportStatsCommandHandler(IAdminStatsService adminStatsService)
     {
         _adminStatsService = adminStatsService;
     }

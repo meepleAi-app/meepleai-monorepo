@@ -21,7 +21,7 @@ public static class KnowledgeBaseServiceExtensions
         services.AddSingleton<RrfFusionDomainService>();
         services.AddSingleton<QualityTrackingDomainService>();
 
-        // ISSUE-970: BGAI-028 - Confidence Validation (threshold ≥0.70)
+        // ISSUE-970: BGAI-028 - Confidence Validation (threshold >= 0.70)
         services.AddSingleton<IConfidenceValidationService, ConfidenceValidationService>();
 
         // ISSUE-971: BGAI-029 - Citation Validation (verify source references)
@@ -45,6 +45,7 @@ public static class KnowledgeBaseServiceExtensions
 
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         services.AddScoped<ILlmService, HybridLlmService>();
+        services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 
         // ISSUE-962 (BGAI-020): Provider Health Check Service (Singleton - background service)
         services.AddHostedService<ProviderHealthCheckService>();

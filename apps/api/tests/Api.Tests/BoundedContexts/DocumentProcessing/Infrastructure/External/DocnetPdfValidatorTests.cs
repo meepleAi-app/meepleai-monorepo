@@ -16,6 +16,7 @@ public class DocnetPdfValidatorTests : IDisposable
     private readonly Mock<ILogger<DocnetPdfValidator>> _mockLogger;
     private readonly PdfValidationDomainService _domainService;
     private readonly DocnetPdfValidator _validator;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public DocnetPdfValidatorTests()
     {
@@ -46,7 +47,7 @@ public class DocnetPdfValidatorTests : IDisposable
         Stream? stream = null;
 
         // Act
-        var result = await _validator.ValidateAsync(stream!, "test.pdf");
+        var result = await _validator.ValidateAsync(stream!, "test.pdf", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -61,7 +62,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream();
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "");
+        var result = await _validator.ValidateAsync(stream, "", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -76,7 +77,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream();
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "   ");
+        var result = await _validator.ValidateAsync(stream, "   ", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -95,7 +96,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream(pdfMagicBytes);
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "test.pdf");
+        var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert: Should not fail on magic bytes (may fail on other checks like file size)
         if (result.Errors.ContainsKey("fileFormat"))
@@ -112,7 +113,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream(invalidBytes);
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "test.pdf");
+        var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -127,7 +128,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream();
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "test.pdf");
+        var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -146,7 +147,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream(data);
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "test.pdf");
+        var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert: Should not fail on file size
         Assert.DoesNotContain("fileSize", result.Errors.Keys);
@@ -160,7 +161,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream(data);
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "test.pdf");
+        var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -180,7 +181,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream(data);
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "document.pdf");
+        var result = await _validator.ValidateAsync(stream, "document.pdf", TestCancellationToken);
 
         // Assert: Should not fail on MIME type
         Assert.DoesNotContain("fileType", result.Errors.Keys);
@@ -194,7 +195,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream(data);
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "document.txt");
+        var result = await _validator.ValidateAsync(stream, "document.txt", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -214,7 +215,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream(invalidData);
 
         // Act
-        var result = await _validator.ValidateAsync(stream, "test.pdf");
+        var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -234,7 +235,7 @@ public class DocnetPdfValidatorTests : IDisposable
         Stream? stream = null;
 
         // Act
-        var metadata = await _validator.ExtractMetadataAsync(stream!);
+        var metadata = await _validator.ExtractMetadataAsync(stream!, TestCancellationToken);
 
         // Assert
         Assert.Null(metadata);
@@ -247,7 +248,7 @@ public class DocnetPdfValidatorTests : IDisposable
         using var stream = new MemoryStream(new byte[] { 0x00, 0x00, 0x00 });
 
         // Act
-        var metadata = await _validator.ExtractMetadataAsync(stream);
+        var metadata = await _validator.ExtractMetadataAsync(stream, TestCancellationToken);
 
         // Assert: Should return null for invalid PDF (Docnet parsing fails)
         Assert.Null(metadata);

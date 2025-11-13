@@ -1,5 +1,7 @@
+using System;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
@@ -77,9 +79,11 @@ public sealed class GameTitle : ValueObject
 
     private static Guid GenerateGuidFromString(string input)
     {
-        using var md5 = System.Security.Cryptography.MD5.Create();
-        var hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
-        return new Guid(hash);
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+        Span<byte> guidBytes = stackalloc byte[16];
+        hash.AsSpan(0, 16).CopyTo(guidBytes);
+        return new Guid(guidBytes);
     }
 
     protected override IEnumerable<object?> GetEqualityComponents()

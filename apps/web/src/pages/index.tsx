@@ -1,107 +1,23 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useInView } from "react-intersection-observer";
-import { api } from "../lib/api";
-import { AccessibleModal, AccessibleFormInput, AccessibleButton } from "@/components/accessible";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
-type AuthUser = {
-  id: string;
-  email: string;
-  displayName?: string | null;
-  role: string;
-};
-
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
-};
+import { AuthModal } from "@/components/auth";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Home() {
   const router = useRouter();
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const { user: authUser, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const [registerForm, setRegisterForm] = useState({
-    email: "",
-    password: "",
-    displayName: "",
-    role: "User"
-  });
-  const [loginForm, setLoginForm] = useState({
-    email: "",
-    password: ""
-  });
 
   // Intersection Observer hooks for scroll animations
   const [heroRef, heroInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   const [featuresRef, featuresInView] = useInView({ triggerOnce: true, threshold: 0.1 });
   const [keyFeaturesRef, keyFeaturesInView] = useInView({ triggerOnce: true, threshold: 0.1 });
-
-  useEffect(() => {
-    void loadCurrentUser();
-  }, []);
-
-  const loadCurrentUser = async () => {
-    try {
-      const res = await api.get<AuthResponse>("/api/v1/auth/me");
-      if (res) {
-        setAuthUser(res.user);
-      }
-    } catch {
-      setAuthUser(null);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage("");
-    try {
-      const payload = {
-        email: registerForm.email,
-        password: registerForm.password,
-        displayName: registerForm.displayName || undefined,
-        role: registerForm.role
-      };
-      const res = await api.post<AuthResponse>("/api/v1/auth/register", payload);
-      setAuthUser(res.user);
-      setShowAuthModal(false);
-      void router.push("/chat");
-    } catch (err: any) {
-      setErrorMessage(err?.message || "Registrazione non riuscita.");
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage("");
-    try {
-      const res = await api.post<AuthResponse>("/api/v1/auth/login", {
-        email: loginForm.email,
-        password: loginForm.password
-      });
-      setAuthUser(res.user);
-      setShowAuthModal(false);
-      void router.push("/chat");
-    } catch (err: any) {
-      setErrorMessage(err?.message || "Accesso non riuscito.");
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await api.post("/api/v1/auth/logout");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setAuthUser(null);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -397,155 +313,13 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Auth Modal - WCAG 2.1 AA Compliant */}
-      <AccessibleModal
+      {/* Unified Auth Modal */}
+      <AuthModal
         isOpen={showAuthModal}
-        onClose={() => {
-          setShowAuthModal(false);
-          setErrorMessage("");
-        }}
-        title={authMode === "login" ? "Login to MeepleAI" : "Create Your Account"}
-        description="Sign in to access AI-powered board game rules assistance"
-        size="md"
-      >
-        <div className="space-y-6">
-          {/* Tab Navigation with ARIA */}
-          <div role="tablist" aria-label="Authentication mode" className="flex gap-2 border-b border-white/10">
-            <button
-              role="tab"
-              aria-selected={authMode === "login"}
-              aria-controls="auth-panel"
-              id="login-tab"
-              onClick={() => {
-                setAuthMode("login");
-                setErrorMessage("");
-              }}
-              className={`px-6 py-3 font-medium transition-all ${
-                authMode === "login"
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-slate-300 hover:text-white"
-              }`}
-            >
-              Login
-            </button>
-            <button
-              role="tab"
-              aria-selected={authMode === "register"}
-              aria-controls="auth-panel"
-              id="register-tab"
-              onClick={() => {
-                setAuthMode("register");
-                setErrorMessage("");
-              }}
-              className={`px-6 py-3 font-medium transition-all ${
-                authMode === "register"
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-slate-300 hover:text-white"
-              }`}
-            >
-              Register
-            </button>
-          </div>
-
-          {/* Error Message with Alert Role */}
-          {errorMessage && (
-            <div
-              role="alert"
-              aria-live="polite"
-              className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg"
-            >
-              {errorMessage}
-            </div>
-          )}
-
-          {/* Tab Panel */}
-          <div
-            id="auth-panel"
-            role="tabpanel"
-            aria-labelledby={authMode === "login" ? "login-tab" : "register-tab"}
-          >
-            {authMode === "login" ? (
-              <form onSubmit={handleLogin} className="space-y-4" data-testid="login-form">
-                <AccessibleFormInput
-                  label="Email"
-                  type="email"
-                  value={loginForm.email}
-                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                  required
-                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
-                />
-                <AccessibleFormInput
-                  label="Password"
-                  type="password"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  required
-                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
-                />
-                <AccessibleButton
-                  type="submit"
-                  variant="primary"
-                  className="w-full mt-6"
-                  data-testid="login-submit-button"
-                >
-                  Login
-                </AccessibleButton>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
-                <AccessibleFormInput
-                  label="Email"
-                  type="email"
-                  value={registerForm.email}
-                  onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-                  required
-                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
-                />
-                <AccessibleFormInput
-                  label="Password"
-                  type="password"
-                  value={registerForm.password}
-                  onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-                  required
-                  hint="Must be at least 8 characters"
-                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
-                  minLength={8}
-                />
-                <AccessibleFormInput
-                  label="Display Name"
-                  value={registerForm.displayName}
-                  onChange={(e) => setRegisterForm({ ...registerForm, displayName: e.target.value })}
-                  hint="Optional - How you'll appear to other users"
-                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
-                />
-                <div className="space-y-2">
-                  <label htmlFor="register-role" className="block text-sm font-medium text-slate-200">
-                    Role
-                  </label>
-                  <select
-                    id="register-role"
-                    value={registerForm.role}
-                    onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 outline-none focus:border-primary transition-colors"
-                    aria-label="Select user role"
-                  >
-                    <option value="User">User</option>
-                    <option value="Editor">Editor</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                </div>
-                <AccessibleButton
-                  type="submit"
-                  variant="primary"
-                  className="w-full mt-6"
-                >
-                  Create Account
-                </AccessibleButton>
-              </form>
-            )}
-          </div>
-        </div>
-      </AccessibleModal>
+        onClose={() => setShowAuthModal(false)}
+        defaultMode="login"
+        showDemoCredentials={!authUser}
+      />
     </div>
   );
 }

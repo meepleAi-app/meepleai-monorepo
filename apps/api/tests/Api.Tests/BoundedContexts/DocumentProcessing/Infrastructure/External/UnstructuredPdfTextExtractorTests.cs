@@ -19,6 +19,7 @@ public class UnstructuredPdfTextExtractorTests
     private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly PdfTextProcessingDomainService _domainService;
     private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public UnstructuredPdfTextExtractorTests()
     {
@@ -120,7 +121,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -150,7 +151,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -177,7 +178,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -204,7 +205,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -231,7 +232,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -254,7 +255,7 @@ public class UnstructuredPdfTextExtractorTests
             .ThrowsAsync(new HttpRequestException("Connection refused"));
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -278,8 +279,9 @@ public class UnstructuredPdfTextExtractorTests
             .ThrowsAsync(new TaskCanceledException(null, null, cts.Token));
 
         // Act & Assert - user cancellation should propagate the exception
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
         await Assert.ThrowsAsync<TaskCanceledException>(
-            () => extractor.ExtractTextAsync(pdfStream, ct: cts.Token));
+            () => extractor.ExtractTextAsync(pdfStream, ct: linkedCts.Token));
     }
 
     [Fact]
@@ -302,7 +304,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -329,7 +331,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -355,7 +357,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -382,7 +384,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -411,7 +413,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -440,7 +442,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -466,8 +468,9 @@ public class UnstructuredPdfTextExtractorTests
             .ThrowsAsync(new TaskCanceledException());
 
         // Act & Assert
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
         await Assert.ThrowsAsync<TaskCanceledException>(
-            () => extractor.ExtractTextAsync(pdfStream, ct: cts.Token));
+            () => extractor.ExtractTextAsync(pdfStream, ct: linkedCts.Token));
     }
 
     [Fact]
@@ -490,7 +493,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -519,7 +522,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractPagedTextAsync(pdfStream);
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -547,7 +550,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractPagedTextAsync(pdfStream);
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -574,7 +577,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        await extractor.ExtractTextAsync(pdfStream);
+        await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         _mockLogger.Verify(
@@ -617,7 +620,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -644,7 +647,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -671,7 +674,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -703,7 +706,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -736,7 +739,7 @@ public class UnstructuredPdfTextExtractorTests
             });
 
         // Act
-        var result = await extractor.ExtractTextAsync(pdfStream);
+        var result = await extractor.ExtractTextAsync(pdfStream, ct: TestCancellationToken);
 
         // Assert
         Assert.True(result.Success);

@@ -26,6 +26,7 @@ import { ChatProvider, useChatContext } from '@/components/chat/ChatProvider';
 import { Game, Agent, Chat, Message } from '@/types';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { GameProvider } from '@/components/game/GameProvider';
+import { UIProvider } from '@/components/ui/UIProvider';
 
 const baseGame: Game = {
   id: 'game-1',
@@ -67,9 +68,11 @@ function ChatProviderWrapper({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <GameProvider>
-        <ChatProvider>
-          {children}
-        </ChatProvider>
+        <UIProvider>
+          <ChatProvider>
+            {children}
+          </ChatProvider>
+        </UIProvider>
       </GameProvider>
     </AuthProvider>
   );

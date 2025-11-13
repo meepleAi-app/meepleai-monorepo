@@ -83,8 +83,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<RuleCommentService>(); // EDIT-05: Comment service with threading and mentions
         services.AddScoped<RuleSpecCommentService>(); // EDIT-02: Legacy comment service
 
-        // CONFIG-01: Dynamic configuration service - REMOVED (migrated to CQRS)
-        // services.AddScoped<IConfigurationService, ConfigurationService>();
+        // CONFIG-01: Dynamic configuration service (still used by legacy services/helpers)
+        services.AddScoped<IConfigurationService, ConfigurationService>();
 
         // CONFIG: Configuration wrapper (TEST-900 RC-1: enables mocking of IConfiguration extension methods)
         services.AddSingleton<IConfigurationWrapper>(sp =>
@@ -197,6 +197,7 @@ public static class ApplicationServiceExtensions
 
         // ADMIN-02: Analytics dashboard service (still used by handlers as infrastructure)
         services.AddScoped<IAdminStatsService, AdminStatsService>();
+        services.AddScoped<AdminStatsService>();
 
         return services;
     }

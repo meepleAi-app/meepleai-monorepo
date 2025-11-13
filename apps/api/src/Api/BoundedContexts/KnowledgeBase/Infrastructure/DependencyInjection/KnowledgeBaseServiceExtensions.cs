@@ -45,6 +45,7 @@ public static class KnowledgeBaseServiceExtensions
 
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         services.AddScoped<ILlmService, HybridLlmService>();
+        services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 
         // ISSUE-962 (BGAI-020): Provider Health Check Service (Singleton - background service)
         services.AddHostedService<ProviderHealthCheckService>();

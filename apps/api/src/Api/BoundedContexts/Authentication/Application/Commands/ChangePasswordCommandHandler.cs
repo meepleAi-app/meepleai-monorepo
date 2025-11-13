@@ -24,7 +24,7 @@ public class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComman
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Unit> Handle(ChangePasswordCommand command, CancellationToken cancellationToken)
+    public async Task Handle(ChangePasswordCommand command, CancellationToken cancellationToken)
     {
         // Validate new password is not empty
         if (string.IsNullOrWhiteSpace(command.NewPassword))
@@ -48,6 +48,5 @@ public class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComman
         // Persist updates
         await _userRepository.UpdateAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Unit.Value;
     }
 }

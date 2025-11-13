@@ -1,15 +1,14 @@
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Api.Migrations
 {
-    /// <summary>
-    /// ISSUE-960: BGAI-018 - Add LLM cost tracking table
-    /// </summary>
+    /// <inheritdoc />
     public partial class AddLlmCostTracking : Migration
     {
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -43,7 +42,7 @@ namespace Api.Migrations
                         name: "FK_llm_cost_logs_users_user_id",
                         column: x => x.user_id,
                         principalTable: "users",
-                        principalColumn: "id",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
 
@@ -73,7 +72,7 @@ namespace Api.Migrations
                 column: "user_id");
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

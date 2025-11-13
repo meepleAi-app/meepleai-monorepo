@@ -649,6 +649,116 @@ namespace Api.Migrations
                     b.ToTable("GameSessions");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.LlmCostLogEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("CompletionTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("completion_tokens");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("endpoint");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("error_message");
+
+                    b.Property<decimal>("InputCost")
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("input_cost_usd");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<int>("LatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("latency_ms");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model_id");
+
+                    b.Property<decimal>("OutputCost")
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("output_cost_usd");
+
+                    b.Property<int>("PromptTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("prompt_tokens");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("provider");
+
+                    b.Property<DateOnly>("RequestDate")
+                        .HasColumnType("date")
+                        .HasColumnName("request_date");
+
+                    b.Property<bool>("Success")
+                        .HasColumnType("boolean")
+                        .HasColumnName("success");
+
+                    b.Property<decimal>("TotalCost")
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("total_cost_usd");
+
+                    b.Property<int>("TotalTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_tokens");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("user_agent");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("UserRole")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("user_role");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_llm_cost_logs_created_at");
+
+                    b.HasIndex("RequestDate")
+                        .HasDatabaseName("ix_llm_cost_logs_request_date");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_llm_cost_logs_user_id");
+
+                    b.HasIndex("Provider", "RequestDate")
+                        .HasDatabaseName("ix_llm_cost_logs_provider_date");
+
+                    b.HasIndex("UserRole", "RequestDate")
+                        .HasDatabaseName("ix_llm_cost_logs_role_date");
+
+                    b.ToTable("llm_cost_logs", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.N8nConfigEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1802,6 +1912,16 @@ namespace Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Game");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.LlmCostLogEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.N8nConfigEntity", b =>

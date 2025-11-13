@@ -91,7 +91,7 @@ export default function RichTextEditor({
 
   if (!editor) {
     return (
-      <div style={{ padding: 12, color: "#999" }}>
+      <div className="p-3 text-gray-400">
         Caricamento editor...
       </div>
     );
@@ -99,43 +99,22 @@ export default function RichTextEditor({
 
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        border: `2px solid ${isValid ? "#ccc" : "#d93025"}`,
-        borderRadius: 4,
-        background: "white"
-      }}
+      className={`
+        flex flex-col h-full rounded bg-white
+        ${isValid ? 'border-2 border-gray-300' : 'border-2 border-red-500'}
+      `}
     >
       <EditorToolbar editor={editor} />
 
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          borderTop: "1px solid #e0e0e0"
-        }}
-      >
+      <div className="flex-1 overflow-y-auto border-t border-gray-200">
         <EditorContent editor={editor} />
       </div>
 
-      <div
-        style={{
-          padding: "8px 12px",
-          borderTop: "1px solid #e0e0e0",
-          background: "#f9f9f9",
-          fontSize: 12,
-          color: "#666",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}
-      >
+      <div className="px-3 py-2 border-t border-gray-200 bg-gray-50 text-xs text-gray-600 flex justify-between items-center">
         <span>
           {characters} caratteri • {words} parole
         </span>
-        <span style={{ fontSize: 11, color: "#999" }}>
+        <span className="text-[11px] text-gray-400">
           Usa Ctrl+Z per annullare, Ctrl+Shift+Z per ripetere
         </span>
       </div>

@@ -65,12 +65,12 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   // Derived values
   const selectedGame = useMemo(
-    () => games.find((g) => g.id === selectedGameId) ?? null,
+    () => (Array.isArray(games) ? games.find((g) => g.id === selectedGameId) : null) ?? null,
     [games, selectedGameId]
   );
 
   const selectedAgent = useMemo(
-    () => agents.find((a) => a.id === selectedAgentId) ?? null,
+    () => (Array.isArray(agents) ? agents.find((a) => a.id === selectedAgentId) : null) ?? null,
     [agents, selectedAgentId]
   );
 

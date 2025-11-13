@@ -12,6 +12,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChatPage from '../../../pages/chat';
 import { api } from '../../../lib/api';
+import { createWrapper } from '../../utils/test-providers';
 
 // Mock ChatProvider with context values
 const mockUseChatContext = jest.fn();
@@ -126,7 +127,7 @@ describe('ChatPage - UI Interactions', () => {
   });
 
   it('toggles sidebar when collapse button is clicked', async () => {
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -154,7 +155,7 @@ describe('ChatPage - UI Interactions', () => {
       isStreaming: false,
     });
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -182,7 +183,7 @@ describe('ChatPage - UI Interactions', () => {
       isStreaming: false,
     });
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();

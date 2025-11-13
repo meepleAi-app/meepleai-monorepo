@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import ChatPage from '@/pages/chat';
 import { api } from '@/lib/api';
+import { createWrapper } from '../utils/test-providers';
 
 jest.mock('@/components/chat/ChatProvider', () => ({
   ChatProvider: ({ children }: { children: React.ReactNode }) => (
@@ -52,7 +53,7 @@ describe('ChatPage', () => {
   it('shows login prompt when user is not authenticated', async () => {
     mockedApiGet.mockResolvedValueOnce(null as any);
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() =>
       expect(mockedApiGet).toHaveBeenCalledWith('/api/v1/auth/me'),
@@ -69,7 +70,7 @@ describe('ChatPage', () => {
   it('renders chat layout when authentication succeeds', async () => {
     mockedApiGet.mockResolvedValueOnce(userResponse as any);
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() =>
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument(),
@@ -84,7 +85,7 @@ describe('ChatPage', () => {
   it('handles authentication errors by falling back to login prompt', async () => {
     mockedApiGet.mockRejectedValueOnce(new Error('network error'));
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() =>
       expect(screen.getByText(/Accesso richiesto/i)).toBeInTheDocument(),

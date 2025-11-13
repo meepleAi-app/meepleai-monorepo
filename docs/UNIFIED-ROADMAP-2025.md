@@ -381,6 +381,1027 @@ BGAI Month 4-6 UI + Dataset
 
 ---
 
+## 🔀 Merge Checkpoints & Manual Testing Protocols
+
+### Overview
+
+Each major milestone requires a **merge checkpoint** before integrating work from `frontend` or `backend` branches into `main`. These checkpoints ensure code quality, functionality, and system stability through automated testing + manual verification.
+
+**Merge Strategy**:
+- Work on feature branches (`frontend`, `backend`)
+- Merge to `main` only at defined checkpoints
+- Each merge requires passing **all** automated tests + manual testing checklist
+- If any test fails, fix issues before merging (no partial merges)
+
+---
+
+### Checkpoint 1: Sprint 1-2 Frontend (End of Week 3)
+
+**Branch**: `frontend` → `main`
+**Issues**: #1088-1096 (Sprint 1-2, 9 issues)
+**Timeline**: Week 3 Friday
+
+#### Pre-Merge Checklist
+
+**Automated Tests** (Must Pass 100%):
+```bash
+cd apps/web
+pnpm typecheck          # Zero TypeScript errors
+pnpm lint               # Zero ESLint errors
+pnpm test               # ≥90% coverage maintained
+pnpm build              # Production build succeeds
+```
+
+**Code Quality Checks**:
+- [ ] No files >500 lines (check `upload.tsx`, `ChatProvider.tsx`)
+- [ ] No inline styles remaining (search for `style={{`)
+- [ ] All components use Tailwind CSS only
+- [ ] No `console.log` statements in production code
+- [ ] All imports use `@/` alias
+
+#### Manual Testing Protocol
+
+**Test 1: Login Flow Unification** (#1088)
+```
+1. Navigate to http://localhost:3000/login
+2. Test cookie-based login:
+   - Enter: admin@meepleai.dev / Demo123!
+   - Verify: Redirects to /games dashboard
+   - Check: Cookie "meepleai-session" set in DevTools
+3. Test API key login:
+   - Logout, go to /login
+   - Enter valid API key (get from /admin/api-keys)
+   - Verify: Redirects to /games with API key in header
+4. Test 2FA flow:
+   - Login as user with 2FA enabled
+   - Verify: Shows 2FA input screen
+   - Enter valid TOTP code
+   - Verify: Completes login successfully
+5. Test error states:
+   - Invalid credentials → Show error message
+   - Network error → Show retry UI
+   - Session expired → Redirect to login
+
+PASS CRITERIA: All 5 scenarios work without console errors
+```
+
+**Test 2: Upload Page Refactor** (#1089)
+```
+1. Navigate to /upload
+2. Test PDF upload:
+   - Drag & drop a PDF (e.g., Catan_Rules_IT.pdf)
+   - Verify: Upload progress bar appears
+   - Verify: Success message after upload
+   - Check: PDF appears in /documents list
+3. Test multiple files:
+   - Upload 3 PDFs simultaneously
+   - Verify: All 3 show individual progress bars
+   - Verify: All complete successfully
+4. Test file validation:
+   - Try uploading .txt file → Reject with error
+   - Try uploading 100MB file → Reject with size error
+   - Upload valid PDF with spaces in name → Accept
+5. Test mobile responsiveness:
+   - Resize browser to 375px width
+   - Verify: Upload UI is usable, buttons accessible
+   - Test upload on mobile screen size → Works
+
+PASS CRITERIA: All uploads succeed, validation works, mobile usable
+```
+
+**Test 3: ChatProvider Context Refactor** (#1090)
+```
+1. Navigate to /chat
+2. Test message sending:
+   - Type: "Come si gioca a Catan?"
+   - Send message
+   - Verify: Message appears in chat history
+   - Verify: AI response streams in real-time (SSE)
+   - Verify: No React context warnings in console
+3. Test chat history:
+   - Send 5 messages in conversation
+   - Refresh page
+   - Verify: Chat history persists (localStorage)
+   - Verify: Can scroll to previous messages
+4. Test thread management:
+   - Create new thread (button)
+   - Verify: Old thread saved, new thread empty
+   - Switch between threads → Messages persist
+5. Test streaming performance:
+   - Ask complex question (long answer expected)
+   - Verify: Response streams smoothly, no lag
+   - Check DevTools Performance: No memory leaks
+
+PASS CRITERIA: Chat works, streaming smooth, no context bugs
+```
+
+**Test 4: Mobile-First Responsive Design** (#1092)
+```
+Test on 5 breakpoints:
+- 320px (iPhone SE)
+- 375px (iPhone 12)
+- 768px (iPad)
+- 1024px (iPad Pro)
+- 1920px (Desktop)
+
+For each breakpoint:
+1. Navigate through all pages: /login, /games, /upload, /chat, /admin
+2. Verify: No horizontal scrolling
+3. Verify: All buttons/inputs accessible (not cut off)
+4. Verify: Text readable (font-size ≥14px)
+5. Verify: Images/icons scale proportionally
+6. Test touch targets: Buttons ≥44px (mobile standard)
+
+PASS CRITERIA: All pages usable on all 5 breakpoints
+```
+
+**Test 5: Performance Optimization** (#1093)
+```
+1. Open Chrome DevTools → Lighthouse
+2. Run audit on /games page:
+   - Performance score ≥90
+   - Accessibility score ≥95
+   - Best Practices score ≥95
+3. Test specific metrics:
+   - First Contentful Paint <1.5s
+   - Largest Contentful Paint <2.5s
+   - Cumulative Layout Shift <0.1
+4. Test bundle size:
+   - Check build output: _next/static/chunks
+   - Main bundle <300KB gzipped
+   - No duplicate dependencies (run `pnpm why react`)
+5. Test lazy loading:
+   - Navigate /games → /upload
+   - Verify: Only upload page chunk loaded (Network tab)
+
+PASS CRITERIA: Lighthouse ≥90, LCP <2.5s, bundles optimized
+```
+
+#### Merge Decision Matrix
+
+| Criteria | Required | Status |
+|----------|----------|--------|
+| All automated tests pass | ✅ YES | ⬜ |
+| Manual test 1 (Login) passes | ✅ YES | ⬜ |
+| Manual test 2 (Upload) passes | ✅ YES | ⬜ |
+| Manual test 3 (Chat) passes | ✅ YES | ⬜ |
+| Manual test 4 (Mobile) passes | ✅ YES | ⬜ |
+| Manual test 5 (Performance) passes | ⚠️ RECOMMENDED | ⬜ |
+| No files >500 lines | ✅ YES | ⬜ |
+
+**Merge Command**:
+```bash
+git checkout main
+git merge frontend --no-ff -m "feat: Complete Sprint 1-2 frontend refactor (#1088-1096)
+
+- Unified login flow (cookie + API key + 2FA)
+- Refactored upload page (1564→400 lines)
+- Split ChatProvider context (639→250 lines)
+- Mobile-first responsive design (320px-1920px)
+- Performance optimizations (LCP <2.5s, bundle <300KB)
+
+Manual testing: 5/5 protocols passed
+Coverage: 90%+ maintained
+Lighthouse: Performance 90+, A11y 95+"
+
+git push origin main
+```
+
+**Rollback Plan**: If production issues detected within 24h:
+```bash
+git revert HEAD~1        # Revert merge commit
+git push origin main
+git checkout frontend    # Continue fixes on branch
+```
+
+---
+
+### Checkpoint 2: BGAI Month 1-2 + Sprint 3 (End of Week 8)
+
+**Branch**: `backend` + `frontend` → `main`
+**Issues**: BGAI Month 1-2 (PDF + LLM) + Sprint 3 (#1097-1102)
+**Timeline**: Week 8 Friday
+
+#### Pre-Merge Checklist
+
+**Automated Tests** (Must Pass 100%):
+```bash
+# Backend
+cd apps/api/src/Api
+dotnet build                          # Zero build errors
+dotnet test                           # All tests pass
+dotnet test --filter "Category=Integration"  # PDF pipeline tests
+
+# Frontend
+cd apps/web
+pnpm test                             # ≥90% coverage
+pnpm build                            # Production build
+
+# Infrastructure
+cd infra
+docker compose up -d postgres qdrant redis
+curl http://localhost:6333/healthz   # Qdrant healthy
+```
+
+**Code Quality Checks**:
+- [ ] PDF 3-stage pipeline implemented (Unstructured → SmolDocling → Docnet)
+- [ ] OpenRouter + Ollama integrations complete
+- [ ] Feature flags working (`AI:Provider` config)
+- [ ] Storybook components documented (#1097)
+- [ ] Migration guide complete (#1102)
+
+#### Manual Testing Protocol
+
+**Test 1: PDF Processing 3-Stage Pipeline**
+```
+1. Start Unstructured container:
+   docker compose up -d unstructured-api
+
+2. Test Stage 1 (Unstructured - Primary):
+   - Upload PDF: docs/test-pdfs/catan-it.pdf
+   - POST /api/v1/documents/upload
+   - Verify: Uses UnstructuredPdfTextExtractor
+   - Check logs: "Stage 1: Unstructured succeeded" (Seq)
+   - Verify: Quality score ≥0.80
+   - Verify: Text extracted with structure (headings, lists)
+
+3. Test Stage 2 (SmolDocling - Fallback):
+   - Upload complex PDF: docs/test-pdfs/gloomhaven-it.pdf (tables/images)
+   - Simulate Stage 1 failure (stop unstructured container)
+   - docker compose stop unstructured-api
+   - Upload PDF again
+   - Verify: Falls back to SmolDocling VLM
+   - Check logs: "Stage 1 failed, trying Stage 2" (Seq)
+   - Verify: Quality score ≥0.70 (lower threshold)
+   - Verify: Tables extracted correctly
+
+4. Test Stage 3 (Docnet - Final Fallback):
+   - Simulate Stage 1+2 failure
+   - Upload any PDF
+   - Verify: Falls back to Docnet (local)
+   - Check logs: "Stage 2 failed, trying Stage 3" (Seq)
+   - Verify: Basic text extraction works (best effort)
+
+5. Test Quality Validation:
+   - Upload 5 different rulebook PDFs
+   - Verify: Each gets quality report (4 metrics)
+   - Verify: Reports show text coverage, structure, tables, pages
+   - Check: PDFs with score <0.70 → Recommendation shown
+
+PASS CRITERIA: All 3 stages work, fallback logic correct, quality scoring accurate
+```
+
+**Test 2: LLM Integration (OpenRouter + Ollama)**
+```
+1. Test OpenRouter (Cloud):
+   - Set feature flag: AI:Provider = "OpenRouter"
+   - Set OPENROUTER_API_KEY in .env
+   - POST /api/v1/chat
+   - Body: { "question": "Come si gioca a Catan?", "gameId": 1 }
+   - Verify: Response streams via SSE
+   - Verify: Uses GPT-4 model (check logs)
+   - Verify: Response in Italian
+   - Check: Latency <5s P95
+
+2. Test Ollama (Local):
+   - Set feature flag: AI:Provider = "Ollama"
+   - Start Ollama: docker compose up -d ollama
+   - Download model: docker exec ollama ollama pull mistral
+   - POST /api/v1/chat (same question)
+   - Verify: Uses Ollama mistral model
+   - Verify: Response quality acceptable (may be lower than GPT-4)
+   - Check: No external API calls (network tab)
+
+3. Test AdaptiveLlm (Auto-switching):
+   - Set feature flag: AI:Provider = "Adaptive"
+   - POST /api/v1/chat with complex question (long)
+   - Verify: Uses OpenRouter (GPT-4) for complex queries
+   - POST /api/v1/chat with simple question (short)
+   - Verify: Uses Ollama for simple queries (cost optimization)
+   - Check logs: "AdaptiveLlm: Selected provider={X}" (Seq)
+
+4. Test Error Handling:
+   - Stop OpenRouter (remove API key)
+   - POST /api/v1/chat → Verify: Graceful error, retry logic
+   - Stop Ollama container → Verify: Falls back to OpenRouter
+   - Both offline → Verify: User-friendly error message
+
+PASS CRITERIA: Both providers work, adaptive switching correct, errors handled gracefully
+```
+
+**Test 3: RAG Hybrid Search (Vector + Keyword)**
+```
+1. Setup test data:
+   - Upload 3 Italian rulebooks: Catan, Carcassonne, 7 Wonders
+   - Verify: PDFs processed, vectors indexed in Qdrant
+   - Check Qdrant UI: http://localhost:6333/dashboard
+   - Verify: Collection "meepleai-rules" exists with 3 documents
+
+2. Test Vector Search (Semantic):
+   - POST /api/v1/search
+   - Body: { "query": "costruzione strade", "gameId": 1 }
+   - Verify: Returns Catan passages about road building
+   - Verify: Semantic matches (not just keyword match)
+   - Example: "edificare vie" also matches (synonym)
+
+3. Test Keyword Search (FTS):
+   - POST /api/v1/search
+   - Body: { "query": "punti vittoria", "gameId": null }
+   - Verify: Returns passages from all games mentioning "punti vittoria"
+   - Verify: Exact keyword matches included
+
+4. Test RRF Fusion (70% Vector + 30% Keyword):
+   - POST /api/v1/search
+   - Body: { "query": "come si vince", "gameId": null }
+   - Verify: Results combine semantic + keyword matches
+   - Verify: Relevance scores reasonable (check response)
+   - Verify: No duplicate results in top 10
+
+5. Test Performance:
+   - Run 10 searches in parallel (load test)
+   - Verify: P95 latency <1s (search only, not LLM)
+   - Check Qdrant logs: No errors, cache hits working
+
+PASS CRITERIA: Hybrid search works, RRF fusion correct, latency <1s P95
+```
+
+**Test 4: Storybook Components** (#1097)
+```
+1. Start Storybook:
+   cd apps/web
+   pnpm storybook  # Port 6006
+
+2. Test documented components:
+   - Navigate to "Components/Button" story
+   - Verify: All variants displayed (primary, secondary, outline)
+   - Verify: Interactive controls work (change props)
+   - Test: Dark mode toggle → Components adapt
+
+3. Test new BGAI components:
+   - Navigate to "BGAI/PdfViewer" story
+   - Verify: Sample PDF renders correctly
+   - Test: Zoom in/out, page navigation
+   - Navigate to "BGAI/ChatMessage" story
+   - Verify: User/AI message variants shown
+
+4. Verify documentation:
+   - Each component has:
+     - Description
+     - Props table
+     - Usage examples
+     - Accessibility notes
+
+PASS CRITERIA: Storybook runs, all components documented, interactive
+```
+
+**Test 5: Integration E2E Workflow**
+```
+Full user workflow test:
+1. Login as admin@meepleai.dev
+2. Upload rulebook: docs/test-pdfs/catan-it.pdf
+3. Wait for processing (check /admin/documents status)
+4. Navigate to /chat
+5. Ask: "Come si costruisce una strada a Catan?"
+6. Verify: AI responds with correct info from uploaded rulebook
+7. Verify: Citations shown (PDF page numbers)
+8. Test follow-up: "E quanto costa?"
+9. Verify: Context maintained from previous question
+10. Export chat: Click "Export" button
+11. Verify: Downloads JSON/MD file with conversation
+
+PASS CRITERIA: Full workflow works end-to-end without errors
+```
+
+#### Merge Decision Matrix
+
+| Criteria | Required | Status |
+|----------|----------|--------|
+| All automated tests pass | ✅ YES | ⬜ |
+| Manual test 1 (PDF Pipeline) passes | ✅ YES | ⬜ |
+| Manual test 2 (LLM Integration) passes | ✅ YES | ⬜ |
+| Manual test 3 (RAG Search) passes | ✅ YES | ⬜ |
+| Manual test 4 (Storybook) passes | ⚠️ RECOMMENDED | ⬜ |
+| Manual test 5 (E2E Workflow) passes | ✅ YES | ⬜ |
+| 5 Italian rulebooks indexed | ✅ YES | ⬜ |
+
+**Merge Command**:
+```bash
+# Merge backend first
+git checkout main
+git merge backend --no-ff -m "feat: BGAI Month 1-2 backend - PDF pipeline + LLM (#956-964)
+
+- 3-stage PDF processing (Unstructured → SmolDocling → Docnet)
+- Quality validation framework (4-metric scoring)
+- OpenRouter + Ollama LLM integration
+- Feature flag AI:Provider configuration
+- Hybrid RAG search (vector + keyword RRF)
+
+Manual testing: 5/5 protocols passed
+Test coverage: 162 backend tests pass"
+
+# Merge frontend
+git merge frontend --no-ff -m "feat: Sprint 3 frontend + BGAI components (#1097-1102)
+
+- Storybook component documentation
+- BGAI PdfViewer + ChatMessage components
+- Migration guide (legacy → DDD)
+- Frontend test coverage maintained 90%+
+
+Manual testing: Storybook verified, E2E workflow passed"
+
+git push origin main
+```
+
+---
+
+### Checkpoint 3: BGAI Month 3-4 Mid-Project Review (End of Week 12)
+
+**Branch**: `backend` + `frontend` → `main`
+**Issues**: BGAI Month 3-4 (Validation + Quality + UI)
+**Timeline**: Week 12 Friday
+
+#### Pre-Merge Checklist
+
+**Automated Tests**:
+```bash
+dotnet test --filter "Category=Validation"   # Multi-model validation tests
+dotnet test --filter "Category=Quality"      # Quality framework tests
+pnpm test -- ChatInterface                   # Frontend BGAI UI tests
+```
+
+**Quality Gates** (CRITICAL for Month 4 Gate):
+- [ ] Multi-model validation working (GPT-4 + Claude consensus)
+- [ ] 5-metric quality framework operational
+- [ ] 50 Q&A golden dataset annotated
+- [ ] **Accuracy ≥70% baseline** (target 80%+ by Month 6)
+- [ ] Hallucination rate measured
+- [ ] Frontend BGAI base components complete
+
+#### Manual Testing Protocol
+
+**Test 1: Multi-Model Validation (GPT-4 + Claude Consensus)**
+```
+1. Test dual-model response:
+   - POST /api/v1/chat
+   - Body: { "question": "Quanti giocatori per Catan?", "gameId": 1, "validation": "multi-model" }
+   - Verify: Both GPT-4 and Claude generate responses
+   - Check logs: "Multi-model validation: GPT-4={X}, Claude={Y}" (Seq)
+   - Verify: Consensus score calculated (agreement metric)
+
+2. Test consensus logic:
+   - Ask factual question: "Quante risorse iniziali a Catan?"
+   - Verify: Both models agree (consensus ≥0.90)
+   - Verify: High confidence score shown to user
+   - Ask ambiguous question: "Quale strategia è migliore?"
+   - Verify: Models disagree (consensus <0.70)
+   - Verify: User shown both perspectives
+
+3. Test hallucination detection:
+   - Ask question with no answer in rulebook
+   - Example: "Come si gioca a Monopoly?" (not indexed)
+   - Verify: Models detect knowledge gap
+   - Verify: Response: "Non ho informazioni su questo gioco"
+   - Verify: No fabricated answer
+
+PASS CRITERIA: Consensus working, hallucinations detected, confidence scores accurate
+```
+
+**Test 2: 5-Metric Quality Framework**
+```
+Metrics: Confidence, Citation Coverage, Forbidden Keywords, Consensus, Latency
+
+1. Test Confidence Scoring:
+   - Ask 10 questions (mix of easy/hard)
+   - Verify: Each response has confidence score 0.0-1.0
+   - Verify: Easy questions (facts) → High confidence ≥0.80
+   - Verify: Hard questions (strategy) → Lower confidence <0.70
+   - Check: Confidence threshold enforced (reject <0.70)
+
+2. Test Citation Coverage:
+   - Ask: "Come si costruisce una città a Catan?"
+   - Verify: Response includes citations [Rulebook p.5, p.7]
+   - Verify: Citations link to specific PDF pages
+   - Verify: Citation coverage ≥70% (most claims cited)
+
+3. Test Forbidden Keywords Detection:
+   - Configure: Forbidden = ["sicuramente", "ovviamente", "sempre"]
+   - Ask question, verify: Response avoids forbidden words
+   - Simulate response with forbidden word
+   - Verify: Quality check flags issue, rejects response
+
+4. Test Latency Metrics:
+   - Run 20 questions, measure P50, P95, P99 latency
+   - Verify: P95 <5s (target)
+   - Verify: Latency logged per request (Seq)
+
+5. Test Quality Dashboard:
+   - Navigate: /admin/quality
+   - Verify: Shows aggregate metrics (last 7 days)
+   - Verify: Charts for confidence distribution, latency P95
+   - Verify: Hallucination rate % displayed
+
+PASS CRITERIA: All 5 metrics working, dashboard shows correct data
+```
+
+**Test 3: Golden Dataset (50 Q&A Annotated)**
+```
+1. Verify dataset structure:
+   - Check: Database table "golden_dataset" exists
+   - Query: SELECT COUNT(*) FROM golden_dataset
+   - Verify: ≥50 Q&A pairs stored
+   - Verify: Each pair has: question, expected_answer, game_id, source_page
+
+2. Test evaluation pipeline:
+   - Run: dotnet run --project tools/EvaluateGoldenDataset
+   - Verify: Script runs 50 questions through RAG pipeline
+   - Verify: Compares actual vs expected answers (cosine similarity)
+   - Verify: Outputs accuracy report: X/50 correct (≥70% target)
+
+3. Test manual review workflow:
+   - Navigate: /admin/golden-dataset
+   - Verify: Shows 50 Q&A pairs in table
+   - Test: Edit question #1, save
+   - Verify: Changes persist (reload page)
+   - Test: Mark answer as "validated" checkbox
+   - Verify: Status updates
+
+4. Test dataset diversity:
+   - Verify: Questions cover 3+ games (not just Catan)
+   - Verify: Mix of question types: factual, procedural, clarification
+   - Verify: Italian language throughout (no English)
+
+PASS CRITERIA: ≥50 Q&A pairs, evaluation pipeline works, accuracy ≥70%
+```
+
+**Test 4: BGAI Frontend UI Components**
+```
+1. Test ChatInterface component:
+   - Navigate: /bgai/chat (new BGAI-specific chat page)
+   - Verify: Modern UI design (Shadcn/Tailwind)
+   - Test: Send message → Response streams smoothly
+   - Verify: Citations clickable (opens PDF viewer modal)
+   - Test: Confidence score displayed per message (color-coded)
+   - Test: Dark mode toggle → UI adapts
+
+2. Test PdfViewer component:
+   - Click citation link in chat response
+   - Verify: Modal opens with PDF viewer
+   - Verify: Auto-scrolls to cited page
+   - Test: Zoom controls (+ / -)
+   - Test: Page navigation (1 of 24)
+   - Test: Close modal → Returns to chat
+
+3. Test QualityIndicator component:
+   - Verify: Each AI response shows quality badge
+   - High confidence (≥0.80) → Green badge "Alta affidabilità"
+   - Medium confidence (0.70-0.79) → Yellow badge "Affidabilità media"
+   - Low confidence (<0.70) → Red badge "Bassa affidabilità"
+   - Hover badge → Tooltip shows detailed metrics
+
+4. Test GameSelector component:
+   - Verify: Dropdown shows indexed games (with rulebook count)
+   - Select game → Chat context switches
+   - Verify: Only relevant game's rules used in RAG
+
+5. Test mobile responsiveness:
+   - Test on 375px width (iPhone)
+   - Verify: Chat interface usable, messages readable
+   - Verify: PDF viewer adapts to mobile (no horizontal scroll)
+
+PASS CRITERIA: All components functional, mobile responsive, UX smooth
+```
+
+**Test 5: Regression Testing (Existing Features)**
+```
+Ensure BGAI work didn't break existing features:
+
+1. Test Auth flow:
+   - Login/logout still works
+   - API key auth still works
+   - 2FA still works
+
+2. Test Upload:
+   - Upload new PDF → Processes successfully
+   - Old uploaded PDFs still accessible
+
+3. Test Admin Console:
+   - /admin/users loads
+   - /admin/api-keys works
+   - /admin/configuration loads
+
+4. Test Performance:
+   - Run Lighthouse on /games
+   - Verify: Performance score still ≥90 (not degraded)
+
+PASS CRITERIA: No regressions, all existing features work
+```
+
+#### Merge Decision Matrix (Month 4 Gate - CRITICAL)
+
+| Criteria | Required | Status |
+|----------|----------|--------|
+| All automated tests pass | ✅ YES | ⬜ |
+| Manual test 1 (Multi-model) passes | ✅ YES | ⬜ |
+| Manual test 2 (Quality Framework) passes | ✅ YES | ⬜ |
+| Manual test 3 (Golden Dataset ≥50, Accuracy ≥70%) | ✅ YES | ⬜ |
+| Manual test 4 (BGAI UI) passes | ✅ YES | ⬜ |
+| Manual test 5 (Regression) passes | ✅ YES | ⬜ |
+| **CRITICAL: Accuracy ≥70% baseline** | ✅ YES | ⬜ |
+
+**Go/No-Go Decision**:
+- ✅ **GO** if accuracy ≥70%: Continue to Month 5-6, confidence in 80%+ target
+- ⚠️ **CAUTION** if accuracy 65-69%: Add 1 week for dataset improvements, re-test
+- ❌ **NO-GO** if accuracy <65%: **PIVOT** - 2-week deep dive on accuracy issues (architecture problem?)
+
+**Merge Command** (if GO):
+```bash
+git checkout main
+git merge backend --no-ff -m "feat: BGAI Month 3-4 validation + quality framework (#974-995)
+
+- Multi-model validation (GPT-4 + Claude consensus)
+- 5-metric quality framework (confidence, citations, keywords, consensus, latency)
+- 50 Q&A golden dataset with evaluation pipeline
+- Accuracy baseline: X% (target ≥70%)
+- Hallucination rate: Y% (target <10%)
+
+Manual testing: 5/5 protocols passed
+Mid-project gate: PASSED ✅"
+
+git merge frontend --no-ff -m "feat: BGAI Month 4 frontend UI components (#983-995)
+
+- ChatInterface with streaming + citations
+- PdfViewer modal with zoom + navigation
+- QualityIndicator badges (confidence-based)
+- GameSelector context switching
+- Mobile-first responsive (375px+)
+
+Manual testing: UI verified, regression tests passed"
+
+git push origin main
+```
+
+**If NO-GO** (Accuracy <65%):
+```bash
+# Do NOT merge yet, create pivot branch
+git checkout -b bgai-accuracy-pivot
+# Investigate issues, improve dataset, re-evaluate in 2 weeks
+```
+
+---
+
+### Checkpoint 4: BGAI Month 5-6 Final Release (End of Week 16)
+
+**Branch**: `backend` + `frontend` → `main`
+**Issues**: BGAI Month 5-6 (Dataset completion + Italian UI + Final polish)
+**Timeline**: Week 16 Friday
+
+#### Pre-Merge Checklist
+
+**Automated Tests**:
+```bash
+dotnet test                              # All backend tests pass
+pnpm test                                # All frontend tests pass ≥90%
+pnpm build                               # Production build succeeds
+```
+
+**Quality Gates** (FINAL for BGAI MVP):
+- [ ] **100 Q&A golden dataset complete**
+- [ ] **Accuracy ≥80% validated** (CRITICAL MVP requirement)
+- [ ] **Hallucination rate ≤10%**
+- [ ] **Italian UI complete (200+ translations)**
+- [ ] **PDF viewer functional**
+- [ ] **P95 latency <5s**
+- [ ] **9 Italian rulebooks indexed**
+- [ ] **All BGAI issues closed (#956-1023)**
+
+#### Manual Testing Protocol
+
+**Test 1: Golden Dataset Completion (100 Q&A)**
+```
+1. Verify dataset size:
+   - Query: SELECT COUNT(*) FROM golden_dataset
+   - Required: Exactly 100 Q&A pairs (50 from Month 4 + 50 new)
+
+2. Verify dataset diversity:
+   - Query: SELECT game_id, COUNT(*) FROM golden_dataset GROUP BY game_id
+   - Required: ≥5 games represented (not just Catan)
+   - Required: Each game has ≥10 questions
+
+3. Run final evaluation:
+   - Execute: dotnet run --project tools/EvaluateGoldenDataset
+   - Verify: Accuracy report generated
+   - **CRITICAL**: Accuracy ≥80% (80/100 correct answers minimum)
+   - Verify: Detailed report saved to /admin/evaluation/latest.json
+
+4. Spot-check 10 random Q&A pairs:
+   - Manually verify: Answers are factually correct
+   - Manually verify: Citations point to correct pages
+   - Manually verify: Italian grammar is correct
+
+PASS CRITERIA: 100 Q&A pairs, ≥80% accuracy, manual spot-check passed
+```
+
+**Test 2: Accuracy & Hallucination Validation**
+```
+1. Test accuracy on known facts:
+   - Ask 20 factual questions from golden dataset
+   - Examples: "Quanti giocatori per Catan?", "Come si vince a Carcassonne?"
+   - Verify: All 20 answers correct (100% accuracy on facts)
+
+2. Test hallucination detection:
+   - Ask 10 questions about non-indexed games
+   - Examples: "Come si gioca a Monopoly?", "Regole di Risiko?"
+   - Verify: All 10 responses admit "Non ho informazioni" (0% hallucination)
+   - Verify: No fabricated rules or invented information
+
+3. Test edge cases:
+   - Ask ambiguous question: "Cosa devo fare ora?"
+   - Verify: Asks clarifying question, doesn't hallucinate
+   - Ask partially covered topic
+   - Verify: Answers what it knows, admits gaps
+
+4. Calculate hallucination rate:
+   - Formula: (False claims / Total claims) * 100
+   - Target: ≤10% hallucination rate
+   - Use validation set of 50 questions (separate from golden dataset)
+
+PASS CRITERIA: ≥80% overall accuracy, ≤10% hallucination rate
+```
+
+**Test 3: Italian i18n Completion (200+ Translations)**
+```
+1. Verify translation files:
+   - Check: apps/web/locales/it-IT/common.json exists
+   - Verify: ≥200 keys translated to Italian
+   - Spot-check: No English strings remaining in Italian locale
+
+2. Test language switching:
+   - Navigate to /settings
+   - Switch language: English → Italian
+   - Verify: Entire UI updates to Italian
+   - Verify: Date/number formats use Italian conventions
+
+3. Test Italian UI strings in BGAI:
+   - Navigate /bgai/chat
+   - Verify: All labels in Italian:
+     - "Invia messaggio", "Nuova conversazione", "Esporta chat"
+   - Verify: AI responses in Italian
+   - Verify: Error messages in Italian
+   - Verify: Quality badges in Italian: "Alta affidabilità", "Media affidabilità"
+
+4. Test pluralization rules:
+   - Test: "1 giocatore" (singular) vs "3 giocatori" (plural)
+   - Verify: Correct Italian pluralization
+
+5. Test mobile Italian UI:
+   - Resize to 375px
+   - Verify: Italian strings don't overflow buttons (longer than English)
+   - Verify: Truncation with ellipsis (...) where needed
+
+PASS CRITERIA: ≥200 translations, full Italian UI functional, mobile adapts
+```
+
+**Test 4: Performance & Latency (P95 <5s)**
+```
+1. Setup load testing:
+   - Tool: Artillery or k6
+   - Config: 10 concurrent users, 100 requests over 5 min
+
+2. Test RAG query latency:
+   - Run load test on POST /api/v1/chat endpoint
+   - Measure: P50, P95, P99 latency
+   - **CRITICAL**: P95 <5s (95% of requests under 5 seconds)
+   - Check: No timeouts, all requests succeed
+
+3. Test streaming latency:
+   - Measure time-to-first-token (TTFT)
+   - Target: TTFT <1s (user sees response start quickly)
+   - Measure time-between-tokens (TBT)
+   - Target: TBT <100ms (smooth streaming experience)
+
+4. Test concurrent uploads:
+   - Simulate 5 users uploading PDFs simultaneously
+   - Verify: No bottlenecks, all complete successfully
+   - Verify: PDF processing queue works (Redis-backed)
+
+5. Test database query performance:
+   - Check: /admin/stats page loads in <2s
+   - Check: No N+1 query problems (review logs with EF Core query logging)
+   - Verify: Database connection pooling working (check PG logs)
+
+6. Run Lighthouse performance audit:
+   - Pages to test: /games, /chat, /admin
+   - **CRITICAL**: Performance score ≥90 on all pages
+   - Verify: LCP <2.5s, FID <100ms, CLS <0.1
+
+PASS CRITERIA: P95 latency <5s, TTFT <1s, Lighthouse ≥90
+```
+
+**Test 5: End-to-End Production Simulation**
+```
+Full production workflow test (90-minute test):
+
+1. Initial Setup (10 min):
+   - Fresh database: dotnet ef database update
+   - Seed demo users: admin@meepleai.dev
+   - Start all services: docker compose up -d
+   - Verify: All health checks pass
+
+2. Document Upload Workflow (20 min):
+   - Login as admin
+   - Upload 9 Italian rulebooks (Catan, Carcassonne, 7 Wonders, Ticket to Ride, Azul, Splendor, Pandemic, Wingspan, Dixit)
+   - Monitor: /admin/documents status page
+   - Verify: All 9 process successfully (3-stage pipeline)
+   - Verify: Quality scores ≥0.70 for all
+   - Verify: Vectors indexed in Qdrant (check dashboard)
+
+3. Chat Interaction Workflow (30 min):
+   - Navigate: /bgai/chat
+   - Test 20 questions across 9 games (mix easy/hard)
+   - Verify: All responses relevant and accurate
+   - Verify: Citations provided (clickable)
+   - Verify: Confidence scores displayed
+   - Test: Multi-turn conversations (5-message threads)
+   - Verify: Context maintained across turns
+
+4. Quality Validation Workflow (15 min):
+   - Navigate: /admin/quality
+   - Verify: Dashboard shows stats from 20 questions
+   - Check: Avg confidence, avg latency, hallucination count
+   - Verify: Charts render correctly (no errors)
+
+5. PDF Viewer Workflow (10 min):
+   - Click citation in chat → PDF viewer opens
+   - Test: Zoom, page navigation, search in PDF
+   - Verify: Highlights cited passage (yellow highlight)
+   - Test: Mobile PDF viewer (375px width)
+
+6. Admin Management Workflow (10 min):
+   - Navigate: /admin/users
+   - Create new user: testuser@example.com
+   - Navigate: /admin/api-keys
+   - Generate API key for testuser
+   - Test: API key authentication (curl)
+   - Verify: testuser can use API key to query /api/v1/chat
+
+7. Error Recovery Workflow (5 min):
+   - Stop Qdrant: docker compose stop qdrant
+   - Try chat query → Verify: Graceful error message
+   - Start Qdrant: docker compose start qdrant
+   - Retry query → Verify: Works again (auto-recovery)
+
+PASS CRITERIA: All 7 workflows complete without critical errors
+```
+
+**Test 6: Regression & Backward Compatibility**
+```
+1. Test old frontend still works:
+   - Navigate: /games (old games page)
+   - Verify: Still functional (not removed)
+   - Navigate: /chat (old chat page)
+   - Verify: Still functional alongside /bgai/chat
+
+2. Test API backward compatibility:
+   - Old endpoint: POST /api/v1/chat (v1)
+   - Verify: Still works (not breaking change)
+   - New endpoint: POST /api/v2/chat (if added)
+   - Verify: Both versions coexist
+
+3. Test database migrations:
+   - Verify: Old data intact (users, games, sessions)
+   - Verify: New columns added (not replaced)
+   - Verify: No data loss from migrations
+
+PASS CRITERIA: No breaking changes, old features still functional
+```
+
+#### Merge Decision Matrix (FINAL - BGAI MVP)
+
+| Criteria | Required | Status |
+|----------|----------|--------|
+| All automated tests pass | ✅ YES | ⬜ |
+| **Test 1: 100 Q&A dataset, ≥80% accuracy** | ✅ YES (MVP BLOCKER) | ⬜ |
+| **Test 2: ≤10% hallucination rate** | ✅ YES (MVP BLOCKER) | ⬜ |
+| Test 3: 200+ Italian translations | ✅ YES | ⬜ |
+| **Test 4: P95 latency <5s** | ✅ YES (MVP BLOCKER) | ⬜ |
+| **Test 5: E2E production simulation passes** | ✅ YES (MVP BLOCKER) | ⬜ |
+| Test 6: No regressions | ✅ YES | ⬜ |
+| 9 Italian rulebooks indexed | ✅ YES | ⬜ |
+
+**Final Go/No-Go Decision**:
+- ✅ **GO** if ALL MVP BLOCKERS pass: **BGAI MVP ready for beta launch** 🎉
+- ⚠️ **CONDITIONAL GO** if 75-79% accuracy: Launch with disclaimer, allocate 1-2 weeks post-launch for improvements
+- ❌ **NO-GO** if accuracy <75% OR hallucination >15% OR P95 >7s: **Delay launch**, address critical issues (1-2 week sprint)
+
+**Merge Command** (if GO):
+```bash
+git checkout main
+
+# Merge backend
+git merge backend --no-ff -m "feat: BGAI Month 5-6 final release - MVP complete (#996-1023)
+
+BGAI MVP LAUNCH READY 🎉
+
+- 100 Q&A golden dataset with evaluation pipeline
+- Accuracy: X% (target ≥80%) ✅
+- Hallucination rate: Y% (target ≤10%) ✅
+- 9 Italian rulebooks indexed (Catan, Carcassonne, 7 Wonders, Ticket to Ride, Azul, Splendor, Pandemic, Wingspan, Dixit)
+- Multi-model validation operational (GPT-4 + Claude)
+- P95 latency: Zs (target <5s) ✅
+
+Manual testing: 6/6 protocols passed
+Production simulation: 90-min E2E test passed
+Coverage: Backend 162 tests, Frontend 90%+"
+
+# Merge frontend
+git merge frontend --no-ff -m "feat: BGAI Month 6 Italian UI + final polish (#1010-1023)
+
+- 200+ Italian translations (complete i18n)
+- Italian-first UX throughout BGAI
+- PDF viewer with citation highlighting
+- Mobile-optimized chat interface (375px+)
+- Quality indicators with Italian labels
+- Dark mode support
+
+Manual testing: Italian UI verified, mobile tested, E2E passed
+Lighthouse: Performance 90+, Accessibility 95+"
+
+git push origin main
+git tag v1.0.0-bgai-mvp
+git push origin v1.0.0-bgai-mvp
+```
+
+**Post-Merge Actions**:
+1. Deploy to staging: `./deploy.sh staging`
+2. Run smoke tests on staging (30 min)
+3. If staging OK → Deploy to production: `./deploy.sh production`
+4. Monitor for 48h: Sentry errors, Seq logs, Grafana metrics
+5. Announce beta launch: Email to early access users
+
+---
+
+### Emergency Rollback Procedures
+
+If critical issues detected in production within 48h of any checkpoint merge:
+
+**Severity 1 - System Down** (API 500 errors, database corruption):
+```bash
+# Immediate rollback (< 5 minutes)
+git checkout main
+git revert HEAD~1              # Revert merge commit
+git push origin main --force   # Force push (emergency only)
+
+# Rollback database migrations
+cd apps/api/src/Api
+dotnet ef database update <PreviousMigrationName>
+
+# Restart services
+docker compose restart api web
+
+# Notify: Post incident in Slack #incidents channel
+```
+
+**Severity 2 - Feature Broken** (BGAI errors, UI broken):
+```bash
+# Targeted fix (< 1 hour)
+git checkout main
+git cherry-pick <fix-commit-sha>   # Apply hotfix
+git push origin main
+
+# OR: Feature flag rollback
+# Navigate /admin/configuration
+# Set: Features:BGAI:Enabled = false (disable feature)
+
+# Notify: Post update in Slack #engineering
+```
+
+**Severity 3 - Performance Degradation** (slow queries, high latency):
+```bash
+# Investigate first (< 2 hours)
+# Check Grafana dashboards, Seq logs, Jaeger traces
+# Identify bottleneck (database query, LLM call, etc.)
+
+# Temporary mitigation:
+# - Increase cache TTL: Features:Cache:TtlMinutes = 10
+# - Reduce concurrent LLM calls: AI:MaxConcurrentRequests = 5
+# - Enable read replica: ConnectionStrings:PostgresReadOnly
+
+# Permanent fix: Create hotfix branch, test, merge next day
+```
+
+---
+
+## 📋 Checkpoint Summary Table
+
+| Checkpoint | Week | Branch(es) | Manual Tests | MVP Blocker? | Rollback Risk |
+|------------|------|------------|--------------|--------------|---------------|
+| **CP1: Sprint 1-2** | 3 | `frontend` | 5 protocols | ❌ No | Low (frontend only) |
+| **CP2: BGAI Month 1-2** | 8 | `backend` + `frontend` | 5 protocols | ⚠️ Partial (infrastructure) | Medium (backend changes) |
+| **CP3: BGAI Month 3-4** | 12 | `backend` + `frontend` | 5 protocols | ✅ YES (accuracy gate) | High (accuracy <70% = NO-GO) |
+| **CP4: BGAI Month 5-6** | 16 | `backend` + `frontend` | 6 protocols | ✅ YES (MVP release) | Critical (launch decision) |
+
+---
+
 ## 🎯 Prioritization Recommendations
 
 ### DO FIRST (Weeks 1-3)

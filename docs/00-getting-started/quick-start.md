@@ -23,7 +23,7 @@
 | Componente | Scelta | Perché |
 |------------|--------|--------|
 | **Backend** | ASP.NET Core 9.0 | Existing system (riuso infra, DDD, 90%+ coverage) |
-| **PDF** | LLMWhisperer + SmolDocling + Docnet | 3-stage per high accuracy (95%+) |
+| **PDF** | Unstructured + SmolDocling + Docnet | 3-stage per high accuracy (95%+) |
 | **LLM** | OpenRouter + Ollama | Feature-flag: API (accuracy) vs free (cost) |
 | **Vector DB** | Qdrant | Existing (hybrid search ready) |
 | **Frontend** | Next.js 16 + React 19 | Latest stable |
@@ -71,13 +71,13 @@
 - [ ] Slack announcement to team (template in prioritization doc)
 
 ### Tomorrow (Jan 16)
-- [ ] Setup accounts: LLMWhisperer (https://llmwhisperer.com), OpenRouter (https://openrouter.ai)
+- [ ] Setup accounts: OpenRouter (https://openrouter.ai)
 - [ ] Add credits: OpenRouter $50 (testing budget)
 - [ ] Pull Ollama models: `docker exec ollama ollama pull mistral:7b-instruct-v0.3-q4_K_M`
 
 ### This Week (Jan 17-19)
-- [ ] Prototype SmolDocling (Python service, 1-2 days)
-- [ ] Test LLMWhisperer (3 Italian PDFs: Terraforming Mars, Wingspan, Azul)
+- [ ] Prototype Unstructured service (Python microservice, 1-2 days)
+- [ ] Test Unstructured (3 Italian PDFs: Terraforming Mars, Wingspan, Azul)
 - [ ] Test OpenRouter (GPT-4 Turbo + Claude 3.5 Sonnet API calls)
 
 ### Next Week (Jan 20-26)
@@ -90,7 +90,7 @@
 ### Sprint 1 Kickoff (Jan 27)
 - [ ] Daily standups start (9:00 AM)
 - [ ] Pair programming (PDF processing complexity)
-- [ ] Target: LLMWhisperer + SmolDocling working by Feb 7
+- [ ] Target: Unstructured + SmolDocling working by Feb 7
 
 ---
 
@@ -118,7 +118,6 @@ cd infra
 cp env/.env.example env/.env.dev
 
 # Edit with your API keys (add these lines)
-echo "LLMWHISPERER_API_KEY=your_key_here" >> env/.env.dev
 echo "OPENROUTER_API_KEY=your_key_here" >> env/.env.dev
 
 # Start services
@@ -162,10 +161,10 @@ apps/web/src/pages/                                  # Frontend pages (add board
   - Hallucination problem (ChatGPT invented "multiple Gandalfs")
   - Italian market unserved (zero dedicated systems found)
 
-### LLMWhisperer (30 min)
-- Docs: https://llmwhisperer.com/docs
-- Try demo: https://llmwhisperer.com/playground (upload sample PDF)
-- Key feature: Layout preservation for LLM consumption
+### Unstructured Library (30 min)
+- Docs: https://docs.unstructured.io/
+- GitHub: https://github.com/Unstructured-IO/unstructured
+- Key feature: RAG-optimized semantic chunking, Apache 2.0 license
 
 ### OpenRouter (30 min)
 - Docs: https://openrouter.ai/docs
@@ -197,9 +196,9 @@ apps/web/src/pages/                                  # Frontend pages (add board
 
 ### Common Issues & Solutions
 
-**"LLMWhisperer API returns 429"**:
-- Cause: Free tier rate limit (100 pages/day exceeded)
-- Solution: Use cached results OR wait 24 hours OR upgrade to paid tier ($29/mo)
+**"Unstructured extraction fails"**:
+- Cause: Missing system dependencies (tesseract, poppler-utils)
+- Solution: Check Docker container has all dependencies installed
 
 **"SmolDocling slow on my machine"**:
 - Cause: No GPU (falls back to CPU, 6x slower)
@@ -218,14 +217,13 @@ apps/web/src/pages/                                  # Frontend pages (add board
 ## ✅ Quick Checklist (Before Sprint 1)
 
 **Accounts & Access**:
-- [ ] LLMWhisperer account + API key
 - [ ] OpenRouter account + $50 credits + API key
 - [ ] GitHub access (meepleai-monorepo repo, write permissions)
 - [ ] Slack/Discord (team channels)
 
 **Environment**:
 - [ ] Docker Compose running (all services healthy)
-- [ ] .env.dev configured (LLMWHISPERER_API_KEY, OPENROUTER_API_KEY)
+- [ ] .env.dev configured (OPENROUTER_API_KEY)
 - [ ] Ollama models pulled (mistral, llama3, nomic-embed-text)
 - [ ] Tests passing (dotnet test, pnpm test both green)
 

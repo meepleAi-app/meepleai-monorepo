@@ -1,9 +1,12 @@
 # ADR-003: PDF Processing Pipeline with Vision-Language Models
 
-**Status**: Accepted
+**Status**: ⚠️ SUPERSEDED by ADR-003b (Unstructured Library)
 **Date**: 2025-01-15
+**Superseded Date**: 2025-01-15
 **Deciders**: CTO, Backend Lead
 **Context**: Phase 1 Rulebook Indexing
+
+**Note**: This ADR documented the original plan to use LLMWhisperer as Stage 1. This has been replaced with Unstructured library (Apache 2.0, open source) to eliminate API costs and vendor lock-in. See [ADR-003b](./adr-003b-unstructured-pdf.md) for the current implementation.
 
 ---
 

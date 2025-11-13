@@ -1,8 +1,9 @@
 # PDF Extraction - Open Source Alternatives Analysis
 
 **Date**: 2025-01-15
-**Decision**: Replace LLMWhisperer with 100% open source stack
+**Decision**: ✅ IMPLEMENTED - Replaced LLMWhisperer with 100% open source stack (Unstructured)
 **Reason**: Eliminate API costs, vendor lock-in, commercial licensing issues
+**Status**: This document is kept for historical reference. See ADR-003b for current implementation.
 
 ---
 
@@ -176,13 +177,13 @@ markdown_text = result.markdown
 
 ## Implementation Changes Required
 
-### Issues to Update/Close
+### Issues to Update/Close (Historical)
 
-#### Close (LLMWhisperer-specific):
-- #941 [BGAI-001] Setup LLMWhisperer account → **Close, not needed**
-- #942 [BGAI-002] Implement LlmWhispererPdfExtractor → **Close, replaced**
-- #943 [BGAI-003] Add LLMWhisperer configuration → **Close, not needed**
-- #944 [BGAI-004] Unit tests for LlmWhispererPdfExtractor → **Close, replaced**
+#### Closed (LLMWhisperer-specific):
+- #941 [BGAI-001] Setup LLMWhisperer account → **✅ Closed, not needed**
+- #942 [BGAI-002] Implement LlmWhispererPdfExtractor → **✅ Closed, replaced with Unstructured**
+- #943 [BGAI-003] Add LLMWhisperer configuration → **✅ Closed, not needed**
+- #944 [BGAI-004] Unit tests for LlmWhispererPdfExtractor → **✅ Closed, replaced with Unstructured tests**
 
 #### Create (Unstructured-specific):
 - **[BGAI-001-NEW]** Install and configure Unstructured library (Python)
@@ -403,9 +404,11 @@ services:
 
 ---
 
-## Comparison: LLMWhisperer vs Unstructured
+## Comparison: LLMWhisperer vs Unstructured (Historical)
 
-| Aspect | LLMWhisperer | Unstructured |
+**Note**: This comparison was used to make the decision to replace LLMWhisperer with Unstructured. LLMWhisperer is no longer part of the roadmap.
+
+| Aspect | LLMWhisperer (OLD) | Unstructured (CURRENT) |
 |--------|--------------|--------------|
 | **Cost** | $0-99/month | $0 (self-hosted) |
 | **License** | Proprietary API | Apache 2.0 ✅ |
@@ -421,6 +424,8 @@ services:
 | **Commercial Safe** | Terms unclear | Apache 2.0 ✅ |
 
 **Winner**: **Unstructured** on all critical metrics
+
+**Decision**: Unstructured was selected and is currently implemented. This comparison is kept for historical reference only.
 
 ---
 
@@ -485,21 +490,13 @@ OR
 
 ## Migration Path for Existing Issues
 
-### Issues Created (#941-#944)
-These were for LLMWhisperer and should be closed/replaced:
+### Issues Created (#941-#944) - Historical
 
-**Action**: Close with comment explaining switch to open source
+These issues were created for LLMWhisperer and have been closed:
 
-```bash
-# Close LLMWhisperer issues
-gh issue close 941 --comment "Switching to open source alternative (Unstructured library) to eliminate API costs and vendor lock-in. See updated architecture in docs/architecture/pdf-extraction-opensource-alternatives.md"
+**Status**: ✅ All issues closed (2025-01-15)
 
-gh issue close 942 --comment "Replaced by Unstructured library implementation (Apache 2.0 license, RAG-optimized). New implementation will be tracked separately."
-
-gh issue close 943 --comment "Configuration simplified with Unstructured (no API key needed, self-hosted). Configuration will be part of Docker service setup."
-
-gh issue close 944 --comment "Tests will be rewritten for Unstructured integration. New test suite will cover semantic chunking and quality validation."
-```
+The LLMWhisperer issues were closed with comments explaining the switch to Unstructured library (Apache 2.0, open source). The replacement implementation using Unstructured has been completed and is documented in ADR-003b.
 
 ### New Issues to Create
 

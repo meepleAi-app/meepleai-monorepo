@@ -1,0 +1,36 @@
+Total issues without milestone: 34
+
+1102|[FEATURE] Theme Customization System|refactor,frontend,sprint-3,mvp,priority-medium
+1101|[FEATURE] Advanced Search and Filters|refactor,frontend,sprint-3,mvp,priority-medium
+1100|[ENHANCEMENT] Keyboard Shortcuts System|refactor,frontend,sprint-3,mvp,priority-medium
+1099|[POLISH] Landing Page Performance and UX|refactor,frontend,sprint-3,mvp,priority-medium
+1098|[TESTING] Comprehensive Component Unit Tests|refactor,frontend,sprint-3,mvp,priority-medium
+1097|[DX] Set Up Storybook for Component Documentation|refactor,frontend,sprint-3,mvp,priority-medium
+1096|[ENHANCEMENT] Standardize Loading States|refactor,frontend,sprint-2,mvp,priority-high
+1095|[REFACTOR] Unified Error Handling System|refactor,frontend,sprint-2,mvp,priority-high
+1094|[A11Y] Accessibility Audit and Fixes|refactor,frontend,sprint-2,mvp,priority-high
+1093|[PERFORMANCE] Optimize Re-renders and Bundle Size|refactor,frontend,sprint-2,mvp,priority-high
+1092|[ENHANCEMENT] Mobile-First Responsive Improvements|refactor,frontend,sprint-2,mvp,priority-high
+1091|[REFACTOR] Eliminate Inline Styles and Standardize with Design System|refactor,frontend,sprint-1,mvp,priority-critical
+1090|[REFACTOR] Split ChatProvider into Multiple Contexts|refactor,frontend,sprint-1,mvp,priority-critical
+936|🔬 Spike: POC Infisical Secret Rotation (Phase 2)|main
+935|[FRONTEND-29] Epic: Performance & Accessibility (Phase 6)|enhancement,frontend,performance,epic,deferred,priority-low
+934|[FRONTEND-24] Epic: Design Polish (Phase 5)|enhancement,frontend,epic,deferred,priority-low
+933|[FRONTEND-12] Epic: App Router Migration (Phase 3)|enhancement,frontend,epic,deferred,priority-low
+932|[FRONTEND-19] Epic: Advanced Features (Phase 4)|enhancement,frontend,epic,deferred,priority-low
+931|[FRONTEND-7] Epic: React 19 Optimization (Phase 2)|enhancement,frontend,epic,deferred,priority-low
+926|[FRONTEND-1] Epic: Foundation & Quick Wins (Phase 1)|enhancement,frontend,epic,deferred,priority-low
+844|epic: UI/UX Automated Testing Roadmap 2025|enhancement,testing,deferred,main,priority-low
+842|test(perf): Implement automated performance testing with Lighthouse CI|enhancement,performance,testing,deferred,main,priority-low
+841|test(a11y): Implement automated accessibility testing with axe-core|enhancement,testing,deferred,main,priority-low
+818|security: Establish quarterly security scan review process|area/infra,area/security,kind/policy,deferred,main,priority-low
+709|📖 Create operational runbooks documentation|main,priority-low
+707|🔧 Add docker-compose.override.yml example for local customization|main,priority-low
+706|📖 Create operational runbooks documentation|main,priority-low
+705|📊 Add infrastructure monitoring (cAdvisor + node-exporter)|main,priority-low
+704|💾 Create backup automation scripts|main,priority-low
+703|🌐 Add Traefik reverse proxy layer|main,priority-low
+702|🎯 Implement Docker Compose profiles for selective service startup|main,priority-low
+701|⚡ Add resource limits to all Docker services|main,priority-low
+576|SEC-05: AUTH-07 Security Penetration Testing|main
+575|AUTH-08: Admin Override for 2FA Locked-Out Users|backend

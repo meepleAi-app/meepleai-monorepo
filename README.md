@@ -198,6 +198,15 @@ docker compose restart api
 docker compose down
 ```
 
+## 🤖 CI/CD Workflows
+
+- **Main CI (`.github/workflows/ci.yml`)** – change-aware build that runs schema validation, web type-check/tests, API tests, infra config validation, and RAG evaluation only when the relevant paths change.
+- **Security Scan (`.github/workflows/security-scan.yml`)** – CodeQL, dependency audit, SecurityCodeScan, and Semgrep now trigger only when code/infrastructure files change (or on the weekly schedule) to reduce noise on docs-only PRs.
+- **Migration Guard (`.github/workflows/migration-guard.yml`)** – prevents accidental EF Core migration deletions on PRs touching `apps/api/src/Api/Migrations`.
+- **Cache Cleanup (`.github/workflows/cleanup-caches.yml`)** – scheduled monthly maintenance that runs `tools/cleanup-caches.sh`, generates a report artifact, and no longer opens noisy PRs/commits.
+
+The legacy `test-automation-mvp.yml` and duplicate `semgrep.yml` workflows have been retired; their responsibilities now live inside the main CI and security pipelines above.
+
 ## 🌐 Environment Variables
 
 Create environment files from templates:

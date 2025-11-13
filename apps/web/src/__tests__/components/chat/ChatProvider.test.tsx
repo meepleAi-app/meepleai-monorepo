@@ -24,6 +24,8 @@ import { render, screen, act, waitFor } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
 import { ChatProvider, useChatContext } from '@/components/chat/ChatProvider';
 import { Game, Agent, Chat, Message } from '@/types';
+import { AuthProvider } from '@/components/auth/AuthProvider';
+import { GameProvider } from '@/components/game/GameProvider';
 
 const baseGame: Game = {
   id: 'game-1',
@@ -59,6 +61,19 @@ const baseMessage: Message = {
   endpoint: 'qa',
   gameId: 'game-1',
 };
+
+// Wrapper component that provides all necessary parent providers
+function ChatProviderWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthProvider>
+      <GameProvider>
+        <ChatProvider>
+          {children}
+        </ChatProvider>
+      </GameProvider>
+    </AuthProvider>
+  );
+}
 
 const setupHappyPathMocks = () => {
   mockApi.get.mockImplementation(async (path: string) => {
@@ -123,7 +138,7 @@ describe('ChatProvider', () => {
     });
 
     it('provides default state inside provider', () => {
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       expect(result.current.authUser).toBeNull();
       expect(result.current.games).toEqual([]);
@@ -136,7 +151,7 @@ describe('ChatProvider', () => {
 
   describe('UI actions', () => {
     it('toggles sidebar state', () => {
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       expect(result.current.sidebarCollapsed).toBe(false);
 
@@ -148,7 +163,7 @@ describe('ChatProvider', () => {
     });
 
     it('updates input value', () => {
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
       act(() => result.current.setInputValue('hello'));
       expect(result.current.inputValue).toBe('hello');
     });
@@ -158,7 +173,7 @@ describe('ChatProvider', () => {
     it('loads agents and chats when selecting a game', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -175,7 +190,7 @@ describe('ChatProvider', () => {
     it('loads chat history when selecting a chat', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -205,7 +220,7 @@ describe('ChatProvider', () => {
 
       mockApi.post.mockResolvedValueOnce(newChat);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -230,7 +245,7 @@ describe('ChatProvider', () => {
       mockApi.delete.mockResolvedValueOnce(undefined);
       const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -275,7 +290,7 @@ describe('ChatProvider', () => {
       setupHappyPathMocks();
       mockApi.post.mockResolvedValueOnce(undefined);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -302,9 +317,9 @@ describe('ChatProvider', () => {
   describe('Component integration', () => {
     it('renders children', () => {
       render(
-        <ChatProvider>
+        <ChatProviderWrapper>
           <div data-testid="child">Child</div>
-        </ChatProvider>,
+        </ChatProviderWrapper>,
       );
 
       expect(screen.getByTestId('child')).toHaveTextContent('Child');
@@ -319,7 +334,7 @@ describe('ChatProvider', () => {
     it('validates content before sending (empty message rejected)', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -341,7 +356,7 @@ describe('ChatProvider', () => {
     it('validates content before sending (whitespace-only message rejected)', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -358,7 +373,7 @@ describe('ChatProvider', () => {
     });
 
     it('requires both gameId and agentId before sending', async () => {
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.sendMessage('Hello');
@@ -371,7 +386,7 @@ describe('ChatProvider', () => {
     it('adds user message optimistically', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -402,7 +417,7 @@ describe('ChatProvider', () => {
 
       mockApi.post.mockResolvedValueOnce(newChat);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -430,7 +445,7 @@ describe('ChatProvider', () => {
     it('rolls back optimistic user message on send failure', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -462,7 +477,7 @@ describe('ChatProvider', () => {
 
       mockApi.post.mockResolvedValueOnce(newChat);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -491,7 +506,7 @@ describe('ChatProvider', () => {
 
       mockApi.post.mockResolvedValueOnce(newChat);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -546,7 +561,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       // Select game 1
       await act(async () => {
@@ -627,7 +642,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       // Select game 1 and set active chat
       await act(async () => {
@@ -696,7 +711,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await waitFor(() => {
         expect(result.current.authUser).toEqual(mockUser);
@@ -716,7 +731,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await waitFor(() => {
         expect(result.current.authUser).toBeNull();
@@ -726,7 +741,7 @@ describe('ChatProvider', () => {
     it('loads games on mount', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await waitFor(() => {
         expect(result.current.games).toHaveLength(1);
@@ -739,7 +754,7 @@ describe('ChatProvider', () => {
     it('auto-selects first game if available', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await waitFor(() => {
         expect(result.current.selectedGameId).toBe(baseGame.id);
@@ -761,7 +776,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await waitFor(() => {
         expect(result.current.games.length).toBeGreaterThan(0);
@@ -777,7 +792,7 @@ describe('ChatProvider', () => {
 
   describe('Chat creation edge cases', () => {
     it('prevents chat creation without gameId', async () => {
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.createChat();
@@ -790,7 +805,7 @@ describe('ChatProvider', () => {
     it('prevents chat creation without agentId', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -816,7 +831,7 @@ describe('ChatProvider', () => {
     it('handles chat creation API errors gracefully', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -869,7 +884,7 @@ describe('ChatProvider', () => {
 
       mockApi.post.mockResolvedValueOnce(newChat);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -907,7 +922,7 @@ describe('ChatProvider', () => {
 
       mockApi.post.mockResolvedValueOnce(newChat);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -937,7 +952,7 @@ describe('ChatProvider', () => {
     it('toggles feedback: null → helpful → null', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -969,7 +984,7 @@ describe('ChatProvider', () => {
     it('toggles feedback: null → not-helpful → null', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1001,7 +1016,7 @@ describe('ChatProvider', () => {
     it('switches feedback: helpful → not-helpful', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1033,7 +1048,7 @@ describe('ChatProvider', () => {
     it('switches feedback: not-helpful → helpful', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1065,7 +1080,7 @@ describe('ChatProvider', () => {
     it('reverts feedback on API error', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1105,7 +1120,7 @@ describe('ChatProvider', () => {
       setupHappyPathMocks();
       mockApi.post.mockResolvedValue(undefined);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1138,7 +1153,7 @@ describe('ChatProvider', () => {
     it('loads agents for selected game and auto-selects first agent', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1162,7 +1177,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1187,7 +1202,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1220,7 +1235,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1242,7 +1257,7 @@ describe('ChatProvider', () => {
     it('allows deselecting agent', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1271,7 +1286,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1301,7 +1316,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1353,7 +1368,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1377,7 +1392,7 @@ describe('ChatProvider', () => {
     it('starts edit mode for a message', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1403,7 +1418,7 @@ describe('ChatProvider', () => {
     it('cancels edit mode', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1435,7 +1450,7 @@ describe('ChatProvider', () => {
     it('updates edit content', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1478,7 +1493,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1516,7 +1531,7 @@ describe('ChatProvider', () => {
     });
 
     it('prevents saving edit without activeChatId', async () => {
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       act(() => {
         result.current.startEditMessage('msg-1', 'Content');
@@ -1536,7 +1551,7 @@ describe('ChatProvider', () => {
     it('prevents saving empty edit content', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1567,7 +1582,7 @@ describe('ChatProvider', () => {
       setupHappyPathMocks();
       mockApi.chat.updateMessage.mockRejectedValue(new Error('Network error'));
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1605,7 +1620,7 @@ describe('ChatProvider', () => {
       mockApi.chat.deleteMessage.mockResolvedValue(undefined);
       jest.spyOn(window, 'confirm').mockReturnValue(true);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1636,7 +1651,7 @@ describe('ChatProvider', () => {
       setupHappyPathMocks();
       jest.spyOn(window, 'confirm').mockReturnValue(false);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1659,7 +1674,7 @@ describe('ChatProvider', () => {
     });
 
     it('prevents message deletion without activeChatId', async () => {
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.deleteMessage('msg-1');
@@ -1673,7 +1688,7 @@ describe('ChatProvider', () => {
       mockApi.chat.deleteMessage.mockRejectedValue(new Error('Network error'));
       jest.spyOn(window, 'confirm').mockReturnValue(true);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1702,7 +1717,7 @@ describe('ChatProvider', () => {
       setupHappyPathMocks();
       jest.spyOn(window, 'confirm').mockReturnValue(false);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1724,7 +1739,7 @@ describe('ChatProvider', () => {
       setupHappyPathMocks();
       jest.spyOn(window, 'confirm').mockReturnValue(true);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1768,7 +1783,7 @@ describe('ChatProvider', () => {
 
       jest.spyOn(window, 'confirm').mockReturnValue(true);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1796,12 +1811,12 @@ describe('ChatProvider', () => {
 
   describe('Search mode state', () => {
     it('defaults to Hybrid search mode', () => {
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
       expect(result.current.searchMode).toBe('Hybrid');
     });
 
     it('updates search mode', () => {
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       act(() => {
         result.current.setSearchMode('Vector');
@@ -1831,7 +1846,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await waitFor(() => {
         expect(result.current.loading.games).toBe(false);
@@ -1848,7 +1863,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await waitFor(() => {
         expect(result.current.loading.games).toBe(false);
@@ -1870,7 +1885,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1892,7 +1907,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1910,7 +1925,7 @@ describe('ChatProvider', () => {
     it('handles feedback for non-existent message gracefully', async () => {
       setupHappyPathMocks();
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1950,7 +1965,7 @@ describe('ChatProvider', () => {
 
       mockApi.post.mockResolvedValue(undefined);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -1986,7 +2001,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       // Initially loading
       await waitFor(() => {
@@ -2016,7 +2031,7 @@ describe('ChatProvider', () => {
         return null;
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -2059,7 +2074,7 @@ describe('ChatProvider', () => {
 
       mockApi.post.mockImplementation(async () => postPromise);
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -2098,7 +2113,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await waitFor(() => {
         expect(result.current.errorMessage).toContain('Failed to load games');
@@ -2134,7 +2149,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);
@@ -2158,7 +2173,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProvider });
+      const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
       await act(async () => {
         await result.current.selectGame(baseGame.id);

@@ -12,6 +12,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChatPage from '../../../pages/chat';
 import { api } from '../../../lib/api';
+import { createWrapper } from '../../utils/test-providers';
 
 // Mock ChatProvider with context values
 const mockUseChatContext = jest.fn();
@@ -123,7 +124,7 @@ describe('ChatPage - Feedback', () => {
   it('submits helpful feedback when thumbs up is clicked', async () => {
     mockApi.post.mockResolvedValueOnce({});
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -139,7 +140,7 @@ describe('ChatPage - Feedback', () => {
   it('submits not-helpful feedback when thumbs down is clicked', async () => {
     mockApi.post.mockResolvedValueOnce({});
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -155,7 +156,7 @@ describe('ChatPage - Feedback', () => {
   it('toggles feedback to null when clicking same button twice', async () => {
     mockApi.post.mockResolvedValue({});
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -176,7 +177,7 @@ describe('ChatPage - Feedback', () => {
   it('changes feedback when switching between helpful and not-helpful', async () => {
     mockApi.post.mockResolvedValue({});
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -199,7 +200,7 @@ describe('ChatPage - Feedback', () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockApi.post.mockRejectedValueOnce(new Error('Feedback failed'));
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -219,7 +220,7 @@ describe('ChatPage - Feedback', () => {
   it('uses backend message ID for feedback when available', async () => {
     mockApi.post.mockResolvedValueOnce({});
 
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -234,7 +235,7 @@ describe('ChatPage - Feedback', () => {
   });
 
   it('only shows feedback buttons for assistant messages', async () => {
-    render(<ChatPage />);
+    render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();

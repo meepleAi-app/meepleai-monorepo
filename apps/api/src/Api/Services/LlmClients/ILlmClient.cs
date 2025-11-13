@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace Api.Services.LlmClients;
 
@@ -48,7 +47,7 @@ public interface ILlmClient
         string userPrompt,
         double temperature,
         int maxTokens,
-        [EnumeratorCancellation] CancellationToken ct = default);
+        CancellationToken ct = default);
 
     /// <summary>
     /// Check if this provider supports the specified model

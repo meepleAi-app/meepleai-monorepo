@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { List } from 'react-window';
+import { cn } from '@/lib/utils';
+
 // Note: CSS imports commented out due to module resolution issues in Next.js 15.5.4
 // import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 // import 'react-pdf/dist/esm/Page/TextLayer.css';
@@ -181,22 +183,15 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
 
     return (
       <div
-        style={{
-          ...style,
-          padding: '8px',
-          cursor: 'pointer'
-        }}
+        style={{ ...style, padding: '8px', cursor: 'pointer' }}
         onClick={() => handleThumbnailClick(pageNumber)}
         data-testid={`thumbnail-${pageNumber}`}
       >
         <div
-          style={{
-            border: isActive ? '3px solid #0070f3' : '1px solid #ddd',
-            borderRadius: '4px',
-            overflow: 'hidden',
-            backgroundColor: '#fff',
-            transition: 'border-color 0.2s'
-          }}
+          className={cn(
+            "rounded overflow-hidden bg-white transition-colors",
+            isActive ? "border-[3px] border-blue-500" : "border border-gray-300"
+          )}
         >
           <Document file={fileUrl} onLoadError={() => {}}>
             <Page
@@ -207,14 +202,10 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
             />
           </Document>
           <div
-            style={{
-              textAlign: 'center',
-              padding: '4px',
-              fontSize: '12px',
-              color: isActive ? '#0070f3' : '#666',
-              fontWeight: isActive ? 600 : 400,
-              backgroundColor: isActive ? '#f0f7ff' : '#f9fafb'
-            }}
+            className={cn(
+              "text-center p-1 text-xs",
+              isActive ? "text-blue-500 font-semibold bg-blue-50" : "text-gray-600 font-normal bg-gray-50"
+            )}
           >
             {pageNumber}
           </div>
@@ -227,31 +218,16 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
     return (
       <div
         data-testid="pdf-preview-error"
-        style={{
-          padding: '24px',
-          backgroundColor: '#ffebee',
-          border: '1px solid #d93025',
-          borderRadius: '4px',
-          color: '#d93025'
-        }}
+        className="p-6 bg-red-50 border border-red-600 rounded text-red-600"
         role="alert"
         aria-live="assertive"
       >
-        <h3 style={{ marginTop: 0 }}>Error loading PDF</h3>
+        <h3 className="mt-0">Error loading PDF</h3>
         <p>{error}</p>
         {onClose && (
           <button
             onClick={onClose}
-            style={{
-              marginTop: '12px',
-              padding: '8px 16px',
-              backgroundColor: '#d93025',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 500
-            }}
+            className="mt-3 px-4 py-2 bg-red-600 text-white border-0 rounded cursor-pointer font-medium"
           >
             Close Preview
           </button>
@@ -263,46 +239,27 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
   return (
     <div
       data-testid="pdf-preview"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '600px',
-        border: '1px solid #e0e0e0',
-        borderRadius: '6px',
-        backgroundColor: '#f9fafb',
-        overflow: 'hidden'
-      }}
+      className="flex flex-col h-[600px] border border-gray-300 rounded-md bg-gray-50 overflow-hidden"
     >
       {/* Toolbar */}
       <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '12px',
-          padding: '12px 16px',
-          backgroundColor: '#fff',
-          borderBottom: '1px solid #e0e0e0',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}
+        className="flex flex-wrap gap-3 p-3 bg-white border-b border-gray-300 items-center justify-between"
         role="toolbar"
         aria-label="PDF preview controls"
       >
         {/* Zoom controls */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="flex gap-2 items-center flex-wrap">
           <button
             onClick={zoomOut}
             disabled={zoomLevel === ZOOM_LEVELS[0]}
             data-testid="zoom-out"
             aria-label="Zoom out"
-            style={{
-              padding: '6px 12px',
-              backgroundColor: zoomLevel === ZOOM_LEVELS[0] ? '#e0e0e0' : '#fff',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              cursor: zoomLevel === ZOOM_LEVELS[0] ? 'not-allowed' : 'pointer',
-              fontWeight: 500
-            }}
+            className={cn(
+              "px-3 py-1.5 border border-gray-300 rounded font-medium",
+              zoomLevel === ZOOM_LEVELS[0]
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-white cursor-pointer hover:bg-gray-50"
+            )}
           >
             -
           </button>
@@ -313,16 +270,12 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
               data-testid={`zoom-${level * 100}`}
               aria-label={`Zoom ${level * 100}%`}
               aria-pressed={zoomLevel === level}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: zoomLevel === level ? '#0070f3' : '#fff',
-                color: zoomLevel === level ? '#fff' : '#000',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: zoomLevel === level ? 600 : 400,
-                fontSize: '13px'
-              }}
+              className={cn(
+                "px-3 py-1.5 border border-gray-300 rounded cursor-pointer text-sm",
+                zoomLevel === level
+                  ? "bg-blue-500 text-white font-semibold"
+                  : "bg-white text-black font-normal hover:bg-gray-50"
+              )}
             >
               {level * 100}%
             </button>
@@ -332,18 +285,16 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
             disabled={zoomLevel === ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
             data-testid="zoom-in"
             aria-label="Zoom in"
-            style={{
-              padding: '6px 12px',
-              backgroundColor: zoomLevel === ZOOM_LEVELS[ZOOM_LEVELS.length - 1] ? '#e0e0e0' : '#fff',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              cursor: zoomLevel === ZOOM_LEVELS[ZOOM_LEVELS.length - 1] ? 'not-allowed' : 'pointer',
-              fontWeight: 500
-            }}
+            className={cn(
+              "px-3 py-1.5 border border-gray-300 rounded font-medium",
+              zoomLevel === ZOOM_LEVELS[ZOOM_LEVELS.length - 1]
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-white cursor-pointer hover:bg-gray-50"
+            )}
           >
             +
           </button>
-          <span data-testid="zoom-level" style={{ fontSize: '13px', color: '#666', marginLeft: '8px' }}>
+          <span data-testid="zoom-level" className="text-sm text-gray-600 ml-2">
             {zoomLevel * 100}%
           </span>
         </div>
@@ -355,16 +306,12 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
             data-testid="toggle-thumbnails"
             aria-label={showThumbnails ? 'Hide thumbnails' : 'Show thumbnails'}
             aria-pressed={showThumbnails}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: showThumbnails ? '#0070f3' : '#fff',
-              color: showThumbnails ? '#fff' : '#000',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: '13px'
-            }}
+            className={cn(
+              "px-3 py-1.5 border border-gray-300 rounded cursor-pointer font-medium text-sm",
+              showThumbnails
+                ? "bg-blue-500 text-white"
+                : "bg-white text-black hover:bg-gray-50"
+            )}
           >
             Pages
           </button>
@@ -376,16 +323,7 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
             onClick={onClose}
             data-testid="close-preview"
             aria-label="Close preview"
-            style={{
-              padding: '6px 12px',
-              backgroundColor: '#666',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: '13px'
-            }}
+            className="px-3 py-1.5 bg-gray-600 text-white border-0 rounded cursor-pointer font-medium text-sm"
           >
             Close
           </button>
@@ -393,20 +331,15 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
       </div>
 
       {/* Main content area */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div className="flex flex-1 overflow-hidden">
         {/* Thumbnail sidebar */}
         {showThumbnails && numPages && (
           <div
             data-testid="thumbnail-sidebar"
-            style={{
-              width: isMobile ? '100%' : `${THUMBNAIL_WIDTH + 32}px`,
-              borderRight: isMobile ? 'none' : '1px solid #e0e0e0',
-              backgroundColor: '#fff',
-              overflow: 'hidden',
-              position: isMobile ? 'absolute' : 'relative',
-              zIndex: isMobile ? 10 : 1,
-              height: isMobile ? '100%' : 'auto'
-            }}
+            className={cn(
+              "border-gray-300 bg-white overflow-hidden",
+              isMobile ? "w-full absolute z-10 h-full" : `w-[${THUMBNAIL_WIDTH + 32}px] relative z-[1] border-r`
+            )}
             role="navigation"
             aria-label="Page thumbnails"
           >
@@ -425,25 +358,12 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
         {(!showThumbnails || !isMobile) && (
           <div
             ref={mainCanvasRef}
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'auto',
-              backgroundColor: '#525659',
-              padding: '20px'
-            }}
+            className="flex-1 flex flex-col overflow-auto bg-[#525659] p-5"
           >
             {loading && (
               <div
                 data-testid="pdf-loading"
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#fff'
-                }}
+                className="flex-1 flex items-center justify-center text-white"
                 role="status"
                 aria-live="polite"
               >
@@ -452,11 +372,8 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
             )}
 
             <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                minHeight: loading ? 0 : 'auto'
-              }}
+              className="flex justify-center"
+              style={{ minHeight: loading ? 0 : 'auto' }}
             >
               <Document
                 file={fileUrl}
@@ -472,14 +389,10 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
                   loading={
                     <div
                       data-testid="page-loading"
+                      className="bg-white flex items-center justify-center rounded"
                       style={{
                         width: pageWidth * zoomLevel,
-                        height: pageWidth * 1.4 * zoomLevel,
-                        backgroundColor: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '4px'
+                        height: pageWidth * 1.4 * zoomLevel
                       }}
                       role="status"
                       aria-live="polite"
@@ -494,17 +407,7 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
             {/* Page navigation (bottom) */}
             {numPages && (
               <div
-                style={{
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginTop: '20px',
-                  padding: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  borderRadius: '6px',
-                  flexWrap: 'wrap'
-                }}
+                className="flex gap-3 items-center justify-center mt-5 p-3 bg-white/95 rounded-md flex-wrap"
                 role="navigation"
                 aria-label="Page navigation"
               >
@@ -513,26 +416,19 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
                   disabled={currentPage === 1}
                   data-testid="prev-page"
                   aria-label="Previous page"
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: currentPage === 1 ? '#e0e0e0' : '#0070f3',
-                    color: currentPage === 1 ? '#999' : 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    fontWeight: 500
-                  }}
+                  className={cn(
+                    "px-4 py-2 border-0 rounded font-medium",
+                    currentPage === 1
+                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                      : "bg-blue-500 text-white cursor-pointer hover:bg-blue-600"
+                  )}
                 >
                   Previous
                 </button>
 
                 <span
                   data-testid="current-page"
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: '#333'
-                  }}
+                  className="text-sm font-medium text-gray-800"
                   aria-live="polite"
                   aria-atomic="true"
                 >
@@ -544,26 +440,20 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
                   disabled={currentPage === numPages}
                   data-testid="next-page"
                   aria-label="Next page"
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: currentPage === numPages ? '#e0e0e0' : '#0070f3',
-                    color: currentPage === numPages ? '#999' : 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: currentPage === numPages ? 'not-allowed' : 'pointer',
-                    fontWeight: 500
-                  }}
+                  className={cn(
+                    "px-4 py-2 border-0 rounded font-medium",
+                    currentPage === numPages
+                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                      : "bg-blue-500 text-white cursor-pointer hover:bg-blue-600"
+                  )}
                 >
                   Next
                 </button>
 
-                <form onSubmit={handleJumpToPage} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <form onSubmit={handleJumpToPage} className="flex gap-2 items-center">
                   <label
                     htmlFor="jump-to-page"
-                    style={{
-                      fontSize: '14px',
-                      color: '#333'
-                    }}
+                    className="text-sm text-gray-800"
                   >
                     Jump to:
                   </label>
@@ -577,28 +467,13 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
                     data-testid="jump-to-page-input"
                     aria-label="Jump to page number"
                     placeholder="Page #"
-                    style={{
-                      width: '70px',
-                      padding: '6px 8px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px'
-                    }}
+                    className="w-[70px] px-2 py-1.5 border border-gray-300 rounded text-sm"
                   />
                   <button
                     type="submit"
                     data-testid="jump-to-page-button"
                     aria-label="Go to page"
-                    style={{
-                      padding: '6px 12px',
-                      backgroundColor: '#34a853',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontWeight: 500,
-                      fontSize: '14px'
-                    }}
+                    className="px-3 py-1.5 bg-green-600 text-white border-0 rounded cursor-pointer font-medium text-sm"
                   >
                     Go
                   </button>

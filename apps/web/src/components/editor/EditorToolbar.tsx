@@ -18,31 +18,13 @@ function ToolbarButton({ onClick, isActive, disabled, title, children }: Toolbar
       onClick={onClick}
       disabled={disabled}
       title={title}
-      style={{
-        padding: "6px 10px",
-        background: isActive ? "#0070f3" : disabled ? "#f0f0f0" : "white",
-        color: isActive ? "white" : disabled ? "#999" : "#333",
-        border: "1px solid #e0e0e0",
-        borderRadius: 4,
-        cursor: disabled ? "not-allowed" : "pointer",
-        fontSize: 14,
-        fontWeight: isActive ? "bold" : "normal",
-        transition: "all 0.15s ease",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minWidth: 32
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled && !isActive) {
-          e.currentTarget.style.background = "#f5f5f5";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.background = disabled ? "#f0f0f0" : "white";
-        }
-      }}
+      className={`
+        px-2.5 py-1.5 border border-gray-200 rounded text-sm min-w-8
+        flex items-center justify-center transition-all duration-150
+        ${isActive ? 'bg-primary text-white font-bold' : ''}
+        ${disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 cursor-pointer'}
+        ${!disabled && !isActive ? 'hover:bg-gray-100' : ''}
+      `}
     >
       {children}
     </button>
@@ -50,16 +32,7 @@ function ToolbarButton({ onClick, isActive, disabled, title, children }: Toolbar
 }
 
 function ToolbarDivider() {
-  return (
-    <div
-      style={{
-        width: 1,
-        height: 24,
-        background: "#e0e0e0",
-        margin: "0 8px"
-      }}
-    />
-  );
+  return <div className="w-px h-6 bg-gray-200 mx-2" />;
 }
 
 /**
@@ -80,17 +53,7 @@ function ToolbarDivider() {
  */
 export default function EditorToolbar({ editor }: EditorToolbarProps) {
   return (
-    <div
-      style={{
-        padding: "8px 12px",
-        background: "#fafafa",
-        borderBottom: "1px solid #e0e0e0",
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 4,
-        alignItems: "center"
-      }}
-    >
+    <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-1 items-center">
       {/* Text Formatting */}
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -116,7 +79,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
         disabled={!editor.can().chain().focus().toggleStrike().run()}
         title="Barrato (Ctrl+Shift+X)"
       >
-        <span style={{ textDecoration: "line-through" }}>S</span>
+        <span className="line-through">S</span>
       </ToolbarButton>
 
       <ToolbarButton
@@ -125,7 +88,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
         disabled={!editor.can().chain().focus().toggleCode().run()}
         title="Codice inline (Ctrl+E)"
       >
-        <span style={{ fontFamily: "monospace" }}>&lt;/&gt;</span>
+        <span className="font-mono">&lt;/&gt;</span>
       </ToolbarButton>
 
       <ToolbarDivider />
@@ -182,7 +145,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
         isActive={editor.isActive("codeBlock")}
         title="Blocco di codice (Ctrl+Alt+C)"
       >
-        <span style={{ fontFamily: "monospace" }}>{"{ }"}</span>
+        <span className="font-mono">{"{ }"}</span>
       </ToolbarButton>
 
       <ToolbarButton

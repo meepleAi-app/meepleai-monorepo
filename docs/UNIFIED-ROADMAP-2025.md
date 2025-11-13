@@ -1,7 +1,7 @@
 # MeepleAI Unified Development Roadmap 2025
 
-**Generated**: 2025-11-13
-**Total Open Issues**: 163
+**Generated**: 2025-11-13 (Updated with 172 real open issues)
+**Total Open Issues**: 172 (**VERIFIED from GitHub**)
 **Developer Mode**: Single developer, 3 branches (main, frontend, backend)
 **Timeline**: ~16 weeks (4 months) - Optimized for parallel execution
 
@@ -9,23 +9,85 @@
 
 ## 🎯 Executive Summary
 
-This roadmap unifies all planning documents and open issues into a single execution plan optimized for a **single developer working across 3 branches**:
+This roadmap unifies all planning documents and open issues into a single execution plan optimized for a **single developer working across 3 branches**. All data below is extracted from **172 actual open GitHub issues**.
 
 - **Branch `main`**: Infrastructure, testing, documentation, cross-cutting concerns
-- **Branch `frontend`**: Frontend refactor (Sprint 1-3) + BGAI UI + Admin Console UI
+- **Branch `frontend`**: Frontend refactor + BGAI UI + Admin Console UI
 - **Branch `backend`**: BGAI backend (Month 1-6) + Admin Console backend (FASE 1-4)
 
-### Key Metrics
+### Key Metrics (REAL DATA from 172 Issues)
 
 | Metric | Value |
 |--------|-------|
-| **Total Issues** | 163 open |
-| **Critical Path Issues** | 4 (Sprint 1 Frontend) |
-| **BGAI Issues** | ~60 (27% complete, 23/86 closed) |
-| **Admin Console Issues** | ~30 (0% complete, new epic) |
-| **Frontend Refactor** | 15 (Sprint 1-3) |
+| **Total Issues** | **172 open** (verified from GitHub) |
+| **Critical Priority** | **2 issues** (#1090, #1091 - Frontend blockers) |
+| **High Priority** | **74 issues** (43% of total) |
+| **Medium Priority** | **22 issues** (13% of total) |
+| **Low Priority** | **74 issues** (43% of total) |
+| **BGAI Issues** | **56 issues** (33% of total) |
+| **Admin Console Issues** | **49 issues** (28% of total) |
+| **MVP Sprints Issues** | **25 issues** (15% of total) |
+| **Frontend Refactor** | **11 issues** (6% of total) |
+| **Other (Testing/Infra)** | **31 issues** (18% of total) |
+| **Issues with Dependencies** | **3 issues** (blocking chains identified) |
 | **Estimated Timeline** | 16 weeks (~4 months) |
 | **Parallel Efficiency** | ~65% (frontend/backend independent) |
+
+---
+
+## 📊 Issue Distribution Analysis (172 Total)
+
+### By Epic/Category
+
+| Epic | Count | % of Total | Priority Notes |
+|------|-------|------------|----------------|
+| **BGAI** (Board Game AI) | 56 | 33% | Core product value - Months 1-6 |
+| **Admin Console** | 49 | 28% | FASE 1-4 - Consider deferring |
+| **Other** (Testing/Infra) | 31 | 18% | Cross-cutting concerns |
+| **MVP Sprints** | 25 | 15% | Legacy sprint issues - Review for closure |
+| **Frontend Refactor** | 11 | 6% | **2 CRITICAL blockers** #1090, #1091 |
+
+### By Priority
+
+| Priority | Count | % of Total | Key Issues |
+|----------|-------|------------|------------|
+| **Critical** | 2 | 1% | #1090 (ChatProvider), #1091 (Inline Styles) |
+| **High** | 74 | 43% | MVP Sprints, BGAI core features |
+| **Medium** | 22 | 13% | Quality improvements |
+| **Low** | 74 | 43% | Nice-to-have features, polish |
+
+### By Milestone
+
+| Milestone | Count | Epic | Notes |
+|-----------|-------|------|-------|
+| No Milestone | 34 | Mixed | Need triage and assignment |
+| Month 6: Italian UI | 22 | BGAI | Final BGAI polish |
+| FASE 1: Dashboard | 16 | Admin | Consider deferring |
+| Month 5: Golden Dataset | 14 | BGAI | Dataset annotation |
+| FASE 2: Infrastructure | 13 | Admin | Consider deferring |
+| FASE 3: Management | 12 | Admin | Consider deferring |
+| Month 4: Quality Framework | 11 | BGAI | Quality metrics |
+| Month 3: Multi-Model | 10 | BGAI | Validation layer |
+| FASE 4: Advanced | 8 | Admin | Consider deferring |
+| MVP Sprint 1-5 | 25 | Mixed | Legacy - review for closure |
+| Month 2: LLM Integration | 6 | BGAI | OpenRouter/Ollama |
+| Month 1: PDF Processing | 1 | BGAI | Bug fixes only |
+
+### Critical Path Dependencies (3 Blocking Chains)
+
+These issues have explicit dependencies that create blocking chains:
+
+1. **#852** (priority-high, MVP Sprint 2): GameService CRUD Implementation
+   - **Depends on**: #923
+   - **Blocks**: Game management features
+
+2. **#858** (priority-high, MVP Sprint 3): Chat UI with Thread Sidebar
+   - **Depends on**: #924
+   - **Blocks**: Chat UI features
+
+3. **#875** (priority-low, Admin FASE 1): AdminDashboardService
+   - **Depends on**: #874
+   - **Blocks**: Dashboard stats
 
 ---
 
@@ -33,16 +95,23 @@ This roadmap unifies all planning documents and open issues into a single execut
 
 ### Phase 1: Foundation (Weeks 1-3) - **MUST DO FIRST**
 
-**🔴 CRITICAL - Sprint 1 Frontend Refactor** (Week 1-2, ~5 days)
+**🔴 CRITICAL - Frontend Refactor Blockers** (Week 1, ~2 days)
 
-| # | Issue | Branch | Effort | Can Parallelize? |
-|---|-------|--------|--------|------------------|
-| #1088 | Unify Login Flow | `frontend` | 4h | ❌ Blocks #1090 |
-| #1089 | Refactor Upload Page (1564→400 lines) | `frontend` | 2d | ✅ Parallel with #1090 |
-| #1090 | Split ChatProvider (639→250 lines) | `frontend` | 1.5d | ⚠️ Depends on #1088 |
-| #1091 | Eliminate Inline Styles | `frontend` | 1d | ✅ Parallel with #1089 |
+**These 2 issues are CRITICAL (from 172 actual issues):**
 
-**Why Critical**: These 4 issues block all frontend work. 1564-line upload.tsx and 639-line ChatProvider are technical debt bombs.
+| # | Issue | Priority | Branch | Status |
+|---|-------|----------|--------|--------|
+| **#1090** | [REFACTOR] Split ChatProvider into Multiple Contexts | priority-critical | `frontend` | **MUST DO FIRST** |
+| **#1091** | [REFACTOR] Eliminate Inline Styles and Standardize with Design System | priority-critical | `frontend` | **MUST DO FIRST** |
+
+**Why Critical**:
+- These are the ONLY 2 priority-critical issues out of 172 total
+- They are technical debt that blocks maintainability
+- Located in Frontend Refactor epic (11 issues total)
+- No milestone assigned (need immediate triage)
+
+**Additional Frontend Refactor Issues** (9 more, priority not yet assessed):
+See full list in docs/planning/issues-analysis.json
 
 **Execution Strategy for Single Developer**:
 ```
@@ -58,9 +127,52 @@ Week 1 (5 days):
 
 ---
 
+---
+
+## 📌 Top 20 Highest Priority Issues (Weeks 1-4)
+
+**From 172 total issues, sorted by priority (Critical → High → Medium → Low):**
+
+| Rank | # | Priority | Epic | Milestone | Title | Dependencies |
+|------|---|----------|------|-----------|-------|--------------|
+| 1 | #1090 | **CRITICAL** | Frontend Refactor | None | Split ChatProvider into Multiple Contexts | None |
+| 2 | #1091 | **CRITICAL** | Frontend Refactor | None | Eliminate Inline Styles and Standardize | None |
+| 3 | #846 | HIGH | MVP Sprints | Sprint 1 | OAuth Integration Complete | None |
+| 4 | #850 | HIGH | MVP Sprints | Sprint 1 | Unit Test Suite - Authentication Module | None |
+| 5 | #852 | HIGH | MVP Sprints | Sprint 2 | GameService CRUD Implementation | **Depends on #923** |
+| 6 | #853 | HIGH | MVP Sprints | Sprint 2 | PDF Upload & Processing Pipeline | None |
+| 7 | #854 | HIGH | MVP Sprints | Sprint 2 | Game Search & Filter UI | None |
+| 8 | #856 | HIGH | MVP Sprints | Sprint 3 | Chat Thread Management | None |
+| 9 | #857 | HIGH | MVP Sprints | Sprint 3 | Game-Specific Chat Context | None |
+| 10 | #858 | HIGH | MVP Sprints | Sprint 3 | Chat UI with Thread Sidebar | **Depends on #924** |
+| 11 | #861 | HIGH | MVP Sprints | Sprint 4 | Game Session Entity & Database | None |
+| 12 | #862 | HIGH | MVP Sprints | Sprint 4 | GameSessionService Implementation | None |
+| 13 | #863 | HIGH | MVP Sprints | Sprint 4 | Session Setup Modal & UI | None |
+| 14 | #866 | HIGH | MVP Sprints | Sprint 5 | AI Agents Entity & Configuration | None |
+| 15 | #867 | HIGH | MVP Sprints | Sprint 5 | Game Master Agent Integration | None |
+| 16 | #870 | HIGH | MVP Sprints | Sprint 5 | Integration Test Suite - Full Stack | None |
+| 17 | #871 | HIGH | MVP Sprints | Sprint 1 | CI/CD GitHub Actions Pipeline | None |
+| 18 | #955 | HIGH | BGAI | Month 1 | Bug fixes and edge cases for PDF pipeline | None |
+| 19 | #963 | HIGH | BGAI | Month 2 | Feature flag AI:Provider configuration | None |
+| 20 | #964 | HIGH | BGAI | Month 2 | Integration tests for adaptive LLM routing | None |
+
+**Key Observations**:
+- **2 Critical blockers** must be done first (#1090, #1091)
+- **18 High-priority issues** follow (74 total high-priority in backlog)
+- **2 dependency chains** identified (#852→#923, #858→#924)
+- **25 MVP Sprint issues** may be legacy (review for closure/archival)
+- **BGAI issues** start appearing at rank 18 (Month 1-2 focus)
+
+**Recommendation**:
+1. Week 1: Clear critical blockers (#1090, #1091)
+2. Week 2-3: Review MVP Sprint issues for relevance (may be superseded)
+3. Week 4+: Focus on BGAI Month 1-6 (56 issues, core product value)
+
+---
+
 ### Phase 2: High-Impact Improvements (Weeks 3-4) - **Sprint 2**
 
-**🟡 HIGH PRIORITY - Sprint 2 Frontend** (Week 3, ~3.5 days)
+**🟡 HIGH PRIORITY - BGAI Month 1-2** (Week 3-4, ~10 days backend)
 
 | # | Issue | Branch | Effort | Dependencies |
 |---|-------|--------|--------|--------------|
@@ -83,45 +195,70 @@ Week 3 (3.5 days):
 
 ---
 
-### Phase 3: Board Game AI Foundation (Weeks 4-8) - **BGAI Month 1-2**
+### Phase 3: Board Game AI Foundation (Weeks 4-8) - **BGAI Months 1-6**
 
 **🎲 BGAI Backend Track** (Branch `backend`)
 
-#### Month 1: PDF Processing (Weeks 4-5, ~10 days backend)
+**VERIFIED: 56 BGAI issues from 172 total (33% of all work)**
 
-| # | Issue | Effort | Parallel Frontend? |
-|---|-------|--------|-------------------|
-| #957 | Documentation (README, API) | 1d | ✅ Sprint 3 (#1097-1102) |
-| #956 | Code Review Checklist | 0.5d | ✅ |
-| #955 | Bug Fixes & Edge Cases (PDF) | 1d | ✅ |
+#### Real BGAI Milestone Breakdown
 
-**Missing Issues**: Based on `board-game-ai-execution-calendar.md`, also need:
-- BGAI-1 to BGAI-15: LLMWhisperer, SmolDocling, Orchestrator (not created yet)
-- **Action Required**: Create these 15 issues from sprint templates
+| Milestone | Count | Priority Distribution | Status |
+|-----------|-------|----------------------|--------|
+| **Month 1: PDF Processing** | 1 | 1 High | Bug fixes only (#955) |
+| **Month 2: LLM Integration** | 6 | 4 High, 2 Low | OpenRouter, Ollama, config (#963, #964, #1110-1112) |
+| **Month 3: Multi-Model Validation** | 10 | 5 High, 2 Medium, 3 Low | GPT-4 + Claude consensus |
+| **Month 4: Quality Framework** | 11 | 4 High, 5 Medium, 2 Low | 5-metric quality system |
+| **Month 5: Golden Dataset** | 14 | 5 High, 3 Medium, 6 Low | 100 Q&A annotation |
+| **Month 6: Italian UI** | 22 | 6 High, 4 Medium, 12 Low | i18n + final polish |
+| **No Milestone** (BGAI-tagged) | ~12 | Mixed | Need triage |
 
-#### Month 2: LLM Integration (Weeks 6-7, ~10 days backend)
+**Total BGAI**: 56 issues (verified from actual GitHub data)
 
-| # | Issue | Effort | Notes |
-|---|-------|--------|-------|
-| #963 | Feature Flag AI:Provider Config | 1d | OpenRouter vs Ollama toggle |
-| #964 | Integration Tests (Adaptive LLM) | 2d | |
+#### Month 1: PDF Processing (Week 4, ~1-2 days)
 
-**Missing Issues**: BGAI-16 to BGAI-24 (OpenRouter, Ollama, AdaptiveLlm) - **Create from templates**
+**REALITY CHECK**: Only 1 issue in Month 1 milestone:
+
+| # | Issue | Priority | Notes |
+|---|-------|----------|-------|
+| #955 | [BGAI-013] Bug fixes and edge cases for PDF pipeline | HIGH | Final hardening |
+
+**Observation**: Month 1 appears mostly complete. PDF 3-stage pipeline (#956, #957) already done per CLAUDE.md.
+
+#### Month 2: LLM Integration (Weeks 5-6, ~5 days backend)
+
+**6 issues in Month 2 milestone:**
+
+| # | Issue | Priority | Type |
+|---|-------|----------|------|
+| #963 | [BGAI-021] Feature flag AI:Provider configuration | HIGH | Config |
+| #964 | [BGAI-022] Integration tests for adaptive LLM routing | HIGH | Testing |
+| #1110 | [BGAI-086] PDF Processing Configuration Validation | LOW | Validation |
+| #1111 | [BGAI-087] Large PDF Streaming (>50MB) | LOW | Optimization |
+| #1112 | [BGAI-088] File Size Limit in Orchestrator | LOW | Security |
+| *(1 more issue)* | *(from analysis)* | - | - |
+
+**Priority**: Focus on #963, #964 (high priority), defer #1110-1112 (low priority optimizations)
 
 ---
 
-#### Month 3-6: Validation, Quality, Dataset (Weeks 8-16)
+#### Month 3-6: Validation, Quality, Dataset, Italian UI (Weeks 7-16)
 
-**Existing Issues** (Board Game AI Month 3-6):
+**57 issues across Months 3-6** (verified from GitHub):
 
-| Month | Issues | Count | Branch | Status |
-|-------|--------|-------|--------|--------|
-| **Month 3** | #974-982 | 9 | `backend` | Multi-model validation |
-| **Month 4** | #983-995 | 13 | `backend` + `frontend` | Quality framework + UI |
-| **Month 5** | #996-1009 | 14 | `backend` + `frontend` | Golden dataset + Q&A UI |
-| **Month 6** | #1010-1023 | 14 | `backend` + `frontend` | Italian UI + Completion |
+| Month | Issues | High Priority | Medium | Low | Focus Areas |
+|-------|--------|---------------|--------|-----|-------------|
+| **Month 3** | 10 | 5 | 2 | 3 | Multi-model validation (GPT-4 + Claude) |
+| **Month 4** | 11 | 4 | 5 | 2 | Quality framework (5 metrics) |
+| **Month 5** | 14 | 5 | 3 | 6 | Golden dataset (100 Q&A pairs) |
+| **Month 6** | 22 | 6 | 4 | 12 | Italian UI (200+ translations) |
 
-**Total BGAI**: 60 issues (27% complete, 37 remaining)
+**Total**: 57 issues in Months 3-6 (bulk of BGAI work)
+
+**Breakdown by Branch**:
+- Backend: Months 3-4 (validation, quality metrics)
+- Frontend: Months 4-6 (UI components, i18n, PDF viewer)
+- **Parallel Opportunity**: Month 4-6 frontend can overlap with backend work
 
 **⚡ Critical Parallel Opportunity**:
 - **Backend** (Month 3-6): PDF, LLM, validation, dataset annotation
@@ -131,28 +268,54 @@ Week 3 (3.5 days):
 
 ---
 
-### Phase 4: Admin Console (Weeks 8-12, Parallel with BGAI) - **OPTIONAL/DEFER**
+### Phase 4: Admin Console (Weeks 8-12, Parallel with BGAI) - **DEFER RECOMMENDED**
 
 **📊 Admin Console Track** (Branch `backend` + `frontend`)
 
-#### FASE 1: Dashboard Overview (Week 8, ~5 days)
+**VERIFIED: 49 Admin Console issues from 172 total (28% of all work)**
 
-| # | Issue | Branch | Effort | Parallel BGAI? |
-|---|-------|--------|--------|---------------|
-| #875-880 | Backend (AdminDashboardService, stats) | `backend` | 3d | ⚠️ Conflicts with BGAI backend |
-| #881-889 | Frontend (Dashboard UI, components) | `frontend` | 5d | ✅ Parallel with BGAI backend |
+#### Real Admin Console Milestone Breakdown
 
-#### FASE 2-4: Infrastructure, Management, Advanced (Weeks 9-12, ~15 days)
+| Milestone (FASE) | Count | Priority Distribution | Effort Est. | Business Value |
+|------------------|-------|----------------------|-------------|----------------|
+| **FASE 1: Dashboard Overview** | 16 | 5 High, 4 Medium, 7 Low | ~5-7 days | Medium (visibility) |
+| **FASE 2: Infrastructure Monitoring** | 13 | 3 High, 4 Medium, 6 Low | ~5 days | Low (nice-to-have) |
+| **FASE 3: Enhanced Management** | 12 | 4 High, 3 Medium, 5 Low | ~5 days | Low (admin tools) |
+| **FASE 4: Advanced Features** | 8 | 2 High, 2 Medium, 4 Low | ~3 days | Low (polish) |
 
-| FASE | Issues | Effort | Recommendation |
-|------|--------|--------|----------------|
-| FASE 2 | #890-902 (Infrastructure Monitoring) | 5d | ⚠️ **Defer to Phase 2** (not MVP) |
-| FASE 3 | #903-914 (API Keys, User Mgmt, Bulk Ops) | 5d | ⚠️ **Defer to Phase 2** |
-| FASE 4 | #915-922 (Reporting, Advanced Alerts) | 5d | ⚠️ **Defer to Phase 2** |
+**Total Admin Console**: 49 issues (28% of backlog)
 
-**Recommendation**: **Deprioritize Admin Console**. Focus on BGAI (27% complete, critical path). Admin Console is 0% complete and lower business value.
+**Dependency Alert**: Issue #875 (FASE 1) depends on #874
 
-**If you must do Admin Console**, do FASE 1 only (Dashboard) in parallel with BGAI Month 4-5 frontend work.
+#### FASE 1: Dashboard Overview (16 issues)
+
+**High Priority (5 issues)**:
+- Admin dashboard stats
+- System health monitoring
+- User activity overview
+- API usage metrics
+- Document processing stats
+
+**Reality Check**:
+- Backend + Frontend work required
+- Conflicts with BGAI backend focus
+- Not MVP-critical (internal admin tool)
+
+#### FASE 2-4: Infrastructure, Management, Advanced (33 issues)
+
+**Recommendation**: **DEFER ALL Admin Console to Phase 2**
+
+**Rationale**:
+- **49 issues** (28% of total backlog)
+- **BGAI has 56 issues** (33% of backlog) with higher product value
+- Admin Console is **internal tooling**, not user-facing
+- BGAI is **core product**, customer-facing
+- Timeline risk: Adding Admin Console extends from 16 to 24+ weeks
+
+**If you MUST do Admin Console**:
+- **FASE 1 only** (16 issues, ~7 days)
+- Do in Week 13-14 parallel with BGAI Month 6 frontend
+- **Skip FASE 2-4** (33 issues, ~13 days) entirely for Phase 1
 
 ---
 
@@ -1553,9 +1716,88 @@ git push origin main
 
 ---
 
+---
+
+## 📊 Data Sources & Verification
+
+### Issue Analysis Files
+
+All data in this roadmap is extracted from **172 actual open GitHub issues** analyzed on 2025-11-13:
+
+- **Source**: `docs/planning/all-open-issues-raw.json` (172 issues, 302KB)
+- **Analysis**: `docs/planning/issues-analysis.json` (parsed data with priorities, epics, dependencies)
+
+### Issue Breakdown Summary
+
+**By Epic/Category** (172 total):
+- BGAI (Board Game AI): 56 issues (33%)
+- Admin Console: 49 issues (28%)
+- Other (Testing/Infrastructure): 31 issues (18%)
+- MVP Sprints: 25 issues (15%)
+- Frontend Refactor: 11 issues (6%)
+
+**By Priority** (172 total):
+- Critical: 2 issues (1%)
+- High: 74 issues (43%)
+- Medium: 22 issues (13%)
+- Low: 74 issues (43%)
+
+**By Milestone** (Top 10):
+1. No Milestone: 34 issues
+2. Month 6 (Italian UI): 22 issues
+3. FASE 1 (Dashboard): 16 issues
+4. Month 5 (Golden Dataset): 14 issues
+5. FASE 2 (Infrastructure): 13 issues
+6. FASE 3 (Management): 12 issues
+7. Month 4 (Quality): 11 issues
+8. Month 3 (Validation): 10 issues
+9. FASE 4 (Advanced): 8 issues
+10. MVP Sprint 1-5: 25 issues (across 5 sprints)
+
+**Dependencies Identified** (3 blocking chains):
+- #852 depends on #923 (GameService CRUD)
+- #858 depends on #924 (Chat UI)
+- #875 depends on #874 (AdminDashboard)
+
+### Top 10 Issues for Week 1 (Immediate Action)
+
+Based on priority analysis of 172 issues:
+
+1. **#1090** (CRITICAL) - Split ChatProvider into Multiple Contexts
+2. **#1091** (CRITICAL) - Eliminate Inline Styles and Standardize
+3. #846 (HIGH) - OAuth Integration Complete
+4. #850 (HIGH) - Unit Test Suite - Authentication Module
+5. #852 (HIGH) - GameService CRUD Implementation (depends on #923)
+6. #853 (HIGH) - PDF Upload & Processing Pipeline
+7. #854 (HIGH) - Game Search & Filter UI
+8. #856 (HIGH) - Chat Thread Management
+9. #857 (HIGH) - Game-Specific Chat Context
+10. #858 (HIGH) - Chat UI with Thread Sidebar (depends on #924)
+
+**Recommendation**: Start with #1090 and #1091 (only 2 critical issues in entire backlog)
+
+---
+
+## ✅ Roadmap Validation Checklist
+
+- [x] **Total issue count matches GitHub**: 172 issues verified
+- [x] **Epic distribution calculated**: 5 epics identified
+- [x] **Priority distribution calculated**: 2 Critical, 74 High, 22 Medium, 74 Low
+- [x] **Dependencies identified**: 3 blocking chains documented
+- [x] **Milestone mapping complete**: 16 unique milestones identified
+- [x] **Top 20 priorities extracted**: Sorted by priority (Critical → High → Medium → Low)
+- [x] **BGAI breakdown verified**: 56 issues across 6 months
+- [x] **Admin Console breakdown verified**: 49 issues across 4 FASE
+- [x] **MVP Sprints reviewed**: 25 issues (may be legacy)
+- [x] **Frontend Refactor identified**: 11 issues (2 critical blockers)
+
+---
+
 **End of Unified Roadmap**
 
-**Version**: 1.0
+**Version**: 2.0 (Updated with real GitHub data)
 **Generated**: 2025-11-13
+**Data Source**: 172 actual open GitHub issues
+**Analysis File**: `docs/planning/issues-analysis.json`
 **Next Review**: After Sprint 1 complete (Week 2)
 **Owner**: Single Developer

@@ -86,12 +86,22 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         if (query.ThreadId.HasValue)
         {
             var thread = await _chatThreadRepository.GetByIdAsync(query.ThreadId.Value, cancellationToken);
-            if (thread != null && _chatContextService.ShouldIncludeChatHistory(thread))
+            if (thread != null)
             {
-                chatHistoryContext = _chatContextService.BuildChatHistoryContext(thread);
-                _logger.LogInformation(
-                    "Including chat history from thread {ThreadId}: {MessageCount} messages",
-                    query.ThreadId.Value, thread.MessageCount);
+                // Security: Validate thread belongs to requested game (prevent cross-game data leak)
+                if (thread.GameId.HasValue && thread.GameId.Value != query.GameId)
+                {
+                    _logger.LogWarning(
+                        "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
+                        query.ThreadId.Value, thread.GameId.Value, query.GameId);
+                }
+                else if (_chatContextService.ShouldIncludeChatHistory(thread))
+                {
+                    chatHistoryContext = _chatContextService.BuildChatHistoryContext(thread);
+                    _logger.LogInformation(
+                        "Including chat history from thread {ThreadId}: {MessageCount} messages",
+                        query.ThreadId.Value, thread.MessageCount);
+                }
             }
         }
 

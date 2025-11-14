@@ -103,13 +103,7 @@ const setupHappyPathMocks = () => {
     if (path === `/api/v1/games/${baseGame.id}/agents`) {
       return [baseAgent];
     }
-    // Legacy endpoint (deprecated, keeping for backward compat)
-    if (path === `/api/v1/chats?gameId=${baseGame.id}`) {
-      return [baseChatThread];
-    }
-    if (path === `/api/v1/chats/${baseChatThread.id}/messages`) {
-      return [baseMessage];
-    }
+    // Legacy endpoints removed - use chatThreads.* mocks instead
     return [];
   });
 
@@ -578,11 +572,11 @@ describe('ChatProvider', () => {
       const chat2: ChatThread = {
         id: 'chat-2',
         gameId: 'game-2',
-        gameName: 'Catan',
-        agentId: 'agent-2',
-        agentName: 'QA Agent 2',
+        title: 'Catan Chat',
         createdAt: new Date().toISOString(),
-        lastMessageAt: null,
+        lastMessageAt: new Date().toISOString(),
+        messageCount: 0,
+        messages: [],
       };
 
       mockApi.get.mockImplementation(async (path: string) => {
@@ -661,11 +655,11 @@ describe('ChatProvider', () => {
       const chat2: ChatThread = {
         id: 'chat-2',
         gameId: 'game-2',
-        gameName: 'Catan',
-        agentId: 'agent-2',
-        agentName: 'QA Agent 2',
+        title: 'Catan Chat',
         createdAt: new Date().toISOString(),
-        lastMessageAt: null,
+        lastMessageAt: new Date().toISOString(),
+        messageCount: 0,
+        messages: [],
       };
 
       mockApi.get.mockImplementation(async (path: string) => {
@@ -1801,11 +1795,11 @@ describe('ChatProvider', () => {
       const chat2: ChatThread = {
         id: 'chat-2',
         gameId: 'game-1',
-        gameName: 'Chess',
-        agentId: 'agent-1',
-        agentName: 'QA Agent',
+        title: 'Chess Chat 2',
         createdAt: new Date().toISOString(),
-        lastMessageAt: null,
+        lastMessageAt: new Date().toISOString(),
+        messageCount: 0,
+        messages: [],
       };
 
       mockApi.get.mockImplementation(async (path: string) => {

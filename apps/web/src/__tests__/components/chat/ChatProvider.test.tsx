@@ -30,7 +30,7 @@ const mockApi: any = (global as any).__chatApiMock;
 import { render, screen, act, waitFor } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
 import { ChatProvider, useChatContext } from '@/components/chat/ChatProvider';
-import { Game, Agent, ChatThread, Message } from '@/types';
+import { Game, Agent, ChatThread, Message, ChatThreadMessage } from '@/types';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { GameProvider } from '@/components/game/GameProvider';
 import { UIProvider } from '@/components/ui/UIProvider';
@@ -166,7 +166,7 @@ describe('ChatProvider', () => {
 
       expect(() => {
         renderHook(() => useChatContext());
-      }).toThrow('useChatContext must be used within ChatProvider');
+      }).toThrow('useAuth must be used within AuthProvider');
 
       consoleError.mockRestore();
     });
@@ -218,7 +218,7 @@ describe('ChatProvider', () => {
       });
 
       expect(mockApi.get).toHaveBeenCalledWith(`/api/v1/games/${baseGame.id}/agents`);
-      expect(mockApi.get).toHaveBeenCalledWith(`/api/v1/chats?gameId=${baseGame.id}`);
+      expect(mockApi.chatThreads.getByGame).toHaveBeenCalledWith(baseGame.id);
     });
 
     it('loads chat history when selecting a chat', async () => {
@@ -231,14 +231,14 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => {
         expect(result.current.messages).toHaveLength(1);
       });
 
-      expect(mockApi.get).toHaveBeenCalledWith(`/api/v1/chats/${baseChat.id}/messages`);
+      expect(mockApi.chatThreads.getById).toHaveBeenCalledWith(baseChatThread.id);
     });
   });
 
@@ -246,13 +246,13 @@ describe('ChatProvider', () => {
     it('creates a chat when prerequisites are met', async () => {
       setupHappyPathMocks();
 
-      const newChat: Chat = {
-        ...baseChat,
+      const newChat: ChatThread = {
+        ...baseChatThread,
         id: 'chat-new',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
 
-      mockApi.post.mockResolvedValueOnce(newChat);
+      mockApi.chatThreads.create.mockResolvedValueOnce(newChat);
 
       const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
@@ -266,9 +266,10 @@ describe('ChatProvider', () => {
         await result.current.createChat();
       });
 
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/chats', {
+      expect(mockApi.chatThreads.create).toHaveBeenCalledWith({
         gameId: baseGame.id,
-        agentId: baseAgent.id,
+        title: null,
+        initialMessage: null,
       });
       expect(result.current.activeChatId).toBe(newChat.id);
       expect(result.current.chats[0].id).toBe(newChat.id);
@@ -285,15 +286,15 @@ describe('ChatProvider', () => {
         await result.current.selectGame(baseGame.id);
       });
 
-      // After selecting game, baseChat should be loaded
+      // After selecting game, baseChatThread should be loaded
       await waitFor(() => {
         expect(result.current.chats).toHaveLength(1);
       });
 
-      const createdChat: Chat = {
-        ...baseChat,
+      const createdChat: ChatThread = {
+        ...baseChatThread,
         id: 'chat-temp',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
 
       mockApi.post.mockResolvedValueOnce(createdChat);
@@ -302,7 +303,7 @@ describe('ChatProvider', () => {
         await result.current.createChat();
       });
 
-      // After creating a chat, we should have 2 chats (baseChat + createdChat)
+      // After creating a chat, we should have 2 chats (baseChatThread + createdChat)
       expect(result.current.chats).toHaveLength(2);
       expect(result.current.chats[0].id).toBe(createdChat.id); // New chat is first
 
@@ -311,9 +312,9 @@ describe('ChatProvider', () => {
       });
 
       expect(mockApi.delete).toHaveBeenCalledWith(`/api/v1/chats/${createdChat.id}`);
-      // After deletion, only baseChat remains
+      // After deletion, only baseChatThread remains
       expect(result.current.chats).toHaveLength(1);
-      expect(result.current.chats[0].id).toBe(baseChat.id);
+      expect(result.current.chats[0].id).toBe(baseChatThread.id);
 
       confirmSpy.mockRestore();
     });
@@ -331,7 +332,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -443,13 +444,13 @@ describe('ChatProvider', () => {
     it('creates chat automatically if none exists when sending message', async () => {
       setupHappyPathMocks();
 
-      const newChat: Chat = {
-        ...baseChat,
+      const newChat: ChatThread = {
+        ...baseChatThread,
         id: 'chat-auto-created',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
 
-      mockApi.post.mockResolvedValueOnce(newChat);
+      mockApi.chatThreads.create.mockResolvedValueOnce(newChat);
 
       const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
@@ -469,9 +470,10 @@ describe('ChatProvider', () => {
         expect(result.current.activeChatId).toBe(newChat.id);
       });
 
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/chats', {
+      expect(mockApi.chatThreads.create).toHaveBeenCalledWith({
         gameId: baseGame.id,
-        agentId: baseAgent.id,
+        title: null,
+        initialMessage: null,
       });
       expect(result.current.chats[0].id).toBe(newChat.id);
     });
@@ -487,7 +489,7 @@ describe('ChatProvider', () => {
 
       await waitFor(() => expect(result.current.selectedAgentId).toBe(baseAgent.id));
 
-      mockApi.post.mockRejectedValueOnce(new Error('Network error'));
+      mockApi.chatThreads.create.mockRejectedValueOnce(new Error('Network error'));
 
       await act(async () => {
         await result.current.sendMessage('Test message');
@@ -503,13 +505,13 @@ describe('ChatProvider', () => {
     it('clears input value after successful send', async () => {
       setupHappyPathMocks();
 
-      const newChat: Chat = {
-        ...baseChat,
+      const newChat: ChatThread = {
+        ...baseChatThread,
         id: 'chat-new',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
 
-      mockApi.post.mockResolvedValueOnce(newChat);
+      mockApi.chatThreads.create.mockResolvedValueOnce(newChat);
 
       const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
@@ -532,13 +534,13 @@ describe('ChatProvider', () => {
     it('trims message content before sending', async () => {
       setupHappyPathMocks();
 
-      const newChat: Chat = {
-        ...baseChat,
+      const newChat: ChatThread = {
+        ...baseChatThread,
         id: 'chat-new',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
 
-      mockApi.post.mockResolvedValueOnce(newChat);
+      mockApi.chatThreads.create.mockResolvedValueOnce(newChat);
 
       const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
@@ -573,13 +575,13 @@ describe('ChatProvider', () => {
         createdAt: new Date().toISOString(),
       };
 
-      const chat2: Chat = {
+      const chat2: ChatThread = {
         id: 'chat-2',
         gameId: 'game-2',
         gameName: 'Catan',
         agentId: 'agent-2',
         agentName: 'QA Agent 2',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         lastMessageAt: null,
       };
 
@@ -588,9 +590,9 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/games') return [baseGame, game2];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
         if (path === `/api/v1/games/${game2.id}/agents`) return [agent2];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat];
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread];
         if (path === `/api/v1/chats?gameId=${game2.id}`) return [chat2];
-        if (path === `/api/v1/chats/${baseChat.id}/messages`) return [baseMessage];
+        if (path === `/api/v1/chats/${baseChatThread.id}/messages`) return [baseMessage];
         if (path === `/api/v1/chats/${chat2.id}/messages`) return [];
         return [];
       });
@@ -606,7 +608,7 @@ describe('ChatProvider', () => {
         expect(result.current.chats).toHaveLength(1);
       });
 
-      expect(result.current.chats[0].id).toBe(baseChat.id);
+      expect(result.current.chats[0].id).toBe(baseChatThread.id);
 
       // Switch to game 2
       await act(async () => {
@@ -638,7 +640,7 @@ describe('ChatProvider', () => {
       await waitFor(() => {
         expect(result.current.chats).toHaveLength(1);
       });
-      expect(result.current.chats[0].id).toBe(baseChat.id);
+      expect(result.current.chats[0].id).toBe(baseChatThread.id);
     });
 
     it('isolates active chat ID per game', async () => {
@@ -656,13 +658,13 @@ describe('ChatProvider', () => {
         createdAt: new Date().toISOString(),
       };
 
-      const chat2: Chat = {
+      const chat2: ChatThread = {
         id: 'chat-2',
         gameId: 'game-2',
         gameName: 'Catan',
         agentId: 'agent-2',
         agentName: 'QA Agent 2',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         lastMessageAt: null,
       };
 
@@ -671,7 +673,7 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/games') return [baseGame, game2];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
         if (path === `/api/v1/games/${game2.id}/agents`) return [agent2];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat];
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread];
         if (path === `/api/v1/chats?gameId=${game2.id}`) return [chat2];
         return [];
       });
@@ -684,11 +686,11 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => {
-        expect(result.current.activeChatId).toBe(baseChat.id);
+        expect(result.current.activeChatId).toBe(baseChatThread.id);
       });
 
       // Switch to game 2
@@ -806,7 +808,7 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/auth/me') return null;
         if (path === '/api/v1/games') return [baseGame, game2];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat];
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread];
         return [];
       });
 
@@ -873,12 +875,12 @@ describe('ChatProvider', () => {
 
       await waitFor(() => expect(result.current.selectedAgentId).toBe(baseAgent.id));
 
-      // After selecting game, baseChat should be loaded
+      // After selecting game, baseChatThread should be loaded
       await waitFor(() => {
         expect(result.current.chats).toHaveLength(1);
       });
 
-      mockApi.post.mockRejectedValueOnce(new Error('Server error'));
+      mockApi.chatThreads.create.mockRejectedValueOnce(new Error('Server error'));
 
       await act(async () => {
         await result.current.createChat();
@@ -888,24 +890,24 @@ describe('ChatProvider', () => {
         expect(result.current.errorMessage).toContain('Errore nella creazione');
       });
 
-      // Chat list should still have baseChat (creation failed, so no new chat added)
+      // Chat list should still have baseChatThread (creation failed, so no new chat added)
       expect(result.current.chats).toHaveLength(1);
-      expect(result.current.chats[0].id).toBe(baseChat.id);
+      expect(result.current.chats[0].id).toBe(baseChatThread.id);
       expect(result.current.activeChatId).toBeNull();
     });
 
     it('adds created chat to beginning of list', async () => {
       setupHappyPathMocks();
 
-      const existingChat: Chat = {
-        ...baseChat,
+      const existingChat: ChatThread = {
+        ...baseChatThread,
         id: 'chat-existing',
       };
 
-      const newChat: Chat = {
-        ...baseChat,
+      const newChat: ChatThread = {
+        ...baseChatThread,
         id: 'chat-new',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
 
       mockApi.get.mockImplementation(async (path: string) => {
@@ -916,7 +918,7 @@ describe('ChatProvider', () => {
         return [];
       });
 
-      mockApi.post.mockResolvedValueOnce(newChat);
+      mockApi.chatThreads.create.mockResolvedValueOnce(newChat);
 
       const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
@@ -948,13 +950,13 @@ describe('ChatProvider', () => {
     it('clears messages when creating new chat', async () => {
       setupHappyPathMocks();
 
-      const newChat: Chat = {
-        ...baseChat,
+      const newChat: ChatThread = {
+        ...baseChatThread,
         id: 'chat-new',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
 
-      mockApi.post.mockResolvedValueOnce(newChat);
+      mockApi.chatThreads.create.mockResolvedValueOnce(newChat);
 
       const { result } = renderHook(() => useChatContext(), { wrapper: ChatProviderWrapper });
 
@@ -963,7 +965,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => {
@@ -993,7 +995,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1025,7 +1027,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1057,7 +1059,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1089,7 +1091,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1121,7 +1123,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1136,7 +1138,7 @@ describe('ChatProvider', () => {
       expect(result.current.messages[0].feedback).toBe('helpful');
 
       // Simulate API error on next toggle
-      mockApi.post.mockRejectedValueOnce(new Error('Network error'));
+      mockApi.chatThreads.create.mockRejectedValueOnce(new Error('Network error'));
 
       await act(async () => {
         await result.current.setMessageFeedback(messageId, 'not-helpful');
@@ -1161,7 +1163,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1315,8 +1317,8 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/auth/me') return null;
         if (path === '/api/v1/games') return [baseGame];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat];
-        if (path === `/api/v1/chats/${baseChat.id}/messages`) return [];
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread];
+        if (path === `/api/v1/chats/${baseChatThread.id}/messages`) return [];
         return [];
       });
 
@@ -1327,7 +1329,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => {
@@ -1335,7 +1337,7 @@ describe('ChatProvider', () => {
       });
 
       expect(result.current.messages).toHaveLength(0);
-      expect(result.current.activeChatId).toBe(baseChat.id);
+      expect(result.current.activeChatId).toBe(baseChatThread.id);
     });
 
     it('handles chat history loading error', async () => {
@@ -1343,8 +1345,8 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/auth/me') return null;
         if (path === '/api/v1/games') return [baseGame];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat];
-        if (path === `/api/v1/chats/${baseChat.id}/messages`) {
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread];
+        if (path === `/api/v1/chats/${baseChatThread.id}/messages`) {
           throw new Error('Network error');
         }
         return [];
@@ -1357,7 +1359,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => {
@@ -1397,8 +1399,8 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/auth/me') return null;
         if (path === '/api/v1/games') return [baseGame];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat];
-        if (path === `/api/v1/chats/${baseChat.id}/messages`) return messages;
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread];
+        if (path === `/api/v1/chats/${baseChatThread.id}/messages`) return messages;
         return [];
       });
 
@@ -1409,7 +1411,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => {
@@ -1433,7 +1435,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1459,7 +1461,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1491,7 +1493,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1522,8 +1524,8 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/auth/me') return null;
         if (path === '/api/v1/games') return [baseGame];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat];
-        if (path === `/api/v1/chats/${baseChat.id}/messages`) return updatedMessages;
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread];
+        if (path === `/api/v1/chats/${baseChatThread.id}/messages`) return updatedMessages;
         return [];
       });
 
@@ -1534,7 +1536,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1554,7 +1556,7 @@ describe('ChatProvider', () => {
       });
 
       expect(mockApi.chat.updateMessage).toHaveBeenCalledWith(
-        baseChat.id,
+        baseChatThread.id,
         messageId,
         'Updated content'
       );
@@ -1592,7 +1594,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1623,7 +1625,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1661,7 +1663,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1670,7 +1672,7 @@ describe('ChatProvider', () => {
 
       // Mock reload to return empty messages
       mockApi.get.mockImplementation(async (path: string) => {
-        if (path === `/api/v1/chats/${baseChat.id}/messages`) return [];
+        if (path === `/api/v1/chats/${baseChatThread.id}/messages`) return [];
         return mockApi.get.getMockImplementation()(path);
       });
 
@@ -1678,7 +1680,7 @@ describe('ChatProvider', () => {
         await result.current.deleteMessage(messageId);
       });
 
-      expect(mockApi.chat.deleteMessage).toHaveBeenCalledWith(baseChat.id, messageId);
+      expect(mockApi.chat.deleteMessage).toHaveBeenCalledWith(baseChatThread.id, messageId);
     });
 
     it('cancels message deletion when not confirmed', async () => {
@@ -1692,7 +1694,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1729,7 +1731,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1762,7 +1764,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.deleteChat(baseChat.id);
+        await result.current.deleteChat(baseChatThread.id);
       });
 
       expect(mockApi.delete).not.toHaveBeenCalled();
@@ -1780,7 +1782,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => {
@@ -1788,7 +1790,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.deleteChat(baseChat.id);
+        await result.current.deleteChat(baseChatThread.id);
       });
 
       expect(result.current.activeChatId).toBeNull();
@@ -1796,13 +1798,13 @@ describe('ChatProvider', () => {
     });
 
     it('preserves messages when deleting non-active chat', async () => {
-      const chat2: Chat = {
+      const chat2: ChatThread = {
         id: 'chat-2',
         gameId: 'game-1',
         gameName: 'Chess',
         agentId: 'agent-1',
         agentName: 'QA Agent',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         lastMessageAt: null,
       };
 
@@ -1810,8 +1812,8 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/auth/me') return null;
         if (path === '/api/v1/games') return [baseGame];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat, chat2];
-        if (path === `/api/v1/chats/${baseChat.id}/messages`) return [baseMessage];
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread, chat2];
+        if (path === `/api/v1/chats/${baseChatThread.id}/messages`) return [baseMessage];
         return [];
       });
 
@@ -1824,7 +1826,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => {
@@ -1837,8 +1839,8 @@ describe('ChatProvider', () => {
       });
 
       expect(result.current.chats).toHaveLength(1);
-      expect(result.current.chats[0].id).toBe(baseChat.id);
-      expect(result.current.activeChatId).toBe(baseChat.id);
+      expect(result.current.chats[0].id).toBe(baseChatThread.id);
+      expect(result.current.activeChatId).toBe(baseChatThread.id);
       expect(result.current.messages).toHaveLength(1); // Preserved
     });
   });
@@ -1966,7 +1968,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -1992,8 +1994,8 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/auth/me') return null;
         if (path === '/api/v1/games') return [baseGame];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat];
-        if (path === `/api/v1/chats/${baseChat.id}/messages`) return [messageWithoutBackendId];
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread];
+        if (path === `/api/v1/chats/${baseChatThread.id}/messages`) return [messageWithoutBackendId];
         return [];
       });
 
@@ -2006,7 +2008,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => expect(result.current.messages).toHaveLength(1));
@@ -2084,7 +2086,7 @@ describe('ChatProvider', () => {
 
       // Resolve and verify loading finishes
       act(() => {
-        resolveCreateChat({ ...baseChat, id: 'new-chat' });
+        resolveCreateChat({ ...baseChatThread, id: 'new-chat' });
       });
 
       await waitFor(() => {
@@ -2095,10 +2097,10 @@ describe('ChatProvider', () => {
     it('sets loading state during message sending', async () => {
       setupHappyPathMocks();
 
-      const newChat: Chat = {
-        ...baseChat,
+      const newChat: ChatThread = {
+        ...baseChatThread,
         id: 'chat-new',
-        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
 
       let resolvePost: any;
@@ -2202,8 +2204,8 @@ describe('ChatProvider', () => {
         if (path === '/api/v1/auth/me') return null;
         if (path === '/api/v1/games') return [baseGame];
         if (path === `/api/v1/games/${baseGame.id}/agents`) return [baseAgent];
-        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChat];
-        if (path === `/api/v1/chats/${baseChat.id}/messages`) return { invalid: 'response' };
+        if (path === `/api/v1/chats?gameId=${baseGame.id}`) return [baseChatThread];
+        if (path === `/api/v1/chats/${baseChatThread.id}/messages`) return { invalid: 'response' };
         return [];
       });
 
@@ -2214,7 +2216,7 @@ describe('ChatProvider', () => {
       });
 
       await act(async () => {
-        await result.current.selectChat(baseChat.id);
+        await result.current.selectChat(baseChatThread.id);
       });
 
       await waitFor(() => {

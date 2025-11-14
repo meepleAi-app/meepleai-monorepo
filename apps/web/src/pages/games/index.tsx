@@ -60,6 +60,9 @@ export default function GamesPage() {
 
   // Fetch games when filters, sort, or page changes
   useEffect(() => {
+    const abortController = new AbortController();
+    let isActive = true;
+
     const fetchGames = async () => {
       setLoading(true);
       setError(null);
@@ -77,16 +80,34 @@ export default function GamesPage() {
           20
         );
 
-        setPaginatedResponse(response);
+        // Only update state if this is still the active request
+        if (isActive) {
+          setPaginatedResponse(response);
+        }
       } catch (err) {
-        console.error('Failed to fetch games:', err);
-        setError('Failed to load games. Please try again.');
+        // Ignore AbortError from cancelled requests
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+
+        if (isActive) {
+          console.error('Failed to fetch games:', err);
+          setError('Failed to load games. Please try again.');
+        }
       } finally {
-        setLoading(false);
+        if (isActive) {
+          setLoading(false);
+        }
       }
     };
 
     fetchGames();
+
+    // Cleanup function to abort request and mark as inactive
+    return () => {
+      isActive = false;
+      abortController.abort();
+    };
   }, [filters, sortOptions, currentPage, searchQuery]);
 
   // Save preferences to localStorage when they change

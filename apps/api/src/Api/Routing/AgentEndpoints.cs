@@ -214,8 +214,55 @@ public static class AgentEndpoints
         .Produces(404)
         .Produces(500);
 
-        // TODO Issue #867: Activate/Deactivate endpoints will be implemented with InvokeAgentCommand
-        // Removed incomplete endpoint that returned success without updating state
+        // Invoke agent - Issue #867: Game Master Agent Integration
+        group.MapPost("/agents/{id:guid}/invoke", async (
+            Guid id,
+            InvokeAgentRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            try
+            {
+                var command = new InvokeAgentCommand(
+                    AgentId: id,
+                    Query: req.Query,
+                    GameId: req.GameId,
+                    ChatThreadId: req.ChatThreadId,
+                    UserId: Guid.Parse(session.User.Id)
+                );
+
+                var result = await mediator.Send(command, ct);
+
+                logger.LogInformation(
+                    "Agent {AgentId} invoked by user {UserId}: InvocationId={InvocationId}, Confidence={Confidence:F3}, Results={ResultCount}",
+                    id, session.User.Id, result.InvocationId, result.Confidence, result.ResultCount);
+
+                return Results.Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                logger.LogWarning(ex, "Agent invocation failed: {Message}", ex.Message);
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to invoke agent {AgentId}", id);
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: 500,
+                    title: "Agent invocation failed");
+            }
+        })
+        .WithName("InvokeAgent")
+        .Produces(200)
+        .Produces(400)
+        .Produces(404)
+        .Produces(500);
 
         return group;
     }
@@ -233,4 +280,10 @@ public record CreateAgentRequest(
 public record ConfigureAgentRequest(
     string StrategyName,
     Dictionary<string, object>? StrategyParameters
+);
+
+public record InvokeAgentRequest(
+    string Query,
+    Guid? GameId = null,
+    Guid? ChatThreadId = null
 );

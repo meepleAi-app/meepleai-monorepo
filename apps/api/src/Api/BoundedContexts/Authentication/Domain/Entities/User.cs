@@ -24,8 +24,10 @@ public sealed class User : AggregateRoot<Guid>
     // Navigation properties (not part of domain model, for EF Core only)
     private readonly List<Session> _sessions = new();
     private readonly List<ApiKey> _apiKeys = new();
+    private readonly List<OAuthAccount> _oauthAccounts = new();
     public IReadOnlyCollection<Session> Sessions => _sessions.AsReadOnly();
     public IReadOnlyCollection<ApiKey> ApiKeys => _apiKeys.AsReadOnly();
+    public IReadOnlyCollection<OAuthAccount> OAuthAccounts => _oauthAccounts.AsReadOnly();
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -178,4 +180,94 @@ public sealed class User : AggregateRoot<Guid>
     /// Checks if this user requires two-factor authentication.
     /// </summary>
     public bool RequiresTwoFactor() => IsTwoFactorEnabled;
+
+    /// <summary>
+    /// Links an OAuth provider account to this user.
+    /// Business rule: Only one account per provider is allowed.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when account is null.</exception>
+    /// <exception cref="DomainException">Thrown when provider is already linked.</exception>
+    public void LinkOAuthAccount(OAuthAccount account)
+    {
+        if (account == null)
+            throw new ArgumentNullException(nameof(account));
+
+        // Validate provider is supported (account constructor already validates this, but check again)
+        if (!OAuthAccount.SupportedProviders.Contains(account.Provider))
+            throw new ValidationException(nameof(account.Provider), $"Unsupported OAuth provider: {account.Provider}");
+
+        // Business rule: One account per provider
+        if (_oauthAccounts.Any(a => a.Provider.Equals(account.Provider, StringComparison.OrdinalIgnoreCase)))
+            throw new DomainException($"OAuth provider '{account.Provider}' is already linked to this user");
+
+        _oauthAccounts.Add(account);
+        // TODO: Add domain event OAuthAccountLinked
+    }
+
+    /// <summary>
+    /// Unlinks an OAuth provider account from this user.
+    /// Business rule: Cannot unlink if it's the only authentication method (prevents lockout).
+    /// </summary>
+    /// <exception cref="ValidationException">Thrown when provider is null or empty.</exception>
+    /// <exception cref="DomainException">Thrown when provider is not linked or unlinking would cause lockout.</exception>
+    public void UnlinkOAuthAccount(string provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider))
+            throw new ValidationException(nameof(provider), "Provider cannot be empty");
+
+        // Find the account
+        var account = _oauthAccounts.FirstOrDefault(a => a.Provider.Equals(provider, StringComparison.OrdinalIgnoreCase));
+        if (account == null)
+            throw new DomainException($"OAuth provider '{provider}' is not linked to this user");
+
+        // Business rule: Cannot unlink if it would leave user with no auth methods (prevent lockout)
+        // Check BEFORE removing to see what state we'd be in after removal
+        if (PasswordHash == null && _oauthAccounts.Count == 1)
+            throw new DomainException("Cannot unlink OAuth account: User must have at least one authentication method (password or OAuth)");
+
+        _oauthAccounts.Remove(account);
+        // TODO: Add domain event OAuthAccountUnlinked
+    }
+
+    /// <summary>
+    /// Retrieves an OAuth account for the specified provider.
+    /// </summary>
+    /// <param name="provider">The OAuth provider (e.g., "google", "discord", "github").</param>
+    /// <returns>The OAuth account if found; otherwise, null.</returns>
+    public OAuthAccount? GetOAuthAccount(string provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider))
+            return null;
+
+        return _oauthAccounts.FirstOrDefault(a => a.Provider.Equals(provider, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Checks if the user has an OAuth account linked for the specified provider.
+    /// </summary>
+    /// <param name="provider">The OAuth provider (e.g., "google", "discord", "github").</param>
+    /// <returns>True if the provider is linked; otherwise, false.</returns>
+    public bool HasOAuthAccount(string provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider))
+            return false;
+
+        return _oauthAccounts.Any(a => a.Provider.Equals(provider, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Checks if the user has at least one authentication method available.
+    /// Used to prevent lockout when unlinking OAuth accounts.
+    /// </summary>
+    /// <returns>True if user has password OR at least one OAuth account; otherwise, false.</returns>
+    public bool HasAnyAuthenticationMethod()
+    {
+        // User has password authentication
+        bool hasPassword = PasswordHash != null;
+
+        // User has at least one OAuth account
+        bool hasOAuth = _oauthAccounts.Any();
+
+        return hasPassword || hasOAuth;
+    }
 }

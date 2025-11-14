@@ -84,6 +84,48 @@ export interface TwoFactorStatusResponse {
   backupCodesCount: number;
 }
 
+// SPRINT-2: Game Library types (Issue #854)
+export interface Game {
+  id: string;
+  title: string;
+  publisher: string | null;
+  yearPublished: number | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  minPlayTimeMinutes: number | null;
+  maxPlayTimeMinutes: number | null;
+  bggId: number | null;
+  createdAt: string;
+}
+
+export interface GameFilters {
+  search?: string;
+  minPlayers?: number;
+  maxPlayers?: number;
+  minPlayTime?: number;
+  maxPlayTime?: number;
+  yearFrom?: number;
+  yearTo?: number;
+  bggOnly?: boolean;
+}
+
+export type GameSortField = 'title' | 'yearPublished' | 'minPlayers' | 'maxPlayers';
+export type SortDirection = 'asc' | 'desc';
+
+export interface GameSortOptions {
+  field: GameSortField;
+  direction: SortDirection;
+}
+
+export interface PaginatedGamesResponse {
+  games: Game[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// SPRINT-1: Settings Pages types (Issue #848)
 export interface UserProfile {
   id: string;
   email: string;
@@ -94,9 +136,23 @@ export interface UserProfile {
   twoFactorEnabledAt: string | null;
 }
 
+export interface UserPreferences {
+  language: string;
+  emailNotifications: boolean;
+  theme: 'light' | 'dark' | 'system';
+  dataRetentionDays: number;
+}
+
 export interface UpdateProfileRequest {
   displayName?: string | null;
   email?: string | null;
+}
+
+export interface UpdatePreferencesRequest {
+  language?: string;
+  emailNotifications?: boolean;
+  theme?: 'light' | 'dark' | 'system';
+  dataRetentionDays?: number;
 }
 
 export interface ChangePasswordRequest {
@@ -112,7 +168,6 @@ export interface BggSearchResult {
   thumbnailUrl: string | null;
   type: string; // "boardgame", "boardgameexpansion", etc.
 }
-
 export interface BggSearchResponse {
   results: BggSearchResult[];
 }
@@ -172,6 +227,34 @@ export interface ChatMessageResponse {
   deletedByUserId: string | null;
   isInvalidated: boolean;
   metadataJson: string | null;
+}
+
+// SPRINT-3: ChatThread DDD types (Issue #858, Backend #1126)
+export interface ChatThreadDto {
+  id: string;
+  gameId: string | null;
+  title: string | null;
+  createdAt: string;
+  lastMessageAt: string;
+  messageCount: number;
+  messages: ChatThreadMessageDto[];
+}
+
+export interface ChatThreadMessageDto {
+  content: string;
+  role: string;
+  timestamp: string;
+}
+
+export interface CreateChatThreadRequest {
+  gameId?: string | null;
+  title?: string | null;
+  initialMessage?: string | null;
+}
+
+export interface AddMessageRequest {
+  content: string;
+  role: string;
 }
 
 // CHAT-05: Chat export types
@@ -469,6 +552,53 @@ export const api = {
 
     async cancelProcessing(pdfId: string): Promise<void> {
       return api.delete(`/api/v1/pdfs/${encodeURIComponent(pdfId)}/processing`);
+    }
+  },
+
+  // SPRINT-3: ChatThread API (Issue #858, Backend #1126)
+  chatThreads: {
+    /**
+     * Get all chat threads for a specific game
+     * @param gameId Game ID (GUID format)
+     */
+    async getByGame(gameId: string): Promise<ChatThreadDto[]> {
+      const response = await api.get<ChatThreadDto[]>(
+        `/api/v1/knowledge-base/chat-threads?gameId=${encodeURIComponent(gameId)}`
+      );
+      return response ?? [];
+    },
+
+    /**
+     * Get a single chat thread by ID
+     * @param threadId Thread ID (GUID format)
+     */
+    async getById(threadId: string): Promise<ChatThreadDto | null> {
+      return api.get<ChatThreadDto>(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}`
+      );
+    },
+
+    /**
+     * Create a new chat thread
+     * @param request Thread creation request
+     */
+    async create(request: CreateChatThreadRequest): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>(
+        '/api/v1/knowledge-base/chat-threads',
+        request
+      );
+    },
+
+    /**
+     * Add a message to an existing thread
+     * @param threadId Thread ID (GUID format)
+     * @param request Message content and role
+     */
+    async addMessage(threadId: string, request: AddMessageRequest): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/messages`,
+        request
+      );
     }
   },
 
@@ -830,6 +960,130 @@ export const api = {
 
     async disable(password: string, code: string): Promise<void> {
       await api.post<void>('/api/v1/auth/2fa/disable', { password, code });
+    }
+  },
+
+  // SPRINT-2: Game Library API (Issue #854)
+  games: {
+    /**
+     * Get all games with optional filtering, sorting, and pagination
+     * @param filters Optional filters (search, players, playtime, year, BGG)
+     * @param sort Optional sorting (field and direction)
+     * @param page Page number (1-indexed)
+     * @param pageSize Number of games per page
+     */
+    async getAll(
+      filters?: GameFilters,
+      sort?: GameSortOptions,
+      page: number = 1,
+      pageSize: number = 20
+    ): Promise<PaginatedGamesResponse> {
+      // For MVP: Fetch all games and do client-side filtering/sorting/pagination
+      // Future: Add query params for server-side operations
+      const allGames = await api.get<Game[]>('/api/v1/games');
+      if (!allGames) {
+        return {
+          games: [],
+          total: 0,
+          page,
+          pageSize,
+          totalPages: 0
+        };
+      }
+
+      // Client-side filtering
+      let filtered = allGames;
+
+      if (filters) {
+        filtered = filtered.filter(game => {
+          // Search filter (title or publisher)
+          if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            const titleMatch = game.title.toLowerCase().includes(searchLower);
+            const publisherMatch = game.publisher?.toLowerCase().includes(searchLower) || false;
+            if (!titleMatch && !publisherMatch) {
+              return false;
+            }
+          }
+
+          // Player count filters
+          if (filters.minPlayers !== undefined && game.maxPlayers !== null && game.maxPlayers < filters.minPlayers) {
+            return false;
+          }
+          if (filters.maxPlayers !== undefined && game.minPlayers !== null && game.minPlayers > filters.maxPlayers) {
+            return false;
+          }
+
+          // Play time filters
+          if (filters.minPlayTime !== undefined && game.maxPlayTimeMinutes !== null && game.maxPlayTimeMinutes < filters.minPlayTime) {
+            return false;
+          }
+          if (filters.maxPlayTime !== undefined && game.minPlayTimeMinutes !== null && game.minPlayTimeMinutes > filters.maxPlayTime) {
+            return false;
+          }
+
+          // Year filters
+          if (filters.yearFrom !== undefined && game.yearPublished !== null && game.yearPublished < filters.yearFrom) {
+            return false;
+          }
+          if (filters.yearTo !== undefined && game.yearPublished !== null && game.yearPublished > filters.yearTo) {
+            return false;
+          }
+
+          // BGG-only filter
+          if (filters.bggOnly && !game.bggId) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      // Client-side sorting
+      if (sort) {
+        filtered = [...filtered].sort((a, b) => {
+          const aVal = a[sort.field];
+          const bVal = b[sort.field];
+
+          // Handle null values (push to end)
+          if (aVal === null && bVal === null) return 0;
+          if (aVal === null) return 1;
+          if (bVal === null) return -1;
+
+          // Sort by field
+          let comparison = 0;
+          if (sort.field === 'title') {
+            comparison = aVal.toString().localeCompare(bVal.toString());
+          } else {
+            comparison = (aVal as number) - (bVal as number);
+          }
+
+          return sort.direction === 'asc' ? comparison : -comparison;
+        });
+      }
+
+      // Client-side pagination
+      const total = filtered.length;
+      const totalPages = Math.ceil(total / pageSize);
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedGames = filtered.slice(startIndex, endIndex);
+
+      return {
+        games: paginatedGames,
+        total,
+        page,
+        pageSize,
+        totalPages
+      };
+    },
+
+    /**
+     * Get a single game by ID
+     * @param id Game ID
+     */
+    async getById(id: string): Promise<Game | null> {
+      return api.get<Game>(`/api/v1/games/${id}`);
     }
   }
 };

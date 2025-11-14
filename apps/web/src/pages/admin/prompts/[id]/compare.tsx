@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { api } from "../../../../lib/api";
+import { cn } from "../../../../lib/utils";
 
 // Dynamically import Monaco DiffEditor to avoid SSR issues
 const DiffEditor = dynamic(
@@ -70,49 +71,49 @@ export default function CompareVersions() {
   const canCompare = version1 && version2 && version1.id !== version2.id;
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
-      <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "2rem" }}>
-        <div style={{ background: "white", borderRadius: "12px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="max-w-[1600px] mx-auto p-8">
+        <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden">
           {/* Header */}
-          <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "2rem", color: "white" }}>
-            <div style={{ marginBottom: "1rem" }}>
+          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+            <div className="mb-4">
               <Link href={`/admin/prompts/${id}`}>
-                <button style={{ padding: "0.5rem 1rem", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+                <button className="px-4 py-2 bg-white/20 text-white border-none rounded-lg cursor-pointer">
                   ← Back to Template
                 </button>
               </Link>
             </div>
-            <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Compare Versions</h1>
-            <p style={{ opacity: 0.9 }}>Select two versions to compare side-by-side</p>
+            <h1 className="text-3xl font-bold mb-2">Compare Versions</h1>
+            <p className="opacity-90">Select two versions to compare side-by-side</p>
           </div>
 
           {/* Content */}
-          <div style={{ padding: "2rem" }}>
-            {loading && <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>Loading...</div>}
+          <div className="p-8">
+            {loading && <div className="text-center py-8 text-gray-500">Loading...</div>}
 
             {error && (
-              <div style={{ padding: "1rem", background: "#fee2e2", color: "#991b1b", borderRadius: "8px", marginBottom: "1rem" }}>
+              <div className="p-4 bg-red-100 text-red-800 rounded-lg mb-4">
                 {error}
               </div>
             )}
 
             {!loading && versions.length < 2 && (
-              <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>
-                <p style={{ fontSize: "1.125rem", marginBottom: "0.5rem" }}>Not enough versions to compare</p>
-                <p style={{ fontSize: "0.875rem" }}>You need at least two versions to use the comparison feature</p>
+              <div className="text-center py-12 text-gray-500">
+                <p className="text-lg mb-2">Not enough versions to compare</p>
+                <p className="text-sm">You need at least two versions to use the comparison feature</p>
               </div>
             )}
 
             {!loading && versions.length >= 2 && (
               <>
                 {/* Version Selectors */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginBottom: "2rem" }}>
+                <div className="grid grid-cols-2 gap-8 mb-8">
                   <div>
-                    <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Version A (Original)</label>
+                    <label className="block mb-2 font-semibold">Version A (Original)</label>
                     <select
                       value={version1Id}
                       onChange={(e) => setVersion1Id(e.target.value)}
-                      style={{ width: "100%", padding: "0.75rem", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "1rem" }}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
                     >
                       <option value="">Select a version...</option>
                       {versions.map((v) => (
@@ -124,11 +125,11 @@ export default function CompareVersions() {
                   </div>
 
                   <div>
-                    <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Version B (Modified)</label>
+                    <label className="block mb-2 font-semibold">Version B (Modified)</label>
                     <select
                       value={version2Id}
                       onChange={(e) => setVersion2Id(e.target.value)}
-                      style={{ width: "100%", padding: "0.75rem", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "1rem" }}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
                     >
                       <option value="">Select a version...</option>
                       {versions.map((v) => (
@@ -143,8 +144,8 @@ export default function CompareVersions() {
                 {/* Diff View */}
                 {canCompare && (
                   <div>
-                    <div style={{ marginBottom: "1rem", padding: "1rem", background: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.875rem", color: "#6b7280" }}>
+                    <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex justify-between text-sm text-gray-500">
                         <div>
                           <strong>Version {version1?.versionNumber}</strong> - {new Date(version1?.createdAt || "").toLocaleString()}
                         </div>
@@ -154,7 +155,7 @@ export default function CompareVersions() {
                       </div>
                     </div>
 
-                    <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", overflow: "hidden" }}>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
                       <DiffEditor
                         height="700px"
                         language="markdown"
@@ -171,8 +172,8 @@ export default function CompareVersions() {
                           automaticLayout: true,
                         }}
                         loading={
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "700px" }}>
-                            <div style={{ textAlign: "center", color: "#6b7280" }}>
+                          <div className="flex items-center justify-center h-[700px]">
+                            <div className="text-center text-gray-500">
                               Loading diff view...
                             </div>
                           </div>
@@ -180,14 +181,14 @@ export default function CompareVersions() {
                       />
                     </div>
 
-                    <div style={{ marginTop: "1.5rem", padding: "1rem", background: "#eff6ff", borderRadius: "8px", fontSize: "0.875rem", color: "#1e40af" }}>
-                      <strong>Legend:</strong> <span style={{ color: "#dc2626" }}>Red</span> indicates removed content, <span style={{ color: "#059669" }}>Green</span> indicates added content
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg text-sm text-blue-800">
+                      <strong>Legend:</strong> <span className="text-red-600">Red</span> indicates removed content, <span className="text-emerald-600">Green</span> indicates added content
                     </div>
                   </div>
                 )}
 
                 {!canCompare && version1Id && version2Id && version1Id === version2Id && (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+                  <div className="text-center py-8 text-gray-500">
                     <p>Please select two different versions to compare</p>
                   </div>
                 )}

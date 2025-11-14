@@ -30,6 +30,7 @@ namespace Api.Migrations
             // Step 2: Backfill existing rows with first admin user
             // This SQL finds the first admin user and assigns all orphaned threads to them
             // If no admin exists, the migration will fail explicitly
+            // SECURITY FIX: Case-insensitive role check to handle 'admin', 'Admin', 'ADMIN'
             migrationBuilder.Sql(@"
                 DO $$
                 DECLARE
@@ -59,7 +60,7 @@ namespace Api.Migrations
                         UPDATE ""ChatThreads""
                         SET ""UserId"" = admin_id
                         WHERE ""UserId"" IS NULL;
-                        
+
                         RAISE NOTICE 'Successfully backfilled % orphaned threads to admin user %', orphaned_count, admin_id;
                     ELSE
                         RAISE NOTICE 'No orphaned threads found, skipping backfill';

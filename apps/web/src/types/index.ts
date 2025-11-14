@@ -25,6 +25,8 @@ export type {
   Agent,
   Chat,
   ChatMessage,
+  ChatThread,
+  ChatThreadMessage,
   ChatWithHistory,
   RuleAtom,
   RuleSpec,

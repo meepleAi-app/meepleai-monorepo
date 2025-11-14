@@ -67,10 +67,7 @@ describe('EditorToolbar Component', () => {
 
       const toolbar = container.firstChild as HTMLElement;
       expect(toolbar).toBeInTheDocument();
-      expect(toolbar).toHaveStyle({
-        padding: '8px 12px',
-        background: '#fafafa',
-      });
+      expect(toolbar).toHaveClass('px-3', 'py-2', 'bg-gray-50');
     });
 
     it('renders all text formatting buttons', () => {
@@ -143,12 +140,8 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
-      expect(boldButton).toHaveStyle({
-        background: '#0070f3',
-      });
-      // Check color separately (jsdom converts 'white' to 'rgb(255, 255, 255)')
-      const computedStyle = window.getComputedStyle(boldButton);
-      expect(computedStyle.color).toMatch(/(white|rgb\(255,\s*255,\s*255\))/);
+      expect(boldButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
+      
     });
 
     it('disables bold button when not available', () => {
@@ -183,7 +176,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const italicButton = screen.getByTitle('Corsivo (Ctrl+I)');
-      expect(italicButton).toHaveStyle({ background: '#0070f3' });
+      expect(italicButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
   });
 
@@ -205,7 +198,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const strikeButton = screen.getByTitle('Barrato (Ctrl+Shift+X)');
-      expect(strikeButton).toHaveStyle({ background: '#0070f3' });
+      expect(strikeButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
   });
 
@@ -227,7 +220,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const codeButton = screen.getByTitle('Codice inline (Ctrl+E)');
-      expect(codeButton).toHaveStyle({ background: '#0070f3' });
+      expect(codeButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
   });
 
@@ -251,7 +244,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const h1Button = screen.getByTitle('Titolo 1 (Ctrl+Alt+1)');
-      expect(h1Button).toHaveStyle({ background: '#0070f3' });
+      expect(h1Button).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
 
     it('executes H2 command when clicked', () => {
@@ -270,7 +263,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const h2Button = screen.getByTitle('Titolo 2 (Ctrl+Alt+2)');
-      expect(h2Button).toHaveStyle({ background: '#0070f3' });
+      expect(h2Button).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
 
     it('executes H3 command when clicked', () => {
@@ -289,7 +282,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const h3Button = screen.getByTitle('Titolo 3 (Ctrl+Alt+3)');
-      expect(h3Button).toHaveStyle({ background: '#0070f3' });
+      expect(h3Button).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
   });
 
@@ -311,7 +304,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const bulletButton = screen.getByTitle('Elenco puntato (Ctrl+Shift+8)');
-      expect(bulletButton).toHaveStyle({ background: '#0070f3' });
+      expect(bulletButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
 
     it('executes ordered list command when clicked', () => {
@@ -328,7 +321,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const orderedButton = screen.getByTitle('Elenco numerato (Ctrl+Shift+7)');
-      expect(orderedButton).toHaveStyle({ background: '#0070f3' });
+      expect(orderedButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
   });
 
@@ -350,7 +343,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const codeBlockButton = screen.getByTitle('Blocco di codice (Ctrl+Alt+C)');
-      expect(codeBlockButton).toHaveStyle({ background: '#0070f3' });
+      expect(codeBlockButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
 
     it('executes horizontal rule command when clicked', () => {
@@ -436,7 +429,7 @@ describe('EditorToolbar Component', () => {
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
       fireEvent.mouseEnter(boldButton);
 
-      expect(boldButton).toHaveStyle({ background: '#f5f5f5' });
+      expect(boldButton).toHaveClass('hover:bg-gray-100');
     });
 
     it('restores background on mouse leave for non-active button', () => {
@@ -446,7 +439,7 @@ describe('EditorToolbar Component', () => {
       fireEvent.mouseEnter(boldButton);
       fireEvent.mouseLeave(boldButton);
 
-      expect(boldButton).toHaveStyle({ background: 'white' });
+      expect(boldButton).toHaveClass('bg-white');
     });
 
     it('does not change background on hover for disabled button', () => {
@@ -492,9 +485,9 @@ describe('EditorToolbar Component', () => {
       const italicButton = screen.getByTitle('Corsivo (Ctrl+I)');
       const strikeButton = screen.getByTitle('Barrato (Ctrl+Shift+X)');
 
-      expect(boldButton).toHaveStyle({ background: '#0070f3' });
-      expect(italicButton).toHaveStyle({ background: '#0070f3' });
-      expect(strikeButton).toHaveStyle({ background: '#0070f3' });
+      expect(boldButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
+      expect(italicButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
+      expect(strikeButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
   });
 
@@ -546,34 +539,21 @@ describe('EditorToolbar Component', () => {
       const { container } = render(<EditorToolbar editor={mockEditor} />);
 
       const toolbar = container.firstChild as HTMLElement;
-      expect(toolbar).toHaveStyle({
-        padding: '8px 12px',
-        background: '#fafafa',
-        borderBottom: '1px solid #e0e0e0',
-        display: 'flex',
-      });
+      expect(toolbar).toHaveClass('px-3', 'py-2', 'bg-gray-50', 'border-b', 'flex');
     });
 
     it('applies flexbox layout with wrap', () => {
       const { container } = render(<EditorToolbar editor={mockEditor} />);
 
       const toolbar = container.firstChild as HTMLElement;
-      expect(toolbar).toHaveStyle({
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '4px',
-      });
+      expect(toolbar).toHaveClass('flex', 'flex-wrap', 'gap-1');
     });
 
     it('applies correct button styling', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
-      expect(boldButton).toHaveStyle({
-        padding: '6px 10px',
-        borderRadius: '4px',
-        fontSize: '14px',
-      });
+      expect(boldButton).toHaveClass('px-2.5', 'py-1.5', 'rounded', 'text-sm');
     });
 
     it('applies disabled styling to disabled buttons', () => {
@@ -586,11 +566,7 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const undoButton = screen.getByTitle('Annulla (Ctrl+Z)');
-      expect(undoButton).toHaveStyle({
-        background: '#f0f0f0',
-        color: '#999',
-        cursor: 'not-allowed',
-      });
+      expect(undoButton).toHaveClass('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
     });
 
     it('applies active styling to active buttons', () => {
@@ -598,13 +574,8 @@ describe('EditorToolbar Component', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
-      expect(boldButton).toHaveStyle({
-        background: '#0070f3',
-        fontWeight: 'bold',
-      });
-      // Check color separately (jsdom converts 'white' to 'rgb(255, 255, 255)')
-      const computedStyle = window.getComputedStyle(boldButton);
-      expect(computedStyle.color).toMatch(/(white|rgb\(255,\s*255,\s*255\))/);
+      expect(boldButton).toHaveClass('bg-primary', 'font-bold', 'text-white');
+      
     });
   });
 
@@ -630,7 +601,7 @@ describe('EditorToolbar Component', () => {
 
       // Most buttons should show active state
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
-      expect(boldButton).toHaveStyle({ background: '#0070f3' });
+      expect(boldButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
 
     it('handles rapid button clicks', () => {

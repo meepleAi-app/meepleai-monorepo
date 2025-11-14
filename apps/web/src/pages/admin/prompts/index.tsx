@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { api } from "../../../lib/api";
+import { cn } from "../../../lib/utils";
 
 type PromptTemplate = {
   id: string;
@@ -209,30 +210,30 @@ export default function AdminPrompts() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
-        <div style={{ background: "white", borderRadius: "12px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="max-w-7xl mx-auto p-8">
+        <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
           {/* Header */}
-          <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "2rem", color: "white" }}>
-            <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Prompt Templates</h1>
-            <p style={{ opacity: 0.9 }}>Manage system prompts and AI templates</p>
+          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+            <h1 className="text-3xl font-bold mb-2">Prompt Templates</h1>
+            <p className="opacity-90">Manage system prompts and AI templates</p>
           </div>
 
           {/* Filters */}
-          <div style={{ padding: "1.5rem", borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
-            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+          <div className="p-6 border-b border-gray-200 bg-gray-50">
+            <div className="flex gap-4 flex-wrap items-center">
               <input
                 type="text"
                 placeholder="Search by name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ flex: "1", minWidth: "200px", padding: "0.5rem 1rem", border: "1px solid #d1d5db", borderRadius: "8px" }}
+                className="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg"
               />
 
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                style={{ padding: "0.5rem 1rem", border: "1px solid #d1d5db", borderRadius: "8px", minWidth: "200px" }}
+                className="px-4 py-2 border border-gray-300 rounded-lg min-w-[200px]"
               >
                 <option value="">All Categories</option>
                 {CATEGORIES.map((cat) => (
@@ -244,18 +245,8 @@ export default function AdminPrompts() {
 
               <button
                 onClick={openCreateModal}
-                style={{
-                  padding: "0.5rem 1.5rem",
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "transform 0.2s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                className="px-6 py-2 text-white border-none rounded-lg font-semibold cursor-pointer transition-transform hover:scale-105"
+                style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}
               >
                 Create Template
               </button>
@@ -263,126 +254,90 @@ export default function AdminPrompts() {
           </div>
 
           {/* Content */}
-          <div style={{ padding: "1.5rem" }}>
-            {loading && <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>Loading...</div>}
+          <div className="p-6">
+            {loading && <div className="text-center p-8 text-gray-500">Loading...</div>}
 
             {error && (
-              <div style={{ padding: "1rem", background: "#fee2e2", color: "#991b1b", borderRadius: "8px", marginBottom: "1rem" }}>
+              <div className="p-4 bg-red-100 text-red-800 rounded-lg mb-4">
                 {error}
               </div>
             )}
 
             {!loading && !error && templates.length === 0 && (
-              <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>
-                <p style={{ fontSize: "1.125rem", marginBottom: "0.5rem" }}>No templates found</p>
-                <p style={{ fontSize: "0.875rem" }}>Create your first prompt template to get started</p>
+              <div className="text-center p-12 text-gray-500">
+                <p className="text-lg mb-2">No templates found</p>
+                <p className="text-sm">Create your first prompt template to get started</p>
               </div>
             )}
 
             {!loading && !error && templates.length > 0 && (
               <>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
                     <thead>
-                      <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                      <tr className="bg-gray-50 border-b-2 border-gray-200">
                         <th
                           onClick={() => handleSort("name")}
-                          style={{ padding: "1rem", textAlign: "left", fontWeight: "600", cursor: "pointer", userSelect: "none" }}
+                          className="p-4 text-left font-semibold cursor-pointer select-none"
                         >
                           Name {sortBy === "name" && (sortOrder === "asc" ? "↑" : "↓")}
                         </th>
-                        <th style={{ padding: "1rem", textAlign: "left", fontWeight: "600" }}>Description</th>
+                        <th className="p-4 text-left font-semibold">Description</th>
                         <th
                           onClick={() => handleSort("category")}
-                          style={{ padding: "1rem", textAlign: "left", fontWeight: "600", cursor: "pointer", userSelect: "none" }}
+                          className="p-4 text-left font-semibold cursor-pointer select-none"
                         >
                           Category {sortBy === "category" && (sortOrder === "asc" ? "↑" : "↓")}
                         </th>
-                        <th style={{ padding: "1rem", textAlign: "left", fontWeight: "600" }}>Active Version</th>
+                        <th className="p-4 text-left font-semibold">Active Version</th>
                         <th
                           onClick={() => handleSort("createdAt")}
-                          style={{ padding: "1rem", textAlign: "left", fontWeight: "600", cursor: "pointer", userSelect: "none" }}
+                          className="p-4 text-left font-semibold cursor-pointer select-none"
                         >
                           Created At {sortBy === "createdAt" && (sortOrder === "asc" ? "↑" : "↓")}
                         </th>
-                        <th style={{ padding: "1rem", textAlign: "left", fontWeight: "600" }}>Actions</th>
+                        <th className="p-4 text-left font-semibold">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {templates.map((template) => (
-                        <tr key={template.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                          <td style={{ padding: "1rem", fontWeight: "500" }}>{template.name}</td>
-                          <td style={{ padding: "1rem", color: "#6b7280", maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <tr key={template.id} className="border-b border-gray-200">
+                          <td className="p-4 font-medium">{template.name}</td>
+                          <td className="p-4 text-gray-500 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">
                             {template.description}
                           </td>
-                          <td style={{ padding: "1rem" }}>
-                            <span
-                              style={{
-                                padding: "0.25rem 0.75rem",
-                                background: "#e0e7ff",
-                                color: "#4338ca",
-                                borderRadius: "9999px",
-                                fontSize: "0.875rem",
-                                fontWeight: "500",
-                              }}
-                            >
+                          <td className="p-4">
+                            <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
                               {template.category}
                             </span>
                           </td>
-                          <td style={{ padding: "1rem" }}>
+                          <td className="p-4">
                             {template.activeVersionId ? (
-                              <span style={{ color: "#059669", fontWeight: "500" }}>✓ Active</span>
+                              <span className="text-emerald-600 font-medium">✓ Active</span>
                             ) : (
-                              <span style={{ color: "#6b7280" }}>No active version</span>
+                              <span className="text-gray-500">No active version</span>
                             )}
                           </td>
-                          <td style={{ padding: "1rem", color: "#6b7280" }}>
+                          <td className="p-4 text-gray-500">
                             {new Date(template.createdAt).toLocaleDateString()}
                           </td>
-                          <td style={{ padding: "1rem" }}>
-                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <td className="p-4">
+                            <div className="flex gap-2">
                               <button
                                 onClick={() => navigateToDetails(template.id)}
-                                style={{
-                                  padding: "0.25rem 0.75rem",
-                                  background: "#e0e7ff",
-                                  color: "#4338ca",
-                                  border: "none",
-                                  borderRadius: "6px",
-                                  fontSize: "0.875rem",
-                                  cursor: "pointer",
-                                  fontWeight: "500",
-                                }}
+                                className="px-3 py-1 bg-indigo-100 text-indigo-700 border-none rounded-md text-sm cursor-pointer font-medium hover:bg-indigo-200"
                               >
                                 View
                               </button>
                               <button
                                 onClick={() => openEditModal(template)}
-                                style={{
-                                  padding: "0.25rem 0.75rem",
-                                  background: "#dbeafe",
-                                  color: "#1e40af",
-                                  border: "none",
-                                  borderRadius: "6px",
-                                  fontSize: "0.875rem",
-                                  cursor: "pointer",
-                                  fontWeight: "500",
-                                }}
+                                className="px-3 py-1 bg-blue-100 text-blue-800 border-none rounded-md text-sm cursor-pointer font-medium hover:bg-blue-200"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => openDeleteDialog(template)}
-                                style={{
-                                  padding: "0.25rem 0.75rem",
-                                  background: "#fee2e2",
-                                  color: "#991b1b",
-                                  border: "none",
-                                  borderRadius: "6px",
-                                  fontSize: "0.875rem",
-                                  cursor: "pointer",
-                                  fontWeight: "500",
-                                }}
+                                className="px-3 py-1 bg-red-100 text-red-800 border-none rounded-md text-sm cursor-pointer font-medium hover:bg-red-200"
                               >
                                 Delete
                               </button>
@@ -395,37 +350,31 @@ export default function AdminPrompts() {
                 </div>
 
                 {/* Pagination */}
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "1rem", marginTop: "1.5rem" }}>
+                <div className="flex justify-center items-center gap-4 mt-6">
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      background: page === 1 ? "#e5e7eb" : "#667eea",
-                      color: page === 1 ? "#9ca3af" : "white",
-                      border: "none",
-                      borderRadius: "8px",
-                      cursor: page === 1 ? "not-allowed" : "pointer",
-                      fontWeight: "500",
-                    }}
+                    className={cn(
+                      "px-4 py-2 border-none rounded-lg font-medium",
+                      page === 1
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-indigo-500 text-white cursor-pointer hover:bg-indigo-600"
+                    )}
                   >
                     Previous
                   </button>
-                  <span style={{ color: "#6b7280", fontWeight: "500" }}>
+                  <span className="text-gray-500 font-medium">
                     Page {page} of {totalPages}
                   </span>
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      background: page === totalPages ? "#e5e7eb" : "#667eea",
-                      color: page === totalPages ? "#9ca3af" : "white",
-                      border: "none",
-                      borderRadius: "8px",
-                      cursor: page === totalPages ? "not-allowed" : "pointer",
-                      fontWeight: "500",
-                    }}
+                    className={cn(
+                      "px-4 py-2 border-none rounded-lg font-medium",
+                      page === totalPages
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-indigo-500 text-white cursor-pointer hover:bg-indigo-600"
+                    )}
                   >
                     Next
                   </button>
@@ -439,66 +388,47 @@ export default function AdminPrompts() {
       {/* Create/Edit Modal */}
       {modalState.isOpen && (
         <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-          }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           onClick={closeModal}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "white",
-              borderRadius: "12px",
-              padding: "2rem",
-              maxWidth: "800px",
-              width: "90%",
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
+            className="bg-white rounded-xl p-8 max-w-3xl w-[90%] max-h-[90vh] overflow-y-auto"
           >
-            <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1.5rem" }}>
+            <h2 className="text-2xl font-bold mb-6">
               {modalState.mode === "create" ? "Create Template" : "Edit Template"}
             </h2>
 
             <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: "1rem" }}>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Name</label>
+              <div className="mb-4">
+                <label className="block mb-2 font-medium">Name</label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  style={{ width: "100%", padding: "0.5rem 1rem", border: "1px solid #d1d5db", borderRadius: "8px" }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
 
-              <div style={{ marginBottom: "1rem" }}>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Description</label>
+              <div className="mb-4">
+                <label className="block mb-2 font-medium">Description</label>
                 <textarea
                   required
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  style={{ width: "100%", padding: "0.5rem 1rem", border: "1px solid #d1d5db", borderRadius: "8px" }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
 
-              <div style={{ marginBottom: "1rem" }}>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Category</label>
+              <div className="mb-4">
+                <label className="block mb-2 font-medium">Category</label>
                 <select
                   required
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  style={{ width: "100%", padding: "0.5rem 1rem", border: "1px solid #d1d5db", borderRadius: "8px" }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="">Select category...</option>
                   {CATEGORIES.map((cat) => (
@@ -510,54 +440,36 @@ export default function AdminPrompts() {
               </div>
 
               {modalState.mode === "create" && (
-                <div style={{ marginBottom: "1rem" }}>
-                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Initial Content</label>
+                <div className="mb-4">
+                  <label className="block mb-2 font-medium">Initial Content</label>
                   <textarea
                     required
                     value={formData.initialContent}
                     onChange={(e) => setFormData({ ...formData, initialContent: e.target.value })}
                     rows={10}
                     placeholder="Enter the initial prompt content..."
-                    style={{
-                      width: "100%",
-                      padding: "0.5rem 1rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "8px",
-                      fontFamily: "monospace",
-                      fontSize: "0.875rem",
-                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
                   />
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+              <div className="flex gap-4 justify-end">
                 <button
                   type="button"
                   onClick={closeModal}
-                  style={{
-                    padding: "0.5rem 1.5rem",
-                    background: "#e5e7eb",
-                    color: "#374151",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 border-none rounded-lg cursor-pointer font-medium hover:bg-gray-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={formLoading}
-                  style={{
-                    padding: "0.5rem 1.5rem",
-                    background: formLoading ? "#9ca3af" : "#667eea",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: formLoading ? "not-allowed" : "pointer",
-                    fontWeight: "500",
-                  }}
+                  className={cn(
+                    "px-6 py-2 text-white border-none rounded-lg font-medium",
+                    formLoading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-indigo-500 cursor-pointer hover:bg-indigo-600"
+                  )}
                 >
                   {formLoading ? "Saving..." : modalState.mode === "create" ? "Create" : "Update"}
                 </button>
@@ -570,62 +482,29 @@ export default function AdminPrompts() {
       {/* Delete Confirmation Dialog */}
       {deleteDialog.isOpen && deleteDialog.template && (
         <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-          }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           onClick={closeDeleteDialog}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "white",
-              borderRadius: "12px",
-              padding: "2rem",
-              maxWidth: "500px",
-              width: "90%",
-            }}
+            className="bg-white rounded-xl p-8 max-w-lg w-[90%]"
           >
-            <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem", color: "#991b1b" }}>
+            <h2 className="text-2xl font-bold mb-4 text-red-800">
               Confirm Delete
             </h2>
-            <p style={{ marginBottom: "1.5rem", color: "#6b7280" }}>
+            <p className="mb-6 text-gray-500">
               Are you sure you want to delete <strong>{deleteDialog.template.name}</strong>? This action cannot be undone.
             </p>
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+            <div className="flex gap-4 justify-end">
               <button
                 onClick={closeDeleteDialog}
-                style={{
-                  padding: "0.5rem 1.5rem",
-                  background: "#e5e7eb",
-                  color: "#374151",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
+                className="px-6 py-2 bg-gray-200 text-gray-700 border-none rounded-lg cursor-pointer font-medium hover:bg-gray-300"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                style={{
-                  padding: "0.5rem 1.5rem",
-                  background: "#dc2626",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
+                className="px-6 py-2 bg-red-600 text-white border-none rounded-lg cursor-pointer font-medium hover:bg-red-700"
               >
                 Delete
               </button>
@@ -637,18 +516,10 @@ export default function AdminPrompts() {
       {/* Toast Notification */}
       {toast.show && (
         <div
-          style={{
-            position: "fixed",
-            bottom: "2rem",
-            right: "2rem",
-            padding: "1rem 1.5rem",
-            background: toast.type === "success" ? "#10b981" : "#ef4444",
-            color: "white",
-            borderRadius: "8px",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-            zIndex: 100,
-            fontWeight: "500",
-          }}
+          className={cn(
+            "fixed bottom-8 right-8 px-6 py-4 rounded-lg shadow-2xl z-[100] font-medium",
+            toast.type === "success" ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
+          )}
         >
           {toast.message}
         </div>

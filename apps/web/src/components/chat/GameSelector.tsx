@@ -21,8 +21,8 @@ export function GameSelector() {
 
   if (loading.games) {
     return (
-      <div style={{ marginBottom: 12 }}>
-        <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 13 }}>
+      <div className="mb-3">
+        <label className="block mb-1.5 font-medium text-[13px]">
           Cambia Gioco:
         </label>
         <SkeletonLoader variant="gameSelection" />
@@ -35,10 +35,10 @@ export function GameSelector() {
     : 'Seleziona un gioco';
 
   return (
-    <div style={{ marginBottom: 12 }}>
+    <div className="mb-3">
       <label
         htmlFor="gameSelect"
-        style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 13 }}
+        className="block mb-1.5 font-medium text-[13px]"
       >
         Cambia Gioco:
       </label>

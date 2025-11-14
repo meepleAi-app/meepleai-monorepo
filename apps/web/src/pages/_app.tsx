@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { useSessionCheck } from '../hooks/useSessionCheck';
 import { SessionWarningModal } from '../components/SessionWarningModal';
 import { AccessibleSkipLink } from '@/components/accessible';
+import { AuthProvider } from '@/components/auth/AuthProvider';
 import { api } from '@/lib/api';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
@@ -68,12 +69,14 @@ function AppContent({ Component, pageProps }: AppProps) {
 export default function App(props: AppProps) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <ErrorBoundary
-        componentName="App"
-        showDetails={process.env.NODE_ENV === 'development'}
-      >
-        <AppContent {...props} />
-      </ErrorBoundary>
+      <AuthProvider>
+        <ErrorBoundary
+          componentName="App"
+          showDetails={process.env.NODE_ENV === 'development'}
+        >
+          <AppContent {...props} />
+        </ErrorBoundary>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

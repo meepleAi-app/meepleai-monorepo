@@ -16,6 +16,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChatPage from '../../pages/chat';
 import { api } from '../../lib/api';
+import { createWrapper } from '../utils/test-providers';
 
 // Mock ChatProvider with context values
 const mockUseChatContext = jest.fn();
@@ -229,7 +230,7 @@ describe('ChatPage - Supplementary Tests', () => {
         isStreaming: false,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(screen.getByTestId('follow-up-questions')).toBeInTheDocument();
@@ -245,7 +246,7 @@ describe('ChatPage - Supplementary Tests', () => {
         isStreaming: false,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(screen.getByText('How do pawns move?')).toBeInTheDocument();
@@ -263,7 +264,7 @@ describe('ChatPage - Supplementary Tests', () => {
         isStreaming: false,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       const user = userEvent.setup();
 
@@ -285,7 +286,7 @@ describe('ChatPage - Supplementary Tests', () => {
         isStreaming: false,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       const user = userEvent.setup();
 
@@ -307,7 +308,7 @@ describe('ChatPage - Supplementary Tests', () => {
         isStreaming: true,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         const followUpButton = screen.getByTestId('follow-up-0');
@@ -337,7 +338,7 @@ describe('ChatPage - Supplementary Tests', () => {
         isStreaming: false,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(screen.getByText('Test answer')).toBeInTheDocument();
@@ -358,7 +359,7 @@ describe('ChatPage - Supplementary Tests', () => {
         chats: chatsGame1,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(screen.getByText('Chess Expert')).toBeInTheDocument();
@@ -372,7 +373,7 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should create separate chat in each game without cross-contamination', async () => {
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
       
 
       // Wait for authentication to complete before accessing UI
@@ -400,7 +401,7 @@ describe('ChatPage - Supplementary Tests', () => {
         messages: [{ role: 'user', message: 'Chess question' }],
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(screen.getByText('Chess question')).toBeInTheDocument();
@@ -414,7 +415,7 @@ describe('ChatPage - Supplementary Tests', () => {
         messages: [{ role: 'user', message: 'Chess question' }],
       });
 
-      const { rerender } = render(<ChatPage />);
+      const { rerender } = render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(screen.getByText('Chess question')).toBeInTheDocument();
@@ -444,7 +445,7 @@ describe('ChatPage - Supplementary Tests', () => {
         chats: chatsGame1,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(screen.getByText('Chess Expert')).toBeInTheDocument();
@@ -452,7 +453,7 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should verify chatStatesByGame Map contains different objects for different games', async () => {
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       // Wait for authentication to complete before accessing UI
       await waitFor(() => {
@@ -467,7 +468,7 @@ describe('ChatPage - Supplementary Tests', () => {
     it('should delete chat in one game without affecting other games', async () => {
       mockApi.delete.mockResolvedValue(undefined);
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       // This test verifies isolation through mocking
       await waitFor(() => {
@@ -476,7 +477,7 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should update previousSelectedGameRef correctly during game switches', async () => {
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       // Wait for authentication to complete before accessing UI
       await waitFor(() => {
@@ -497,7 +498,7 @@ describe('ChatPage - Supplementary Tests', () => {
         selectedGameId: null,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         const agentSelect = screen.getByLabelText(/Agente:/i) as HTMLSelectElement;
@@ -510,7 +511,7 @@ describe('ChatPage - Supplementary Tests', () => {
         selectedGameId: 'game-1',
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(screen.getByTestId('game-indicator')).toHaveTextContent('game-1');
@@ -541,7 +542,7 @@ describe('ChatPage - Supplementary Tests', () => {
         messages,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalled();
@@ -557,7 +558,7 @@ describe('ChatPage - Supplementary Tests', () => {
         messages,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalledWith({
@@ -576,7 +577,7 @@ describe('ChatPage - Supplementary Tests', () => {
         messages,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalled();
@@ -595,7 +596,7 @@ describe('ChatPage - Supplementary Tests', () => {
         messages,
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalled();
@@ -611,7 +612,7 @@ describe('ChatPage - Supplementary Tests', () => {
         messages: [],
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await new Promise((resolve) => setTimeout(resolve, 200));
 
@@ -627,7 +628,7 @@ describe('ChatPage - Supplementary Tests', () => {
         activeChatId: null,
       });
 
-      const { rerender } = render(<ChatPage />);
+      const { rerender } = render(<ChatPage />, { wrapper: createWrapper() });
 
       expect(screen.queryByRole('button', { name: /Export chat/i })).not.toBeInTheDocument();
 
@@ -652,7 +653,7 @@ describe('ChatPage - Supplementary Tests', () => {
         messages: [{ role: 'user', message: 'Test message' }],
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       const user = userEvent.setup();
 
@@ -674,7 +675,7 @@ describe('ChatPage - Supplementary Tests', () => {
         messages: [{ role: 'user', message: 'Test' }],
       });
 
-      render(<ChatPage />);
+      render(<ChatPage />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /Export chat/i })).toBeInTheDocument();

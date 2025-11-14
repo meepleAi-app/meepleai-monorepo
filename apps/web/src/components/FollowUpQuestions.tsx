@@ -25,61 +25,23 @@ export const FollowUpQuestions: FC<FollowUpQuestionsProps> = ({
     <div
       role="region"
       aria-label="Suggested follow-up questions"
-      style={{
-        marginTop: 12,
-        paddingTop: 12,
-        borderTop: "1px solid #dadce0",
-      }}
+      className="mt-3 pt-3 border-t border-gray-200"
     >
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 500,
-          marginBottom: 8,
-          color: "#64748b",
-        }}
-      >
+      <div className="text-xs font-medium mb-2 text-slate-600">
         Domande suggerite:
       </div>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-        }}
-      >
+      <div className="flex flex-wrap gap-2">
         {questions.map((question, idx) => (
           <button
             key={idx}
             onClick={() => onQuestionClick(question)}
             disabled={disabled}
             aria-label={`Ask follow-up question: ${question}`}
-            style={{
-              padding: "6px 12px",
-              background: disabled ? "#f1f3f4" : "#ffffff",
-              color: disabled ? "#9ca3af" : "#1a73e8",
-              border: "1px solid #dadce0",
-              borderRadius: 16,
-              fontSize: 13,
-              cursor: disabled ? "not-allowed" : "pointer",
-              transition: "all 0.2s",
-              whiteSpace: "nowrap",
-              maxWidth: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-            onMouseEnter={(e) => {
-              if (!disabled) {
-                e.currentTarget.style.background = "#e8f0fe";
-                e.currentTarget.style.borderColor = "#1a73e8";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!disabled) {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.borderColor = "#dadce0";
-              }
-            }}
+            className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap max-w-full overflow-hidden text-ellipsis transition-all duration-200 ${
+              disabled
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-blue-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-600 cursor-pointer"
+            }`}
           >
             {question}
           </button>

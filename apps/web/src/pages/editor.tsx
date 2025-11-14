@@ -4,6 +4,7 @@ import Link from "next/link";
 import { api } from "../lib/api";
 import { RichTextEditor, ViewModeToggle } from "../components/editor";
 import { useDebounce } from "../hooks/useDebounce";
+import { cn } from "../lib/utils";
 
 type RuleAtom = {
   id: string;
@@ -335,10 +336,10 @@ export default function RuleSpecEditor() {
 
   if (!authUser) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif" }}>
+      <main className="p-6 font-sans">
         <h1>Editor RuleSpec</h1>
         <p>Devi effettuare l&apos;accesso per utilizzare l&apos;editor.</p>
-        <Link href="/" style={{ color: "#0070f3" }}>
+        <Link href="/" className="text-blue-600">
           Torna alla home
         </Link>
       </main>
@@ -347,10 +348,10 @@ export default function RuleSpecEditor() {
 
   if (authUser.role !== "Admin" && authUser.role !== "Editor") {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif" }}>
+      <main className="p-6 font-sans">
         <h1>Editor RuleSpec</h1>
         <p>Non hai i permessi necessari per utilizzare l&apos;editor.</p>
-        <Link href="/" style={{ color: "#0070f3" }}>
+        <Link href="/" className="text-blue-600">
           Torna alla home
         </Link>
       </main>
@@ -359,10 +360,10 @@ export default function RuleSpecEditor() {
 
   if (!gameId) {
     return (
-      <main style={{ padding: 24, fontFamily: "sans-serif" }}>
+      <main className="p-6 font-sans">
         <h1>Editor RuleSpec</h1>
         <p>Specifica un gameId nella query string: ?gameId=demo-chess</p>
-        <Link href="/" style={{ color: "#0070f3" }}>
+        <Link href="/" className="text-blue-600">
           Torna alla home
         </Link>
       </main>
@@ -370,44 +371,30 @@ export default function RuleSpecEditor() {
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 1400, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+    <main className="p-6 font-sans max-w-[1400px] mx-auto">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 style={{ margin: 0 }}>Editor RuleSpec</h1>
-          <p style={{ margin: "8px 0 0 0", color: "#666" }}>
+          <h1 className="m-0">Editor RuleSpec</h1>
+          <p className="my-2 mx-0 text-gray-600">
             Game: <strong>{gameId}</strong>
             {hasUnsavedChanges && (
-              <span style={{ marginLeft: 12, color: "#ff9800", fontSize: 14 }}>
+              <span className="ml-3 text-orange-500 text-sm">
                 • Modifiche non salvate
               </span>
             )}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div className="flex gap-3 items-center">
           <ViewModeToggle mode={viewMode} onModeChange={handleViewModeChange} />
           <Link
             href={`/versions?gameId=${gameId}`}
-            style={{
-              padding: "8px 16px",
-              background: "#ff9800",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              fontSize: 14
-            }}
+            className="px-4 py-2 bg-orange-500 text-white no-underline rounded text-sm"
           >
             Storico Versioni
           </Link>
           <Link
             href="/"
-            style={{
-              padding: "8px 16px",
-              background: "#666",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              fontSize: 14
-            }}
+            className="px-4 py-2 bg-gray-600 text-white no-underline rounded text-sm"
           >
             Home
           </Link>
@@ -416,14 +403,14 @@ export default function RuleSpecEditor() {
 
       {/* Status Messages */}
       {statusMessage && (
-        <div style={{ padding: 12, background: "#e7f5e7", border: "1px solid #4caf50", borderRadius: 4, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="p-3 bg-green-50 border border-green-600 rounded mb-4 flex items-center gap-2">
           <span>✓</span>
           <span>{statusMessage}</span>
         </div>
       )}
 
       {errorMessage && (
-        <div style={{ padding: 12, background: "#fce4e4", border: "1px solid #d93025", borderRadius: 4, marginBottom: 16 }}>
+        <div className="p-3 bg-red-50 border border-red-600 rounded mb-4">
           {errorMessage}
         </div>
       )}
@@ -431,28 +418,23 @@ export default function RuleSpecEditor() {
       {isLoading ? (
         <p>Caricamento...</p>
       ) : (
-        <div style={{ display: "flex", gap: 24 }}>
+        <div className="flex gap-6">
           {/* Editor Panel */}
-          <div style={{ flex: "1 1 50%", display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h2 style={{ margin: 0 }}>
+          <div className="flex-[1_1_50%] flex flex-col">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="m-0">
                 {viewMode === "rich" ? "Editor Visuale" : "Editor JSON"}
               </h2>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="flex gap-2">
                 {viewMode === "json" && (
                   <>
                     <button
                       onClick={handleUndo}
                       disabled={!canUndo}
-                      style={{
-                        padding: "6px 12px",
-                        background: canUndo ? "#0070f3" : "#ccc",
-                        color: "white",
-                        border: "none",
-                        borderRadius: 4,
-                        cursor: canUndo ? "pointer" : "not-allowed",
-                        fontSize: 14
-                      }}
+                      className={cn(
+                        "px-3 py-1.5 text-white border-none rounded cursor-pointer text-sm",
+                        canUndo ? "bg-blue-600" : "bg-gray-300 cursor-not-allowed"
+                      )}
                       title="Annulla (Ctrl+Z)"
                     >
                       ← Annulla
@@ -460,15 +442,10 @@ export default function RuleSpecEditor() {
                     <button
                       onClick={handleRedo}
                       disabled={!canRedo}
-                      style={{
-                        padding: "6px 12px",
-                        background: canRedo ? "#0070f3" : "#ccc",
-                        color: "white",
-                        border: "none",
-                        borderRadius: 4,
-                        cursor: canRedo ? "pointer" : "not-allowed",
-                        fontSize: 14
-                      }}
+                      className={cn(
+                        "px-3 py-1.5 text-white border-none rounded cursor-pointer text-sm",
+                        canRedo ? "bg-blue-600" : "bg-gray-300 cursor-not-allowed"
+                      )}
                       title="Ripeti (Ctrl+Y)"
                     >
                       Ripeti →
@@ -478,16 +455,12 @@ export default function RuleSpecEditor() {
                 <button
                   onClick={handleSave}
                   disabled={!isValid || isSaving || !hasUnsavedChanges}
-                  style={{
-                    padding: "6px 16px",
-                    background: isValid && !isSaving && hasUnsavedChanges ? "#4caf50" : "#ccc",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 4,
-                    cursor: isValid && !isSaving && hasUnsavedChanges ? "pointer" : "not-allowed",
-                    fontSize: 14,
-                    fontWeight: "bold"
-                  }}
+                  className={cn(
+                    "px-4 py-1.5 text-white border-none rounded text-sm font-bold",
+                    isValid && !isSaving && hasUnsavedChanges
+                      ? "bg-green-600 cursor-pointer"
+                      : "bg-gray-300 cursor-not-allowed"
+                  )}
                 >
                   {isSaving ? "Salvataggio..." : hasUnsavedChanges ? "Salva Ora" : "Salvato"}
                 </button>
@@ -496,14 +469,12 @@ export default function RuleSpecEditor() {
 
             {/* Validation Status */}
             <div
-              style={{
-                padding: 8,
-                background: isValid ? "#e7f5e7" : "#fce4e4",
-                border: `1px solid ${isValid ? "#4caf50" : "#d93025"}`,
-                borderRadius: 4,
-                marginBottom: 8,
-                fontSize: 14
-              }}
+              className={cn(
+                "p-2 rounded mb-2 text-sm",
+                isValid
+                  ? "bg-green-50 border border-green-600"
+                  : "bg-red-50 border border-red-600"
+              )}
             >
               {isValid ? "✓ Contenuto valido" : `✗ ${validationError}`}
             </div>
@@ -521,35 +492,19 @@ export default function RuleSpecEditor() {
                 value={jsonContent}
                 onChange={(e) => handleJsonChange(e.target.value)}
                 onBlur={handleJsonBlur}
-                style={{
-                  flex: 1,
-                  minHeight: 600,
-                  fontFamily: "monospace",
-                  fontSize: 14,
-                  padding: 12,
-                  border: `2px solid ${isValid ? "#ccc" : "#d93025"}`,
-                  borderRadius: 4,
-                  resize: "vertical"
-                }}
+                className={cn(
+                  "flex-1 min-h-[600px] font-mono text-sm p-3 rounded resize-y",
+                  isValid ? "border-2 border-gray-300" : "border-2 border-red-600"
+                )}
                 spellCheck={false}
               />
             )}
           </div>
 
           {/* Preview Panel */}
-          <div style={{ flex: "1 1 50%", display: "flex", flexDirection: "column" }}>
-            <h2 style={{ marginTop: 0 }}>Preview</h2>
-            <div
-              style={{
-                flex: 1,
-                padding: 16,
-                background: "#f9f9f9",
-                border: "1px solid #ccc",
-                borderRadius: 4,
-                overflowY: "auto",
-                minHeight: 600
-              }}
-            >
+          <div className="flex-[1_1_50%] flex flex-col">
+            <h2 className="mt-0">Preview</h2>
+            <div className="flex-1 p-4 bg-gray-50 border border-gray-300 rounded overflow-y-auto min-h-[600px]">
               {isValid && (viewMode === "rich" ? richContent : jsonContent) ? (
                 viewMode === "rich" ? (
                   <div dangerouslySetInnerHTML={{ __html: sanitizedRichContent }} />
@@ -557,7 +512,7 @@ export default function RuleSpecEditor() {
                   <RuleSpecPreview ruleSpec={JSON.parse(jsonContent)} />
                 )
               ) : (
-                <p style={{ color: "#999" }}>Correggi gli errori per visualizzare l&apos;anteprima</p>
+                <p className="text-gray-400">Correggi gli errori per visualizzare l&apos;anteprima</p>
               )}
             </div>
           </div>
@@ -570,56 +525,50 @@ export default function RuleSpecEditor() {
 function RuleSpecPreview({ ruleSpec }: { ruleSpec: RuleSpec }) {
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Informazioni Gioco</h3>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="mb-6">
+        <h3 className="mt-0 mb-2">Informazioni Gioco</h3>
+        <table className="w-full border-collapse">
           <tbody>
             <tr>
-              <td style={{ padding: "4px 8px", fontWeight: "bold", width: 120 }}>Game ID:</td>
-              <td style={{ padding: "4px 8px" }}>{ruleSpec.gameId}</td>
+              <td className="p-1 px-2 font-bold w-[120px]">Game ID:</td>
+              <td className="p-1 px-2">{ruleSpec.gameId}</td>
             </tr>
             <tr>
-              <td style={{ padding: "4px 8px", fontWeight: "bold" }}>Versione:</td>
-              <td style={{ padding: "4px 8px" }}>{ruleSpec.version}</td>
+              <td className="p-1 px-2 font-bold">Versione:</td>
+              <td className="p-1 px-2">{ruleSpec.version}</td>
             </tr>
             <tr>
-              <td style={{ padding: "4px 8px", fontWeight: "bold" }}>Creato:</td>
-              <td style={{ padding: "4px 8px" }}>
+              <td className="p-1 px-2 font-bold">Creato:</td>
+              <td className="p-1 px-2">
                 {new Date(ruleSpec.createdAt).toLocaleString()}
               </td>
             </tr>
             <tr>
-              <td style={{ padding: "4px 8px", fontWeight: "bold" }}>N. Regole:</td>
-              <td style={{ padding: "4px 8px" }}>{ruleSpec.rules.length}</td>
+              <td className="p-1 px-2 font-bold">N. Regole:</td>
+              <td className="p-1 px-2">{ruleSpec.rules.length}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <div>
-        <h3 style={{ marginBottom: 12 }}>Regole</h3>
+        <h3 className="mb-3">Regole</h3>
         {ruleSpec.rules.map((rule, index) => (
           <div
             key={rule.id}
-            style={{
-              marginBottom: 16,
-              padding: 12,
-              background: "white",
-              border: "1px solid #ddd",
-              borderRadius: 4
-            }}
+            className="mb-4 p-3 bg-white border border-gray-300 rounded"
           >
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <strong style={{ color: "#0070f3" }}>
+            <div className="flex justify-between mb-2">
+              <strong className="text-blue-600">
                 {index + 1}. {rule.id}
               </strong>
-              <div style={{ fontSize: 12, color: "#666" }}>
-                {rule.section && <span style={{ marginRight: 12 }}>Sezione: {rule.section}</span>}
-                {rule.page && <span style={{ marginRight: 12 }}>Pag. {rule.page}</span>}
+              <div className="text-xs text-gray-600">
+                {rule.section && <span className="mr-3">Sezione: {rule.section}</span>}
+                {rule.page && <span className="mr-3">Pag. {rule.page}</span>}
                 {rule.line && <span>Riga {rule.line}</span>}
               </div>
             </div>
-            <p style={{ margin: 0, lineHeight: 1.6 }}>{rule.text}</p>
+            <p className="m-0 leading-relaxed">{rule.text}</p>
           </div>
         ))}
       </div>

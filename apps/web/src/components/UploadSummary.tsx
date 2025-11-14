@@ -6,6 +6,7 @@
 import type { UploadQueueStats } from '../hooks/useUploadQueue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface UploadSummaryProps {
   stats: UploadQueueStats;
@@ -28,83 +29,69 @@ export function UploadSummary({ stats, onClose, onClearAll }: UploadSummaryProps
       aria-live="polite"
       aria-label="Upload summary"
       data-testid="upload-summary"
+      className="p-5 border-2 rounded-lg mb-5"
       style={{
-        padding: '20px',
-        border: `2px solid ${summaryColor}`,
-        borderRadius: '8px',
-        backgroundColor: summaryBgColor,
-        marginBottom: '20px'
+        borderColor: summaryColor,
+        backgroundColor: summaryBgColor
       }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+      <div className="flex items-center mb-4">
         <div
           aria-hidden="true"
-          style={{
-            fontSize: '32px',
-            marginRight: '12px',
-            lineHeight: 1
-          }}
+          className="text-[32px] mr-3 leading-none"
         >
           {summaryIcon}
         </div>
         <div>
-          <div style={{ fontSize: '18px', fontWeight: 600, color: '#202124' }}>
+          <div className="text-lg font-semibold text-gray-800">
             Upload Complete
           </div>
-          <div style={{ fontSize: '14px', color: '#5f6368', marginTop: '2px' }}>
+          <div className="text-sm text-gray-600 mt-0.5">
             {allSucceeded
               ? `All ${stats.total} files uploaded successfully!`
-              : `${stats.succeeded} succeeded, ${stats.failed} failed${hasCancelled ? `, ${stats.cancelled} cancelled` : ''}`
-            }
+              : `${stats.succeeded} succeeded, ${stats.failed} failed${hasCancelled ? `, ${stats.cancelled} cancelled` : ''}`}
           </div>
         </div>
       </div>
 
       {/* Detailed Stats */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-          gap: '12px',
-          marginBottom: '16px'
-        }}
-      >
-        <div style={{ textAlign: 'center', padding: '12px', backgroundColor: 'white', borderRadius: '6px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#202124' }}>
+      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+        <div className="text-center p-3 bg-white rounded-md">
+          <div className="text-2xl font-bold text-gray-800">
             {stats.total}
           </div>
-          <div style={{ fontSize: '13px', color: '#5f6368', marginTop: '4px' }}>
+          <div className="text-sm text-gray-600 mt-1">
             Total
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', padding: '12px', backgroundColor: 'white', borderRadius: '6px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#34a853' }}>
+        <div className="text-center p-3 bg-white rounded-md">
+          <div className="text-2xl font-bold text-green-600">
             {stats.succeeded}
           </div>
-          <div style={{ fontSize: '13px', color: '#5f6368', marginTop: '4px' }}>
+          <div className="text-sm text-gray-600 mt-1">
             Succeeded
           </div>
         </div>
 
         {stats.failed > 0 && (
-          <div style={{ textAlign: 'center', padding: '12px', backgroundColor: 'white', borderRadius: '6px' }}>
-            <div style={{ fontSize: '24px', fontWeight: 700, color: '#d93025' }}>
+          <div className="text-center p-3 bg-white rounded-md">
+            <div className="text-2xl font-bold text-red-600">
               {stats.failed}
             </div>
-            <div style={{ fontSize: '13px', color: '#5f6368', marginTop: '4px' }}>
+            <div className="text-sm text-gray-600 mt-1">
               Failed
             </div>
           </div>
         )}
 
         {stats.cancelled > 0 && (
-          <div style={{ textAlign: 'center', padding: '12px', backgroundColor: 'white', borderRadius: '6px' }}>
-            <div style={{ fontSize: '24px', fontWeight: 700, color: '#999' }}>
+          <div className="text-center p-3 bg-white rounded-md">
+            <div className="text-2xl font-bold text-gray-600">
               {stats.cancelled}
             </div>
-            <div style={{ fontSize: '13px', color: '#5f6368', marginTop: '4px' }}>
+            <div className="text-sm text-gray-600 mt-1">
               Cancelled
             </div>
           </div>
@@ -115,41 +102,27 @@ export function UploadSummary({ stats, onClose, onClearAll }: UploadSummaryProps
       {hasFailures && (
         <div
           role="alert"
-          style={{
-            padding: '12px',
-            backgroundColor: 'white',
-            border: '1px solid #d93025',
-            borderRadius: '6px',
-            marginBottom: '16px'
-          }}
+          className="p-3 bg-white border border-red-600 rounded-md mb-4"
         >
-          <div style={{ fontSize: '14px', fontWeight: 600, color: '#d93025', marginBottom: '4px' }}>
+          <div className="text-sm font-semibold text-red-600 mb-1">
             Some uploads failed
           </div>
-          <div style={{ fontSize: '13px', color: '#5f6368' }}>
+          <div className="text-sm text-gray-600">
             Review the failed items in the queue and use the Retry button to try again.
           </div>
         </div>
       )}
 
       {allSucceeded && (
-        <div
-          style={{
-            padding: '12px',
-            backgroundColor: 'white',
-            border: '1px solid #34a853',
-            borderRadius: '6px',
-            marginBottom: '16px'
-          }}
-        >
-          <div style={{ fontSize: '13px', color: '#5f6368' }}>
+        <div className="p-3 bg-white border border-green-600 rounded-md mb-4">
+          <div className="text-sm text-gray-600">
             All files have been uploaded and are being processed. You can view them in the Uploaded PDFs section below.
           </div>
         </div>
       )}
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      <div className="flex gap-3 flex-wrap">
         <Button
           onClick={onClose}
           aria-label="Close upload summary"

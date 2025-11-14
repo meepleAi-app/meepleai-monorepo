@@ -72,16 +72,10 @@ export function TimelineEventList({
 
   if (sortedEvents.length === 0) {
     return (
-      <div
-        style={{
-          padding: 48,
-          textAlign: "center",
-          color: "#64748b"
-        }}
-      >
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-        <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>Nessun evento trovato</div>
-        <div style={{ fontSize: 13 }}>
+      <div className="p-12 text-center text-slate-500">
+        <div className="text-5xl mb-4">🔍</div>
+        <div className="text-base font-medium mb-2">Nessun evento trovato</div>
+        <div className="text-[13px]">
           Prova a modificare i filtri o inizia una conversazione per vedere gli eventi.
         </div>
       </div>
@@ -89,19 +83,9 @@ export function TimelineEventList({
   }
 
   return (
-    <div style={{ padding: 16 }}>
+    <div className="p-4">
       {/* Event Count */}
-      <div
-        style={{
-          marginBottom: 16,
-          padding: 12,
-          background: "#e8f0fe",
-          borderRadius: 8,
-          fontSize: 13,
-          color: "#1967d2",
-          fontWeight: 500
-        }}
-      >
+      <div className="mb-4 p-3 bg-blue-50 rounded-lg text-[13px] text-blue-700 font-medium">
         {sortedEvents.length} {sortedEvents.length === 1 ? "evento trovato" : "eventi trovati"}
         {filteredEvents.length !== events.length && ` (${events.length} totali)`}
       </div>

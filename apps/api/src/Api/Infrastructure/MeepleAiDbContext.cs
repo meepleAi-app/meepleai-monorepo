@@ -56,5 +56,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.User>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
     }
 }

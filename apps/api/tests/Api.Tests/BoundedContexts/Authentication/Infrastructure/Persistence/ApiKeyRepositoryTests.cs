@@ -1,8 +1,8 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -11,45 +11,28 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Integration tests for ApiKeyRepository using Testcontainers with real PostgreSQL.
 /// Tests API key management, scoping, expiration, and revocation logic.
 /// </summary>
-[Collection("Integration")]
-public class ApiKeyRepositoryTests : IAsyncLifetime
+public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
 {
-    private PostgreSqlContainer? _postgresContainer;
-    private MeepleAiDbContext? _dbContext;
-    private ApiKeyRepository? _repository;
+    protected override string DatabaseName => "meepleai_apikey_test";
+    
+    protected override ApiKeyRepository CreateRepository(MeepleAiDbContext dbContext) 
+        => new ApiKeyRepository(dbContext);
 
-    public async ValueTask InitializeAsync()
+    private async Task<Guid> CreateTestUserAsync(string email = "test@example.com")
     {
-        _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithDatabase("meepleai_apikey_test")
-            .WithUsername("testuser")
-            .WithPassword("testpass")
-            .Build();
-
-        await _postgresContainer.StartAsync();
-
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_postgresContainer.GetConnectionString())
-            .Options;
-
-        _dbContext = new MeepleAiDbContext(options);
-        await _dbContext.Database.MigrateAsync();
-
-        _repository = new ApiKeyRepository(_dbContext);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_dbContext != null)
-        {
-            await _dbContext.DisposeAsync();
-        }
-
-        if (_postgresContainer != null)
-        {
-            await _postgresContainer.DisposeAsync();
-        }
+        var userId = Guid.NewGuid();
+        await DbContext.Users.AddAsync(new Api.Infrastructure.Entities.UserEntity 
+        { 
+            Id = userId, 
+            Email = email, 
+            DisplayName = $"Test {email}", 
+            PasswordHash = "hash", 
+            Role = "user", 
+            CreatedAt = DateTime.UtcNow, 
+            IsTwoFactorEnabled = false 
+        });
+        await DbContext.SaveChangesAsync();
+        return userId;
     }
 
     #region GetByKeyPrefixAsync Tests
@@ -58,7 +41,8 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test01_GetByKeyPrefixAsync_ExistingKey_ReturnsApiKey()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(
             id: Guid.NewGuid(),
             userId: userId,
@@ -66,11 +50,11 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
             scopes: "read,write"
         );
 
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+        var result = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
 
         // Assert
         Assert.NotNull(result);
@@ -82,10 +66,11 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test02_GetByKeyPrefixAsync_NonExistingPrefix_ReturnsNull()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var nonExistentPrefix = "NONEXIST";
 
         // Act
-        var result = await _repository!.GetByKeyPrefixAsync(nonExistentPrefix);
+        var result = await Repository.GetByKeyPrefixAsync(nonExistentPrefix);
 
         // Assert
         Assert.Null(result);
@@ -99,10 +84,11 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test03_GetByUserIdAsync_NoKeys_ReturnsEmptyList()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
 
         // Act
-        var keys = await _repository!.GetByUserIdAsync(userId);
+        var keys = await Repository.GetByUserIdAsync(userId);
 
         // Assert
         Assert.Empty(keys);
@@ -112,7 +98,8 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test04_GetByUserIdAsync_MultipleKeys_ReturnsAllOrdered()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
 
         var (key1, _) = ApiKey.Create(Guid.NewGuid(), userId, "Key 1", "read");
         await Task.Delay(10); // Ensure different timestamps
@@ -120,13 +107,13 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
         await Task.Delay(10);
         var (key3, _) = ApiKey.Create(Guid.NewGuid(), userId, "Key 3", "admin");
 
-        await _repository!.AddAsync(key1);
-        await _repository.AddAsync(key2);
-        await _repository.AddAsync(key3);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(key1);
+        await Repository.AddAsync(key2);
+        await Repository.AddAsync(key3);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var keys = await _repository.GetByUserIdAsync(userId);
+        var keys = await Repository.GetByUserIdAsync(userId);
 
         // Assert
         Assert.Equal(3, keys.Count);
@@ -139,21 +126,22 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test05_GetByUserIdAsync_MultipleUsers_FiltersCorrectly()
     {
         // Arrange
-        var user1Id = Guid.NewGuid();
-        var user2Id = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var user1Id = await CreateTestUserAsync("user1@example.com");
+        var user2Id = await CreateTestUserAsync("user2@example.com");
 
         var (key1, _) = ApiKey.Create(Guid.NewGuid(), user1Id, "User1 Key1", "read");
         var (key2, _) = ApiKey.Create(Guid.NewGuid(), user1Id, "User1 Key2", "write");
         var (key3, _) = ApiKey.Create(Guid.NewGuid(), user2Id, "User2 Key1", "admin");
 
-        await _repository!.AddAsync(key1);
-        await _repository.AddAsync(key2);
-        await _repository.AddAsync(key3);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(key1);
+        await Repository.AddAsync(key2);
+        await Repository.AddAsync(key3);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var user1Keys = await _repository.GetByUserIdAsync(user1Id);
-        var user2Keys = await _repository.GetByUserIdAsync(user2Id);
+        var user1Keys = await Repository.GetByUserIdAsync(user1Id);
+        var user2Keys = await Repository.GetByUserIdAsync(user2Id);
 
         // Assert
         Assert.Equal(2, user1Keys.Count);
@@ -168,17 +156,18 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test06_GetActiveKeysByUserIdAsync_OnlyActiveKeys_ReturnsAll()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
 
         var (key1, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active Key 1", "read");
         var (key2, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active Key 2", "write");
 
-        await _repository!.AddAsync(key1);
-        await _repository.AddAsync(key2);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(key1);
+        await Repository.AddAsync(key2);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeKeys = await _repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
 
         // Assert
         Assert.Equal(2, activeKeys.Count);
@@ -188,19 +177,20 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test07_GetActiveKeysByUserIdAsync_RevokedKeys_Excluded()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var revokerId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
+        var revokerId = await CreateTestUserAsync("revoker@example.com");
 
         var (activeKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active Key", "read");
         var (revokedKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Revoked Key", "write");
         revokedKey.Revoke(revokerId);
 
-        await _repository!.AddAsync(activeKey);
-        await _repository.AddAsync(revokedKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(activeKey);
+        await Repository.AddAsync(revokedKey);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeKeys = await _repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
 
         // Assert
         Assert.Single(activeKeys);
@@ -211,17 +201,18 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test08_GetActiveKeysByUserIdAsync_ExpiredKeys_Excluded()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
 
         var (activeKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active Key", "read", expiresAt: DateTime.UtcNow.AddDays(30));
         var (expiredKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Expired Key", "write", expiresAt: DateTime.UtcNow.AddDays(-1));
 
-        await _repository!.AddAsync(activeKey);
-        await _repository.AddAsync(expiredKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(activeKey);
+        await Repository.AddAsync(expiredKey);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeKeys = await _repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
 
         // Assert
         Assert.Single(activeKeys);
@@ -232,19 +223,20 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test09_GetActiveKeysByUserIdAsync_InactiveKeys_Excluded()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var revokerId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
+        var revokerId = await CreateTestUserAsync("revoker@example.com");
 
         var (activeKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active Key", "read");
         var (inactiveKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Inactive Key", "write");
         inactiveKey.Revoke(revokerId); // Makes IsActive = false
 
-        await _repository!.AddAsync(activeKey);
-        await _repository.AddAsync(inactiveKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(activeKey);
+        await Repository.AddAsync(inactiveKey);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeKeys = await _repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
 
         // Assert
         Assert.Single(activeKeys);
@@ -255,8 +247,9 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test10_GetActiveKeysByUserIdAsync_MixedKeys_FiltersCorrectly()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var revokerId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
+        var revokerId = await CreateTestUserAsync("revoker@example.com");
 
         var (active1, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active 1", "read");
         var (active2, _) = ApiKey.Create(Guid.NewGuid(), userId, "Active 2", "write");
@@ -264,14 +257,14 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
         var (revoked, _) = ApiKey.Create(Guid.NewGuid(), userId, "Revoked", "read");
         revoked.Revoke(revokerId);
 
-        await _repository!.AddAsync(active1);
-        await _repository.AddAsync(active2);
-        await _repository.AddAsync(expired);
-        await _repository.AddAsync(revoked);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(active1);
+        await Repository.AddAsync(active2);
+        await Repository.AddAsync(expired);
+        await Repository.AddAsync(revoked);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeKeys = await _repository.GetActiveKeysByUserIdAsync(userId);
+        var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId);
 
         // Assert
         Assert.Equal(2, activeKeys.Count);
@@ -287,7 +280,8 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test11_AddAsync_NewApiKey_PersistsSuccessfully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, plaintextKey) = ApiKey.Create(
             id: Guid.NewGuid(),
             userId: userId,
@@ -298,11 +292,11 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
         );
 
         // Act
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.NotNull(persisted);
         Assert.Equal(userId, persisted.UserId);
         Assert.Equal("Production Key", persisted.KeyName);
@@ -317,7 +311,8 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test12_AddAsync_ApiKeyWithoutExpiration_PersistsCorrectly()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(
             id: Guid.NewGuid(),
             userId: userId,
@@ -326,11 +321,11 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
         );
 
         // Act
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.NotNull(persisted);
         Assert.Null(persisted.ExpiresAt);
     }
@@ -343,18 +338,21 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test13_UpdateAsync_LastUsedAt_UpdatesCorrectly()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Test Key", "read");
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
+
+        DbContext.ChangeTracker.Clear();
 
         // Act
         apiKey.MarkAsUsed();
-        await _repository.UpdateAsync(apiKey);
-        await _dbContext.SaveChangesAsync();
+        await Repository.UpdateAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var updated = await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.NotNull(updated);
         Assert.NotNull(updated.LastUsedAt);
     }
@@ -363,19 +361,22 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test14_UpdateAsync_RevokeApiKey_PersistsRevocation()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var revokerId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
+        var revokerId = await CreateTestUserAsync("revoker@example.com");
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Test Key", "read");
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
+
+        DbContext.ChangeTracker.Clear();
 
         // Act
         apiKey.Revoke(revokerId);
-        await _repository.UpdateAsync(apiKey);
-        await _dbContext.SaveChangesAsync();
+        await Repository.UpdateAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var updated = await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.NotNull(updated);
         Assert.NotNull(updated.RevokedAt);
         Assert.Equal(revokerId, updated.RevokedBy);
@@ -390,7 +391,8 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test15_Mapping_DomainToPersistence_AllFieldsCorrect()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(
             id: Guid.NewGuid(),
             userId: userId,
@@ -401,11 +403,11 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
         );
 
         // Act
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.NotNull(persisted);
         Assert.Equal(apiKey.Id, persisted.Id);
         Assert.Equal(apiKey.UserId, persisted.UserId);
@@ -421,13 +423,14 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test16_Mapping_PersistenceToDomain_AllFieldsCorrect()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Round Trip Test", "admin");
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var retrieved = await _repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+        var retrieved = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -447,15 +450,16 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test17_ScopeSerialization_SingleScope_PersistsCorrectly()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Single Scope Key", "read");
 
         // Act
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.NotNull(persisted);
         Assert.Equal("read", persisted.Scopes);
     }
@@ -464,15 +468,16 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test18_ScopeSerialization_MultipleScopes_PersistsCorrectly()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Multi Scope Key", "read,write,admin");
 
         // Act
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.NotNull(persisted);
         Assert.Equal("read,write,admin", persisted.Scopes);
     }
@@ -485,15 +490,18 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test19_ConcurrentPrefixLookups_NoConflicts()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Concurrent Key", "read");
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
-        // Act - Multiple concurrent prefix lookups
-        var tasks = Enumerable.Range(0, 10)
-            .Select(_ => _repository.GetByKeyPrefixAsync(apiKey.KeyPrefix))
-            .ToArray();
+        // Act - Multiple concurrent prefix lookups using independent repositories
+        var tasks = Enumerable.Range(0, 10).Select(async _ =>
+        {
+            var independentRepo = CreateIndependentRepository();
+            return await independentRepo.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+        }).ToArray();
 
         var results = await Task.WhenAll(tasks);
 
@@ -509,27 +517,34 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test20_ConcurrentUsageUpdates_LastOneWins()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "Usage Key", "read");
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
-        // Act - Multiple concurrent usage updates
+        // Act - Multiple concurrent usage updates using independent repositories
         var tasks = Enumerable.Range(0, 5).Select(async _ =>
         {
-            var key = await _repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+            var independentRepo = CreateIndependentRepository();
+            var independentDbContext = CreateIndependentDbContext();
+            
+            var key = await independentRepo.GetByKeyPrefixAsync(apiKey.KeyPrefix);
             if (key != null)
             {
                 key.MarkAsUsed();
-                await _repository.UpdateAsync(key);
-                await _dbContext.SaveChangesAsync();
+                await independentRepo.UpdateAsync(key);
+                await independentDbContext.SaveChangesAsync();
             }
+            
+            await independentDbContext.DisposeAsync();
         }).ToArray();
 
         await Task.WhenAll(tasks);
 
         // Assert - Should have LastUsedAt updated
-        var updated = await _dbContext!.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        DbContext.ChangeTracker.Clear();
+        var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.NotNull(updated);
         Assert.NotNull(updated.LastUsedAt);
     }
@@ -542,15 +557,16 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test21_NullableFields_Metadata_HandledCorrectly()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "No Metadata Key", "read", metadata: null);
 
         // Act
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.NotNull(persisted);
         Assert.Null(persisted.Metadata);
     }
@@ -559,22 +575,23 @@ public class ApiKeyRepositoryTests : IAsyncLifetime
     public async Task Test22_AsNoTracking_QueriesDoNotTrackEntities()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var (apiKey, _) = ApiKey.Create(Guid.NewGuid(), userId, "No Tracking Key", "read");
-        await _repository!.AddAsync(apiKey);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(apiKey);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var retrieved = await _repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
+        var retrieved = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix);
 
         // Modify retrieved object
         retrieved!.MarkAsUsed();
 
         // SaveChanges without explicit Update call
-        await _dbContext!.SaveChangesAsync();
+        await DbContext.SaveChangesAsync();
 
         // Assert - Changes should NOT be persisted (AsNoTracking)
-        var reloaded = await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
+        var reloaded = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id);
         Assert.Null(reloaded!.LastUsedAt); // Should remain null
     }
 

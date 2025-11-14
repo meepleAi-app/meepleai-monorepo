@@ -2,8 +2,8 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -12,50 +12,12 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Integration tests for UserRepository using Testcontainers with real PostgreSQL.
 /// Tests actual EF Core queries and domain-persistence mapping.
 /// </summary>
-[Collection("Integration")]
-public class UserRepositoryTests : IAsyncLifetime
+public class UserRepositoryTests : IntegrationTestBase<UserRepository>
 {
-    private PostgreSqlContainer? _postgresContainer;
-    private MeepleAiDbContext? _dbContext;
-    private UserRepository? _repository;
+    protected override string DatabaseName => "meepleai_user_test";
 
-    public async ValueTask InitializeAsync()
-    {
-        // Start PostgreSQL container
-        _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithDatabase("meepleai_test")
-            .WithUsername("testuser")
-            .WithPassword("testpass")
-            .Build();
-
-        await _postgresContainer.StartAsync();
-
-        // Create DbContext with container connection string
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_postgresContainer.GetConnectionString())
-            .Options;
-
-        _dbContext = new MeepleAiDbContext(options);
-
-        // Apply migrations
-        await _dbContext.Database.MigrateAsync();
-
-        _repository = new UserRepository(_dbContext);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_dbContext != null)
-        {
-            await _dbContext.DisposeAsync();
-        }
-
-        if (_postgresContainer != null)
-        {
-            await _postgresContainer.DisposeAsync();
-        }
-    }
+    protected override UserRepository CreateRepository(MeepleAiDbContext dbContext)
+        => new UserRepository(dbContext);
 
     #region GetByIdAsync Tests
 
@@ -63,12 +25,13 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test01_GetByIdAsync_ExistingUser_ReturnsUser()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("test@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _repository.GetByIdAsync(user.Id);
+        var result = await Repository.GetByIdAsync(user.Id);
 
         // Assert
         Assert.NotNull(result);
@@ -81,10 +44,11 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test02_GetByIdAsync_NonExistingUser_ReturnsNull()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await _repository!.GetByIdAsync(nonExistentId);
+        var result = await Repository.GetByIdAsync(nonExistentId);
 
         // Assert
         Assert.Null(result);
@@ -98,14 +62,15 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test03_GetByEmailAsync_ExistingUser_ReturnsUser()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("user@test.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         var email = new Email("user@test.com");
 
         // Act
-        var result = await _repository.GetByEmailAsync(email);
+        var result = await Repository.GetByEmailAsync(email);
 
         // Assert
         Assert.NotNull(result);
@@ -117,14 +82,15 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test04_GetByEmailAsync_CaseInsensitive_ReturnsUser()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("CaseSensitive@Example.COM", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         var emailLowercase = new Email("casesensitive@example.com");
 
         // Act
-        var result = await _repository.GetByEmailAsync(emailLowercase);
+        var result = await Repository.GetByEmailAsync(emailLowercase);
 
         // Assert
         Assert.NotNull(result);
@@ -135,10 +101,11 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test05_GetByEmailAsync_NonExistingEmail_ReturnsNull()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var email = new Email("nonexistent@example.com");
 
         // Act
-        var result = await _repository!.GetByEmailAsync(email);
+        var result = await Repository.GetByEmailAsync(email);
 
         // Assert
         Assert.Null(result);
@@ -152,14 +119,15 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test06_ExistsByEmailAsync_ExistingUser_ReturnsTrue()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("exists@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         var email = new Email("exists@example.com");
 
         // Act
-        var exists = await _repository.ExistsByEmailAsync(email);
+        var exists = await Repository.ExistsByEmailAsync(email);
 
         // Assert
         Assert.True(exists);
@@ -169,10 +137,11 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test07_ExistsByEmailAsync_NonExistingUser_ReturnsFalse()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var email = new Email("notexists@example.com");
 
         // Act
-        var exists = await _repository!.ExistsByEmailAsync(email);
+        var exists = await Repository.ExistsByEmailAsync(email);
 
         // Assert
         Assert.False(exists);
@@ -185,8 +154,11 @@ public class UserRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task Test08_HasAnyUsersAsync_EmptyDatabase_ReturnsFalse()
     {
+        // Arrange
+        await ResetDatabaseAsync();
+
         // Act
-        var hasUsers = await _repository!.HasAnyUsersAsync();
+        var hasUsers = await Repository.HasAnyUsersAsync();
 
         // Assert
         Assert.False(hasUsers);
@@ -196,12 +168,13 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test09_HasAnyUsersAsync_PopulatedDatabase_ReturnsTrue()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("firstuser@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var hasUsers = await _repository.HasAnyUsersAsync();
+        var hasUsers = await Repository.HasAnyUsersAsync();
 
         // Assert
         Assert.True(hasUsers);
@@ -215,14 +188,15 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test10_CountAdminsAsync_NoAdmins_ReturnsZero()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user1 = CreateTestUser("user1@example.com", Role.User);
         var user2 = CreateTestUser("user2@example.com", Role.Editor);
-        await _repository!.AddAsync(user1);
-        await _repository.AddAsync(user2);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user1);
+        await Repository.AddAsync(user2);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var adminCount = await _repository.CountAdminsAsync();
+        var adminCount = await Repository.CountAdminsAsync();
 
         // Assert
         Assert.Equal(0, adminCount);
@@ -232,19 +206,20 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test11_CountAdminsAsync_MultipleAdmins_ReturnsCorrectCount()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var admin1 = CreateTestUser("admin1@example.com", Role.Admin);
         var admin2 = CreateTestUser("admin2@example.com", Role.Admin);
         var user = CreateTestUser("user@example.com", Role.User);
         var editor = CreateTestUser("editor@example.com", Role.Editor);
 
-        await _repository!.AddAsync(admin1);
-        await _repository.AddAsync(admin2);
-        await _repository.AddAsync(user);
-        await _repository.AddAsync(editor);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(admin1);
+        await Repository.AddAsync(admin2);
+        await Repository.AddAsync(user);
+        await Repository.AddAsync(editor);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var adminCount = await _repository.CountAdminsAsync();
+        var adminCount = await Repository.CountAdminsAsync();
 
         // Assert
         Assert.Equal(2, adminCount);
@@ -257,8 +232,11 @@ public class UserRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task Test12_GetAllAsync_EmptyDatabase_ReturnsEmptyList()
     {
+        // Arrange
+        await ResetDatabaseAsync();
+
         // Act
-        var users = await _repository!.GetAllAsync();
+        var users = await Repository.GetAllAsync();
 
         // Assert
         Assert.Empty(users);
@@ -268,17 +246,18 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test13_GetAllAsync_MultipleUsers_ReturnsAll()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user1 = CreateTestUser("user1@example.com", Role.User);
         var user2 = CreateTestUser("user2@example.com", Role.Admin);
         var user3 = CreateTestUser("user3@example.com", Role.Editor);
 
-        await _repository!.AddAsync(user1);
-        await _repository.AddAsync(user2);
-        await _repository.AddAsync(user3);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user1);
+        await Repository.AddAsync(user2);
+        await Repository.AddAsync(user3);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var users = await _repository.GetAllAsync();
+        var users = await Repository.GetAllAsync();
 
         // Assert
         Assert.Equal(3, users.Count);
@@ -295,14 +274,15 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test14_AddAsync_NewUser_PersistsSuccessfully()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("newuser@example.com", Role.User);
 
         // Act
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.NotNull(persisted);
         Assert.Equal("newuser@example.com", persisted.Email);
         Assert.Equal("user", persisted.Role);
@@ -312,15 +292,16 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test15_AddAsync_UserWith2FA_PersistsCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("2fa@example.com", Role.User);
         user.EnableTwoFactor("encrypted_totp_secret_123");
 
         // Act
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.NotNull(persisted);
         Assert.True(persisted.IsTwoFactorEnabled);
         Assert.Equal("encrypted_totp_secret_123", persisted.TotpSecretEncrypted);
@@ -335,20 +316,23 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test16_UpdateAsync_ModifiedUser_PersistsChanges()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("update@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
+
+        DbContext.ChangeTracker.Clear();
 
         // Modify user
         user.UpdateDisplayName("Updated Name");
         user.UpdateRole(Role.Admin);
 
         // Act
-        await _repository.UpdateAsync(user);
-        await _dbContext.SaveChangesAsync();
+        await Repository.UpdateAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var updated = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.NotNull(updated);
         Assert.Equal("Updated Name", updated.DisplayName);
         Assert.Equal("admin", updated.Role);
@@ -358,19 +342,20 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test17_UpdateAsync_Enable2FA_UpdatesCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("enable2fa@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Enable 2FA
         user.EnableTwoFactor("new_encrypted_secret");
 
         // Act
-        await _repository.UpdateAsync(user);
-        await _dbContext.SaveChangesAsync();
+        await Repository.UpdateAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var updated = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.NotNull(updated);
         Assert.True(updated.IsTwoFactorEnabled);
         Assert.Equal("new_encrypted_secret", updated.TotpSecretEncrypted);
@@ -384,16 +369,17 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test18_DeleteAsync_ExistingUser_RemovesFromDatabase()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("delete@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        await _repository.DeleteAsync(user);
-        await _dbContext.SaveChangesAsync();
+        await Repository.DeleteAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var deleted = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var deleted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.Null(deleted);
     }
 
@@ -401,11 +387,12 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test19_DeleteAsync_NonExistingUser_DoesNotThrow()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("nonexistent@example.com", Role.User);
 
         // Act & Assert - Should not throw
-        await _repository!.DeleteAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.DeleteAsync(user);
+        await DbContext.SaveChangesAsync();
     }
 
     #endregion
@@ -416,12 +403,13 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test20_ExistsAsync_ExistingUser_ReturnsTrue()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("exists@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var exists = await _repository.ExistsAsync(user.Id);
+        var exists = await Repository.ExistsAsync(user.Id);
 
         // Assert
         Assert.True(exists);
@@ -431,10 +419,11 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test21_ExistsAsync_NonExistingUser_ReturnsFalse()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var exists = await _repository!.ExistsAsync(nonExistentId);
+        var exists = await Repository.ExistsAsync(nonExistentId);
 
         // Assert
         Assert.False(exists);
@@ -448,15 +437,16 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test22_Mapping_DomainToPersistence_AllFieldsCorrect()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("mapping@example.com", Role.Admin);
         user.UpdateDisplayName("Mapping Test");
 
         // Act
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.NotNull(persisted);
         Assert.Equal(user.Id, persisted.Id);
         Assert.Equal(user.Email.Value, persisted.Email);
@@ -470,13 +460,14 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test23_Mapping_PersistenceToDomain_AllFieldsCorrect()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("roundtrip@example.com", Role.Editor);
         user.UpdateDisplayName("Round Trip Test");
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var retrieved = await _repository.GetByIdAsync(user.Id);
+        var retrieved = await Repository.GetByIdAsync(user.Id);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -491,13 +482,14 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test24_Mapping_2FAFields_PreservedCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("2famapping@example.com", Role.User);
         user.EnableTwoFactor("secret_123");
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var retrieved = await _repository.GetByIdAsync(user.Id);
+        var retrieved = await Repository.GetByIdAsync(user.Id);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -514,14 +506,17 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test25_ConcurrentReads_NoConflicts()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("concurrent@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
-        // Act - Multiple concurrent reads
-        var tasks = Enumerable.Range(0, 10)
-            .Select(_ => _repository.GetByIdAsync(user.Id))
-            .ToArray();
+        // Act - Multiple concurrent reads using independent repositories
+        var tasks = Enumerable.Range(0, 10).Select(async _ =>
+        {
+            var repo = CreateIndependentRepository();
+            return await repo.GetByIdAsync(user.Id);
+        }).ToArray();
 
         var results = await Task.WhenAll(tasks);
 
@@ -537,15 +532,16 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test26_ConcurrentEmailLookups_NoConflicts()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("concurrentemail@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         var email = new Email("concurrentemail@example.com");
 
         // Act - Multiple concurrent email lookups
         var tasks = Enumerable.Range(0, 10)
-            .Select(_ => _repository.GetByEmailAsync(email))
+            .Select(_ => Repository.GetByEmailAsync(email))
             .ToArray();
 
         var results = await Task.WhenAll(tasks);
@@ -566,14 +562,15 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test27_Transaction_Rollback_NoDataPersisted()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("transaction@example.com", Role.User);
 
         // Act
-        await _repository!.AddAsync(user);
+        await Repository.AddAsync(user);
         // DO NOT call SaveChangesAsync - simulates rollback
 
         // Assert
-        var notPersisted = await _dbContext!.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var notPersisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.Null(notPersisted);
     }
 
@@ -581,16 +578,17 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test28_MultipleOperations_SingleTransaction_AllOrNothing()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user1 = CreateTestUser("trans1@example.com", Role.User);
         var user2 = CreateTestUser("trans2@example.com", Role.Admin);
 
         // Act
-        await _repository!.AddAsync(user1);
-        await _repository.AddAsync(user2);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user1);
+        await Repository.AddAsync(user2);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var count = await _dbContext.Users.CountAsync();
+        var count = await DbContext.Users.CountAsync();
         Assert.Equal(2, count);
     }
 
@@ -602,15 +600,16 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test29_NullableFields_HandledCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("nullable@example.com", Role.User);
         // DisplayName is nullable in some cases
 
         // Act
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var retrieved = await _repository.GetByIdAsync(user.Id);
+        var retrieved = await Repository.GetByIdAsync(user.Id);
         Assert.NotNull(retrieved);
     }
 
@@ -618,14 +617,15 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test30_SpecialCharacters_EmailHandling()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("user+tag@sub.domain.com", Role.User);
 
         // Act
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         var email = new Email("user+tag@sub.domain.com");
-        var retrieved = await _repository.GetByEmailAsync(email);
+        var retrieved = await Repository.GetByEmailAsync(email);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -636,18 +636,19 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test31_LargeDataset_PerformanceTest()
     {
         // Arrange - Add 100 users
+        await ResetDatabaseAsync();
         var users = Enumerable.Range(1, 100)
             .Select(i => CreateTestUser($"user{i}@example.com", Role.User))
             .ToList();
 
         foreach (var user in users)
         {
-            await _repository!.AddAsync(user);
+            await Repository.AddAsync(user);
         }
-        await _dbContext!.SaveChangesAsync();
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var allUsers = await _repository!.GetAllAsync();
+        var allUsers = await Repository.GetAllAsync();
 
         // Assert
         Assert.Equal(100, allUsers.Count);
@@ -657,21 +658,22 @@ public class UserRepositoryTests : IAsyncLifetime
     public async Task Test32_AsNoTracking_QueriesDoNotTrackEntities()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user = CreateTestUser("notracking@example.com", Role.User);
-        await _repository!.AddAsync(user);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var retrieved = await _repository.GetByIdAsync(user.Id);
+        var retrieved = await Repository.GetByIdAsync(user.Id);
 
         // Modify retrieved object
         retrieved!.UpdateDisplayName("Modified");
 
         // SaveChanges without explicit Update call
-        await _dbContext!.SaveChangesAsync();
+        await DbContext.SaveChangesAsync();
 
         // Assert - Changes should NOT be persisted (AsNoTracking)
-        var reloaded = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+        var reloaded = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.NotEqual("Modified", reloaded!.DisplayName);
     }
 

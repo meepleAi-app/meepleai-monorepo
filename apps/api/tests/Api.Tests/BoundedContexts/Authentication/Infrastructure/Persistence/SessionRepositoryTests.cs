@@ -2,8 +2,8 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -12,47 +12,12 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Integration tests for SessionRepository using Testcontainers with real PostgreSQL.
 /// Tests session lifecycle, expiration queries, and token-based lookups.
 /// </summary>
-[Collection("Integration")]
-public class SessionRepositoryTests : IAsyncLifetime
+public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
 {
-    private PostgreSqlContainer? _postgresContainer;
-    private MeepleAiDbContext? _dbContext;
-    private SessionRepository? _repository;
-    private readonly TimeProvider _timeProvider = TimeProvider.System;
+    protected override string DatabaseName => "meepleai_session_test";
 
-    public async ValueTask InitializeAsync()
-    {
-        _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithDatabase("meepleai_session_test")
-            .WithUsername("testuser")
-            .WithPassword("testpass")
-            .Build();
-
-        await _postgresContainer.StartAsync();
-
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_postgresContainer.GetConnectionString())
-            .Options;
-
-        _dbContext = new MeepleAiDbContext(options);
-        await _dbContext.Database.MigrateAsync();
-
-        _repository = new SessionRepository(_dbContext, _timeProvider);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_dbContext != null)
-        {
-            await _dbContext.DisposeAsync();
-        }
-
-        if (_postgresContainer != null)
-        {
-            await _postgresContainer.DisposeAsync();
-        }
-    }
+    protected override SessionRepository CreateRepository(MeepleAiDbContext dbContext)
+        => new SessionRepository(dbContext, TimeProvider);
 
     #region GetByTokenHashAsync Tests
 
@@ -60,13 +25,14 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test01_GetByTokenHashAsync_ExistingSession_ReturnsSession()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId);
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _repository.GetByTokenHashAsync(session.TokenHash);
+        var result = await Repository.GetByTokenHashAsync(session.TokenHash);
 
         // Assert
         Assert.NotNull(result);
@@ -79,10 +45,11 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test02_GetByTokenHashAsync_NonExistingToken_ReturnsNull()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var nonExistentHash = "nonexistent_hash_123";
 
         // Act
-        var result = await _repository!.GetByTokenHashAsync(nonExistentHash);
+        var result = await Repository.GetByTokenHashAsync(nonExistentHash);
 
         // Assert
         Assert.Null(result);
@@ -96,10 +63,11 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test03_GetByUserIdAsync_NoSessions_ReturnsEmptyList()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
 
         // Act
-        var sessions = await _repository!.GetByUserIdAsync(userId);
+        var sessions = await Repository.GetByUserIdAsync(userId);
 
         // Assert
         Assert.Empty(sessions);
@@ -109,6 +77,7 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test04_GetByUserIdAsync_MultipleSessions_ReturnsAllOrdered()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session1 = CreateTestSession(userId);
         await Task.Delay(10); // Ensure different timestamps
@@ -116,13 +85,13 @@ public class SessionRepositoryTests : IAsyncLifetime
         await Task.Delay(10);
         var session3 = CreateTestSession(userId);
 
-        await _repository!.AddAsync(session1);
-        await _repository.AddAsync(session2);
-        await _repository.AddAsync(session3);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session1);
+        await Repository.AddAsync(session2);
+        await Repository.AddAsync(session3);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var sessions = await _repository.GetByUserIdAsync(userId);
+        var sessions = await Repository.GetByUserIdAsync(userId);
 
         // Assert
         Assert.Equal(3, sessions.Count);
@@ -135,6 +104,7 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test05_GetByUserIdAsync_MultipleUsers_FiltersCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user1Id = Guid.NewGuid();
         var user2Id = Guid.NewGuid();
 
@@ -142,14 +112,14 @@ public class SessionRepositoryTests : IAsyncLifetime
         var session2 = CreateTestSession(user1Id);
         var session3 = CreateTestSession(user2Id);
 
-        await _repository!.AddAsync(session1);
-        await _repository.AddAsync(session2);
-        await _repository.AddAsync(session3);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session1);
+        await Repository.AddAsync(session2);
+        await Repository.AddAsync(session3);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var user1Sessions = await _repository.GetByUserIdAsync(user1Id);
-        var user2Sessions = await _repository.GetByUserIdAsync(user2Id);
+        var user1Sessions = await Repository.GetByUserIdAsync(user1Id);
+        var user2Sessions = await Repository.GetByUserIdAsync(user2Id);
 
         // Assert
         Assert.Equal(2, user1Sessions.Count);
@@ -164,16 +134,17 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test06_GetActiveSessionsByUserIdAsync_OnlyActiveSessions_ReturnsAll()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session1 = CreateTestSession(userId);
         var session2 = CreateTestSession(userId);
 
-        await _repository!.AddAsync(session1);
-        await _repository.AddAsync(session2);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session1);
+        await Repository.AddAsync(session2);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeSessions = await _repository.GetActiveSessionsByUserIdAsync(userId);
+        var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId);
 
         // Assert
         Assert.Equal(2, activeSessions.Count);
@@ -183,16 +154,17 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test07_GetActiveSessionsByUserIdAsync_ExpiredSessions_Excluded()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var activeSession = CreateTestSession(userId);
         var expiredSession = CreateTestSession(userId, TimeSpan.FromDays(-1)); // Already expired
 
-        await _repository!.AddAsync(activeSession);
-        await _repository.AddAsync(expiredSession);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(activeSession);
+        await Repository.AddAsync(expiredSession);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeSessions = await _repository.GetActiveSessionsByUserIdAsync(userId);
+        var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId);
 
         // Assert
         Assert.Single(activeSessions);
@@ -203,17 +175,18 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test08_GetActiveSessionsByUserIdAsync_RevokedSessions_Excluded()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var activeSession = CreateTestSession(userId);
         var revokedSession = CreateTestSession(userId);
         revokedSession.Revoke();
 
-        await _repository!.AddAsync(activeSession);
-        await _repository.AddAsync(revokedSession);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(activeSession);
+        await Repository.AddAsync(revokedSession);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeSessions = await _repository.GetActiveSessionsByUserIdAsync(userId);
+        var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId);
 
         // Assert
         Assert.Single(activeSessions);
@@ -224,6 +197,7 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test09_GetActiveSessionsByUserIdAsync_MixedSessions_FiltersCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var active1 = CreateTestSession(userId);
         var active2 = CreateTestSession(userId);
@@ -231,14 +205,14 @@ public class SessionRepositoryTests : IAsyncLifetime
         var revoked = CreateTestSession(userId);
         revoked.Revoke();
 
-        await _repository!.AddAsync(active1);
-        await _repository.AddAsync(active2);
-        await _repository.AddAsync(expired);
-        await _repository.AddAsync(revoked);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(active1);
+        await Repository.AddAsync(active2);
+        await Repository.AddAsync(expired);
+        await Repository.AddAsync(revoked);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeSessions = await _repository.GetActiveSessionsByUserIdAsync(userId);
+        var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId);
 
         // Assert
         Assert.Equal(2, activeSessions.Count);
@@ -254,15 +228,16 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test10_AddAsync_NewSession_PersistsSuccessfully()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId, ipAddress: "192.168.1.1", userAgent: "TestBrowser/1.0");
 
         // Act
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(persisted);
         Assert.Equal(userId, persisted.UserId);
         Assert.Equal(session.TokenHash, persisted.TokenHash);
@@ -274,6 +249,7 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test11_AddAsync_SessionWithMetadata_StoresAllFields()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(
             userId,
@@ -282,11 +258,11 @@ public class SessionRepositoryTests : IAsyncLifetime
         );
 
         // Act
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(persisted);
         Assert.Equal("10.0.0.1", persisted.IpAddress);
         Assert.Equal("Mozilla/5.0", persisted.UserAgent);
@@ -302,18 +278,21 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test12_UpdateAsync_LastSeenAt_UpdatesCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId);
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
+
+        DbContext.ChangeTracker.Clear();
 
         // Act
         session.UpdateLastSeen();
-        await _repository.UpdateAsync(session);
-        await _dbContext.SaveChangesAsync();
+        await Repository.UpdateAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var updated = await _dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var updated = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(updated);
         Assert.NotNull(updated.LastSeenAt);
     }
@@ -322,18 +301,21 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test13_UpdateAsync_RevokeSession_PersistsRevocation()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId);
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
+
+        DbContext.ChangeTracker.Clear();
 
         // Act
         session.Revoke();
-        await _repository.UpdateAsync(session);
-        await _dbContext.SaveChangesAsync();
+        await Repository.UpdateAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var updated = await _dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var updated = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(updated);
         Assert.NotNull(updated.RevokedAt);
     }
@@ -346,21 +328,22 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test14_RevokeAllUserSessionsAsync_MultipleSessions_RevokesAll()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session1 = CreateTestSession(userId);
         var session2 = CreateTestSession(userId);
         var session3 = CreateTestSession(userId);
 
-        await _repository!.AddAsync(session1);
-        await _repository.AddAsync(session2);
-        await _repository.AddAsync(session3);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session1);
+        await Repository.AddAsync(session2);
+        await Repository.AddAsync(session3);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        await _repository.RevokeAllUserSessionsAsync(userId);
+        await Repository.RevokeAllUserSessionsAsync(userId);
 
         // Assert
-        var allSessions = await _dbContext!.UserSessions.Where(s => s.UserId == userId).ToListAsync();
+        var allSessions = await DbContext.UserSessions.Where(s => s.UserId == userId).ToListAsync();
         Assert.Equal(3, allSessions.Count);
         Assert.All(allSessions, s => Assert.NotNull(s.RevokedAt));
     }
@@ -369,22 +352,23 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test15_RevokeAllUserSessionsAsync_AlreadyRevokedSessions_NoEffect()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session1 = CreateTestSession(userId);
         var session2 = CreateTestSession(userId);
         session2.Revoke();
 
-        await _repository!.AddAsync(session1);
-        await _repository.AddAsync(session2);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session1);
+        await Repository.AddAsync(session2);
+        await DbContext.SaveChangesAsync();
 
         var originalRevokedAt = session2.RevokedAt;
 
         // Act
-        await _repository.RevokeAllUserSessionsAsync(userId);
+        await Repository.RevokeAllUserSessionsAsync(userId);
 
         // Assert
-        var allSessions = await _dbContext!.UserSessions.Where(s => s.UserId == userId).ToListAsync();
+        var allSessions = await DbContext.UserSessions.Where(s => s.UserId == userId).ToListAsync();
         Assert.Equal(2, allSessions.Count);
 
         var session1Updated = allSessions.First(s => s.Id == session1.Id);
@@ -398,6 +382,7 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test16_RevokeAllUserSessionsAsync_MultipleUsers_OnlyTargetUser()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var user1Id = Guid.NewGuid();
         var user2Id = Guid.NewGuid();
 
@@ -405,17 +390,17 @@ public class SessionRepositoryTests : IAsyncLifetime
         var user1Session2 = CreateTestSession(user1Id);
         var user2Session = CreateTestSession(user2Id);
 
-        await _repository!.AddAsync(user1Session1);
-        await _repository.AddAsync(user1Session2);
-        await _repository.AddAsync(user2Session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user1Session1);
+        await Repository.AddAsync(user1Session2);
+        await Repository.AddAsync(user2Session);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        await _repository.RevokeAllUserSessionsAsync(user1Id);
+        await Repository.RevokeAllUserSessionsAsync(user1Id);
 
         // Assert
-        var user1Sessions = await _dbContext!.UserSessions.Where(s => s.UserId == user1Id).ToListAsync();
-        var user2Sessions = await _dbContext.UserSessions.Where(s => s.UserId == user2Id).ToListAsync();
+        var user1Sessions = await DbContext.UserSessions.Where(s => s.UserId == user1Id).ToListAsync();
+        var user2Sessions = await DbContext.UserSessions.Where(s => s.UserId == user2Id).ToListAsync();
 
         Assert.All(user1Sessions, s => Assert.NotNull(s.RevokedAt));
         Assert.All(user2Sessions, s => Assert.Null(s.RevokedAt));
@@ -429,6 +414,7 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test17_Mapping_DomainToPersistence_AllFieldsCorrect()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(
             userId,
@@ -437,11 +423,11 @@ public class SessionRepositoryTests : IAsyncLifetime
         );
 
         // Act
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(persisted);
         Assert.Equal(session.Id, persisted.Id);
         Assert.Equal(session.UserId, persisted.UserId);
@@ -456,13 +442,14 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test18_Mapping_PersistenceToDomain_AllFieldsCorrect()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId);
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var retrieved = await _repository.GetByTokenHashAsync(session.TokenHash);
+        var retrieved = await Repository.GetByTokenHashAsync(session.TokenHash);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -481,20 +468,21 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test19_ExpirationQuery_EdgeCase_ExactExpirationTime()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         // Create session that expires in 1 second
         var session = CreateTestSession(userId, TimeSpan.FromSeconds(1));
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Act - Check active immediately
-        var activeNow = await _repository.GetActiveSessionsByUserIdAsync(userId);
+        var activeNow = await Repository.GetActiveSessionsByUserIdAsync(userId);
 
         // Wait for expiration
         await Task.Delay(1500);
 
         // Check active after expiration
-        var activeAfter = await _repository.GetActiveSessionsByUserIdAsync(userId);
+        var activeAfter = await Repository.GetActiveSessionsByUserIdAsync(userId);
 
         // Assert
         Assert.Single(activeNow);
@@ -505,13 +493,14 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test20_ExpirationQuery_FutureSessions_IncludedInActive()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId, TimeSpan.FromDays(30));
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var activeSessions = await _repository.GetActiveSessionsByUserIdAsync(userId);
+        var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId);
 
         // Assert
         Assert.Single(activeSessions);
@@ -525,15 +514,18 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test21_ConcurrentTokenLookups_NoConflicts()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId);
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
-        // Act - Multiple concurrent token lookups
-        var tasks = Enumerable.Range(0, 10)
-            .Select(_ => _repository.GetByTokenHashAsync(session.TokenHash))
-            .ToArray();
+        // Act - Multiple concurrent token lookups using independent repositories
+        var tasks = Enumerable.Range(0, 10).Select(async _ =>
+        {
+            var repo = CreateIndependentRepository();
+            return await repo.GetByTokenHashAsync(session.TokenHash);
+        }).ToArray();
 
         var results = await Task.WhenAll(tasks);
 
@@ -549,20 +541,23 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test22_ConcurrentRevocations_Idempotent()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId);
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
-        // Act - Multiple concurrent revocations (should be idempotent)
-        var tasks = Enumerable.Range(0, 5)
-            .Select(_ => _repository.RevokeAllUserSessionsAsync(userId))
-            .ToArray();
+        // Act - Multiple concurrent revocations using independent repositories
+        var tasks = Enumerable.Range(0, 5).Select(async _ =>
+        {
+            var repo = CreateIndependentRepository();
+            await repo.RevokeAllUserSessionsAsync(userId);
+        }).ToArray();
 
         await Task.WhenAll(tasks);
 
         // Assert
-        var revokedSession = await _dbContext!.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var revokedSession = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(revokedSession);
         Assert.NotNull(revokedSession.RevokedAt);
     }
@@ -575,15 +570,16 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test23_NullableFields_IpAddress_HandledCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId, ipAddress: null);
 
         // Act
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(persisted);
         Assert.Null(persisted.IpAddress);
     }
@@ -592,15 +588,16 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test24_NullableFields_UserAgent_HandledCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId, userAgent: null);
 
         // Act
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(persisted);
         Assert.Null(persisted.UserAgent);
     }
@@ -609,16 +606,17 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test25_LongUserAgent_PersistsCorrectly()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var longUserAgent = new string('A', 500);
         var session = CreateTestSession(userId, userAgent: longUserAgent);
 
         // Act
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(persisted);
         Assert.Equal(longUserAgent, persisted.UserAgent);
     }
@@ -627,22 +625,23 @@ public class SessionRepositoryTests : IAsyncLifetime
     public async Task Test26_AsNoTracking_QueriesDoNotTrackEntities()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
         var session = CreateTestSession(userId);
-        await _repository!.AddAsync(session);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(session);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var retrieved = await _repository.GetByTokenHashAsync(session.TokenHash);
+        var retrieved = await Repository.GetByTokenHashAsync(session.TokenHash);
 
         // Modify retrieved object
         retrieved!.UpdateLastSeen();
 
         // SaveChanges without explicit Update call
-        await _dbContext!.SaveChangesAsync();
+        await DbContext.SaveChangesAsync();
 
         // Assert - Changes should NOT be persisted (AsNoTracking)
-        var reloaded = await _dbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        var reloaded = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.Null(reloaded!.LastSeenAt); // Should remain null
     }
 

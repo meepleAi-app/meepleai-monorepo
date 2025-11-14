@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.Mappers;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
@@ -36,29 +37,7 @@ public class AbandonGameSessionCommandHandler : ICommandHandler<AbandonGameSessi
         await _sessionRepository.UpdateAsync(session, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Map to DTO
-        return MapToDto(session);
-    }
-
-    private static GameSessionDto MapToDto(GameSession session)
-    {
-        var playerDtos = session.Players.Select(p => new SessionPlayerDto(
-            PlayerName: p.PlayerName,
-            PlayerOrder: p.PlayerOrder,
-            Color: p.Color
-        )).ToList();
-
-        return new GameSessionDto(
-            Id: session.Id,
-            GameId: session.GameId,
-            Status: session.Status.Value,
-            StartedAt: session.StartedAt,
-            CompletedAt: session.CompletedAt,
-            PlayerCount: session.PlayerCount,
-            Players: playerDtos,
-            WinnerName: session.WinnerName,
-            Notes: session.Notes,
-            DurationMinutes: (int)session.Duration.TotalMinutes
-        );
+        // Map to DTO using shared mapper
+        return session.ToDto();
     }
 }

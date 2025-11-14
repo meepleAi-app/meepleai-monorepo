@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface TimelineEventItemProps {
   event: TimelineEvent;
@@ -31,18 +32,21 @@ export function TimelineEventItem({
 
   return (
     <Card
-      className={`mb-3 transition-all ${
-        isSelected ? "border-2" : "border"
-      } ${isSelected ? "bg-muted" : ""}`}
+      className={cn(
+        "mb-3 transition-all border",
+        isSelected ? "border-2 bg-muted" : ""
+      )}
       style={isSelected ? { borderColor: typeColor } : {}}
     >
       <CardHeader
-        className="p-3 cursor-pointer flex-row items-center gap-3 space-y-0"
-        style={{ borderBottom: isExpanded ? "1px solid hsl(var(--border))" : "none" }}
+        className={cn(
+          "p-3 cursor-pointer flex-row items-center gap-3 space-y-0",
+          isExpanded && "border-b"
+        )}
         onClick={() => onSelect(event.id)}
       >
         {/* Status Icon */}
-        <div style={{ fontSize: 20, flexShrink: 0 }}>{statusIcon}</div>
+        <div className="text-xl flex-shrink-0">{statusIcon}</div>
 
         {/* Event Type Badge */}
         <Badge
@@ -92,17 +96,9 @@ export function TimelineEventItem({
         <CardContent className="p-3 bg-muted/50 text-xs text-foreground">
           {/* Message Content */}
           {event.data.message && event.type === "message" && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "#64748b" }}>Messaggio:</div>
-              <div
-                style={{
-                  padding: 10,
-                  background: "white",
-                  border: "1px solid #dadce0",
-                  borderRadius: 4,
-                  whiteSpace: "pre-wrap"
-                }}
-              >
+            <div className="mb-3">
+              <div className="font-semibold mb-1.5 text-slate-500">Messaggio:</div>
+              <div className="p-2.5 bg-white border border-gray-300 rounded whitespace-pre-wrap">
                 {event.data.message}
               </div>
             </div>
@@ -110,26 +106,20 @@ export function TimelineEventItem({
 
           {/* Citations */}
           {event.data.citations && event.data.citations.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "#64748b" }}>
+            <div className="mb-3">
+              <div className="font-semibold mb-1.5 text-slate-500">
                 Citazioni ({event.data.citations.length}):
               </div>
               {event.data.citations.map((citation: Snippet, idx: number) => (
                 <div
                   key={idx}
-                  style={{
-                    padding: 8,
-                    background: "white",
-                    border: "1px solid #dadce0",
-                    borderRadius: 4,
-                    marginBottom: 6
-                  }}
+                  className="p-2 bg-white border border-gray-300 rounded mb-1.5"
                 >
-                  <div style={{ fontWeight: 500, marginBottom: 4 }}>
+                  <div className="font-medium mb-1">
                     {citation.source}
                     {citation.page !== null && citation.page !== undefined && ` (Pagina ${citation.page})`}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 11 }}>{citation.text}</div>
+                  <div className="text-slate-500 text-[11px]">{citation.text}</div>
                 </div>
               ))}
             </div>
@@ -137,92 +127,51 @@ export function TimelineEventItem({
 
           {/* Metrics */}
           {event.data.metrics && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "#64748b" }}>Metriche:</div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: 8
-                }}
-              >
+            <div className="mb-3">
+              <div className="font-semibold mb-1.5 text-slate-500">Metriche:</div>
+              <div className="grid grid-cols-2 gap-2">
                 {event.data.metrics.latencyMs !== undefined && (
-                  <div
-                    style={{
-                      padding: 8,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 4
-                    }}
-                  >
-                    <div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>Latenza</div>
-                    <div style={{ fontWeight: 600, color: "#1a73e8" }}>
+                  <div className="p-2 bg-white border border-gray-300 rounded">
+                    <div className="text-[10px] text-slate-500 mb-0.5">Latenza</div>
+                    <div className="font-semibold text-blue-600">
                       {formatDuration(event.data.metrics.latencyMs)}
                     </div>
                   </div>
                 )}
                 {event.data.metrics.promptTokens !== undefined && (
-                  <div
-                    style={{
-                      padding: 8,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 4
-                    }}
-                  >
-                    <div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>
+                  <div className="p-2 bg-white border border-gray-300 rounded">
+                    <div className="text-[10px] text-slate-500 mb-0.5">
                       Token Prompt
                     </div>
-                    <div style={{ fontWeight: 600, color: "#1a73e8" }}>
+                    <div className="font-semibold text-blue-600">
                       {event.data.metrics.promptTokens}
                     </div>
                   </div>
                 )}
                 {event.data.metrics.completionTokens !== undefined && (
-                  <div
-                    style={{
-                      padding: 8,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 4
-                    }}
-                  >
-                    <div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>
+                  <div className="p-2 bg-white border border-gray-300 rounded">
+                    <div className="text-[10px] text-slate-500 mb-0.5">
                       Token Completamento
                     </div>
-                    <div style={{ fontWeight: 600, color: "#1a73e8" }}>
+                    <div className="font-semibold text-blue-600">
                       {event.data.metrics.completionTokens}
                     </div>
                   </div>
                 )}
                 {event.data.metrics.totalTokens !== undefined && (
-                  <div
-                    style={{
-                      padding: 8,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 4
-                    }}
-                  >
-                    <div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>
+                  <div className="p-2 bg-white border border-gray-300 rounded">
+                    <div className="text-[10px] text-slate-500 mb-0.5">
                       Totale Token
                     </div>
-                    <div style={{ fontWeight: 600, color: "#1a73e8" }}>
+                    <div className="font-semibold text-blue-600">
                       {event.data.metrics.totalTokens}
                     </div>
                   </div>
                 )}
                 {event.data.metrics.confidence !== undefined && (
-                  <div
-                    style={{
-                      padding: 8,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 4
-                    }}
-                  >
-                    <div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>Confidenza</div>
-                    <div style={{ fontWeight: 600, color: "#188038" }}>
+                  <div className="p-2 bg-white border border-gray-300 rounded">
+                    <div className="text-[10px] text-slate-500 mb-0.5">Confidenza</div>
+                    <div className="font-semibold text-green-700">
                       {(event.data.metrics.confidence * 100).toFixed(1)}%
                     </div>
                   </div>
@@ -233,45 +182,20 @@ export function TimelineEventItem({
 
           {/* Error */}
           {event.data.error && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "#d93025" }}>Errore:</div>
-              <div
-                style={{
-                  padding: 10,
-                  background: "#fce8e6",
-                  border: "1px solid #d93025",
-                  borderRadius: 4,
-                  color: "#d93025"
-                }}
-              >
+            <div className="mb-3">
+              <div className="font-semibold mb-1.5 text-red-600">Errore:</div>
+              <div className="p-2.5 bg-red-50 border border-red-600 rounded text-red-600">
                 {event.data.error}
               </div>
             </div>
           )}
 
           {/* Technical Details */}
-          <details style={{ marginTop: 8 }}>
-            <summary
-              style={{
-                cursor: "pointer",
-                color: "#64748b",
-                fontSize: 11,
-                fontWeight: 500,
-                padding: "4px 0"
-              }}
-            >
+          <details className="mt-2">
+            <summary className="cursor-pointer text-slate-500 text-[11px] font-medium py-1">
               Dettagli Tecnici
             </summary>
-            <div
-              style={{
-                marginTop: 8,
-                padding: 8,
-                background: "#f1f3f4",
-                borderRadius: 4,
-                fontFamily: "monospace",
-                fontSize: 11
-              }}
-            >
+            <div className="mt-2 p-2 bg-gray-100 rounded font-mono text-[11px]">
               <div>ID: {event.id}</div>
               <div>Type: {event.type}</div>
               <div>Status: {event.status}</div>

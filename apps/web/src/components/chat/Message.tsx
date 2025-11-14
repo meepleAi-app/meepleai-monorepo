@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { Message as MessageType } from '@/types';
 import { useChatContext } from './ChatProvider';
 import { MessageActions } from './MessageActions';
@@ -51,32 +52,25 @@ export function Message({ message, isUser }: MessageProps) {
   return (
     <li
       aria-label={`${isUser ? 'Your message' : 'AI response'}`}
-      style={{
-        marginBottom: 24,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: isUser ? 'flex-end' : 'flex-start'
-      }}
+      className={cn(
+        "mb-6 flex flex-col",
+        isUser ? "items-end" : "items-start"
+      )}
     >
       {/* Message Bubble */}
       <div
-        className={isUser && showActions ? 'user-message-hoverable' : ''}
-        style={{
-          maxWidth: '75%',
-          padding: 12,
-          borderRadius: 8,
-          background: isUser ? '#e3f2fd' : '#f1f3f4',
-          fontSize: 14,
-          lineHeight: 1.5,
-          position: 'relative'
-        }}
+        className={cn(
+          "max-w-[75%] p-3 rounded-lg text-sm leading-relaxed relative",
+          isUser ? "bg-[#e3f2fd]" : "bg-[#f1f3f4]",
+          isUser && showActions && "user-message-hoverable"
+        )}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <div style={{ fontWeight: 500, fontSize: 12, color: '#64748b' }}>
+        <div className="flex justify-between items-center mb-1">
+          <div className="font-medium text-xs text-[#64748b]">
             {isUser ? 'Tu' : 'MeepleAI'}
             {/* Edited badge */}
             {message.updatedAt && !isDeleted && (
-              <span style={{ marginLeft: 6, fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>
+              <span className="ml-1.5 text-[11px] text-[#94a3b8] italic">
                 (modificato)
               </span>
             )}
@@ -97,13 +91,13 @@ export function Message({ message, isUser }: MessageProps) {
 
         {/* Message Content */}
         {isDeleted ? (
-          <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>
+          <div className="text-[#94a3b8] italic">
             [Messaggio eliminato]
           </div>
         ) : isEditing ? (
           <MessageEditForm />
         ) : (
-          <div style={{ whiteSpace: 'pre-wrap' }}>
+          <div className="whitespace-pre-wrap">
             {message.content}
           </div>
         )}
@@ -120,7 +114,7 @@ export function Message({ message, isUser }: MessageProps) {
 
       {/* CHAT-02: Follow-up questions for assistant messages */}
       {!isUser && !isDeleted && message.followUpQuestions && message.followUpQuestions.length > 0 && (
-        <div style={{ maxWidth: '75%' }} data-testid="follow-up-questions">
+        <div className="max-w-[75%]" data-testid="follow-up-questions">
           <FollowUpQuestions
             questions={message.followUpQuestions}
             onQuestionClick={handleFollowUpClick}
@@ -131,7 +125,7 @@ export function Message({ message, isUser }: MessageProps) {
 
       {/* Timestamp */}
       {!isDeleted && (
-        <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+        <div className="text-[11px] text-[#64748b] mt-1">
           {message.timestamp.toLocaleTimeString()}
         </div>
       )}

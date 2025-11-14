@@ -1,81 +1,41 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { api } from "../lib/api";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { GameProvider } from "@/components/game/GameProvider";
 import { ChatProvider } from "@/components/chat/ChatProvider";
+import { UIProvider } from "@/components/ui/UIProvider";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatContent } from "@/components/chat/ChatContent";
 import { ExportChatModal } from "@/components/ExportChatModal";
 
-// Type definitions
-type AuthUser = {
-  id: string;
-  email: string;
-  displayName?: string | null;
-  role: string;
-};
-
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
-};
-
-type Game = {
-  id: string;
-  name: string;
-};
-
 export default function ChatPage() {
-  // Authentication
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const { user: authUser, loading } = useAuth();
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // Load current user on mount
-  useEffect(() => {
-    void loadCurrentUser();
-  }, []);
-
-  const loadCurrentUser = async () => {
-    try {
-      const res = await api.get<AuthResponse>("/api/v1/auth/me");
-      if (res) {
-        setAuthUser(res.user);
-      } else {
-        setAuthUser(null);
-      }
-    } catch {
-      setAuthUser(null);
-    }
-  };
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <main id="main-content" className="p-6 max-w-4xl mx-auto font-sans">
+        <div className="text-center mt-12">
+          <p>Loading...</p>
+        </div>
+      </main>
+    );
+  }
 
   // Render login required state
   if (!authUser) {
     return (
-      <main id="main-content" style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
-        <Link href="/" style={{ color: "#3391ff", textDecoration: "none" }}>
+      <main id="main-content" className="p-6 max-w-4xl mx-auto font-sans">
+        <Link href="/" className="text-[#3391ff] no-underline">
           ← Torna alla Home
         </Link>
-        <div
-          style={{
-            marginTop: 24,
-            padding: 32,
-            textAlign: "center",
-            border: "1px solid #dadce0",
-            borderRadius: 8
-          }}
-        >
+        <div className="mt-6 p-8 text-center border border-[#dadce0] rounded-lg">
           <h2>Accesso richiesto</h2>
           <p>Devi effettuare l&apos;accesso per utilizzare la chat.</p>
           <Link
             href="/"
-            style={{
-              display: "inline-block",
-              marginTop: 16,
-              padding: "8px 16px",
-              background: "#0070f3",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4
-            }}
+            className="inline-block mt-4 px-4 py-2 bg-[#0070f3] text-white no-underline rounded"
           >
             Vai al Login
           </Link>
@@ -84,29 +44,25 @@ export default function ChatPage() {
     );
   }
 
-  // Main chat interface with new component architecture
+  // Main chat interface with new provider hierarchy
   return (
-    <ChatProvider>
-      <main
-        id="main-content"
-        style={{
-          display: "flex",
-          height: "100vh",
-          fontFamily: "sans-serif",
-          overflow: "hidden"
-        }}
-      >
-        <ChatSidebar />
-        <ChatContent />
+    <GameProvider>
+      <ChatProvider>
+        <UIProvider>
+          <main id="main-content" className="flex h-screen font-sans overflow-hidden">
+            <ChatSidebar />
+            <ChatContent />
 
-        {/* Export Chat Modal - will be integrated into ChatContent in future */}
-        <ExportChatModal
-          isOpen={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          chatId={"temp-placeholder"}
-          gameName={"placeholder"}
-        />
-      </main>
-    </ChatProvider>
+            {/* Export Chat Modal - will be integrated into ChatContent in future */}
+            <ExportChatModal
+              isOpen={showExportModal}
+              onClose={() => setShowExportModal(false)}
+              chatId={"temp-placeholder"}
+              gameName={"placeholder"}
+            />
+          </main>
+        </UIProvider>
+      </ChatProvider>
+    </GameProvider>
   );
 }

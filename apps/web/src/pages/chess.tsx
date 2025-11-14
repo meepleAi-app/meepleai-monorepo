@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
 import { Chess } from "chess.js";
 import { api } from "../lib/api";
+import { cn } from "@/lib/utils";
 
 // Type definitions
 type AuthUser = {
@@ -224,32 +225,16 @@ export default function ChessPage() {
   // Render login required state
   if (!authUser) {
     return (
-      <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif", background: "#ffffff", minHeight: "100vh" }}>
-        <Link href="/" style={{ color: "#1a73e8", textDecoration: "underline" }}>
+      <main className="p-6 max-w-[900px] mx-auto font-sans bg-white min-h-screen">
+        <Link href="/" className="text-blue-600 underline">
           ← Torna alla Home
         </Link>
-        <div
-          style={{
-            marginTop: 24,
-            padding: 32,
-            textAlign: "center",
-            border: "1px solid #dadce0",
-            borderRadius: 8
-          }}
-        >
-          <h2>Accesso richiesto</h2>
-          <p>Devi effettuare l&apos;accesso per utilizzare la chat scacchi.</p>
+        <div className="mt-6 p-8 text-center border border-gray-300 rounded-lg">
+          <h2 className="text-xl font-semibold">Accesso richiesto</h2>
+          <p className="mt-2">Devi effettuare l&apos;accesso per utilizzare la chat scacchi.</p>
           <Link
             href="/"
-            style={{
-              display: "inline-block",
-              marginTop: 16,
-              padding: "8px 16px",
-              background: "#0070f3",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4
-            }}
+            className="inline-block mt-4 px-4 py-2 bg-blue-500 text-white no-underline rounded"
           >
             Vai al Login
           </Link>
@@ -260,48 +245,22 @@ export default function ChessPage() {
 
   // Main chess interface
   return (
-    <main
-      style={{
-        display: "flex",
-        height: "100vh",
-        fontFamily: "sans-serif",
-        overflow: "hidden",
-        background: "#f8f9fa"
-      }}
-    >
+    <main className="flex h-screen font-sans overflow-hidden bg-gray-50">
       {/* Chess Board Panel */}
-      <div
-        style={{
-          flex: "0 0 600px",
-          display: "flex",
-          flexDirection: "column",
-          padding: 24,
-          background: "white",
-          borderRight: "1px solid #dadce0"
-        }}
-      >
+      <div className="flex-shrink-0 w-[600px] flex flex-col p-6 bg-white border-r border-gray-300">
         {/* Board Header */}
-        <div style={{ marginBottom: 16 }}>
-          <h1 style={{ margin: 0, fontSize: 24, marginBottom: 8 }}>Chess Assistant</h1>
-          <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>
+        <div className="mb-4">
+          <h1 className="m-0 text-2xl mb-2">Chess Assistant</h1>
+          <p className="m-0 text-slate-600 text-sm">
             Gioca o chiedi consigli sull&apos;agente scacchi AI
           </p>
         </div>
 
         {/* Board Controls */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <div className="flex gap-2 mb-4">
           <button
             onClick={resetBoard}
-            style={{
-              padding: "8px 16px",
-              background: "#1a73e8",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: "pointer"
-            }}
+            className="px-4 py-2 bg-blue-600 text-white border-0 rounded text-sm font-medium cursor-pointer hover:bg-blue-700"
           >
             Nuova Partita
           </button>
@@ -309,47 +268,20 @@ export default function ChessPage() {
             onClick={() =>
               setBoardOrientation((prev) => (prev === "white" ? "black" : "white"))
             }
-            style={{
-              padding: "8px 16px",
-              background: "#f1f3f4",
-              color: "#202124",
-              border: "1px solid #dadce0",
-              borderRadius: 4,
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: "pointer"
-            }}
+            className="px-4 py-2 bg-gray-100 text-gray-800 border border-gray-300 rounded text-sm font-medium cursor-pointer hover:bg-gray-200"
           >
             Ruota Scacchiera
           </button>
           <Link
             href="/"
-            style={{
-              padding: "8px 16px",
-              background: "#f1f3f4",
-              color: "#202124",
-              border: "1px solid #dadce0",
-              borderRadius: 4,
-              fontSize: 14,
-              fontWeight: 500,
-              textDecoration: "none",
-              display: "flex",
-              alignItems: "center"
-            }}
+            className="px-4 py-2 bg-gray-100 text-gray-800 border border-gray-300 rounded text-sm font-medium no-underline flex items-center hover:bg-gray-200"
           >
             Home
           </Link>
         </div>
 
         {/* Chess Board */}
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 550,
-            aspectRatio: "1",
-            margin: "0 auto"
-          }}
-        >
+        <div className="w-full max-w-[550px] aspect-square mx-auto">
           <Chessboard
             options={{
               position: currentPosition,
@@ -361,19 +293,11 @@ export default function ChessPage() {
         </div>
 
         {/* Game Status */}
-        <div
-          style={{
-            marginTop: 16,
-            padding: 12,
-            background: "#f1f3f4",
-            borderRadius: 4,
-            fontSize: 13
-          }}
-        >
-          <div style={{ marginBottom: 4 }}>
+        <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+          <div className="mb-1">
             <strong>Turno:</strong> {game.turn() === "w" ? "Bianco" : "Nero"}
           </div>
-          <div style={{ marginBottom: 4 }}>
+          <div className="mb-1">
             <strong>Stato:</strong>{" "}
             {game.isCheckmate()
               ? "Scacco Matto!"
@@ -385,61 +309,39 @@ export default function ChessPage() {
                     ? "Stallo"
                     : "In corso"}
           </div>
-          <div style={{ fontSize: 11, color: "#64748b", marginTop: 8 }}>
+          <div className="text-xs text-slate-600 mt-2">
             <strong>FEN:</strong> {currentPosition}
           </div>
         </div>
       </div>
 
       {/* Chat Panel */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Chat Header */}
-        <div
-          style={{
-            padding: 16,
-            borderBottom: "1px solid #dadce0",
-            background: "white"
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: 18 }}>Chat con l&apos;Agente</h2>
-          <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: 13 }}>
+        <div className="p-4 border-b border-gray-300 bg-white">
+          <h2 className="m-0 text-lg">Chat con l&apos;Agente</h2>
+          <p className="mt-1 mb-0 text-slate-600 text-sm">
             Chiedi consigli, analisi o spiegazioni sulle mosse
           </p>
         </div>
 
         {/* Error Message */}
         {errorMessage && (
-          <div
-            style={{
-              margin: 16,
-              padding: 12,
-              background: "#fce8e6",
-              color: "#d93025",
-              borderRadius: 4,
-              fontSize: 14
-            }}
-          >
+          <div className="m-4 p-3 bg-red-50 text-red-600 rounded text-sm">
             {errorMessage}
           </div>
         )}
 
         {/* Messages Area */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: 24,
-            background: "#ffffff"
-          }}
-        >
+        <div className="flex-1 overflow-y-auto p-6 bg-white">
           {messages.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 48, color: "#64748b" }}>
-              <p style={{ fontSize: 16, marginBottom: 8 }}>Benvenuto nella Chess Chat!</p>
-              <p style={{ fontSize: 14 }}>
+            <div className="text-center py-12 text-slate-600">
+              <p className="text-base mb-2">Benvenuto nella Chess Chat!</p>
+              <p className="text-sm">
                 Inizia facendo una domanda o muovi un pezzo sulla scacchiera.
               </p>
-              <p style={{ fontSize: 13, marginTop: 16 }}>Esempi:</p>
-              <ul style={{ fontSize: 13, textAlign: "left", maxWidth: 400, margin: "8px auto" }}>
+              <p className="text-sm mt-4">Esempi:</p>
+              <ul className="text-sm text-left max-w-[400px] my-2 mx-auto">
                 <li>Qual è la migliore apertura per il bianco?</li>
                 <li>Come si fa l&apos;arrocco?</li>
                 <li>Analizza questa posizione</li>
@@ -450,47 +352,34 @@ export default function ChessPage() {
             messages.map((msg) => (
               <div
                 key={msg.id}
-                style={{
-                  marginBottom: 24,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: msg.role === "user" ? "flex-end" : "flex-start"
-                }}
+                className={cn(
+                  "mb-6 flex flex-col",
+                  msg.role === "user" ? "items-end" : "items-start"
+                )}
               >
                 {/* Message Bubble */}
                 <div
+                  className="max-w-[80%] p-3 rounded-lg text-sm leading-normal"
                   style={{
-                    maxWidth: "80%",
-                    padding: 12,
-                    borderRadius: 8,
-                    background: msg.role === "user" ? "#e3f2fd" : "#f1f3f4",
-                    fontSize: 14,
-                    lineHeight: 1.5
+                    background: msg.role === "user" ? "#e3f2fd" : "#f1f3f4"
                   }}
                 >
-                  <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#64748b" }}>
+                  <div className="font-medium mb-1 text-xs text-slate-600">
                     {msg.role === "user" ? "Tu" : "Chess AI"}
                   </div>
-                  <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
 
                   {/* Suggested Moves */}
                   {msg.suggestedMoves && msg.suggestedMoves.length > 0 && (
-                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dadce0" }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#64748b" }}>
+                    <div className="mt-3 pt-3 border-t border-gray-300">
+                      <div className="text-xs font-medium mb-2 text-slate-600">
                         Mosse suggerite:
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      <div className="flex flex-wrap gap-2">
                         {msg.suggestedMoves.map((move, idx) => (
                           <span
                             key={idx}
-                            style={{
-                              padding: "4px 8px",
-                              background: "#34a853",
-                              color: "white",
-                              borderRadius: 4,
-                              fontSize: 12,
-                              fontWeight: 500
-                            }}
+                            className="px-2 py-1 bg-green-600 text-white rounded text-xs font-medium"
                           >
                             {move}
                           </span>
@@ -501,14 +390,14 @@ export default function ChessPage() {
 
                   {/* FEN Position */}
                   {msg.fen && (
-                    <div style={{ marginTop: 8, fontSize: 11, color: "#64748b" }}>
+                    <div className="mt-2 text-xs text-slate-600">
                       Posizione: {msg.fen.substring(0, 40)}...
                     </div>
                   )}
                 </div>
 
                 {/* Timestamp */}
-                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                <div className="text-xs text-slate-600 mt-1">
                   {msg.timestamp.toLocaleTimeString()}
                 </div>
               </div>
@@ -516,20 +405,12 @@ export default function ChessPage() {
           )}
 
           {isSendingMessage && (
-            <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 24 }}>
-              <div
-                style={{
-                  maxWidth: "80%",
-                  padding: 12,
-                  borderRadius: 8,
-                  background: "#f1f3f4",
-                  fontSize: 14
-                }}
-              >
-                <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#64748b" }}>
+            <div className="flex items-start mb-6">
+              <div className="max-w-[80%] p-3 rounded-lg bg-gray-100 text-sm">
+                <div className="font-medium mb-1 text-xs text-slate-600">
                   Chess AI
                 </div>
-                <div style={{ color: "#64748b" }}>Sto analizzando...</div>
+                <div className="text-slate-600">Sto analizzando...</div>
               </div>
             </div>
           )}
@@ -538,13 +419,7 @@ export default function ChessPage() {
         {/* Input Form */}
         <form
           onSubmit={sendMessage}
-          style={{
-            padding: 16,
-            borderTop: "1px solid #dadce0",
-            background: "white",
-            display: "flex",
-            gap: 8
-          }}
+          className="p-4 border-t border-gray-300 bg-white flex gap-2"
         >
           <input
             type="text"
@@ -552,27 +427,17 @@ export default function ChessPage() {
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Chiedi consigli o analisi della posizione..."
             disabled={isSendingMessage}
-            style={{
-              flex: 1,
-              padding: 12,
-              fontSize: 14,
-              border: "1px solid #dadce0",
-              borderRadius: 4
-            }}
+            className="flex-1 p-3 text-sm border border-gray-300 rounded"
           />
           <button
             type="submit"
             disabled={isSendingMessage || !inputValue.trim()}
-            style={{
-              padding: "12px 24px",
-              background: isSendingMessage || !inputValue.trim() ? "#dadce0" : "#34a853",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: isSendingMessage || !inputValue.trim() ? "not-allowed" : "pointer"
-            }}
+            className={cn(
+              "px-6 py-3 text-white border-0 rounded text-sm font-medium",
+              isSendingMessage || !inputValue.trim()
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-green-600 cursor-pointer hover:bg-green-700"
+            )}
           >
             {isSendingMessage ? "Invio..." : "Invia"}
           </button>

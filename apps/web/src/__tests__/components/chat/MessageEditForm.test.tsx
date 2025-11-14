@@ -6,7 +6,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MessageEditForm } from '@/components/chat/MessageEditForm';
-import { ChatContextValue } from '@/components/chat/ChatProvider';
+import { ChatContextValue } from '@/hooks/useChatContext';
 import React from 'react';
 
 // Mock ChatProvider context

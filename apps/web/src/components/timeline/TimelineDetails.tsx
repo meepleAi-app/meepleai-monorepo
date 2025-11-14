@@ -7,6 +7,7 @@ import {
   getStatusIcon,
   formatDuration
 } from "@/lib/timeline-types";
+import { cn } from "@/lib/utils";
 
 interface TimelineDetailsProps {
   event: TimelineEvent | null;
@@ -17,45 +18,20 @@ interface TimelineDetailsProps {
 export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: TimelineDetailsProps) {
   if (isCollapsed) {
     return (
-      <div
-        style={{
-          width: 60,
-          background: "#f8f9fa",
-          borderLeft: "1px solid #dadce0",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "16px 8px"
-        }}
-      >
+      <div className="w-[60px] bg-gray-50 border-l border-gray-300 flex flex-col items-center p-4">
         <button
           onClick={onToggleCollapse}
-          style={{
-            padding: 12,
-            background: event ? "#1a73e8" : "#f1f3f4",
-            color: event ? "white" : "#64748b",
-            border: "none",
-            borderRadius: 4,
-            cursor: "pointer",
-            fontSize: 20,
-            width: "100%"
-          }}
+          className={cn(
+            "p-3 rounded border-none cursor-pointer text-xl w-full",
+            event ? "bg-blue-600 text-white" : "bg-gray-100 text-slate-500"
+          )}
           title="Mostra dettagli"
           disabled={!event}
         >
           ☰
         </button>
         {event && (
-          <div
-            style={{
-              marginTop: 16,
-              fontSize: 11,
-              color: "#64748b",
-              textAlign: "center",
-              writingMode: "vertical-rl",
-              transform: "rotate(180deg)"
-            }}
-          >
+          <div className="mt-4 text-[11px] text-slate-500 text-center [writing-mode:vertical-rl] rotate-180">
             Dettagli
           </div>
         )}
@@ -64,37 +40,13 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
   }
 
   return (
-    <div
-      style={{
-        width: 360,
-        background: "#f8f9fa",
-        borderLeft: "1px solid #dadce0",
-        display: "flex",
-        flexDirection: "column",
-        overflowY: "auto"
-      }}
-    >
+    <div className="w-[360px] bg-gray-50 border-l border-gray-300 flex flex-col overflow-y-auto">
       {/* Header */}
-      <div
-        style={{
-          padding: 16,
-          borderBottom: "1px solid #dadce0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Dettagli Evento</h3>
+      <div className="p-4 border-b border-gray-300 flex justify-between items-center">
+        <h3 className="m-0 text-base font-semibold">Dettagli Evento</h3>
         <button
           onClick={onToggleCollapse}
-          style={{
-            padding: "6px 10px",
-            background: "#f1f3f4",
-            border: "none",
-            borderRadius: 4,
-            cursor: "pointer",
-            fontSize: 16
-          }}
+          className="px-2.5 py-1.5 bg-gray-100 border-none rounded cursor-pointer text-base"
           title="Nascondi dettagli"
         >
           ✕
@@ -103,59 +55,34 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
 
       {/* Content */}
       {!event ? (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 32,
-            textAlign: "center",
-            color: "#64748b"
-          }}
-        >
-          <div style={{ fontSize: 48, marginBottom: 16 }}>👈</div>
-          <div style={{ fontSize: 14 }}>Seleziona un evento dalla timeline per vedere i dettagli</div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
+          <div className="text-5xl mb-4">👈</div>
+          <div className="text-sm">Seleziona un evento dalla timeline per vedere i dettagli</div>
         </div>
       ) : (
-        <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+        <div className="flex-1 overflow-y-auto p-4">
           {/* Event Header */}
           <div
-            style={{
-              padding: 16,
-              background: "white",
-              border: `2px solid ${getEventTypeColor(event.type)}`,
-              borderRadius: 8,
-              marginBottom: 16
-            }}
+            className="p-4 bg-white border-2 rounded-lg mb-4"
+            style={{ borderColor: getEventTypeColor(event.type) }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div style={{ fontSize: 28 }}>{getStatusIcon(event.status)}</div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="text-3xl">{getStatusIcon(event.status)}</div>
               <div>
                 <div
-                  style={{
-                    padding: "4px 10px",
-                    background: getEventTypeColor(event.type),
-                    color: "white",
-                    borderRadius: 12,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    display: "inline-block"
-                  }}
+                  className="py-1 px-2.5 text-white rounded-xl text-[11px] font-semibold uppercase tracking-wider inline-block"
+                  style={{ background: getEventTypeColor(event.type) }}
                 >
                   {getEventTypeLabel(event.type)}
                 </div>
-                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                <div className="text-[11px] text-slate-500 mt-1">
                   {event.timestamp.toLocaleString()}
                 </div>
               </div>
             </div>
 
             {event.data.message && (
-              <div style={{ fontSize: 14, color: "#202124", lineHeight: 1.5 }}>
+              <div className="text-sm text-gray-900 leading-normal">
                 {event.data.message}
               </div>
             )}
@@ -163,28 +90,11 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
 
           {/* Role (for messages) */}
           {event.data.role && (
-            <div style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#64748b",
-                  marginBottom: 8,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px"
-                }}
-              >
+            <div className="mb-4">
+              <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">
                 Ruolo
               </div>
-              <div
-                style={{
-                  padding: 12,
-                  background: "white",
-                  border: "1px solid #dadce0",
-                  borderRadius: 8,
-                  fontSize: 13
-                }}
-              >
+              <div className="p-3 bg-white border border-gray-300 rounded-lg text-[13px]">
                 {event.data.role === "user" ? "Utente" : "Assistente"}
               </div>
             </div>
@@ -192,106 +102,47 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
 
           {/* Metrics */}
           {event.data.metrics && (
-            <div style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#64748b",
-                  marginBottom: 8,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px"
-                }}
-              >
+            <div className="mb-4">
+              <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">
                 Metriche
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="flex flex-col gap-2">
                 {event.data.metrics.latencyMs !== undefined && (
-                  <div
-                    style={{
-                      padding: 12,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 8,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <span style={{ fontSize: 13, color: "#64748b" }}>Latenza</span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#1a73e8" }}>
+                  <div className="p-3 bg-white border border-gray-300 rounded-lg flex justify-between items-center">
+                    <span className="text-[13px] text-slate-500">Latenza</span>
+                    <span className="text-[15px] font-semibold text-blue-600">
                       {formatDuration(event.data.metrics.latencyMs)}
                     </span>
                   </div>
                 )}
                 {event.data.metrics.promptTokens !== undefined && (
-                  <div
-                    style={{
-                      padding: 12,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 8,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <span style={{ fontSize: 13, color: "#64748b" }}>Token Prompt</span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#1a73e8" }}>
+                  <div className="p-3 bg-white border border-gray-300 rounded-lg flex justify-between items-center">
+                    <span className="text-[13px] text-slate-500">Token Prompt</span>
+                    <span className="text-[15px] font-semibold text-blue-600">
                       {event.data.metrics.promptTokens}
                     </span>
                   </div>
                 )}
                 {event.data.metrics.completionTokens !== undefined && (
-                  <div
-                    style={{
-                      padding: 12,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 8,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <span style={{ fontSize: 13, color: "#64748b" }}>Token Completamento</span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#1a73e8" }}>
+                  <div className="p-3 bg-white border border-gray-300 rounded-lg flex justify-between items-center">
+                    <span className="text-[13px] text-slate-500">Token Completamento</span>
+                    <span className="text-[15px] font-semibold text-blue-600">
                       {event.data.metrics.completionTokens}
                     </span>
                   </div>
                 )}
                 {event.data.metrics.totalTokens !== undefined && (
-                  <div
-                    style={{
-                      padding: 12,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 8,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <span style={{ fontSize: 13, color: "#64748b" }}>Totale Token</span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#1a73e8" }}>
+                  <div className="p-3 bg-white border border-gray-300 rounded-lg flex justify-between items-center">
+                    <span className="text-[13px] text-slate-500">Totale Token</span>
+                    <span className="text-[15px] font-semibold text-blue-600">
                       {event.data.metrics.totalTokens}
                     </span>
                   </div>
                 )}
                 {event.data.metrics.confidence !== undefined && (
-                  <div
-                    style={{
-                      padding: 12,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 8,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <span style={{ fontSize: 13, color: "#64748b" }}>Confidenza</span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#188038" }}>
+                  <div className="p-3 bg-white border border-gray-300 rounded-lg flex justify-between items-center">
+                    <span className="text-[13px] text-slate-500">Confidenza</span>
+                    <span className="text-[15px] font-semibold text-green-700">
                       {(event.data.metrics.confidence * 100).toFixed(1)}%
                     </span>
                   </div>
@@ -302,47 +153,26 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
 
           {/* Citations */}
           {event.data.citations && event.data.citations.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#64748b",
-                  marginBottom: 8,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px"
-                }}
-              >
+            <div className="mb-4">
+              <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">
                 Citazioni ({event.data.citations.length})
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="flex flex-col gap-2">
                 {event.data.citations.map((citation: Snippet, idx: number) => (
                   <div
                     key={idx}
-                    style={{
-                      padding: 12,
-                      background: "white",
-                      border: "1px solid #dadce0",
-                      borderRadius: 8
-                    }}
+                    className="p-3 bg-white border border-gray-300 rounded-lg"
                   >
-                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, color: "#202124" }}>
+                    <div className="font-semibold text-[13px] mb-1.5 text-gray-900">
                       {citation.source}
                       {citation.page !== null && citation.page !== undefined && (
-                        <span style={{ color: "#64748b", fontWeight: 400 }}>
+                        <span className="text-slate-500 font-normal">
                           {" "}
                           • Pagina {citation.page}
                         </span>
                       )}
                     </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "#64748b",
-                        lineHeight: 1.5,
-                        whiteSpace: "pre-wrap"
-                      }}
-                    >
+                    <div className="text-xs text-slate-500 leading-normal whitespace-pre-wrap">
                       {citation.text}
                     </div>
                   </div>
@@ -353,30 +183,11 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
 
           {/* Error */}
           {event.data.error && (
-            <div style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#d93025",
-                  marginBottom: 8,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px"
-                }}
-              >
+            <div className="mb-4">
+              <div className="text-xs font-semibold text-red-600 mb-2 uppercase tracking-wider">
                 Errore
               </div>
-              <div
-                style={{
-                  padding: 12,
-                  background: "#fce8e6",
-                  border: "1px solid #d93025",
-                  borderRadius: 8,
-                  color: "#d93025",
-                  fontSize: 13,
-                  lineHeight: 1.5
-                }}
-              >
+              <div className="p-3 bg-red-50 border border-red-600 rounded-lg text-red-600 text-[13px] leading-normal">
                 {event.data.error}
               </div>
             </div>
@@ -384,60 +195,39 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
 
           {/* Technical Info */}
           <details>
-            <summary
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#64748b",
-                marginBottom: 8,
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                cursor: "pointer",
-                padding: "8px 0"
-              }}
-            >
+            <summary className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider cursor-pointer py-2">
               Informazioni Tecniche
             </summary>
-            <div
-              style={{
-                padding: 12,
-                background: "#f1f3f4",
-                borderRadius: 8,
-                fontFamily: "monospace",
-                fontSize: 11,
-                color: "#202124",
-                lineHeight: 1.6
-              }}
-            >
-              <div style={{ marginBottom: 4 }}>
+            <div className="p-3 bg-gray-100 rounded-lg font-mono text-[11px] text-gray-900 leading-relaxed">
+              <div className="mb-1">
                 <strong>ID:</strong> {event.id}
               </div>
-              <div style={{ marginBottom: 4 }}>
+              <div className="mb-1">
                 <strong>Type:</strong> {event.type}
               </div>
-              <div style={{ marginBottom: 4 }}>
+              <div className="mb-1">
                 <strong>Status:</strong> {event.status}
               </div>
-              <div style={{ marginBottom: 4 }}>
+              <div className="mb-1">
                 <strong>Timestamp:</strong> {event.timestamp.toISOString()}
               </div>
               {event.relatedMessageId && (
-                <div style={{ marginBottom: 4 }}>
+                <div className="mb-1">
                   <strong>Related Message:</strong> {event.relatedMessageId}
                 </div>
               )}
               {event.data.endpoint && (
-                <div style={{ marginBottom: 4 }}>
+                <div className="mb-1">
                   <strong>Endpoint:</strong> {event.data.endpoint}
                 </div>
               )}
               {event.data.gameId && (
-                <div style={{ marginBottom: 4 }}>
+                <div className="mb-1">
                   <strong>Game ID:</strong> {event.data.gameId}
                 </div>
               )}
               {event.data.chatId && (
-                <div style={{ marginBottom: 4 }}>
+                <div className="mb-1">
                   <strong>Chat ID:</strong> {event.data.chatId}
                 </div>
               )}

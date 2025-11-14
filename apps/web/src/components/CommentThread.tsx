@@ -153,44 +153,37 @@ export function CommentThread({
   const canComment = currentUserRole === "Admin" || currentUserRole === "Editor";
 
   return (
-    <div style={{ marginTop: 24 }} data-testid="comment-thread">
+    <div className="mt-6" data-testid="comment-thread">
       {/* Hidden test data elements for test compatibility */}
       <div data-testid="comment-game-id" style={{ display: 'none' }}>{gameId}</div>
       <div data-testid="comment-version" style={{ display: 'none' }}>{version}</div>
       <div data-testid="comment-user-id" style={{ display: 'none' }}>{currentUserId}</div>
       <div data-testid="comment-user-role" style={{ display: 'none' }}>{currentUserRole}</div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h3 style={{ margin: 0 }}>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="m-0">
           Commenti ({comments.length})
         </h3>
 
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
             checked={includeResolved}
             onChange={(e) => setIncludeResolved(e.target.checked)}
-            style={{ cursor: "pointer" }}
+            className="cursor-pointer"
           />
           <span>Mostra commenti risolti</span>
         </label>
       </div>
 
       {lineNumber !== null && (
-        <div style={{
-          marginBottom: 16,
-          padding: 12,
-          background: "#fff3cd",
-          border: "1px solid #ffc107",
-          borderRadius: 4,
-          fontSize: 14
-        }}>
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-400 rounded text-sm">
           Commenti sulla riga {lineNumber}
         </div>
       )}
 
       {error && (
-        <div style={{ padding: 12, background: "#fce4e4", border: "1px solid #d93025", borderRadius: 4, marginBottom: 16 }}>
+        <div className="p-3 bg-red-50 border border-red-600 rounded mb-4">
           {error}
         </div>
       )}
@@ -208,13 +201,12 @@ export function CommentThread({
       )}
 
       {isLoading ? (
-        <p style={{ color: "#666", fontSize: 14 }}>Caricamento commenti...</p>
+        <p className="text-gray-600 text-sm">Caricamento commenti...</p>
       ) : comments.length === 0 ? (
-        <p style={{ color: "#999", fontSize: 14, fontStyle: "italic" }}>
+        <p className="text-gray-600 text-sm italic">
           {lineNumber !== null
             ? `Nessun commento su questa riga. ${canComment ? "Sii il primo a commentare!" : ""}`
-            : `Nessun commento ancora. ${canComment ? "Sii il primo a commentare!" : ""}`
-          }
+            : `Nessun commento ancora. ${canComment ? "Sii il primo a commentare!" : ""}`}
         </p>
       ) : (
         <div>

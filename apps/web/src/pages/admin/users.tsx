@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, startTransition } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api";
+import { cn } from "../../lib/utils";
 
 // Types
 type User = {
@@ -254,7 +255,7 @@ export default function UserManagement() {
 
   if (loading) {
     return (
-      <div style={{ padding: "2rem" }}>
+      <div className="p-8">
         <h1>User Management</h1>
         <p>Loading...</p>
       </div>
@@ -263,9 +264,9 @@ export default function UserManagement() {
 
   if (error) {
     return (
-      <div style={{ padding: "2rem" }}>
+      <div className="p-8">
         <h1>User Management</h1>
-        <div style={{ padding: "1rem", background: "#fee", border: "1px solid #c00", borderRadius: "4px" }}>
+        <div className="p-4 bg-red-50 border border-red-600 rounded">
           {error}
         </div>
         <Link href="/admin">← Back to Admin Dashboard</Link>
@@ -274,15 +275,15 @@ export default function UserManagement() {
   }
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-8">
         <h1>User Management</h1>
         <Link href="/admin">← Back to Admin Dashboard</Link>
       </div>
 
       {/* Filters */}
-      <div style={{ marginBottom: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-        <div style={{ flex: "1 1 300px" }}>
+      <div className="mb-6 flex gap-4 flex-wrap">
+        <div className="flex-[1_1_300px]">
           <input
             type="text"
             placeholder="Search by email or name..."
@@ -291,12 +292,7 @@ export default function UserManagement() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
+            className="w-full p-2 border border-gray-300 rounded"
           />
         </div>
         <div>
@@ -306,11 +302,7 @@ export default function UserManagement() {
               setRoleFilter(e.target.value);
               setPage(1);
             }}
-            style={{
-              padding: "0.5rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
+            className="p-2 border border-gray-300 rounded"
           >
             <option value="all">All Roles</option>
             <option value="Admin">Admin</option>
@@ -321,17 +313,10 @@ export default function UserManagement() {
       </div>
 
       {/* Actions */}
-      <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem" }}>
+      <div className="mb-4 flex gap-4">
         <button
           onClick={() => setModal({ isOpen: true, mode: "create" })}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
+          className="px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700"
           data-testid="open-create-user-modal"
         >
           Create User
@@ -339,14 +324,7 @@ export default function UserManagement() {
         {selectedUsers.size > 0 && (
           <button
             onClick={handleBulkDelete}
-            style={{
-              padding: "0.5rem 1rem",
-              background: "#dc3545",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
+            className="px-4 py-2 bg-red-600 text-white border-none rounded cursor-pointer hover:bg-red-700"
           >
             Delete Selected ({selectedUsers.size})
           </button>
@@ -354,11 +332,11 @@ export default function UserManagement() {
       </div>
 
       {/* User Table */}
-      <div style={{ overflowX: "auto", marginBottom: "1rem" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #ddd" }}>
-          <thead style={{ background: "#f8f9fa" }}>
+      <div className="overflow-x-auto mb-4">
+        <table className="w-full border-collapse border border-gray-300">
+          <thead className="bg-gray-50">
             <tr>
-              <th style={{ padding: "0.75rem", borderBottom: "2px solid #dee2e6", width: "40px" }}>
+              <th className="p-3 border-b-2 border-gray-300 w-10">
                 <input
                   type="checkbox"
                   checked={selectedUsers.size === users.length && users.length > 0}
@@ -367,53 +345,33 @@ export default function UserManagement() {
                 />
               </th>
               <th
-                style={{
-                  padding: "0.75rem",
-                  borderBottom: "2px solid #dee2e6",
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
+                className="p-3 border-b-2 border-gray-300 cursor-pointer text-left"
                 onClick={() => handleSort("email")}
               >
                 Email {sortBy === "email" && (sortOrder === "asc" ? "↑" : "↓")}
               </th>
               <th
-                style={{
-                  padding: "0.75rem",
-                  borderBottom: "2px solid #dee2e6",
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
+                className="p-3 border-b-2 border-gray-300 cursor-pointer text-left"
                 onClick={() => handleSort("displayName")}
               >
                 Display Name {sortBy === "displayName" && (sortOrder === "asc" ? "↑" : "↓")}
               </th>
               <th
-                style={{
-                  padding: "0.75rem",
-                  borderBottom: "2px solid #dee2e6",
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
+                className="p-3 border-b-2 border-gray-300 cursor-pointer text-left"
                 onClick={() => handleSort("role")}
               >
                 Role {sortBy === "role" && (sortOrder === "asc" ? "↑" : "↓")}
               </th>
               <th
-                style={{
-                  padding: "0.75rem",
-                  borderBottom: "2px solid #dee2e6",
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
+                className="p-3 border-b-2 border-gray-300 cursor-pointer text-left"
                 onClick={() => handleSort("createdAt")}
               >
                 Created {sortBy === "createdAt" && (sortOrder === "asc" ? "↑" : "↓")}
               </th>
-              <th style={{ padding: "0.75rem", borderBottom: "2px solid #dee2e6", textAlign: "left" }}>
+              <th className="p-3 border-b-2 border-gray-300 text-left">
                 Last Seen
               </th>
-              <th style={{ padding: "0.75rem", borderBottom: "2px solid #dee2e6", textAlign: "center" }}>
+              <th className="p-3 border-b-2 border-gray-300 text-center">
                 Actions
               </th>
             </tr>
@@ -421,14 +379,14 @@ export default function UserManagement() {
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
+                <td colSpan={7} className="p-8 text-center text-gray-600">
                   No users found
                 </td>
               </tr>
             ) : (
               users.map((user) => (
-                <tr key={user.id} style={{ borderBottom: "1px solid #dee2e6" }}>
-                  <td style={{ padding: "0.75rem" }}>
+                <tr key={user.id} className="border-b border-gray-300">
+                  <td className="p-3">
                     <input
                       type="checkbox"
                       checked={selectedUsers.has(user.id)}
@@ -436,59 +394,36 @@ export default function UserManagement() {
                       aria-label={`Select ${user.email}`}
                     />
                   </td>
-                  <td style={{ padding: "0.75rem" }}>{user.email}</td>
-                  <td style={{ padding: "0.75rem" }}>{user.displayName}</td>
-                  <td style={{ padding: "0.75rem" }}>
+                  <td className="p-3">{user.email}</td>
+                  <td className="p-3">{user.displayName}</td>
+                  <td className="p-3">
                     <span
-                      style={{
-                        padding: "0.25rem 0.5rem",
-                        borderRadius: "4px",
-                        fontSize: "0.875rem",
-                        background:
-                          user.role === "Admin"
-                            ? "#dc3545"
-                            : user.role === "Editor"
-                            ? "#ffc107"
-                            : "#28a745",
-                        color: user.role === "Editor" ? "#000" : "#fff",
-                      }}
+                      className={cn(
+                        "px-2 py-1 rounded text-sm",
+                        user.role === "Admin" && "bg-red-600 text-white",
+                        user.role === "Editor" && "bg-yellow-400 text-black",
+                        user.role === "User" && "bg-green-600 text-white"
+                      )}
                     >
                       {user.role}
                     </span>
                   </td>
-                  <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#666" }}>
+                  <td className="p-3 text-sm text-gray-600">
                     {formatDate(user.createdAt)}
                   </td>
-                  <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#666" }}>
+                  <td className="p-3 text-sm text-gray-600">
                     {formatDate(user.lastSeenAt)}
                   </td>
-                  <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                  <td className="p-3 text-center">
                     <button
                       onClick={() => setModal({ isOpen: true, mode: "edit", user })}
-                      style={{
-                        padding: "0.25rem 0.75rem",
-                        marginRight: "0.5rem",
-                        background: "#007bff",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        fontSize: "0.875rem",
-                      }}
+                      className="px-3 py-1 mr-2 bg-blue-600 text-white border-none rounded cursor-pointer text-sm hover:bg-blue-700"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(user.id, user.email)}
-                      style={{
-                        padding: "0.25rem 0.75rem",
-                        background: "#dc3545",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        fontSize: "0.875rem",
-                      }}
+                      className="px-3 py-1 bg-red-600 text-white border-none rounded cursor-pointer text-sm hover:bg-red-700"
                     >
                       Delete
                     </button>
@@ -501,40 +436,36 @@ export default function UserManagement() {
       </div>
 
       {/* Pagination */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ color: "#666", fontSize: "0.875rem" }}>
+      <div className="flex justify-between items-center">
+        <div className="text-gray-600 text-sm">
           Showing {Math.min((page - 1) * pageSize + 1, total)} to {Math.min(page * pageSize, total)} of {total} users
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="flex gap-2">
           <button
             onClick={() => setPage(Math.max(1, page - 1))}
             disabled={page === 1}
-            style={{
-              padding: "0.5rem 1rem",
-              background: page === 1 ? "#e9ecef" : "#007bff",
-              color: page === 1 ? "#6c757d" : "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: page === 1 ? "not-allowed" : "pointer",
-            }}
+            className={cn(
+              "px-4 py-2 border-none rounded",
+              page === 1
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700"
+            )}
             data-testid="pagination-previous"
           >
             Previous
           </button>
-          <span style={{ padding: "0.5rem 1rem", display: "flex", alignItems: "center" }}>
+          <span className="px-4 py-2 flex items-center">
             Page {page} of {Math.ceil(total / pageSize)}
           </span>
           <button
             onClick={() => setPage(page + 1)}
             disabled={page >= Math.ceil(total / pageSize)}
-            style={{
-              padding: "0.5rem 1rem",
-              background: page >= Math.ceil(total / pageSize) ? "#e9ecef" : "#007bff",
-              color: page >= Math.ceil(total / pageSize) ? "#6c757d" : "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: page >= Math.ceil(total / pageSize) ? "not-allowed" : "pointer",
-            }}
+            className={cn(
+              "px-4 py-2 border-none rounded",
+              page >= Math.ceil(total / pageSize)
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700"
+            )}
             data-testid="pagination-next"
           >
             Next
@@ -556,56 +487,25 @@ export default function UserManagement() {
       {/* Confirmation Dialog */}
       {confirmation.isOpen && (
         <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]"
           onClick={() => setConfirmation({ isOpen: false, title: "", message: "", onConfirm: () => {} })}
         >
           <div
-            style={{
-              background: "white",
-              padding: "2rem",
-              borderRadius: "8px",
-              maxWidth: "500px",
-              width: "90%",
-            }}
+            className="bg-white p-8 rounded-lg max-w-lg w-[90%]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ marginTop: 0 }}>{confirmation.title}</h2>
+            <h2 className="mt-0">{confirmation.title}</h2>
             <p>{confirmation.message}</p>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem", marginTop: "1.5rem" }}>
+            <div className="flex justify-end gap-4 mt-6">
               <button
                 onClick={() => setConfirmation({ isOpen: false, title: "", message: "", onConfirm: () => {} })}
-                style={{
-                  padding: "0.5rem 1rem",
-                  background: "#6c757d",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
+                className="px-4 py-2 bg-gray-600 text-white border-none rounded cursor-pointer hover:bg-gray-700"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmation.onConfirm}
-                style={{
-                  padding: "0.5rem 1rem",
-                  background: "#dc3545",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
+                className="px-4 py-2 bg-red-600 text-white border-none rounded cursor-pointer hover:bg-red-700"
               >
                 Confirm
               </button>
@@ -615,36 +515,22 @@ export default function UserManagement() {
       )}
 
       {/* Toast Notifications */}
-      <div style={{ position: "fixed", top: "1rem", right: "1rem", zIndex: 1001 }}>
+      <div className="fixed top-4 right-4 z-[1001]">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            style={{
-              padding: "1rem",
-              marginBottom: "0.5rem",
-              background: toast.type === "success" ? "#d4edda" : toast.type === "error" ? "#f8d7da" : "#d1ecf1",
-              border: `1px solid ${
-                toast.type === "success" ? "#c3e6cb" : toast.type === "error" ? "#f5c6cb" : "#bee5eb"
-              }`,
-              borderRadius: "4px",
-              color: toast.type === "success" ? "#155724" : toast.type === "error" ? "#721c24" : "#0c5460",
-              maxWidth: "400px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
+            className={cn(
+              "p-4 mb-2 rounded max-w-md flex justify-between items-center",
+              toast.type === "success" && "bg-green-100 border border-green-300 text-green-800",
+              toast.type === "error" && "bg-red-100 border border-red-300 text-red-800",
+              toast.type === "info" && "bg-blue-100 border border-blue-300 text-blue-800"
+            )}
           >
             <span>{toast.message}</span>
             <button
               onClick={() => removeToast(toast.id)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "1.25rem",
-                marginLeft: "1rem",
-                color: "inherit",
-              }}
+              className="bg-transparent border-none cursor-pointer text-xl ml-4"
+              style={{ color: "inherit" }}
               aria-label="Close notification"
             >
               ×
@@ -714,36 +600,19 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
 
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: "rgba(0, 0, 0, 0.5)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 1000,
-      }}
+      className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]"
       onClick={onClose}
     >
       <div
-        style={{
-          background: "white",
-          padding: "2rem",
-          borderRadius: "8px",
-          maxWidth: "500px",
-          width: "90%",
-        }}
+        className="bg-white p-8 rounded-lg max-w-lg w-[90%]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 style={{ marginTop: 0 }}>{mode === "create" ? "Create User" : "Edit User"}</h2>
+        <h2 className="mt-0">{mode === "create" ? "Create User" : "Edit User"}</h2>
 
         <form onSubmit={handleSubmit}>
           {/* Email */}
-          <div style={{ marginBottom: "1rem" }}>
-            <label htmlFor="email" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+          <div className="mb-4">
+            <label htmlFor="email" className="block mb-2 font-medium">
               Email *
             </label>
             <input
@@ -751,21 +620,19 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                border: errors.email ? "1px solid #dc3545" : "1px solid #ccc",
-                borderRadius: "4px",
-              }}
+              className={cn(
+                "w-full p-2 rounded",
+                errors.email ? "border border-red-600" : "border border-gray-300"
+              )}
               required
             />
-            {errors.email && <div style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>{errors.email}</div>}
+            {errors.email && <div className="text-red-600 text-sm mt-1">{errors.email}</div>}
           </div>
 
           {/* Password (only for create) */}
           {mode === "create" && (
-            <div style={{ marginBottom: "1rem" }}>
-              <label htmlFor="password" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+            <div className="mb-4">
+              <label htmlFor="password" className="block mb-2 font-medium">
                 Password *
               </label>
               <input
@@ -773,22 +640,20 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "0.5rem",
-                  border: errors.password ? "1px solid #dc3545" : "1px solid #ccc",
-                  borderRadius: "4px",
-                }}
+                className={cn(
+                  "w-full p-2 rounded",
+                  errors.password ? "border border-red-600" : "border border-gray-300"
+                )}
                 required
                 minLength={8}
               />
-              {errors.password && <div style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>{errors.password}</div>}
+              {errors.password && <div className="text-red-600 text-sm mt-1">{errors.password}</div>}
             </div>
           )}
 
           {/* Display Name */}
-          <div style={{ marginBottom: "1rem" }}>
-            <label htmlFor="displayName" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+          <div className="mb-4">
+            <label htmlFor="displayName" className="block mb-2 font-medium">
               Display Name *
             </label>
             <input
@@ -796,32 +661,25 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                border: errors.displayName ? "1px solid #dc3545" : "1px solid #ccc",
-                borderRadius: "4px",
-              }}
+              className={cn(
+                "w-full p-2 rounded",
+                errors.displayName ? "border border-red-600" : "border border-gray-300"
+              )}
               required
             />
-            {errors.displayName && <div style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>{errors.displayName}</div>}
+            {errors.displayName && <div className="text-red-600 text-sm mt-1">{errors.displayName}</div>}
           </div>
 
           {/* Role */}
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="role" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+          <div className="mb-6">
+            <label htmlFor="role" className="block mb-2 font-medium">
               Role *
             </label>
             <select
               id="role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-              }}
+              className="w-full p-2 border border-gray-300 rounded"
               required
             >
               <option value="User">User</option>
@@ -831,31 +689,17 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
           </div>
 
           {/* Actions */}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
+          <div className="flex justify-end gap-4">
             <button
               type="button"
               onClick={onClose}
-              style={{
-                padding: "0.5rem 1rem",
-                background: "#6c757d",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
+              className="px-4 py-2 bg-gray-600 text-white border-none rounded cursor-pointer hover:bg-gray-700"
             >
               Cancel
             </button>
             <button
               type="submit"
-              style={{
-                padding: "0.5rem 1rem",
-                background: "#007bff",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
+              className="px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700"
               data-testid="submit-user-form"
             >
               {mode === "create" ? "Create User" : "Save Changes"}

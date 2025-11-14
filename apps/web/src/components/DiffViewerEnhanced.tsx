@@ -170,9 +170,9 @@ export function DiffViewerEnhanced({
         </div>
 
         <h3>Modifiche ({changesToShow.length})</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="flex flex-col gap-3">
           {changesToShow.length === 0 ? (
-            <div style={{ padding: 16, background: "#f5f5f5", borderRadius: 4, textAlign: "center", color: "#666" }}>
+            <div className="p-4 bg-gray-100 rounded text-center text-gray-600">
               Nessuna modifica da visualizzare
             </div>
           ) : (
@@ -202,9 +202,9 @@ export function DiffViewerEnhanced({
         </div>
 
         <h3>Modifiche ({changesToShow.length})</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="flex flex-col gap-3">
           {changesToShow.length === 0 ? (
-            <div style={{ padding: 16, background: "#f5f5f5", borderRadius: 4, textAlign: "center", color: "#666" }}>
+            <div className="p-4 bg-gray-100 rounded text-center text-gray-600">
               Nessuna modifica da visualizzare
             </div>
           ) : (

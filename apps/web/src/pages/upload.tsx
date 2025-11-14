@@ -64,8 +64,8 @@ export default function UploadPage() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
-  // Authorization check
-  const isUnauthorizedRole = authUser && !AUTHORIZED_ROLES.has(authUser.role);
+  // Authorization check (case-insensitive)
+  const isUnauthorizedRole = authUser && !AUTHORIZED_ROLES.has(authUser.role.toLowerCase());
 
   // Initialize selected game
   useEffect(() => {

@@ -92,7 +92,7 @@ describe('UploadPage - Continuation Tests', () => {
     fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
     // Now confirm selection
-    const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+    const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
     await waitFor(() => expect(confirmButton).not.toBeDisabled());
     fireEvent.click(confirmButton);
   }
@@ -104,7 +104,7 @@ describe('UploadPage - Continuation Tests', () => {
     fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
     // Click confirm immediately (button should be enabled after selection)
-    const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+    const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
     fireEvent.click(confirmButton);
   }
 

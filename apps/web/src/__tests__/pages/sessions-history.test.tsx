@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { useRouter } from 'next/router';
 import SessionHistoryPage from '@/pages/sessions/history';
@@ -81,7 +81,16 @@ describe('SessionHistoryPage', () => {
       render(<SessionHistoryPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('1')).toBeInTheDocument(); // Completed
+        // Find the statistics card specifically
+        const statisticsCard = screen.getByText('Session Statistics').closest('.rounded-xl');
+        expect(statisticsCard).toBeInTheDocument();
+
+        // Look for the values within the statistics card
+        const greenValue = statisticsCard?.querySelector('.text-green-600');
+        expect(greenValue).toHaveTextContent('1');
+
+        const redValue = statisticsCard?.querySelector('.text-red-600');
+        expect(redValue).toHaveTextContent('1');
       });
     });
 
@@ -98,7 +107,10 @@ describe('SessionHistoryPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/win rates/i)).toBeInTheDocument();
-        expect(screen.getByText('Alice')).toBeInTheDocument();
+        // Find Alice specifically in the win rates section (not in the table)
+        const winRatesSection = screen.getByText(/win rates/i).parentElement;
+        expect(winRatesSection).toHaveTextContent('Alice');
+        expect(winRatesSection).toHaveTextContent('100%'); // Alice won 1 out of 1 completed game
       });
     });
   });
@@ -117,14 +129,34 @@ describe('SessionHistoryPage', () => {
     it('should filter by game', async () => {
       render(<SessionHistoryPage />);
 
+      // Wait for initial load to complete
       await waitFor(() => {
-        const gameFilter = screen.getByLabelText(/filter sessions by game/i);
+        expect(screen.getByLabelText(/filter sessions by game/i)).toBeInTheDocument();
+      });
+
+      // Wait for initial API calls to complete
+      await waitFor(() => {
+        expect(api.sessions.getHistory).toHaveBeenCalled();
+      });
+
+      // Clear previous calls to check for new ones
+      (api.sessions.getHistory as jest.Mock).mockClear();
+
+      // Change the filter with act wrapper
+      const gameFilter = screen.getByLabelText(/filter sessions by game/i) as HTMLSelectElement;
+
+      await act(async () => {
         fireEvent.change(gameFilter, { target: { value: 'game-1' } });
       });
 
+      // Wait for the API to be called with the filter
       await waitFor(() => {
         expect(api.sessions.getHistory).toHaveBeenCalledWith(
-          expect.objectContaining({ gameId: 'game-1' })
+          expect.objectContaining({
+            gameId: 'game-1',
+            limit: 20,
+            offset: 0
+          })
         );
       });
     });
@@ -194,8 +226,14 @@ describe('SessionHistoryPage', () => {
       render(<SessionHistoryPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Catan')).toBeInTheDocument();
-        expect(screen.getByText('Ticket to Ride')).toBeInTheDocument();
+        // Look for game titles specifically in the table cells
+        const tableRows = screen.getAllByRole('button', { name: /view session details/i });
+        expect(tableRows).toHaveLength(2);
+
+        // Check the table contains the game titles
+        const table = screen.getByRole('table');
+        expect(table).toHaveTextContent('Catan');
+        expect(table).toHaveTextContent('Ticket to Ride');
       });
     });
 
@@ -203,7 +241,15 @@ describe('SessionHistoryPage', () => {
       render(<SessionHistoryPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Alice')).toBeInTheDocument();
+        // Find the table and look for Alice as a winner in the table specifically
+        const table = screen.getByRole('table');
+        expect(table).toBeInTheDocument();
+
+        // Look for Alice in the winner column (will be in the table row for session-1)
+        const aliceRow = screen.getByRole('button', { name: /view session details for Alice/i });
+        expect(aliceRow).toBeInTheDocument();
+        expect(aliceRow).toHaveTextContent('Alice');
+        expect(aliceRow).toHaveTextContent('Completed');
       });
     });
 

@@ -104,7 +104,7 @@ describe('UploadPage - Edge Cases', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 

@@ -55,7 +55,7 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -107,7 +107,7 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -157,7 +157,7 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -216,7 +216,7 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -268,7 +268,7 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -319,7 +319,7 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -359,7 +359,7 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -404,7 +404,7 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -447,7 +447,7 @@ describe('UploadPage - Review & Edit', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         // At this point, ruleSpec is null, so operations should be no-ops
         // This tests the guard conditions in updateRuleAtom, deleteRuleAtom, addRuleAtom

@@ -115,10 +115,10 @@ describe('UploadPage - Comprehensive Test Suite', () => {
   // Helper to setup game selection (pattern from upload.pdf-upload.test.tsx)
   async function confirmGameSelection() {
     // Wait for games to load
-    await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
     // Select the first available game (get from select options)
-    const gameSelect = screen.getByLabelText(/Existing games/i) as HTMLSelectElement;
+    const gameSelect = screen.getByLabelText(/Select Game/i) as HTMLSelectElement;
     const firstGameId = gameSelect.options[0]?.value;
     if (!firstGameId) {
       throw new Error('No games available to select');
@@ -284,7 +284,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        const select = screen.getByLabelText(/Existing games/i) as HTMLSelectElement;
+        const select = screen.getByLabelText(/Select Game/i) as HTMLSelectElement;
         expect(select.value).toBe('game-first');
       });
     });
@@ -299,7 +299,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument();
       });
 
       const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
@@ -417,7 +417,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
 
       await waitFor(() => {
         // Get options only from the game select element, not the language select
-        const gameSelect = screen.getByLabelText(/Existing games/i) as HTMLSelectElement;
+        const gameSelect = screen.getByLabelText(/Select Game/i) as HTMLSelectElement;
         const options = Array.from(gameSelect.options);
         const names = options.map(opt => opt.textContent);
         expect(names).toEqual(['Apple Game', 'Middle Game', 'Zebra Game']);
@@ -487,11 +487,11 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument();
       });
 
       // Select and confirm first game
-      const select = screen.getByLabelText(/Existing games/i);
+      const select = screen.getByLabelText(/Select Game/i);
       fireEvent.change(select, { target: { value: 'game-1' } });
 
       const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
@@ -527,7 +527,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument();
       });
 
       const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });

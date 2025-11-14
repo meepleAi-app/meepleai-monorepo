@@ -58,7 +58,7 @@ describe('UploadPage - PDF Upload', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -158,7 +158,7 @@ describe('UploadPage - PDF Upload', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -218,10 +218,10 @@ describe('UploadPage - PDF Upload', () => {
         render(<UploadPageWithHooks />);
 
         // Wait for games to load
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         // Select a game FIRST before confirming
-        const gameSelect = screen.getByLabelText(/Existing games/i);
+        const gameSelect = screen.getByLabelText(/Select Game/i);
         fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
         // Now confirm selection
@@ -291,9 +291,9 @@ describe('UploadPage - PDF Upload', () => {
 
         render(<UploadPageWithHooks />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-        const gameSelect = screen.getByLabelText(/Existing games/i);
+        const gameSelect = screen.getByLabelText(/Select Game/i);
         fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
         const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
@@ -354,7 +354,7 @@ describe('UploadPage - PDF Upload', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -389,7 +389,7 @@ describe('UploadPage - PDF Upload', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -424,7 +424,7 @@ describe('UploadPage - PDF Upload', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -458,7 +458,7 @@ describe('UploadPage - PDF Upload', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -499,7 +499,7 @@ describe('UploadPage - PDF Upload', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
           fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -538,7 +538,7 @@ describe('UploadPage - PDF Upload', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -610,9 +610,9 @@ describe('UploadPage - PDF Upload', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-        const gameSelect = screen.getByLabelText(/Existing games/i);
+        const gameSelect = screen.getByLabelText(/Select Game/i);
         fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
         const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });

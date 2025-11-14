@@ -32,7 +32,7 @@ describe('UploadPage - Game Selection', () => {
     jest.useRealTimers();
   });
 
-  describe('Given user has existing games', () => {
+  describe('Given user has Select Game options', () => {
     describe('When user selects game but does not confirm', () => {
       it('Then upload button remains disabled', async () => {
         const user = userEvent.setup();
@@ -46,7 +46,7 @@ describe('UploadPage - Game Selection', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
@@ -70,7 +70,7 @@ describe('UploadPage - Game Selection', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         await user.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -96,10 +96,10 @@ describe('UploadPage - Game Selection', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
         // First game should be auto-selected
-        const gameSelect = screen.getByLabelText(/Existing games/i) as HTMLSelectElement;
+        const gameSelect = screen.getByLabelText(/Select Game/i) as HTMLSelectElement;
         expect(gameSelect.value).toBe('game-1');
 
         // Confirm button should be enabled for the selected game
@@ -109,7 +109,7 @@ describe('UploadPage - Game Selection', () => {
     });
   });
 
-  describe('Given user has no existing games', () => {
+  describe('Given user has no games to select', () => {
     describe('When user creates a new game successfully', () => {
       it('Then new game appears in selection and upload is enabled', async () => {
         const user = userEvent.setup();

@@ -288,7 +288,7 @@ public static class AuthEndpoints
         .WithName("Setup2FA")
         .WithTags("Authentication");
 
-        group.MapPost("/auth/2fa/enable", async (TwoFactorEnableRequest request, HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+        group.MapPost("/auth/2fa/enable", async (TwoFactorEnableRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var userIdStr = context.User.FindFirst("sub")?.Value;
             if (string.IsNullOrEmpty(userIdStr))
@@ -303,23 +303,34 @@ public static class AuthEndpoints
 
             try
             {
-                var success = await totpService.EnableTwoFactorAsync(userId, request.Code);
-                if (!success)
+                // DDD CQRS: Use Enable2FACommand
+                var command = new Api.BoundedContexts.Authentication.Application.Commands.Enable2FACommand(
+                    UserId: userId,
+                    TotpCode: request.Code
+                );
+
+                var result = await mediator.Send(command, ct);
+
+                if (!result.Success)
                 {
-                    logger.LogWarning("2FA enable failed: Invalid code for user {UserId}", userId);
-                    return Results.BadRequest(new { error = "Invalid verification code" });
+                    logger.LogWarning("2FA enable failed for user {UserId}: {ErrorMessage}", userId, result.ErrorMessage);
+                    return Results.BadRequest(new { error = result.ErrorMessage ?? "Invalid verification code" });
                 }
 
                 logger.LogInformation("2FA enabled for user {UserId}", userId);
-                return Results.Ok(new { message = "Two-factor authentication enabled successfully" });
+                return Results.Ok(new
+                {
+                    message = "Two-factor authentication enabled successfully",
+                    backupCodes = result.BackupCodes // Return backup codes for user to save
+                });
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in TotpService; this catches unexpected infrastructure failures
+            // All business exceptions are handled in Enable2FACommandHandler; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (TotpService)
+                // Specific exception handling occurs in command handler (Enable2FACommandHandler)
                 logger.LogError(ex, "2FA enable error for user {UserId}", userId);
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
@@ -401,7 +412,7 @@ public static class AuthEndpoints
         .WithName("Verify2FA")
         .WithTags("Authentication");
 
-        group.MapPost("/auth/2fa/disable", async (TwoFactorDisableRequest request, HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+        group.MapPost("/auth/2fa/disable", async (TwoFactorDisableRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var userIdStr = context.User.FindFirst("sub")?.Value;
             if (string.IsNullOrEmpty(userIdStr))
@@ -416,23 +427,35 @@ public static class AuthEndpoints
 
             try
             {
-                await totpService.DisableTwoFactorAsync(userId, request.Password, request.Code);
+                // DDD CQRS: Use Disable2FACommand
+                var command = new Api.BoundedContexts.Authentication.Application.Commands.Disable2FACommand(
+                    UserId: userId,
+                    CurrentPassword: request.Password,
+                    TotpOrBackupCode: request.Code
+                );
+
+                var result = await mediator.Send(command, ct);
+
+                if (!result.Success)
+                {
+                    logger.LogWarning("2FA disable failed for user {UserId}: {ErrorMessage}", userId, result.ErrorMessage);
+                    if (result.ErrorMessage?.Contains("password", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        return Results.Unauthorized();
+                    }
+                    return Results.BadRequest(new { error = result.ErrorMessage ?? "Failed to disable two-factor authentication" });
+                }
+
                 logger.LogInformation("2FA disabled for user {UserId}", userId);
                 return Results.Ok(new { message = "Two-factor authentication disabled successfully" });
             }
-            catch (UnauthorizedAccessException ex)
-            {
-                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
-                logger.LogWarning(ex, "2FA disable unauthorized for user {UserId}", userId);
-                return Results.Unauthorized();
-            }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in TotpService; this catches unexpected infrastructure failures
+            // All business exceptions are handled in Disable2FACommandHandler; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (TotpService)
+                // Specific exception handling occurs in command handler (Disable2FACommandHandler)
                 logger.LogError(ex, "2FA disable error for user {UserId}", userId);
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
@@ -442,7 +465,7 @@ public static class AuthEndpoints
         .WithName("Disable2FA")
         .WithTags("Authentication");
 
-        group.MapGet("/users/me/2fa/status", async (HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+        group.MapGet("/users/me/2fa/status", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var userIdStr = context.User.FindFirst("sub")?.Value;
             if (string.IsNullOrEmpty(userIdStr))
@@ -457,16 +480,28 @@ public static class AuthEndpoints
 
             try
             {
-                var status = await totpService.GetTwoFactorStatusAsync(userId);
+                // DDD CQRS: Use Get2FAStatusQuery
+                var query = new Api.BoundedContexts.Authentication.Application.Queries.Get2FAStatusQuery(
+                    UserId: userId
+                );
+
+                var status = await mediator.Send(query, ct);
+
+                if (status == null)
+                {
+                    logger.LogWarning("User {UserId} not found for 2FA status query", userId);
+                    return Results.NotFound(new { error = "User not found" });
+                }
+
                 return Results.Ok(status);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in TotpService; this catches unexpected infrastructure failures
+            // All business exceptions are handled in Get2FAStatusQueryHandler; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (TotpService)
+                // Specific exception handling occurs in query handler (Get2FAStatusQueryHandler)
                 logger.LogError(ex, "Get 2FA status error for user {UserId}", userId);
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }

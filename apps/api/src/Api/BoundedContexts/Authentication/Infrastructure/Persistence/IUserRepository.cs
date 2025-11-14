@@ -31,4 +31,9 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Used to prevent deletion of the last admin.
     /// </summary>
     Task<int> CountAdminsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all backup codes for a user (used for 2FA).
+    /// </summary>
+    Task<List<Api.Infrastructure.Entities.UserBackupCodeEntity>> GetBackupCodesAsync(Guid userId, CancellationToken cancellationToken = default);
 }

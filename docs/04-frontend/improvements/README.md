@@ -13,7 +13,12 @@ This directory contains the complete strategy for implementing frontend moderniz
 
 | Document | Description | Target Audience | Length |
 |----------|-------------|-----------------|--------|
-| **[implementation-roadmap.md](./implementation-roadmap.md)** | Complete implementation roadmap with detailed phases, checkpoints, test scenarios, and risk mitigation | Project Manager, Tech Lead, All Developers | 942 lines |
+| **[integrated-worktree-strategy.md](./integrated-worktree-strategy.md)** | Complete implementation roadmap with detailed phases, checkpoints, test scenarios, and risk mitigation (8 FE-IMP + 69 BGAI + 39 Admin) | Project Manager, Tech Lead, All Developers | 942 lines |
+| **[frontend-refactor-15-issues.md](./frontend-refactor-15-issues.md)** | Detailed refactoring roadmap focusing on 15 frontend improvement issues across 3 sprints | Frontend Developers | 1232 lines |
+| **[01-ui-analysis.md](./01-ui-analysis.md)** | Comprehensive UI/UX audit and analysis | Frontend Developers, Designers | Analysis |
+| **[02-improvement-recommendations.md](./02-improvement-recommendations.md)** | Detailed recommendations for frontend improvements | Frontend Developers | Recommendations |
+| **[03-brainstorm-ideas.md](./03-brainstorm-ideas.md)** | Creative UI/UX ideas and enhancements | Designers, Product | Ideas |
+| **[05-design-system-overview.md](./05-design-system-overview.md)** | Design system summary and guidelines | Frontend Developers, Designers | Guidelines |
 | **[QUICK-START-ROADMAP.md](./QUICK-START-ROADMAP.md)** | Quick reference guide with essential commands and timeline | All Developers | Quick Read |
 | **[worktree-visual-guide.md](./worktree-visual-guide.md)** | Visual diagrams explaining worktree structure, branch flow, and dependencies | Visual Learners, New Team Members | Visual Focus |
 | **[plan.md](./plan.md)** | High-level plan with objectives and success metrics | Stakeholders, Management | Strategic |
@@ -30,10 +35,11 @@ This directory contains the complete strategy for implementing frontend moderniz
 4. **Start Development**: Week 1 tasks in Quick Start
 
 ### For Project Management
-1. **Full Plan**: [implementation-roadmap.md](./implementation-roadmap.md) - Complete reference
-2. **Timeline**: Section "📅 Sequenza di Implementazione" in roadmap
-3. **Metrics**: Section "📊 Metriche di Successo" in roadmap
-4. **Risk Management**: Section "⚠️ Risk Mitigation" in roadmap
+1. **Full Plan**: [integrated-worktree-strategy.md](./integrated-worktree-strategy.md) - Complete reference
+2. **Refactor Plan**: [frontend-refactor-15-issues.md](./frontend-refactor-15-issues.md) - 15 issues roadmap
+3. **Timeline**: Section "📅 Sequenza di Implementazione" in integrated-worktree-strategy
+4. **Metrics**: Section "📊 Metriche di Successo" in integrated-worktree-strategy
+5. **Risk Management**: Section "⚠️ Risk Mitigation" in integrated-worktree-strategy
 
 ### For Developers
 1. **Issue Details**: [issues.md](./issues.md) - FE-IMP specifications
@@ -155,7 +161,7 @@ Expected output:
 **Frontend Worktree** (FE-IMP-001: App Router)
 ```bash
 cd /home/user/meepleai-frontend-worktree
-# Read: docs/ImproveFrontend/issues.md (FE-IMP-001)
+# Read: docs/04-frontend/improvements/issues.md (FE-IMP-001)
 # Start: Create app/layout.tsx, app/page.tsx, app/chat/page.tsx
 ```
 
@@ -177,7 +183,7 @@ cd /home/user/meepleai-monorepo
 
 ## 📖 Document Details
 
-### implementation-roadmap.md (FULL REFERENCE)
+### integrated-worktree-strategy.md (FULL REFERENCE)
 
 **942 lines** | **Comprehensive guide**
 
@@ -345,7 +351,7 @@ git rebase origin/claude/analyze-frontend-issues-011CV5re59xZsma3sqrD1BMo
 ## 📞 Support
 
 ### For Questions About
-- **Strategy/Plan**: Read plan.md or implementation-roadmap.md
+- **Strategy/Plan**: Read plan.md or integrated-worktree-strategy.md
 - **Worktree Setup**: Read worktree-visual-guide.md
 - **Daily Commands**: Read QUICK-START-ROADMAP.md
 - **Issue Specs**: Read issues.md

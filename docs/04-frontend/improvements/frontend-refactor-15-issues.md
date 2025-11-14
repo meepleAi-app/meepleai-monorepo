@@ -1116,7 +1116,7 @@ const UploadPage = () => {
 ### For Team Members
 
 **Before Starting**:
-1. Read `docs/frontend/design-system.md` (15min)
+1. Read `docs/04-frontend/design-system.md` (15min)
 2. Review `DESIGN-SYSTEM-QUICKSTART.md` (5min)
 3. Watch Tailwind CSS crash course (30min)
 4. Familiarize with shadcn/ui components (15min)
@@ -1200,8 +1200,8 @@ const UploadPage = () => {
 ## 📞 Support
 
 **Questions**:
-- Check documentation in `docs/fe-improv/`
-- Review design system: `docs/frontend/design-system.md`
+- Check documentation in `docs/04-frontend/improvements/`
+- Review design system: `docs/04-frontend/design-system.md`
 - Create GitHub issue with `question` label
 
 **Blockers**:

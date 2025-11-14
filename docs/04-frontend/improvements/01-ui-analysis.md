@@ -684,4 +684,4 @@ Page                              Size     First Load JS
 ---
 
 **Analysis Complete**: 2025-11-13
-**Next Steps**: Review roadmap in `04-implementation-roadmap.md`
+**Next Steps**: Review roadmap in `frontend-refactor-15-issues.md`

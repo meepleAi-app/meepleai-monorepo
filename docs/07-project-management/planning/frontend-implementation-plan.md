@@ -39,7 +39,7 @@
 - shadcn/ui installed and configured
 - 5 core components (Button, Card, Input, Select, Dialog)
 - Demo page `/shadcn-demo`
-- Documentation in `docs/frontend/shadcn-ui-installation.md`
+- Documentation in `docs/04-frontend/shadcn-ui-installation.md`
 
 ---
 

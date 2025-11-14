@@ -475,7 +475,7 @@ git rebase origin/claude/analyze-frontend-issues-011CV5re59xZsma3sqrD1BMo
 │   │       └── ...
 │   └── docs/
 │       └── ImproveFrontend/
-│           ├── implementation-roadmap.md  ← FULL ROADMAP
+│           ├── integrated-worktree-strategy.md  ← FULL ROADMAP
 │           └── QUICK-START-ROADMAP.md    ← THIS FILE
 │
 ├── meepleai-frontend-worktree/            📁 FRONTEND WORKTREE
@@ -585,4 +585,4 @@ git worktree add ../meepleai-frontend-worktree claude/frontend-modernization
 
 **Version**: 1.0
 **Created**: 2025-11-13
-**Companion to**: implementation-roadmap.md, QUICK-START-ROADMAP.md
+**Companion to**: integrated-worktree-strategy.md, QUICK-START-ROADMAP.md

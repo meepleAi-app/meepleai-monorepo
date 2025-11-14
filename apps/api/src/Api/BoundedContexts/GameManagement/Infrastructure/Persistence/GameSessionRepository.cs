@@ -44,7 +44,7 @@ public class GameSessionRepository : IGameSessionRepository
         var sessionEntities = await _dbContext.GameSessions
             .AsNoTracking()
             .Where(s => s.GameId == gameId &&
-                       (s.Status == "Setup" || s.Status == "InProgress"))
+                       (s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused"))
             .OrderByDescending(s => s.StartedAt)
             .ToListAsync(cancellationToken);
 
@@ -79,6 +79,56 @@ public class GameSessionRepository : IGameSessionRepository
             .ToList();
 
         return sessions;
+    }
+
+    public async Task<IReadOnlyList<GameSession>> FindActiveAsync(int? limit = null, int? offset = null, CancellationToken cancellationToken = default)
+    {
+        IQueryable<Api.Infrastructure.Entities.GameSessionEntity> query = _dbContext.GameSessions
+            .AsNoTracking()
+            .Where(s => s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused")
+            .OrderByDescending(s => s.StartedAt);
+
+        if (offset.HasValue)
+            query = query.Skip(offset.Value);
+
+        if (limit.HasValue)
+            query = query.Take(limit.Value);
+
+        var sessionEntities = await query.ToListAsync(cancellationToken);
+        return sessionEntities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<GameSession>> FindHistoryAsync(
+        Guid? gameId = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        int? limit = null,
+        int? offset = null,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<Api.Infrastructure.Entities.GameSessionEntity> query = _dbContext.GameSessions
+            .AsNoTracking()
+            .Where(s => s.Status == "Completed" || s.Status == "Abandoned");
+
+        if (gameId.HasValue)
+            query = query.Where(s => s.GameId == gameId.Value);
+
+        if (startDate.HasValue)
+            query = query.Where(s => s.StartedAt >= startDate.Value);
+
+        if (endDate.HasValue)
+            query = query.Where(s => s.CompletedAt <= endDate.Value);
+
+        query = query.OrderByDescending(s => s.CompletedAt ?? s.StartedAt);
+
+        if (offset.HasValue)
+            query = query.Skip(offset.Value);
+
+        if (limit.HasValue)
+            query = query.Take(limit.Value);
+
+        var sessionEntities = await query.ToListAsync(cancellationToken);
+        return sessionEntities.Select(MapToDomain).ToList();
     }
 
     public async Task AddAsync(GameSession session, CancellationToken cancellationToken = default)
@@ -128,6 +178,7 @@ public class GameSessionRepository : IGameSessionRepository
         {
             "Setup" => SessionStatus.Setup,
             "InProgress" => SessionStatus.InProgress,
+            "Paused" => SessionStatus.Paused,
             "Completed" => SessionStatus.Completed,
             "Abandoned" => SessionStatus.Abandoned,
             _ => SessionStatus.Setup

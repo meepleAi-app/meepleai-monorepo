@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Routing;
 
@@ -149,6 +150,33 @@ public static class GameEndpoints
             return Results.Created($"/api/v1/sessions/{result.Id}", result);
         });
 
+        // Add player to session
+        group.MapPost("/sessions/{id}/players", async (
+            Guid id,
+            SessionPlayerRequest request,
+            IMediator mediator,
+            HttpContext context,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new AddPlayerToSessionCommand(
+                SessionId: id,
+                PlayerName: request.PlayerName,
+                PlayerOrder: request.PlayerOrder,
+                Color: request.Color
+            );
+
+            var result = await mediator.Send(command, ct);
+            logger.LogInformation("Added player {PlayerName} to session {SessionId}", request.PlayerName, id);
+            return Results.Ok(result);
+        });
+
         // Complete game session
         group.MapPost("/sessions/{id}/complete", async (
             Guid id,
@@ -235,6 +263,122 @@ public static class GameEndpoints
             var query = new GetActiveSessionsByGameQuery(gameId);
             var result = await mediator.Send(query, ct);
 
+            return Results.Ok(result);
+        });
+
+        // Pause game session
+        group.MapPost("/sessions/{id}/pause", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new PauseGameSessionCommand(SessionId: id);
+            var result = await mediator.Send(command, ct);
+
+            return Results.Ok(result);
+        });
+
+        // Resume game session
+        group.MapPost("/sessions/{id}/resume", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new ResumeGameSessionCommand(SessionId: id);
+            var result = await mediator.Send(command, ct);
+
+            return Results.Ok(result);
+        });
+
+        // End game session (alias for complete)
+        group.MapPost("/sessions/{id}/end", async (
+            Guid id,
+            CompleteSessionRequest? request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new EndGameSessionCommand(
+                SessionId: id,
+                WinnerName: request?.WinnerName
+            );
+
+            var result = await mediator.Send(command, ct);
+            return Results.Ok(result);
+        });
+
+        // Get all active sessions (with pagination)
+        group.MapGet("/sessions/active", async (
+            [FromQuery] int? limit,
+            [FromQuery] int? offset,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
+            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
+
+            if (!hasSession && !hasApiKey)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetActiveSessionsQuery(Limit: limit, Offset: offset);
+            var result = await mediator.Send(query, ct);
+
+            return Results.Ok(result);
+        });
+
+        // Get session history (with filters and pagination)
+        group.MapGet("/sessions/history", async (
+            [FromQuery] Guid? gameId,
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromQuery] int? limit,
+            [FromQuery] int? offset,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
+            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
+
+            if (!hasSession && !hasApiKey)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetSessionHistoryQuery(
+                GameId: gameId,
+                StartDate: startDate,
+                EndDate: endDate,
+                Limit: limit,
+                Offset: offset
+            );
+
+            var result = await mediator.Send(query, ct);
             return Results.Ok(result);
         });
 

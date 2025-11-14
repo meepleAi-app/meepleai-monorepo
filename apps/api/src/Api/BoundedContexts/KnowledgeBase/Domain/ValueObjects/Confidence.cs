@@ -13,13 +13,17 @@ public sealed class Confidence : ValueObject
 
     public Confidence(double value)
     {
-        if (value < 0.0 || value > 1.0)
+        // Allow for tiny floating-point rounding errors (epsilon tolerance)
+        const double epsilon = 1e-9;
+
+        if (value < -epsilon || value > 1.0 + epsilon)
             throw new ValidationException(nameof(Confidence), $"Confidence must be between 0.0 and 1.0, got {value}");
 
         if (double.IsNaN(value) || double.IsInfinity(value))
             throw new ValidationException(nameof(Confidence), "Confidence cannot be NaN or Infinity");
 
-        Value = value;
+        // Clamp value to [0.0, 1.0] range to handle rounding errors
+        Value = Math.Clamp(value, 0.0, 1.0);
     }
 
     public bool IsHigh() => Value >= 0.8;

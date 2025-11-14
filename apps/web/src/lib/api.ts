@@ -1117,23 +1117,168 @@ export const api = {
     }
   },
 
-  // SPRINT-4: Game Sessions API (Issue #863)
+  // SPRINT-4: Game Session Management API (Issue #1134)
   sessions: {
     /**
+     * Get all active sessions with optional pagination
+     * @param limit Maximum number of sessions to return (default: 20)
+     * @param offset Number of sessions to skip (default: 0)
+     */
+    async getActive(limit: number = 20, offset: number = 0): Promise<PaginatedSessionsResponse> {
+      const params = new URLSearchParams();
+      params.append('limit', limit.toString());
+      params.append('offset', offset.toString());
+
+      const response = await api.get<PaginatedSessionsResponse>(
+        `/api/v1/sessions/active?${params}`
+      );
+      if (!response) {
+        return {
+          sessions: [],
+          total: 0,
+          page: Math.floor(offset / limit) + 1,
+          pageSize: limit
+        };
+      }
+      return response;
+    },
+
+    /**
+     * Get session history with optional filters
+     * @param filters Optional filters for game, date range, and pagination
+     */
+    async getHistory(filters?: SessionHistoryFilters): Promise<PaginatedSessionsResponse> {
+      const params = new URLSearchParams();
+      if (filters?.gameId) params.append('gameId', filters.gameId);
+      if (filters?.startDate) params.append('startDate', filters.startDate);
+      if (filters?.endDate) params.append('endDate', filters.endDate);
+      if (filters?.limit) params.append('limit', filters.limit.toString());
+      if (filters?.offset) params.append('offset', filters.offset.toString());
+
+      const response = await api.get<PaginatedSessionsResponse>(
+        `/api/v1/sessions/history?${params}`
+      );
+      if (!response) {
+        const limit = filters?.limit || 20;
+        const offset = filters?.offset || 0;
+        return {
+          sessions: [],
+          total: 0,
+          page: Math.floor(offset / limit) + 1,
+          pageSize: limit
+        };
+      }
+      return response;
+    },
+
+    /**
+     * Get a single session by ID
+     * @param id Session ID
+     */
+    async getById(id: string): Promise<GameSessionDto | null> {
+      return api.get<GameSessionDto>(`/api/v1/sessions/${id}`);
+    },
+
+    /**
      * Start a new game session
-     * @param request Session start request with gameId and players
-     * @returns Created session details
+     * @param request Session start request with game ID and players
      */
     async start(request: StartSessionRequest): Promise<GameSessionDto> {
       return api.post<GameSessionDto>('/api/v1/sessions', request);
     },
 
     /**
-     * Get session by ID
+     * Pause an active session
      * @param id Session ID
      */
-    async getById(id: string): Promise<GameSessionDto | null> {
-      return api.get<GameSessionDto>(`/api/v1/sessions/${id}`);
+    async pause(id: string): Promise<GameSessionDto> {
+      return api.post<GameSessionDto>(`/api/v1/sessions/${id}/pause`);
+    },
+
+    /**
+     * Resume a paused session
+     * @param id Session ID
+     */
+    async resume(id: string): Promise<GameSessionDto> {
+      return api.post<GameSessionDto>(`/api/v1/sessions/${id}/resume`);
+    },
+
+    /**
+     * End a session without marking it complete
+     * @param id Session ID
+     * @param winnerName Optional winner name
+     */
+    async end(id: string, winnerName?: string | null): Promise<GameSessionDto> {
+      return api.post<GameSessionDto>(`/api/v1/sessions/${id}/end`, { winnerName });
+    },
+
+    /**
+     * Complete a session with winner information
+     * @param id Session ID
+     * @param request Completion request with optional winner name
+     */
+    async complete(id: string, request?: CompleteSessionRequest): Promise<GameSessionDto> {
+      return api.post<GameSessionDto>(`/api/v1/sessions/${id}/complete`, request || {});
+    },
+
+    /**
+     * Abandon a session
+     * @param id Session ID
+     */
+    async abandon(id: string): Promise<GameSessionDto> {
+      return api.post<GameSessionDto>(`/api/v1/sessions/${id}/abandon`);
     }
   }
 };
+
+// SPRINT-4: Game Session Management types (Issue #1134)
+export interface SessionPlayerDto {
+  playerName: string;
+  playerOrder: number;
+  color: string | null;
+}
+
+export interface GameSessionDto {
+  id: string;
+  gameId: string;
+  status: string; // Setup, InProgress, Paused, Completed, Abandoned
+  startedAt: string;
+  completedAt: string | null;
+  playerCount: number;
+  players: SessionPlayerDto[];
+  winnerName: string | null;
+  notes: string | null;
+  durationMinutes: number;
+}
+
+export interface StartSessionRequest {
+  gameId: string;
+  players: SessionPlayerDto[];
+}
+
+export interface CompleteSessionRequest {
+  winnerName?: string | null;
+}
+
+export interface SessionHistoryFilters {
+  gameId?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface PaginatedSessionsResponse {
+  sessions: GameSessionDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface SessionStatistics {
+  totalSessions: number;
+  completedSessions: number;
+  abandonedSessions: number;
+  averageDurationMinutes: number;
+  winRates: { [playerName: string]: number };
+}

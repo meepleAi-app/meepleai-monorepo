@@ -10,6 +10,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import UploadPage from '../../pages/upload';
 import {
   setupUploadMocks,
@@ -34,7 +35,7 @@ describe('UploadPage - Review & Edit', () => {
   });
 
   // Helper to setup game selection for tests
-  async function confirmGameSelection() {
+  async function confirmGameSelection(user: ReturnType<typeof userEvent.setup>) {
     // Wait for the Shadcn Select trigger button to be available
     const selectTrigger = await waitFor(() => {
       const trigger = screen.getByRole('combobox', { name: /select.*game/i });
@@ -66,6 +67,7 @@ describe('UploadPage - Review & Edit', () => {
   describe('Given user is in review phase', () => {
     describe('When user edits rule atom text', () => {
       it('Then rule text is updated in UI', async () => {
+        const user = userEvent.setup();
         jest.useFakeTimers();
 
         try {
@@ -87,7 +89,7 @@ describe('UploadPage - Review & Edit', () => {
 
           await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          await confirmGameSelection();
+          await confirmGameSelection(user);
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -115,6 +117,7 @@ describe('UploadPage - Review & Edit', () => {
 
     describe('When user deletes a rule atom', () => {
       it('Then rule is removed from list', async () => {
+        const user = userEvent.setup();
         jest.useFakeTimers();
 
         try {
@@ -139,7 +142,7 @@ describe('UploadPage - Review & Edit', () => {
 
           await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          await confirmGameSelection();
+          await confirmGameSelection(user);
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -168,6 +171,7 @@ describe('UploadPage - Review & Edit', () => {
 
     describe('When user adds a new rule atom', () => {
       it('Then new empty rule appears in list', async () => {
+        const user = userEvent.setup();
         jest.useFakeTimers();
 
         try {
@@ -189,7 +193,7 @@ describe('UploadPage - Review & Edit', () => {
 
           await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          await confirmGameSelection();
+          await confirmGameSelection(user);
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -223,6 +227,7 @@ describe('UploadPage - Review & Edit', () => {
 
     describe('When user publishes RuleSpec successfully', () => {
       it('Then success message is displayed', async () => {
+        const user = userEvent.setup();
         jest.useFakeTimers();
 
         try {
@@ -248,7 +253,7 @@ describe('UploadPage - Review & Edit', () => {
 
           await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          await confirmGameSelection();
+          await confirmGameSelection(user);
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -278,6 +283,7 @@ describe('UploadPage - Review & Edit', () => {
 
     describe('When publishing RuleSpec fails', () => {
       it('Then error message is displayed and button re-enabled', async () => {
+        const user = userEvent.setup();
         jest.useFakeTimers();
 
         try {
@@ -300,7 +306,7 @@ describe('UploadPage - Review & Edit', () => {
 
           await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          await confirmGameSelection();
+          await confirmGameSelection(user);
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -333,6 +339,7 @@ describe('UploadPage - Review & Edit', () => {
 
     describe('When RuleSpec load fails with 401', () => {
       it('Then stays on parse step with error message', async () => {
+        const user = userEvent.setup();
         jest.useFakeTimers();
 
         try {
@@ -351,7 +358,7 @@ describe('UploadPage - Review & Edit', () => {
 
           await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          await confirmGameSelection();
+          await confirmGameSelection(user);
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -373,6 +380,7 @@ describe('UploadPage - Review & Edit', () => {
 
     describe('When handleParse throws error', () => {
       it('Then error message is displayed and stays on parse step', async () => {
+        const user = userEvent.setup();
         jest.useFakeTimers();
 
         try {
@@ -391,7 +399,7 @@ describe('UploadPage - Review & Edit', () => {
 
           await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          await confirmGameSelection();
+          await confirmGameSelection(user);
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -415,6 +423,7 @@ describe('UploadPage - Review & Edit', () => {
 
     describe('When user resets wizard from review step', () => {
       it('Then wizard returns to upload step', async () => {
+        const user = userEvent.setup();
         jest.useFakeTimers();
 
         try {
@@ -436,7 +445,7 @@ describe('UploadPage - Review & Edit', () => {
 
           await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          await confirmGameSelection();
+          await confirmGameSelection(user);
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });

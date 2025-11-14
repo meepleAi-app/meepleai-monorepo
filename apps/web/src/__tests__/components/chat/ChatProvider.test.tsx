@@ -9,6 +9,13 @@ function createMockApi() {
       updateMessage: jest.fn(),
       deleteMessage: jest.fn(),
     },
+    // SPRINT-3 #858: ChatThread DDD API methods
+    chatThreads: {
+      getByGame: jest.fn(),
+      getById: jest.fn(),
+      create: jest.fn(),
+      addMessage: jest.fn(),
+    },
   };
 }
 
@@ -23,7 +30,7 @@ const mockApi: any = (global as any).__chatApiMock;
 import { render, screen, act, waitFor } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
 import { ChatProvider, useChatContext } from '@/components/chat/ChatProvider';
-import { Game, Agent, Chat, Message } from '@/types';
+import { Game, Agent, ChatThread, Message } from '@/types';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { GameProvider } from '@/components/game/GameProvider';
 import { UIProvider } from '@/components/ui/UIProvider';
@@ -42,14 +49,21 @@ const baseAgent: Agent = {
   createdAt: new Date().toISOString(),
 };
 
-const baseChat: Chat = {
+// SPRINT-3 #858: Use ChatThread instead of Chat
+const baseChatThread: ChatThread = {
   id: 'chat-1',
   gameId: 'game-1',
-  gameName: 'Chess',
-  agentId: 'agent-1',
-  agentName: 'QA Agent',
-  startedAt: new Date().toISOString(),
-  lastMessageAt: null,
+  title: 'Chess Chat',
+  createdAt: new Date().toISOString(),
+  lastMessageAt: new Date().toISOString(),
+  messageCount: 1,
+  messages: [
+    {
+      content: 'Hello!',
+      role: 'assistant',
+      timestamp: new Date().toISOString(),
+    },
+  ],
 };
 
 const baseMessage: Message = {
@@ -89,19 +103,26 @@ const setupHappyPathMocks = () => {
     if (path === `/api/v1/games/${baseGame.id}/agents`) {
       return [baseAgent];
     }
+    // Legacy endpoint (deprecated, keeping for backward compat)
     if (path === `/api/v1/chats?gameId=${baseGame.id}`) {
-      return [baseChat];
+      return [baseChatThread];
     }
-    if (path === `/api/v1/chats/${baseChat.id}/messages`) {
+    if (path === `/api/v1/chats/${baseChatThread.id}/messages`) {
       return [baseMessage];
     }
     return [];
   });
 
+  // SPRINT-3 #858: Mock new DDD ChatThread API methods
+  mockApi.chatThreads.getByGame.mockResolvedValue([baseChatThread]);
+  mockApi.chatThreads.getById.mockResolvedValue(baseChatThread);
+  mockApi.chatThreads.create.mockResolvedValue(baseChatThread);
+  mockApi.chatThreads.addMessage.mockResolvedValue(baseChatThread);
+
   mockApi.post.mockResolvedValue({
-    ...baseChat,
+    ...baseChatThread,
     id: 'chat-new',
-    startedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
   });
 
   mockApi.delete.mockResolvedValue(undefined);
@@ -116,12 +137,22 @@ beforeEach(() => {
   mockApi.delete.mockReset();
   mockApi.chat.updateMessage.mockReset();
   mockApi.chat.deleteMessage.mockReset();
+  // SPRINT-3 #858: Reset ChatThread mocks
+  mockApi.chatThreads.getByGame.mockReset();
+  mockApi.chatThreads.getById.mockReset();
+  mockApi.chatThreads.create.mockReset();
+  mockApi.chatThreads.addMessage.mockReset();
 
   mockApi.get.mockResolvedValue([]);
   mockApi.post.mockResolvedValue(null);
   mockApi.delete.mockResolvedValue(undefined);
   mockApi.chat.updateMessage.mockResolvedValue(undefined);
   mockApi.chat.deleteMessage.mockResolvedValue(undefined);
+  // SPRINT-3 #858: Default ChatThread mock responses
+  mockApi.chatThreads.getByGame.mockResolvedValue([]);
+  mockApi.chatThreads.getById.mockResolvedValue(null);
+  mockApi.chatThreads.create.mockResolvedValue(null);
+  mockApi.chatThreads.addMessage.mockResolvedValue(null);
 
   const confirmStub = jest.fn(() => true);
   (global as any).confirm = confirmStub;

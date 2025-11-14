@@ -325,12 +325,15 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
-        // Act - Complete game and close thread
-        gameSession.Complete("Game Finisher");
-        await gameSessionRepository.UpdateAsync(gameSession, TestCancellationToken);
+        // Act - Complete game and close thread (reload to avoid tracking conflicts)
+        var reloadedGameSession = await gameSessionRepository.GetByIdAsync(gameSession.Id, TestCancellationToken);
+        reloadedGameSession!.Complete("Game Finisher");
+        await gameSessionRepository.UpdateAsync(reloadedGameSession, TestCancellationToken);
+        await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
-        chatThread.CloseThread();
-        await chatThreadRepository.UpdateAsync(chatThread, TestCancellationToken);
+        var reloadedChatThread = await chatThreadRepository.GetByIdAsync(chatThread.Id, TestCancellationToken);
+        reloadedChatThread!.CloseThread();
+        await chatThreadRepository.UpdateAsync(reloadedChatThread, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert

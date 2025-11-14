@@ -204,12 +204,15 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await pdfRepository.AddAsync(pdfDocument, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        pdfDocument.MarkAsProcessing();
-        await pdfRepository.UpdateAsync(pdfDocument, TestCancellationToken);
+        // Reload to avoid tracking conflicts
+        var reloadedPdf = await pdfRepository.GetByIdAsync(pdfDocument.Id, TestCancellationToken);
+        reloadedPdf!.MarkAsProcessing();
+        await pdfRepository.UpdateAsync(reloadedPdf, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        pdfDocument.MarkAsCompleted(pageCount: 32);
-        await pdfRepository.UpdateAsync(pdfDocument, TestCancellationToken);
+        var reloadedPdf2 = await pdfRepository.GetByIdAsync(pdfDocument.Id, TestCancellationToken);
+        reloadedPdf2!.MarkAsCompleted(pageCount: 32);
+        await pdfRepository.UpdateAsync(reloadedPdf2, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var vectorDoc = new VectorDocument(

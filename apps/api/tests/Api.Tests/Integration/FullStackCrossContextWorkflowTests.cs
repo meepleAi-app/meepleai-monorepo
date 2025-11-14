@@ -181,9 +181,10 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Step 6: Complete game
-        gameSession.Complete("New User");
-        await gameSessionRepository.UpdateAsync(gameSession, TestCancellationToken);
+        // Step 6: Complete game (reload to avoid tracking conflict)
+        var reloadedGameSession = await gameSessionRepository.GetByIdAsync(gameSession.Id, TestCancellationToken);
+        reloadedGameSession!.Complete("New User");
+        await gameSessionRepository.UpdateAsync(reloadedGameSession, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Verify complete workflow

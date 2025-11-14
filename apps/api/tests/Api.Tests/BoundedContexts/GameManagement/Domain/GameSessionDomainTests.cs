@@ -245,6 +245,156 @@ public class GameSessionDomainTests
         Assert.False(session.HasPlayer("   "));
     }
 
+    // ========================================
+    // AddPlayer Tests
+    // ========================================
+
+    [Fact]
+    public void GameSession_AddPlayer_InSetupStatus_AddsSuccessfully()
+    {
+        // Arrange
+        var session = CreateDefaultSession(); // Status = Setup
+        var newPlayer = new SessionPlayer("Charlie", 3, "Green");
+
+        // Act
+        session.AddPlayer(newPlayer);
+
+        // Assert
+        Assert.Equal(3, session.PlayerCount);
+        Assert.True(session.HasPlayer("Charlie"));
+        Assert.Contains(session.Players, p => p.PlayerName == "Charlie");
+    }
+
+    [Fact]
+    public void GameSession_AddPlayer_InProgressStatus_AddsSuccessfully()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        session.Start(); // Status = InProgress
+        var newPlayer = new SessionPlayer("Charlie", 3, "Green");
+
+        // Act
+        session.AddPlayer(newPlayer);
+
+        // Assert
+        Assert.Equal(3, session.PlayerCount);
+        Assert.True(session.HasPlayer("Charlie"));
+    }
+
+    [Fact]
+    public void GameSession_AddPlayer_NullPlayer_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => session.AddPlayer(null!));
+    }
+
+    [Fact]
+    public void GameSession_AddPlayer_ToCompletedSession_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        session.Start();
+        session.Complete();
+        var newPlayer = new SessionPlayer("Charlie", 3);
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(newPlayer));
+        Assert.Contains("Cannot add player to finished session", exception.Message);
+    }
+
+    [Fact]
+    public void GameSession_AddPlayer_ToAbandonedSession_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        session.Start();
+        session.Abandon();
+        var newPlayer = new SessionPlayer("Charlie", 3);
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(newPlayer));
+        Assert.Contains("Cannot add player to finished session", exception.Message);
+    }
+
+    [Fact]
+    public void GameSession_AddPlayer_DuplicateName_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var session = CreateDefaultSession(); // Has "Alice" and "Bob"
+        var duplicatePlayer = new SessionPlayer("Alice", 3); // Same name as existing
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(duplicatePlayer));
+        Assert.Contains("already in this session", exception.Message);
+        Assert.Contains("Alice", exception.Message);
+    }
+
+    [Fact]
+    public void GameSession_AddPlayer_DuplicateNameCaseInsensitive_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var session = CreateDefaultSession(); // Has "Alice"
+        var duplicatePlayer = new SessionPlayer("ALICE", 3); // Different case
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(duplicatePlayer));
+        Assert.Contains("already in this session", exception.Message);
+    }
+
+    [Fact]
+    public void GameSession_AddPlayer_Exceeds100Players_ThrowsInvalidOperationException()
+    {
+        // Arrange - Create session with 100 players
+        var players = Enumerable.Range(1, 100)
+            .Select(i => new SessionPlayer($"Player{i}", 1))
+            .ToList();
+        var session = new GameSession(Guid.NewGuid(), Guid.NewGuid(), players);
+
+        var oneMorePlayer = new SessionPlayer("Player101", 1);
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(oneMorePlayer));
+        Assert.Contains("cannot have more than 100 players", exception.Message);
+    }
+
+    [Fact]
+    public void GameSession_AddPlayer_MultiplePlayersSequentially_AllAdded()
+    {
+        // Arrange
+        var session = CreateDefaultSession(); // Starts with 2 players
+
+        // Act
+        session.AddPlayer(new SessionPlayer("Charlie", 3, "Green"));
+        session.AddPlayer(new SessionPlayer("Diana", 4, "Yellow"));
+        session.AddPlayer(new SessionPlayer("Eve", 5, "Purple"));
+
+        // Assert
+        Assert.Equal(5, session.PlayerCount);
+        Assert.True(session.HasPlayer("Charlie"));
+        Assert.True(session.HasPlayer("Diana"));
+        Assert.True(session.HasPlayer("Eve"));
+    }
+
+    [Fact]
+    public void GameSession_AddPlayer_ToPausedSession_AddsSuccessfully()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        session.Start();
+        session.Pause(); // Status = Paused
+        var newPlayer = new SessionPlayer("Charlie", 3, "Green");
+
+        // Act
+        session.AddPlayer(newPlayer);
+
+        // Assert
+        Assert.Equal(3, session.PlayerCount);
+        Assert.True(session.HasPlayer("Charlie"));
+    }
+
     private static GameSession CreateDefaultSession()
     {
         var players = new List<SessionPlayer>

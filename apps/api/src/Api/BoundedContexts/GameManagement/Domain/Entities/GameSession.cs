@@ -132,6 +132,29 @@ public sealed class GameSession : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Adds a player to the session.
+    /// Can only add players when session is not finished (Setup, InProgress, or Paused).
+    /// </summary>
+    public void AddPlayer(SessionPlayer player)
+    {
+        if (player == null)
+            throw new ArgumentNullException(nameof(player));
+
+        if (Status.IsFinished)
+            throw new InvalidOperationException($"Cannot add player to finished session (status: {Status})");
+
+        if (_players.Count >= 100)
+            throw new InvalidOperationException("Session cannot have more than 100 players");
+
+        if (HasPlayer(player.PlayerName))
+            throw new InvalidOperationException($"Player '{player.PlayerName}' is already in this session");
+
+        _players.Add(player);
+
+        // TODO: Add domain event PlayerAddedToSession
+    }
+
+    /// <summary>
     /// Adds notes to the session.
     /// </summary>
     public void AddNotes(string notes)

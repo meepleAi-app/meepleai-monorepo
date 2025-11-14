@@ -80,15 +80,16 @@ export function GameProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       const gamesList = await api.get<Game[]>('/api/v1/games');
-      setGames((prevGames) => {
-        const games = gamesList ?? [];
+      const games = gamesList ?? [];
+      setGames(games);
 
-        // Auto-select first game if available and no game currently selected
-        if (games.length > 0 && !selectedGameId) {
-          setSelectedGameId(games[0].id);
+      // Auto-select first game if available and no game currently selected
+      // We check the current selectedGameId value directly without dependency
+      setSelectedGameId((currentId) => {
+        if (games.length > 0 && !currentId) {
+          return games[0].id;
         }
-
-        return games;
+        return currentId;
       });
     } catch (err) {
       console.error('Failed to load games:', err);
@@ -97,7 +98,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     } finally {
       setLoading((prev) => ({ ...prev, games: false }));
     }
-  }, [selectedGameId]);
+  }, []);
 
   const loadAgents = useCallback(async (gameId: string) => {
     setLoading((prev) => ({ ...prev, agents: true }));
@@ -150,7 +151,10 @@ export function GameProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       const newGame = await api.post<Game>('/api/v1/games', { name });
-      setGames((prev) => [...prev, newGame]);
+      setGames((prev) => {
+        const prevGames = Array.isArray(prev) ? prev : [];
+        return [...prevGames, newGame];
+      });
       setSelectedGameId(newGame.id);
       return newGame;
     } catch (err) {

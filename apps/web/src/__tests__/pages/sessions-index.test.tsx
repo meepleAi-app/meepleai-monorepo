@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { useRouter } from 'next/router';
 import ActiveSessionsPage from '@/pages/sessions/index';
@@ -85,32 +85,42 @@ describe('ActiveSessionsPage', () => {
     });
 
     it('should provide link to start new session from empty state', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ sessions: [], total: 0, page: 1, pageSize: 20 })
+      (api.sessions.getActive as jest.Mock).mockResolvedValue({
+        sessions: [],
+        total: 0,
+        page: 1,
+        pageSize: 20
       });
+      (api.games.getAll as jest.Mock).mockResolvedValue({ games: [], total: 0 });
 
-      render(<ActiveSessionsPage />);
+      const { container } = render(<ActiveSessionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Start a New Session' })).toBeInTheDocument();
+        expect(screen.getByText(/no active sessions found/i)).toBeInTheDocument();
       });
+
+      const startButton = screen.getByRole('button', { name: /go to games library to start a session/i });
+      expect(startButton).toBeInTheDocument();
+      expect(startButton).toHaveTextContent('Start a New Session');
     });
 
     it('should navigate to games library on start button click', async () => {
       const user = userEvent.setup();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ sessions: [], total: 0, page: 1, pageSize: 20 })
+      (api.sessions.getActive as jest.Mock).mockResolvedValue({
+        sessions: [],
+        total: 0,
+        page: 1,
+        pageSize: 20
       });
+      (api.games.getAll as jest.Mock).mockResolvedValue({ games: [], total: 0 });
 
       render(<ActiveSessionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Start a New Session' })).toBeInTheDocument();
+        expect(screen.getByText(/no active sessions found/i)).toBeInTheDocument();
       });
 
-      const startButton = screen.getByRole('button', { name: 'Start a New Session' });
+      const startButton = screen.getByRole('button', { name: /go to games library to start a session/i });
       await user.click(startButton);
 
       expect(mockPush).toHaveBeenCalledWith('/games');
@@ -166,12 +176,17 @@ describe('ActiveSessionsPage', () => {
     });
 
     it('should display all active sessions', async () => {
-      render(<ActiveSessionsPage />);
+      const { container } = render(<ActiveSessionsPage />);
 
+      // Wait for loading to complete by checking for the absence of skeletons
       await waitFor(() => {
-        expect(screen.getByText('Catan')).toBeInTheDocument();
-        expect(screen.getByText('Ticket to Ride')).toBeInTheDocument();
+        expect(screen.queryByRole('status', { name: /loading sessions/i })).not.toBeInTheDocument();
       });
+
+      // Check for the game titles in the table cells (not in the filter dropdown)
+      const table = screen.getByRole('table');
+      expect(within(table).getByText('Catan')).toBeInTheDocument();
+      expect(within(table).getByText('Ticket to Ride')).toBeInTheDocument();
     });
 
     it('should display session status badges', async () => {
@@ -399,59 +414,84 @@ describe('ActiveSessionsPage', () => {
       render(<ActiveSessionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/filter by game/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/filter sessions by game/i)).toBeInTheDocument();
       });
     });
 
     it('should filter sessions by game', async () => {
       render(<ActiveSessionsPage />);
 
+      // Wait for loading to complete
       await waitFor(() => {
-        const filter = screen.getByLabelText(/filter by game/i);
-        fireEvent.change(filter, { target: { value: 'game-1' } });
+        expect(screen.queryByRole('status', { name: /loading sessions/i })).not.toBeInTheDocument();
       });
 
-      await waitFor(() => {
-        expect(screen.getByText('Catan')).toBeInTheDocument();
-        expect(screen.queryByText('Ticket to Ride')).not.toBeInTheDocument();
-      });
+      const table = screen.getByRole('table');
+
+      // Verify both sessions are initially displayed in the table
+      expect(within(table).getByText('Catan')).toBeInTheDocument();
+      expect(within(table).getByText('Ticket to Ride')).toBeInTheDocument();
+
+      const filter = screen.getByLabelText(/filter sessions by game/i);
+      fireEvent.change(filter, { target: { value: 'game-1' } });
+
+      // After filtering, only Catan should be visible in the table
+      expect(within(table).getByText('Catan')).toBeInTheDocument();
+      expect(within(table).queryByText('Ticket to Ride')).not.toBeInTheDocument();
     });
 
     it('should show all sessions when filter is "all"', async () => {
       render(<ActiveSessionsPage />);
 
+      // Wait for loading to complete
       await waitFor(() => {
-        const filter = screen.getByLabelText(/filter by game/i);
-        fireEvent.change(filter, { target: { value: 'all' } });
+        expect(screen.queryByRole('status', { name: /loading sessions/i })).not.toBeInTheDocument();
       });
 
-      await waitFor(() => {
-        expect(screen.getByText('Catan')).toBeInTheDocument();
-        expect(screen.getByText('Ticket to Ride')).toBeInTheDocument();
-      });
+      const table = screen.getByRole('table');
+
+      // Verify both sessions are initially displayed in the table
+      expect(within(table).getByText('Catan')).toBeInTheDocument();
+      expect(within(table).getByText('Ticket to Ride')).toBeInTheDocument();
+
+      const filter = screen.getByLabelText(/filter sessions by game/i);
+
+      // First filter to game-1
+      fireEvent.change(filter, { target: { value: 'game-1' } });
+      expect(within(table).queryByText('Ticket to Ride')).not.toBeInTheDocument();
+
+      // Then filter back to all
+      fireEvent.change(filter, { target: { value: 'all' } });
+      expect(within(table).getByText('Catan')).toBeInTheDocument();
+      expect(within(table).getByText('Ticket to Ride')).toBeInTheDocument();
     });
   });
 
   describe('Pagination', () => {
     it('should display pagination controls when multiple pages exist', async () => {
+      const mockSessionsArray = Array(20).fill(null).map((_, index) => ({
+        id: `session-${index}`,
+        gameId: 'game-1',
+        status: 'InProgress',
+        startedAt: '2024-01-15T10:00:00Z',
+        completedAt: null,
+        playerCount: 4,
+        players: [],
+        winnerName: null,
+        notes: null,
+        durationMinutes: 45
+      }));
+
       (api.sessions.getActive as jest.Mock).mockResolvedValue({
-        sessions: Array(20).fill({
-          id: 'session-1',
-          gameId: 'game-1',
-          status: 'InProgress',
-          startedAt: '2024-01-15T10:00:00Z',
-          completedAt: null,
-          playerCount: 4,
-          players: [],
-          winnerName: null,
-          notes: null,
-          durationMinutes: 45
-        }),
+        sessions: mockSessionsArray,
         total: 50,
         page: 1,
         pageSize: 20
       });
-      (api.games.getAll as jest.Mock).mockResolvedValue({ games: [], total: 0 });
+      (api.games.getAll as jest.Mock).mockResolvedValue({
+        games: [{ id: 'game-1', title: 'Catan' }],
+        total: 1
+      });
 
       render(<ActiveSessionsPage />);
 
@@ -461,20 +501,38 @@ describe('ActiveSessionsPage', () => {
     });
 
     it('should navigate to next page on next button click', async () => {
+      const mockSessionsArray = Array(20).fill(null).map((_, index) => ({
+        id: `session-${index}`,
+        gameId: 'game-1',
+        status: 'InProgress',
+        startedAt: '2024-01-15T10:00:00Z',
+        completedAt: null,
+        playerCount: 4,
+        players: [],
+        winnerName: null,
+        notes: null,
+        durationMinutes: 45
+      }));
+
       (api.sessions.getActive as jest.Mock).mockResolvedValue({
-        sessions: [],
+        sessions: mockSessionsArray,
         total: 50,
         page: 1,
         pageSize: 20
       });
-      (api.games.getAll as jest.Mock).mockResolvedValue({ games: [], total: 0 });
+      (api.games.getAll as jest.Mock).mockResolvedValue({
+        games: [{ id: 'game-1', title: 'Catan' }],
+        total: 1
+      });
 
       render(<ActiveSessionsPage />);
 
       await waitFor(() => {
-        const nextButton = screen.getByRole('button', { name: /next page/i });
-        fireEvent.click(nextButton);
+        expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
       });
+
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      fireEvent.click(nextButton);
 
       await waitFor(() => {
         expect(api.sessions.getActive).toHaveBeenCalledWith(20, 20); // offset = 20
@@ -482,18 +540,34 @@ describe('ActiveSessionsPage', () => {
     });
 
     it('should disable previous button on first page', async () => {
+      const mockSessionsArray = Array(20).fill(null).map((_, index) => ({
+        id: `session-${index}`,
+        gameId: 'game-1',
+        status: 'InProgress',
+        startedAt: '2024-01-15T10:00:00Z',
+        completedAt: null,
+        playerCount: 4,
+        players: [],
+        winnerName: null,
+        notes: null,
+        durationMinutes: 45
+      }));
+
       (api.sessions.getActive as jest.Mock).mockResolvedValue({
-        sessions: [],
+        sessions: mockSessionsArray,
         total: 50,
         page: 1,
         pageSize: 20
       });
-      (api.games.getAll as jest.Mock).mockResolvedValue({ games: [], total: 0 });
+      (api.games.getAll as jest.Mock).mockResolvedValue({
+        games: [{ id: 'game-1', title: 'Catan' }],
+        total: 1
+      });
 
       render(<ActiveSessionsPage />);
 
       await waitFor(() => {
-        const prevButton = screen.getByRole('button', { name: /previous page/i });
+        const prevButton = screen.getByRole('button', { name: /previous/i });
         expect(prevButton).toBeDisabled();
       });
     });

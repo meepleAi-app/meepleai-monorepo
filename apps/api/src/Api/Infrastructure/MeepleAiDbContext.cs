@@ -50,5 +50,11 @@ public class MeepleAiDbContext : DbContext
 
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);
+
+        // Ignore domain entities - EF Core should only map persistence entities
+        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.OAuthAccount>();
+        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.User>();
+        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
+        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
     }
 }

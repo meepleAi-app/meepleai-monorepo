@@ -48,6 +48,7 @@ public class OAuthAccountRepository : IOAuthAccountRepository
             .AsNoTracking()
             .Include(o => o.User)
             .Where(o => o.UserId == userId)
+            .OrderBy(o => o.Provider)
             .ToListAsync(cancellationToken);
 
         return entities.Select(MapToDomain).ToList();

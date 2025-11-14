@@ -56,5 +56,5 @@ public class OAuthAccountEntity
     /// <summary>
     /// Navigation property to the user entity
     /// </summary>
-    required public UserEntity User { get; set; }
+    public UserEntity? User { get; set; }
 }

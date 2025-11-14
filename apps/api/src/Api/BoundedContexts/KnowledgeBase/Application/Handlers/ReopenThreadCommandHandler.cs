@@ -1,21 +1,20 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
-using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// Handles add message to chat thread command.
+/// Handles chat thread reopening command.
 /// </summary>
-public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatThreadDto>
+public class ReopenThreadCommandHandler : ICommandHandler<ReopenThreadCommand, ChatThreadDto>
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public AddMessageCommandHandler(
+    public ReopenThreadCommandHandler(
         IChatThreadRepository threadRepository,
         IUnitOfWork unitOfWork)
     {
@@ -23,15 +22,15 @@ public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatT
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<ChatThreadDto> Handle(AddMessageCommand command, CancellationToken cancellationToken)
+    public async Task<ChatThreadDto> Handle(ReopenThreadCommand command, CancellationToken cancellationToken)
     {
-        // Load thread
-        var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken)
-            ?? throw new InvalidOperationException($"Chat thread with ID {command.ThreadId} not found");
+        // Retrieve thread
+        var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken);
+        if (thread == null)
+            throw new InvalidOperationException($"Thread with ID {command.ThreadId} not found");
 
-        // Add message via domain method
-        var message = new ChatMessage(command.Content, command.Role);
-        thread.AddMessage(message);
+        // Reopen thread (domain logic validates state)
+        thread.ReopenThread();
 
         // Persist
         await _threadRepository.UpdateAsync(thread, cancellationToken);

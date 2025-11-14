@@ -35,8 +35,10 @@ public class GetChatThreadByIdQueryHandler : IQueryHandler<GetChatThreadByIdQuer
 
         return new ChatThreadDto(
             Id: thread.Id,
+            UserId: thread.UserId,
             GameId: thread.GameId,
             Title: thread.Title,
+            Status: thread.Status.Value,
             CreatedAt: thread.CreatedAt,
             LastMessageAt: thread.LastMessageAt,
             MessageCount: thread.MessageCount,

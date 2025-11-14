@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
@@ -22,6 +23,8 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
 
     private readonly SearchQueryHandler _searchQueryHandler;
     private readonly QualityTrackingDomainService _qualityTrackingService;
+    private readonly ChatContextDomainService _chatContextService;
+    private readonly IChatThreadRepository _chatThreadRepository;
     private readonly ILlmService _llmService;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
@@ -29,12 +32,16 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
     public AskQuestionQueryHandler(
         SearchQueryHandler searchQueryHandler,
         QualityTrackingDomainService qualityTrackingService,
+        ChatContextDomainService chatContextService,
+        IChatThreadRepository chatThreadRepository,
         ILlmService llmService,
         IPromptTemplateService promptTemplateService,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
+        _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
+        _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -74,13 +81,31 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         // Calculate search confidence
         var searchConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
 
+        // Step 1.5: Load chat thread context if ThreadId provided (Issue #857)
+        string chatHistoryContext = string.Empty;
+        if (query.ThreadId.HasValue)
+        {
+            var thread = await _chatThreadRepository.GetByIdAsync(query.ThreadId.Value, cancellationToken);
+            if (thread != null && _chatContextService.ShouldIncludeChatHistory(thread))
+            {
+                chatHistoryContext = _chatContextService.BuildChatHistoryContext(thread);
+                _logger.LogInformation(
+                    "Including chat history from thread {ThreadId}: {MessageCount} messages",
+                    query.ThreadId.Value, thread.MessageCount);
+            }
+        }
+
         // Step 2: Build LLM prompt with context
         var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt")
             ?? DefaultSystemPrompt;
         var context = string.Join("\n\n", searchResults.Select(sr =>
             $"[Page {sr.PageNumber}] {sr.TextContent}"));
 
-        var userPrompt = $"Question: {query.Question}\n\nContext:\n{context}";
+        // Enrich user prompt with chat history if available
+        var baseQuestion = $"Question: {query.Question}\n\nContext:\n{context}";
+        var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
+            ? _chatContextService.EnrichPromptWithHistory(baseQuestion, chatHistoryContext)
+            : baseQuestion;
 
         // Step 3: Generate answer with LLM
         var llmResult = await _llmService.GenerateCompletionAsync(

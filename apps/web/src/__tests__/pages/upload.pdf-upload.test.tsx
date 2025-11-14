@@ -17,6 +17,7 @@ import {
   createPdfMock,
   createRuleSpecMock
 } from '../../pages/../__tests__/fixtures/upload-mocks';
+import userEvent from '@testing-library/user-event';
 
 describe('UploadPage - PDF Upload', () => {
   const originalFetch = global.fetch;
@@ -32,6 +33,36 @@ describe('UploadPage - PDF Upload', () => {
   afterEach(() => {
     jest.useRealTimers();
   });
+
+  // Helper to setup game selection for tests
+  async function confirmGameSelection(user: ReturnType<typeof userEvent.setup>) {
+    // Wait for the Shadcn Select trigger button to be available
+    const selectTrigger = await waitFor(() => {
+      const trigger = screen.getByRole('combobox', { name: /select.*game/i });
+      expect(trigger).toBeInTheDocument();
+      return trigger;
+    });
+
+    // Open the select dropdown
+    await user.click(selectTrigger);
+
+    // Wait for and click the first game option
+    const gameOptions = await waitFor(() => {
+      const options = screen.getAllByRole('option');
+      expect(options.length).toBeGreaterThan(0);
+      return options;
+    });
+    
+    await user.click(gameOptions[0]);
+
+    // Now confirm selection
+    const confirmButton = await waitFor(() => {
+      const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+      expect(btn).not.toBeDisabled();
+      return btn;
+    });
+    await user.click(confirmButton);
+  }
 
   describe('Given user uploads PDF successfully', () => {
     describe('When PDF processing completes', () => {

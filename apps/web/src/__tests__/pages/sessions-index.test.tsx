@@ -11,6 +11,7 @@ import '@testing-library/jest-dom';
 import { useRouter } from 'next/router';
 import ActiveSessionsPage from '@/pages/sessions/index';
 import { api } from '@/lib/api';
+import userEvent from '@testing-library/user-event';
 
 // Mock Next.js router
 jest.mock('next/router', () => ({
@@ -84,37 +85,33 @@ describe('ActiveSessionsPage', () => {
     });
 
     it('should provide link to start new session from empty state', async () => {
-      (api.sessions.getActive as jest.Mock).mockResolvedValue({
-        sessions: [],
-        total: 0,
-        page: 1,
-        pageSize: 20
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ sessions: [], total: 0, page: 1, pageSize: 20 })
       });
-      (api.games.getAll as jest.Mock).mockResolvedValue({ games: [], total: 0 });
 
       render(<ActiveSessionsPage />);
 
       await waitFor(() => {
-        const button = screen.getByRole('button', { name: /start a new session/i });
-        expect(button).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Start a New Session' })).toBeInTheDocument();
       });
     });
 
     it('should navigate to games library on start button click', async () => {
-      (api.sessions.getActive as jest.Mock).mockResolvedValue({
-        sessions: [],
-        total: 0,
-        page: 1,
-        pageSize: 20
+      const user = userEvent.setup();
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ sessions: [], total: 0, page: 1, pageSize: 20 })
       });
-      (api.games.getAll as jest.Mock).mockResolvedValue({ games: [], total: 0 });
 
       render(<ActiveSessionsPage />);
 
       await waitFor(() => {
-        const button = screen.getByRole('button', { name: /start a new session/i });
-        fireEvent.click(button);
+        expect(screen.getByRole('button', { name: 'Start a New Session' })).toBeInTheDocument();
       });
+
+      const startButton = screen.getByRole('button', { name: 'Start a New Session' });
+      await user.click(startButton);
 
       expect(mockPush).toHaveBeenCalledWith('/games');
     });

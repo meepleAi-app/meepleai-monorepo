@@ -30,6 +30,38 @@ jest.mock('@/components/PdfPreview', () => ({
   PdfPreview: ({ file }: { file: File }) => <div data-testid="pdf-preview">{file.name}</div>
 }));
 
+// Helper to create a proper PDF file for testing with proper Blob interface
+function createPdfFile(name: string, content: string = '%PDF-1.4 test content'): File {
+  // Encode the content to bytes
+  const encoder = new TextEncoder();
+  const uint8Array = encoder.encode(content);
+
+  const file = new File([uint8Array], name, { type: 'application/pdf' });
+
+  // Mock slice method to return a blob with working arrayBuffer
+  const originalSlice = file.slice;
+  file.slice = function(start?: number, end?: number) {
+    const sliceStart = start || 0;
+    const sliceEnd = end || content.length;
+    const slicedContent = content.substring(sliceStart, sliceEnd);
+    const slicedBytes = encoder.encode(slicedContent);
+
+    // Create a mock blob
+    const mockBlob: any = {
+      size: slicedBytes.length,
+      type: 'application/pdf',
+      arrayBuffer: async () => slicedBytes.buffer,
+      slice: originalSlice,
+      stream: () => { throw new Error('stream not implemented'); },
+      text: async () => slicedContent
+    };
+
+    return mockBlob;
+  };
+
+  return file;
+}
+
 describe('PdfUploadForm', () => {
   const mockProps = {
     gameId: 'game-1',
@@ -79,7 +111,7 @@ describe('PdfUploadForm', () => {
   describe('File Selection', () => {
     it('validates and accepts valid PDF file', async () => {
       const user = userEvent.setup();
-      const file = new File(['%PDF-1.4 test content'], 'test.pdf', { type: 'application/pdf' });
+      const file = createPdfFile('test.pdf');
 
       render(<PdfUploadForm {...mockProps} />);
 
@@ -137,7 +169,7 @@ describe('PdfUploadForm', () => {
 
     it('displays PDF preview when valid file is selected', async () => {
       const user = userEvent.setup();
-      const file = new File(['%PDF-1.4 content'], 'test.pdf', { type: 'application/pdf' });
+      const file = createPdfFile('test.pdf');
 
       render(<PdfUploadForm {...mockProps} />);
 
@@ -189,7 +221,7 @@ describe('PdfUploadForm', () => {
   describe('File Upload', () => {
     it('uploads file successfully', async () => {
       const user = userEvent.setup();
-      const file = new File(['%PDF-1.4 content'], 'test.pdf', { type: 'application/pdf' });
+      const file = createPdfFile('test.pdf');
 
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
@@ -215,7 +247,7 @@ describe('PdfUploadForm', () => {
 
     it('shows loading state during upload', async () => {
       const user = userEvent.setup();
-      const file = new File(['%PDF-1.4 content'], 'test.pdf', { type: 'application/pdf' });
+      const file = createPdfFile('test.pdf');
 
       let resolveUpload: (value: any) => void;
       const uploadPromise = new Promise((resolve) => {
@@ -245,7 +277,7 @@ describe('PdfUploadForm', () => {
 
     it('handles upload error', async () => {
       const user = userEvent.setup();
-      const file = new File(['%PDF-1.4 content'], 'test.pdf', { type: 'application/pdf' });
+      const file = createPdfFile('test.pdf');
 
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
 
@@ -268,7 +300,7 @@ describe('PdfUploadForm', () => {
 
     it('shows retry message during retries', async () => {
       const user = userEvent.setup();
-      const file = new File(['%PDF-1.4 content'], 'test.pdf', { type: 'application/pdf' });
+      const file = createPdfFile('test.pdf');
 
       const { retryWithBackoff } = require('@/lib/retryUtils');
       retryWithBackoff.mockImplementation(async (fn, options) => {

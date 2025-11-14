@@ -526,6 +526,8 @@ Rate limited to 10 requests per minute per IP address.
         .Produces(429)
         .Produces(400);
 
+        // TODO: Migrate to HandleOAuthCallbackCommand when token encryption fully moved to handlers
+        // Currently uses IOAuthService due to complex orchestration with token encryption
         group.MapGet("/auth/oauth/{provider}/callback", async (
             string provider,
             string code,
@@ -611,15 +613,38 @@ Rate limited to 10 requests per minute per IP address.
         .Produces(302)
         .Produces(429);
 
+        /// <summary>
+        /// Unlink OAuth provider from user account (DDD CQRS pattern).
+        /// Uses IMediator to send UnlinkOAuthAccountCommand instead of direct service call.
+        /// Business logic enforced in handler: Cannot unlink if only auth method (prevents lockout).
+        /// </summary>
         group.MapDelete("/auth/oauth/{provider}/unlink", async (
             string provider,
             HttpContext context,
-            IOAuthService oauthService) =>
+            IMediator mediator,
+            ILogger<Program> logger) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            await oauthService.UnlinkOAuthAccountAsync(Guid.Parse(session.User.Id), provider);
+            var userId = Guid.Parse(session.User.Id);
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.OAuth.UnlinkOAuthAccountCommand
+            {
+                UserId = userId,
+                Provider = provider
+            };
+
+            var result = await mediator.Send(command);
+
+            if (!result.Success)
+            {
+                logger.LogWarning("Failed to unlink OAuth account for user {UserId}, provider {Provider}: {ErrorMessage}",
+                    userId, provider, result.ErrorMessage);
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            logger.LogInformation("Successfully unlinked OAuth account for user {UserId}, provider {Provider}",
+                userId, provider);
             return Results.NoContent();
         })
         .WithName("UnlinkOAuthAccount")
@@ -633,20 +658,38 @@ User must have at least one authentication method remaining (password or another
 
 **Authorization**: Requires active session (cookie-based authentication).
 
-**Security**: Cannot unlink if it's the only authentication method (prevents account lockout).")
+**Security**: Cannot unlink if it's the only authentication method (prevents account lockout).
+
+**Implementation**: Uses DDD CQRS pattern with IMediator and UnlinkOAuthAccountCommand.")
         .Produces(204)
+        .Produces(400)
         .Produces(401)
         .Produces(404);
 
+        /// <summary>
+        /// Get user's linked OAuth accounts (DDD CQRS pattern).
+        /// Uses IMediator to send GetLinkedOAuthAccountsQuery instead of direct service call.
+        /// Returns list of OAuth providers linked to authenticated user.
+        /// </summary>
         group.MapGet("/users/me/oauth-accounts", async (
             HttpContext context,
-            IOAuthService oauthService) =>
+            IMediator mediator,
+            ILogger<Program> logger) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var accounts = await oauthService.GetLinkedAccountsAsync(Guid.Parse(session.User.Id));
-            return Results.Json(accounts);
+            var userId = Guid.Parse(session.User.Id);
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.OAuth.GetLinkedOAuthAccountsQuery
+            {
+                UserId = userId
+            };
+
+            var result = await mediator.Send(query);
+
+            logger.LogInformation("Retrieved {Count} linked OAuth accounts for user {UserId}",
+                result.Accounts.Count, userId);
+            return Results.Json(result.Accounts);
         })
         .WithName("GetLinkedOAuthAccounts")
         .WithTags("Authentication", "OAuth", "User Profile")
@@ -657,8 +700,10 @@ User must have at least one authentication method remaining (password or another
 
 **Response**: Array of OAuthAccountDto objects containing:
 - `provider`: Provider name (google, discord, github)
-- `createdAt`: Timestamp when account was linked")
-        .Produces<List<OAuthAccountDto>>(200)
+- `createdAt`: Timestamp when account was linked
+
+**Implementation**: Uses DDD CQRS pattern with IMediator and GetLinkedOAuthAccountsQuery.")
+        .Produces<List<Api.BoundedContexts.Authentication.Application.Queries.OAuth.OAuthAccountDto>>(200)
         .Produces(401);
     }
 

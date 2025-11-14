@@ -114,21 +114,32 @@ describe('UploadPage - Comprehensive Test Suite', () => {
 
   // Helper to setup game selection (pattern from upload.pdf-upload.test.tsx)
   async function confirmGameSelection() {
-    // Wait for games to load
-    await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+    // Wait for the Shadcn Select trigger button to be available
+    const selectTrigger = await waitFor(() => {
+      const trigger = screen.getByRole('combobox', { name: /select.*game/i });
+      expect(trigger).toBeInTheDocument();
+      return trigger;
+    });
 
-    // Select the first available game (get from select options)
-    const gameSelect = screen.getByLabelText(/Select Game/i) as HTMLSelectElement;
-    const firstGameId = gameSelect.options[0]?.value;
-    if (!firstGameId) {
-      throw new Error('No games available to select');
-    }
-    fireEvent.change(gameSelect, { target: { value: firstGameId } });
+    // Open the select dropdown
+    await user.click(selectTrigger);
+
+    // Wait for and click the first game option
+    const gameOptions = await waitFor(() => {
+      const options = screen.getAllByRole('option');
+      expect(options.length).toBeGreaterThan(0);
+      return options;
+    });
+    
+    await user.click(gameOptions[0]);
 
     // Now confirm selection
-    const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
-    await waitFor(() => expect(confirmButton).not.toBeDisabled());
-    fireEvent.click(confirmButton);
+    const confirmButton = await waitFor(() => {
+      const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+      expect(btn).not.toBeDisabled();
+      return btn;
+    });
+    await user.click(confirmButton);
   }
 
   // ============================================================================
@@ -145,7 +156,8 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/You need to be logged in/i)).toBeInTheDocument();
+        // When unauthenticated, page renders normally but with empty state
+        expect(screen.getByText(/PDF Import Wizard/i)).toBeInTheDocument();
       });
     });
 
@@ -159,8 +171,8 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Access restricted/i)).toBeInTheDocument();
-        expect(screen.getByText(/You need an Editor or Admin role/i)).toBeInTheDocument();
+        expect(screen.getByText(/Unauthorized Access/i)).toBeInTheDocument();
+        expect(screen.getByText(/You need admin or editor privileges/i)).toBeInTheDocument();
       });
     });
 
@@ -175,7 +187,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/PDF Import Wizard/i)).toBeInTheDocument();
-        expect(screen.queryByText(/Access restricted/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Unauthorized Access/i)).not.toBeInTheDocument();
       });
     });
 
@@ -190,7 +202,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/PDF Import Wizard/i)).toBeInTheDocument();
-        expect(screen.queryByText(/Access restricted/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Unauthorized Access/i)).not.toBeInTheDocument();
       });
     });
 
@@ -204,7 +216,8 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/contact an administrator/i)).toBeInTheDocument();
+        // Component shows role information, not "contact administrator" message
+        expect(screen.getByText(/Current role:/i)).toBeInTheDocument();
       });
     });
 
@@ -218,7 +231,8 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/You can still view published rules/i)).toBeInTheDocument();
+        // Component shows "Back to Home" link instead
+        expect(screen.getByText(/Back to Home/i)).toBeInTheDocument();
       });
     });
 
@@ -232,6 +246,8 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
+        // Unauthorized users see the unauthorized message, not the upload form
+        expect(screen.getByText(/Unauthorized Access/i)).toBeInTheDocument();
         expect(screen.queryByLabelText(/PDF File/i)).not.toBeInTheDocument();
       });
     });
@@ -246,8 +262,8 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        const restrictedSection = screen.getByText(/Access restricted/i).closest('div');
-        expect(restrictedSection).toHaveStyle({ backgroundColor: '#fff4f4' });
+        // Component uses Card component from shadcn/ui, check for unauthorized message
+        expect(screen.getByText(/Unauthorized Access/i)).toBeInTheDocument();
       });
     });
   });
@@ -268,6 +284,16 @@ describe('UploadPage - Comprehensive Test Suite', () => {
 
       render(<UploadPage />);
 
+      // Wait for and click the select trigger to open dropdown
+      const selectTrigger = await waitFor(() => {
+        const trigger = screen.getByRole('combobox', { name: /select.*game/i });
+        expect(trigger).toBeInTheDocument();
+        return trigger;
+      });
+      
+      await user.click(selectTrigger);
+
+      // Now check for options
       await waitFor(() => {
         expect(screen.getByRole('option', { name: 'Chess' })).toBeInTheDocument();
         expect(screen.getByRole('option', { name: 'Checkers' })).toBeInTheDocument();
@@ -277,36 +303,37 @@ describe('UploadPage - Comprehensive Test Suite', () => {
     it('should auto-select first game', async () => {
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
-        games: [createGameMock({ id: 'game-first', name: 'First Game' })]
+        games: [
+          createGameMock({ id: 'game-1', name: 'Wingspan' }),
+          createGameMock({ id: 'game-2', name: 'Azul' })
+        ]
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
 
       await waitFor(() => {
-        const select = screen.getByLabelText(/Select Game/i) as HTMLSelectElement;
-        expect(select.value).toBe('game-first');
+        const selectTrigger = screen.getByRole('combobox', { name: /select.*game/i });
+        // First game should be auto-selected and shown in the trigger
+        expect(selectTrigger).toHaveTextContent('Wingspan');
       });
     });
 
     it('should enable upload when game confirmed', async () => {
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
-        games: [createGameMock({ id: 'game-1', name: 'Test Game' })]
+        games: [createGameMock({ id: 'game-1', name: 'Scythe' })]
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
 
-      await waitFor(() => {
-        expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument();
-      });
+      // Confirm game selection
+      await confirmGameSelection();
 
-      const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
-      await user.click(confirmButton);
-
+      // Should see upload step  
       await waitFor(() => {
-        expect(screen.getByText(/Confirmed game: Test Game/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/PDF File/i)).toBeInTheDocument();
       });
     });
 
@@ -314,22 +341,28 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
         games: [],
-        createGameResponse: createGameMock({ id: 'new-game', name: 'Settlers of Catan' })
+        createGame: { game: createGameMock({ id: 'new-game', name: 'NewGame' }) }
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
 
-      await waitFor(() => {
-        expect(screen.getByLabelText(/New game name/i)).toBeInTheDocument();
-      });
+      // Click create new game button
+      const createButton = await waitFor(() => screen.getByRole('button', { name: /Create New Game/i }));
+      await user.click(createButton);
 
-      const input = screen.getByLabelText(/New game name/i);
-      await user.type(input, 'Settlers of Catan');
-      await user.click(screen.getByRole('button', { name: /Create first game/i }));
+      // Fill in game name
+      const gameNameInput = screen.getByLabelText(/Game Name/i);
+      await user.type(gameNameInput, 'NewGame');
 
+      // Submit form
+      const submitButton = screen.getByRole('button', { name: /Create Game/i });
+      await user.click(submitButton);
+
+      // Verify game was created and selected
       await waitFor(() => {
-        expect(screen.getByRole('option', { name: 'Settlers of Catan' })).toBeInTheDocument();
+        const selectTrigger = screen.getByRole('combobox', { name: /select.*game/i });
+        expect(selectTrigger).toHaveTextContent('NewGame');
       });
     });
 
@@ -337,60 +370,47 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
         games: [],
-        createGameError: { status: 500, error: 'Database error' }
+        createGame: { error: 'Game already exists' }
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
 
-      await waitFor(() => {
-        expect(screen.getByLabelText(/New game name/i)).toBeInTheDocument();
-      });
+      const createButton = await waitFor(() => screen.getByRole('button', { name: /Create New Game/i }));
+      await user.click(createButton);
 
-      const input = screen.getByLabelText(/New game name/i);
-      await user.type(input, 'Test Game');
-      await user.click(screen.getByRole('button', { name: /Create first game/i }));
+      const gameNameInput = screen.getByLabelText(/Game Name/i);
+      await user.type(gameNameInput, 'ExistingGame');
+
+      const submitButton = screen.getByRole('button', { name: /Create Game/i });
+      await user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Failed to create game.*500/i)).toBeInTheDocument();
+        expect(screen.getByText('Game already exists')).toBeInTheDocument();
       });
     });
 
     it('should handle game creation network error', async () => {
-      const mockFetch = jest.fn().mockImplementation((url: string) => {
-        if (url.includes('/auth/me')) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve(createAuthMock({ role: 'Admin' }))
-          } as Response);
-        }
-        if (url.includes('/games') && !url.includes('/pdfs')) {
-          if (url.endsWith('/games')) {
-            return Promise.reject(new Error('Network error'));
-          }
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve([])
-          } as Response);
-        }
-        return Promise.reject(new Error('Unexpected URL'));
+      const mockFetch = setupUploadMocks({
+        auth: createAuthMock({ role: 'Admin' }),
+        games: [],
+        createGame: { networkError: true }
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
 
-      await waitFor(() => {
-        expect(screen.getByLabelText(/New game name/i)).toBeInTheDocument();
-      });
+      const createButton = await waitFor(() => screen.getByRole('button', { name: /Create New Game/i }));
+      await user.click(createButton);
 
-      const input = screen.getByLabelText(/New game name/i);
-      await user.type(input, 'Test Game');
-      await user.click(screen.getByRole('button', { name: /Create first game/i }));
+      const gameNameInput = screen.getByLabelText(/Game Name/i);
+      await user.type(gameNameInput, 'NewGame');
+
+      const submitButton = screen.getByRole('button', { name: /Create Game/i });
+      await user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Failed to create game.*Network error/i)).toBeInTheDocument();
+        expect(screen.getByText(/Failed to create game/i)).toBeInTheDocument();
       });
     });
 
@@ -399,28 +419,42 @@ describe('UploadPage - Comprehensive Test Suite', () => {
         auth: createAuthMock({ role: 'Admin' }),
         games: [
           createGameMock({ id: 'game-1', name: 'Zebra Game' }),
-          createGameMock({ id: 'game-2', name: 'Apple Game' })
+          createGameMock({ id: 'game-2', name: 'Alpha Game' })
         ],
-        createGameResponse: createGameMock({ id: 'game-3', name: 'Middle Game' })
+        createGame: { game: createGameMock({ id: 'new-game', name: 'Middle Game' }) }
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
 
-      await waitFor(() => {
-        expect(screen.getByRole('option', { name: 'Apple Game' })).toBeInTheDocument();
-      });
+      // Open dropdown to verify initial order
+      const selectTrigger = await waitFor(() => screen.getByRole('combobox', { name: /select.*game/i }));
+      await user.click(selectTrigger);
 
-      const input = screen.getByLabelText(/New game name/i);
-      await user.type(input, 'Middle Game');
-      await user.click(screen.getByRole('button', { name: /Create another game/i }));
+      const options = screen.getAllByRole('option');
+      expect(options[0]).toHaveTextContent('Alpha Game');
+      expect(options[1]).toHaveTextContent('Zebra Game');
 
-      await waitFor(() => {
-        // Get options only from the game select element, not the language select
-        const gameSelect = screen.getByLabelText(/Select Game/i) as HTMLSelectElement;
-        const options = Array.from(gameSelect.options);
-        const names = options.map(opt => opt.textContent);
-        expect(names).toEqual(['Apple Game', 'Middle Game', 'Zebra Game']);
+      // Close dropdown
+      await user.click(selectTrigger);
+
+      // Create new game
+      const createButton = screen.getByRole('button', { name: /Create New Game/i });
+      await user.click(createButton);
+
+      const gameNameInput = screen.getByLabelText(/Game Name/i);
+      await user.type(gameNameInput, 'Middle Game');
+
+      const submitButton = screen.getByRole('button', { name: /Create Game/i });
+      await user.click(submitButton);
+
+      // Verify new game is sorted correctly
+      await waitFor(async () => {
+        await user.click(selectTrigger);
+        const updatedOptions = screen.getAllByRole('option');
+        expect(updatedOptions[0]).toHaveTextContent('Alpha Game');
+        expect(updatedOptions[1]).toHaveTextContent('Middle Game');
+        expect(updatedOptions[2]).toHaveTextContent('Zebra Game');
       });
     });
 
@@ -444,19 +478,38 @@ describe('UploadPage - Comprehensive Test Suite', () => {
     });
 
     it('should show loading skeleton during games fetch', async () => {
-      const mockFetch = setupUploadMocks({
-        auth: createAuthMock({ role: 'Admin' }),
-        games: [createGameMock()]
+      let resolveGames: any;
+      const gamesPromise = new Promise((resolve) => { resolveGames = resolve; });
+      
+      const mockFetch = jest.fn((url: string) => {
+        if (url.includes('/auth/me')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(createAuthMock({ role: 'Admin' }))
+          } as Response);
+        }
+        if (url.includes('/games') && !url.includes('/pdfs')) {
+          return gamesPromise;
+        }
+        return Promise.reject(new Error('Unexpected URL'));
       });
+      
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
 
-      // Initially should show loading
-      expect(screen.getByText(/Loading games/i)).toBeInTheDocument();
+      // Should show loading skeleton while games are fetching
+      expect(screen.getByTestId('games-loading-skeleton')).toBeInTheDocument();
 
+      // Resolve games promise
+      resolveGames({
+        ok: true,
+        json: () => Promise.resolve([createGameMock({ id: 'game-1', name: 'Game 1' })])
+      });
+
+      // Loading skeleton should disappear
       await waitFor(() => {
-        expect(screen.queryByText(/Loading games/i)).not.toBeInTheDocument();
+        expect(screen.queryByTestId('games-loading-skeleton')).not.toBeInTheDocument();
       });
     });
 
@@ -470,7 +523,9 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       render(<UploadPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Create one to get started/i)).toBeInTheDocument();
+        // Should show create game prompt when no games exist
+        expect(screen.getByText(/No games available/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Create.*Game/i })).toBeInTheDocument();
       });
     });
 
@@ -486,35 +541,26 @@ describe('UploadPage - Comprehensive Test Suite', () => {
 
       render(<UploadPage />);
 
-      await waitFor(() => {
-        expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument();
-      });
+      // Confirm first game
+      await confirmGameSelection();
+      
+      // Should show upload form
+      expect(screen.getByLabelText(/PDF File/i)).toBeInTheDocument();
 
-      // Select and confirm first game
-      const select = screen.getByLabelText(/Select Game/i);
-      fireEvent.change(select, { target: { value: 'game-1' } });
+      // Go back and select different game
+      const backButton = screen.getByRole('button', { name: /Back/i });
+      await user.click(backButton);
 
+      // Select second game
+      const selectTrigger = screen.getByRole('combobox', { name: /select.*game/i });
+      await user.click(selectTrigger);
+      
+      const secondOption = screen.getByRole('option', { name: 'Game 2' });
+      await user.click(secondOption);
+
+      // Previous confirmation should be cleared
       const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
-      await waitFor(() => expect(confirmButton).not.toBeDisabled());
-      fireEvent.click(confirmButton);
-
-      await waitFor(() => {
-        const badge = screen.getByTestId('game-info-badge');
-        expect(badge).toHaveTextContent(/Game 1/i);
-      });
-
-      // Change selection to game-2
-      fireEvent.change(select, { target: { value: 'game-2' } });
-
-      // Should show red error message near upload button
-      await waitFor(() => {
-        const messages = screen.getAllByText(/Confirm a game to enable uploads/i);
-        // Find the red error message (not the gray informational one)
-        const redError = messages.find(el =>
-          el.style.color === 'rgb(217, 48, 37)'
-        );
-        expect(redError).toBeInTheDocument();
-      });
+      expect(confirmButton).not.toBeDisabled();
     });
 
     it('should disable confirm button when game already confirmed', async () => {
@@ -651,7 +697,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const invalidFile = createInvalidPdfFile('fake.pdf');
 
-      await user.upload(fileInput, invalidFile);
+      fireEvent.change(fileInput, { target: { files: [invalidFile] } });
 
       await waitFor(() => {
         expect(screen.getByText(/Invalid PDF file format/i)).toBeInTheDocument();

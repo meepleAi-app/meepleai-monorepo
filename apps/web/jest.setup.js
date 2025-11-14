@@ -116,6 +116,38 @@ global.IntersectionObserver = class IntersectionObserver {
   }
 };
 
+// Mock File.slice() for PDF validation tests (Issue #871, #1141)
+// jsdom's File doesn't properly implement slice() which is needed for PDF magic bytes validation
+if (typeof File !== 'undefined' && !File.prototype.slice) {
+  File.prototype.slice = function(start, end) {
+    // Return a Blob-like object that supports arrayBuffer()
+    const content = this.text ? this.text() : Promise.resolve('%PDF-1.4');
+    return {
+      size: Math.max(0, (end || this.size) - (start || 0)),
+      type: this.type,
+      arrayBuffer: () => content.then(text => {
+        const encoder = new TextEncoder();
+        const fullBuffer = encoder.encode(text).buffer;
+        const sliceStart = start || 0;
+        const sliceEnd = Math.min(end || fullBuffer.byteLength, fullBuffer.byteLength);
+        return fullBuffer.slice(sliceStart, sliceEnd);
+      }),
+      text: () => content
+    };
+  };
+}
+
+// Mock Blob.arrayBuffer() for PDF validation tests
+if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
+  Blob.prototype.arrayBuffer = function() {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsArrayBuffer(this);
+    });
+  };
+}
+
 // Setup browser API polyfills for test environment (issue #463)
 // See test-utils/browser-polyfills.ts for implementation details
 import('./src/test-utils/browser-polyfills').then(({ setupBrowserPolyfills }) => {

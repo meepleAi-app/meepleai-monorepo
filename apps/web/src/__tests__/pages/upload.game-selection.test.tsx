@@ -32,6 +32,27 @@ describe('UploadPage - Game Selection', () => {
     jest.useRealTimers();
   });
 
+  // Helper for Shadcn Select interaction
+  async function selectGame(gameId: string) {
+    // Open the select dropdown
+    const selectTrigger = screen.getByRole('combobox', { name: /select.*game/i });
+    await user.click(selectTrigger);
+
+    // Find and click the specific game option
+    const gameOption = screen.getByRole('option', { name: new RegExp(gameId.replace('game-', 'Game '), 'i') });
+    await user.click(gameOption);
+  }
+
+  // Helper to confirm game selection
+  async function confirmGameSelection() {
+    const confirmButton = await waitFor(() => {
+      const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+      expect(btn).not.toBeDisabled();
+      return btn;
+    });
+    await user.click(confirmButton);
+  }
+
   describe('Given user has Select Game options', () => {
     describe('When user selects game but does not confirm', () => {
       it('Then upload button remains disabled', async () => {
@@ -46,7 +67,7 @@ describe('UploadPage - Game Selection', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
         const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
@@ -70,7 +91,7 @@ describe('UploadPage - Game Selection', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
         await user.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
 
@@ -96,15 +117,15 @@ describe('UploadPage - Game Selection', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-        // First game should be auto-selected
-        const gameSelect = screen.getByLabelText(/Select Game/i) as HTMLSelectElement;
-        expect(gameSelect.value).toBe('game-1');
+        // First game should be auto-selected and shown in the combobox text
+        const gameSelect = screen.getByRole('combobox', { name: /select.*game/i });
+        expect(gameSelect).toHaveTextContent('Terraforming Mars');
 
         // Confirm button should be enabled for the selected game
         const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
-        expect(confirmButton).toBeEnabled();
+        expect(confirmButton).not.toBeDisabled();
       });
     });
   });

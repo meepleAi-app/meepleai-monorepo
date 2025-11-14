@@ -33,6 +33,36 @@ describe('UploadPage - Review & Edit', () => {
     jest.useRealTimers();
   });
 
+  // Helper to setup game selection for tests
+  async function confirmGameSelection() {
+    // Wait for the Shadcn Select trigger button to be available
+    const selectTrigger = await waitFor(() => {
+      const trigger = screen.getByRole('combobox', { name: /select.*game/i });
+      expect(trigger).toBeInTheDocument();
+      return trigger;
+    });
+
+    // Open the select dropdown
+    await user.click(selectTrigger);
+
+    // Wait for and click the first game option
+    const gameOptions = await waitFor(() => {
+      const options = screen.getAllByRole('option');
+      expect(options.length).toBeGreaterThan(0);
+      return options;
+    });
+    
+    await user.click(gameOptions[0]);
+
+    // Now confirm selection
+    const confirmButton = await waitFor(() => {
+      const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+      expect(btn).not.toBeDisabled();
+      return btn;
+    });
+    await user.click(confirmButton);
+  }
+
   describe('Given user is in review phase', () => {
     describe('When user edits rule atom text', () => {
       it('Then rule text is updated in UI', async () => {
@@ -55,9 +85,9 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          await confirmGameSelection();
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -107,9 +137,9 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          await confirmGameSelection();
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -157,9 +187,9 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          await confirmGameSelection();
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -216,9 +246,9 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          await confirmGameSelection();
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -268,9 +298,9 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          await confirmGameSelection();
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -319,9 +349,9 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          await confirmGameSelection();
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -359,9 +389,9 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          await confirmGameSelection();
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -404,9 +434,9 @@ describe('UploadPage - Review & Edit', () => {
 
           render(<UploadPage />);
 
-          await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+          await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          await confirmGameSelection();
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
@@ -447,7 +477,7 @@ describe('UploadPage - Review & Edit', () => {
 
         render(<UploadPage />);
 
-        await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
         // At this point, ruleSpec is null, so operations should be no-ops
         // This tests the guard conditions in updateRuleAtom, deleteRuleAtom, addRuleAtom

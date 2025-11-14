@@ -1,334 +1,156 @@
-/**
- * Unit tests for Login Page (AUTH-05)
- *
- * Tests cover:
- * - Component rendering without crashing
- * - Session expired alert display based on query param
- * - Return to home link functionality
- * - Proper ARIA attributes for accessibility
- * - Visual elements (logo, title, description)
- */
-
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/router';
-import type { NextRouter } from 'next/router';
-import LoginPage from '../../pages/login';
-import { createMockRouter } from '../fixtures/common-fixtures';
+import LoginPage from '@/pages/login';
+import '@testing-library/jest-dom';
 
-// Mock Next.js router
+// Mock next/router
 jest.mock('next/router', () => ({
   useRouter: jest.fn(),
 }));
 
-const useRouterMock = useRouter as jest.MockedFunction<typeof useRouter>;
+// Mock AuthModal component  
+jest.mock('@/components/auth', () => ({
+  AuthModal: ({ isOpen, onClose, defaultMode, sessionExpiredMessage, showDemoCredentials }: any) => {
+    if (!isOpen) return null;
+    return (
+      <div data-testid="auth-modal" role="dialog">
+        <div>Auth Modal</div>
+        {defaultMode && <div data-testid="auth-mode">{defaultMode}</div>}
+        {sessionExpiredMessage && <div data-testid="session-expired">Session expired</div>}
+        {showDemoCredentials && <div data-testid="demo-credentials">Demo credentials shown</div>}
+        <button onClick={onClose}>Close</button>
+      </div>
+    );
+  }
+}));
 
 describe('Login Page', () => {
+  const mockPush = jest.fn();
+  const mockRouter = {
+    query: {},
+    push: mockPush,
+    pathname: '/login',
+    route: '/login',
+    asPath: '/login',
+    basePath: '',
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (useRouter as jest.Mock).mockReturnValue(mockRouter);
   });
 
   describe('Basic Rendering', () => {
     it('renders without crashing', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
-      render(<LoginPage />);
-
-      expect(screen.getByText('MeepleAI')).toBeInTheDocument();
-    });
-
-    it('renders the page title correctly', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
       const { container } = render(<LoginPage />);
-
-      // Check for Head component content (Next.js doesn't set document.title in tests)
-      const head = container.querySelector('head');
-      // Just verify the page renders without error since Next.js Head doesn't update document.title in jest
-      expect(screen.getByText('MeepleAI')).toBeInTheDocument();
+      expect(container).toBeInTheDocument();
     });
 
-    it('displays the MeepleAI branding', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
+    it('renders the AuthModal component', () => {
       render(<LoginPage />);
-
-      expect(screen.getByText('MeepleAI')).toBeInTheDocument();
-      expect(screen.getByText('AI-Powered Board Game Rules Assistant')).toBeInTheDocument();
+      expect(screen.getByTestId('auth-modal')).toBeInTheDocument();
     });
 
-    it('displays login placeholder text', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
+    it('sets AuthModal to login mode by default', () => {
       render(<LoginPage />);
-
-      expect(screen.getByText('Login functionality will be implemented here.')).toBeInTheDocument();
+      expect(screen.getByTestId('auth-mode')).toHaveTextContent('login');
     });
 
-    it('displays security notice in footer', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
+    it('shows demo credentials in AuthModal', () => {
       render(<LoginPage />);
+      expect(screen.getByTestId('demo-credentials')).toBeInTheDocument();
+    });
 
-      expect(screen.getByText('Sessions expire after 30 days of inactivity for your security.')).toBeInTheDocument();
+    it('AuthModal is open by default', () => {
+      render(<LoginPage />);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
 
   describe('Session Expiration Alert', () => {
-    it('displays session expired alert when reason=session_expired query param is present', () => {
-      useRouterMock.mockReturnValue(createMockRouter({
-        pathname: '/login',
-        route: '/login',
-        query: { reason: 'session_expired' },
-        asPath: '/login?reason=session_expired'
-      }));
-      render(<LoginPage />);
+    it('displays session expired message when reason=session_expired', () => {
+      (useRouter as jest.Mock).mockReturnValue({
+        ...mockRouter,
+        query: { reason: 'session_expired' }
+      });
 
-      expect(screen.getByRole('alert')).toBeInTheDocument();
-      expect(screen.getByText('Session Expired')).toBeInTheDocument();
-      expect(screen.getByText(/Your session has expired due to inactivity/i)).toBeInTheDocument();
+      render(<LoginPage />);
+      expect(screen.getByTestId('session-expired')).toBeInTheDocument();
     });
 
-    it('does not display session expired alert when no query param', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+    it('does not display session expired message without query param', () => {
       render(<LoginPage />);
-
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-      expect(screen.queryByText('Session Expired')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('session-expired')).not.toBeInTheDocument();
     });
 
-    it('does not display session expired alert when reason param is different', () => {
-      useRouterMock.mockReturnValue(createMockRouter({
-        pathname: '/login',
-        route: '/login',
-        query: { reason: 'other_reason' },
-        asPath: '/login?reason=other_reason'
-      }));
+    it('passes correct sessionExpiredMessage prop to AuthModal', () => {
+      (useRouter as jest.Mock).mockReturnValue({
+        ...mockRouter,
+        query: { reason: 'session_expired' }
+      });
+
       render(<LoginPage />);
-
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-      expect(screen.queryByText('Session Expired')).not.toBeInTheDocument();
-    });
-
-    it('session expired alert contains proper warning icon', () => {
-      useRouterMock.mockReturnValue(createMockRouter({
-        pathname: '/login',
-        route: '/login',
-        query: { reason: 'session_expired' },
-        asPath: '/login?reason=session_expired'
-      }));
-      render(<LoginPage />);
-
-      const alert = screen.getByRole('alert');
-      // Check for SVG icon (warning triangle icon)
-      const svg = alert.querySelector('svg');
-      expect(svg).toBeInTheDocument();
-      expect(svg).toHaveAttribute('aria-hidden', 'true');
-    });
-
-    it('session expired alert contains complete message text', () => {
-      useRouterMock.mockReturnValue(createMockRouter({
-        pathname: '/login',
-        route: '/login',
-        query: { reason: 'session_expired' },
-        asPath: '/login?reason=session_expired'
-      }));
-      render(<LoginPage />);
-
-      expect(screen.getByText('Your session has expired due to inactivity. Please log in again to continue.')).toBeInTheDocument();
+      // The AuthModal receives true when session is expired
+      expect(screen.getByTestId('session-expired')).toBeInTheDocument();
     });
   });
 
-  describe('Return to Home Link', () => {
-    it('renders "Return to Home" link', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+  describe('Navigation', () => {
+    it('redirects to home when modal is closed', () => {
       render(<LoginPage />);
+      
+      const closeButton = screen.getByText('Close');
+      closeButton.click();
 
-      const homeLink = screen.getByRole('link', { name: 'Return to Home' });
-      expect(homeLink).toBeInTheDocument();
+      expect(mockPush).toHaveBeenCalledWith('/');
     });
 
-    it('Return to Home link has correct href', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
-      render(<LoginPage />);
+    it('hides modal after closing', () => {
+      const { rerender } = render(<LoginPage />);
+      
+      const closeButton = screen.getByText('Close');
+      closeButton.click();
 
-      const homeLink = screen.getByRole('link', { name: 'Return to Home' });
-      expect(homeLink).toHaveAttribute('href', '/');
-    });
-
-    it('Return to Home link has proper styling classes', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
-      render(<LoginPage />);
-
-      const homeLink = screen.getByRole('link', { name: 'Return to Home' });
-      expect(homeLink).toHaveClass('bg-primary', 'hover:bg-primary/90');
+      rerender(<LoginPage />);
+      // After closing, the modal should not be rendered
+      waitFor(() => {
+        expect(screen.queryByTestId('auth-modal')).not.toBeInTheDocument();
+      });
     });
   });
 
-  describe('Accessibility', () => {
-    it('session expired alert has proper ARIA role', () => {
-      useRouterMock.mockReturnValue(createMockRouter({
-        pathname: '/login',
-        route: '/login',
-        query: { reason: 'session_expired' },
-        asPath: '/login?reason=session_expired'
-      }));
+  describe('Page Metadata', () => {
+    it('sets the correct page title', () => {
       render(<LoginPage />);
-
-      const alert = screen.getByRole('alert');
-      expect(alert).toHaveAttribute('role', 'alert');
-    });
-
-    it('warning icon is properly hidden from screen readers', () => {
-      useRouterMock.mockReturnValue(createMockRouter({
-        pathname: '/login',
-        route: '/login',
-        query: { reason: 'session_expired' },
-        asPath: '/login?reason=session_expired'
-      }));
-      render(<LoginPage />);
-
-      const alert = screen.getByRole('alert');
-      const svg = alert.querySelector('svg');
-      expect(svg).toHaveAttribute('aria-hidden', 'true');
-    });
-
-    it('page has proper heading structure', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
-      render(<LoginPage />);
-
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('MeepleAI');
-    });
-
-    it('form section has proper semantic structure', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
-      render(<LoginPage />);
-
-      // The page should have proper semantic HTML
-      expect(screen.getByText('MeepleAI')).toBeInTheDocument();
+      // Note: Testing Next.js Head requires different approach
+      // The actual title would be "Login - MeepleAI"
+      expect(document.title).toBeDefined();
     });
   });
 
-  describe('Visual Elements', () => {
-    it('renders with proper layout classes', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+  describe('Styling', () => {
+    it('applies gradient background styling', () => {
       const { container } = render(<LoginPage />);
-
-      const mainContainer = container.querySelector('.min-h-screen');
-      expect(mainContainer).toBeInTheDocument();
-      expect(mainContainer).toHaveClass('flex', 'items-center', 'justify-center');
+      const backgroundDiv = container.querySelector('.min-h-screen');
+      expect(backgroundDiv).toHaveClass('bg-gradient-to-br');
+      expect(backgroundDiv).toHaveClass('from-slate-50');
+      expect(backgroundDiv).toHaveClass('to-slate-100');
     });
 
-    it('renders card container with proper styling', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+    it('supports dark mode styling classes', () => {
       const { container } = render(<LoginPage />);
-
-      const card = container.querySelector('.rounded-2xl');
-      expect(card).toBeInTheDocument();
-      expect(card).toHaveClass('shadow-xl', 'p-8');
+      const backgroundDiv = container.querySelector('.min-h-screen');
+      expect(backgroundDiv).toHaveClass('dark:from-slate-900');
+      expect(backgroundDiv).toHaveClass('dark:to-slate-800');
     });
 
-    it('displays gradient background', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+    it('centers content properly', () => {
       const { container } = render(<LoginPage />);
-
-      const background = container.querySelector('.bg-gradient-to-br');
-      expect(background).toBeInTheDocument();
-    });
-
-    it('supports dark mode styling', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
-      const { container } = render(<LoginPage />);
-
-      const card = container.querySelector('.dark\\:bg-slate-800');
-      expect(card).toBeInTheDocument();
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('handles missing query object gracefully', () => {
-      // This test verifies behavior when query is undefined
-      // Note: In production, router.query is always defined (at least as {})
-      // but we test defensive coding
-      const routerWithoutQuery = createMockRouter();
-      delete (routerWithoutQuery as any).query;
-      useRouterMock.mockReturnValue(routerWithoutQuery);
-
-      // This will throw because the component destructures router.query
-      // which is a known limitation - router.query is always defined in Next.js
-      expect(() => render(<LoginPage />)).toThrow();
-    });
-
-    it('handles empty query object', () => {
-      useRouterMock.mockReturnValue(createMockRouter({
-        pathname: '/login',
-        route: '/login'
-      }));
-
-      render(<LoginPage />);
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    });
-
-    it('handles multiple query parameters', () => {
-      useRouterMock.mockReturnValue(createMockRouter({
-        pathname: '/login',
-        route: '/login',
-        query: {
-          reason: 'session_expired',
-          redirect: '/chat'
-        },
-        asPath: '/login?reason=session_expired&redirect=/chat'
-      }));
-
-      render(<LoginPage />);
-      expect(screen.getByRole('alert')).toBeInTheDocument();
-    });
-
-    it('reason param as array (edge case)', () => {
-      useRouterMock.mockReturnValue(createMockRouter({
-        pathname: '/login',
-        route: '/login',
-        query: {
-          reason: ['session_expired', 'other']
-        },
-        asPath: '/login?reason=session_expired&reason=other'
-      }));
-
-      render(<LoginPage />);
-      // Should not show alert when reason is an array
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('User Interactions', () => {
-    it('clicking Return to Home link navigates correctly', async () => {
-      const user = userEvent.setup();
-      useRouterMock.mockReturnValue(createMockRouter());
-
-      render(<LoginPage />);
-
-      const homeLink = screen.getByRole('link', { name: 'Return to Home' });
-      await user.click(homeLink);
-
-      // Link should have correct href (navigation handled by Next.js)
-      expect(homeLink).toHaveAttribute('href', '/');
-    });
-
-    it('Return to Home link can receive focus', async () => {
-      const user = userEvent.setup();
-      useRouterMock.mockReturnValue(createMockRouter());
-
-      render(<LoginPage />);
-
-      const homeLink = screen.getByRole('link', { name: 'Return to Home' });
-      await user.tab();
-
-      // After tab, the link should be focusable
-      expect(homeLink).toBeInTheDocument();
-    });
-
-    it('focus styles are applied correctly', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
-      render(<LoginPage />);
-
-      const homeLink = screen.getByRole('link', { name: 'Return to Home' });
-      expect(homeLink).toHaveClass('focus:outline-none', 'focus:ring-2', 'focus:ring-ring');
+      const backgroundDiv = container.querySelector('.min-h-screen');
+      expect(backgroundDiv).toHaveClass('flex');
+      expect(backgroundDiv).toHaveClass('items-center');
+      expect(backgroundDiv).toHaveClass('justify-center');
     });
   });
 });

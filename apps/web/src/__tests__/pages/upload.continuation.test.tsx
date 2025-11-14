@@ -82,26 +82,47 @@ describe('UploadPage - Continuation Tests', () => {
     jest.useRealTimers();
   });
 
-  // Helper to setup game selection for tests WITHOUT fake timers
+  // Helper to setup game selection  
   async function confirmGameSelection() {
-    // Wait for games to load
-    await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
+    // Wait for the Shadcn Select trigger button to be available
+    const selectTrigger = await waitFor(() => {
+      const trigger = screen.getByRole('combobox', { name: /select.*game/i });
+      expect(trigger).toBeInTheDocument();
+      return trigger;
+    });
 
-    // Select a game FIRST before confirming
-    const gameSelect = screen.getByLabelText(/Select Game/i);
-    fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+    // Open the select dropdown
+    await user.click(selectTrigger);
+
+    // Wait for and click the first game option
+    const gameOptions = await waitFor(() => {
+      const options = screen.getAllByRole('option');
+      expect(options.length).toBeGreaterThan(0);
+      return options;
+    });
+    
+    await user.click(gameOptions[0]);
 
     // Now confirm selection
-    const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
-    await waitFor(() => expect(confirmButton).not.toBeDisabled());
-    fireEvent.click(confirmButton);
+    const confirmButton = await waitFor(() => {
+      const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+      expect(btn).not.toBeDisabled();
+      return btn;
+    });
+    await user.click(confirmButton);
   }
 
   // Helper for tests WITH fake timers (no waitFor for button state)
   function confirmGameSelectionSync() {
     // Games should already be loaded before calling this
-    const gameSelect = screen.getByLabelText(/Select Game/i);
-    fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+    const selectTrigger = screen.getByRole('combobox', { name: /select.*game/i });
+    
+    // Open dropdown synchronously
+    fireEvent.click(selectTrigger);
+    
+    // Click first option
+    const gameOptions = screen.getAllByRole('option');
+    fireEvent.click(gameOptions[0]);
 
     // Click confirm immediately (button should be enabled after selection)
     const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });

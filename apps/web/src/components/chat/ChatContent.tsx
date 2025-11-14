@@ -48,7 +48,7 @@ export function ChatContent() {
           <div>
             <h1 className="m-0 text-xl">
               {activeChatId
-                ? activeChat?.agentName ?? 'Chat'
+                ? activeChat?.title ?? 'Chat'
                 : 'Seleziona o crea una chat'}
             </h1>
             <p className="mt-1 mb-0 text-[#64748b] text-[13px]">

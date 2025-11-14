@@ -6,17 +6,17 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatHistoryItem } from '@/components/chat/ChatHistoryItem';
-import { Chat } from '@/types';
+import { ChatThread } from '@/types';
 
 describe('ChatHistoryItem', () => {
-  const mockChat: Chat = {
+  const mockChat: ChatThread = {
     id: 'chat-1',
     gameId: 'game-1',
-    gameName: 'Chess',
-    agentId: 'agent-1',
-    agentName: 'Chess Expert',
-    startedAt: '2025-01-10T10:00:00Z',
-    lastMessageAt: '2025-01-10T10:05:00Z'
+    title: 'Chess Expert',
+    createdAt: '2025-01-10T10:00:00Z',
+    lastMessageAt: '2025-01-10T10:05:00Z',
+    messageCount: 5,
+    messages: []
   };
 
   const defaultProps = {
@@ -65,7 +65,7 @@ describe('ChatHistoryItem', () => {
 
     it('renders delete button with accessible label', () => {
       render(<ChatHistoryItem {...defaultProps} />);
-      expect(screen.getByLabelText('Delete chat with Chess Expert')).toBeInTheDocument();
+      expect(screen.getByLabelText('Delete chat Chess Expert')).toBeInTheDocument();
     });
   });
 

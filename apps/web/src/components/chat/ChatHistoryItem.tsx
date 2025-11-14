@@ -6,20 +6,20 @@
  */
 
 import React from 'react';
-import { Chat } from '@/types';
+import { ChatThread } from '@/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface ChatHistoryItemProps {
-  chat: Chat;
+  chat: ChatThread;
   isActive: boolean;
   onSelect: () => void;
   onDelete: () => void;
 }
 
-function formatChatPreview(chat: Chat): string {
-  const date = new Date(chat.lastMessageAt ?? chat.startedAt);
-  return `${chat.agentName} - ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+function formatChatPreview(chat: ChatThread): string {
+  const date = new Date(chat.lastMessageAt ?? chat.createdAt);
+  return `${chat.title ?? 'Chat'} - ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
 }
 
 export function ChatHistoryItem({ chat, isActive, onSelect, onDelete }: ChatHistoryItemProps) {
@@ -42,7 +42,7 @@ export function ChatHistoryItem({ chat, isActive, onSelect, onDelete }: ChatHist
       }}
       aria-current={isActive ? 'true' : undefined}
     >
-      <div className="font-medium mb-1">{chat.agentName}</div>
+      <div className="font-medium mb-1">{chat.title ?? 'Chat'}</div>
       <div className="text-xs text-slate-500">{formatChatPreview(chat)}</div>
       <Button
         variant="destructive"
@@ -52,7 +52,7 @@ export function ChatHistoryItem({ chat, isActive, onSelect, onDelete }: ChatHist
           e.stopPropagation();
           onDelete();
         }}
-        aria-label={`Delete chat with ${chat.agentName}`}
+        aria-label={`Delete chat ${chat.title ?? ''}`}
         title="Elimina chat"
       >
         🗑️

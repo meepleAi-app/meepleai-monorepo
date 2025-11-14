@@ -43,10 +43,10 @@ namespace Api.Migrations
 
                     -- Only proceed if there are orphaned threads
                     IF orphaned_count > 0 THEN
-                        -- Find first admin user
+                        -- Find first admin user (case-insensitive role check)
                         SELECT ""Id"" INTO admin_id
                         FROM ""users""
-                        WHERE ""Role"" = 'Admin'
+                        WHERE LOWER(""Role"") = 'admin'
                         ORDER BY ""CreatedAt""
                         LIMIT 1;
 

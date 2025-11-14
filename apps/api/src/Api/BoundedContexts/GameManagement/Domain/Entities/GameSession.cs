@@ -133,7 +133,7 @@ public sealed class GameSession : AggregateRoot<Guid>
 
     /// <summary>
     /// Adds a player to the session.
-    /// Can only add players when session is in Setup or InProgress status.
+    /// Can only add players when session is not finished (Setup, InProgress, or Paused).
     /// </summary>
     public void AddPlayer(SessionPlayer player)
     {

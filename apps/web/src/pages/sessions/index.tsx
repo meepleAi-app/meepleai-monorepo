@@ -1,0 +1,398 @@
+/**
+ * SPRINT-4: Active Sessions Dashboard (Issue #1134)
+ *
+ * Displays all active game sessions with real-time status updates.
+ * Features:
+ * - List of active sessions with game info
+ * - Status indicators (InProgress, Paused)
+ * - Action buttons: Pause/Resume, End Session
+ * - Filter by game
+ * - Pagination (20 per page)
+ * - Empty state handling
+ * - Loading and error states
+ * - WCAG 2.1 AA accessibility compliance
+ */
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { api, GameSessionDto, Game, PaginatedSessionsResponse } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+/**
+ * Session status badge component
+ */
+function SessionStatusBadge({ status }: { status: string }) {
+  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    InProgress: 'default',
+    Paused: 'secondary',
+    Setup: 'outline'
+  };
+
+  return (
+    <Badge variant={variants[status] || 'outline'} aria-label={`Session status: ${status}`}>
+      {status}
+    </Badge>
+  );
+}
+
+/**
+ * Session action buttons component
+ */
+function SessionActions({
+  session,
+  onPause,
+  onResume,
+  onEnd,
+  isLoading
+}: {
+  session: GameSessionDto;
+  onPause: (id: string) => void;
+  onResume: (id: string) => void;
+  onEnd: (id: string) => void;
+  isLoading: boolean;
+}) {
+  const canPause = session.status === 'InProgress';
+  const canResume = session.status === 'Paused';
+  const canEnd = session.status === 'InProgress' || session.status === 'Paused';
+
+  return (
+    <div className="flex gap-2" role="group" aria-label="Session actions">
+      {canPause && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onPause(session.id)}
+          disabled={isLoading}
+          aria-label={`Pause session for ${session.players?.[0]?.playerName || 'game'}`}
+        >
+          Pause
+        </Button>
+      )}
+      {canResume && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onResume(session.id)}
+          disabled={isLoading}
+          aria-label={`Resume session for ${session.players?.[0]?.playerName || 'game'}`}
+        >
+          Resume
+        </Button>
+      )}
+      {canEnd && (
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={() => onEnd(session.id)}
+          disabled={isLoading}
+          aria-label={`End session for ${session.players?.[0]?.playerName || 'game'}`}
+        >
+          End Session
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Active Sessions Dashboard Page
+ */
+export default function ActiveSessionsPage() {
+  const router = useRouter();
+  const [sessions, setSessions] = useState<GameSessionDto[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedGame, setSelectedGame] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 20;
+
+  /**
+   * Fetch active sessions from API
+   */
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const offset = (currentPage - 1) * pageSize;
+      const response: PaginatedSessionsResponse = await api.sessions.getActive(pageSize, offset);
+
+      setSessions(response.sessions || []);
+      setTotalPages(Math.ceil((response.total || 0) / pageSize));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load active sessions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Fetch games for filter dropdown
+   */
+  const fetchGames = async () => {
+    try {
+      const response = await api.games.getAll();
+      setGames(response.games || []);
+    } catch (err) {
+      console.error('Failed to load games:', err);
+    }
+  };
+
+  /**
+   * Initialize component
+   */
+  useEffect(() => {
+    fetchSessions();
+    fetchGames();
+  }, [currentPage]);
+
+  /**
+   * Handle pause session action
+   */
+  const handlePause = async (sessionId: string) => {
+    try {
+      setActionLoading(true);
+      await api.sessions.pause(sessionId);
+      await fetchSessions(); // Refresh list
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to pause session');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /**
+   * Handle resume session action
+   */
+  const handleResume = async (sessionId: string) => {
+    try {
+      setActionLoading(true);
+      await api.sessions.resume(sessionId);
+      await fetchSessions(); // Refresh list
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resume session');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /**
+   * Handle end session action
+   */
+  const handleEnd = async (sessionId: string) => {
+    if (!confirm('Are you sure you want to end this session? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await api.sessions.end(sessionId);
+      await fetchSessions(); // Refresh list
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to end session');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /**
+   * Navigate to session details
+   */
+  const viewSession = (sessionId: string) => {
+    router.push(`/sessions/${sessionId}`);
+  };
+
+  /**
+   * Filter sessions by selected game
+   */
+  const filteredSessions = selectedGame === 'all'
+    ? sessions
+    : sessions.filter(s => s.gameId === selectedGame);
+
+  /**
+   * Format duration for display
+   */
+  const formatDuration = (minutes: number): string => {
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  };
+
+  /**
+   * Format date for display
+   */
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Game Sessions</CardTitle>
+          <CardDescription>
+            Manage your currently active and paused game sessions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Filters */}
+          <div className="mb-6 flex gap-4 items-center">
+            <label htmlFor="game-filter" className="text-sm font-medium">
+              Filter by Game:
+            </label>
+            <select
+              id="game-filter"
+              value={selectedGame}
+              onChange={(e) => setSelectedGame(e.target.value)}
+              className="border rounded px-3 py-2"
+              aria-label="Filter sessions by game"
+            >
+              <option value="all">All Games</option>
+              {games.map(game => (
+                <option key={game.id} value={game.id}>
+                  {game.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Error Alert */}
+          {error && (
+            <Alert variant="destructive" className="mb-4" role="alert">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="space-y-4" role="status" aria-live="polite" aria-label="Loading sessions">
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && filteredSessions.length === 0 && (
+            <div className="text-center py-12" role="status">
+              <p className="text-muted-foreground text-lg mb-4">
+                No active sessions found
+              </p>
+              <Button onClick={() => router.push('/games')} aria-label="Go to games library to start a session">
+                Start a New Session
+              </Button>
+            </div>
+          )}
+
+          {/* Sessions Table */}
+          {!loading && filteredSessions.length > 0 && (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Game</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Players</TableHead>
+                    <TableHead>Started</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSessions.map(session => (
+                    <TableRow
+                      key={session.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => viewSession(session.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          viewSession(session.id);
+                        }
+                      }}
+                      aria-label={`View session details for ${session.players?.[0]?.playerName || 'game'}`}
+                    >
+                      <TableCell className="font-medium">
+                        {games.find(g => g.id === session.gameId)?.title || 'Unknown Game'}
+                      </TableCell>
+                      <TableCell>
+                        <SessionStatusBadge status={session.status} />
+                      </TableCell>
+                      <TableCell>
+                        {session.playerCount} player{session.playerCount !== 1 ? 's' : ''}
+                      </TableCell>
+                      <TableCell>{formatDate(session.startedAt)}</TableCell>
+                      <TableCell>{formatDuration(session.durationMinutes)}</TableCell>
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <SessionActions
+                          session={session}
+                          onPause={handlePause}
+                          onResume={handleResume}
+                          onEnd={handleEnd}
+                          isLoading={actionLoading}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex justify-center gap-2" role="navigation" aria-label="Pagination">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    aria-label="Go to previous page"
+                  >
+                    Previous
+                  </Button>
+                  <span className="px-4 py-2 text-sm" aria-current="page">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    aria-label="Go to next page"
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

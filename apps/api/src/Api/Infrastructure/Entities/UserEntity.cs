@@ -21,4 +21,5 @@ public class UserEntity
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();
+    public ICollection<OAuthAccountEntity> OAuthAccounts { get; set; } = new List<OAuthAccountEntity>();
 }

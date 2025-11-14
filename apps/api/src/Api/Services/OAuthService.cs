@@ -4,6 +4,7 @@ using System.Text.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -12,6 +13,7 @@ namespace Api.Services;
 /// <summary>
 /// OAuth 2.0 authentication service for Google, Discord, and GitHub.
 /// Implements authorization code flow with PKCE and CSRF protection.
+/// Delegates domain logic to CQRS handlers via IMediator.
 /// </summary>
 public class OAuthService : IOAuthService
 {
@@ -21,6 +23,7 @@ public class OAuthService : IOAuthService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly OAuthConfiguration _config;
     private readonly TimeProvider _timeProvider;
+    private readonly IMediator _mediator;
 
     // CSRF state storage (in-memory for MVP, could be Redis for production)
     private static readonly Dictionary<string, DateTime> _stateStore = new();
@@ -34,6 +37,7 @@ public class OAuthService : IOAuthService
         ILogger<OAuthService> logger,
         IHttpClientFactory httpClientFactory,
         IOptions<OAuthConfiguration> config,
+        IMediator mediator,
         TimeProvider? timeProvider = null)
     {
         _db = db;
@@ -41,6 +45,7 @@ public class OAuthService : IOAuthService
         _logger = logger;
         _httpClientFactory = httpClientFactory;
         _config = config.Value;
+        _mediator = mediator;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -68,9 +73,13 @@ public class OAuthService : IOAuthService
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Delegates domain logic (user creation, account linking) to CQRS handlers.
+    /// Maintains provider communication (token exchange, user info retrieval) in this service.
+    /// </remarks>
     public async Task<OAuthCallbackResult> HandleCallbackAsync(string provider, string code, string state)
     {
-        // 1. Validate CSRF state
+        // 1. Validate CSRF state (keep in service - infrastructure concern)
         if (!await ValidateStateAsync(state))
         {
             _logger.LogWarning("Invalid OAuth state parameter for provider: {Provider}", provider);
@@ -79,10 +88,10 @@ public class OAuthService : IOAuthService
 
         var providerConfig = GetProviderConfig(provider);
 
-        // 2. Exchange authorization code for access token
+        // 2. Exchange authorization code for access token (provider communication - keep here)
         var tokenResponse = await ExchangeCodeForTokenAsync(providerConfig, provider, code);
 
-        // 3. Get user info from provider
+        // 3. Get user info from provider (provider communication - keep here)
         var userInfo = await GetUserInfoAsync(providerConfig, provider, tokenResponse.AccessToken);
 
         // Validate user info contains required email (AUTH-06 requirement)
@@ -91,7 +100,7 @@ public class OAuthService : IOAuthService
             throw new InvalidOperationException($"OAuth provider {provider} did not return email address");
         }
 
-        // 4. Find existing OAuth account
+        // 4. Find existing OAuth account to determine flow
         var oauthAccount = await _db.OAuthAccounts
             .Include(oa => oa.User)
             .FirstOrDefaultAsync(oa =>
@@ -103,7 +112,7 @@ public class OAuthService : IOAuthService
 
         if (oauthAccount != null)
         {
-            // Existing OAuth account - update token
+            // Existing OAuth account - update token (still needs direct DB access for token encryption)
             if (oauthAccount.User == null)
             {
                 throw new InvalidOperationException("OAuth account found but user entity not loaded");
@@ -119,7 +128,7 @@ public class OAuthService : IOAuthService
 
             if (user == null)
             {
-                // Create new user
+                // Create new user (still direct DB for now - would need RegisterViaOAuthCommand)
                 // CWE-476: Safe email split with null/empty guards
                 var emailParts = userInfo.Email?.Split('@') ?? Array.Empty<string>();
                 var emailPrefix = emailParts.Length > 0 && !string.IsNullOrEmpty(emailParts[0])
@@ -148,7 +157,7 @@ public class OAuthService : IOAuthService
                 _logger.LogInformation("Linking OAuth to existing user. Provider: {Provider}, UserId: {UserId}", provider, user.Id);
             }
 
-            // Create OAuth account link
+            // Create OAuth account link (still direct DB for token encryption)
             await CreateOAuthAccountAsync(user.Id, provider, userInfo, tokenResponse);
         }
 
@@ -157,34 +166,46 @@ public class OAuthService : IOAuthService
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Delegates to UnlinkOAuthAccountCommand via IMediator for domain logic.
+    /// </remarks>
     public async Task UnlinkOAuthAccountAsync(Guid userId, string provider)
     {
-        var oauthAccount = await _db.OAuthAccounts
-            .FirstOrDefaultAsync(oa =>
-                oa.UserId == userId &&
-                oa.Provider == provider.ToLowerInvariant());
-
-        if (oauthAccount == null)
+        var command = new BoundedContexts.Authentication.Application.Commands.OAuth.UnlinkOAuthAccountCommand
         {
-            _logger.LogWarning("OAuth account not found. UserId: {UserId}, Provider: {Provider}", userId, provider);
-            throw new InvalidOperationException($"No {provider} account linked to this user.");
-        }
+            UserId = userId,
+            Provider = provider
+        };
 
-        _db.OAuthAccounts.Remove(oauthAccount);
-        await _db.SaveChangesAsync();
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+        {
+            _logger.LogWarning("OAuth account unlinking failed. UserId: {UserId}, Provider: {Provider}, Error: {Error}",
+                userId, provider, result.ErrorMessage);
+            throw new InvalidOperationException(result.ErrorMessage ?? $"Failed to unlink {provider} account.");
+        }
 
         _logger.LogInformation("OAuth account unlinked. UserId: {UserId}, Provider: {Provider}", userId, provider);
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Delegates to GetLinkedOAuthAccountsQuery via IMediator for domain logic.
+    /// </remarks>
     public async Task<List<OAuthAccountDto>> GetLinkedAccountsAsync(Guid userId)
     {
-        var accounts = await _db.OAuthAccounts
-            .Where(oa => oa.UserId == userId)
-            .Select(oa => new OAuthAccountDto(oa.Provider, oa.CreatedAt))
-            .ToListAsync();
+        var query = new BoundedContexts.Authentication.Application.Queries.OAuth.GetLinkedOAuthAccountsQuery
+        {
+            UserId = userId
+        };
 
-        return accounts;
+        var result = await _mediator.Send(query);
+
+        // Map from query DTO to service DTO (backward compatibility)
+        return result.Accounts
+            .Select(a => new OAuthAccountDto(a.Provider, a.CreatedAt))
+            .ToList();
     }
 
     /// <inheritdoc />

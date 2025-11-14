@@ -112,7 +112,7 @@ describe('UploadPage - Edge Cases', () => {
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
           fireEvent.change(fileInput, { target: { files: [file] } });
 
-          const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+          const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
           await waitFor(() => expect(uploadButton).not.toBeDisabled());
           fireEvent.click(uploadButton);
 

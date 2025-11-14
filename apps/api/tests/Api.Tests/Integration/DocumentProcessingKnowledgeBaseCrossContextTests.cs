@@ -67,6 +67,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
+        services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         _serviceProvider = services.BuildServiceProvider();
@@ -282,9 +283,16 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             language: "en",
             totalChunks: 12
         );
-        vectorDoc.UpdateMetadata("{\"page\": 8, \"source\": \"pandemic-rules.pdf\", \"topic\": \"outbreak\"}");
         await vectorRepository.AddAsync(vectorDoc, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
+
+        // Clear tracker to avoid conflicts
+        _dbContext.ChangeTracker.Clear();
+
+        // Reload and update metadata
+        var loadedVectorDoc = await vectorRepository.GetByIdAsync(vectorDoc.Id, TestCancellationToken);
+        loadedVectorDoc!.UpdateMetadata("{\"page\": 8, \"source\": \"pandemic-rules.pdf\", \"topic\": \"outbreak\"}");
+        await vectorRepository.UpdateAsync(loadedVectorDoc, TestCancellationToken);
 
         // Act - Create chat thread using RAG context
         var chatThread = new ChatThread(

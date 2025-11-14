@@ -71,6 +71,11 @@ export interface ChatThreadMessage {
   content: string;
   role: string;
   timestamp: string;
+  // Optional metadata fields for ChatProvider compatibility (SPRINT-3 #858)
+  backendMessageId?: string;
+  endpoint?: string;
+  gameId?: string;
+  feedback?: 'positive' | 'negative' | null;
 }
 
 /**

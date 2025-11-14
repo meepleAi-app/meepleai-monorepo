@@ -125,6 +125,31 @@ export interface PaginatedGamesResponse {
   totalPages: number;
 }
 
+// SPRINT-4: Game Session types (Issue #863)
+export interface SessionPlayerDto {
+  playerName: string;
+  playerOrder: number;
+  color: string | null;
+}
+
+export interface GameSessionDto {
+  id: string;
+  gameId: string;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
+  playerCount: number;
+  players: SessionPlayerDto[];
+  winnerName: string | null;
+  notes: string | null;
+  durationMinutes: number;
+}
+
+export interface StartSessionRequest {
+  gameId: string;
+  players: SessionPlayerDto[];
+}
+
 // SPRINT-1: Settings Pages types (Issue #848)
 export interface UserProfile {
   id: string;
@@ -244,6 +269,11 @@ export interface ChatThreadMessageDto {
   content: string;
   role: string;
   timestamp: string;
+  // Optional metadata fields for ChatProvider compatibility (SPRINT-3 #858)
+  backendMessageId?: string;
+  endpoint?: string;
+  gameId?: string;
+  feedback?: 'positive' | 'negative' | null;
 }
 
 export interface CreateChatThreadRequest {
@@ -1084,6 +1114,26 @@ export const api = {
      */
     async getById(id: string): Promise<Game | null> {
       return api.get<Game>(`/api/v1/games/${id}`);
+    }
+  },
+
+  // SPRINT-4: Game Sessions API (Issue #863)
+  sessions: {
+    /**
+     * Start a new game session
+     * @param request Session start request with gameId and players
+     * @returns Created session details
+     */
+    async start(request: StartSessionRequest): Promise<GameSessionDto> {
+      return api.post<GameSessionDto>('/api/v1/sessions', request);
+    },
+
+    /**
+     * Get session by ID
+     * @param id Session ID
+     */
+    async getById(id: string): Promise<GameSessionDto | null> {
+      return api.get<GameSessionDto>(`/api/v1/sessions/${id}`);
     }
   }
 };

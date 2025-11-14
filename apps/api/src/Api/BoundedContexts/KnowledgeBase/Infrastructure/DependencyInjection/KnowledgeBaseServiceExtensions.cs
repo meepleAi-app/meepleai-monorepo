@@ -20,6 +20,7 @@ public static class KnowledgeBaseServiceExtensions
         services.AddSingleton<VectorSearchDomainService>();
         services.AddSingleton<RrfFusionDomainService>();
         services.AddSingleton<QualityTrackingDomainService>();
+        services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
 
         // ISSUE-970: BGAI-028 - Confidence Validation (threshold >= 0.70)
         services.AddSingleton<IConfidenceValidationService, ConfidenceValidationService>();

@@ -81,13 +81,31 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         // Calculate search confidence
         var searchConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
 
+        // Step 1.5: Load chat thread context if ThreadId provided (Issue #857)
+        string chatHistoryContext = string.Empty;
+        if (query.ThreadId.HasValue)
+        {
+            var thread = await _chatThreadRepository.GetByIdAsync(query.ThreadId.Value, cancellationToken);
+            if (thread != null && _chatContextService.ShouldIncludeChatHistory(thread))
+            {
+                chatHistoryContext = _chatContextService.BuildChatHistoryContext(thread);
+                _logger.LogInformation(
+                    "Including chat history from thread {ThreadId}: {MessageCount} messages",
+                    query.ThreadId.Value, thread.MessageCount);
+            }
+        }
+
         // Step 2: Build LLM prompt with context
         var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt")
             ?? DefaultSystemPrompt;
         var context = string.Join("\n\n", searchResults.Select(sr =>
             $"[Page {sr.PageNumber}] {sr.TextContent}"));
 
-        var userPrompt = $"Question: {query.Question}\n\nContext:\n{context}";
+        // Enrich user prompt with chat history if available
+        var baseQuestion = $"Question: {query.Question}\n\nContext:\n{context}";
+        var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
+            ? _chatContextService.EnrichPromptWithHistory(baseQuestion, chatHistoryContext)
+            : baseQuestion;
 
         // Step 3: Generate answer with LLM
         var llmResult = await _llmService.GenerateCompletionAsync(

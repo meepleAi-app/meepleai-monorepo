@@ -580,7 +580,7 @@ public class LoginCommandHandlerTests
 
         if (is2FAEnabled)
         {
-            user.EnableTwoFactor("encrypted_secret_base64");
+            user.Enable2FA(TotpSecret.FromEncrypted("encrypted_secret_base64"));
         }
 
         return user;

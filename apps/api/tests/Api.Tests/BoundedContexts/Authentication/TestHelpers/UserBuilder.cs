@@ -127,7 +127,7 @@ public class UserBuilder
 
         if (_enable2FA && _totpSecret != null)
         {
-            user.EnableTwoFactor(_totpSecret);
+            user.Enable2FA(TotpSecret.FromEncrypted(_totpSecret));
         }
 
         return user;

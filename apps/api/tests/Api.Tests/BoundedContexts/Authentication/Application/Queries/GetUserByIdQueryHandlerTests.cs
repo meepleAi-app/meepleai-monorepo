@@ -107,7 +107,7 @@ public class GetUserByIdQueryHandlerTests
     {
         // Arrange
         var user = CreateTestUser("user@example.com");
-        user.EnableTwoFactor("encrypted_secret_base64");
+        user.Enable2FA(TotpSecret.FromEncrypted("encrypted_secret_base64"));
 
         var query = new GetUserByIdQuery(user.Id);
 

@@ -1,23 +1,24 @@
 /**
- * ChatProvider - Chat state management (REFACTORED)
+ * ChatProvider - Chat state management (DDD INTEGRATED - SPRINT-3 #858)
  *
  * Manages:
- * - Chat sessions per game
- * - Messages per chat
+ * - ChatThread sessions per game (DDD KnowledgeBase)
+ * - Messages per thread
  * - Message operations (send, edit, delete, feedback)
  *
- * Key improvements over original:
+ * Key improvements:
+ * - Integrated with DDD KnowledgeBase.Application (Issue #858)
+ * - Uses ChatThread endpoints (Backend #1126)
  * - Normalized state structure (no Map, serializable)
  * - localStorage persistence
  * - No useRef anti-patterns
  * - No disabled ESLint rules
- * - Focused responsibility (chat operations only)
  *
  * Nested under GameProvider in provider hierarchy
  */
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, PropsWithChildren } from 'react';
-import { Chat, Message } from '@/types';
+import { ChatThread, Message } from '@/types';
 import { api } from '@/lib/api';
 import { useGame } from '@/components/game/GameProvider';
 
@@ -27,11 +28,12 @@ import { useGame } from '@/components/game/GameProvider';
 
 /**
  * Normalized chat state structure (serializable for localStorage)
+ * SPRINT-3 #858: Using ChatThread from DDD KnowledgeBase
  */
 interface ChatState {
-  chatsByGame: Record<string, Chat[]>;  // Chats indexed by gameId
-  activeChatIds: Record<string, string | null>; // Active chat per game (nullable)
-  messagesByChat: Record<string, Message[]>; // Messages indexed by chatId
+  chatsByGame: Record<string, ChatThread[]>;  // ChatThreads indexed by gameId
+  activeChatIds: Record<string, string | null>; // Active thread per game (nullable)
+  messagesByChat: Record<string, Message[]>; // Messages indexed by threadId (UI format)
 }
 
 interface LoadingState {
@@ -44,13 +46,14 @@ interface LoadingState {
 }
 
 export interface ChatContextValue {
-  // Current game's chats (derived from normalized state)
-  chats: Chat[];
-  activeChat: Chat | null;
+  // Current game's threads (derived from normalized state)
+  // Using ChatThread from DDD KnowledgeBase (#858)
+  chats: ChatThread[];
+  activeChat: ChatThread | null;
   activeChatId: string | null;
   messages: Message[];
 
-  // Chat operations
+  // Thread operations (DDD ChatThread API)
   createChat: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   selectChat: (chatId: string) => Promise<void>;
@@ -179,24 +182,25 @@ export function ChatProvider({ children }: PropsWithChildren) {
   );
 
   // ============================================================================
-  // Data Loading Functions
+  // Data Loading Functions (DDD ChatThread Integration - #858)
   // ============================================================================
 
   const loadChats = useCallback(async (gameId: string) => {
     setLoading((prev) => ({ ...prev, chats: true }));
     setError(null);
     try {
-      const chatsList = await api.get<Chat[]>(`/api/v1/chats?gameId=${gameId}`);
+      // SPRINT-3 #858: Use DDD KnowledgeBase ChatThread API
+      const chatThreads = await api.chatThreads.getByGame(gameId);
       setState((prev) => ({
         ...prev,
         chatsByGame: {
           ...prev.chatsByGame,
-          [gameId]: chatsList ?? [],
+          [gameId]: chatThreads ?? [],
         },
       }));
     } catch (err) {
-      console.error('Failed to load chats:', err);
-      setError('Failed to load chats');
+      console.error('Failed to load chat threads:', err);
+      setError('Failed to load chat threads');
       setState((prev) => ({
         ...prev,
         chatsByGame: {
@@ -209,19 +213,35 @@ export function ChatProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
-  const loadMessages = useCallback(async (chatId: string) => {
+  const loadMessages = useCallback(async (threadId: string) => {
     setLoading((prev) => ({ ...prev, messages: true }));
     setError(null);
     try {
-      const messagesResponse = await api.get<Message[]>(`/api/v1/chats/${chatId}/messages`);
-      const messagesList = Array.isArray(messagesResponse) ? messagesResponse : [];
-      setState((prev) => ({
-        ...prev,
-        messagesByChat: {
-          ...prev.messagesByChat,
-          [chatId]: messagesList,
-        },
-      }));
+      // SPRINT-3 #858: Messages come with ChatThread, convert to UI format
+      const thread = await api.chatThreads.getById(threadId);
+      if (thread) {
+        const uiMessages: Message[] = thread.messages.map((msg, index) => ({
+          id: `${threadId}-${index}`, // Generate temp ID (backend messages don't have IDs yet)
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setState((prev) => ({
+          ...prev,
+          messagesByChat: {
+            ...prev.messagesByChat,
+            [threadId]: uiMessages,
+          },
+        }));
+      } else {
+        setState((prev) => ({
+          ...prev,
+          messagesByChat: {
+            ...prev.messagesByChat,
+            [threadId]: [],
+          },
+        }));
+      }
     } catch (err) {
       console.error('Failed to load messages:', err);
       setError('Failed to load messages');
@@ -229,7 +249,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         ...prev,
         messagesByChat: {
           ...prev.messagesByChat,
-          [chatId]: [],
+          [threadId]: [],
         },
       }));
     } finally {
@@ -262,30 +282,32 @@ export function ChatProvider({ children }: PropsWithChildren) {
     setError(null);
 
     try {
-      const newChat = await api.post<Chat>('/api/v1/chats', {
+      // SPRINT-3 #858: Use DDD CreateChatThreadCommand
+      const newThread = await api.chatThreads.create({
         gameId: selectedGameId,
-        agentId: selectedAgentId,
+        title: null, // Let backend generate default title
+        initialMessage: null, // No initial message for now
       });
 
-      if (newChat) {
+      if (newThread) {
         setState((prev) => ({
           ...prev,
           chatsByGame: {
             ...prev.chatsByGame,
-            [selectedGameId]: [newChat, ...(prev.chatsByGame[selectedGameId] ?? [])],
+            [selectedGameId]: [newThread, ...(prev.chatsByGame[selectedGameId] ?? [])],
           },
           activeChatIds: {
             ...prev.activeChatIds,
-            [selectedGameId]: newChat.id,
+            [selectedGameId]: newThread.id,
           },
           messagesByChat: {
             ...prev.messagesByChat,
-            [newChat.id]: [],
+            [newThread.id]: [],
           },
         }));
       }
     } catch (err) {
-      console.error('Failed to create chat:', err);
+      console.error('Failed to create chat thread:', err);
       setError('Errore nella creazione della chat.');
     } finally {
       setLoading((prev) => ({ ...prev, creating: false }));
@@ -370,31 +392,32 @@ export function ChatProvider({ children }: PropsWithChildren) {
       setLoading((prev) => ({ ...prev, sending: true }));
 
       try {
-        // Create chat if none exists
-        let chatId = activeChatId;
-        if (!chatId) {
-          const newChat = await api.post<Chat>('/api/v1/chats', {
+        // Create thread if none exists
+        let threadId = activeChatId;
+        if (!threadId) {
+          // SPRINT-3 #858: Create thread using DDD
+          const newThread = await api.chatThreads.create({
             gameId: selectedGameId,
-            agentId: selectedAgentId,
+            title: null,
+            initialMessage: null,
           });
 
-          if (!newChat) throw new Error('Failed to create chat');
+          if (!newThread) throw new Error('Failed to create chat thread');
 
-          const newChatId = newChat.id;
-          chatId = newChatId;
+          threadId = newThread.id;
           setState((prev) => ({
             ...prev,
             chatsByGame: {
               ...prev.chatsByGame,
-              [selectedGameId]: [newChat, ...(prev.chatsByGame[selectedGameId] ?? [])],
+              [selectedGameId]: [newThread, ...(prev.chatsByGame[selectedGameId] ?? [])],
             },
             activeChatIds: {
               ...prev.activeChatIds,
-              [selectedGameId]: newChatId,
+              [selectedGameId]: threadId,
             },
             messagesByChat: {
               ...prev.messagesByChat,
-              [newChatId]: [],
+              [threadId]: [],
             },
           }));
         }
@@ -404,12 +427,18 @@ export function ChatProvider({ children }: PropsWithChildren) {
           ...prev,
           messagesByChat: {
             ...prev.messagesByChat,
-            [chatId]: [...(prev.messagesByChat[chatId] ?? []), userMessage],
+            [threadId]: [...(prev.messagesByChat[threadId] ?? []), userMessage],
           },
         }));
 
-        // Note: Streaming integration will be added in future enhancement
-        // For now, this creates the chat and user message
+        // SPRINT-3 #858: Add message using DDD AddMessageCommand
+        await api.chatThreads.addMessage(threadId, {
+          content: content.trim(),
+          role: 'user',
+        });
+
+        // Note: AI response streaming will be added in future enhancement
+        // For now, this sends the user message to the backend
       } catch (err) {
         console.error('Failed to send message:', err);
         setError("Errore nella comunicazione con l'agente. Riprova.");

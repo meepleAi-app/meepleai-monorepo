@@ -22,6 +22,7 @@ interface PdfUploadFormProps {
   gameName: string;
   onUploadSuccess: (documentId: string) => void;
   onUploadError: (error: CategorizedError) => void;
+  onUploadStart?: () => void;
 }
 
 // Validation constants
@@ -94,7 +95,8 @@ export function PdfUploadForm({
   gameId,
   gameName,
   onUploadSuccess,
-  onUploadError
+  onUploadError,
+  onUploadStart
 }: PdfUploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState('en');
@@ -146,6 +148,7 @@ export function PdfUploadForm({
     setUploading(true);
     setRetryMessage(null);
     setRetryCount(0);
+    onUploadStart?.();
 
     try {
       const formData = new FormData();

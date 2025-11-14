@@ -43,7 +43,17 @@ interface RuleSpec {
 const AUTHORIZED_ROLES = new Set(['admin', 'editor']);
 const enableProcessingProgress = process.env.NEXT_PUBLIC_ENABLE_PROGRESS_UI === 'true';
 
-export default function UploadPage() {
+interface UploadPageProps {
+  autoUpload?: boolean;
+  onUploadStart?: () => void;
+  onUploadError?: () => void;
+}
+
+export default function UploadPage({
+  autoUpload = true,
+  onUploadStart,
+  onUploadError
+}: UploadPageProps = {}) {
   // Wizard state management
   const { state: wizardState, dispatch: wizardDispatch } = useWizard();
 
@@ -114,7 +124,8 @@ export default function UploadPage() {
 
   const handleUploadError = useCallback((error: CategorizedError) => {
     setUploadError(error);
-  }, []);
+    onUploadError?.();
+  }, [onUploadError]);
 
   const handleProcessingComplete = useCallback(() => {
     setShowProcessingProgress(false);
@@ -320,6 +331,7 @@ export default function UploadPage() {
                   gameName={confirmedGame.name}
                   onUploadSuccess={handleUploadSuccess}
                   onUploadError={handleUploadError}
+                  onUploadStart={onUploadStart}
                 />
 
                 <div className="mt-8">
@@ -327,8 +339,10 @@ export default function UploadPage() {
                     gameId={confirmedGameId}
                     gameName={confirmedGame.name}
                     language="en"
-                    autoUpload={true}
+                    autoUpload={autoUpload}
                     onUploadComplete={refetchPdfs}
+                    onUploadStart={onUploadStart}
+                    onUploadError={onUploadError}
                   />
                 </div>
 

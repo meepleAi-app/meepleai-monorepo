@@ -91,13 +91,31 @@ describe('UploadPage - PDF Upload', () => {
 
           await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          // Select a game first before confirming
+          const gameSelect = screen.getByLabelText(/Select Game/i);
+          fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+
+          // Now wait for and click the confirm button
+          const confirmButton = await waitFor(() => {
+            const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+            expect(btn).not.toBeDisabled();
+            return btn;
+          });
+          fireEvent.click(confirmButton);
+
+          // Wait for PDF upload form to appear
+          await waitFor(() => expect(screen.getByLabelText(/PDF File/i)).toBeInTheDocument());
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
-          const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
 
+          // First, verify the button exists (might be disabled)
+          const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
+
+          // Now change the file which should enable the button
           fireEvent.change(fileInput, { target: { files: [file] } });
+
+          // Wait for button to become enabled
           await waitFor(() => expect(uploadButton).not.toBeDisabled());
 
           fireEvent.click(uploadButton);
@@ -191,13 +209,31 @@ describe('UploadPage - PDF Upload', () => {
 
           await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          // Select a game first before confirming
+          const gameSelect = screen.getByLabelText(/Select Game/i);
+          fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+
+          // Now wait for and click the confirm button
+          const confirmButton = await waitFor(() => {
+            const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+            expect(btn).not.toBeDisabled();
+            return btn;
+          });
+          fireEvent.click(confirmButton);
+
+          // Wait for PDF upload form to appear
+          await waitFor(() => expect(screen.getByLabelText(/PDF File/i)).toBeInTheDocument());
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+
+          // First, verify the button exists (might be disabled)
+          const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
+
+          // Now change the file which should enable the button
           fireEvent.change(fileInput, { target: { files: [file] } });
 
-          const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
+          // Wait for button to become enabled
           await waitFor(() => expect(uploadButton).not.toBeDisabled());
           fireEvent.click(uploadButton);
 
@@ -387,7 +423,17 @@ describe('UploadPage - PDF Upload', () => {
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-        fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+        // Select a game first before confirming
+        const gameSelect = screen.getByLabelText(/Select Game/i);
+        fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+
+        // Now wait for and click the confirm button
+        const confirmButton = await waitFor(() => {
+          const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+          expect(btn).not.toBeDisabled();
+          return btn;
+        });
+        fireEvent.click(confirmButton);
 
         await waitFor(() =>
           expect(screen.getByText(/Unable to load uploaded PDFs\. Please try again\./i)).toBeInTheDocument()
@@ -422,7 +468,17 @@ describe('UploadPage - PDF Upload', () => {
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-        fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+        // Select a game first before confirming
+        const gameSelect = screen.getByLabelText(/Select Game/i);
+        fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+
+        // Now wait for and click the confirm button
+        const confirmButton = await waitFor(() => {
+          const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+          expect(btn).not.toBeDisabled();
+          return btn;
+        });
+        fireEvent.click(confirmButton);
 
         await waitFor(() =>
           expect(screen.getByText(/Unable to load uploaded PDFs\. Please try again\./i)).toBeInTheDocument()
@@ -457,7 +513,17 @@ describe('UploadPage - PDF Upload', () => {
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-        fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+        // Select a game first before confirming
+        const gameSelect = screen.getByLabelText(/Select Game/i);
+        fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+
+        // Now wait for and click the confirm button
+        const confirmButton = await waitFor(() => {
+          const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+          expect(btn).not.toBeDisabled();
+          return btn;
+        });
+        fireEvent.click(confirmButton);
 
         await waitFor(() => {
           expect(screen.getByText('512 B')).toBeInTheDocument();
@@ -491,7 +557,17 @@ describe('UploadPage - PDF Upload', () => {
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-        fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+        // Select a game first before confirming
+        const gameSelect = screen.getByLabelText(/Select Game/i);
+        fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+
+        // Now wait for and click the confirm button
+        const confirmButton = await waitFor(() => {
+          const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+          expect(btn).not.toBeDisabled();
+          return btn;
+        });
+        fireEvent.click(confirmButton);
 
         await waitFor(() => {
           expect(screen.getByText('test.pdf')).toBeInTheDocument();
@@ -532,7 +608,17 @@ describe('UploadPage - PDF Upload', () => {
 
           await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+          // Select a game first before confirming
+          const gameSelect = screen.getByLabelText(/Select Game/i);
+          fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+
+          // Now wait for and click the confirm button
+          const confirmButton = await waitFor(() => {
+            const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+            expect(btn).not.toBeDisabled();
+            return btn;
+          });
+          fireEvent.click(confirmButton);
 
           await waitFor(() => expect(screen.getByText(/failed.pdf/i)).toBeInTheDocument());
 
@@ -571,7 +657,17 @@ describe('UploadPage - PDF Upload', () => {
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-        fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
+        // Select a game first before confirming
+        const gameSelect = screen.getByLabelText(/Select Game/i);
+        fireEvent.change(gameSelect, { target: { value: 'game-1' } });
+
+        // Now wait for and click the confirm button
+        const confirmButton = await waitFor(() => {
+          const btn = screen.getByRole('button', { name: /Confirm Game Selection/i });
+          expect(btn).not.toBeDisabled();
+          return btn;
+        });
+        fireEvent.click(confirmButton);
 
         await waitFor(() => {
           expect(screen.getByText('test.pdf')).toBeInTheDocument();
@@ -653,11 +749,19 @@ describe('UploadPage - PDF Upload', () => {
         // Wait for file input to be ready
         await waitFor(() => expect(screen.getByLabelText(/PDF File/i)).toBeInTheDocument());
 
+        // Wait for PDF upload form to appear
+        await waitFor(() => expect(screen.getByLabelText(/PDF File/i)).toBeInTheDocument());
+
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
         const file = new File(['pdf'], 'test.pdf', { type: 'application/pdf' });
+
+        // First, verify the button exists (might be disabled)
+        const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
+
+        // Now change the file which should enable the button
         fireEvent.change(fileInput, { target: { files: [file] } });
 
-        const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
+        // Wait for button to become enabled
         await waitFor(() => expect(uploadButton).not.toBeDisabled());
         fireEvent.click(uploadButton);
 

@@ -29,6 +29,7 @@ public class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThreadCo
         // Create ChatThread aggregate
         var thread = new ChatThread(
             id: Guid.NewGuid(),
+            userId: command.UserId,
             gameId: command.GameId,
             title: command.Title
         );
@@ -57,8 +58,10 @@ public class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThreadCo
 
         return new ChatThreadDto(
             Id: thread.Id,
+            UserId: thread.UserId,
             GameId: thread.GameId,
             Title: thread.Title,
+            Status: thread.Status.Value,
             CreatedAt: thread.CreatedAt,
             LastMessageAt: thread.LastMessageAt,
             MessageCount: thread.MessageCount,

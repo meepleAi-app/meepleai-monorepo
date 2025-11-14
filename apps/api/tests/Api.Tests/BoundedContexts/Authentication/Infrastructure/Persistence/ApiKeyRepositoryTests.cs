@@ -526,17 +526,18 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
         // Act - Multiple concurrent usage updates using independent repositories
         var tasks = Enumerable.Range(0, 5).Select(async _ =>
         {
-            var independentRepo = CreateIndependentRepository();
+            // Create independent DbContext and repository using same context
             var independentDbContext = CreateIndependentDbContext();
-            
+            var independentRepo = CreateRepository(independentDbContext);
+
             var key = await independentRepo.GetByKeyPrefixAsync(apiKey.KeyPrefix);
             if (key != null)
             {
                 key.MarkAsUsed();
                 await independentRepo.UpdateAsync(key);
-                await independentDbContext.SaveChangesAsync();
+                await independentDbContext.SaveChangesAsync(); // Now saves on correct context
             }
-            
+
             await independentDbContext.DisposeAsync();
         }).ToArray();
 

@@ -295,6 +295,29 @@ public static class KnowledgeBaseEndpoints
                 return Results.BadRequest(new { error = "Content is required" });
             }
 
+            // SEC: Authorize BEFORE executing command to prevent unauthorized mutations
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
+            // Verify thread ownership before mutation
+            var threadQuery = new GetChatThreadByIdQuery(threadId);
+            var existingThread = await mediator.Send(threadQuery, ct);
+
+            if (existingThread == null)
+            {
+                return Results.NotFound(new { error = "Thread not found" });
+            }
+
+            if (existingThread.UserId != userId &&
+                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning("User {UserId} denied access to add message to thread {ThreadId} (owner: {OwnerId})",
+                    userId, threadId, existingThread.UserId);
+                return Results.Forbid();
+            }
+
             try
             {
                 var command = new AddMessageCommand(
@@ -304,19 +327,6 @@ public static class KnowledgeBaseEndpoints
                 );
 
                 var result = await mediator.Send(command, ct);
-
-                // Authorization: User can only add to their own threads
-                if (!Guid.TryParse(session.User.Id, out var userId))
-                {
-                    return Results.BadRequest(new { error = "Invalid user ID" });
-                }
-
-                if (result.UserId != userId &&
-                    !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-                {
-                    return Results.Forbid();
-                }
-
                 return Results.Ok(result);
             }
             catch (InvalidOperationException ex)
@@ -344,23 +354,33 @@ public static class KnowledgeBaseEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
+            // SEC: Authorize BEFORE executing command
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
+            // Verify thread ownership before mutation
+            var threadQuery = new GetChatThreadByIdQuery(threadId);
+            var existingThread = await mediator.Send(threadQuery, ct);
+
+            if (existingThread == null)
+            {
+                return Results.NotFound(new { error = "Thread not found" });
+            }
+
+            if (existingThread.UserId != userId &&
+                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning("User {UserId} denied access to close thread {ThreadId} (owner: {OwnerId})",
+                    userId, threadId, existingThread.UserId);
+                return Results.Forbid();
+            }
+
             try
             {
                 var command = new CloseThreadCommand(threadId);
                 var result = await mediator.Send(command, ct);
-
-                // Authorization: User can only close their own threads
-                if (!Guid.TryParse(session.User.Id, out var userId))
-                {
-                    return Results.BadRequest(new { error = "Invalid user ID" });
-                }
-
-                if (result.UserId != userId &&
-                    !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-                {
-                    return Results.Forbid();
-                }
-
                 return Results.Ok(result);
             }
             catch (InvalidOperationException ex)
@@ -388,23 +408,33 @@ public static class KnowledgeBaseEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
+            // SEC: Authorize BEFORE executing command
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
+            // Verify thread ownership before mutation
+            var threadQuery = new GetChatThreadByIdQuery(threadId);
+            var existingThread = await mediator.Send(threadQuery, ct);
+
+            if (existingThread == null)
+            {
+                return Results.NotFound(new { error = "Thread not found" });
+            }
+
+            if (existingThread.UserId != userId &&
+                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning("User {UserId} denied access to reopen thread {ThreadId} (owner: {OwnerId})",
+                    userId, threadId, existingThread.UserId);
+                return Results.Forbid();
+            }
+
             try
             {
                 var command = new ReopenThreadCommand(threadId);
                 var result = await mediator.Send(command, ct);
-
-                // Authorization: User can only reopen their own threads
-                if (!Guid.TryParse(session.User.Id, out var userId))
-                {
-                    return Results.BadRequest(new { error = "Invalid user ID" });
-                }
-
-                if (result.UserId != userId &&
-                    !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-                {
-                    return Results.Forbid();
-                }
-
                 return Results.Ok(result);
             }
             catch (InvalidOperationException ex)

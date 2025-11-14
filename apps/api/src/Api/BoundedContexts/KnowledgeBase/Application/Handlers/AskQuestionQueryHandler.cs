@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
@@ -22,6 +23,8 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
 
     private readonly SearchQueryHandler _searchQueryHandler;
     private readonly QualityTrackingDomainService _qualityTrackingService;
+    private readonly ChatContextDomainService _chatContextService;
+    private readonly IChatThreadRepository _chatThreadRepository;
     private readonly ILlmService _llmService;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
@@ -29,12 +32,16 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
     public AskQuestionQueryHandler(
         SearchQueryHandler searchQueryHandler,
         QualityTrackingDomainService qualityTrackingService,
+        ChatContextDomainService chatContextService,
+        IChatThreadRepository chatThreadRepository,
         ILlmService llmService,
         IPromptTemplateService promptTemplateService,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
+        _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
+        _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));

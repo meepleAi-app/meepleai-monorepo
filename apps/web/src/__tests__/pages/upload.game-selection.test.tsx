@@ -72,7 +72,7 @@ describe('UploadPage - Game Selection', () => {
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-        await user.click(screen.getByRole('button', { name: /Confirm selection/i }));
+        await user.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
 
         const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
@@ -103,7 +103,7 @@ describe('UploadPage - Game Selection', () => {
         expect(gameSelect.value).toBe('game-1');
 
         // Confirm button should be enabled for the selected game
-        const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+        const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
         expect(confirmButton).toBeEnabled();
       });
     });

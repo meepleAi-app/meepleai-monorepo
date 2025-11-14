@@ -106,7 +106,7 @@ describe('UploadPage - Edge Cases', () => {
 
           await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+          fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });

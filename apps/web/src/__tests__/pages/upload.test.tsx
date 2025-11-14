@@ -126,7 +126,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
     fireEvent.change(gameSelect, { target: { value: firstGameId } });
 
     // Now confirm selection
-    const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+    const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
     await waitFor(() => expect(confirmButton).not.toBeDisabled());
     fireEvent.click(confirmButton);
   }
@@ -302,7 +302,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
         expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument();
       });
 
-      const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+      const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -494,7 +494,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const select = screen.getByLabelText(/Select Game/i);
       fireEvent.change(select, { target: { value: 'game-1' } });
 
-      const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+      const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
       await waitFor(() => expect(confirmButton).not.toBeDisabled());
       fireEvent.click(confirmButton);
 
@@ -530,7 +530,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
         expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument();
       });
 
-      const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+      const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
       await user.click(confirmButton);
 
       await waitFor(() => {

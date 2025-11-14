@@ -150,6 +150,33 @@ public static class GameEndpoints
             return Results.Created($"/api/v1/sessions/{result.Id}", result);
         });
 
+        // Add player to session
+        group.MapPost("/sessions/{id}/players", async (
+            Guid id,
+            SessionPlayerRequest request,
+            IMediator mediator,
+            HttpContext context,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new AddPlayerToSessionCommand(
+                SessionId: id,
+                PlayerName: request.PlayerName,
+                PlayerOrder: request.PlayerOrder,
+                Color: request.Color
+            );
+
+            var result = await mediator.Send(command, ct);
+            logger.LogInformation("Added player {PlayerName} to session {SessionId}", request.PlayerName, id);
+            return Results.Ok(result);
+        });
+
         // Complete game session
         group.MapPost("/sessions/{id}/complete", async (
             Guid id,

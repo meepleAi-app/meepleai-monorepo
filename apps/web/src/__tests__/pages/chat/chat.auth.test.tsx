@@ -65,6 +65,16 @@ jest.mock('../../../lib/api', () => ({
       exportChat: jest.fn(),
       updateMessage: jest.fn(),
       deleteMessage: jest.fn()
+    },
+    // SPRINT-3 #858: ChatThread DDD API methods
+    chatThreads: {
+      getByGame: jest.fn(),
+      getById: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+      addMessage: jest.fn(),
+      updateMessage: jest.fn(),
+      deleteMessage: jest.fn()
     }
   }
 }));
@@ -126,6 +136,9 @@ describe('ChatPage - Authentication', () => {
       return Promise.resolve([]);
     });
 
+    // Mock chatThreads API
+    (mockApi.chatThreads.getByGame as jest.Mock).mockResolvedValue([]);
+
     render(<ChatPage />, { wrapper: createWrapper() });
 
     await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
@@ -137,12 +150,11 @@ describe('ChatPage - Authentication', () => {
 
   it('shows authenticated interface when user is logged in', async () => {
     const testData = {
-      mockAuthResponse: {
+      mockUser: {
         id: 'user-1',
         email: 'user@example.com',
         displayName: 'Test User',
-        role: 'User',
-        expiresAt: new Date(Date.now() + 3600000).toISOString()
+        role: 'User'
       },
       mockGames: [{ id: 'game-1', name: 'Chess', createdAt: new Date().toISOString() }],
       mockAgents: [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: new Date().toISOString() }],
@@ -152,7 +164,8 @@ describe('ChatPage - Authentication', () => {
     // Setup comprehensive mocks for provider hierarchy
     mockApi.get.mockImplementation((path: string) => {
       if (path === '/api/v1/auth/me') {
-        return Promise.resolve(testData.mockAuthResponse);
+        // Return the correct structure with user property
+        return Promise.resolve({ user: testData.mockUser });
       }
       if (path === '/api/v1/games') {
         return Promise.resolve(testData.mockGames);
@@ -165,6 +178,9 @@ describe('ChatPage - Authentication', () => {
       }
       return Promise.resolve([]);
     });
+
+    // Mock chatThreads API for authenticated state
+    (mockApi.chatThreads.getByGame as jest.Mock).mockResolvedValue([]);
 
     render(<ChatPage />, { wrapper: createWrapper() });
 
@@ -188,6 +204,9 @@ describe('ChatPage - Authentication', () => {
       }
       return Promise.resolve([]);
     });
+
+    // Mock chatThreads API for failure case
+    (mockApi.chatThreads.getByGame as jest.Mock).mockResolvedValue([]);
 
     render(<ChatPage />, { wrapper: createWrapper() });
 

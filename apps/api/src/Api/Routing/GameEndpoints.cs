@@ -104,6 +104,10 @@ public static class GameEndpoints
         });
 
         // CHAT-06: Get agents for a specific game
+        // TODO Issue #866: This legacy endpoint needs migration to new Agent aggregate
+        // Agents are now in KnowledgeBase context, not tied to games
+        // Use /api/v1/agents instead
+        /*
         group.MapGet("/games/{gameId:guid}/agents", async (Guid gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetAuthenticatedUser();
@@ -120,6 +124,7 @@ public static class GameEndpoints
 
             return Results.Json(response);
         });
+        */
 
 
         // ========================================

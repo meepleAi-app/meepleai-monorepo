@@ -58,6 +58,7 @@ public static class KnowledgeBaseServiceExtensions
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>(); // Issue #924: ChatThread support
         services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
+        services.AddScoped<IAgentRepository, AgentRepository>(); // Issue #866: Agent management
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

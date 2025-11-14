@@ -127,7 +127,7 @@ public sealed record AgentStrategy
             return typedValue;
 
         // Try conversion for primitive types implementing IConvertible
-        if (value is IConvertible && typeof(T).IsPrimitive || typeof(T) == typeof(string))
+        if (value is IConvertible && (typeof(T).IsPrimitive || typeof(T) == typeof(string)))
         {
             try
             {

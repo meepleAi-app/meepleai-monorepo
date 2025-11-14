@@ -19,6 +19,11 @@ public interface IAgentRepository
     Task<Agent?> GetByNameAsync(string name, CancellationToken ct = default);
 
     /// <summary>
+    /// Gets all agents (active and inactive).
+    /// </summary>
+    Task<List<Agent>> GetAllAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Gets all active agents.
     /// </summary>
     Task<List<Agent>> GetAllActiveAsync(CancellationToken ct = default);

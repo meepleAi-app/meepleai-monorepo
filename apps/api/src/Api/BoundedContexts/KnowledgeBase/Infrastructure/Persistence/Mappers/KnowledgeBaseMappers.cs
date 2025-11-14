@@ -124,4 +124,97 @@ public static class KnowledgeBaseMappers
 
         return (embedding.Id, embedding.Vector.Values.ToArray(), payload);
     }
+
+    /// <summary>
+    /// Maps persistence AgentEntity to domain Agent.
+    /// </summary>
+    public static Agent ToDomain(AgentEntity entity)
+    {
+        var agentType = AgentType.Parse(entity.Type);
+        var strategy = DeserializeStrategy(entity.StrategyName, entity.StrategyParametersJson);
+
+        var agent = new Agent(
+            id: entity.Id,
+            name: entity.Name,
+            type: agentType,
+            strategy: strategy,
+            isActive: entity.IsActive
+        );
+
+        // Use reflection to set read-only properties (CreatedAt, LastInvokedAt, InvocationCount)
+        var createdAtProp = typeof(Agent).GetProperty(nameof(Agent.CreatedAt));
+        createdAtProp?.SetValue(agent, entity.CreatedAt);
+
+        var lastInvokedAtProp = typeof(Agent).GetProperty(nameof(Agent.LastInvokedAt));
+        lastInvokedAtProp?.SetValue(agent, entity.LastInvokedAt);
+
+        var invocationCountProp = typeof(Agent).GetProperty(nameof(Agent.InvocationCount));
+        invocationCountProp?.SetValue(agent, entity.InvocationCount);
+
+        return agent;
+    }
+
+    /// <summary>
+    /// Maps domain Agent to persistence AgentEntity.
+    /// </summary>
+    public static AgentEntity ToEntity(Agent agent)
+    {
+        var (strategyName, parametersJson) = SerializeStrategy(agent.Strategy);
+
+        return new AgentEntity
+        {
+            Id = agent.Id,
+            Name = agent.Name,
+            Type = agent.Type.Value,
+            StrategyName = strategyName,
+            StrategyParametersJson = parametersJson,
+            IsActive = agent.IsActive,
+            CreatedAt = agent.CreatedAt,
+            LastInvokedAt = agent.LastInvokedAt,
+            InvocationCount = agent.InvocationCount
+        };
+    }
+
+    /// <summary>
+    /// Deserializes AgentStrategy from name and JSON parameters.
+    /// </summary>
+    private static AgentStrategy DeserializeStrategy(string name, string parametersJson)
+    {
+        var parameters = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(parametersJson)
+            ?? new Dictionary<string, object>();
+
+        // Convert JsonElement to appropriate types
+        var typedParams = new Dictionary<string, object>();
+        foreach (var (key, value) in parameters)
+        {
+            if (value is System.Text.Json.JsonElement jsonElement)
+            {
+                typedParams[key] = jsonElement.ValueKind switch
+                {
+                    System.Text.Json.JsonValueKind.Number => jsonElement.GetDouble(),
+                    System.Text.Json.JsonValueKind.String => jsonElement.GetString() ?? "",
+                    System.Text.Json.JsonValueKind.True => true,
+                    System.Text.Json.JsonValueKind.False => false,
+                    System.Text.Json.JsonValueKind.Array => jsonElement.EnumerateArray()
+                        .Select(e => e.GetString() ?? "").ToArray(),
+                    _ => value
+                };
+            }
+            else
+            {
+                typedParams[key] = value;
+            }
+        }
+
+        return AgentStrategy.Custom(name, typedParams);
+    }
+
+    /// <summary>
+    /// Serializes AgentStrategy to name and JSON parameters.
+    /// </summary>
+    private static (string name, string parametersJson) SerializeStrategy(AgentStrategy strategy)
+    {
+        var parametersJson = System.Text.Json.JsonSerializer.Serialize(strategy.Parameters);
+        return (strategy.Name, parametersJson);
+    }
 }

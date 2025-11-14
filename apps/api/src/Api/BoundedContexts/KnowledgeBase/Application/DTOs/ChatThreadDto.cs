@@ -5,8 +5,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 /// </summary>
 public record ChatThreadDto(
     Guid Id,
+    Guid UserId,
     Guid? GameId,
     string? Title,
+    string Status,
     DateTime CreatedAt,
     DateTime LastMessageAt,
     int MessageCount,

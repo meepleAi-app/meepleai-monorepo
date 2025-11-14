@@ -39,11 +39,33 @@ public class ChatThreadRepository : IChatThreadRepository
         return threadEntities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<ChatThread>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var threadEntities = await _dbContext.ChatThreads
+            .AsNoTracking()
+            .Where(t => t.UserId == userId)
+            .OrderByDescending(t => t.LastMessageAt)
+            .ToListAsync(cancellationToken);
+
+        return threadEntities.Select(MapToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<ChatThread>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
         var threadEntities = await _dbContext.ChatThreads
             .AsNoTracking()
             .Where(t => t.GameId == gameId)
+            .OrderByDescending(t => t.LastMessageAt)
+            .ToListAsync(cancellationToken);
+
+        return threadEntities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<ChatThread>> FindByUserIdAndGameIdAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default)
+    {
+        var threadEntities = await _dbContext.ChatThreads
+            .AsNoTracking()
+            .Where(t => t.UserId == userId && t.GameId == gameId)
             .OrderByDescending(t => t.LastMessageAt)
             .ToListAsync(cancellationToken);
 
@@ -98,22 +120,29 @@ public class ChatThreadRepository : IChatThreadRepository
         // Create thread
         var thread = new ChatThread(
             id: entity.Id,
+            userId: entity.UserId,
             gameId: entity.GameId,
             title: entity.Title
         );
 
-        // Add messages via domain method
+        // Add messages via domain method (but disable Status validation during hydration)
+        // We need to restore messages before setting Status to allow closed threads to have messages
+        var statusProp = typeof(ChatThread).GetProperty("Status");
+        statusProp?.SetValue(thread, ThreadStatus.Active); // Temporarily set to active
+
         foreach (var message in messages)
         {
             thread.AddMessage(message);
         }
 
-        // Override timestamps from DB
+        // Override timestamps and status from DB
         var createdAtProp = typeof(ChatThread).GetProperty("CreatedAt");
         createdAtProp?.SetValue(thread, entity.CreatedAt);
 
         var lastMessageAtProp = typeof(ChatThread).GetProperty("LastMessageAt");
         lastMessageAtProp?.SetValue(thread, entity.LastMessageAt);
+
+        statusProp?.SetValue(thread, ThreadStatus.From(entity.Status));
 
         return thread;
     }
@@ -135,8 +164,10 @@ public class ChatThreadRepository : IChatThreadRepository
         return new Api.Infrastructure.Entities.ChatThreadEntity
         {
             Id = domainEntity.Id,
+            UserId = domainEntity.UserId,
             GameId = domainEntity.GameId,
             Title = domainEntity.Title,
+            Status = domainEntity.Status.Value,
             CreatedAt = domainEntity.CreatedAt,
             LastMessageAt = domainEntity.LastMessageAt,
             MessagesJson = messagesJson

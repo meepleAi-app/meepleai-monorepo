@@ -229,6 +229,34 @@ export interface ChatMessageResponse {
   metadataJson: string | null;
 }
 
+// SPRINT-3: ChatThread DDD types (Issue #858, Backend #1126)
+export interface ChatThreadDto {
+  id: string;
+  gameId: string | null;
+  title: string | null;
+  createdAt: string;
+  lastMessageAt: string;
+  messageCount: number;
+  messages: ChatThreadMessageDto[];
+}
+
+export interface ChatThreadMessageDto {
+  content: string;
+  role: string;
+  timestamp: string;
+}
+
+export interface CreateChatThreadRequest {
+  gameId?: string | null;
+  title?: string | null;
+  initialMessage?: string | null;
+}
+
+export interface AddMessageRequest {
+  content: string;
+  role: string;
+}
+
 // CHAT-05: Chat export types
 export type ExportFormat = "pdf" | "txt" | "md";
 
@@ -524,6 +552,53 @@ export const api = {
 
     async cancelProcessing(pdfId: string): Promise<void> {
       return api.delete(`/api/v1/pdfs/${encodeURIComponent(pdfId)}/processing`);
+    }
+  },
+
+  // SPRINT-3: ChatThread API (Issue #858, Backend #1126)
+  chatThreads: {
+    /**
+     * Get all chat threads for a specific game
+     * @param gameId Game ID (GUID format)
+     */
+    async getByGame(gameId: string): Promise<ChatThreadDto[]> {
+      const response = await api.get<ChatThreadDto[]>(
+        `/api/v1/knowledge-base/chat-threads?gameId=${encodeURIComponent(gameId)}`
+      );
+      return response ?? [];
+    },
+
+    /**
+     * Get a single chat thread by ID
+     * @param threadId Thread ID (GUID format)
+     */
+    async getById(threadId: string): Promise<ChatThreadDto | null> {
+      return api.get<ChatThreadDto>(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}`
+      );
+    },
+
+    /**
+     * Create a new chat thread
+     * @param request Thread creation request
+     */
+    async create(request: CreateChatThreadRequest): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>(
+        '/api/v1/knowledge-base/chat-threads',
+        request
+      );
+    },
+
+    /**
+     * Add a message to an existing thread
+     * @param threadId Thread ID (GUID format)
+     * @param request Message content and role
+     */
+    async addMessage(threadId: string, request: AddMessageRequest): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/messages`,
+        request
+      );
     }
   },
 

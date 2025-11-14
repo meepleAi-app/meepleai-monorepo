@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 

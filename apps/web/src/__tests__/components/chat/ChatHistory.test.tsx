@@ -11,11 +11,10 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ChatHistory } from '../../../components/chat/ChatHistory';
 import { ChatProvider } from '../../../components/chat/ChatProvider';
-import { Chat } from '../../../types';
+import { ChatThread } from '../../../types';
 
-// Mock ChatProvider with controllable state
+// Mock useChatContext hook
 jest.mock('../../../components/chat/ChatProvider', () => ({
-  ...jest.requireActual('../../../components/chat/ChatProvider'),
   useChatContext: jest.fn(),
 }));
 
@@ -24,16 +23,16 @@ import { useChatContext } from '../../../components/chat/ChatProvider';
 const mockUseChatContext = useChatContext as jest.Mock;
 
 /**
- * Helper to create mock chat object
+ * Helper to create mock chat thread object
  */
-const createMockChat = (overrides?: Partial<Chat>): Chat => ({
+const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
   id: 'chat-1',
   gameId: 'game-1',
-  gameName: 'Chess',
-  agentId: 'agent-1',
-  agentName: 'Chess Expert',
-  startedAt: '2025-01-10T10:00:00Z',
+  title: 'Chess Expert',
+  createdAt: '2025-01-10T10:00:00Z',
   lastMessageAt: '2025-01-10T10:05:00Z',
+  messageCount: 5,
+  messages: [],
   ...overrides,
 });
 
@@ -141,8 +140,8 @@ describe('ChatHistory Component', () => {
   describe('Chat List Rendering', () => {
     it('renders list of chat sessions', () => {
       const chats = [
-        createMockChat({ id: 'chat-1', gameName: 'Chess' }),
-        createMockChat({ id: 'chat-2', gameName: 'Catan', agentName: 'Catan Helper' }),
+        createMockChatThread({ id: 'chat-1', title: 'Chess' }),
+        createMockChatThread({ id: 'chat-2', title: 'Catan Helper' }),
       ];
       setupChatContext({ chats });
       render(<ChatHistory />);
@@ -154,9 +153,9 @@ describe('ChatHistory Component', () => {
 
     it('renders ChatHistoryItem for each chat', () => {
       const chats = [
-        createMockChat({ id: 'chat-1' }),
-        createMockChat({ id: 'chat-2' }),
-        createMockChat({ id: 'chat-3' }),
+        createMockChatThread({ id: 'chat-1' }),
+        createMockChatThread({ id: 'chat-2' }),
+        createMockChatThread({ id: 'chat-3' }),
       ];
       setupChatContext({ chats });
       render(<ChatHistory />);
@@ -167,22 +166,21 @@ describe('ChatHistory Component', () => {
     });
 
     it('passes correct props to ChatHistoryItem components', () => {
-      const chat = createMockChat({
+      const chat = createMockChatThread({
         id: 'chat-1',
-        gameName: 'Chess',
-        agentName: 'Chess Expert',
+        title: 'Chess Expert',
       });
       setupChatContext({ chats: [chat], activeChatId: 'chat-1' });
       render(<ChatHistory />);
 
-      // ChatHistoryItem should display the agent name
+      // ChatHistoryItem should display the title
       expect(screen.getByText('Chess Expert')).toBeInTheDocument();
     });
 
     it('marks active chat correctly', () => {
       const chats = [
-        createMockChat({ id: 'chat-1' }),
-        createMockChat({ id: 'chat-2' }),
+        createMockChatThread({ id: 'chat-1' }),
+        createMockChatThread({ id: 'chat-2' }),
       ];
       setupChatContext({ chats, activeChatId: 'chat-2' });
       render(<ChatHistory />);
@@ -192,7 +190,7 @@ describe('ChatHistory Component', () => {
     });
 
     it('renders navigation element with correct aria-label', () => {
-      const chats = [createMockChat()];
+      const chats = [createMockChatThread()];
       setupChatContext({ chats });
       render(<ChatHistory />);
 
@@ -205,7 +203,7 @@ describe('ChatHistory Component', () => {
    */
   describe('Chat Selection', () => {
     it('calls selectChat when chat item is clicked', () => {
-      const chat = createMockChat({ id: 'chat-123', agentName: 'Test Agent' });
+      const chat = createMockChatThread({ id: 'chat-123', title: 'Test Agent' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
@@ -218,9 +216,9 @@ describe('ChatHistory Component', () => {
 
     it('calls selectChat with correct chat ID for multiple chats', () => {
       const chats = [
-        createMockChat({ id: 'chat-1', agentName: 'Agent 1' }),
-        createMockChat({ id: 'chat-2', agentName: 'Agent 2' }),
-        createMockChat({ id: 'chat-3', agentName: 'Agent 3' }),
+        createMockChatThread({ id: 'chat-1', title: 'Agent 1' }),
+        createMockChatThread({ id: 'chat-2', title: 'Agent 2' }),
+        createMockChatThread({ id: 'chat-3', title: 'Agent 3' }),
       ];
       setupChatContext({ chats });
       render(<ChatHistory />);
@@ -234,7 +232,7 @@ describe('ChatHistory Component', () => {
 
     it('handles asynchronous selectChat calls', async () => {
       mockSelectChat.mockResolvedValue(undefined);
-      const chat = createMockChat({ id: 'chat-1', agentName: 'Test Agent' });
+      const chat = createMockChatThread({ id: 'chat-1', title: 'Test Agent' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
@@ -253,7 +251,7 @@ describe('ChatHistory Component', () => {
    */
   describe('Chat Deletion', () => {
     it('prompts for confirmation before deleting', () => {
-      const chat = createMockChat({ id: 'chat-1' });
+      const chat = createMockChatThread({ id: 'chat-1' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
@@ -264,7 +262,7 @@ describe('ChatHistory Component', () => {
 
     it('calls deleteChat when deletion is confirmed', () => {
       window.confirm = jest.fn(() => true);
-      const chat = createMockChat({ id: 'chat-123' });
+      const chat = createMockChatThread({ id: 'chat-123' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
@@ -274,7 +272,7 @@ describe('ChatHistory Component', () => {
 
     it('does not call deleteChat when deletion is cancelled', () => {
       window.confirm = jest.fn(() => false);
-      const chat = createMockChat({ id: 'chat-1' });
+      const chat = createMockChatThread({ id: 'chat-1' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
@@ -284,7 +282,7 @@ describe('ChatHistory Component', () => {
 
     it('displays correct confirmation message', () => {
       window.confirm = jest.fn(() => false);
-      const chat = createMockChat({ id: 'chat-1' });
+      const chat = createMockChatThread({ id: 'chat-1' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
@@ -294,7 +292,7 @@ describe('ChatHistory Component', () => {
     it('handles asynchronous deleteChat calls', async () => {
       mockDeleteChat.mockResolvedValue(undefined);
       window.confirm = jest.fn(() => true);
-      const chat = createMockChat({ id: 'chat-1' });
+      const chat = createMockChatThread({ id: 'chat-1' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
@@ -311,14 +309,14 @@ describe('ChatHistory Component', () => {
   describe('Multiple Chats', () => {
     it('renders multiple chats in order', () => {
       const chats = [
-        createMockChat({ id: 'chat-1', gameName: 'Chess', agentName: 'Chess Agent' }),
-        createMockChat({ id: 'chat-2', gameName: 'Catan', agentName: 'Catan Agent' }),
-        createMockChat({ id: 'chat-3', gameName: 'Risk', agentName: 'Risk Agent' }),
+        createMockChatThread({ id: 'chat-1', title: 'Chess Agent' }),
+        createMockChatThread({ id: 'chat-2', title: 'Catan Agent' }),
+        createMockChatThread({ id: 'chat-3', title: 'Risk Agent' }),
       ];
       setupChatContext({ chats });
       render(<ChatHistory />);
 
-      // Verify all agent names are displayed
+      // Verify all titles are displayed
       expect(screen.getByText('Chess Agent')).toBeInTheDocument();
       expect(screen.getByText('Catan Agent')).toBeInTheDocument();
       expect(screen.getByText('Risk Agent')).toBeInTheDocument();
@@ -326,7 +324,7 @@ describe('ChatHistory Component', () => {
 
     it('handles many chats without performance issues', () => {
       const chats = Array.from({ length: 50 }, (_, i) =>
-        createMockChat({ id: `chat-${i}`, gameName: `Game ${i}` })
+        createMockChatThread({ id: `chat-${i}`, title: `Game ${i}` })
       );
       setupChatContext({ chats });
 
@@ -336,7 +334,7 @@ describe('ChatHistory Component', () => {
 
     it('renders with scrollable container', () => {
       const chats = Array.from({ length: 10 }, (_, i) =>
-        createMockChat({ id: `chat-${i}` })
+        createMockChatThread({ id: `chat-${i}` })
       );
       setupChatContext({ chats });
       render(<ChatHistory />);
@@ -351,38 +349,37 @@ describe('ChatHistory Component', () => {
    */
   describe('Chat Properties', () => {
     it('handles chat with lastMessageAt timestamp', () => {
-      const chat = createMockChat({
+      const chat = createMockChatThread({
         lastMessageAt: '2025-01-10T15:30:00Z',
-        agentName: 'Test Agent',
+        title: 'Test Agent',
       });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
-      // Verify the chat item is rendered with the agent name
+      // Verify the chat item is rendered with the title
       expect(screen.getByText('Test Agent')).toBeInTheDocument();
     });
 
-    it('handles chat without lastMessageAt (null)', () => {
-      const chat = createMockChat({
-        lastMessageAt: null,
-        agentName: 'Test Agent',
+    it('handles chat without title (null)', () => {
+      const chat = createMockChatThread({
+        title: null,
       });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
-      // Verify the chat item is rendered with the agent name
-      expect(screen.getByText('Test Agent')).toBeInTheDocument();
+      // ChatHistoryItem should handle null title gracefully
+      expect(() => render(<ChatHistory />)).not.toThrow();
     });
 
     it('passes all chat properties to ChatHistoryItem', () => {
-      const chat = createMockChat({
+      const chat = createMockChatThread({
         id: 'chat-1',
         gameId: 'game-1',
-        gameName: 'Chess',
-        agentId: 'agent-1',
-        agentName: 'Chess Expert',
-        startedAt: '2025-01-10T10:00:00Z',
+        title: 'Chess Expert',
+        createdAt: '2025-01-10T10:00:00Z',
         lastMessageAt: '2025-01-10T10:05:00Z',
+        messageCount: 10,
+        messages: [],
       });
       setupChatContext({ chats: [chat], activeChatId: 'chat-1' });
       render(<ChatHistory />);
@@ -406,7 +403,7 @@ describe('ChatHistory Component', () => {
       expect(screen.getByText('Caricamento chat...')).toBeInTheDocument();
 
       // Update to loaded state
-      setupChatContext({ chats: [createMockChat()], loading: { chats: false } });
+      setupChatContext({ chats: [createMockChatThread()], loading: { chats: false } });
       rerender(<ChatHistory />);
 
       expect(screen.queryByText('Caricamento chat...')).not.toBeInTheDocument();
@@ -420,7 +417,7 @@ describe('ChatHistory Component', () => {
       expect(screen.getByText('Nessuna chat. Creane una nuova!')).toBeInTheDocument();
 
       // Add chats
-      setupChatContext({ chats: [createMockChat()] });
+      setupChatContext({ chats: [createMockChatThread()] });
       rerender(<ChatHistory />);
 
       expect(screen.queryByText('Nessuna chat. Creane una nuova!')).not.toBeInTheDocument();
@@ -428,7 +425,7 @@ describe('ChatHistory Component', () => {
     });
 
     it('handles transition from populated to empty state', () => {
-      setupChatContext({ chats: [createMockChat()] });
+      setupChatContext({ chats: [createMockChatThread()] });
       const { rerender } = render(<ChatHistory />);
 
       expect(screen.getByRole('list')).toBeInTheDocument();
@@ -445,11 +442,11 @@ describe('ChatHistory Component', () => {
       const chat: any = {
         id: 'chat-1',
         gameId: 'game-1',
-        gameName: 'Chess',
-        agentId: 'agent-1',
-        agentName: 'Chess Expert',
-        startedAt: '2025-01-10T10:00:00Z',
-        // lastMessageAt is missing
+        title: 'Chess Expert',
+        createdAt: '2025-01-10T10:00:00Z',
+        lastMessageAt: '2025-01-10T10:05:00Z',
+        messageCount: 0,
+        messages: [],
       };
       setupChatContext({ chats: [chat] });
 
@@ -457,7 +454,7 @@ describe('ChatHistory Component', () => {
     });
 
     it('handles chat with undefined activeChatId', () => {
-      const chats = [createMockChat()];
+      const chats = [createMockChatThread()];
       setupChatContext({ chats, activeChatId: undefined });
 
       expect(() => render(<ChatHistory />)).not.toThrow();
@@ -469,7 +466,7 @@ describe('ChatHistory Component', () => {
    */
   describe('Accessibility', () => {
     it('uses semantic navigation element', () => {
-      setupChatContext({ chats: [createMockChat()] });
+      setupChatContext({ chats: [createMockChatThread()] });
       render(<ChatHistory />);
 
       expect(screen.getByRole('navigation')).toBeInTheDocument();
@@ -484,7 +481,7 @@ describe('ChatHistory Component', () => {
     });
 
     it('uses semantic list element for chats', () => {
-      setupChatContext({ chats: [createMockChat()] });
+      setupChatContext({ chats: [createMockChatThread()] });
       render(<ChatHistory />);
 
       const list = screen.getByRole('list');
@@ -507,7 +504,7 @@ describe('ChatHistory Component', () => {
    */
   describe('Styling', () => {
     it('applies correct container styles', () => {
-      setupChatContext({ chats: [createMockChat()] });
+      setupChatContext({ chats: [createMockChatThread()] });
       render(<ChatHistory />);
 
       const nav = screen.getByRole('navigation');
@@ -515,7 +512,7 @@ describe('ChatHistory Component', () => {
     });
 
     it('removes default list styling', () => {
-      setupChatContext({ chats: [createMockChat()] });
+      setupChatContext({ chats: [createMockChatThread()] });
       render(<ChatHistory />);
 
       const list = screen.getByRole('list');

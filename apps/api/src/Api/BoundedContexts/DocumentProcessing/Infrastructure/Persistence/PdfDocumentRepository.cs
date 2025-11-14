@@ -65,6 +65,14 @@ public class PdfDocumentRepository : IPdfDocumentRepository
     public Task UpdateAsync(PdfDocument document, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(document);
+
+        // Detach existing tracked entity to avoid conflicts (SPRINT-5 Issue #1142)
+        var tracked = _dbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.PdfDocumentEntity>()
+            .FirstOrDefault(e => e.Entity.Id == entity.Id);
+
+        if (tracked != null)
+            tracked.State = EntityState.Detached;
+
         _dbContext.PdfDocuments.Update(entity);
         return Task.CompletedTask;
     }

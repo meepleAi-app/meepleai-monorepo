@@ -412,18 +412,22 @@ jobs:
           echo "Coverage artifacts downloaded:"
           ls -R ./coverage-reports || echo "No coverage reports found"
 
+      # NOTE: Coverage thresholds are enforced at test execution time, not here
+      # - Backend: dotnet test with -p:Threshold=90 (Coverlet) - fails if <90%
+      # - Frontend: jest with coverageThreshold in jest.config.js - fails if <90%
+      # This job validates that test jobs passed (which means they met thresholds)
       - name: Check backend coverage threshold
         id: backend-coverage
         if: needs.backend-unit-tests.result == 'success' || needs.backend-integration-tests.result == 'success'
         run: |
-          echo "✅ Backend tests passed with 90%+ coverage (enforced in dotnet test)"
+          echo "✅ Backend tests passed with 90%+ coverage (enforced via Coverlet -p:Threshold=90)"
           echo "backend_coverage=passed" >> $GITHUB_OUTPUT
 
       - name: Check frontend coverage threshold
         id: frontend-coverage
         if: needs.frontend-unit-tests.result == 'success'
         run: |
-          echo "✅ Frontend tests passed with 90%+ coverage (enforced in jest.config.js)"
+          echo "✅ Frontend tests passed with 90%+ coverage (enforced via jest.config.js coverageThreshold)"
           echo "frontend_coverage=passed" >> $GITHUB_OUTPUT
 
       - name: Check E2E test results

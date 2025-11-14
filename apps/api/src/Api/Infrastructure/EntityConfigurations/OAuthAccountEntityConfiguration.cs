@@ -21,7 +21,7 @@ public class OAuthAccountEntityConfiguration : IEntityTypeConfiguration<OAuthAcc
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.Property(e => e.UpdatedAt).IsRequired();
         builder.HasOne(e => e.User)
-            .WithMany()
+            .WithMany(u => u.OAuthAccounts)
             .HasForeignKey(e => e.UserId)
             .OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(e => e.UserId);

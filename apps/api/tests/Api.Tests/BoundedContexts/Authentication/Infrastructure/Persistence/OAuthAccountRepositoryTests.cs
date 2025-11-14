@@ -1,8 +1,10 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Testcontainers.PostgreSql;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -11,46 +13,12 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Integration tests for OAuthAccountRepository using Testcontainers with real PostgreSQL.
 /// Tests OAuth provider linking, token management, and multi-provider scenarios.
 /// </summary>
-[Collection("Integration")]
-public class OAuthAccountRepositoryTests : IAsyncLifetime
+public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepository>
 {
-    private PostgreSqlContainer? _postgresContainer;
-    private MeepleAiDbContext? _dbContext;
-    private OAuthAccountRepository? _repository;
+    protected override string DatabaseName => "meepleai_oauth_test";
 
-    public async ValueTask InitializeAsync()
-    {
-        _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithDatabase("meepleai_oauth_test")
-            .WithUsername("testuser")
-            .WithPassword("testpass")
-            .Build();
-
-        await _postgresContainer.StartAsync();
-
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_postgresContainer.GetConnectionString())
-            .Options;
-
-        _dbContext = new MeepleAiDbContext(options);
-        await _dbContext.Database.MigrateAsync();
-
-        _repository = new OAuthAccountRepository(_dbContext);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_dbContext != null)
-        {
-            await _dbContext.DisposeAsync();
-        }
-
-        if (_postgresContainer != null)
-        {
-            await _postgresContainer.DisposeAsync();
-        }
-    }
+    protected override OAuthAccountRepository CreateRepository(MeepleAiDbContext dbContext)
+        => new OAuthAccountRepository(dbContext, NullLogger<OAuthAccountRepository>.Instance);
 
     #region GetByUserIdAndProviderAsync Tests
 
@@ -58,13 +26,14 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test01_GetByUserIdAndProviderAsync_ExistingAccount_ReturnsAccount()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "google", "google_user_123");
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _repository.GetByUserIdAndProviderAsync(userId, "google");
+        var result = await Repository.GetByUserIdAndProviderAsync(userId, "google");
 
         // Assert
         Assert.NotNull(result);
@@ -77,13 +46,14 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test02_GetByUserIdAndProviderAsync_CaseInsensitiveProvider_ReturnsAccount()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "github", "github_user_456");
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Act - Search with uppercase
-        var result = await _repository.GetByUserIdAndProviderAsync(userId, "GITHUB");
+        var result = await Repository.GetByUserIdAndProviderAsync(userId, "GITHUB");
 
         // Assert
         Assert.NotNull(result);
@@ -94,10 +64,11 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test03_GetByUserIdAndProviderAsync_NonExisting_ReturnsNull()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
 
         // Act
-        var result = await _repository!.GetByUserIdAndProviderAsync(userId, "google");
+        var result = await Repository.GetByUserIdAndProviderAsync(userId, "google");
 
         // Assert
         Assert.Null(result);
@@ -111,13 +82,14 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test04_GetByProviderUserIdAsync_ExistingAccount_ReturnsAccount()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "discord", "discord_user_789");
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _repository.GetByProviderUserIdAsync("discord", "discord_user_789");
+        var result = await Repository.GetByProviderUserIdAsync("discord", "discord_user_789");
 
         // Assert
         Assert.NotNull(result);
@@ -130,18 +102,19 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test05_GetByProviderUserIdAsync_ForOAuthLogin_FindsCorrectUser()
     {
         // Arrange - Simulate OAuth login scenario
-        var user1Id = Guid.NewGuid();
-        var user2Id = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var user1Id = await CreateTestUserAsync();
+        var user2Id = await CreateTestUserAsync();
 
         var account1 = CreateTestOAuthAccount(user1Id, "google", "google_12345");
         var account2 = CreateTestOAuthAccount(user2Id, "google", "google_67890");
 
-        await _repository!.AddAsync(account1);
-        await _repository.AddAsync(account2);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account1);
+        await Repository.AddAsync(account2);
+        await DbContext.SaveChangesAsync();
 
         // Act - OAuth provider returns google_12345
-        var result = await _repository.GetByProviderUserIdAsync("google", "google_12345");
+        var result = await Repository.GetByProviderUserIdAsync("google", "google_12345");
 
         // Assert - Should find user1
         Assert.NotNull(result);
@@ -151,8 +124,11 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task Test06_GetByProviderUserIdAsync_NonExisting_ReturnsNull()
     {
+        // Arrange
+        await ResetDatabaseAsync();
+
         // Act
-        var result = await _repository!.GetByProviderUserIdAsync("google", "nonexistent_id");
+        var result = await Repository.GetByProviderUserIdAsync("google", "nonexistent_id");
 
         // Assert
         Assert.Null(result);
@@ -166,10 +142,11 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test07_GetByUserIdAsync_NoAccounts_ReturnsEmptyList()
     {
         // Arrange
+        await ResetDatabaseAsync();
         var userId = Guid.NewGuid();
 
         // Act
-        var accounts = await _repository!.GetByUserIdAsync(userId);
+        var accounts = await Repository.GetByUserIdAsync(userId);
 
         // Assert
         Assert.Empty(accounts);
@@ -179,19 +156,20 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test08_GetByUserIdAsync_MultipleProviders_ReturnsAllOrdered()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
 
         var googleAccount = CreateTestOAuthAccount(userId, "google", "google_user");
         var githubAccount = CreateTestOAuthAccount(userId, "github", "github_user");
         var discordAccount = CreateTestOAuthAccount(userId, "discord", "discord_user");
 
-        await _repository!.AddAsync(googleAccount);
-        await _repository.AddAsync(githubAccount);
-        await _repository.AddAsync(discordAccount);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(googleAccount);
+        await Repository.AddAsync(githubAccount);
+        await Repository.AddAsync(discordAccount);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var accounts = await _repository.GetByUserIdAsync(userId);
+        var accounts = await Repository.GetByUserIdAsync(userId);
 
         // Assert
         Assert.Equal(3, accounts.Count);
@@ -205,21 +183,22 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test09_GetByUserIdAsync_MultipleUsers_FiltersCorrectly()
     {
         // Arrange
-        var user1Id = Guid.NewGuid();
-        var user2Id = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var user1Id = await CreateTestUserAsync();
+        var user2Id = await CreateTestUserAsync();
 
         var user1Google = CreateTestOAuthAccount(user1Id, "google", "user1_google");
         var user1Github = CreateTestOAuthAccount(user1Id, "github", "user1_github");
         var user2Google = CreateTestOAuthAccount(user2Id, "google", "user2_google");
 
-        await _repository!.AddAsync(user1Google);
-        await _repository.AddAsync(user1Github);
-        await _repository.AddAsync(user2Google);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(user1Google);
+        await Repository.AddAsync(user1Github);
+        await Repository.AddAsync(user2Google);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var user1Accounts = await _repository.GetByUserIdAsync(user1Id);
-        var user2Accounts = await _repository.GetByUserIdAsync(user2Id);
+        var user1Accounts = await Repository.GetByUserIdAsync(user1Id);
+        var user2Accounts = await Repository.GetByUserIdAsync(user2Id);
 
         // Assert
         Assert.Equal(2, user1Accounts.Count);
@@ -234,7 +213,8 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test10_AddAsync_NewAccount_PersistsSuccessfully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(
             userId,
             "google",
@@ -245,11 +225,11 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
         );
 
         // Act
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
+        var persisted = await DbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
         Assert.NotNull(persisted);
         Assert.Equal(userId, persisted.UserId);
         Assert.Equal("google", persisted.Provider);
@@ -263,7 +243,8 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test11_AddAsync_WithoutRefreshToken_PersistsCorrectly()
     {
         // Arrange - Some providers don't provide refresh tokens
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(
             userId,
             "github",
@@ -273,11 +254,11 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
         );
 
         // Act
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
+        var persisted = await DbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
         Assert.NotNull(persisted);
         Assert.Null(persisted.RefreshTokenEncrypted);
     }
@@ -290,22 +271,26 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test12_UpdateAsync_RefreshTokens_UpdatesCorrectly()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "google", "google_refresh_test");
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Act - Simulate token refresh
-        account.UpdateTokens(
+        var trackedAccount = await Repository.GetByUserIdAndProviderAsync(userId, "google");
+        Assert.NotNull(trackedAccount);
+        trackedAccount.UpdateTokens(
             "new_access_token_encrypted",
             "new_refresh_token_encrypted",
             DateTime.UtcNow.AddHours(2)
         );
-        await _repository.UpdateAsync(account);
-        await _dbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear(); // Clear any tracked entities before update
+        await Repository.UpdateAsync(trackedAccount);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var updated = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
+        var updated = await Repository.GetByUserIdAndProviderAsync(userId, "google");
         Assert.NotNull(updated);
         Assert.Equal("new_access_token_encrypted", updated.AccessTokenEncrypted);
         Assert.Equal("new_refresh_token_encrypted", updated.RefreshTokenEncrypted);
@@ -317,18 +302,22 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test13_UpdateAsync_AccessTokenOnly_UpdatesWithoutRefresh()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "discord", "discord_update_test");
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        account.UpdateTokens("new_access_token_only", null, DateTime.UtcNow.AddHours(1));
-        await _repository.UpdateAsync(account);
-        await _dbContext.SaveChangesAsync();
+        var trackedAccount = await Repository.GetByUserIdAndProviderAsync(userId, "discord");
+        Assert.NotNull(trackedAccount);
+        trackedAccount.UpdateTokens("new_access_token_only", null, DateTime.UtcNow.AddHours(1));
+        DbContext.ChangeTracker.Clear(); // Clear any tracked entities before update
+        await Repository.UpdateAsync(trackedAccount);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var updated = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
+        var updated = await Repository.GetByUserIdAndProviderAsync(userId, "discord");
         Assert.NotNull(updated);
         Assert.Equal("new_access_token_only", updated.AccessTokenEncrypted);
     }
@@ -341,17 +330,18 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test14_DeleteAsync_ExistingAccount_RemovesFromDatabase()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "google", "delete_test");
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        await _repository.DeleteAsync(account);
-        await _dbContext.SaveChangesAsync();
+        await Repository.DeleteAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var deleted = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
+        var deleted = await DbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
         Assert.Null(deleted);
     }
 
@@ -359,12 +349,13 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test15_DeleteAsync_NonExistingAccount_DoesNotThrow()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "google", "nonexistent");
 
         // Act & Assert - Should not throw
-        await _repository!.DeleteAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.DeleteAsync(account);
+        await DbContext.SaveChangesAsync();
     }
 
     #endregion
@@ -375,7 +366,8 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test16_Mapping_DomainToPersistence_AllFieldsCorrect()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var tokenExpiry = DateTime.UtcNow.AddHours(1);
         var account = CreateTestOAuthAccount(
             userId,
@@ -387,11 +379,11 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
         );
 
         // Act
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var persisted = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
+        var persisted = await DbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
         Assert.NotNull(persisted);
         Assert.Equal(account.Id, persisted.Id);
         Assert.Equal(account.UserId, persisted.UserId);
@@ -406,13 +398,14 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test17_Mapping_PersistenceToDomain_AllFieldsCorrect()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
         var account = CreateTestOAuthAccount(userId, "discord", "roundtrip_test");
-        await _repository!.AddAsync(account);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(account);
+        await DbContext.SaveChangesAsync();
 
         // Act
-        var retrieved = await _repository.GetByUserIdAndProviderAsync(userId, "discord");
+        var retrieved = await Repository.GetByUserIdAndProviderAsync(userId, "discord");
 
         // Assert
         Assert.NotNull(retrieved);
@@ -431,25 +424,26 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     public async Task Test18_MultiProvider_UserWithThreeProviders_AllPersistCorrectly()
     {
         // Arrange - User links Google, GitHub, and Discord
-        var userId = Guid.NewGuid();
+        await ResetDatabaseAsync();
+        var userId = await CreateTestUserAsync();
 
         var googleAccount = CreateTestOAuthAccount(userId, "google", "multi_google");
         var githubAccount = CreateTestOAuthAccount(userId, "github", "multi_github");
         var discordAccount = CreateTestOAuthAccount(userId, "discord", "multi_discord");
 
         // Act
-        await _repository!.AddAsync(googleAccount);
-        await _repository.AddAsync(githubAccount);
-        await _repository.AddAsync(discordAccount);
-        await _dbContext!.SaveChangesAsync();
+        await Repository.AddAsync(googleAccount);
+        await Repository.AddAsync(githubAccount);
+        await Repository.AddAsync(discordAccount);
+        await DbContext.SaveChangesAsync();
 
         // Assert
-        var allAccounts = await _repository.GetByUserIdAsync(userId);
+        var allAccounts = await Repository.GetByUserIdAsync(userId);
         Assert.Equal(3, allAccounts.Count);
 
-        var google = await _repository.GetByUserIdAndProviderAsync(userId, "google");
-        var github = await _repository.GetByUserIdAndProviderAsync(userId, "github");
-        var discord = await _repository.GetByUserIdAndProviderAsync(userId, "discord");
+        var google = await Repository.GetByUserIdAndProviderAsync(userId, "google");
+        var github = await Repository.GetByUserIdAndProviderAsync(userId, "github");
+        var discord = await Repository.GetByUserIdAndProviderAsync(userId, "discord");
 
         Assert.NotNull(google);
         Assert.NotNull(github);
@@ -459,6 +453,32 @@ public class OAuthAccountRepositoryTests : IAsyncLifetime
     #endregion
 
     #region Helper Methods
+
+    /// <summary>
+    /// Creates a test user in the database to satisfy FK constraints for OAuth accounts.
+    /// </summary>
+    private async Task<Guid> CreateTestUserAsync()
+    {
+        var userId = Guid.NewGuid();
+        var userEntity = new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = userId,
+            Email = $"test_{userId:N}@test.com",
+            DisplayName = "Test User",
+            PasswordHash = "dummy_password_hash",
+            Role = "user",
+            CreatedAt = DateTime.UtcNow,
+            IsTwoFactorEnabled = false
+        };
+
+        DbContext.Users.Add(userEntity);
+        await DbContext.SaveChangesAsync();
+
+        // Clear change tracker to prevent navigation property issues
+        DbContext.ChangeTracker.Clear();
+
+        return userId;
+    }
 
     private static OAuthAccount CreateTestOAuthAccount(
         Guid userId,

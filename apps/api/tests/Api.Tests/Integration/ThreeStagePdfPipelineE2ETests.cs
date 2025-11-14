@@ -20,7 +20,7 @@ namespace Api.Tests.Integration;
 /// Architecture: EnhancedPdfProcessingOrchestrator → 3 stages with quality-based fallback
 /// Hybrid approach: Tests 1-5 use fake extractors (fast), Test 6 uses Testcontainers (real performance)
 /// </remarks>
-[Collection("Integration")]
+[Collection("PdfPipeline")]
 public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 {
     private readonly Action<string> _output;

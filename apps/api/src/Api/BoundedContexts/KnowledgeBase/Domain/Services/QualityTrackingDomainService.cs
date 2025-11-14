@@ -16,7 +16,7 @@ public class QualityTrackingDomainService
     /// Calculates overall confidence score from search results.
     /// Uses average of top results weighted by rank.
     /// </summary>
-    public Confidence CalculateSearchConfidence(List<SearchResult> results)
+    public virtual Confidence CalculateSearchConfidence(List<SearchResult> results)
     {
         if (results == null || results.Count == 0)
             return Confidence.Zero;
@@ -39,7 +39,7 @@ public class QualityTrackingDomainService
     /// <summary>
     /// Calculates LLM response confidence based on response characteristics.
     /// </summary>
-    public Confidence CalculateLlmConfidence(
+    public virtual Confidence CalculateLlmConfidence(
         string llmResponse,
         List<SearchResult> sourceResults)
     {
@@ -65,7 +65,7 @@ public class QualityTrackingDomainService
     /// <summary>
     /// Calculates overall RAG confidence combining search and LLM confidence.
     /// </summary>
-    public Confidence CalculateOverallConfidence(
+    public virtual Confidence CalculateOverallConfidence(
         Confidence searchConfidence,
         Confidence llmConfidence)
     {
@@ -77,7 +77,7 @@ public class QualityTrackingDomainService
     /// <summary>
     /// Determines if response meets quality threshold.
     /// </summary>
-    public bool IsLowQuality(Confidence overallConfidence)
+    public virtual bool IsLowQuality(Confidence overallConfidence)
     {
         return overallConfidence.Value < LowQualityThreshold;
     }
@@ -85,7 +85,7 @@ public class QualityTrackingDomainService
     /// <summary>
     /// Determines if response is high quality.
     /// </summary>
-    public bool IsHighQuality(Confidence overallConfidence)
+    public virtual bool IsHighQuality(Confidence overallConfidence)
     {
         return overallConfidence.Value >= HighQualityThreshold;
     }
@@ -102,7 +102,7 @@ public class QualityTrackingDomainService
     /// <summary>
     /// Calculates citation quality score.
     /// </summary>
-    public Confidence CalculateCitationQuality(
+    public virtual Confidence CalculateCitationQuality(
         List<Citation> citations,
         string llmResponse)
     {

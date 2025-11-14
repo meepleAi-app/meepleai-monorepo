@@ -1,0 +1,45 @@
+# Integration Instructions for SessionSetupModal (Issue #863)
+
+## Changes needed in GameDetailModal.tsx:
+
+1. Add imports:
+```typescript
+import { GameSessionDto } from '@/lib/api';
+import { Play } from 'lucide-react';
+import { SessionSetupModal } from '@/components/SessionSetupModal';
+```
+
+2. Add state for session modal:
+```typescript
+const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
+```
+
+3. Add "Start Session" button after line 99 (after basic game info):
+```typescript
+{/* Start Session Button - SPRINT-4 #863 */}
+<Button
+  variant="default"
+  size="sm"
+  onClick={() => setIsSessionModalOpen(true)}
+  className="w-full"
+>
+  <Play className="mr-2 h-4 w-4" />
+  Start Session
+</Button>
+```
+
+4. Add SessionSetupModal component before closing Dialog tag (after line 252):
+```typescript
+{/* Session Setup Modal - SPRINT-4 #863 */}
+<SessionSetupModal
+  isOpen={isSessionModalOpen}
+  onClose={() => setIsSessionModalOpen(false)}
+  game={game}
+  onSessionCreated={(session: GameSessionDto) => {
+    console.log('Session created:', session.id);
+    // TODO: Navigate to session page or show success message
+    setIsSessionModalOpen(false);
+  }}
+/>
+```
+

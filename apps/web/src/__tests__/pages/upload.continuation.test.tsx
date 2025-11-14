@@ -85,10 +85,10 @@ describe('UploadPage - Continuation Tests', () => {
   // Helper to setup game selection for tests WITHOUT fake timers
   async function confirmGameSelection() {
     // Wait for games to load
-    await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
     // Select a game FIRST before confirming
-    const gameSelect = screen.getByLabelText(/Existing games/i);
+    const gameSelect = screen.getByLabelText(/Select Game/i);
     fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
     // Now confirm selection
@@ -100,7 +100,7 @@ describe('UploadPage - Continuation Tests', () => {
   // Helper for tests WITH fake timers (no waitFor for button state)
   function confirmGameSelectionSync() {
     // Games should already be loaded before calling this
-    const gameSelect = screen.getByLabelText(/Existing games/i);
+    const gameSelect = screen.getByLabelText(/Select Game/i);
     fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
     // Click confirm immediately (button should be enabled after selection)

@@ -51,6 +51,29 @@ export interface ChatMessage {
 }
 
 /**
+ * ChatThread entity (SPRINT-3: DDD KnowledgeBase)
+ * Represents a conversation thread with messages
+ */
+export interface ChatThread {
+  id: string;
+  gameId: string | null;
+  title: string | null;
+  createdAt: string;
+  lastMessageAt: string;
+  messageCount: number;
+  messages: ChatThreadMessage[];
+}
+
+/**
+ * ChatThread message entity (SPRINT-3: DDD KnowledgeBase)
+ */
+export interface ChatThreadMessage {
+  content: string;
+  role: string;
+  timestamp: string;
+}
+
+/**
  * Chat with full message history
  */
 export interface ChatWithHistory extends Chat {

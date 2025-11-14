@@ -800,7 +800,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
 
       await user.upload(fileInput, validFile);
 
-      const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+      const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
       expect(uploadButton).toBeDisabled();
     });
 
@@ -921,7 +921,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+      const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
       await user.click(uploadButton);
 
       await waitFor(() => {
@@ -969,7 +969,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByTestId('error-display')).toBeInTheDocument();
@@ -991,7 +991,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByTestId('error-display')).toBeInTheDocument();
@@ -1013,7 +1013,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByTestId('error-display')).toBeInTheDocument();
@@ -1329,7 +1329,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         const uploadStep = screen.getByText(/1\. Upload/i);
@@ -1369,7 +1369,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Step 2: Parse PDF/i)).toBeInTheDocument();
@@ -1391,7 +1391,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       // Wait for parse step to show (upload success)
       await waitFor(() => {
@@ -1423,7 +1423,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByRole('progressbar', { name: /PDF processing progress/i })).toBeInTheDocument();
@@ -1447,7 +1447,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Document ID: test-doc-id/i)).toBeInTheDocument();
@@ -1479,7 +1479,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       // Wait for parse step
       await waitFor(() => {
@@ -1513,7 +1513,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Document ID: doc-123/i)).toBeInTheDocument();

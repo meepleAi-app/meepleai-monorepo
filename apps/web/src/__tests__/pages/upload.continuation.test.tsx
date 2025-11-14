@@ -177,7 +177,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Document ID: doc-123/i)).toBeInTheDocument();
@@ -210,7 +210,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       // Wait for Document ID and step 2 to appear first
       await waitFor(() => {
@@ -250,7 +250,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Document ID: doc-123/i)).toBeInTheDocument();
@@ -318,7 +318,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       // Wait for Document ID first
       await waitFor(() => {
@@ -356,7 +356,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       // Wait for Document ID first
       await waitFor(() => {
@@ -436,7 +436,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Document ID: doc-123/i)).toBeInTheDocument();
@@ -514,7 +514,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       // Wait for Document ID first
       await waitFor(() => {
@@ -592,7 +592,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Document ID: doc-123/i)).toBeInTheDocument();
@@ -667,7 +667,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Document ID: doc-123/i)).toBeInTheDocument();
@@ -709,7 +709,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       // Wait for Document ID and step 2 first
       await waitFor(() => {
@@ -749,7 +749,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       // Wait for progress transitions naturally
       await waitFor(() => {
@@ -787,7 +787,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Document ID: doc-123/i)).toBeInTheDocument();
@@ -830,7 +830,7 @@ describe('UploadPage - Continuation Tests', () => {
       const file = createPdfFile('test.pdf', 1024);
       await user.upload(fileInput, file);
 
-      await user.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+      await user.click(screen.getByRole('button', { name: /Upload PDF/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/Document ID: doc-123/i)).toBeInTheDocument();

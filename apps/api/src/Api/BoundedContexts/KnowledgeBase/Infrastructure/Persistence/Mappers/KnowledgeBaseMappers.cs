@@ -27,7 +27,8 @@ public static class KnowledgeBaseMappers
             IndexedAt = domain.IndexedAt,
             IndexingError = null,
             EmbeddingModel = "nomic-embed-text", // Default model
-            EmbeddingDimensions = 768 // Default dimensions
+            EmbeddingDimensions = 768, // Default dimensions
+            Metadata = domain.Metadata // Map metadata field
         };
     }
 

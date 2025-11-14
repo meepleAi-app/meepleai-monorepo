@@ -23,6 +23,9 @@ public class VectorDocumentEntity
     public string EmbeddingModel { get; set; } = "nomic-embed-text";
     public int EmbeddingDimensions { get; set; } = 768;
 
+    // Domain metadata (JSON string for flexible metadata storage)
+    public string? Metadata { get; set; }
+
     // Navigation properties
     public GameEntity Game { get; set; } = default!;
     public PdfDocumentEntity PdfDocument { get; set; } = default!;

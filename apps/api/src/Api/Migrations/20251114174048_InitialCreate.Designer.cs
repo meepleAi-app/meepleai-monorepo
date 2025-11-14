@@ -1800,6 +1800,9 @@ namespace Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("Metadata")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("PdfDocumentId")
                         .HasMaxLength(64)
                         .HasColumnType("uuid");

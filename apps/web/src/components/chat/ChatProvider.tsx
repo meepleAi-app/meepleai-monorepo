@@ -200,7 +200,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
       }));
     } catch (err) {
       console.error('Failed to load chat threads:', err);
-      setError('Failed to load chat threads');
+      setError('Failed to load chats');
       setState((prev) => ({
         ...prev,
         chatsByGame: {
@@ -225,6 +225,11 @@ export function ChatProvider({ children }: PropsWithChildren) {
           role: msg.role as 'user' | 'assistant',
           content: msg.content,
           timestamp: new Date(msg.timestamp),
+          // SPRINT-3 #858: Preserve optional fields from ChatThreadMessage
+          backendMessageId: msg.backendMessageId,
+          endpoint: msg.endpoint,
+          gameId: msg.gameId,
+          feedback: msg.feedback ?? null,
         }));
         setState((prev) => ({
           ...prev,

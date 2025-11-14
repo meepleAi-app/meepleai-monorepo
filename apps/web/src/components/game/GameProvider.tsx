@@ -104,7 +104,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       const agentsList = await api.get<Agent[]>(`/api/v1/games/${gameId}/agents`);
-      setAgents(agentsList ?? []);
+      setAgents(Array.isArray(agentsList) ? agentsList : []);
 
       // Auto-select first agent if available
       if (agentsList && agentsList.length > 0) {

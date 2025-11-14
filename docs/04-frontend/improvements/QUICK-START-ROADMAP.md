@@ -1,6 +1,6 @@
 # 🚀 Quick Start: Frontend + BGAI Implementation
 
-**Full Details**: [`implementation-roadmap.md`](./implementation-roadmap.md) (942 righe)
+**Full Details**: [`integrated-worktree-strategy.md`](./integrated-worktree-strategy.md) (942 righe)
 
 ---
 
@@ -352,7 +352,7 @@ git worktree add ../meepleai-frontend-worktree claude/frontend-modernization
 
 ## 📚 Documenti di Riferimento
 
-- **Roadmap Completa**: [`implementation-roadmap.md`](./implementation-roadmap.md)
+- **Roadmap Completa**: [`integrated-worktree-strategy.md`](./integrated-worktree-strategy.md)
 - **Issue FE-IMP**: [`issues.md`](./issues.md)
 - **Piano Generale**: [`plan.md`](./plan.md)
 - **CLAUDE.md**: [`/CLAUDE.md`](/CLAUDE.md)

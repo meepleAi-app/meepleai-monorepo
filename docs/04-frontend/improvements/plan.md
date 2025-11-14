@@ -91,7 +91,7 @@
 
 ## 📎 Riferimenti
 
-- Issues dettagliati: [`docs/ImproveFrontend/issues.md`](./issues.md)  
+- Issues dettagliati: [`docs/04-frontend/improvements/issues.md`](./issues.md)  
 - Stack attuale: `apps/web/package.json`  
 - Contesto storico: `docs/planning/frontend-implementation-plan.md`
 

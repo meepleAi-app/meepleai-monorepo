@@ -950,7 +950,7 @@ Just use semantic color names - they adapt automatically:
 
 ### Full Documentation
 
-- **Complete Guide**: `docs/frontend/design-system.md` (800+ lines)
+- **Complete Guide**: `docs/04-frontend/design-system.md` (800+ lines)
 - **Quick Start**: `DESIGN-SYSTEM-QUICKSTART.md` (this file)
 - **Token Definitions**: `apps/web/src/styles/design-tokens.css`
 
@@ -1016,4 +1016,4 @@ Just use semantic color names - they adapt automatically:
 **Last Updated**: 2025-11-13
 **Maintained By**: Design Team
 
-**Questions?** Check `docs/frontend/design-system.md` for detailed explanations.
+**Questions?** Check `docs/04-frontend/design-system.md` for detailed explanations.

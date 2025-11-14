@@ -207,7 +207,7 @@
 - `docs/testing/test-writing-guide.md`
 
 ### Frontend Guides
-- `docs/frontend/shadcn-ui-installation.md` ✅ NEW
+- `docs/04-frontend/shadcn-ui-installation.md` ✅ NEW
 
 ---
 

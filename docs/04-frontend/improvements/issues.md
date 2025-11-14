@@ -53,7 +53,7 @@ Implementare Server Actions per `login`, `register`, `logout`, `exportChat` e `e
 1. Configurare `QueryClient` con `defaultOptions` (retry, staleTime, error logging).  
 2. Creare hook `useCurrentUser`, `useGames`, `useChats(gameId)`, `useMessages(chatId)` usando `useQuery`.  
 3. Sostituire `loadCurrentUser`, `loadGames`, `loadChats`, `loadChatHistory` con i nuovi hook + `useMutation`.  
-4. Aggiornare unit test (mock `react-query`) e documentare pattern in `docs/frontend/testing-strategy.md`.
+4. Aggiornare unit test (mock `react-query`) e documentare pattern in `docs/04-frontend/testing-strategy.md`.
 
 **Acceptance**  
 - Nessun `useEffect(async …)` rimane nei componenti per fetch delle risorse sopra.  
@@ -86,13 +86,13 @@ Implementare Server Actions per `login`, `register`, `logout`, `exportChat` e `e
 **Tasks**  
 1. Definire schema `z.object({ ... })` per risposte note (`AuthResponse`, `Chat`, ecc.).  
 2. Esporre factory `createApiClient(fetchImpl)` per facilitare mocking nei test.  
-3. Centralizzare gestione `ApiError` con correlationId, logging, mapping in `docs/frontend/error-handling.md`.  
+3. Centralizzare gestione `ApiError` con correlationId, logging, mapping in `docs/04-frontend/error-handling.md`.  
 4. Aggiornare import nei componenti/hook + rimuovere tipi duplicati.
 
 **Acceptance**  
 - Lint non trova più import diretti da `../lib/api` per tutto il codice (solo entry modulare).  
 - Error boundary riceve errori arricchiti (status, correlationId).  
-- Documentazione aggiornata (`docs/frontend/architecture.md`).
+- Documentazione aggiornata (`docs/04-frontend/architecture.md`).
 
 ---
 
@@ -109,7 +109,7 @@ Implementare Server Actions per `login`, `register`, `logout`, `exportChat` e `e
 **Acceptance**  
 - Nessun `useState` per singoli campi rimane nei form target.  
 - Errori di validazione sono annunciati via aria-live (verificato con jest-axe).  
-- Docs aggiornate (`docs/frontend/accessibility-standards.md`).
+- Docs aggiornate (`docs/04-frontend/accessibility-standards.md`).
 
 ---
 
@@ -127,7 +127,7 @@ Implementare Server Actions per `login`, `register`, `logout`, `exportChat` e `e
 **Acceptance**  
 - Componenti `ChatSidebar`, `ChatContent`, `MessageList` leggono solo il selettore necessario (profiling mostra meno rerender).  
 - Store supporta `undo` per edit/delete tramite history o snapshots.  
-- Documentato in `docs/frontend/architecture.md`.
+- Documentato in `docs/04-frontend/architecture.md`.
 
 ---
 
@@ -151,6 +151,6 @@ Implementare Server Actions per `login`, `register`, `logout`, `exportChat` e `e
 
 ## Come creare le issue su GitHub
 1. Per ogni sezione sopra, aprire una nuova issue usando il titolo `FE-IMP-00X — …`.  
-2. Applicare i label suggeriti e collegare il piano (`docs/ImproveFrontend/plan.md`).  
+2. Applicare i label suggeriti e collegare il piano (`docs/04-frontend/improvements/plan.md`).  
 3. Aggiornare il piano con i numeri GitHub reali appena disponibili.
 

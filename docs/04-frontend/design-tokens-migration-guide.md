@@ -247,7 +247,7 @@ Use browser DevTools or online tools:
 
 For questions or issues related to this migration:
 - **GitHub Issue**: [#928](https://github.com/yourusername/meepleai-monorepo/issues/928)
-- **Documentation**: `docs/frontend/`
+- **Documentation**: `docs/04-frontend/`
 - **Team**: @frontend-team
 
 ---

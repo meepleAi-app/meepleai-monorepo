@@ -19,9 +19,11 @@ import {
 
 describe('UploadPage - Game Selection', () => {
   const originalFetch = global.fetch;
+  let user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    user = userEvent.setup();
   });
 
   afterAll(() => {
@@ -56,7 +58,6 @@ describe('UploadPage - Game Selection', () => {
   describe('Given user has Select Game options', () => {
     describe('When user selects game but does not confirm', () => {
       it('Then upload button remains disabled', async () => {
-        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-1', role: 'Admin' }),
           games: [createGameMock({ id: 'game-1', name: 'Terraforming Mars' })],
@@ -80,7 +81,6 @@ describe('UploadPage - Game Selection', () => {
 
     describe('When user confirms game selection', () => {
       it('Then upload button becomes enabled with file selected', async () => {
-        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-1', role: 'Admin' }),
           games: [createGameMock({ id: 'game-1', name: 'Terraforming Mars' })],
@@ -133,7 +133,6 @@ describe('UploadPage - Game Selection', () => {
   describe('Given user has no games to select', () => {
     describe('When user creates a new game successfully', () => {
       it('Then new game appears in selection and upload is enabled', async () => {
-        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-2', role: 'Admin' }),
           games: [],
@@ -163,7 +162,6 @@ describe('UploadPage - Game Selection', () => {
 
     describe('When game creation fails', () => {
       it('Then error message is displayed', async () => {
-        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-16', role: 'Admin' }),
           games: [],
@@ -187,7 +185,6 @@ describe('UploadPage - Game Selection', () => {
 
     describe('When user tries to create game without name', () => {
       it('Then validation error is displayed', async () => {
-        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-1', role: 'Admin' }),
           games: []

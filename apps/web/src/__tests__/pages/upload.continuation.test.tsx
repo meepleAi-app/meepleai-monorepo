@@ -82,8 +82,8 @@ describe('UploadPage - Continuation Tests', () => {
     jest.useRealTimers();
   });
 
-  // Helper to setup game selection  
-  async function confirmGameSelection() {
+  // Helper to setup game selection for tests
+  async function confirmGameSelection(user: ReturnType<typeof userEvent.setup>) {
     // Wait for the Shadcn Select trigger button to be available
     const selectTrigger = await waitFor(() => {
       const trigger = screen.getByRole('combobox', { name: /select.*game/i });
@@ -136,6 +136,7 @@ describe('UploadPage - Continuation Tests', () => {
 
   describe('6. PDF Processing & Polling', () => {
     it('should poll processing status every 2 seconds', async () => {
+      const user = userEvent.setup();
       let pollCount = 0;
 
       const mockFetch = jest.fn().mockImplementation((url: string) => {
@@ -192,7 +193,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -210,6 +211,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 15000);
 
     it('should update processingStatus state from API response', async () => {
+      const user = userEvent.setup();
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
         games: [createGameMock({ id: 'game-1' })],
@@ -225,7 +227,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -253,6 +255,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 15000);
 
     it('should auto-advance to review when status = completed', async () => {
+      const user = userEvent.setup();
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
         games: [createGameMock({ id: 'game-1' })],
@@ -265,7 +268,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -284,6 +287,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 15000);
 
     it('should stop polling when processing fails', async () => {
+      const user = userEvent.setup();
       let pollCount = 0;
 
       const mockFetch = jest.fn().mockImplementation((url: string) => {
@@ -333,7 +337,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -358,6 +362,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 15000);
 
     it('should display processing error message', async () => {
+      const user = userEvent.setup();
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
         games: [createGameMock({ id: 'game-1' })],
@@ -371,7 +376,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -392,6 +397,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 15000);
 
     it('should retry polling on network error with 4s interval', async () => {
+      const user = userEvent.setup();
       let attemptCount = 0;
 
       const mockFetch = jest.fn().mockImplementation((url: string) => {
@@ -451,7 +457,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -471,6 +477,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 20000);
 
     it('should clear polling error on successful retry', async () => {
+      const user = userEvent.setup();
       let attemptCount = 0;
 
       const mockFetch = jest.fn().mockImplementation((url: string) => {
@@ -529,7 +536,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -558,6 +565,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 20000);
 
     it('should cancel polling when component unmounts', async () => {
+      const user = userEvent.setup();
       let pollCount = 0;
 
       const mockFetch = jest.fn().mockImplementation((url: string) => {
@@ -607,7 +615,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       const { unmount } = render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -633,6 +641,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 15000);
 
     it('should cancel polling when step changes', async () => {
+      const user = userEvent.setup();
       let pollCount = 0;
 
       const mockFetch = jest.fn().mockImplementation((url: string) => {
@@ -682,7 +691,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -708,6 +717,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 15000);
 
     it('should handle processingStatus: pending, processing, completed, failed', async () => {
+      const user = userEvent.setup();
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
         games: [createGameMock({ id: 'game-1' })],
@@ -724,7 +734,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -751,6 +761,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 15000);
 
     it('should show progress percentage (20%, 65%, 100%)', async () => {
+      const user = userEvent.setup();
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
         games: [createGameMock({ id: 'game-1' })],
@@ -764,7 +775,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -790,6 +801,7 @@ describe('UploadPage - Continuation Tests', () => {
     }, 15000);
 
     it('should trigger handleParse automatically when completed', async () => {
+      const user = userEvent.setup();
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
         games: [createGameMock({ id: 'game-1' })],
@@ -802,7 +814,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -828,6 +840,7 @@ describe('UploadPage - Continuation Tests', () => {
 
   describe('7. RuleSpec Review & Edit', () => {
     const setupReviewStep = async () => {
+      const user = userEvent.setup();
       const mockFetch = setupUploadMocks({
         auth: createAuthMock({ role: 'Admin' }),
         games: [createGameMock({ id: 'game-1' })],
@@ -845,7 +858,7 @@ describe('UploadPage - Continuation Tests', () => {
       global.fetch = mockFetch as unknown as typeof fetch;
 
       render(<UploadPage />);
-      await confirmGameSelection();
+      await confirmGameSelection(user);
 
       const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
       const file = createPdfFile('test.pdf', 1024);
@@ -866,6 +879,8 @@ describe('UploadPage - Continuation Tests', () => {
       }, { timeout: 5000 });
 
       jest.useRealTimers();
+      
+      return user;
     };
 
     it('should display RuleSpec metadata (gameId, version, rule count)', async () => {
@@ -896,7 +911,7 @@ describe('UploadPage - Continuation Tests', () => {
     });
 
     it('should update rule text via textarea', async () => {
-      await setupReviewStep();
+      const user = await setupReviewStep();
 
       const textarea = screen.getByDisplayValue(/Test rule 1/i) as HTMLTextAreaElement;
       await user.clear(textarea);
@@ -906,7 +921,7 @@ describe('UploadPage - Continuation Tests', () => {
     });
 
     it('should update rule section, page, line fields', async () => {
-      await setupReviewStep();
+      const user = await setupReviewStep();
 
       const sectionInputs = screen.getAllByDisplayValue(/intro/i);
       const sectionInput = sectionInputs[0] as HTMLInputElement;
@@ -918,7 +933,7 @@ describe('UploadPage - Continuation Tests', () => {
     });
 
     it('should delete rule atom from list', async () => {
-      await setupReviewStep();
+      const user = await setupReviewStep();
 
       const deleteButtons = screen.getAllByRole('button', { name: /Delete/i });
       expect(deleteButtons.length).toBe(2);
@@ -932,7 +947,7 @@ describe('UploadPage - Continuation Tests', () => {
     });
 
     it('should add new rule atom to list', async () => {
-      await setupReviewStep();
+      const user = await setupReviewStep();
 
       const addButton = screen.getByRole('button', { name: /\+ Add Rule/i });
       await user.click(addButton);
@@ -943,7 +958,7 @@ describe('UploadPage - Continuation Tests', () => {
     });
 
     it('should have incremented ID for new rule', async () => {
-      await setupReviewStep();
+      const user = await setupReviewStep();
 
       const addButton = screen.getByRole('button', { name: /\+ Add Rule/i });
       await user.click(addButton);
@@ -957,7 +972,7 @@ describe('UploadPage - Continuation Tests', () => {
     });
 
     it('should navigate back to parse step', async () => {
-      await setupReviewStep();
+      const user = await setupReviewStep();
 
       const backButton = screen.getByRole('button', { name: /← Back/i });
       await user.click(backButton);
@@ -968,7 +983,7 @@ describe('UploadPage - Continuation Tests', () => {
     });
 
     it('should cancel button reset wizard', async () => {
-      await setupReviewStep();
+      const user = await setupReviewStep();
 
       const cancelButton = screen.getByRole('button', { name: /Cancel/i });
       await user.click(cancelButton);
@@ -979,7 +994,7 @@ describe('UploadPage - Continuation Tests', () => {
     });
 
     it('should publish button trigger API call', async () => {
-      await setupReviewStep();
+      const user = await setupReviewStep();
 
       const publishButton = screen.getByRole('button', { name: /Publish RuleSpec/i });
       await user.click(publishButton);

@@ -775,7 +775,8 @@ namespace Api.Migrations
                     IndexedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IndexingError = table.Column<string>(type: "text", nullable: true),
                     EmbeddingModel = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    EmbeddingDimensions = table.Column<int>(type: "integer", nullable: false)
+                    EmbeddingDimensions = table.Column<int>(type: "integer", nullable: false),
+                    Metadata = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {

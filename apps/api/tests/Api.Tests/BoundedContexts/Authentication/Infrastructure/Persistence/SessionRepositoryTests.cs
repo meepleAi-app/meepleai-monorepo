@@ -383,8 +383,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var user1Id = await CreateTestUserAsync();
-        var user2Id = await CreateTestUserAsync();
+        var user1Id = await CreateTestUserAsync("user1@test.com");
+        var user2Id = await CreateTestUserAsync("user2@test.com");
 
         var user1Session1 = CreateTestSession(user1Id);
         var user1Session2 = CreateTestSession(user1Id);

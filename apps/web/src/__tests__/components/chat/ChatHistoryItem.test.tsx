@@ -163,7 +163,7 @@ describe('ChatHistoryItem', () => {
       const onDelete = jest.fn();
       render(<ChatHistoryItem {...defaultProps} onDelete={onDelete} />);
 
-      const deleteButton = screen.getByLabelText('Delete chat with Chess Expert');
+      const deleteButton = screen.getByLabelText('Delete chat Chess Expert');
       await user.click(deleteButton);
 
       expect(onDelete).toHaveBeenCalledTimes(1);
@@ -175,7 +175,7 @@ describe('ChatHistoryItem', () => {
       const onDelete = jest.fn();
       render(<ChatHistoryItem {...defaultProps} onSelect={onSelect} onDelete={onDelete} />);
 
-      const deleteButton = screen.getByLabelText('Delete chat with Chess Expert');
+      const deleteButton = screen.getByLabelText('Delete chat Chess Expert');
       await user.click(deleteButton);
 
       // onSelect should not be called when delete button is clicked
@@ -199,40 +199,40 @@ describe('ChatHistoryItem', () => {
 
     it('has accessible delete button label', () => {
       render(<ChatHistoryItem {...defaultProps} />);
-      expect(screen.getByLabelText('Delete chat with Chess Expert')).toBeInTheDocument();
+      expect(screen.getByLabelText('Delete chat Chess Expert')).toBeInTheDocument();
     });
 
     it('has title attribute on delete button', () => {
       render(<ChatHistoryItem {...defaultProps} />);
-      const deleteButton = screen.getByLabelText('Delete chat with Chess Expert');
+      const deleteButton = screen.getByLabelText('Delete chat Chess Expert');
       expect(deleteButton).toHaveAttribute('title', 'Elimina chat');
     });
   });
 
   describe('Edge Cases', () => {
-    it('handles chat with very long agent name', () => {
-      const chatWithLongName = {
+    it('handles chat with very long title', () => {
+      const chatWithLongTitle = {
         ...mockChat,
-        agentName: 'This is a very long agent name that should still render correctly without breaking the layout'
+        title: 'This is a very long agent name that should still render correctly without breaking the layout'
       };
-      render(<ChatHistoryItem {...defaultProps} chat={chatWithLongName} />);
-      expect(screen.getByText(chatWithLongName.agentName)).toBeInTheDocument();
+      render(<ChatHistoryItem {...defaultProps} chat={chatWithLongTitle} />);
+      expect(screen.getByText(chatWithLongTitle.title)).toBeInTheDocument();
     });
 
-    it('handles chat with empty string agent name', () => {
-      const chatWithEmptyName = {
+    it('handles chat with empty string title', () => {
+      const chatWithEmptyTitle = {
         ...mockChat,
-        agentName: ''
+        title: ''
       };
-      render(<ChatHistoryItem {...defaultProps} chat={chatWithEmptyName} />);
-      // Should still render without crashing
+      render(<ChatHistoryItem {...defaultProps} chat={chatWithEmptyTitle} />);
+      // Should still render without crashing - the component shows empty string, not 'Chat' fallback
       expect(screen.getByText('🗑️')).toBeInTheDocument();
     });
 
-    it('handles chat with special characters in agent name', () => {
+    it('handles chat with special characters in title', () => {
       const chatWithSpecialChars = {
         ...mockChat,
-        agentName: 'Chess <Expert> & "Helper"'
+        title: 'Chess <Expert> & "Helper"'
       };
       render(<ChatHistoryItem {...defaultProps} chat={chatWithSpecialChars} />);
       expect(screen.getByText('Chess <Expert> & "Helper"')).toBeInTheDocument();
@@ -241,7 +241,7 @@ describe('ChatHistoryItem', () => {
     it('handles invalid date strings gracefully', () => {
       const chatWithInvalidDate = {
         ...mockChat,
-        startedAt: 'invalid-date',
+        createdAt: 'invalid-date',
         lastMessageAt: 'invalid-date'
       };
       // Should not throw an error

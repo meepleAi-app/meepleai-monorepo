@@ -63,7 +63,7 @@ describe('UploadPage - PDF Upload', () => {
           fireEvent.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
 
           const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
-          const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+          const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
 
           fireEvent.change(fileInput, { target: { files: [file] } });
@@ -166,7 +166,7 @@ describe('UploadPage - PDF Upload', () => {
           const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
           fireEvent.change(fileInput, { target: { files: [file] } });
 
-          const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+          const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
           await waitFor(() => expect(uploadButton).not.toBeDisabled());
           fireEvent.click(uploadButton);
 
@@ -626,7 +626,7 @@ describe('UploadPage - PDF Upload', () => {
         const file = new File(['pdf'], 'test.pdf', { type: 'application/pdf' });
         fireEvent.change(fileInput, { target: { files: [file] } });
 
-        const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+        const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
         await waitFor(() => expect(uploadButton).not.toBeDisabled());
         fireEvent.click(uploadButton);
 

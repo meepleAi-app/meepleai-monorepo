@@ -48,7 +48,7 @@ describe('UploadPage - Game Selection', () => {
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
-        const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+        const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
         const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
 
@@ -74,7 +74,7 @@ describe('UploadPage - Game Selection', () => {
 
         await user.click(screen.getByRole('button', { name: /Confirm Game Selection/i }));
 
-        const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+        const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
         const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
 
@@ -131,7 +131,7 @@ describe('UploadPage - Game Selection', () => {
 
         await waitFor(() => expect(screen.getByRole('option', { name: 'New Game' })).toBeInTheDocument());
 
-        const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+        const uploadButton = screen.getByRole('button', { name: /Upload PDF/i });
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
         const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
         await user.upload(fileInput, file);

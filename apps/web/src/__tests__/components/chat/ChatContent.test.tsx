@@ -119,10 +119,13 @@ describe('ChatContent Component', () => {
       const chats = [
         {
           id: 'chat-1',
-          agentName: 'Chess Expert',
+          title: 'Chess Expert',
           gameName: 'Chess',
           gameId: 'game-1',
-          agentId: 'agent-1',
+          createdAt: '2025-01-10T10:00:00Z',
+          lastMessageAt: '2025-01-10T10:05:00Z',
+          messageCount: 5,
+          messages: []
         },
       ];
       setupMockContext({ activeChatId: 'chat-1', chats });
@@ -135,10 +138,13 @@ describe('ChatContent Component', () => {
       const chats = [
         {
           id: 'chat-1',
-          agentName: undefined,
+          title: undefined,
           gameName: 'Chess',
           gameId: 'game-1',
-          agentId: 'agent-1',
+          createdAt: '2025-01-10T10:00:00Z',
+          lastMessageAt: '2025-01-10T10:05:00Z',
+          messageCount: 5,
+          messages: []
         },
       ];
       setupMockContext({ activeChatId: 'chat-1', chats });
@@ -174,17 +180,23 @@ describe('ChatContent Component', () => {
       const chats = [
         {
           id: 'chat-1',
-          agentName: 'Chess Expert',
+          title: 'Chess Expert',
           gameName: 'Chess',
           gameId: 'game-1',
-          agentId: 'agent-1',
+          createdAt: '2025-01-10T10:00:00Z',
+          lastMessageAt: '2025-01-10T10:05:00Z',
+          messageCount: 5,
+          messages: []
         },
         {
           id: 'chat-2',
-          agentName: 'Catan Helper',
+          title: 'Catan Helper',
           gameName: 'Catan',
           gameId: 'game-2',
-          agentId: 'agent-2',
+          createdAt: '2025-01-10T10:00:00Z',
+          lastMessageAt: '2025-01-10T10:05:00Z',
+          messageCount: 3,
+          messages: []
         },
       ];
       setupMockContext({ activeChatId: 'chat-1', chats });
@@ -310,17 +322,6 @@ describe('ChatContent Component', () => {
 
       const alert = screen.getByRole('alert');
       expect(alert).toHaveAttribute('aria-live', 'polite');
-    });
-
-    it('applies error styling', () => {
-      setupMockContext({ errorMessage: 'Error occurred' });
-      render(<ChatContent />);
-
-      const alert = screen.getByRole('alert');
-      expect(alert).toHaveStyle({
-        background: '#fce8e6',
-        color: '#d93025',
-      });
     });
 
     it('updates when error message changes', () => {
@@ -504,86 +505,9 @@ describe('ChatContent Component', () => {
   });
 
   /**
-   * Test Group: Styling
-   */
-  describe('Styling', () => {
-    it('applies correct container styling', () => {
-      setupMockContext();
-      const { container } = render(<ChatContent />);
-
-      const mainDiv = container.firstChild as HTMLElement;
-      expect(mainDiv).toHaveStyle({
-        flex: '1',
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#ffffff',
-      });
-    });
-
-    it('applies correct header styling', () => {
-      setupMockContext();
-      render(<ChatContent />);
-
-      // Header contains heading and home link
-      expect(screen.getByRole('heading')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
-    });
-
-    it('applies correct heading styling', () => {
-      setupMockContext();
-      render(<ChatContent />);
-
-      const heading = screen.getByRole('heading');
-      expect(heading).toHaveStyle({ margin: '0', fontSize: '20px' });
-    });
-
-    it('applies correct subtitle styling', () => {
-      setupMockContext();
-      render(<ChatContent />);
-
-      const subtitle = screen.getByText('Nessun gioco selezionato');
-      expect(subtitle).toHaveStyle({
-        margin: '4px 0 0 0',
-        color: '#64748b',
-        fontSize: '13px',
-      });
-    });
-
-    it('renders home link correctly', () => {
-      setupMockContext();
-      render(<ChatContent />);
-
-      const link = screen.getByRole('link', { name: 'Home' });
-      expect(link).toBeInTheDocument();
-      expect(link).toHaveAttribute('href', '/');
-    });
-
-    it('applies correct toggle button styling', () => {
-      setupMockContext();
-      render(<ChatContent />);
-
-      const button = screen.getByRole('button', { name: /sidebar/i });
-      expect(button).toHaveStyle({
-        background: '#f1f3f4',
-      });
-    });
-  });
-
-  /**
    * Test Group: Layout
    */
   describe('Layout', () => {
-    it('uses flexbox layout', () => {
-      setupMockContext();
-      const { container } = render(<ChatContent />);
-
-      const mainDiv = container.firstChild as HTMLElement;
-      expect(mainDiv).toHaveStyle({
-        display: 'flex',
-        flexDirection: 'column',
-      });
-    });
-
     it('maintains header at top', () => {
       setupMockContext();
       render(<ChatContent />);

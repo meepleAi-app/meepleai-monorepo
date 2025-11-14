@@ -12,6 +12,7 @@ public sealed class SessionStatus : ValueObject
     // Known session statuses
     public static readonly SessionStatus Setup = new("Setup");
     public static readonly SessionStatus InProgress = new("InProgress");
+    public static readonly SessionStatus Paused = new("Paused");
     public static readonly SessionStatus Completed = new("Completed");
     public static readonly SessionStatus Abandoned = new("Abandoned");
 
@@ -20,7 +21,7 @@ public sealed class SessionStatus : ValueObject
         Value = value;
     }
 
-    public bool IsActive => Value == InProgress.Value || Value == Setup.Value;
+    public bool IsActive => Value == InProgress.Value || Value == Setup.Value || Value == Paused.Value;
     public bool IsFinished => Value == Completed.Value || Value == Abandoned.Value;
 
     protected override IEnumerable<object?> GetEqualityComponents()

@@ -71,12 +71,39 @@ public sealed class GameSession : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Pauses the game session (moves from InProgress to Paused).
+    /// </summary>
+    public void Pause()
+    {
+        if (Status != SessionStatus.InProgress)
+            throw new InvalidOperationException($"Cannot pause session in {Status} status. Session must be InProgress.");
+
+        Status = SessionStatus.Paused;
+
+        // TODO: Add domain event GameSessionPaused
+    }
+
+    /// <summary>
+    /// Resumes the game session (moves from Paused to InProgress).
+    /// </summary>
+    public void Resume()
+    {
+        if (Status != SessionStatus.Paused)
+            throw new InvalidOperationException($"Cannot resume session in {Status} status. Session must be Paused.");
+
+        Status = SessionStatus.InProgress;
+
+        // TODO: Add domain event GameSessionResumed
+    }
+
+    /// <summary>
     /// Completes the session with optional winner.
+    /// Can be completed from InProgress or Paused status.
     /// </summary>
     public void Complete(string? winnerName = null)
     {
-        if (Status != SessionStatus.InProgress)
-            throw new InvalidOperationException($"Cannot complete session in {Status} status. Session must be InProgress.");
+        if (Status != SessionStatus.InProgress && Status != SessionStatus.Paused)
+            throw new InvalidOperationException($"Cannot complete session in {Status} status. Session must be InProgress or Paused.");
 
         Status = SessionStatus.Completed;
         CompletedAt = DateTime.UtcNow;
@@ -102,6 +129,29 @@ public sealed class GameSession : AggregateRoot<Guid>
         }
 
         // TODO: Add domain event GameSessionAbandoned
+    }
+
+    /// <summary>
+    /// Adds a player to the session.
+    /// Can only add players when session is in Setup or InProgress status.
+    /// </summary>
+    public void AddPlayer(SessionPlayer player)
+    {
+        if (player == null)
+            throw new ArgumentNullException(nameof(player));
+
+        if (Status.IsFinished)
+            throw new InvalidOperationException($"Cannot add player to finished session (status: {Status})");
+
+        if (_players.Count >= 100)
+            throw new InvalidOperationException("Session cannot have more than 100 players");
+
+        if (HasPlayer(player.PlayerName))
+            throw new InvalidOperationException($"Player '{player.PlayerName}' is already in this session");
+
+        _players.Add(player);
+
+        // TODO: Add domain event PlayerAddedToSession
     }
 
     /// <summary>

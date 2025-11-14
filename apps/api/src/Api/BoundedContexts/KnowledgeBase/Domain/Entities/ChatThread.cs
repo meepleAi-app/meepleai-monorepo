@@ -8,8 +8,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// </summary>
 public sealed class ChatThread : AggregateRoot<Guid>
 {
+    public Guid UserId { get; private set; }
     public Guid? GameId { get; private set; }
     public string? Title { get; private set; }
+    public ThreadStatus Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime LastMessageAt { get; private set; }
 
@@ -30,11 +32,17 @@ public sealed class ChatThread : AggregateRoot<Guid>
     /// </summary>
     public ChatThread(
         Guid id,
+        Guid userId,
         Guid? gameId = null,
         string? title = null) : base(id)
     {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId cannot be empty", nameof(userId));
+
+        UserId = userId;
         GameId = gameId;
         Title = title?.Trim();
+        Status = ThreadStatus.Active;
         CreatedAt = DateTime.UtcNow;
         LastMessageAt = CreatedAt;
 
@@ -48,6 +56,9 @@ public sealed class ChatThread : AggregateRoot<Guid>
     {
         if (message == null)
             throw new ArgumentNullException(nameof(message));
+
+        if (Status.IsClosed)
+            throw new InvalidOperationException("Cannot add message to closed thread");
 
         _messages.Add(message);
         LastMessageAt = message.Timestamp;
@@ -102,4 +113,30 @@ public sealed class ChatThread : AggregateRoot<Guid>
     /// Gets the last message in the thread.
     /// </summary>
     public ChatMessage? LastMessage => _messages.Count > 0 ? _messages[^1] : null;
+
+    /// <summary>
+    /// Closes the thread, preventing further messages.
+    /// </summary>
+    public void CloseThread()
+    {
+        if (Status.IsClosed)
+            throw new InvalidOperationException("Thread is already closed");
+
+        Status = ThreadStatus.Closed;
+
+        // TODO: Add domain event ThreadClosed
+    }
+
+    /// <summary>
+    /// Reopens a closed thread.
+    /// </summary>
+    public void ReopenThread()
+    {
+        if (Status.IsActive)
+            throw new InvalidOperationException("Thread is already active");
+
+        Status = ThreadStatus.Active;
+
+        // TODO: Add domain event ThreadReopened
+    }
 }

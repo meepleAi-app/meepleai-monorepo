@@ -4,11 +4,8 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
-/// Command to create a new chat thread.
+/// Command to reopen a closed chat thread.
 /// </summary>
-public record CreateChatThreadCommand(
-    Guid UserId,
-    Guid? GameId = null,
-    string? Title = null,
-    string? InitialMessage = null
+public record ReopenThreadCommand(
+    Guid ThreadId
 ) : ICommand<ChatThreadDto>;

@@ -12,7 +12,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Input } from '@/components/ui/input';
 import { AccessibleFormInput } from '@/components/accessible';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 
@@ -42,6 +41,8 @@ export interface LoginFormProps {
   loading?: boolean;
   error?: string;
   onErrorDismiss?: () => void;
+  initialEmail?: string;
+  initialPassword?: string;
 }
 
 // ============================================================================
@@ -52,7 +53,9 @@ export function LoginForm({
   onSubmit,
   loading = false,
   error,
-  onErrorDismiss
+  onErrorDismiss,
+  initialEmail = '',
+  initialPassword = '',
 }: LoginFormProps) {
   const {
     register,
@@ -61,8 +64,8 @@ export function LoginForm({
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: initialEmail,
+      password: initialPassword,
     },
   });
 

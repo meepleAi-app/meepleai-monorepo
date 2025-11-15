@@ -149,10 +149,22 @@ Expected output: 3 open security issues
 
 ## 📖 Related Documentation
 
-- **Security Audit Report:** `docs/security/SECURITY_AUDIT_2025-11-04.md`
-- **Security Policy:** `docs/SECURITY.md`
-- **Security Scanning:** `docs/security-scanning.md`
+### Security Reports (Updated 2025-11-15)
+- **📊 Executive Audit Summary:** `docs/06-security/security-issue-audit.md` - **START HERE**
+- **📋 Comprehensive Analysis (954 Issues):** `docs/06-security/SECURITY_ANALYSIS_954_ISSUES.md`
+- **🔍 Original Security Audit:** `docs/06-security/SECURITY_AUDIT_2025-11-04.md`
+
+### Remediation Documentation
+- **Path Injection Fixes:** `docs/06-security/code-scanning-remediation-summary.md`
+- **IDisposable Leaks:** `docs/06-security/disposable-resource-leak-remediation.md`
+- **Null References:** `docs/06-security/null-reference-remediation.md`
+- **Exception Handling:** `docs/06-security/generic-catch-analysis.md`
+
+### Security Policies & Configuration
+- **Security Policy:** `SECURITY.md` (root) and `docs/SECURITY.md`
 - **Semgrep Rules:** `.semgrep.yml`
+- **Security Patterns:** `docs/06-security/security-patterns.md`
+- **OAuth Security:** `docs/06-security/oauth-security.md`
 
 ---
 
@@ -212,5 +224,8 @@ For questions or issues:
 ---
 
 **Created:** 2025-11-04
-**Security Audit:** `docs/security/SECURITY_AUDIT_2025-11-04.md`
+**Last Updated:** 2025-11-15
+**Security Audit:** `docs/06-security/security-issue-audit.md` (Executive Summary)
+**Comprehensive Analysis:** `docs/06-security/SECURITY_ANALYSIS_954_ISSUES.md` (954 Issues Analyzed)
 **Issues Ready:** 3 (P1, P2, P3)
+**Overall Security Rating:** 9.5/10 (EXCELLENT)

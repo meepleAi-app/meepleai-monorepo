@@ -229,15 +229,27 @@ nano api.env.dev  # oppure code api.env.dev per VS Code
 
 **Configurazione `api.env.dev`** (parametri principali):
 
+> **⚠️ IMPORTANTE**: Se esegui l'API in Docker Compose, sostituisci `localhost` con i nomi dei servizi Docker:
+> - `localhost` → `postgres` (database)
+> - `localhost:6333` → `http://qdrant:6333` (vector DB)
+> - `localhost:6379` → `redis:6379` (cache)
+> - `localhost:8081` → `http://seq:5341` (logging - porta ingestion)
+> - `localhost:8001` → `http://unstructured:8001` (PDF processing)
+> - `localhost:8002` → `http://smoldocling:8002` (PDF processing)
+
 ```bash
 # ============================================
 # DATABASE
 # ============================================
+# Se API in Docker: Host=postgres
+# Se API fuori Docker: Host=localhost
 CONNECTIONSTRINGS__POSTGRES=Host=localhost;Port=5432;Database=meepleai;Username=meepleai_user;Password=meepleai_dev_password
 
 # ============================================
 # SERVIZI ESTERNI
 # ============================================
+# Se API in Docker: http://qdrant:6333 e redis:6379
+# Se API fuori Docker: http://localhost:6333 e localhost:6379
 QDRANT_URL=http://localhost:6333
 REDIS_URL=localhost:6379
 
@@ -256,7 +268,10 @@ AI__OPENROUTER__CHATMODEL=anthropic/claude-3.5-sonnet
 # ============================================
 # OSSERVABILITÀ
 # ============================================
-SEQ_URL=http://localhost:8081
+# Se API in Docker: http://seq:5341 (porta ingestion, NON 8081!)
+# Se API fuori Docker: http://localhost:5341
+# Porta 8081 è solo per la UI web di Seq
+SEQ_URL=http://localhost:5341
 JAEGER_AGENT_HOST=localhost
 JAEGER_AGENT_PORT=6831
 
@@ -270,6 +285,8 @@ INITIAL_ADMIN_PASSWORD=Admin123!
 # PDF PROCESSING
 # ============================================
 PDFPROCESSING__EXTRACTOR__PROVIDER=Orchestrator
+# Se API in Docker: http://unstructured:8001 e http://smoldocling:8002
+# Se API fuori Docker: http://localhost:8001 e http://localhost:8002
 PDFPROCESSING__UNSTRUCTURED__BASEURL=http://localhost:8001
 PDFPROCESSING__SMOLDOCLING__BASEURL=http://localhost:8002
 
@@ -1097,9 +1114,11 @@ docker compose ps seq
 
 # Verifica SEQ_URL in api.env.dev
 grep SEQ_URL infra/env/api.env.dev
-# Deve essere: http://localhost:8081
+# IMPORTANTE: Deve puntare alla porta di INGESTION (5341), NON alla UI (8081)!
+# Se API fuori Docker: http://localhost:5341
+# Se API in Docker: http://seq:5341
 
-# Riavvia API
+# Riavvia API dopo la modifica
 ```
 
 ### Log Debugging

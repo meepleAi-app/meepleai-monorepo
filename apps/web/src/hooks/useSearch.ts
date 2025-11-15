@@ -146,8 +146,21 @@ function applyFilters(results: SearchResult[], filters?: SearchFilters): SearchR
 
     // Filter by agent
     if (filters.agentId) {
+      // Agent results: filter by agent ID
       if (result.type === 'agent' && result.id !== filters.agentId) return false;
-      if (result.type === 'message' && result.message.endpoint !== filters.agentId) return false;
+
+      // Message results: Cannot filter by agent without chat-message association
+      // Note: message.endpoint is HTTP route ("/qa"), not agentId
+      // TODO: Need to pass chat context to properly filter messages by agent
+
+      // Chat results: Cannot filter by agent (ChatThread doesn't have agentId)
+      // TODO: If chat needs agent filtering, ChatThread type needs agentId property
+
+      // Game results: cannot be filtered by agent (games don't have agents)
+      if (result.type === 'game') return false;
+
+      // For now, only agent type itself can be filtered by agentId
+      // Other types pass through (no filtering)
     }
 
     // Filter by date range

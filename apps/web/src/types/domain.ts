@@ -134,14 +134,27 @@ export interface Snippet {
 }
 
 /**
+ * Citation from PDF document (Issue #859)
+ * Maps to backend CitationDto from KnowledgeBase.Application.DTOs
+ */
+export interface Citation {
+  documentId: string;
+  pageNumber: number;
+  snippet: string;
+  relevanceScore: number;
+}
+
+/**
  * Message in chat UI (combines user/assistant messages)
  * Issue #1167: Added isOptimistic for optimistic updates
+ * Issue #859: Added citations for PDF citation display
  */
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   snippets?: Snippet[];
+  citations?: Citation[]; // #859: PDF citations from RAG responses
   followUpQuestions?: string[];
   feedback?: 'helpful' | 'not-helpful' | null;
   endpoint?: string;
@@ -156,10 +169,12 @@ export interface Message {
 
 /**
  * Q&A response from agent
+ * Issue #859: Added citations to match backend QaResponseDto
  */
 export interface QaResponse {
   answer: string;
   snippets?: Snippet[];
+  citations?: Citation[]; // #859: PDF citations from RAG
   followUpQuestions?: string[];
   messageId?: string;
 }

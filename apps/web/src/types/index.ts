@@ -32,6 +32,7 @@ export type {
   RuleSpec,
   RuleSpecComment,
   Snippet,
+  Citation, // #859: PDF citation type
   Message,
   QaResponse,
   SetupStep,

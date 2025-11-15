@@ -35,9 +35,10 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
   const isEditing = editingMessageId === message.id;
   const isDeleted = message.isDeleted;
   const isUpdating = loading.updating || loading.deleting;
+  const isOptimistic = message.isOptimistic ?? false; // #1167
 
-  // Don't show actions for deleted messages
-  const showActions = !isDeleted && !isEditing;
+  // Don't show actions for deleted or optimistic messages
+  const showActions = !isDeleted && !isEditing && !isOptimistic;
 
   // CHAT-02: Handle follow-up question click
   const handleFollowUpClick = (question: string) => {
@@ -62,14 +63,23 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
         className={cn(
           "max-w-[75%] p-3 rounded-lg text-sm leading-relaxed relative",
           isUser ? "bg-[#e3f2fd]" : "bg-[#f1f3f4]",
-          isUser && showActions && "user-message-hoverable"
+          isUser && showActions && "user-message-hoverable",
+          isOptimistic && "opacity-60 animate-pulse" // #1167: Visual feedback for optimistic messages
         )}
+        aria-busy={isOptimistic}
+        aria-label={isOptimistic ? "Sending message..." : undefined}
       >
         <div className="flex justify-between items-center mb-1">
           <div className="font-medium text-xs text-[#64748b]">
             {isUser ? 'Tu' : 'MeepleAI'}
+            {/* #1167: Sending indicator for optimistic messages */}
+            {isOptimistic && (
+              <span className="ml-1.5 text-[11px] text-[#64748b] italic">
+                (invio...)
+              </span>
+            )}
             {/* Edited badge */}
-            {message.updatedAt && !isDeleted && (
+            {message.updatedAt && !isDeleted && !isOptimistic && (
               <span className="ml-1.5 text-[11px] text-[#94a3b8] italic">
                 (modificato)
               </span>

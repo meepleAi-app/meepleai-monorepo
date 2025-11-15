@@ -392,6 +392,117 @@ public class EnhancedPdfProcessingOrchestratorTests
         }
     }
 
+    #region BGAI-088: Defense in Depth - File Size Validation Tests
+
+    [Theory]
+    [InlineData(52428800, true)]     // 50 MB - under limit (50 * 1024 * 1024)
+    [InlineData(104857600, true)]    // 100 MB - at limit (boundary) (100 * 1024 * 1024)
+    [InlineData(105906176, false)]   // 101 MB - exceeds limit (101 * 1024 * 1024)
+    public async Task Test11_FileSizeLimit_ReturnsExpected(long size, bool shouldSucceed)
+    {
+        // Arrange - Create fake extractors (won't be called for oversized PDFs)
+        var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, text: "Should not extract");
+        var stage2 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, text: "Should not extract");
+        var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Should not extract");
+
+        // Configuration with 100 MB limit
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["PdfProcessing:MaxFileSizeBytes"] = "104857600" // 100 MB
+            })
+            .Build();
+
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            stage1, stage2, stage3, _logger, config);
+
+        await using var pdfStream = CreateTestPdfStream(size);
+
+        // Act
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
+
+        // Assert
+        Assert.Equal(shouldSucceed, result.Success);
+
+        if (!shouldSucceed)
+        {
+            // Rejected due to size
+            Assert.Contains("exceeds maximum", result.ErrorMessage);
+            Assert.Equal(0, result.StageUsed); // No stage was used
+            Assert.Equal("None", result.StageName);
+            Assert.Equal(0, result.CharacterCount);
+
+            // Verify extractors were NOT called (defense in depth prevented processing)
+            Assert.Equal(0, stage1.CallCount);
+            Assert.Equal(0, stage2.CallCount);
+            Assert.Equal(0, stage3.CallCount);
+        }
+        else
+        {
+            // Accepted and processed
+            Assert.True(result.Success);
+            Assert.True(result.StageUsed > 0, "At least one stage should have processed the PDF");
+        }
+    }
+
+    [Fact]
+    public async Task Test12_NonSeekableStream_SkipsSizeCheck()
+    {
+        // Arrange - Non-seekable stream (size check should be skipped gracefully)
+        var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, text: "Extracted successfully");
+        var stage2 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, text: "Stage2");
+        var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Stage3");
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["PdfProcessing:MaxFileSizeBytes"] = "100" // Very low limit (100 bytes)
+            })
+            .Build();
+
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            stage1, stage2, stage3, _logger, config);
+
+        // Create non-seekable stream wrapper
+        await using var baseStream = CreateDummyPdfStream();
+        await using var nonSeekableStream = new NonSeekableStreamWrapper(baseStream);
+
+        // Act
+        var result = await orchestrator.ExtractTextWithFallbackAsync(nonSeekableStream, ct: TestCancellationToken);
+
+        // Assert - Should process successfully even though limit is very low
+        Assert.True(result.Success, "Non-seekable stream should skip size check and process normally");
+        Assert.Equal("Extracted successfully", result.ExtractedText);
+        Assert.Equal(1, stage1.CallCount); // Stage 1 should have been called
+    }
+
+    [Fact]
+    public async Task Test13_DefaultMaxSize_WhenConfigMissing()
+    {
+        // Arrange - No configuration (should use default 100 MB)
+        var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, text: "Extracted");
+        var stage2 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, text: "Stage2");
+        var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Stage3");
+
+        var emptyConfig = new ConfigurationBuilder().Build(); // No PdfProcessing:MaxFileSizeBytes
+
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            stage1, stage2, stage3, _logger, emptyConfig);
+
+        // 110 MB stream - should exceed default 100 MB
+        await using var pdfStream = CreateTestPdfStream(115343360); // 110 * 1024 * 1024
+
+        // Act
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
+
+        // Assert - Should reject (default is 100 MB)
+        Assert.False(result.Success);
+        Assert.Contains("exceeds maximum", result.ErrorMessage);
+        Assert.Contains("115", result.ErrorMessage); // Should show actual size (115343360 bytes = 110 MB = 115.3 in decimal MB)
+    }
+
+    #endregion
+
     #region Helper: Fake Extractor
 
     /// <summary>
@@ -497,6 +608,66 @@ public class EnhancedPdfProcessingOrchestratorTests
         // Minimal PDF header
         var pdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34 }; // %PDF-1.4
         return new MemoryStream(pdfBytes);
+    }
+
+    private static MemoryStream CreateTestPdfStream(long size)
+    {
+        // Create PDF with specific size for testing file size limits
+        var pdfBytes = new byte[size];
+        // Minimal PDF header at start
+        pdfBytes[0] = 0x25; // %
+        pdfBytes[1] = 0x50; // P
+        pdfBytes[2] = 0x44; // D
+        pdfBytes[3] = 0x46; // F
+        pdfBytes[4] = 0x2D; // -
+        pdfBytes[5] = 0x31; // 1
+        pdfBytes[6] = 0x2E; // .
+        pdfBytes[7] = 0x34; // 4
+        return new MemoryStream(pdfBytes);
+    }
+
+    /// <summary>
+    /// Wrapper to make a stream non-seekable for testing
+    /// </summary>
+    private class NonSeekableStreamWrapper : Stream
+    {
+        private readonly Stream _innerStream;
+
+        public NonSeekableStreamWrapper(Stream innerStream)
+        {
+            _innerStream = innerStream;
+        }
+
+        public override bool CanRead => _innerStream.CanRead;
+        public override bool CanSeek => false; // Force non-seekable
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException("Non-seekable stream");
+        public override long Position
+        {
+            get => throw new NotSupportedException("Non-seekable stream");
+            set => throw new NotSupportedException("Non-seekable stream");
+        }
+
+        public override void Flush() => _innerStream.Flush();
+        public override int Read(byte[] buffer, int offset, int count) => _innerStream.Read(buffer, offset, count);
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException("Non-seekable stream");
+        public override void SetLength(long value) => throw new NotSupportedException("Non-seekable stream");
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException("Non-seekable stream");
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _innerStream.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            await _innerStream.DisposeAsync();
+            await base.DisposeAsync();
+        }
     }
 
     #endregion

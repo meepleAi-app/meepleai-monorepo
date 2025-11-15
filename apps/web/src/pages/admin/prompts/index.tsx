@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { api } from "../../../lib/api";
 import { cn } from "../../../lib/utils";
+import { ErrorDisplay } from "../../../components/ErrorDisplay";
+import { categorizeError } from "../../../lib/errorUtils";
 
 type PromptTemplate = {
   id: string;
@@ -258,8 +260,12 @@ export default function AdminPrompts() {
             {loading && <div className="text-center p-8 text-gray-500">Loading...</div>}
 
             {error && (
-              <div className="p-4 bg-red-100 text-red-800 rounded-lg mb-4">
-                {error}
+              <div className="mb-4">
+                <ErrorDisplay
+                  error={categorizeError(new Error(error))}
+                  onRetry={fetchTemplates}
+                  showTechnicalDetails={process.env.NODE_ENV === 'development'}
+                />
               </div>
             )}
 

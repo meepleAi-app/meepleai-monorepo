@@ -19,10 +19,11 @@ import { api, GameSessionDto, Game } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Avatar } from '@/components/ui/avatar';
+import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { categorizeError } from '@/lib/errorUtils';
 
 /**
  * Session status badge component
@@ -268,12 +269,12 @@ export default function SessionDetailsPage() {
   if (error && !session) {
     return (
       <div className="container mx-auto py-8 px-4">
-        <Alert variant="destructive" role="alert">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button className="mt-4" onClick={() => router.push('/sessions')}>
-          Back to Sessions
-        </Button>
+        <ErrorDisplay
+          error={categorizeError(new Error(error))}
+          onRetry={fetchSession}
+          onDismiss={() => router.push('/sessions')}
+          showTechnicalDetails={process.env.NODE_ENV === 'development'}
+        />
       </div>
     );
   }
@@ -348,11 +349,13 @@ export default function SessionDetailsPage() {
         </div>
       </div>
 
-      {/* Error Alert */}
+      {/* Error Display */}
       {error && (
-        <Alert variant="destructive" className="mb-4" role="alert">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorDisplay
+          error={categorizeError(new Error(error))}
+          onRetry={fetchSession}
+          showTechnicalDetails={process.env.NODE_ENV === 'development'}
+        />
       )}
 
       {/* Content Grid */}

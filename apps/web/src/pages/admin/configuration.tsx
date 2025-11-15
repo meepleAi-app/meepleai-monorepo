@@ -17,6 +17,8 @@ import { toast } from "@/components/Toast";
 import { api, SystemConfigurationDto } from "../../lib/api";
 import FeatureFlagsTab from "../../components/admin/FeatureFlagsTab";
 import CategoryConfigTab from "../../components/admin/CategoryConfigTab";
+import { ErrorDisplay } from "../../components/ErrorDisplay";
+import { categorizeError } from "../../lib/errorUtils";
 
 // Tab types
 type TabId = "feature-flags" | "rate-limiting" | "ai-llm" | "rag";
@@ -133,14 +135,12 @@ export default function ConfigurationManagement() {
   if (error && !error.includes("Unauthorized") && !error.includes("403")) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="text-center max-w-md">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={loadInitialData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Retry
-          </button>
+        <div className="max-w-2xl w-full px-4">
+          <ErrorDisplay
+            error={categorizeError(new Error(error))}
+            onRetry={loadInitialData}
+            showTechnicalDetails={process.env.NODE_ENV === 'development'}
+          />
         </div>
       </div>
     );
@@ -225,6 +225,7 @@ export default function ConfigurationManagement() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex-1 px-6 py-4 text-center font-medium transition-colors border-b-2 ${
+
                       activeTab === tab.id
                         ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
                         : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"

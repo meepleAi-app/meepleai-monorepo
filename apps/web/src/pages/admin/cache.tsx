@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, CacheStats } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { ErrorDisplay } from "../../components/ErrorDisplay";
+import { categorizeError } from "../../lib/errorUtils";
 
 type Game = {
   id: string;
@@ -178,8 +180,14 @@ export default function CacheDashboard() {
   if (error) {
     return (
       <main className="p-6 font-sans max-w-7xl mx-auto">
-        <h1>Error</h1>
-        <p className="text-red-600">{error}</p>
+        <div className="mb-4">
+          <ErrorDisplay
+            error={categorizeError(new Error(error))}
+            onRetry={fetchStats}
+            onDismiss={() => window.location.href = '/admin'}
+            showTechnicalDetails={process.env.NODE_ENV === 'development'}
+          />
+        </div>
         <Link href="/admin" className="text-blue-600">
           Back to Admin Dashboard
         </Link>

@@ -1,20 +1,83 @@
 /**
  * ErrorDisplay component for user-friendly error messages
  * Implements PDF-06: Error handling with correlation ID tracking
+ * Enhanced with toast integration and retry logic for Issue #1095
  */
 
-import { type CSSProperties, useState } from 'react';
+import { type CSSProperties, useState, useEffect } from 'react';
 import { type CategorizedError, getErrorIcon, getErrorTitle } from '../lib/errorUtils';
+import { showErrorToast, shouldShowToast } from '../lib/toastUtils';
 
 interface ErrorDisplayProps {
   error: CategorizedError;
   onRetry?: () => void;
   onDismiss?: () => void;
   showTechnicalDetails?: boolean;
+  /**
+   * Show toast notification for transient errors
+   * @default true
+   */
+  showToast?: boolean;
+  /**
+   * Enable automatic retry with exponential backoff
+   * @default false
+   */
+  autoRetry?: boolean;
+  /**
+   * Maximum number of automatic retries
+   * @default 3
+   */
+  maxRetries?: number;
 }
 
-export function ErrorDisplay({ error, onRetry, onDismiss, showTechnicalDetails = false }: ErrorDisplayProps) {
+export function ErrorDisplay({
+  error,
+  onRetry,
+  onDismiss,
+  showTechnicalDetails = false,
+  showToast = true,
+  autoRetry = false,
+  maxRetries = 3
+}: ErrorDisplayProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  // Show toast for transient errors on mount
+  useEffect(() => {
+    if (showToast && shouldShowToast(error)) {
+      showErrorToast(error);
+    }
+  }, [error, showToast]);
+
+  // Handle automatic retry with exponential backoff
+  const handleRetry = async () => {
+    if (!onRetry) return;
+
+    setIsRetrying(true);
+    setRetryCount(prev => prev + 1);
+
+    try {
+      await onRetry();
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  // Auto-retry logic
+  useEffect(() => {
+    if (!autoRetry || !error.canRetry || retryCount >= maxRetries || !onRetry) {
+      return;
+    }
+
+    // Exponential backoff: 1s, 2s, 4s
+    const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+    const timeout = setTimeout(() => {
+      handleRetry();
+    }, delay);
+
+    return () => clearTimeout(timeout);
+  }, [autoRetry, error.canRetry, retryCount, maxRetries, onRetry]);
 
   const containerStyle: CSSProperties = {
     padding: '20px',
@@ -196,8 +259,8 @@ export function ErrorDisplay({ error, onRetry, onDismiss, showTechnicalDetails =
 
       <div style={buttonContainerStyle}>
         {onRetry && error.canRetry && (
-          <button onClick={onRetry} style={retryButtonStyle}>
-            Retry
+          <button onClick={handleRetry} style={retryButtonStyle} disabled={isRetrying}>
+            {isRetrying ? 'Retrying...' : retryCount > 0 ? `Retry (${retryCount}/${maxRetries})` : 'Retry'}
           </button>
         )}
 

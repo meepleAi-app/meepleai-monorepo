@@ -20,7 +20,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -30,6 +29,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { categorizeError } from '@/lib/errorUtils';
 
 /**
  * Session status badge component
@@ -336,11 +337,13 @@ export default function SessionHistoryPage() {
             </div>
           </div>
 
-          {/* Error Alert */}
+          {/* Error Display */}
           {error && (
-            <Alert variant="destructive" className="mb-4" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <ErrorDisplay
+              error={categorizeError(new Error(error))}
+              onRetry={fetchHistory}
+              showTechnicalDetails={process.env.NODE_ENV === 'development'}
+            />
           )}
 
           {/* Loading State */}

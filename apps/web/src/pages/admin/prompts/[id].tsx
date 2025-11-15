@@ -4,6 +4,8 @@ import Link from "next/link";
 import { api } from "../../../lib/api";
 import PromptVersionCard from "../../../components/PromptVersionCard";
 import { cn } from "../../../lib/utils";
+import { ErrorDisplay } from "../../../components/ErrorDisplay";
+import { categorizeError } from "../../../lib/errorUtils";
 
 type PromptTemplate = {
   id: string;
@@ -99,15 +101,19 @@ export default function PromptTemplateDetail() {
   if (error || !template) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-800 mb-4 text-lg">
-            {error || "Template not found"}
+        <div className="max-w-2xl w-full p-8">
+          <ErrorDisplay
+            error={categorizeError(new Error(error || "Template not found"))}
+            onRetry={fetchTemplate}
+            showTechnicalDetails={process.env.NODE_ENV === 'development'}
+          />
+          <div className="text-center mt-4">
+            <Link href="/admin/prompts">
+              <button className="px-4 py-2 bg-indigo-500 text-white border-none rounded-lg cursor-pointer hover:bg-indigo-600">
+                Back to Templates
+              </button>
+            </Link>
           </div>
-          <Link href="/admin/prompts">
-            <button className="px-4 py-2 bg-indigo-500 text-white border-none rounded-lg cursor-pointer hover:bg-indigo-600">
-              Back to Templates
-            </button>
-          </Link>
         </div>
       </div>
     );

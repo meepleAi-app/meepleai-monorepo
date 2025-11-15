@@ -1,23 +1,45 @@
 import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth";
 import { useAuth } from "@/hooks/useAuth";
+
+// Lazy load below-fold sections
+const FeaturesSection = dynamic(() => import("@/components/landing/FeaturesSection"), {
+  loading: () => <div className="py-20 px-6" />,
+});
+const KeyFeaturesSection = dynamic(() => import("@/components/landing/KeyFeaturesSection"), {
+  loading: () => <div className="py-20 px-6" />,
+});
+const TestimonialsSection = dynamic(() => import("@/components/landing/TestimonialsSection"), {
+  loading: () => <div className="py-20 px-6" />,
+});
 
 export default function Home() {
   const router = useRouter();
   const { user: authUser, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [demoEmail, setDemoEmail] = useState("");
+  const [demoPassword, setDemoPassword] = useState("");
 
-  // Intersection Observer hooks for scroll animations
-  const [heroRef, heroInView] = useInView({ triggerOnce: true, threshold: 0.1 });
-  const [featuresRef, featuresInView] = useInView({ triggerOnce: true, threshold: 0.1 });
-  const [keyFeaturesRef, keyFeaturesInView] = useInView({ triggerOnce: true, threshold: 0.1 });
+  // Consolidated Intersection Observer with multiple thresholds
+  const { ref: heroRef, inView: heroInView } = useInView({
+    triggerOnce: true,
+    threshold: [0.1, 0.5, 0.9],
+  });
+
+  // Handler for "Try Demo" button
+  const handleTryDemo = () => {
+    setDemoEmail("user@meepleai.dev");
+    setDemoPassword("Demo123!");
+    setShowAuthModal(true);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -103,6 +125,21 @@ export default function Home() {
                   {authUser ? "Go to Chat" : "Get Started Free"}
                 </Button>
               </motion.div>
+              {!authUser && (
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    variant="outline"
+                    className="text-lg"
+                    onClick={handleTryDemo}
+                    data-testid="hero-try-demo"
+                  >
+                    Try Demo Account
+                  </Button>
+                </motion.div>
+              )}
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -118,19 +155,14 @@ export default function Home() {
                 </Button>
               </motion.div>
             </div>
-            {!authUser && (
-              <p className="text-sm text-slate-50 mt-4">
-                💡 Try with demo account: <code className="bg-slate-700 px-2 py-1 rounded text-white font-mono">user@meepleai.dev</code> / <code className="bg-slate-700 px-2 py-1 rounded text-white font-mono">Demo123!</code>
-              </p>
-            )}
           </motion.div>
 
-          {/* Hero Visual */}
+          {/* Hero Visual - improved mobile visibility */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={heroInView ? { opacity: 1, scale: 1 } : {}}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="hidden md:block"
+            className="block"
           >
             <Card className="p-6 shadow-2xl shadow-primary/20">
               <div className="space-y-4">
@@ -176,70 +208,14 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" ref={featuresRef} className="py-20 px-6 bg-gradient-to-b from-slate-950 to-slate-900">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={featuresInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-5xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-slate-50">Three simple steps to never misunderstand rules again</p>
-          </motion.div>
+      {/* Lazy-loaded Features Section */}
+      <FeaturesSection />
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { icon: "📤", title: "1. Upload", description: "Upload any PDF rulebook. Our AI automatically extracts and indexes the content for lightning-fast search." },
-              { icon: "💬", title: "2. Ask", description: "Ask questions in natural language. No need to search through pages—just ask like you're talking to an expert." },
-              { icon: "⚡", title: "3. Play", description: "Get instant answers with exact sources. Every answer includes page numbers and rule sections for verification." }
-            ].map((feature, index) => (
-              <Card key={index}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={featuresInView ? { opacity: 1, y: 0 } : {}}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="text-center p-8 hover:scale-105 transition-transform"
-                >
-                  <div className="text-6xl mb-4">{feature.icon}</div>
-                  <h3 className="text-2xl font-semibold mb-3">{feature.title}</h3>
-                  <p className="text-slate-50 leading-relaxed">{feature.description}</p>
-                </motion.div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Lazy-loaded Key Features Section */}
+      <KeyFeaturesSection />
 
-      {/* Key Features Section */}
-      <section ref={keyFeaturesRef} className="py-20 px-6 bg-slate-950">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-6">
-            {[
-              { icon: "🎯", title: "Semantic Search", description: "Advanced AI understands context and meaning, not just keywords. Ask complex questions and get accurate answers." },
-              { icon: "📚", title: "Multi-Game Support", description: "Upload rulebooks for chess, complex board games, TCGs, and more. Switch between games seamlessly." },
-              { icon: "🔍", title: "Source Citations", description: "Every answer includes exact page numbers and sections. Trust but verify with direct source references." },
-              { icon: "⚙️", title: "RuleSpec Editor", description: "Create machine-readable rule specifications. Perfect for game designers and tournament organizers." }
-            ].map((feature, index) => (
-              <Card key={index}>
-                <motion.div
-                  initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
-                  animate={keyFeaturesInView ? { opacity: 1, x: 0 } : {}}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="p-6 hover:border-primary/50 transition-colors"
-                >
-                  <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
-                    <span className="text-2xl">{feature.icon}</span>
-                    {feature.title}
-                  </h3>
-                  <p className="text-slate-50">{feature.description}</p>
-                </motion.div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Lazy-loaded Testimonials Section */}
+      <TestimonialsSection />
 
       {/* CTA Section */}
       <section className="py-20 px-6 bg-gradient-cta">
@@ -316,9 +292,15 @@ export default function Home() {
       {/* Unified Auth Modal */}
       <AuthModal
         isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
+        onClose={() => {
+          setShowAuthModal(false);
+          setDemoEmail("");
+          setDemoPassword("");
+        }}
         defaultMode="login"
         showDemoCredentials={!authUser}
+        initialEmail={demoEmail}
+        initialPassword={demoPassword}
       />
     </div>
   );

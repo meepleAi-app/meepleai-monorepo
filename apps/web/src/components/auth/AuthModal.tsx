@@ -30,9 +30,11 @@ export interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultMode?: 'login' | 'register';
-  onSuccess?: (user: any) => void;
+  onSuccess?: (user: unknown) => void;
   showDemoCredentials?: boolean;
   sessionExpiredMessage?: boolean;
+  initialEmail?: string;
+  initialPassword?: string;
 }
 
 // ============================================================================
@@ -46,6 +48,8 @@ export function AuthModal({
   onSuccess,
   showDemoCredentials = true,
   sessionExpiredMessage = false,
+  initialEmail = '',
+  initialPassword = '',
 }: AuthModalProps) {
   const router = useRouter();
   const { login, register, error, clearError, loading } = useAuth();
@@ -86,7 +90,7 @@ export function AuthModal({
   };
 
   // Handle demo credential click
-  const handleDemoCredentialClick = (credential: any) => {
+  const handleDemoCredentialClick = (_credential: unknown) => {
     setActiveTab('login');
     // Auto-fill handled by component state if needed
   };
@@ -142,6 +146,8 @@ export function AuthModal({
               loading={loading}
               error={error}
               onErrorDismiss={clearError}
+              initialEmail={initialEmail}
+              initialPassword={initialPassword}
             />
           </TabsContent>
 

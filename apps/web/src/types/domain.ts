@@ -135,6 +135,7 @@ export interface Snippet {
 
 /**
  * Message in chat UI (combines user/assistant messages)
+ * Issue #1167: Added isOptimistic for optimistic updates
  */
 export interface Message {
   id: string;
@@ -150,6 +151,7 @@ export interface Message {
   updatedAt?: string | null;
   isDeleted?: boolean;
   isInvalidated?: boolean;
+  isOptimistic?: boolean; // #1167: Temporary message state for optimistic updates
 }
 
 /**

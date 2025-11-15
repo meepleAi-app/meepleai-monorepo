@@ -7,17 +7,18 @@
  * Migrated to shadcn/ui components.
  */
 
-import React, { FormEvent } from 'react';
+import React, { FormEvent, useState } from 'react';
 import { useChatContext } from './ChatProvider';
+import { useChatOptimistic } from '@/hooks/useChatOptimistic';
 import { LoadingButton } from '../loading/LoadingButton';
 import { SearchModeToggle, SearchMode } from '@/components';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 export function MessageInput() {
   const {
     inputValue,
     setInputValue,
-    sendMessage,
     selectedGameId,
     selectedAgentId,
     loading,
@@ -25,15 +26,36 @@ export function MessageInput() {
     setSearchMode
   } = useChatContext();
 
-  const handleSubmit = (e: FormEvent) => {
+  // #1167: Use optimistic updates hook
+  const { sendMessageOptimistic, isOptimisticUpdate } = useChatOptimistic();
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || !selectedGameId || !selectedAgentId) {
       return;
     }
-    void sendMessage(inputValue);
+
+    // #1167: Use optimistic update
+    setIsSending(true);
+    const messageContent = inputValue;
+    setInputValue(''); // Clear input immediately for better UX
+
+    try {
+      await sendMessageOptimistic(messageContent);
+    } catch (err) {
+      // Restore input on error
+      setInputValue(messageContent);
+
+      // Show error toast (categorized error handling)
+      const errorMessage = err instanceof Error ? err.message : 'Errore di comunicazione';
+      toast.error(`Errore nell'invio del messaggio: ${errorMessage}`);
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const isDisabled = loading.sending || !selectedGameId || !selectedAgentId;
+  const isDisabled = loading.sending || isSending || isOptimisticUpdate || !selectedGameId || !selectedAgentId;
   const isSendDisabled = !inputValue.trim() || isDisabled;
 
   return (
@@ -62,7 +84,7 @@ export function MessageInput() {
         />
         <LoadingButton
           type="submit"
-          isLoading={loading.sending}
+          isLoading={loading.sending || isSending}
           loadingText="Invio..."
           disabled={isSendDisabled}
           aria-label="Send message"

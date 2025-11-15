@@ -1,25 +1,24 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Configuration;
 using Api.Models;
-using Microsoft.Extensions.Logging;
+using Api.Services;
+using MediatR;
 using Microsoft.Extensions.Options;
 
-namespace Api.Services.Chat;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// Service for generating AI-powered follow-up questions based on Q&A context.
+/// Handler for GenerateFollowUpQuestionsQuery.
+/// Generates AI-powered follow-up questions based on Q&A context.
 /// CHAT-02: AI-Generated Follow-Up Questions
 /// </summary>
-public class FollowUpQuestionService : IFollowUpQuestionService
+public sealed class GenerateFollowUpQuestionsQueryHandler
+    : IRequestHandler<GenerateFollowUpQuestionsQuery, IReadOnlyList<string>>
 {
     private readonly ILlmService _llmService;
-    private readonly ILogger<FollowUpQuestionService> _logger;
+    private readonly ILogger<GenerateFollowUpQuestionsQueryHandler> _logger;
     private readonly FollowUpQuestionsConfiguration _config;
 
     // OpenTelemetry metrics
@@ -27,16 +26,9 @@ public class FollowUpQuestionService : IFollowUpQuestionService
     private readonly Counter<long> _errorsCounter;
     private readonly Histogram<double> _generationDurationHistogram;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FollowUpQuestionService"/> class.
-    /// </summary>
-    /// <param name="llmService">The LLM service for generating questions</param>
-    /// <param name="logger">Logger instance</param>
-    /// <param name="config">Follow-up questions configuration</param>
-    /// <param name="meterFactory">Meter factory for OpenTelemetry metrics</param>
-    public FollowUpQuestionService(
+    public GenerateFollowUpQuestionsQueryHandler(
         ILlmService llmService,
-        ILogger<FollowUpQuestionService> logger,
+        ILogger<GenerateFollowUpQuestionsQueryHandler> logger,
         IOptions<FollowUpQuestionsConfiguration> config,
         IMeterFactory meterFactory)
     {
@@ -64,50 +56,40 @@ public class FollowUpQuestionService : IFollowUpQuestionService
             description: "Duration of follow-up question generation");
     }
 
-    /// <summary>
-    /// Generates follow-up questions based on the original question, answer, and RAG context.
-    /// </summary>
-    /// <param name="originalQuestion">The user's original question</param>
-    /// <param name="generatedAnswer">The AI-generated answer</param>
-    /// <param name="ragContext">RAG context snippets used to generate the answer</param>
-    /// <param name="gameName">Name of the game for context-specific questions</param>
-    /// <param name="maxQuestions">Maximum number of questions to generate (limited by configuration)</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>List of follow-up questions (empty list if generation fails)</returns>
-    public async Task<IReadOnlyList<string>> GenerateQuestionsAsync(
-        string originalQuestion,
-        string generatedAnswer,
-        IReadOnlyList<Snippet> ragContext,
-        string gameName,
-        int maxQuestions = 5,
-        CancellationToken ct = default)
+    public async Task<IReadOnlyList<string>> Handle(
+        GenerateFollowUpQuestionsQuery request,
+        CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
-        var sanitizedGameName = SanitizeGameNameForMetrics(gameName);
+        var sanitizedGameName = SanitizeGameNameForMetrics(request.GameName);
         var tags = new TagList { { "game_name", sanitizedGameName } };
 
         try
         {
             // Check for user cancellation before starting
-            if (ct.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
-                throw new OperationCanceledException(ct);
+                throw new OperationCanceledException(cancellationToken);
             }
 
             // Apply configuration limits (take minimum of requested and configured max)
-            var effectiveMaxQuestions = Math.Min(maxQuestions, _config.MaxQuestionsPerResponse);
+            var effectiveMaxQuestions = Math.Min(request.MaxQuestions, _config.MaxQuestionsPerResponse);
 
             // Build prompts
             var systemPrompt = BuildSystemPrompt(effectiveMaxQuestions);
-            var userPrompt = BuildUserPrompt(originalQuestion, generatedAnswer, ragContext, gameName);
+            var userPrompt = BuildUserPrompt(
+                request.OriginalQuestion,
+                request.GeneratedAnswer,
+                request.RagContext,
+                request.GameName);
 
             _logger.LogDebug(
                 "Generating up to {MaxQuestions} follow-up questions for game {GameName}",
                 effectiveMaxQuestions,
-                gameName);
+                request.GameName);
 
             // Create linked cancellation token with timeout
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(_config.GenerationTimeoutMs));
 
             FollowUpQuestionsDto? result = null;
@@ -140,13 +122,13 @@ public class FollowUpQuestionService : IFollowUpQuestionService
                         }
                     }
                 }
-                catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested && !ct.IsCancellationRequested)
+                catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
                 {
                     // Timeout occurred (but not user cancellation)
                     _logger.LogWarning(
                         "Follow-up question generation timed out after {TimeoutMs}ms for game {GameName}",
                         _config.GenerationTimeoutMs,
-                        gameName);
+                        request.GameName);
 
                     _errorsCounter.Add(1, tags);
                     return Array.Empty<string>();
@@ -159,7 +141,7 @@ public class FollowUpQuestionService : IFollowUpQuestionService
                 _logger.LogWarning(
                     "Failed to generate follow-up questions after {Attempts} attempts for game {GameName}",
                     attemptCount,
-                    gameName);
+                    request.GameName);
 
                 _errorsCounter.Add(1, tags);
                 return Array.Empty<string>();
@@ -180,17 +162,17 @@ public class FollowUpQuestionService : IFollowUpQuestionService
             _logger.LogInformation(
                 "Generated {QuestionCount} follow-up questions for game {GameName} in {DurationMs}ms",
                 validQuestions.Count,
-                gameName,
+                request.GameName,
                 stopwatch.Elapsed.TotalMilliseconds);
 
             return validQuestions.AsReadOnly();
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             // User-initiated cancellation - propagate
             _logger.LogInformation(
                 "Follow-up question generation cancelled by user for game {GameName}",
-                gameName);
+                request.GameName);
 
             throw;
         }
@@ -198,7 +180,7 @@ public class FollowUpQuestionService : IFollowUpQuestionService
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            // Service layer: Catches all exceptions with configurable failure behavior
+            // CQRS handler: Catches all exceptions with configurable failure behavior
             // If FailOnGenerationError=true, re-throws; otherwise gracefully degrades to empty list
             stopwatch.Stop();
             _errorsCounter.Add(1, tags);
@@ -206,7 +188,7 @@ public class FollowUpQuestionService : IFollowUpQuestionService
             _logger.LogError(
                 ex,
                 "Error generating follow-up questions for game {GameName} after {DurationMs}ms",
-                gameName,
+                request.GameName,
                 stopwatch.Elapsed.TotalMilliseconds);
 
             // Check if we should fail or degrade gracefully
@@ -223,8 +205,6 @@ public class FollowUpQuestionService : IFollowUpQuestionService
     /// <summary>
     /// Builds the system prompt instructing the LLM to generate follow-up questions.
     /// </summary>
-    /// <param name="maxQuestions">Maximum number of questions to generate</param>
-    /// <returns>System prompt string</returns>
     private static string BuildSystemPrompt(int maxQuestions)
     {
         return $@"You are an expert board game assistant generating follow-up questions.
@@ -250,11 +230,6 @@ Return ONLY a valid JSON object with this structure:
     /// <summary>
     /// Builds the user prompt with game context, question, answer, and RAG snippets.
     /// </summary>
-    /// <param name="originalQuestion">The user's original question</param>
-    /// <param name="generatedAnswer">The AI-generated answer</param>
-    /// <param name="ragContext">RAG context snippets (top 3 used)</param>
-    /// <param name="gameName">Name of the game</param>
-    /// <returns>User prompt string</returns>
     private static string BuildUserPrompt(
         string originalQuestion,
         string generatedAnswer,
@@ -286,9 +261,6 @@ Generate follow-up questions that help the user explore this topic further.";
     /// <summary>
     /// Truncates text to a maximum length, adding ellipsis if truncated.
     /// </summary>
-    /// <param name="text">Text to truncate</param>
-    /// <param name="maxLength">Maximum length</param>
-    /// <returns>Truncated text</returns>
     private static string TruncateText(string text, int maxLength)
     {
         if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
@@ -302,8 +274,6 @@ Generate follow-up questions that help the user explore this topic further.";
     /// <summary>
     /// Sanitizes game name for use as a metrics tag to avoid cardinality explosion.
     /// </summary>
-    /// <param name="gameName">Original game name</param>
-    /// <returns>Sanitized game name (alphanumeric, max 50 chars)</returns>
     private static string SanitizeGameNameForMetrics(string gameName)
     {
         if (string.IsNullOrWhiteSpace(gameName))
@@ -324,4 +294,12 @@ Generate follow-up questions that help the user explore this topic further.";
 
         return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
     }
+}
+
+/// <summary>
+/// DTO for follow-up questions JSON response from LLM.
+/// </summary>
+internal record FollowUpQuestionsDto
+{
+    public List<string> Questions { get; init; } = new();
 }

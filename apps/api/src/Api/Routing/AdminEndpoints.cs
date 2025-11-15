@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
@@ -13,7 +14,6 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
-using Api.Services.Chat;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -151,13 +151,13 @@ public static class AdminEndpoints
             return Results.Json(new { requests = result.Requests, totalCount = result.TotalCount });
         });
 
-        group.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, AgentFeedbackService feedbackService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
+        group.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var stats = await logService.GetStatsAsync(startDate, endDate, userId, gameId, ct);
-            var feedbackStats = await feedbackService.GetStatsAsync(null, userId, gameId, startDate, endDate, ct);
+            // TODO: Add feedback stats query when AgentFeedbackService is migrated to CQRS
 
             return Results.Json(new
             {
@@ -165,10 +165,10 @@ public static class AdminEndpoints
                 stats.AvgLatencyMs,
                 stats.TotalTokens,
                 stats.SuccessRate,
-                stats.EndpointCounts,
-                feedbackCounts = feedbackStats.OutcomeCounts,
-                totalFeedback = feedbackStats.TotalFeedback,
-                feedbackByEndpoint = feedbackStats.EndpointOutcomeCounts
+                stats.EndpointCounts
+                // feedbackCounts = feedbackStats.OutcomeCounts,
+                // totalFeedback = feedbackStats.TotalFeedback,
+                // feedbackByEndpoint = feedbackStats.EndpointOutcomeCounts
             });
         });
 
@@ -2265,14 +2265,14 @@ public static class AdminEndpoints
         });
 
         // CHESS-03: Chess knowledge indexing endpoints
-        group.MapPost("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 
-            var result = await chessService.IndexChessKnowledgeAsync(ct);
+            var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct);
 
             if (!result.Success)
             {
@@ -2292,7 +2292,7 @@ public static class AdminEndpoints
             });
         });
 
-        group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -2304,7 +2304,7 @@ public static class AdminEndpoints
 
             logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, q);
 
-            var searchResult = await chessService.SearchChessKnowledgeAsync(q, limit ?? 5, ct);
+            var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = q, Limit = limit ?? 5 }, ct);
 
             if (!searchResult.Success)
             {
@@ -2327,14 +2327,14 @@ public static class AdminEndpoints
             });
         });
 
-        group.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
 
-            var success = await chessService.DeleteChessKnowledgeAsync(ct);
+            var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct);
 
             if (!success)
             {

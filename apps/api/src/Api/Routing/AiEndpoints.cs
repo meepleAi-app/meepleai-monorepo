@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Configuration;
 using Api.Extensions;
@@ -5,7 +6,6 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
-using Api.Services.Chat;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +28,7 @@ public static class AiEndpoints
             ChatService chatService,
             AiRequestLogService aiLog,
             IResponseQualityService qualityService, // AI-11: Quality scoring
-            IFollowUpQuestionService followUpService, // CHAT-02
+            IMediator mediator, // CHAT-02: for GenerateFollowUpQuestionsQuery (Issue #1188)
             IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
             MeepleAiDbContext dbContext, // CHAT-02: for game name lookup
             ILogger<Program> logger,
@@ -87,6 +87,7 @@ public static class AiEndpoints
 
                 // CHAT-02: Generate follow-up questions if enabled
                 IReadOnlyList<string>? followUpQuestions = null;
+                // CHAT-02: Generate follow-up questions using CQRS query (Issue #1188)
                 if (generateFollowUps)
                 {
                     var gameGuid = Guid.Parse(req.gameId);
@@ -98,12 +99,14 @@ public static class AiEndpoints
 
                     if (!string.IsNullOrEmpty(game))
                     {
-                        followUpQuestions = await followUpService.GenerateQuestionsAsync(
-                            originalQuestion: req.query,
-                            generatedAnswer: resp.answer,
-                            ragContext: resp.snippets,
-                            gameName: game,
-                            ct: ct);
+                        followUpQuestions = await mediator.Send(new GenerateFollowUpQuestionsQuery
+                        {
+                            OriginalQuestion = req.query,
+                            GeneratedAnswer = resp.answer,
+                            RagContext = resp.snippets,
+                            GameName = game,
+                            MaxQuestions = 5
+                        }, ct);
 
                         logger.LogInformation("Generated {Count} follow-up questions for game {GameId}",
                             followUpQuestions.Count, req.gameId);
@@ -484,12 +487,11 @@ public static class AiEndpoints
             IMediator mediator,
             ChatService chatService,
             AiRequestLogService aiLog,
-            IFollowUpQuestionService followUpService, // CHAT-02
             IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
-            MeepleAiDbContext dbContext, // CHAT-02
+            MeepleAiDbContext dbContext, // CHAT-02: for game name lookup
             IFeatureFlagService featureFlags, // CONFIG-05
             ILogger<Program> logger,
-            bool generateFollowUps = true, // CHAT-02: opt-in parameter
+            bool generateFollowUps = true, // CHAT-02: opt-in parameter (Issue #1188)
             CancellationToken ct = default) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
@@ -599,12 +601,15 @@ public static class AiEndpoints
                                     }
 
                                     var answer = answerBuilder.ToString();
-                                    return await followUpService.GenerateQuestionsAsync(
-                                        originalQuestion: req.query,
-                                        generatedAnswer: answer,
-                                        ragContext: snippets,
-                                        gameName: gameName,
-                                        ct: ct);
+                                    // CHAT-02: Use CQRS query for follow-up generation (Issue #1188)
+                                    return await mediator.Send(new GenerateFollowUpQuestionsQuery
+                                    {
+                                        OriginalQuestion = req.query,
+                                        GeneratedAnswer = answer,
+                                        RagContext = snippets,
+                                        GameName = gameName,
+                                        MaxQuestions = 5
+                                    }, ct);
                                 }
 #pragma warning disable CA1031 // Do not catch general exception types
                                 // Justification: Background service boundary - must handle all errors without crashing
@@ -951,7 +956,8 @@ public static class AiEndpoints
             return Results.Empty;
         });
 
-        group.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, AgentFeedbackService feedbackService, ILogger<Program> logger, CancellationToken ct) =>
+        // Migrated to CQRS: Uses ProvideAgentFeedbackCommand via MediatR (Issue #1188)
+        group.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -968,13 +974,14 @@ public static class AiEndpoints
 
             try
             {
-                await feedbackService.RecordFeedbackAsync(
-                    req.messageId,
-                    req.endpoint,
-                    session.User.Id,
-                    string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
-                    req.gameId,
-                    ct);
+                await mediator.Send(new ProvideAgentFeedbackCommand
+                {
+                    MessageId = req.messageId,
+                    Endpoint = req.endpoint,
+                    UserId = session.User.Id,
+                    Outcome = string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
+                    GameId = req.gameId
+                }, ct);
 
                 logger.LogInformation(
                     "Recorded feedback {Outcome} for message {MessageId} on endpoint {Endpoint} by user {UserId}",
@@ -991,7 +998,6 @@ public static class AiEndpoints
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (AgentFeedbackService)
                 logger.LogError(ex, "Failed to record feedback for message {MessageId}", req.messageId);
                 return Results.Problem(detail: "Unable to record feedback", statusCode: 500);
             }
@@ -999,7 +1005,8 @@ public static class AiEndpoints
         });
 
         // CHESS-04: Chess conversational agent endpoint
-        group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IChessAgentService chessAgent, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+        // Migrated to CQRS: Uses InvokeChessAgentCommand via MediatR (Issue #1188)
+        group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IMediator mediator, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -1031,7 +1038,12 @@ public static class AiEndpoints
                         ct);
                 }
 
-                var resp = await chessAgent.AskAsync(req, ct);
+                var resp = await mediator.Send(new InvokeChessAgentCommand
+                {
+                    Question = req.question,
+                    FenPosition = req.fenPosition,
+                    ChatId = req.chatId
+                }, ct);
                 var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
                 logger.LogInformation("Chess agent response delivered: {MoveCount} moves suggested",
@@ -1258,7 +1270,8 @@ public static class AiEndpoints
         });
 
 
-        group.MapPost("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+        // Migrated to CQRS: Uses IndexChessKnowledgeCommand via MediatR (Issue #1188)
+        group.MapPost("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -1272,7 +1285,7 @@ public static class AiEndpoints
 
             logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 
-            var result = await chessService.IndexChessKnowledgeAsync(ct);
+            var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct);
 
             if (!result.Success)
             {
@@ -1292,7 +1305,8 @@ public static class AiEndpoints
             });
         });
 
-        group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+        // Migrated to CQRS: Uses SearchChessKnowledgeQuery via MediatR (Issue #1188)
+        group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -1304,7 +1318,11 @@ public static class AiEndpoints
 
             logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, q);
 
-            var searchResult = await chessService.SearchChessKnowledgeAsync(q, limit ?? 5, ct);
+            var searchResult = await mediator.Send(new SearchChessKnowledgeQuery
+            {
+                Query = q,
+                Limit = limit ?? 5
+            }, ct);
 
             if (!searchResult.Success)
             {
@@ -1327,7 +1345,8 @@ public static class AiEndpoints
             });
         });
 
-        group.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+        // Migrated to CQRS: Uses DeleteChessKnowledgeCommand via MediatR (Issue #1188)
+        group.MapDelete("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -1341,7 +1360,7 @@ public static class AiEndpoints
 
             logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
 
-            var success = await chessService.DeleteChessKnowledgeAsync(ct);
+            var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct);
 
             if (!success)
             {

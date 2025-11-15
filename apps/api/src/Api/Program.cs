@@ -8,7 +8,6 @@ using Api.Models;
 using Api.Observability;
 using Api.Routing;
 using Api.Services;
-using Api.Services.Chat; // CHAT-02
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc; // EDIT-05: For [FromServices] attribute

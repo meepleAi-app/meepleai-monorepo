@@ -6,6 +6,7 @@ import { ChatProvider } from "@/components/chat/ChatProvider";
 import { UIProvider } from "@/components/ui/UIProvider";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatContent } from "@/components/chat/ChatContent";
+import { BottomNav } from "@/components/chat/BottomNav";
 import { ExportChatModal } from "@/components/ExportChatModal";
 
 export default function ChatPage() {
@@ -49,9 +50,10 @@ export default function ChatPage() {
     <GameProvider>
       <ChatProvider>
         <UIProvider>
-          <main id="main-content" className="flex h-screen font-sans overflow-hidden">
+          <main id="main-content" className="flex h-dvh font-sans overflow-hidden">
             <ChatSidebar />
             <ChatContent />
+            <BottomNav />
 
             {/* Export Chat Modal - will be integrated into ChatContent in future */}
             <ExportChatModal
@@ -66,3 +68,4 @@ export default function ChatPage() {
     </GameProvider>
   );
 }
+

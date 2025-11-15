@@ -9,7 +9,7 @@ interface GameCardProps {
   onClick?: () => void;
 }
 
-export function GameCard({ game, onClick }: GameCardProps) {
+export const GameCard = React.memo(function GameCard({ game, onClick }: GameCardProps) {
   const hasClickHandler = !!onClick;
 
   return (
@@ -81,4 +81,4 @@ export function GameCard({ game, onClick }: GameCardProps) {
       </CardContent>
     </Card>
   );
-}
+});

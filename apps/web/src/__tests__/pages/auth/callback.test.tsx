@@ -220,7 +220,7 @@ describe('OAuth Callback Page', () => {
       useRouterMock.mockReturnValue(mockRouter as NextRouter);
       const { container } = render(<OAuthCallbackPage />);
 
-      const mainContainer = container.querySelector('.min-h-screen');
+      const mainContainer = container.querySelector('.min-h-dvh');
       expect(mainContainer).toBeInTheDocument();
       expect(mainContainer).toHaveClass('flex', 'items-center', 'justify-center');
     });
@@ -391,3 +391,4 @@ describe('OAuth Callback Page', () => {
     });
   });
 });
+

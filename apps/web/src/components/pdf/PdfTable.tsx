@@ -1,16 +1,13 @@
-import { FileText, RotateCw } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { SkeletonLoader } from '@/components/loading';
+import { PdfTableRow } from './PdfTableRow';
 
 interface PdfDocument {
   id: string;
@@ -32,43 +29,6 @@ interface PdfTableProps {
   onOpenLog?: (pdf: PdfDocument) => void;
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
-}
-
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } catch {
-    return dateString;
-  }
-}
-
-function getLanguageDisplay(languageCode?: string | null): { code: string; name: string } {
-  const languages: Record<string, string> = {
-    en: 'English',
-    it: 'Italiano',
-    de: 'Deutsch',
-    fr: 'Français',
-    es: 'Español'
-  };
-
-  const code = (languageCode ?? 'en').toUpperCase();
-  const name = languages[languageCode ?? 'en'] ?? 'Unknown';
-
-  return { code, name };
-}
 
 /**
  * PdfTable - Display uploaded PDFs with actions
@@ -143,63 +103,15 @@ export function PdfTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pdfs.map((pdf) => {
-              const { code, name } = getLanguageDisplay(pdf.language);
-              const isRetrying = retryingPdfId === pdf.id;
-
-              return (
-                <TableRow key={pdf.id}>
-                  <TableCell className="font-medium">{pdf.fileName}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" title={name}>
-                      {code}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{formatFileSize(pdf.fileSizeBytes)}</TableCell>
-                  <TableCell className="text-sm">{formatDate(pdf.uploadedAt)}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        pdf.status === 'completed'
-                          ? 'default'
-                          : pdf.status === 'failed'
-                            ? 'destructive'
-                            : 'secondary'
-                      }
-                    >
-                      {pdf.status ?? 'Pending'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {onOpenLog && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onOpenLog(pdf)}
-                        >
-                          <FileText className="w-4 h-4 mr-1" />
-                          Log
-                        </Button>
-                      )}
-                      {onRetryParsing && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => onRetryParsing(pdf)}
-                          disabled={isRetrying}
-                        >
-                          <RotateCw
-                            className={`w-4 h-4 mr-1 ${isRetrying ? 'animate-spin' : ''}`}
-                          />
-                          {isRetrying ? 'Retrying...' : 'Retry'}
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {pdfs.map((pdf) => (
+              <PdfTableRow
+                key={pdf.id}
+                pdf={pdf}
+                isRetrying={retryingPdfId === pdf.id}
+                onRetryParsing={onRetryParsing}
+                onOpenLog={onOpenLog}
+              />
+            ))}
           </TableBody>
         </Table>
       </div>

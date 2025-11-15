@@ -20,7 +20,7 @@ export default function ShadcnDemo() {
   const [selectValue, setSelectValue] = useState('');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8">
+    <div className="min-h-dvh bg-slate-950 text-white p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
@@ -251,3 +251,4 @@ export default function ShadcnDemo() {
     </div>
   );
 }
+

@@ -110,7 +110,7 @@ describe("PromptTemplateDetail Page", () => {
 
       const { container } = render(<PromptTemplateDetail />);
       const loadingDiv = container.querySelector(
-        '.min-h-screen'
+        '.min-h-dvh'
       );
 
       expect(loadingDiv).toBeInTheDocument();
@@ -726,3 +726,4 @@ describe("PromptTemplateDetail Page", () => {
     });
   });
 });
+

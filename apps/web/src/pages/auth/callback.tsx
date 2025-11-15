@@ -38,7 +38,7 @@ export default function OAuthCallbackPage() {
         <title>Logging in... - MeepleAI</title>
       </Head>
 
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 text-center">
           {status === 'loading' && (
             <>
@@ -104,3 +104,4 @@ export default function OAuthCallbackPage() {
     </>
   );
 }
+

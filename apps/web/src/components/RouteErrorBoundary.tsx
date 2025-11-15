@@ -72,7 +72,7 @@ export function RouteErrorBoundary({
     const categorizedError = categorizeError(error);
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+      <div className="min-h-dvh flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-2xl w-full">
           <ErrorDisplay
             error={categorizedError}
@@ -99,3 +99,4 @@ export function RouteErrorBoundary({
     </ErrorBoundary>
   );
 }
+

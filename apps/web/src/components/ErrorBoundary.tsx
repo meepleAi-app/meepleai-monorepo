@@ -105,7 +105,7 @@ function DefaultErrorFallback({ error, errorInfo, onReset, showDetails = false }
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-dvh flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <div className="bg-white shadow-lg rounded-lg p-6">
           <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
@@ -216,3 +216,4 @@ export function useErrorHandler() {
     error
   };
 }
+

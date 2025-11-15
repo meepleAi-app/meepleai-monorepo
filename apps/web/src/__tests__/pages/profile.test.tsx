@@ -69,7 +69,7 @@ describe('ProfilePage', () => {
     const { container } = render(<ProfilePage />);
 
     // Check for dark mode support classes
-    const mainContainer = container.querySelector('.min-h-screen');
+    const mainContainer = container.querySelector('.min-h-dvh');
     expect(mainContainer).toHaveClass('bg-slate-50', 'dark:bg-slate-900');
 
     // Check for centering classes
@@ -137,7 +137,7 @@ describe('ProfilePage', () => {
     const { container } = render(<ProfilePage />);
 
     // Check the component has the expected DOM structure
-    const minHeightContainer = container.querySelector('.min-h-screen') as HTMLElement;
+    const minHeightContainer = container.querySelector('.min-h-dvh') as HTMLElement;
     const centerContainer = container.querySelector('.text-center') as HTMLElement;
     const spinner = container.querySelector('.animate-spin') as HTMLElement;
     const message = container.querySelector('p') as HTMLElement;

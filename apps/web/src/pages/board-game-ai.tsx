@@ -68,7 +68,7 @@ export default function BoardGameAI() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-dvh bg-slate-950 text-white">
       {/* Header */}
       <header className="sticky top-0 glass z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
@@ -116,7 +116,7 @@ export default function BoardGameAI() {
       {/* Main Content */}
       <main id="main-content">
         {/* Hero Section */}
-        <section ref={heroRef} className="relative min-h-screen flex items-center px-6 py-20">
+        <section ref={heroRef} className="relative min-h-dvh flex items-center px-6 py-20">
           <div className="max-w-7xl mx-auto w-full grid md:grid-cols-2 gap-12 items-center">
             {/* Hero Content */}
             <motion.div
@@ -190,7 +190,7 @@ export default function BoardGameAI() {
                       <p className="text-sm">
                         <strong>🤖 Board Game AI:</strong> No, Standard Projects can only be performed during the Action Phase, not during the Production Phase. The Production Phase is exclusively for generating resources and moving the production track markers.
                       </p>
-                      <p className="text-xs text-slate-400 mt-2 italic">
+                      <p className="text-xs text-slate-300 mt-2 italic">
                         📖 Sources: Terraforming Mars Rulebook - Page 5, Section "Game Phases"
                       </p>
                       <div className="mt-2 flex items-center gap-2 text-xs">
@@ -209,7 +209,7 @@ export default function BoardGameAI() {
             animate={{ y: [0, 10, 0] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <svg className="w-6 h-6 text-slate-500" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-6 h-6 text-slate-300" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
               <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
             </svg>
           </motion.div>
@@ -395,10 +395,11 @@ export default function BoardGameAI() {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto pt-8 border-t border-white/10 text-center text-sm text-slate-400">
+        <div className="max-w-6xl mx-auto pt-8 border-t border-white/10 text-center text-sm text-slate-300">
           <p>© 2025 MeepleAI. Open source board game rules assistant.</p>
         </div>
       </footer>
     </div>
   );
 }
+

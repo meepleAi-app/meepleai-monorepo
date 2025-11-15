@@ -11,11 +11,12 @@
  * - Full integration with useChatStreaming hook
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useChatContext } from './ChatProvider';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
+import { MobileSidebar } from './MobileSidebar';
 
 export function ChatContent() {
   const {
@@ -28,19 +29,47 @@ export function ChatContent() {
     toggleSidebar
   } = useChatContext();
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
   const selectedGame = games.find(g => g.id === selectedGameId);
   const activeChat = chats.find(c => c.id === activeChatId);
 
+  // Track mobile viewport with matchMedia
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  const handleToggleSidebar = () => {
+    // On mobile (< 768px), toggle Sheet instead of desktop sidebar
+    if (isMobile) {
+      setMobileMenuOpen(!mobileMenuOpen);
+    } else {
+      toggleSidebar();
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-white">
+      {/* Mobile Sidebar */}
+      <MobileSidebar open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} />
+
       {/* Header */}
       <div className="p-4 border-b border-[#dadce0] flex justify-between items-center bg-white">
         <div className="flex items-center gap-3">
           <button
-            onClick={toggleSidebar}
+            onClick={handleToggleSidebar}
             aria-label={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
             aria-expanded={!sidebarCollapsed}
-            className="px-3 py-2 bg-[#f1f3f4] border-none rounded cursor-pointer text-lg"
+            className="px-3 py-2 bg-[#f1f3f4] border-none rounded cursor-pointer text-lg touch-target"
             title={sidebarCollapsed ? 'Mostra sidebar' : 'Nascondi sidebar'}
           >
             {sidebarCollapsed ? '☰' : '✕'}

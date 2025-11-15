@@ -33,7 +33,7 @@ export function ChatSidebar() {
     <aside
       aria-label="Chat sidebar with game selection and chat history"
       className={cn(
-        "bg-[#f8f9fa] border-r border-[#dadce0] flex flex-col overflow-hidden transition-[width,min-width] duration-300 ease-in-out",
+        "hidden md:flex bg-[#f8f9fa] border-r border-[#dadce0] flex-col overflow-hidden transition-[width,min-width] duration-300 ease-in-out",
         sidebarCollapsed ? "w-0 min-w-0" : "w-80 min-w-[320px]"
       )}
     >

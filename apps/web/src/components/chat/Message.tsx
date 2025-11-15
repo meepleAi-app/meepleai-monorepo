@@ -22,7 +22,7 @@ interface MessageProps {
   isUser: boolean;
 }
 
-export function Message({ message, isUser }: MessageProps) {
+export const Message = React.memo(function Message({ message, isUser }: MessageProps) {
   const {
     editingMessageId,
     startEditMessage,
@@ -131,4 +131,4 @@ export function Message({ message, isUser }: MessageProps) {
       )}
     </li>
   );
-}
+});

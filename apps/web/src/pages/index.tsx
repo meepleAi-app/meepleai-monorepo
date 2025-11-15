@@ -20,7 +20,7 @@ export default function Home() {
   const [keyFeaturesRef, keyFeaturesInView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-white">
+    <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
       <header className="sticky top-0 glass z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
@@ -73,7 +73,7 @@ export default function Home() {
       {/* Main Content */}
       <main id="main-content">
         {/* Hero Section */}
-        <section ref={heroRef} className="relative min-h-dvh flex items-center px-6 py-20">
+        <section ref={heroRef} className="relative min-h-screen flex items-center px-6 py-20">
         <div className="max-w-7xl mx-auto w-full grid md:grid-cols-2 gap-12 items-center">
           {/* Hero Content */}
           <motion.div

@@ -23,8 +23,14 @@ import { api } from '@/lib/api';
 import { useGame } from '@/components/game/GameProvider';
 
 // ============================================================================
-// Types
+// Types & Constants
 // ============================================================================
+
+/**
+ * Maximum threads per game (Issue #858 - configurable limit)
+ * When exceeded, oldest inactive thread is archived
+ */
+const MAX_THREADS_PER_GAME = 5;
 
 /**
  * Normalized chat state structure (serializable for localStorage)
@@ -277,6 +283,52 @@ export function ChatProvider({ children }: PropsWithChildren) {
   }, [activeChatId, loadMessages]);
 
   // ============================================================================
+  // Helper Functions
+  // ============================================================================
+
+  /**
+   * Enforce thread limit per game (Issue #858)
+   * Archives oldest inactive thread when limit is exceeded
+   */
+  const enforceThreadLimit = useCallback(async (gameId: string, threads: ChatThread[]) => {
+    const activeThreads = threads.filter(t => t.status === 'Active');
+
+    if (activeThreads.length > MAX_THREADS_PER_GAME) {
+      // Sort by lastMessageAt (oldest first)
+      const sortedThreads = [...activeThreads].sort((a, b) =>
+        new Date(a.lastMessageAt ?? a.createdAt).getTime() -
+        new Date(b.lastMessageAt ?? b.createdAt).getTime()
+      );
+
+      // Find oldest thread that's not currently active
+      const currentActiveId = state.activeChatIds[gameId];
+      const threadToArchive = sortedThreads.find(t => t.id !== currentActiveId);
+
+      if (threadToArchive) {
+        try {
+          console.log(`Auto-archiving oldest thread: ${threadToArchive.id}`);
+          await api.chatThreads.close(threadToArchive.id);
+
+          // Reload threads to reflect archived state
+          await loadChats(gameId);
+        } catch (err) {
+          console.error('Failed to auto-archive thread:', err);
+          // Non-critical error, continue anyway
+        }
+      }
+    }
+  }, [state.activeChatIds, loadChats]);
+
+  /**
+   * Generate thread title from first message (Issue #858)
+   * Extracts first 50 characters, removes line breaks
+   */
+  const generateTitleFromMessage = (content: string): string => {
+    const cleaned = content.trim().replace(/\n/g, ' ');
+    return cleaned.length > 50 ? `${cleaned.substring(0, 50)}...` : cleaned;
+  };
+
+  // ============================================================================
   // Chat Operations
   // ============================================================================
 
@@ -397,19 +449,26 @@ export function ChatProvider({ children }: PropsWithChildren) {
       setLoading((prev) => ({ ...prev, sending: true }));
 
       try {
-        // Create thread if none exists
+        // Create thread if none exists (Hybrid approach - Issue #858)
         let threadId: string = activeChatId ?? '';
+        let isNewThread = false;
+
         if (!threadId) {
+          // Auto-generate title from first message (Issue #858)
+          const autoTitle = generateTitleFromMessage(content.trim());
+
           // SPRINT-3 #858: Create thread using DDD
           const newThread = await api.chatThreads.create({
             gameId: selectedGameId,
-            title: null,
+            title: autoTitle,
             initialMessage: null,
           });
 
           if (!newThread) throw new Error('Failed to create chat thread');
 
           threadId = newThread.id;
+          isNewThread = true;
+
           setState((prev) => ({
             ...prev,
             chatsByGame: {
@@ -425,6 +484,10 @@ export function ChatProvider({ children }: PropsWithChildren) {
               [threadId]: [],
             },
           }));
+
+          // Enforce thread limit after creating new thread (Issue #858)
+          const updatedThreads = [newThread, ...(state.chatsByGame[selectedGameId] ?? [])];
+          await enforceThreadLimit(selectedGameId, updatedThreads);
         }
 
         // Optimistic update
@@ -441,6 +504,12 @@ export function ChatProvider({ children }: PropsWithChildren) {
           content: content.trim(),
           role: 'user',
         });
+
+        // If this was the first message in an existing thread, update title (Issue #858)
+        if (!isNewThread && messages.length === 0) {
+          // This is first message in existing thread, could update title
+          // For now, backend handles title management
+        }
 
         // Note: AI response streaming will be added in future enhancement
         // For now, this sends the user message to the backend

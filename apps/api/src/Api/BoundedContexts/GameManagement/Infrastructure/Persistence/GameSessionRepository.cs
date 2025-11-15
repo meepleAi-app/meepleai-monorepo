@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -140,6 +141,14 @@ public class GameSessionRepository : IGameSessionRepository
     public Task UpdateAsync(GameSession session, CancellationToken cancellationToken = default)
     {
         var sessionEntity = MapToPersistence(session);
+
+        // Detach existing tracked entity to avoid conflicts (SPRINT-5 Issue #1142)
+        var tracked = _dbContext.ChangeTracker.Entries<GameSessionEntity>()
+            .FirstOrDefault(e => e.Entity.Id == sessionEntity.Id);
+
+        if (tracked != null)
+            tracked.State = EntityState.Detached;
+
         _dbContext.GameSessions.Update(sessionEntity);
         return Task.CompletedTask;
     }

@@ -1,3 +1,5 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+
 namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
 /// <summary>
@@ -10,7 +12,26 @@ public record SearchResultDto(
     double RelevanceScore,
     int Rank,
     string? SearchMethod
-);
+)
+{
+    /// <summary>
+    /// Creates a DTO from domain SearchResult entity.
+    /// </summary>
+    public static SearchResultDto FromDomain(SearchResult searchResult)
+    {
+        if (searchResult == null)
+            throw new ArgumentNullException(nameof(searchResult));
+
+        return new SearchResultDto(
+            VectorDocumentId: searchResult.VectorDocumentId.ToString(),
+            TextContent: searchResult.TextContent,
+            PageNumber: searchResult.PageNumber,
+            RelevanceScore: searchResult.RelevanceScore.Value,
+            Rank: searchResult.Rank,
+            SearchMethod: searchResult.SearchMethod
+        );
+    }
+};
 
 /// <summary>
 /// DTO for Q&A response.

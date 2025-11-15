@@ -294,7 +294,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("2fa@example.com", Role.User);
-        user.EnableTwoFactor("encrypted_totp_secret_123");
+        user.Enable2FA(TotpSecret.FromEncrypted("encrypted_totp_secret_123"));
 
         // Act
         await Repository.AddAsync(user);
@@ -348,7 +348,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await DbContext.SaveChangesAsync();
 
         // Enable 2FA
-        user.EnableTwoFactor("new_encrypted_secret");
+        user.Enable2FA(TotpSecret.FromEncrypted("new_encrypted_secret"));
 
         // Act
         await Repository.UpdateAsync(user);
@@ -484,7 +484,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("2famapping@example.com", Role.User);
-        user.EnableTwoFactor("secret_123");
+        user.Enable2FA(TotpSecret.FromEncrypted("secret_123"));
         await Repository.AddAsync(user);
         await DbContext.SaveChangesAsync();
 
@@ -494,7 +494,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Assert
         Assert.NotNull(retrieved);
         Assert.True(retrieved.IsTwoFactorEnabled);
-        Assert.Equal("secret_123", retrieved.TotpSecretEncrypted);
+        Assert.Equal("secret_123", retrieved.TotpSecret?.EncryptedValue);
         Assert.NotNull(retrieved.TwoFactorEnabledAt);
     }
 

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20251114092909_AddUserIdAndStatusToChatThreads")]
-    partial class AddUserIdAndStatusToChatThreads
+    [Migration("20251114174048_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -29,29 +29,65 @@ namespace Api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(64)
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("GameId")
-                        .HasMaxLength(64)
+                    b.Property<Guid?>("GameEntityId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("InvocationCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("LastInvokedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("StrategyName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("StrategyParametersJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GameId", "Name");
+                    b.HasIndex("GameEntityId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("LastInvokedAt");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Type");
 
                     b.ToTable("agents", (string)null);
                 });
@@ -638,27 +674,39 @@ namespace Api.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Notes")
-                        .HasColumnType("text");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("PlayersJson")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("[]");
 
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("WinnerName")
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GameId");
+                    b.HasIndex("GameId")
+                        .HasDatabaseName("IX_GameSessions_GameId");
 
-                    b.ToTable("GameSessions");
+                    b.HasIndex("StartedAt")
+                        .HasDatabaseName("IX_GameSessions_StartedAt");
+
+                    b.HasIndex("Status", "StartedAt")
+                        .HasDatabaseName("IX_GameSessions_Status_StartedAt");
+
+                    b.ToTable("GameSessions", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.LlmCostLogEntity", b =>
@@ -1752,6 +1800,9 @@ namespace Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("Metadata")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("PdfDocumentId")
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
@@ -1827,13 +1878,9 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", null)
                         .WithMany("Agents")
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Game");
+                        .HasForeignKey("GameEntityId");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ApiKeyEntity", b =>

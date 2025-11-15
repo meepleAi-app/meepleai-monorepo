@@ -92,6 +92,14 @@ public class ChatThreadRepository : IChatThreadRepository
     public Task UpdateAsync(ChatThread thread, CancellationToken cancellationToken = default)
     {
         var threadEntity = MapToPersistence(thread);
+
+        // Detach existing tracked entity to avoid conflicts (SPRINT-5 Issue #1142)
+        var tracked = _dbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.ChatThreadEntity>()
+            .FirstOrDefault(e => e.Entity.Id == threadEntity.Id);
+
+        if (tracked != null)
+            tracked.State = EntityState.Detached;
+
         _dbContext.ChatThreads.Update(threadEntity);
         return Task.CompletedTask;
     }

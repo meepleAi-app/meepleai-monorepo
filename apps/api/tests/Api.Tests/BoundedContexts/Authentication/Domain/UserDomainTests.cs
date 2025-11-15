@@ -58,11 +58,11 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act
-        user.EnableTwoFactor("encrypted_secret_base64");
+        user.Enable2FA(TotpSecret.FromEncrypted("encrypted_secret_base64"));
 
         // Assert
         Assert.True(user.IsTwoFactorEnabled);
-        Assert.NotNull(user.TotpSecretEncrypted);
+        Assert.NotNull(user.TotpSecret?.EncryptedValue);
         Assert.NotNull(user.TwoFactorEnabledAt);
     }
 
@@ -71,14 +71,14 @@ public class UserDomainTests
     {
         // Arrange
         var user = CreateTestUser();
-        user.EnableTwoFactor("secret");
+        user.Enable2FA(TotpSecret.FromEncrypted("secret"));
 
         // Act
-        user.DisableTwoFactor();
+        user.Disable2FA();
 
         // Assert
         Assert.False(user.IsTwoFactorEnabled);
-        Assert.Null(user.TotpSecretEncrypted);
+        Assert.Null(user.TotpSecret?.EncryptedValue);
     }
 
     [Fact]
@@ -288,7 +288,7 @@ public class UserDomainTests
     {
         // Arrange
         var user = CreateTestUser();
-        user.EnableTwoFactor("encrypted_secret");
+        user.Enable2FA(TotpSecret.FromEncrypted("encrypted_secret"));
 
         // Act & Assert
         Assert.True(user.RequiresTwoFactor());
@@ -311,9 +311,9 @@ public class UserDomainTests
         // Arrange
         var user = CreateTestUser();
 
-        // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            user.EnableTwoFactor(null!));
+        // Act & Assert - Domain throws ArgumentNullException for null aggregates
+        Assert.Throws<ArgumentNullException>(() =>
+            user.Enable2FA(null!));
     }
 
     [Fact]
@@ -324,7 +324,7 @@ public class UserDomainTests
 
         // Act & Assert
         Assert.Throws<ValidationException>(() =>
-            user.EnableTwoFactor(string.Empty));
+            user.Enable2FA(TotpSecret.FromEncrypted(string.Empty)));
     }
 
     [Fact]
@@ -335,7 +335,7 @@ public class UserDomainTests
 
         // Act & Assert
         Assert.Throws<ValidationException>(() =>
-            user.EnableTwoFactor("   "));
+            user.Enable2FA(TotpSecret.FromEncrypted("   ")));
     }
 
     [Fact]
@@ -343,11 +343,11 @@ public class UserDomainTests
     {
         // Arrange
         var user = CreateTestUser();
-        user.EnableTwoFactor("first_secret");
+        user.Enable2FA(TotpSecret.FromEncrypted("first_secret"));
 
         // Act & Assert
         var exception = Assert.Throws<DomainException>(() =>
-            user.EnableTwoFactor("second_secret"));
+            user.Enable2FA(TotpSecret.FromEncrypted("second_secret")));
         Assert.Contains("Two-factor authentication is already enabled", exception.Message);
     }
 
@@ -359,7 +359,7 @@ public class UserDomainTests
         var beforeEnable = DateTime.UtcNow;
 
         // Act
-        user.EnableTwoFactor("encrypted_secret");
+        user.Enable2FA(TotpSecret.FromEncrypted("encrypted_secret"));
 
         // Assert
         Assert.NotNull(user.TwoFactorEnabledAt);
@@ -376,7 +376,7 @@ public class UserDomainTests
 
         // Act & Assert
         var exception = Assert.Throws<DomainException>(() =>
-            user.DisableTwoFactor());
+            user.Disable2FA());
         Assert.Contains("Two-factor authentication is not enabled", exception.Message);
     }
 
@@ -385,10 +385,10 @@ public class UserDomainTests
     {
         // Arrange
         var user = CreateTestUser();
-        user.EnableTwoFactor("secret");
+        user.Enable2FA(TotpSecret.FromEncrypted("secret"));
 
         // Act
-        user.DisableTwoFactor();
+        user.Disable2FA();
 
         // Assert
         Assert.Null(user.TwoFactorEnabledAt);
@@ -470,7 +470,7 @@ public class UserDomainTests
 
         // Assert
         Assert.False(user.IsTwoFactorEnabled);
-        Assert.Null(user.TotpSecretEncrypted);
+        Assert.Null(user.TotpSecret?.EncryptedValue);
         Assert.Null(user.TwoFactorEnabledAt);
     }
 
@@ -498,13 +498,13 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act
-        user.EnableTwoFactor("secret1");
-        user.DisableTwoFactor();
-        user.EnableTwoFactor("secret2");
+        user.Enable2FA(TotpSecret.FromEncrypted("secret1"));
+        user.Disable2FA();
+        user.Enable2FA(TotpSecret.FromEncrypted("secret2"));
 
         // Assert
         Assert.True(user.IsTwoFactorEnabled);
-        Assert.Equal("secret2", user.TotpSecretEncrypted);
+        Assert.Equal("secret2", user.TotpSecret?.EncryptedValue);
     }
 
     [Fact]

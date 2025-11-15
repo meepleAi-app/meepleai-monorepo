@@ -34,7 +34,9 @@ public class VectorSearchDomainService
             .Select((embedding, index) =>
             {
                 var similarity = queryVector.CosineSimilarity(embedding.Vector);
-                var confidence = new Confidence(similarity);
+                // Clamp similarity to [0.0, 1.0] to handle floating-point rounding errors
+                var clampedSimilarity = Math.Clamp(similarity, 0.0, 1.0);
+                var confidence = new Confidence(clampedSimilarity);
 
                 return new
                 {

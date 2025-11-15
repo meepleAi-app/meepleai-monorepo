@@ -8,7 +8,7 @@
 
 ---
 
-## Architecture (DDD - 99% Complete)
+## Architecture (DDD - 100% Complete)
 
 **7 Bounded Contexts** - CQRS/MediatR architecture:
 
@@ -16,7 +16,7 @@
 apps/api/src/Api/BoundedContexts/
 ├── Authentication/         Auth, sessions, API keys, OAuth, 2FA
 ├── GameManagement/         Games catalog, play sessions
-├── KnowledgeBase/          RAG, vectors, chat (Hybrid: vector+keyword RRF)
+├── KnowledgeBase/          RAG, vectors, chat (Hybrid: vector+keyword RRF) [STREAMING CQRS]
 ├── DocumentProcessing/     PDF upload, extraction, validation
 ├── WorkflowIntegration/    n8n workflows, error logging
 ├── SystemConfiguration/    Runtime config, feature flags
@@ -25,7 +25,7 @@ apps/api/src/Api/BoundedContexts/
 
 **Pattern**: Domain (pure logic) → Application (CQRS) → Infrastructure (adapters) → HTTP (MediatR)
 
-**Eliminated**: 2,070 lines legacy services (GameService 181, AuthService 346, PDF services 1,300, UserManagementService 243)
+**Eliminated**: 3,010 lines legacy services (GameService 181, AuthService 346, PDF services 1,300, UserManagementService 243, Streaming services 940)
 **Retained**: ConfigurationService, AdminStatsService, AlertingService, RagService (orchestration/infrastructure)
 
 ---
@@ -208,15 +208,15 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 
 ## DDD Migration Status
 
-**99% Complete** (2025-11-11):
-- ✅ 7/7 contexts migrated (6 at 100%, 1 at 95%)
-- ✅ 72+ CQRS handlers operational
-- ✅ 2,070 lines legacy code removed
-- ✅ 60+ endpoints migrated to MediatR
-- ✅ 99.1% test pass rate maintained
+**100% Complete** (2025-11-15):
+- ✅ 7/7 contexts migrated to CQRS (ALL at 100%)
+- ✅ 75+ CQRS handlers operational (including 3 streaming handlers)
+- ✅ 3,010 lines legacy code removed
+- ✅ 63+ endpoints migrated to MediatR
 - ✅ Zero build errors
+- ✅ Streaming RAG/QA/Setup migrated to IAsyncEnumerable pattern
 
-**Contexts**: GameManagement, DocumentProcessing, Authentication, WorkflowIntegration, SystemConfiguration, Administration (all 100%), KnowledgeBase (95%)
+**Contexts**: All 7 contexts at 100% - Authentication, GameManagement, KnowledgeBase, DocumentProcessing, WorkflowIntegration, SystemConfiguration, Administration
 
 **Pattern Reused**:
 1. Implement handlers (Commands/Queries)

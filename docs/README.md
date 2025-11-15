@@ -37,7 +37,7 @@ docs/
 
 ### I'm a Developer
 
-- **Setup**: [Quick Start](./00-getting-started/quick-start.md)
+- **Setup**: [Quick Start](./00-getting-started/quick-start.md), [🇮🇹 Guida Setup Locale](./00-getting-started/guida-setup-locale.md)
 - **Architecture**: [System Architecture](./01-architecture/overview/system-architecture.md), [Architecture Diagrams](./01-architecture/diagrams/)
 - **API**: [API Specification](./03-api/board-game-ai-api-specification.md)
 - **Testing**: [Test Writing Guide](./02-development/testing/test-writing-guide.md), [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md)
@@ -81,6 +81,7 @@ docs/
 | Document | Description |
 |----------|-------------|
 | [Quick Start](./00-getting-started/quick-start.md) | Step-by-step local setup (Docker, API, Web) |
+| [Guida Setup Locale](./00-getting-started/guida-setup-locale.md) | 🇮🇹 Guida completa setup locale e test in italiano |
 | [Executive Summary](./00-getting-started/executive-summary.md) | High-level project overview |
 | [Overview](./00-getting-started/overview.md) | Documentation overview |
 

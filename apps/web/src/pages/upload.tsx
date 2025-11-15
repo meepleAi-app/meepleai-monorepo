@@ -7,7 +7,7 @@
  */
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { api, ApiError } from '../lib/api';
 import { categorizeError, type CategorizedError } from '../lib/errorUtils';
 import { ErrorDisplay } from '../components/ErrorDisplay';
@@ -84,13 +84,13 @@ export default function UploadPage({
     }
   }, [games, selectedGameId]);
 
-  // Wizard steps configuration
-  const wizardSteps = [
+  // Wizard steps configuration (memoized for performance - PERF #1093)
+  const wizardSteps = useMemo(() => [
     { id: 'upload', label: '1. Upload', description: 'Select PDF file' },
     { id: 'parse', label: '2. Parse', description: 'Extract rules' },
     { id: 'review', label: '3. Review', description: 'Edit rules' },
     { id: 'publish', label: '4. Publish', description: 'Finalize' }
-  ];
+  ], []);
 
   // Handlers
   const handleGameSelect = useCallback((gameId: string) => {

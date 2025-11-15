@@ -26,6 +26,7 @@
 **Purpose**: Quick start guides, onboarding, project overview
 
 - [Quick Start](./00-getting-started/quick-start.md) - Local setup in 15 minutes
+- [Guida Setup Locale](./00-getting-started/guida-setup-locale.md) - 🇮🇹 Guida completa setup locale e test in italiano
 - [Executive Summary](./00-getting-started/executive-summary.md) - Project overview
 - [Overview](./00-getting-started/overview.md) - Documentation structure
 

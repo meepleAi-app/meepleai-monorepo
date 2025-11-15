@@ -395,7 +395,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Act & Assert - Should throw when all providers disabled
         var exception = Assert.Throws<InvalidOperationException>(() => strategy.SelectProvider(user));
-        Assert.Contains("disabled and no enabled fallback provider found", exception.Message);
+        Assert.Contains("Both AI providers are disabled", exception.Message);
     }
 
     [Fact]
@@ -446,6 +446,212 @@ public class HybridAdaptiveRoutingStrategyTests
         Assert.True(
             decision.ModelId == "meta-llama/llama-3.3-70b-instruct:free" ||
             decision.ModelId == "openai/gpt-4o-mini");
+    }
+
+    #endregion
+
+    #region ISSUE-1159: Missing Provider Fallback Tests
+
+    [Fact]
+    public void Test16_BothProvidersMissing_UsesDefaults()
+    {
+        // Arrange - Empty providers dictionary (both missing)
+        var emptySettings = Options.Create(new AiProviderSettings
+        {
+            Providers = new Dictionary<string, ProviderConfig>() // Both missing
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, emptySettings);
+        var user = CreateUser(Role.User);
+
+        // Act
+        var decision = strategy.SelectProvider(user);
+
+        // Assert - Should work with default configuration (no crash)
+        Assert.NotNull(decision);
+        Assert.True(
+            decision.ModelId == "meta-llama/llama-3.3-70b-instruct:free" ||
+            decision.ModelId == "openai/gpt-4o-mini");
+    }
+
+    [Fact]
+    public void Test17_OneProviderDisabled_OtherMissing_FallbackWorks()
+    {
+        // Arrange - OpenRouter disabled, Ollama missing (should fallback to Ollama defaults)
+        var customConfig = new Dictionary<string, string>
+        {
+            ["LlmRouting:EditorModel"] = "llama3:8b",
+            ["LlmRouting:EditorOpenRouterPercent"] = "100" // Force OpenRouter selection
+        };
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(customConfig!)
+            .Build();
+
+        var oneDisabledSettings = Options.Create(new AiProviderSettings
+        {
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["OpenRouter"] = new() { Enabled = false, BaseUrl = "https://openrouter.ai/api/v1" }
+                // Ollama missing (not in dictionary)
+            }
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, oneDisabledSettings);
+        var editor = CreateUser(Role.Editor);
+
+        // Act - Run 10 times
+        var decisions = Enumerable.Range(0, 10)
+            .Select(_ => strategy.SelectProvider(editor))
+            .ToList();
+
+        // Assert - Should fallback to Ollama (missing = implicitly enabled)
+        Assert.All(decisions, d =>
+        {
+            Assert.Equal("Ollama", d.ProviderName);
+            Assert.Equal("llama3:8b", d.ModelId); // Default Ollama model
+            Assert.Contains("Fallback from OpenRouter", d.Reason);
+        });
+    }
+
+    [Fact]
+    public void Test18_BothProvidersExplicitlyDisabled_ThrowsException()
+    {
+        // Arrange - Both providers explicitly disabled
+        var customConfig = new Dictionary<string, string>
+        {
+            ["LlmRouting:UserModel"] = "llama3:8b",
+            ["LlmRouting:UserOpenRouterPercent"] = "50"
+        };
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(customConfig!)
+            .Build();
+
+        var bothDisabledSettings = Options.Create(new AiProviderSettings
+        {
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["Ollama"] = new() { Enabled = false, BaseUrl = "http://localhost:11434" },
+                ["OpenRouter"] = new() { Enabled = false, BaseUrl = "https://openrouter.ai/api/v1" }
+            }
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, bothDisabledSettings);
+        var user = CreateUser(Role.User);
+
+        // Act & Assert - Should throw when both providers explicitly disabled
+        var exception = Assert.Throws<InvalidOperationException>(() => strategy.SelectProvider(user));
+        Assert.Contains("Both AI providers are disabled", exception.Message);
+    }
+
+    [Fact]
+    public void Test19_OneProviderDisabled_OtherExplicitlyEnabled_FallbackWorks()
+    {
+        // Arrange - Ollama disabled, OpenRouter explicitly enabled
+        var customConfig = new Dictionary<string, string>
+        {
+            ["LlmRouting:EditorModel"] = "llama3:8b",
+            ["LlmRouting:EditorOpenRouterPercent"] = "0" // Force Ollama selection
+        };
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(customConfig!)
+            .Build();
+
+        var oneEnabledSettings = Options.Create(new AiProviderSettings
+        {
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["Ollama"] = new() { Enabled = false, BaseUrl = "http://localhost:11434" },
+                ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = ["gpt-4o"] }
+            }
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, oneEnabledSettings);
+        var editor = CreateUser(Role.Editor);
+
+        // Act - Run 10 times
+        var decisions = Enumerable.Range(0, 10)
+            .Select(_ => strategy.SelectProvider(editor))
+            .ToList();
+
+        // Assert - Should fallback to OpenRouter (explicitly enabled)
+        Assert.All(decisions, d =>
+        {
+            Assert.Equal("OpenRouter", d.ProviderName);
+            Assert.Equal("gpt-4o", d.ModelId);
+            Assert.Contains("Fallback from Ollama", d.Reason);
+        });
+    }
+
+    [Fact]
+    public void Test20_MissingProvider_UsesDefaultModel()
+    {
+        // Arrange - Only OpenRouter configured, Ollama missing
+        var customConfig = new Dictionary<string, string>
+        {
+            ["LlmRouting:UserModel"] = "llama3:8b",
+            ["LlmRouting:UserOpenRouterPercent"] = "100" // Force OpenRouter
+        };
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(customConfig!)
+            .Build();
+
+        var partialSettings = Options.Create(new AiProviderSettings
+        {
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["OpenRouter"] = new() { Enabled = false, BaseUrl = "https://openrouter.ai/api/v1" }
+                // Ollama missing - should use GetDefaultModelForProvider
+            }
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, partialSettings);
+        var user = CreateUser(Role.User);
+
+        // Act
+        var decision = strategy.SelectProvider(user);
+
+        // Assert - Should use default Ollama model (llama3:8b)
+        Assert.Equal("Ollama", decision.ProviderName);
+        Assert.Equal("llama3:8b", decision.ModelId);
+    }
+
+    [Fact]
+    public void Test21_AdminUser_FallbackToMissingProvider_UsesAdminModel()
+    {
+        // Arrange - OpenRouter disabled, Ollama missing (admin should get Claude)
+        var customConfig = new Dictionary<string, string>
+        {
+            ["LlmRouting:AdminModel"] = "llama3:8b",
+            ["LlmRouting:AdminOpenRouterPercent"] = "100", // Force OpenRouter
+            ["LlmRouting:PremiumModel"] = "anthropic/claude-3.5-haiku"
+        };
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(customConfig!)
+            .Build();
+
+        var adminFallbackSettings = Options.Create(new AiProviderSettings
+        {
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["OpenRouter"] = new() { Enabled = false, BaseUrl = "https://openrouter.ai/api/v1" }
+                // Ollama missing
+            }
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, adminFallbackSettings);
+        var admin = CreateUser(Role.Admin);
+
+        // Act
+        var decision = strategy.SelectProvider(admin);
+
+        // Assert - Admin fallback to Ollama should still use admin-tier model
+        Assert.Equal("Ollama", decision.ProviderName);
+        Assert.Equal("llama3:8b", decision.ModelId); // Ollama default
     }
 
     #endregion

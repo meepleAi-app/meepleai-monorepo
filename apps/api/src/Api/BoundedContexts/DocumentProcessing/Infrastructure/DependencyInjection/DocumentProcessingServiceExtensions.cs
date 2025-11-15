@@ -1,11 +1,13 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
 
@@ -17,6 +19,13 @@ public static class DocumentProcessingServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        // BGAI-086: Register and validate PDF processing configuration on startup
+        services.AddOptions<PdfProcessingOptions>()
+            .Bind(configuration.GetSection("PdfProcessing"))
+            .ValidateOnStart();
+
+        services.AddSingleton<IValidateOptions<PdfProcessingOptions>, PdfProcessingConfigurationValidator>();
+
         // Domain Layer
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -31,30 +40,42 @@ public static class DocumentProcessingServiceExtensions
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();
         services.AddScoped<IPdfValidator, DocnetPdfValidator>(); // PDF-09: DDD validation adapter
 
-        // BGAI-001-v2: Configure PDF text extractor based on provider setting
-        var extractorProvider = configuration["PdfProcessing:Extractor:Provider"] ?? "Docnet";
+        // BGAI-086/087: Configure PDF text extractor based on provider setting
+        var extractorProvider = configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
 
-        if (extractorProvider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase))
+        if (extractorProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase))
         {
-            // Register Unstructured HTTP client with Polly retry policy
-            services.AddHttpClient("UnstructuredService", client =>
-                {
-                    var baseUrl = configuration["PdfProcessing:Extractor:UnstructuredService:BaseUrl"]
-                                  ?? "http://unstructured-service:8001";
-                    client.BaseAddress = new Uri(baseUrl);
+            // BGAI-087 + ISSUE-1174: Register all extractors for orchestrator using keyed services
+            // This prevents circular dependency: OrchestratedPdfTextExtractor → EnhancedPdfProcessingOrchestrator → IPdfTextExtractor[]
+            RegisterUnstructuredExtractor(services, configuration);
+            RegisterSmolDoclingExtractor(services, configuration);
+            services.AddScoped<DocnetPdfTextExtractor>();
 
-                    var timeoutSeconds = configuration.GetValue<int?>("PdfProcessing:Extractor:UnstructuredService:TimeoutSeconds") ?? 35;
-                    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+            // ISSUE-1174: Register stage extractors as keyed services (avoids circular DI dependency)
+            // The orchestrator constructor uses [FromKeyedServices] to resolve specific extractors
+            services.AddKeyedScoped<IPdfTextExtractor, UnstructuredPdfTextExtractor>("unstructured");
+            services.AddKeyedScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>("smoldocling");
+            services.AddKeyedScoped<IPdfTextExtractor, DocnetPdfTextExtractor>("docnet");
 
-                    client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
-                })
-                .AddPolicyHandler(GetRetryPolicy(configuration));
+            // Register orchestrator application service
+            services.AddScoped<EnhancedPdfProcessingOrchestrator>();
 
+            // Register orchestrator adapter as primary extractor interface
+            services.AddScoped<IPdfTextExtractor, OrchestratedPdfTextExtractor>();
+        }
+        else if (extractorProvider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase))
+        {
+            RegisterUnstructuredExtractor(services, configuration);
             services.AddScoped<IPdfTextExtractor, UnstructuredPdfTextExtractor>();
+        }
+        else if (extractorProvider.Equals("SmolDocling", StringComparison.OrdinalIgnoreCase))
+        {
+            RegisterSmolDoclingExtractor(services, configuration);
+            services.AddScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>();
         }
         else
         {
-            // Default: Docnet extractor (existing implementation)
+            // Fallback: Docnet extractor
             services.AddScoped<IPdfTextExtractor, DocnetPdfTextExtractor>();
         }
 
@@ -62,12 +83,54 @@ public static class DocumentProcessingServiceExtensions
     }
 
     /// <summary>
-    /// Get Polly retry policy for Unstructured service HTTP calls
+    /// BGAI-086: Register Unstructured extractor with updated config paths
     /// </summary>
-    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(IConfiguration configuration)
+    private static void RegisterUnstructuredExtractor(IServiceCollection services, IConfiguration configuration)
     {
-        var maxRetries = configuration.GetValue<int?>("PdfProcessing:Extractor:UnstructuredService:MaxRetries") ?? 3;
+        services.AddHttpClient("UnstructuredService", client =>
+            {
+                var apiUrl = configuration["PdfProcessing:Extractor:Unstructured:ApiUrl"]
+                             ?? "http://unstructured-service:8001";
+                client.BaseAddress = new Uri(apiUrl);
 
+                var timeoutSeconds = configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:TimeoutSeconds") ?? 35;
+                client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+                client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
+            })
+            .AddPolicyHandler(GetRetryPolicy(
+                configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:MaxRetries") ?? 3));
+
+        services.AddScoped<UnstructuredPdfTextExtractor>();
+    }
+
+    /// <summary>
+    /// BGAI-087: Register SmolDocling extractor with new config
+    /// </summary>
+    private static void RegisterSmolDoclingExtractor(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddHttpClient("SmolDoclingService", client =>
+            {
+                var apiUrl = configuration["PdfProcessing:Extractor:SmolDocling:ApiUrl"]
+                             ?? "http://smoldocling-service:8002";
+                client.BaseAddress = new Uri(apiUrl);
+
+                var timeoutSeconds = configuration.GetValue<int?>("PdfProcessing:Extractor:SmolDocling:TimeoutSeconds") ?? 30;
+                client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+                client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
+            })
+            .AddPolicyHandler(GetRetryPolicy(
+                configuration.GetValue<int?>("PdfProcessing:Extractor:SmolDocling:MaxRetries") ?? 3));
+
+        services.AddScoped<SmolDoclingPdfTextExtractor>();
+    }
+
+    /// <summary>
+    /// Get Polly retry policy with configurable max retries
+    /// </summary>
+    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(int maxRetries)
+    {
         return HttpPolicyExtensions
             .HandleTransientHttpError()
             .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.RequestTimeout)

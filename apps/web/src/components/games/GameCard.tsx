@@ -11,8 +11,11 @@ interface GameCardProps {
 }
 
 export const GameCard = React.memo(function GameCard({ game, onClick }: GameCardProps) {
+<<<<<<< HEAD
   // If onClick is provided, use it (for backwards compatibility)
   // Otherwise, default to navigating to the detail page
+=======
+>>>>>>> f06affe5 (feat(performance): Optimize re-renders and component performance (#1093))
   const hasClickHandler = !!onClick;
 
   const CardWrapper = ({ children }: { children: React.ReactNode }) => {

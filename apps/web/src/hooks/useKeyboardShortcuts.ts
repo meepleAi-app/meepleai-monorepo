@@ -74,15 +74,16 @@ function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut): bool
   if (key !== shortcutKey) return false;
 
   // Modifier keys match
-  const ctrlMatch = shortcut.ctrl ? event.ctrlKey : !event.ctrlKey;
-  const metaMatch = shortcut.meta ? event.metaKey : !event.metaKey;
   const shiftMatch = shortcut.shift ? event.shiftKey : !event.shiftKey;
   const altMatch = shortcut.alt ? event.altKey : !event.altKey;
 
-  // On Mac, treat ctrl and meta interchangeably for Cmd+K style shortcuts
-  const modifierMatch = isMac
-    ? (shortcut.ctrl || shortcut.meta) ? (event.metaKey || event.ctrlKey) : (!event.metaKey && !event.ctrlKey)
-    : ctrlMatch && metaMatch;
+  // Platform-specific modifier handling
+  // On Mac: Cmd (meta) is primary, Ctrl is secondary → treat interchangeably
+  // On Windows/Linux: Ctrl is primary, Meta (Windows key) is rarely used → treat interchangeably
+  const wantsMod = shortcut.ctrl || shortcut.meta;
+  const hasMod = event.ctrlKey || event.metaKey;
+
+  const modifierMatch = wantsMod ? hasMod : (!event.ctrlKey && !event.metaKey);
 
   return modifierMatch && shiftMatch && altMatch;
 }
@@ -99,10 +100,11 @@ export function getDefaultShortcuts(callbacks: {
 }): KeyboardShortcut[] {
   return [
     // Navigation shortcuts
+    // NOTE: ctrl + meta = true enables cross-platform support (Cmd on Mac, Ctrl on Windows/Linux)
     {
       key: 'n',
       ctrl: true,
-      meta: true, // Works on both Mac (Cmd+N) and Windows (Ctrl+N)
+      meta: true,
       description: 'New chat',
       action: callbacks.onNewChat,
       preventDefault: true,

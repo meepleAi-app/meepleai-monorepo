@@ -56,9 +56,14 @@ docs/                Architecture, ADRs, guides
 | **Backend** | `dotnet build && dotnet test` | xUnit+Testcontainers |
 | | `dotnet ef migrations add <Name> --project src/Api` | Auto-applied |
 | **Frontend** | `pnpm dev` / `pnpm build` / `pnpm test` | Jest 90%+ |
-| **Docker** | `docker compose up -d` | PG, Qdrant, Redis, n8n, Seq, Jaeger |
+| **Docker** | `docker compose up -d` | Full stack (15 services) |
 
-**Ports**: api:8080, web:3000, pg:5432, qdrant:6333, redis:6379, n8n:5678, seq:8081, jaeger:16686
+**Services**:
+- **Core**: postgres:5432, qdrant:6333, redis:6379
+- **AI/ML**: ollama:11434, embedding:8000, unstructured:8001, smoldocling:8002
+- **Observability**: seq:8081, jaeger:16686, prometheus:9090, alertmanager:9093, grafana:3001
+- **Workflow**: n8n:5678
+- **App**: api:8080, web:3000
 
 ---
 
@@ -145,7 +150,7 @@ GET    /api/v1/search             → SearchQuery (hybrid)
 
 ## PDF Processing Pipeline (BGAI - Production Ready)
 
-**3-Stage Fallback Architecture** (ADR-003):
+**3-Stage Fallback Architecture** (ADR-003b - Unstructured):
 ```
 PDF Upload → EnhancedPdfProcessingOrchestrator
                ├─ Stage 1: Unstructured (≥0.80 quality) - 80% success, 1.3s avg
@@ -271,18 +276,19 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 
 ## Key Docs
 
+**See [docs/INDEX.md](docs/INDEX.md) for complete navigation** (115 docs, 800+ pages)
+
 | Doc | Path |
 |-----|------|
-| **Architecture** | `docs/architecture/board-game-ai-architecture-overview.md` |
-| **API Spec** | `docs/api/board-game-ai-api-specification.md` |
-| **ADR Hybrid RAG** | `docs/architecture/adr-001-hybrid-rag-architecture.md` |
-| **DDD Status** | `docs/refactoring/ddd-status-and-roadmap.md` |
-| **DB Schema** | `docs/database-schema.md` |
-| **OAuth Setup** | `docs/guide/oauth-setup-guide.md` |
-| **Security** | `docs/SECURITY.md`, `docs/security-scanning.md` |
-| **Testing** | `docs/testing/test-writing-guide.md` |
-| **Shadcn/UI** | `docs/frontend/shadcn-ui-installation.md` |
-| **AI Provider Config** | `docs/03-api/ai-provider-configuration.md` (Admin), `docs/02-development/ai-provider-integration.md` (Dev) |
+| **Architecture** | `docs/01-architecture/overview/system-architecture.md` |
+| **API Spec** | `docs/03-api/board-game-ai-api-specification.md` |
+| **ADR Hybrid RAG** | `docs/01-architecture/adr/adr-001-hybrid-rag.md` |
+| **ADR PDF Processing** | `docs/01-architecture/adr/adr-003b-unstructured-pdf.md` |
+| **Security** | `SECURITY.md`, `docs/06-security/code-scanning-remediation-summary.md` |
+| **OAuth Security** | `docs/06-security/oauth-security.md` |
+| **Testing** | `docs/02-development/testing/test-writing-guide.md` |
+| **Shadcn/UI** | `docs/04-frontend/shadcn-ui-installation.md` |
+| **AI Provider Config** | `docs/03-api/ai-provider-configuration.md`, `docs/02-development/ai-provider-integration.md` |
 
 ---
 
@@ -338,5 +344,10 @@ bash tools/cleanup-caches.sh                # Run
 ---
 
 **Version**: 1.0-rc (DDD 99%)
-**Last Updated**: 2025-11-11
+**Last Updated**: 2025-11-15
+**Last Verified**: 2025-11-15 (against codebase)
 **Owner**: Engineering Lead
+
+---
+
+**Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Docker services and ports updated to reflect full observability stack (15 services total).

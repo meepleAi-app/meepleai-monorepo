@@ -46,19 +46,19 @@
 ## 📚 Essential Documentation (Read in Order)
 
 ### For Everyone (30 min total)
-1. **[NEXT STEPS](./board-game-ai-NEXT-STEPS.md)** (10 min) - Action plan, Sprint 1 kickoff
-2. **[Prioritization Decision](./org/project-prioritization-2025.md)** (10 min) - Why Board Game AI priority, FASE deferred
-3. **[Implementation Notes](./board-game-ai-IMPLEMENTATION-NOTES.md)** (10 min) - Technology corrections (CRITICAL)
+1. **[Project Overview](../00-getting-started/overview.md)** (10 min) - Documentation structure
+2. **[Prioritization Decision](../07-project-management/organization/project-prioritization-2025.md)** (10 min) - Why Board Game AI priority
+3. **[Executive Summary](../00-getting-started/executive-summary.md)** (10 min) - High-level overview
 
 ### For Engineers (2 hours)
-4. **[Consolidation Strategy](./architecture/board-game-ai-consolidation-strategy.md)** (30 min) - Integrate into existing vs new system
-5. **[Architecture Overview](./architecture/board-game-ai-architecture-overview.md)** (45 min) - Components, data flow, code examples
-6. **[Execution Calendar](./org/board-game-ai-execution-calendar.md)** (30 min) - Sprint-by-sprint plan
-7. **[Sprint Overview](./org/board-game-ai-sprint-overview.md)** (15 min) - Visual timeline, issue breakdown
+4. **[System Architecture](../01-architecture/overview/system-architecture.md)** (45 min) - Complete architecture overview
+5. **[API Specification](../03-api/board-game-ai-api-specification.md)** (30 min) - API endpoints and contracts
+6. **[Test Writing Guide](../02-development/testing/test-writing-guide.md)** (30 min) - Testing patterns and standards
+7. **[DDD Quick Reference](../01-architecture/ddd/quick-reference.md)** (15 min) - Domain-driven design patterns
 
 ### For Business/Leadership (1 hour)
-8. **[Strategic Roadmap](./roadmap/board-game-ai-strategic-roadmap.md)** (30 min) - 4-phase plan, market analysis
-9. **[Business Plan](./business/board-game-ai-business-plan.md)** (30 min) - Revenue projections, funding
+8. **[Strategic Roadmap](../07-project-management/roadmap/board-game-ai-strategic-roadmap.md)** (30 min) - 4-phase plan, market analysis
+9. **[Business Plan](../08-business/board-game-ai-business-plan.md)** (30 min) - Revenue projections, funding
 
 ---
 

@@ -49,6 +49,40 @@ public static class GameEndpoints
             return result != null ? Results.Ok(result) : Results.NotFound();
         });
 
+        // Get game details with extended metadata and statistics (DDD/CQRS)
+        // Issue #1196: Supports Game Detail Page (Issue #855)
+        group.MapGet("/games/{id}/details", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            var query = new GetGameDetailsQuery(id);
+            var result = await mediator.Send(query, ct);
+
+            return result != null ? Results.Ok(result) : Results.NotFound();
+        });
+
+        // Get rule specifications for a game (DDD/CQRS)
+        // Issue #1196: Supports Rules tab in Game Detail Page (Issue #855)
+        group.MapGet("/games/{id}/rules", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            var query = new GetRuleSpecsQuery(id);
+            var result = await mediator.Send(query, ct);
+
+            return Results.Ok(result);
+        });
+
         // Create game (DDD/CQRS) - Admin/Editor only
         group.MapPost("/games", async (
             Api.BoundedContexts.GameManagement.Application.DTOs.CreateGameRequest request,

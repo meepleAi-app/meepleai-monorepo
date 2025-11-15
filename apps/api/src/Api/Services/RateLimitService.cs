@@ -146,7 +146,10 @@ public class RateLimitService : IRateLimitService
     /// Get rate limit configuration based on role with database configuration support.
     /// Fallback chain: DB (role-specific) → DB (global) → appsettings.json → hardcoded defaults.
     /// </summary>
-    public RateLimitConfig GetConfigForRole(string? role)
+    /// <param name="role">User role (admin, editor, user, anonymous)</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Rate limit configuration for the role</returns>
+    public async Task<RateLimitConfig> GetConfigForRoleAsync(string? role, CancellationToken ct = default)
     {
         // For backward compatibility and when ConfigurationService is not available
         if (_configService is null)
@@ -157,8 +160,8 @@ public class RateLimitService : IRateLimitService
         var normalizedRole = role?.ToLowerInvariant() ?? "anonymous";
 
         // Get both maxTokens and refillRate from database with fallback
-        var maxTokens = GetRateLimitValueAsync<int>("MaxTokens", normalizedRole).Result;
-        var refillRate = GetRateLimitValueAsync<double>("RefillRate", normalizedRole).Result;
+        var maxTokens = await GetRateLimitValueAsync<int>("MaxTokens", normalizedRole, ct);
+        var refillRate = await GetRateLimitValueAsync<double>("RefillRate", normalizedRole, ct);
 
         _logger.LogDebug("Rate limit config for {Role}: MaxTokens={MaxTokens}, RefillRate={RefillRate}",
             normalizedRole, maxTokens, refillRate);
@@ -169,7 +172,7 @@ public class RateLimitService : IRateLimitService
     /// <summary>
     /// Get a specific rate limit value with fallback chain.
     /// </summary>
-    private async Task<T> GetRateLimitValueAsync<T>(string limitType, string role) where T : struct
+    private async Task<T> GetRateLimitValueAsync<T>(string limitType, string role, CancellationToken ct = default) where T : struct
     {
         // Guard: This method should only be called when _configService is not null
         if (_configService == null)
@@ -179,7 +182,7 @@ public class RateLimitService : IRateLimitService
 
         // 1. Try DB config with role-specific key (e.g., RateLimit.MaxTokens.admin)
         var roleKey = $"RateLimit.{limitType}.{role}";
-        var value = await _configService.GetValueAsync<T?>(roleKey);
+        var value = await _configService.GetValueAsync<T?>(roleKey, ct);
         if (value.HasValue)
         {
             var validated = ValidateRateLimit(value.Value, limitType, role);
@@ -190,7 +193,7 @@ public class RateLimitService : IRateLimitService
 
         // 2. Try DB config with global key (e.g., RateLimit.MaxTokens)
         var globalKey = $"RateLimit.{limitType}";
-        value = await _configService.GetValueAsync<T?>(globalKey);
+        value = await _configService.GetValueAsync<T?>(globalKey, ct);
         if (value.HasValue)
         {
             var validated = ValidateRateLimit(value.Value, limitType, role);

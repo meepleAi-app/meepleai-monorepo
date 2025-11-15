@@ -49,7 +49,7 @@ public class RateLimitingMiddleware
                 rateKey = $"ip:{ip}";
             }
 
-            var cfg = rateLimiter.GetConfigForRole(role);
+            var cfg = await rateLimiter.GetConfigForRoleAsync(role, context.RequestAborted);
             var rl = await rateLimiter.CheckRateLimitAsync(rateKey, cfg.MaxTokens, cfg.RefillRate, context.RequestAborted);
 
             // Always add headers for observability

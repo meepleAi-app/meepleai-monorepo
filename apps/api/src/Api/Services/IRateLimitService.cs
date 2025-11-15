@@ -23,5 +23,8 @@ public interface IRateLimitService
     /// <summary>
     /// Get rate limit configuration based on role or defaults.
     /// </summary>
-    RateLimitConfig GetConfigForRole(string? role);
+    /// <param name="role">User role (admin, editor, user, anonymous)</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Rate limit configuration for the role</returns>
+    Task<RateLimitConfig> GetConfigForRoleAsync(string? role, CancellationToken ct = default);
 }

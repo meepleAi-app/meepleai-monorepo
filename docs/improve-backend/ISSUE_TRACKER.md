@@ -1,8 +1,8 @@
 # API Improvements - Issue Tracker
 
 **Created**: 2025-11-15
-**Last Updated**: 2025-11-15
-**Total Issues**: 12
+**Last Updated**: 2025-11-15 (All GitHub issues created)
+**Total Issues**: 12 (Issues #1183-#1194)
 **Estimated Effort**: 78-110 hours
 
 ---
@@ -44,7 +44,7 @@ Critical deadlock risk in `RateLimitService.GetConfigForRole()` due to blocking 
 - [ ] Verify no deadlocks
 - [ ] Deploy hotfix
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1183
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -85,7 +85,7 @@ Migrate `ChatService` (431 lines) to DDD/CQRS pattern. Complete KnowledgeBase co
 - [ ] Remove ChatService.cs
 - [ ] Remove service registration
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1184
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -123,7 +123,7 @@ Migrate `RuleSpecService` (575+ lines) to DDD/CQRS pattern for GameManagement co
 - [ ] Run tests
 - [ ] Remove RuleSpecService.cs
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1185
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -161,7 +161,7 @@ Migrate streaming RAG/QA services to CQRS pattern using `IAsyncEnumerable<T>` ha
 - [ ] Load test streaming endpoints
 - [ ] Remove services
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1186
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -199,7 +199,7 @@ Replace hardcoded configuration values with dynamic configuration using `IConfig
 - [ ] Test configuration fallback chain
 - [ ] Update admin UI for runtime config
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1187
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -240,7 +240,7 @@ Migrate agent-related services to CQRS pattern in KnowledgeBase bounded context.
 - [ ] Update feedback endpoint
 - [ ] Remove services
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1188
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -277,7 +277,7 @@ Migrate comment and diff services for RuleSpec to CQRS pattern.
 - [ ] Test threaded comments
 - [ ] Remove services
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1189
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -317,7 +317,7 @@ Implement 42 TODO domain events across all bounded contexts.
 - [ ] Test event publishing
 - [ ] Resolve all 42 TODOs
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1190
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -353,7 +353,7 @@ Complete OAuth migration by implementing `HandleOAuthCallbackCommand` handler.
 - [ ] Test OAuth flow (Google, Discord, GitHub)
 - [ ] Remove TODO comment
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1191
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -390,7 +390,7 @@ Add `.AsNoTracking()` to read-only queries for 30% performance improvement.
 - [ ] Benchmark performance before/after
 - [ ] Document improvements
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1192
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -429,7 +429,7 @@ Add authorization checks and rate limiting to session management endpoints.
 - [ ] Test authorization scenarios
 - [ ] Add audit logging
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1193
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -468,7 +468,7 @@ Centralize error handling to reduce code duplication and improve consistency.
 - [ ] Ensure no sensitive data leakage
 - [ ] Update tests
 
-**GitHub Issue**: #_____
+**GitHub Issue**: #1194
 **PR**: #_____
 **Started**: _____
 **Completed**: _____
@@ -532,11 +532,21 @@ Centralize error handling to reduce code duplication and improve consistency.
 
 ## 🔗 Quick Links
 
-- **Full Issue Templates**: `.github/ISSUES_API_IMPROVEMENTS.md`
-- **Executive Summary**: `docs/architecture/api-improvements-summary.md`
-- **Analysis Report**: [Link to initial analysis]
-- **GitHub Issues**: [Link to issue list]
-- **Project Board**: [Link to project board]
+- **Full Issue Templates**: `docs/improve-backend/issues-templates.md`
+- **Issue Tracker**: `docs/improve-backend/ISSUE_TRACKER.md`
+- **GitHub Issues**: https://github.com/DegrassiAaron/meepleai-monorepo/issues?q=is%3Aissue+label%3Addd%2Ccqrs
+- **Issue #1183**: [P0] Fix Deadlock Risk in RateLimitService
+- **Issue #1184**: [DDD] Migrate ChatService to CQRS Pattern
+- **Issue #1185**: [DDD] Migrate RuleSpecService to CQRS Pattern
+- **Issue #1186**: [DDD] Implement Streaming Query Handlers for RAG/QA
+- **Issue #1187**: [Config] Replace Hardcoded Configuration Values
+- **Issue #1188**: [DDD] Migrate Agent Services to CQRS Pattern
+- **Issue #1189**: [DDD] Migrate RuleSpec Comment/Diff Services to CQRS
+- **Issue #1190**: [DDD] Implement Domain Events for All Aggregates
+- **Issue #1191**: [Auth] Complete OAuth Callback Migration to CQRS
+- **Issue #1192**: [Performance] Add AsNoTracking to Read-Only Queries
+- **Issue #1193**: [Security] Improve Session Authorization and Rate Limiting
+- **Issue #1194**: [Refactor] Centralize Error Handling with Middleware
 
 ---
 

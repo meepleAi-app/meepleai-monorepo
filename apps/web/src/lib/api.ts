@@ -467,6 +467,10 @@ export const api = {
     if (!res.ok) {
       throw await createApiError(path, res);
     }
+    // Handle 204 No Content - don't attempt to parse JSON (P1 Badge fix)
+    if (res.status === 204) {
+      return undefined as T;
+    }
     return res.json();
   },
   async put<T>(path: string, body: unknown): Promise<T> {

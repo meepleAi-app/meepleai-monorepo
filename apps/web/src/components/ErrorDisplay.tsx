@@ -43,11 +43,19 @@ export function ErrorDisplay({
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
 
-  // Reset retry state when error changes (P1 Badge fix)
+  // Track error ID to detect actual error transitions (P1 Badge fix)
+  // Use correlationId or message as stable identifier to avoid resetting on every object change
+  const errorId = error.correlationId || error.message;
+  const [lastErrorId, setLastErrorId] = useState(errorId);
+
+  // Reset retry state only when error ID changes (different error scenario)
   useEffect(() => {
-    setRetryCount(0);
-    setIsRetrying(false);
-  }, [error]);
+    if (errorId !== lastErrorId) {
+      setRetryCount(0);
+      setIsRetrying(false);
+      setLastErrorId(errorId);
+    }
+  }, [errorId, lastErrorId]);
 
   // Show toast for transient errors on mount
   useEffect(() => {

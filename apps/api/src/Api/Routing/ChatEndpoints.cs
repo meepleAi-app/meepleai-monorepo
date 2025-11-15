@@ -272,78 +272,9 @@ public static class ChatEndpoints
             .WithDescription("Soft-delete a message. Users can delete their own messages; admins can delete any message. Invalidates subsequent AI responses. Requires authentication.")
             .WithTags("Chat");
 
-        // CHAT-05: Export chat endpoint
-        group.MapPost("/chats/{chatId:guid}/export", async (
-            Guid chatId,
-            ExportChatRequest request,
-            IChatExportService exportService,
-            IFeatureFlagService featureFlags,
-            HttpContext context,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
-
-            // CONFIG-05: Check if chat export feature is enabled
-            if (!await featureFlags.IsEnabledAsync("Features.ChatExport"))
-            {
-                return Results.Json(
-                    new { error = "feature_disabled", message = "Chat export is currently unavailable", featureName = "Features.ChatExport" },
-                    statusCode: 403);
-            }
-
-            if (!Guid.TryParse(session.User.Id, out var userId))
-            {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
-            }
-
-            try
-            {
-                var result = await exportService.ExportChatAsync(
-                    chatId,
-                    userId,
-                    request.Format,
-                    request.DateFrom,
-                    request.DateTo,
-                    ct);
-
-                if (!result.Success)
-                {
-                    return result.Error switch
-                    {
-                        "not_found" => Results.NotFound(new { error = result.ErrorDetails }),
-                        "unsupported_format" => Results.BadRequest(new { error = result.ErrorDetails }),
-                        "generation_failed" => Results.Problem(
-                            detail: result.ErrorDetails,
-                            statusCode: StatusCodes.Status500InternalServerError),
-                        _ => Results.Problem("Unknown error occurred during export")
-                    };
-                }
-
-                logger.LogInformation("User {UserId} exported chat {ChatId} in {Format} format",
-                    session.User.Id, chatId, request.Format);
-
-                // Return stream with proper content disposition for download
-                return Results.Stream(
-                    result.Stream!,
-                    contentType: result.ContentType,
-                    fileDownloadName: result.Filename,
-                    enableRangeProcessing: false);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
-            // Specific exception handling occurs in service layer (ChatExportService)
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (ChatExportService)
-                logger.LogError(ex, "Unexpected error during chat export for user {UserId}, chat {ChatId}",
-                    session.User.Id, chatId);
-                return Results.Problem("An unexpected error occurred during export");
-            }
-#pragma warning restore CA1031
-        });
+        // LEGACY CHAT-05: Export chat endpoint - REMOVED
+        // Replaced by DDD implementation in KnowledgeBaseEndpoints.cs
+        // New endpoint: GET /api/v1/chat-threads/{threadId}/export?format=json|markdown
 
         return group;
     }

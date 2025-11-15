@@ -78,7 +78,7 @@ public static class ApplicationServiceExtensions
     private static IServiceCollection AddDomainServices(this IServiceCollection services)
     {
         // Game and RuleSpec services
-        services.AddScoped<RuleSpecService>();
+        // Issue #1185: RuleSpecService migrated to CQRS pattern in GameManagement bounded context
         services.AddScoped<RuleSpecDiffService>();
         services.AddScoped<RuleCommentService>(); // EDIT-05: Comment service with threading and mentions
         services.AddScoped<RuleSpecCommentService>(); // EDIT-02: Legacy comment service

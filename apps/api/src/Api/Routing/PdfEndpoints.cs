@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -423,7 +424,7 @@ public static class PdfEndpoints
         .RequireAuthorization()
         .WithName("CancelPdfProcessing");
 
-        group.MapPost("/ingest/pdf/{pdfId:guid}/rulespec", async (Guid pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/ingest/pdf/{pdfId:guid}/rulespec", async (Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -437,7 +438,13 @@ public static class PdfEndpoints
             try
             {
                 logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.Id, pdfId);
-                var ruleSpec = await ruleSpecService.GenerateRuleSpecFromPdfAsync(pdfId.ToString(), ct);
+                var command = new GenerateRuleSpecFromPdfCommand(pdfId);
+                var ruleSpecDto = await mediator.Send(command, ct);
+
+                // Convert DTO to Model for backward compatibility
+                var atoms = ruleSpecDto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
+                var ruleSpec = new RuleSpec(ruleSpecDto.GameId.ToString(), ruleSpecDto.Version, ruleSpecDto.CreatedAt, atoms);
+
                 return Results.Json(ruleSpec);
             }
             catch (InvalidOperationException ex)

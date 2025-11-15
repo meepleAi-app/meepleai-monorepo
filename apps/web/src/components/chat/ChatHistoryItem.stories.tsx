@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ChatHistoryItem } from './ChatHistoryItem';
 import { ChatThread } from '@/types';
 import { fn } from '@storybook/test';
+import React from 'react';
 
 /**
  * ChatHistoryItem - Individual chat item in the history list.
@@ -120,120 +121,128 @@ export const LongTitle: Story = {
 /**
  * Multiple chat items list
  */
-export const ChatList: Story = {
-  render: () => {
-    const chats: ChatThread[] = [
-      {
-        id: 'thread-1',
-        title: 'Gloomhaven Rules',
-        gameId: 'game-1',
-        agentId: 'agent-1',
-        createdAt: new Date(),
-        lastMessageAt: new Date(),
-        messageCount: 5,
-      },
-      {
-        id: 'thread-2',
-        title: 'Wingspan Setup',
-        gameId: 'game-2',
-        agentId: 'agent-2',
-        createdAt: new Date('2024-01-14T14:00:00'),
-        lastMessageAt: new Date('2024-01-14T15:30:00'),
-        messageCount: 8,
-      },
-      {
-        id: 'thread-3',
-        title: 'Terraforming Mars Strategy',
-        gameId: 'game-3',
-        agentId: 'agent-1',
-        createdAt: new Date('2024-01-12T10:00:00'),
-        lastMessageAt: new Date('2024-01-12T12:00:00'),
-        messageCount: 15,
-      },
-      {
-        id: 'thread-4',
-        title: 'Spirit Island Powers',
-        gameId: 'game-4',
-        agentId: 'agent-3',
-        createdAt: new Date('2024-01-10T09:00:00'),
-        lastMessageAt: new Date('2024-01-10T11:00:00'),
-        messageCount: 10,
-      },
-    ];
+const ChatListComponent = () => {
+  const chats: ChatThread[] = [
+    {
+      id: 'thread-1',
+      title: 'Gloomhaven Rules',
+      gameId: 'game-1',
+      agentId: 'agent-1',
+      createdAt: new Date(),
+      lastMessageAt: new Date(),
+      messageCount: 5,
+    },
+    {
+      id: 'thread-2',
+      title: 'Wingspan Setup',
+      gameId: 'game-2',
+      agentId: 'agent-2',
+      createdAt: new Date('2024-01-14T14:00:00'),
+      lastMessageAt: new Date('2024-01-14T15:30:00'),
+      messageCount: 8,
+    },
+    {
+      id: 'thread-3',
+      title: 'Terraforming Mars Strategy',
+      gameId: 'game-3',
+      agentId: 'agent-1',
+      createdAt: new Date('2024-01-12T10:00:00'),
+      lastMessageAt: new Date('2024-01-12T12:00:00'),
+      messageCount: 15,
+    },
+    {
+      id: 'thread-4',
+      title: 'Spirit Island Powers',
+      gameId: 'game-4',
+      agentId: 'agent-3',
+      createdAt: new Date('2024-01-10T09:00:00'),
+      lastMessageAt: new Date('2024-01-10T11:00:00'),
+      messageCount: 10,
+    },
+  ];
 
-    return (
-      <ul className="space-y-2 max-w-md">
-        {chats.map((chat, idx) => (
-          <ChatHistoryItem
-            key={chat.id}
-            chat={chat}
-            isActive={idx === 1}
-            onSelect={() => console.log('Selected:', chat.id)}
-            onDelete={() => console.log('Delete:', chat.id)}
-          />
-        ))}
-      </ul>
-    );
-  },
+  return (
+    <ul className="space-y-2 max-w-md">
+      {chats.map((chat, idx) => (
+        <ChatHistoryItem
+          key={chat.id}
+          chat={chat}
+          isActive={idx === 1}
+          onSelect={() => {
+            // Selected chat: chat.id
+          }}
+          onDelete={() => {
+            // Delete chat: chat.id
+          }}
+        />
+      ))}
+    </ul>
+  );
+};
+
+export const ChatList: Story = {
+  render: () => <ChatListComponent />,
 };
 
 /**
  * Interactive selection demo
  */
+const InteractiveChatHistoryComponent = () => {
+  const [activeId, setActiveId] = React.useState('thread-2');
+  const [chats, setChats] = React.useState<ChatThread[]>([
+    {
+      id: 'thread-1',
+      title: 'Gloomhaven Rules',
+      gameId: 'game-1',
+      agentId: 'agent-1',
+      createdAt: new Date(),
+      lastMessageAt: new Date(),
+      messageCount: 5,
+    },
+    {
+      id: 'thread-2',
+      title: 'Wingspan Setup',
+      gameId: 'game-2',
+      agentId: 'agent-2',
+      createdAt: new Date('2024-01-14T14:00:00'),
+      lastMessageAt: new Date('2024-01-14T15:30:00'),
+      messageCount: 8,
+    },
+    {
+      id: 'thread-3',
+      title: 'Terraforming Mars',
+      gameId: 'game-3',
+      agentId: 'agent-1',
+      createdAt: new Date('2024-01-12T10:00:00'),
+      lastMessageAt: new Date('2024-01-12T12:00:00'),
+      messageCount: 15,
+    },
+  ]);
+
+  const handleDelete = (id: string) => {
+    setChats(chats.filter((c) => c.id !== id));
+    if (activeId === id) {
+      setActiveId(chats[0]?.id || '');
+    }
+  };
+
+  return (
+    <ul className="space-y-2 max-w-md">
+      {chats.map((chat) => (
+        <ChatHistoryItem
+          key={chat.id}
+          chat={chat}
+          isActive={activeId === chat.id}
+          onSelect={() => setActiveId(chat.id)}
+          onDelete={() => handleDelete(chat.id)}
+        />
+      ))}
+    </ul>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const [activeId, setActiveId] = React.useState('thread-2');
-    const [chats, setChats] = React.useState<ChatThread[]>([
-      {
-        id: 'thread-1',
-        title: 'Gloomhaven Rules',
-        gameId: 'game-1',
-        agentId: 'agent-1',
-        createdAt: new Date(),
-        lastMessageAt: new Date(),
-        messageCount: 5,
-      },
-      {
-        id: 'thread-2',
-        title: 'Wingspan Setup',
-        gameId: 'game-2',
-        agentId: 'agent-2',
-        createdAt: new Date('2024-01-14T14:00:00'),
-        lastMessageAt: new Date('2024-01-14T15:30:00'),
-        messageCount: 8,
-      },
-      {
-        id: 'thread-3',
-        title: 'Terraforming Mars',
-        gameId: 'game-3',
-        agentId: 'agent-1',
-        createdAt: new Date('2024-01-12T10:00:00'),
-        lastMessageAt: new Date('2024-01-12T12:00:00'),
-        messageCount: 15,
-      },
-    ]);
-
-    const handleDelete = (id: string) => {
-      setChats(chats.filter((c) => c.id !== id));
-      if (activeId === id) {
-        setActiveId(chats[0]?.id || '');
-      }
-    };
-
-    return (
-      <ul className="space-y-2 max-w-md">
-        {chats.map((chat) => (
-          <ChatHistoryItem
-            key={chat.id}
-            chat={chat}
-            isActive={activeId === chat.id}
-            onSelect={() => setActiveId(chat.id)}
-            onDelete={() => handleDelete(chat.id)}
-          />
-        ))}
-      </ul>
-    );
-  },
+  render: () => <InteractiveChatHistoryComponent />,
 };
 
 /**
@@ -255,6 +264,3 @@ export const DarkMode: Story = {
     isActive: true,
   },
 };
-
-// Import React for interactive stories
-import React from 'react';

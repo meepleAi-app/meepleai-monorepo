@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { LoadingButton } from './LoadingButton';
-import { Mail, Save, Send } from 'lucide-react';
+import { Mail } from 'lucide-react';
+import React from 'react';
 
 /**
  * LoadingButton component with integrated loading state and spinner.
@@ -152,27 +153,29 @@ export const Disabled: Story = {
 /**
  * Interactive demo showing loading state toggle
  */
+const InteractiveLoadingButtonComponent = () => {
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleClick = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+  };
+
+  return (
+    <LoadingButton
+      isLoading={isLoading}
+      loadingText="Processing..."
+      onClick={handleClick}
+    >
+      Click Me
+    </LoadingButton>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const [isLoading, setIsLoading] = React.useState(false);
-
-    const handleClick = () => {
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 2000);
-    };
-
-    return (
-      <LoadingButton
-        isLoading={isLoading}
-        loadingText="Processing..."
-        onClick={handleClick}
-      >
-        Click Me
-      </LoadingButton>
-    );
-  },
+  render: () => <InteractiveLoadingButtonComponent />,
 };
 
 /**
@@ -198,31 +201,30 @@ export const AllVariants: Story = {
 /**
  * Form submission example
  */
-export const FormSubmission: Story = {
-  render: () => {
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
+const FormSubmissionComponent = () => {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      setIsSubmitting(true);
-      setTimeout(() => {
-        setIsSubmitting(false);
-      }, 2000);
-    };
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+    }, 2000);
+  };
 
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded">
-        <div>
-          <label className="block mb-2">Name:</label>
-          <input type="text" className="border rounded px-3 py-2 w-full" />
-        </div>
-        <LoadingButton type="submit" isLoading={isSubmitting} loadingText="Submitting...">
-          Submit Form
-        </LoadingButton>
-      </form>
-    );
-  },
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded">
+      <div>
+        <label className="block mb-2">Name:</label>
+        <input type="text" className="border rounded px-3 py-2 w-full" />
+      </div>
+      <LoadingButton type="submit" isLoading={isSubmitting} loadingText="Submitting...">
+        Submit Form
+      </LoadingButton>
+    </form>
+  );
 };
 
-// Import React for interactive stories
-import React from 'react';
+export const FormSubmission: Story = {
+  render: () => <FormSubmissionComponent />,
+};

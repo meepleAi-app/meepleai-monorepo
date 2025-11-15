@@ -108,30 +108,143 @@ export const ManyGames: Story = {
 /**
  * Interactive game creation demo
  */
-export const Interactive: Story = {
-  render: () => {
-    const [games, setGames] = React.useState(mockGames);
-    const [selectedGameId, setSelectedGameId] = React.useState<string | null>(null);
-    const [loading, setLoading] = React.useState(false);
+const InteractiveGamePickerComponent = () => {
+  const [games, setGames] = React.useState(mockGames);
+  const [selectedGameId, setSelectedGameId] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
-    const handleGameCreate = async (name: string) => {
-      setLoading(true);
+  const handleGameCreate = async (name: string) => {
+    setLoading(true);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const newGame = {
-        id: `game-${Date.now()}`,
-        name,
-        createdAt: new Date().toISOString(),
-      };
-
-      setGames([...games, newGame]);
-      setSelectedGameId(newGame.id);
-      setLoading(false);
+    const newGame = {
+      id: `game-${Date.now()}`,
+      name,
+      createdAt: new Date().toISOString(),
     };
 
-    return (
+    setGames([...games, newGame]);
+    setSelectedGameId(newGame.id);
+    setLoading(false);
+  };
+
+  return (
+    <GamePicker
+      games={games}
+      selectedGameId={selectedGameId}
+      onGameSelect={setSelectedGameId}
+      onGameCreate={handleGameCreate}
+      loading={loading}
+    />
+  );
+};
+
+export const Interactive: Story = {
+  render: () => <InteractiveGamePickerComponent />,
+};
+
+/**
+ * Error handling demo (validation)
+ */
+const ValidationErrorComponent = () => {
+  const handleGameCreate = async (name: string) => {
+    if (name.toLowerCase().includes('test')) {
+      throw new Error('Game name cannot contain "test"');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  };
+
+  return (
+    <GamePicker
+      games={mockGames}
+      selectedGameId={null}
+      onGameSelect={() => {}}
+      onGameCreate={handleGameCreate}
+      loading={false}
+    />
+  );
+};
+
+export const ValidationError: Story = {
+  render: () => <ValidationErrorComponent />,
+};
+
+/**
+ * Creation in progress
+ */
+const CreatingGameComponent = () => {
+  const [creating, setCreating] = React.useState(false);
+
+  const handleGameCreate = async (name: string) => {
+    setCreating(true);
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    setCreating(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="text-sm text-slate-600">Try creating a game to see the loading state</div>
+      <GamePicker
+        games={mockGames}
+        selectedGameId={null}
+        onGameSelect={() => {}}
+        onGameCreate={handleGameCreate}
+        loading={creating}
+      />
+    </div>
+  );
+};
+
+export const CreatingGame: Story = {
+  render: () => <CreatingGameComponent />,
+};
+
+/**
+ * Full workflow demo
+ */
+const FullWorkflowComponent = () => {
+  const [games, setGames] = React.useState(mockGames);
+  const [selectedGameId, setSelectedGameId] = React.useState<string | null>('game-1');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleGameCreate = async (name: string) => {
+    setLoading(true);
+
+    // Simulate API call with potential error
+    await new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if (Math.random() > 0.8) {
+          reject(new Error('Failed to create game (random error for demo)'));
+        } else {
+          resolve(null);
+        }
+      }, 1000);
+    });
+
+    const newGame = {
+      id: `game-${Date.now()}`,
+      name,
+      createdAt: new Date().toISOString(),
+    };
+
+    setGames([...games, newGame]);
+    setSelectedGameId(newGame.id);
+    setLoading(false);
+  };
+
+  return (
+    <div className="max-w-md">
+      <div className="mb-4 text-sm text-slate-600">
+        <p className="mb-2">This demo shows the full workflow:</p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>Select existing game from dropdown</li>
+          <li>Create new game (20% chance of random error)</li>
+          <li>Newly created game is auto-selected</li>
+          <li>Loading states during creation</li>
+        </ul>
+      </div>
       <GamePicker
         games={games}
         selectedGameId={selectedGameId}
@@ -139,117 +252,12 @@ export const Interactive: Story = {
         onGameCreate={handleGameCreate}
         loading={loading}
       />
-    );
-  },
+    </div>
+  );
 };
 
-/**
- * Error handling demo (validation)
- */
-export const ValidationError: Story = {
-  render: () => {
-    const handleGameCreate = async (name: string) => {
-      if (name.toLowerCase().includes('test')) {
-        throw new Error('Game name cannot contain "test"');
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    };
-
-    return (
-      <GamePicker
-        games={mockGames}
-        selectedGameId={null}
-        onGameSelect={() => {}}
-        onGameCreate={handleGameCreate}
-        loading={false}
-      />
-    );
-  },
-};
-
-/**
- * Creation in progress
- */
-export const CreatingGame: Story = {
-  render: () => {
-    const [creating, setCreating] = React.useState(false);
-
-    const handleGameCreate = async (name: string) => {
-      setCreating(true);
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      setCreating(false);
-    };
-
-    return (
-      <div className="space-y-4">
-        <div className="text-sm text-slate-600">Try creating a game to see the loading state</div>
-        <GamePicker
-          games={mockGames}
-          selectedGameId={null}
-          onGameSelect={() => {}}
-          onGameCreate={handleGameCreate}
-          loading={creating}
-        />
-      </div>
-    );
-  },
-};
-
-/**
- * Full workflow demo
- */
 export const FullWorkflow: Story = {
-  render: () => {
-    const [games, setGames] = React.useState(mockGames);
-    const [selectedGameId, setSelectedGameId] = React.useState<string | null>('game-1');
-    const [loading, setLoading] = React.useState(false);
-
-    const handleGameCreate = async (name: string) => {
-      setLoading(true);
-
-      // Simulate API call with potential error
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          if (Math.random() > 0.8) {
-            reject(new Error('Failed to create game (random error for demo)'));
-          } else {
-            resolve(null);
-          }
-        }, 1000);
-      });
-
-      const newGame = {
-        id: `game-${Date.now()}`,
-        name,
-        createdAt: new Date().toISOString(),
-      };
-
-      setGames([...games, newGame]);
-      setSelectedGameId(newGame.id);
-      setLoading(false);
-    };
-
-    return (
-      <div className="max-w-md">
-        <div className="mb-4 text-sm text-slate-600">
-          <p className="mb-2">This demo shows the full workflow:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Select existing game from dropdown</li>
-            <li>Create new game (20% chance of random error)</li>
-            <li>Newly created game is auto-selected</li>
-            <li>Loading states during creation</li>
-          </ul>
-        </div>
-        <GamePicker
-          games={games}
-          selectedGameId={selectedGameId}
-          onGameSelect={setSelectedGameId}
-          onGameCreate={handleGameCreate}
-          loading={loading}
-        />
-      </div>
-    );
-  },
+  render: () => <FullWorkflowComponent />,
 };
 
 /**

@@ -347,25 +347,35 @@ export function ChatProvider({ children }: PropsWithChildren) {
       });
 
       if (newThread) {
-        // Enforce thread limit after creating new thread (Issue #858)
-        const updatedThreads = [newThread, ...(state.chatsByGame[selectedGameId] ?? [])];
-        await enforceThreadLimit(selectedGameId, updatedThreads);
+        // Use functional update to access latest state (Issue #858)
+        setState((prev) => {
+          const currentGameThreads = prev.chatsByGame[selectedGameId] ?? [];
+          const updatedThreads = [newThread, ...currentGameThreads];
 
-        setState((prev) => ({
-          ...prev,
-          chatsByGame: {
-            ...prev.chatsByGame,
-            [selectedGameId]: [newThread, ...(prev.chatsByGame[selectedGameId] ?? [])],
-          },
-          activeChatIds: {
-            ...prev.activeChatIds,
-            [selectedGameId]: newThread.id,
-          },
-          messagesByChat: {
-            ...prev.messagesByChat,
-            [newThread.id]: [],
-          },
-        }));
+          return {
+            ...prev,
+            chatsByGame: {
+              ...prev.chatsByGame,
+              [selectedGameId]: updatedThreads,
+            },
+            activeChatIds: {
+              ...prev.activeChatIds,
+              [selectedGameId]: newThread.id,
+            },
+            messagesByChat: {
+              ...prev.messagesByChat,
+              [newThread.id]: [],
+            },
+          };
+        });
+
+        // Enforce thread limit after state update (Issue #858)
+        // Use setState callback to get latest threads
+        setState((prev) => {
+          const currentGameThreads = prev.chatsByGame[selectedGameId] ?? [];
+          void enforceThreadLimit(selectedGameId, currentGameThreads);
+          return prev; // Return unchanged state, enforceThreadLimit updates separately
+        });
       }
     } catch (err) {
       console.error('Failed to create chat thread:', err);
@@ -373,7 +383,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
     } finally {
       setLoading((prev) => ({ ...prev, creating: false }));
     }
-  }, [selectedGameId, selectedAgentId]);
+  }, [selectedGameId, selectedAgentId, enforceThreadLimit]);
 
   const deleteChat = useCallback(
     async (chatId: string) => {
@@ -473,25 +483,34 @@ export function ChatProvider({ children }: PropsWithChildren) {
           threadId = newThread.id;
           isNewThread = true;
 
-          setState((prev) => ({
-            ...prev,
-            chatsByGame: {
-              ...prev.chatsByGame,
-              [selectedGameId]: [newThread, ...(prev.chatsByGame[selectedGameId] ?? [])],
-            },
-            activeChatIds: {
-              ...prev.activeChatIds,
-              [selectedGameId]: threadId,
-            },
-            messagesByChat: {
-              ...prev.messagesByChat,
-              [threadId]: [],
-            },
-          }));
+          // Use functional update to access latest state (Issue #858)
+          setState((prev) => {
+            const currentGameThreads = prev.chatsByGame[selectedGameId] ?? [];
+            const updatedThreads = [newThread, ...currentGameThreads];
 
-          // Enforce thread limit after creating new thread (Issue #858)
-          const updatedThreads = [newThread, ...(state.chatsByGame[selectedGameId] ?? [])];
-          await enforceThreadLimit(selectedGameId, updatedThreads);
+            return {
+              ...prev,
+              chatsByGame: {
+                ...prev.chatsByGame,
+                [selectedGameId]: updatedThreads,
+              },
+              activeChatIds: {
+                ...prev.activeChatIds,
+                [selectedGameId]: threadId,
+              },
+              messagesByChat: {
+                ...prev.messagesByChat,
+                [threadId]: [],
+              },
+            };
+          });
+
+          // Enforce thread limit after state update (Issue #858)
+          setState((prev) => {
+            const currentGameThreads = prev.chatsByGame[selectedGameId] ?? [];
+            void enforceThreadLimit(selectedGameId, currentGameThreads);
+            return prev; // Return unchanged state, enforceThreadLimit updates separately
+          });
         }
 
         // Optimistic update
@@ -535,7 +554,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         setLoading((prev) => ({ ...prev, sending: false }));
       }
     },
-    [selectedGameId, selectedAgentId, activeChatId]
+    [selectedGameId, selectedAgentId, activeChatId, messages.length, enforceThreadLimit]
   );
 
   const editMessage = useCallback(

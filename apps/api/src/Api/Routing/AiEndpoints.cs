@@ -90,6 +90,7 @@ public static class AiEndpoints
                     var gameGuid = Guid.Parse(req.gameId);
                     var game = await dbContext.Games
                         .Where(g => g.Id == gameGuid)
+                        .AsNoTracking()
                         .Select(g => g.Name)
                         .FirstOrDefaultAsync(ct);
 
@@ -592,6 +593,7 @@ public static class AiEndpoints
                                     // Fetch game name
                                     gameName = await dbContext.Games
                                         .Where(g => g.Id.ToString() == req.gameId)
+                                        .AsNoTracking()
                                         .Select(g => g.Name)
                                         .FirstOrDefaultAsync(ct);
 

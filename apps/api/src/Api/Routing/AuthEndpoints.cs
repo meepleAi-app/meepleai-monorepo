@@ -770,6 +770,7 @@ User must have at least one authentication method remaining (password or another
             var tokenHash = Convert.ToBase64String(hash);
 
             var dbSession = await db.UserSessions
+                .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct);
 
             if (dbSession == null)

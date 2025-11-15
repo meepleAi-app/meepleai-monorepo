@@ -50,7 +50,9 @@ public class ApiKeyManagementService
             return new ApiKeyListResponse { Keys = new List<ApiKeyDto>(), TotalCount = 0, Page = page, PageSize = pageSize };
         }
 
-        var query = _db.ApiKeys.Where(k => k.UserId == userGuid);
+        var query = _db.ApiKeys
+            .AsNoTracking()
+            .Where(k => k.UserId == userGuid);
 
         if (!includeRevoked)
         {
@@ -92,7 +94,7 @@ public class ApiKeyManagementService
             return null;
         }
 
-        var key = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, ct);
+        var key = await _db.ApiKeys.AsNoTracking().FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, ct);
 
         return key == null ? null : MapToDto(key);
     }
@@ -223,7 +225,7 @@ public class ApiKeyManagementService
         }
 
         // Check that the user owns the key before revoking
-        var apiKey = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, ct);
+        var apiKey = await _db.ApiKeys.AsNoTracking().FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, ct);
         if (apiKey == null)
         {
             _logger.LogWarning("API key revocation failed: key not found or unauthorized. KeyId: {KeyId}, UserId: {UserId}", keyId, userId);

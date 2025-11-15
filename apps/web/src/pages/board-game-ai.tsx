@@ -142,14 +142,8 @@ export default function BoardGameAI() {
                   loadingText="Loading..."
                   className="text-lg"
                   data-testid="hero-get-started"
-                  asChild
                 >
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {authUser ? "Ask a Question" : "Get Started Free"}
-                  </motion.button>
+                  {authUser ? "Ask a Question" : "Get Started Free"}
                 </LoadingButton>
                 <Button
                   asChild
@@ -352,14 +346,8 @@ export default function BoardGameAI() {
               loadingText="Loading..."
               className="text-lg bg-white text-primary hover:bg-slate-100"
               data-testid="cta-get-started"
-              asChild
             >
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {authUser ? "Ask Your First Question" : "Get Started Free"}
-              </motion.button>
+              {authUser ? "Ask Your First Question" : "Get Started Free"}
             </LoadingButton>
             <p className="text-sm text-slate-50 mt-4">
               💡 No credit card required • 95%+ accuracy • Instant answers

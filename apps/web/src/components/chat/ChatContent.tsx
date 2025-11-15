@@ -1,11 +1,16 @@
 /**
- * ChatContent - Main chat content area
+ * ChatContent - Main chat content area (Issue #858)
  *
  * Composes the message list and input form.
- * Displays chat header with game/agent info and sidebar toggle.
+ * Displays thread header with title, game info, message count, and status.
  *
- * Simplified version for Phase 3 - will be enhanced in Phase 4 with:
- * - Export chat button
+ * Updated for SPRINT-3 #858:
+ * - Thread-based header (title, message count, status)
+ * - Shows archived thread indicator
+ * - Better mobile spacing (prevents bottom nav overlap)
+ *
+ * Will be enhanced in Phase 4 with:
+ * - Export thread button
  * - Streaming response display with stop button
  * - Typing indicator
  * - Full integration with useChatStreaming hook
@@ -33,7 +38,8 @@ export function ChatContent() {
   const [isMobile, setIsMobile] = useState(false);
 
   const selectedGame = games.find(g => g.id === selectedGameId);
-  const activeChat = chats.find(c => c.id === activeChatId);
+  const activeThread = chats.find(c => c.id === activeChatId);
+  const isArchived = activeThread?.status === 'Closed';
 
   // Track mobile viewport with matchMedia
   useEffect(() => {
@@ -59,38 +65,60 @@ export function ChatContent() {
 
   return (
     <div className="flex-1 flex flex-col bg-white">
-      {/* Mobile Sidebar */}
+      {/* Mobile Sidebar (from origin/main) */}
       <MobileSidebar open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} />
 
-      {/* Header */}
+      {/* Header (Issue #858: Thread-based) */}
       <div className="p-4 border-b border-[#dadce0] flex justify-between items-center bg-white">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <button
             onClick={handleToggleSidebar}
             aria-label={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
             aria-expanded={!sidebarCollapsed}
-            className="px-3 py-2 bg-[#f1f3f4] border-none rounded cursor-pointer text-lg touch-target"
+            className="px-3 py-2 bg-[#f1f3f4] border-none rounded cursor-pointer text-lg touch-target hover:bg-[#e8eaed] transition-colors flex-shrink-0"
             title={sidebarCollapsed ? 'Mostra sidebar' : 'Nascondi sidebar'}
           >
             {sidebarCollapsed ? '☰' : '✕'}
           </button>
-          <div>
-            <h1 className="m-0 text-xl">
-              {activeChatId
-                ? activeChat?.title ?? 'Chat'
-                : 'Seleziona o crea una chat'}
-            </h1>
-            <p className="mt-1 mb-0 text-[#64748b] text-[13px]">
-              {selectedGameId
-                ? selectedGame?.name ?? ''
-                : 'Nessun gioco selezionato'}
-            </p>
+          <div className="flex-1 min-w-0">
+            {/* Thread Title (Issue #858) */}
+            <div className="flex items-center gap-2">
+              <h1 className="m-0 text-xl truncate">
+                {activeChatId
+                  ? activeThread?.title ?? 'Chat Thread'
+                  : 'Seleziona o crea un thread'}
+              </h1>
+              {/* Archived Badge (Issue #858) */}
+              {isArchived && (
+                <span
+                  className="px-2 py-0.5 bg-[#dadce0] text-[#5f6368] rounded text-[10px] font-semibold uppercase flex-shrink-0"
+                  title="This thread is archived"
+                  aria-label="Archived thread"
+                >
+                  Archiviato
+                </span>
+              )}
+            </div>
+            {/* Thread Metadata (Issue #858) */}
+            <div className="mt-1 mb-0 text-[#64748b] text-[13px] flex items-center gap-2">
+              <span>
+                {selectedGameId
+                  ? selectedGame?.name ?? ''
+                  : 'Nessun gioco selezionato'}
+              </span>
+              {activeThread && (
+                <>
+                  <span>•</span>
+                  <span>{activeThread.messageCount} messaggi</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Link
             href="/"
-            className="px-4 py-2 bg-[#1a73e8] text-white no-underline rounded text-sm"
+            className="px-4 py-2 bg-[#1a73e8] text-white no-underline rounded text-sm hover:bg-[#1557b0] transition-colors"
           >
             Home
           </Link>

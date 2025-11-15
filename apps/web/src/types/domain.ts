@@ -56,8 +56,10 @@ export interface ChatMessage {
  */
 export interface ChatThread {
   id: string;
+  userId?: string; // Added for Issue #858
   gameId: string | null;
   title: string | null;
+  status?: string; // Added for Issue #858: "Active" | "Closed"
   createdAt: string;
   lastMessageAt: string | null;
   messageCount: number;

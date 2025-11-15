@@ -650,6 +650,28 @@ export const api = {
         `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/messages`,
         request
       );
+    },
+
+    /**
+     * Close a chat thread (archive it)
+     * @param threadId Thread ID (GUID format)
+     */
+    async close(threadId: string): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/close`,
+        {}
+      );
+    },
+
+    /**
+     * Reopen a closed thread
+     * @param threadId Thread ID (GUID format)
+     */
+    async reopen(threadId: string): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/reopen`,
+        {}
+      );
     }
   },
 
@@ -1265,30 +1287,8 @@ export const api = {
   }
 };
 
-// SPRINT-4: Game Session Management types (Issue #1134)
-export interface SessionPlayerDto {
-  playerName: string;
-  playerOrder: number;
-  color: string | null;
-}
-
-export interface GameSessionDto {
-  id: string;
-  gameId: string;
-  status: string; // Setup, InProgress, Paused, Completed, Abandoned
-  startedAt: string;
-  completedAt: string | null;
-  playerCount: number;
-  players: SessionPlayerDto[];
-  winnerName: string | null;
-  notes: string | null;
-  durationMinutes: number;
-}
-
-export interface StartSessionRequest {
-  gameId: string;
-  players: SessionPlayerDto[];
-}
+// Issue #858: Removed duplicate SessionPlayerDto, GameSessionDto, StartSessionRequest
+// These are already defined at lines 146-167
 
 export interface CompleteSessionRequest {
   winnerName?: string | null;

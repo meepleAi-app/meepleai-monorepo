@@ -1,8 +1,14 @@
 /**
- * ChatSidebar - Collapsible sidebar with game/agent selection and chat history
+ * ChatSidebar - Collapsible sidebar with game/agent selection and thread history (Issue #858)
  *
- * Composes GameSelector, AgentSelector, ChatHistory, and new chat button.
+ * Composes GameSelector, AgentSelector, ChatHistory (thread list), and new thread button.
  * Manages sidebar collapse state and game context badge.
+ *
+ * Updated for SPRINT-3 #858:
+ * - Thread-based UI (replacing chat sessions)
+ * - Shows active and archived threads
+ * - Thread limit indicator (max 5 per game)
+ * - Hybrid creation: manual button + auto-create on first message
  */
 
 import React from 'react';
@@ -13,9 +19,12 @@ import { AgentSelector } from './AgentSelector';
 import { ChatHistory } from './ChatHistory';
 import { LoadingButton } from '../loading/LoadingButton';
 
+const MAX_THREADS_PER_GAME = 5; // Issue #858: Thread limit constant
+
 export function ChatSidebar() {
   const {
     games,
+    chats,
     selectedGameId,
     selectedAgentId,
     sidebarCollapsed,
@@ -29,9 +38,13 @@ export function ChatSidebar() {
 
   const isDisabled = !selectedGameId || !selectedAgentId || loading.creating;
 
+  // Calculate active thread count for current game (Issue #858)
+  const activeThreadCount = chats.filter(t => t.status !== 'Closed').length;
+  const isAtThreadLimit = activeThreadCount >= MAX_THREADS_PER_GAME;
+
   return (
     <aside
-      aria-label="Chat sidebar with game selection and chat history"
+      aria-label="Chat sidebar with game selection and thread history"
       className={cn(
         "hidden md:flex bg-[#f8f9fa] border-r border-[#dadce0] flex-col overflow-hidden transition-[width,min-width] duration-300 ease-in-out",
         sidebarCollapsed ? "w-0 min-w-0" : "w-80 min-w-[320px]"
@@ -59,25 +72,44 @@ export function ChatSidebar() {
         {/* Agent Selector */}
         <AgentSelector />
 
-        {/* New Chat Button */}
-        <LoadingButton
-          isLoading={loading.creating}
-          loadingText="Creazione..."
-          onClick={handleCreateChat}
-          disabled={isDisabled}
-          aria-label="Create new chat"
-          className={cn(
-            "w-full py-2.5 text-white border-none rounded text-sm font-medium",
-            isDisabled
-              ? "bg-[#dadce0] cursor-not-allowed"
-              : "bg-[#1a73e8] cursor-pointer"
+        {/* New Thread Button with limit indicator (Issue #858) */}
+        <div>
+          <LoadingButton
+            isLoading={loading.creating}
+            loadingText="Creazione..."
+            onClick={handleCreateChat}
+            disabled={isDisabled}
+            aria-label="Create new thread"
+            className={cn(
+              "w-full py-2.5 text-white border-none rounded text-sm font-medium",
+              isDisabled
+                ? "bg-[#dadce0] cursor-not-allowed"
+                : "bg-[#1a73e8] cursor-pointer hover:bg-[#1557b0]"
+            )}
+          >
+            + Nuovo Thread
+          </LoadingButton>
+
+          {/* Thread limit indicator (Issue #858) */}
+          {selectedGameId && (
+            <div className="mt-2 text-[11px] text-center">
+              <span className={cn(
+                "text-[#5f6368]",
+                isAtThreadLimit && "text-[#d93025] font-semibold"
+              )}>
+                {activeThreadCount} / {MAX_THREADS_PER_GAME} thread attivi
+              </span>
+              {isAtThreadLimit && (
+                <div className="mt-1 text-[10px] text-[#d93025]">
+                  (thread più vecchio sarà archiviato)
+                </div>
+              )}
+            </div>
           )}
-        >
-          + Nuova Chat
-        </LoadingButton>
+        </div>
       </div>
 
-      {/* Chat History */}
+      {/* Thread History (Issue #858: Now shows active + archived threads) */}
       <ChatHistory />
     </aside>
   );

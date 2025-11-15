@@ -263,6 +263,7 @@ describe('ChatProvider', () => {
         await result.current.createChat();
       });
 
+      // Issue #858: Manual createChat still uses null title (no message provided yet)
       expect(mockApi.chatThreads.create).toHaveBeenCalledWith({
         gameId: baseGame.id,
         title: null,
@@ -526,9 +527,10 @@ describe('ChatProvider', () => {
         expect(result.current.activeChatId).toBe(newChat.id);
       });
 
+      // Issue #858: Auto-title generation from first message
       expect(mockApi.chatThreads.create).toHaveBeenCalledWith({
         gameId: baseGame.id,
-        title: null,
+        title: 'First message', // Auto-generated from sendMessage content
         initialMessage: null,
       });
       expect(result.current.chats[0].id).toBe(newChat.id);

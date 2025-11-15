@@ -1,10 +1,10 @@
 /**
- * ChatHistory Component Tests
+ * ChatHistory Component Tests (Updated for Issue #858)
  *
- * Tests for the ChatHistory component that displays a list of chat sessions
- * with loading states, empty states, and chat management capabilities.
+ * Tests for the ChatHistory component that displays a list of chat threads
+ * with loading states, empty states, thread management, and active/archived separation.
  *
- * Target Coverage: 90%+ (from 58.8%)
+ * Target Coverage: 90%+
  */
 
 import React from 'react';
@@ -27,8 +27,10 @@ const mockUseChatContext = useChatContext as jest.Mock;
  */
 const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
   id: 'chat-1',
+  userId: 'user-1',
   gameId: 'game-1',
   title: 'Chess Expert',
+  status: 'Active', // Issue #858: Added status field
   createdAt: '2025-01-10T10:00:00Z',
   lastMessageAt: '2025-01-10T10:05:00Z',
   messageCount: 5,
@@ -71,12 +73,12 @@ describe('ChatHistory Component', () => {
    * Test Group: Loading State
    */
   describe('Loading State', () => {
-    it('displays loading skeleton when chats are being fetched', () => {
+    it('displays loading skeleton when threads are being fetched', () => {
       setupChatContext({ loading: { chats: true } });
       render(<ChatHistory />);
 
-      // Multiple status elements exist due to SkeletonLoader, check for the loading message
-      expect(screen.getByText('Caricamento chat...')).toBeInTheDocument();
+      // Issue #858: Updated text for threads
+      expect(screen.getByText('Caricamento thread...')).toBeInTheDocument();
       const statuses = screen.getAllByRole('status', { hidden: true });
       expect(statuses.length).toBeGreaterThan(0);
     });
@@ -85,15 +87,15 @@ describe('ChatHistory Component', () => {
       setupChatContext({ loading: { chats: true } });
       render(<ChatHistory />);
 
-      expect(screen.getByText('Caricamento chat...')).toBeInTheDocument();
+      expect(screen.getByText('Caricamento thread...')).toBeInTheDocument();
     });
 
     it('displays skeleton loader with correct aria-label', () => {
       setupChatContext({ loading: { chats: true } });
       render(<ChatHistory />);
 
-      // SkeletonLoader creates multiple items with the same aria-label
-      const skeletons = screen.getAllByLabelText('Caricamento cronologia chat');
+      // Issue #858: Updated aria-label for threads
+      const skeletons = screen.getAllByLabelText('Caricamento cronologia thread');
       expect(skeletons.length).toBeGreaterThan(0);
     });
 
@@ -101,7 +103,7 @@ describe('ChatHistory Component', () => {
       setupChatContext({ loading: { chats: true } });
       render(<ChatHistory />);
 
-      const nav = screen.getByRole('navigation', { name: 'Chat history' });
+      const nav = screen.getByRole('navigation', { name: 'Thread history' });
       expect(nav).toBeInTheDocument();
     });
   });
@@ -110,27 +112,74 @@ describe('ChatHistory Component', () => {
    * Test Group: Empty State
    */
   describe('Empty State', () => {
-    it('displays empty message when no chats exist', () => {
+    it('displays empty message when no threads exist', () => {
       setupChatContext({ chats: [] });
       render(<ChatHistory />);
 
-      expect(screen.getByText('Nessuna chat. Creane una nuova!')).toBeInTheDocument();
+      // Issue #858: Updated empty state message
+      expect(screen.getByText('Nessun thread. Invia un messaggio per iniziare!')).toBeInTheDocument();
     });
 
     it('renders empty state within navigation element', () => {
       setupChatContext({ chats: [] });
       render(<ChatHistory />);
 
-      const nav = screen.getByRole('navigation', { name: 'Chat history' });
-      expect(nav).toContainElement(screen.getByText('Nessuna chat. Creane una nuova!'));
+      const nav = screen.getByRole('navigation', { name: 'Thread history' });
+      expect(nav).toContainElement(screen.getByText('Nessun thread. Invia un messaggio per iniziare!'));
     });
 
     it('applies correct styling to empty state', () => {
       setupChatContext({ chats: [] });
       render(<ChatHistory />);
 
-      const emptyText = screen.getByText('Nessuna chat. Creane una nuova!');
+      const emptyText = screen.getByText('Nessun thread. Invia un messaggio per iniziare!');
       expect(emptyText).toBeInTheDocument(); // Style assertion removed - Shadcn/UI uses Tailwind CSS classes
+    });
+  });
+
+  /**
+   * Test Group: Thread Separation (Issue #858)
+   */
+  describe('Thread Separation', () => {
+    it('separates active and archived threads into sections', () => {
+      const chats = [
+        createMockChatThread({ id: 'thread-1', title: 'Active Thread 1', status: 'Active' }),
+        createMockChatThread({ id: 'thread-2', title: 'Archived Thread', status: 'Closed' }),
+        createMockChatThread({ id: 'thread-3', title: 'Active Thread 2', status: 'Active' }),
+      ];
+      setupChatContext({ chats });
+      render(<ChatHistory />);
+
+      expect(screen.getByText('Active Threads')).toBeInTheDocument();
+      // "Archived" appears in both section heading and badge, use getByRole for heading
+      const heading = screen.getByRole('heading', { name: 'Archived' });
+      expect(heading).toBeInTheDocument();
+    });
+
+    it('shows only active threads section when no archived threads', () => {
+      const chats = [
+        createMockChatThread({ id: 'thread-1', status: 'Active' }),
+        createMockChatThread({ id: 'thread-2', status: 'Active' }),
+      ];
+      setupChatContext({ chats });
+      render(<ChatHistory />);
+
+      expect(screen.getByText('Active Threads')).toBeInTheDocument();
+      // No archived section or badges should appear
+      expect(screen.queryByRole('heading', { name: 'Archived' })).not.toBeInTheDocument();
+    });
+
+    it('shows only archived section when all threads are closed', () => {
+      const chats = [
+        createMockChatThread({ id: 'thread-1', status: 'Closed' }),
+        createMockChatThread({ id: 'thread-2', status: 'Closed' }),
+      ];
+      setupChatContext({ chats });
+      render(<ChatHistory />);
+
+      expect(screen.queryByText('Active Threads')).not.toBeInTheDocument();
+      const heading = screen.getByRole('heading', { name: 'Archived' });
+      expect(heading).toBeInTheDocument();
     });
   });
 
@@ -194,7 +243,7 @@ describe('ChatHistory Component', () => {
       setupChatContext({ chats });
       render(<ChatHistory />);
 
-      expect(screen.getByRole('navigation', { name: 'Chat history' })).toBeInTheDocument();
+      expect(screen.getByRole('navigation', { name: 'Thread history' })).toBeInTheDocument();
     });
   });
 
@@ -202,19 +251,19 @@ describe('ChatHistory Component', () => {
    * Test Group: Chat Selection
    */
   describe('Chat Selection', () => {
-    it('calls selectChat when chat item is clicked', () => {
+    it('calls selectChat when thread item is clicked', () => {
       const chat = createMockChatThread({ id: 'chat-123', title: 'Test Agent' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
-      // ChatHistoryItem's li element has role="button", click it directly
-      const chatItem = screen.getByText('Test Agent').closest('li');
-      fireEvent.click(chatItem!);
+      // Issue #858: ThreadListItem uses separate select button
+      const selectButton = screen.getByRole('button', { name: /Select thread: Test Agent/ });
+      fireEvent.click(selectButton);
 
       expect(mockSelectChat).toHaveBeenCalledWith('chat-123');
     });
 
-    it('calls selectChat with correct chat ID for multiple chats', () => {
+    it('calls selectChat with correct thread ID for multiple threads', () => {
       const chats = [
         createMockChatThread({ id: 'chat-1', title: 'Agent 1' }),
         createMockChatThread({ id: 'chat-2', title: 'Agent 2' }),
@@ -223,9 +272,9 @@ describe('ChatHistory Component', () => {
       setupChatContext({ chats });
       render(<ChatHistory />);
 
-      // Click the second chat item (Agent 2)
-      const agent2Button = screen.getByText('Agent 2').closest('[role="button"]');
-      fireEvent.click(agent2Button!);
+      // Click the second thread item (Agent 2)
+      const agent2Button = screen.getByRole('button', { name: /Select thread: Agent 2/ });
+      fireEvent.click(agent2Button);
 
       expect(mockSelectChat).toHaveBeenCalledWith('chat-2');
     });
@@ -236,9 +285,9 @@ describe('ChatHistory Component', () => {
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
-      // Click the chat item (li element with role="button")
-      const chatItem = screen.getByText('Test Agent').closest('li');
-      fireEvent.click(chatItem!);
+      // Issue #858: Click the select button in ThreadListItem
+      const selectButton = screen.getByRole('button', { name: /Select thread: Test Agent/ });
+      fireEvent.click(selectButton);
 
       await waitFor(() => {
         expect(mockSelectChat).toHaveBeenCalledTimes(1);
@@ -371,11 +420,12 @@ describe('ChatHistory Component', () => {
       expect(() => render(<ChatHistory />)).not.toThrow();
     });
 
-    it('passes all chat properties to ChatHistoryItem', () => {
+    it('passes all chat properties to ThreadListItem', () => {
       const chat = createMockChatThread({
         id: 'chat-1',
         gameId: 'game-1',
         title: 'Chess Expert',
+        status: 'Active',
         createdAt: '2025-01-10T10:00:00Z',
         lastMessageAt: '2025-01-10T10:05:00Z',
         messageCount: 10,
@@ -384,11 +434,12 @@ describe('ChatHistory Component', () => {
       setupChatContext({ chats: [chat], activeChatId: 'chat-1' });
       render(<ChatHistory />);
 
-      // All properties should be passed to and displayed by ChatHistoryItem
+      // All properties should be passed to and displayed by ThreadListItem
       expect(screen.getByText('Chess Expert')).toBeInTheDocument();
-      // Active chat should have aria-current on the list item (role=button)
+      // Active thread should have aria-current on the wrapper div (Issue #858)
       const chatItem = screen.getByText('Chess Expert').closest('li');
-      expect(chatItem).toHaveAttribute('aria-current', 'true');
+      const wrapper = chatItem?.querySelector('div');
+      expect(wrapper).toHaveAttribute('aria-current', 'true');
     });
   });
 
@@ -400,13 +451,13 @@ describe('ChatHistory Component', () => {
       setupChatContext({ loading: { chats: true } });
       const { rerender } = render(<ChatHistory />);
 
-      expect(screen.getByText('Caricamento chat...')).toBeInTheDocument();
+      expect(screen.getByText('Caricamento thread...')).toBeInTheDocument();
 
       // Update to loaded state
       setupChatContext({ chats: [createMockChatThread()], loading: { chats: false } });
       rerender(<ChatHistory />);
 
-      expect(screen.queryByText('Caricamento chat...')).not.toBeInTheDocument();
+      expect(screen.queryByText('Caricamento thread...')).not.toBeInTheDocument();
       expect(screen.getByRole('list')).toBeInTheDocument();
     });
 
@@ -414,13 +465,13 @@ describe('ChatHistory Component', () => {
       setupChatContext({ chats: [] });
       const { rerender } = render(<ChatHistory />);
 
-      expect(screen.getByText('Nessuna chat. Creane una nuova!')).toBeInTheDocument();
+      expect(screen.getByText('Nessun thread. Invia un messaggio per iniziare!')).toBeInTheDocument();
 
-      // Add chats
+      // Add threads
       setupChatContext({ chats: [createMockChatThread()] });
       rerender(<ChatHistory />);
 
-      expect(screen.queryByText('Nessuna chat. Creane una nuova!')).not.toBeInTheDocument();
+      expect(screen.queryByText('Nessun thread. Invia un messaggio per iniziare!')).not.toBeInTheDocument();
       expect(screen.getByRole('list')).toBeInTheDocument();
     });
 
@@ -430,12 +481,12 @@ describe('ChatHistory Component', () => {
 
       expect(screen.getByRole('list')).toBeInTheDocument();
 
-      // Remove all chats
+      // Remove all threads
       setupChatContext({ chats: [] });
       rerender(<ChatHistory />);
 
       expect(screen.queryByRole('list')).not.toBeInTheDocument();
-      expect(screen.getByText('Nessuna chat. Creane una nuova!')).toBeInTheDocument();
+      expect(screen.getByText('Nessun thread. Invia un messaggio per iniziare!')).toBeInTheDocument();
     });
 
     it('handles chat with missing optional properties', () => {
@@ -476,7 +527,7 @@ describe('ChatHistory Component', () => {
       setupChatContext({ chats: [] });
       render(<ChatHistory />);
 
-      const nav = screen.getByRole('navigation', { name: 'Chat history' });
+      const nav = screen.getByRole('navigation', { name: 'Thread history' });
       expect(nav).toBeInTheDocument();
     });
 

@@ -15,6 +15,16 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInject
 
 public static class DocumentProcessingServiceExtensions
 {
+    /// <summary>
+    /// Keyed service keys for PDF text extractors (ISSUE-1174: Post-merge enhancement)
+    /// </summary>
+    public static class PdfExtractorKeys
+    {
+        public const string Unstructured = "unstructured";
+        public const string SmolDocling = "smoldocling";
+        public const string Docnet = "docnet";
+    }
+
     public static IServiceCollection AddDocumentProcessingContext(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -53,9 +63,9 @@ public static class DocumentProcessingServiceExtensions
 
             // ISSUE-1174: Register stage extractors as keyed services (avoids circular DI dependency)
             // The orchestrator constructor uses [FromKeyedServices] to resolve specific extractors
-            services.AddKeyedScoped<IPdfTextExtractor, UnstructuredPdfTextExtractor>("unstructured");
-            services.AddKeyedScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>("smoldocling");
-            services.AddKeyedScoped<IPdfTextExtractor, DocnetPdfTextExtractor>("docnet");
+            services.AddKeyedScoped<IPdfTextExtractor, UnstructuredPdfTextExtractor>(PdfExtractorKeys.Unstructured);
+            services.AddKeyedScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>(PdfExtractorKeys.SmolDocling);
+            services.AddKeyedScoped<IPdfTextExtractor, DocnetPdfTextExtractor>(PdfExtractorKeys.Docnet);
 
             // Register orchestrator application service
             services.AddScoped<EnhancedPdfProcessingOrchestrator>();

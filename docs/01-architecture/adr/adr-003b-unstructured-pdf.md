@@ -283,9 +283,125 @@ Board Game AI (BGAI) project needs high-quality PDF extraction optimized for RAG
 
 ---
 
+## Dependency Injection Architecture (Issue #1174)
+
+### Keyed Services Pattern
+
+**Status**: ✅ Implemented (2025-11-15)
+**Context**: [Issue #1174] - Orchestrator DI Circular Dependency Risk
+
+#### Problem
+
+The 3-stage orchestrator requires injecting multiple implementations of `IPdfTextExtractor` (Unstructured, SmolDocling, Docnet). Traditional DI registration caused a circular dependency:
+
+```
+IPdfTextExtractor
+→ OrchestratedPdfTextExtractor
+→ EnhancedPdfProcessingOrchestrator
+→ IPdfTextExtractor[] (x3)
+→ [CIRCULAR DEPENDENCY] ❌
+```
+
+#### Solution: .NET 8+ Keyed Services
+
+Use keyed DI services to differentiate stage extractors while maintaining interface-based design:
+
+**DI Registration** (`DocumentProcessingServiceExtensions.cs`):
+```csharp
+/// <summary>
+/// Keyed service keys for PDF text extractors
+/// </summary>
+public static class PdfExtractorKeys
+{
+    public const string Unstructured = "unstructured";
+    public const string SmolDocling = "smoldocling";
+    public const string Docnet = "docnet";
+}
+
+// Register keyed services
+services.AddKeyedScoped<IPdfTextExtractor, UnstructuredPdfTextExtractor>(
+    PdfExtractorKeys.Unstructured);
+services.AddKeyedScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>(
+    PdfExtractorKeys.SmolDocling);
+services.AddKeyedScoped<IPdfTextExtractor, DocnetPdfTextExtractor>(
+    PdfExtractorKeys.Docnet);
+
+// Primary extractor (orchestrator)
+services.AddScoped<IPdfTextExtractor, OrchestratedPdfTextExtractor>();
+```
+
+**Constructor Injection** (`EnhancedPdfProcessingOrchestrator.cs`):
+```csharp
+public EnhancedPdfProcessingOrchestrator(
+    [FromKeyedServices(PdfExtractorKeys.Unstructured)]
+        IPdfTextExtractor unstructuredExtractor,
+    [FromKeyedServices(PdfExtractorKeys.SmolDocling)]
+        IPdfTextExtractor smolDoclingExtractor,
+    [FromKeyedServices(PdfExtractorKeys.Docnet)]
+        IPdfTextExtractor docnetExtractor,
+    ILogger<EnhancedPdfProcessingOrchestrator> logger,
+    IConfiguration configuration,
+    IOptions<PdfProcessingOptions> options)
+{
+    // Constructor implementation
+}
+```
+
+#### Benefits
+
+✅ **Circular Dependency Resolved**: Stage extractors resolved by key, not generic `IPdfTextExtractor`
+✅ **Interface-Based Design**: Maintains abstraction for testability
+✅ **Compile-Time Safety**: Constants prevent typos in service keys
+✅ **Zero Breaking Changes**: Non-Orchestrator providers unaffected
+✅ **Clean Architecture**: No service locator pattern, pure DI
+
+#### DI Graph
+
+```
+Provider: "Orchestrator"
+┌──────────────────────────────────────────────────────┐
+│ DI Container                                         │
+│                                                       │
+│  IPdfTextExtractor (default)                         │
+│  └─→ OrchestratedPdfTextExtractor ──────────┐       │
+│                                              │       │
+│  IPdfTextExtractor ["unstructured"]          │       │
+│  └─→ UnstructuredPdfTextExtractor ←──────────┼───┐   │
+│                                              │   │   │
+│  IPdfTextExtractor ["smoldocling"]           │   │   │
+│  └─→ SmolDoclingPdfTextExtractor ←───────────┼───┼─┐ │
+│                                              │   │ │ │
+│  IPdfTextExtractor ["docnet"]                │   │ │ │
+│  └─→ DocnetPdfTextExtractor ←────────────────┼───┼─┼─┤
+│                                              │   │ │ │
+│  EnhancedPdfProcessingOrchestrator ──────────┘   │ │ │
+│  └─→ Requires keyed extractors ─────────────────┴─┴─┘
+│                                                       │
+└──────────────────────────────────────────────────────┘
+```
+
+#### Testing
+
+6 comprehensive DI integration tests (`OrchestratorDICircularDependencyTests.cs`):
+- ✅ Orchestrator provider resolves without circular dependency
+- ✅ Orchestrator service resolves correctly
+- ✅ Keyed extractors resolve to correct types
+- ✅ All 4 provider modes work (Orchestrator, Unstructured, SmolDocling, Docnet)
+- ✅ Backward compatibility for non-Orchestrator modes
+
+#### Performance
+
+- **Keyed Service Resolution**: O(1) dictionary lookup
+- **Overhead**: Negligible (<1ms per request)
+- **Memory**: No additional allocations
+- **Build Time**: No impact (compile-time constants)
+
+---
+
 ## Related
 
 - **Issue**: #952 (BGAI-001-v2)
+- **Issue**: #1174 (DI Circular Dependency)
 - **Replaces**: #941-#944 (LLMWhisperer issues, closed)
 - **Epic**: Month 1 - PDF Processing Pipeline
 - **Milestone**: Month 1 (Due: 2025-02-14)

@@ -5,11 +5,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using static Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection.DocumentProcessingServiceExtensions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.DI;
 
 /// <summary>
 /// ISSUE-1174: Tests for orchestrator DI circular dependency fix using keyed services
+/// POST-MERGE: Updated to use PdfExtractorKeys constants for compile-time safety
 /// </summary>
 public class OrchestratorDICircularDependencyTests
 {
@@ -189,16 +191,16 @@ public class OrchestratorDICircularDependencyTests
         services.AddDocumentProcessingContext(configuration);
         var serviceProvider = services.BuildServiceProvider();
 
-        // Assert - Verify keyed extractors can be resolved
-        var unstructuredExtractor = serviceProvider.GetRequiredKeyedService<IPdfTextExtractor>("unstructured");
+        // Assert - Verify keyed extractors can be resolved using constants
+        var unstructuredExtractor = serviceProvider.GetRequiredKeyedService<IPdfTextExtractor>(PdfExtractorKeys.Unstructured);
         Assert.NotNull(unstructuredExtractor);
         Assert.IsType<UnstructuredPdfTextExtractor>(unstructuredExtractor);
 
-        var smolDoclingExtractor = serviceProvider.GetRequiredKeyedService<IPdfTextExtractor>("smoldocling");
+        var smolDoclingExtractor = serviceProvider.GetRequiredKeyedService<IPdfTextExtractor>(PdfExtractorKeys.SmolDocling);
         Assert.NotNull(smolDoclingExtractor);
         Assert.IsType<SmolDoclingPdfTextExtractor>(smolDoclingExtractor);
 
-        var docnetExtractor = serviceProvider.GetRequiredKeyedService<IPdfTextExtractor>("docnet");
+        var docnetExtractor = serviceProvider.GetRequiredKeyedService<IPdfTextExtractor>(PdfExtractorKeys.Docnet);
         Assert.NotNull(docnetExtractor);
         Assert.IsType<DocnetPdfTextExtractor>(docnetExtractor);
     }

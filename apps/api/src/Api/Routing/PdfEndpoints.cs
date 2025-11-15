@@ -216,6 +216,7 @@ public static class PdfEndpoints
 
             var pdf = await db.PdfDocuments
                 .Where(p => p.Id == pdfId)
+                .AsNoTracking()
                 .Select(p => new
                 {
                     p.Id,
@@ -246,6 +247,7 @@ public static class PdfEndpoints
             // Load PDF to check ownership
             var pdf = await db.PdfDocuments
                 .Where(p => p.Id == pdfId)
+                .AsNoTracking()
                 .Select(p => new { p.Id, p.UploadedByUserId, p.GameId })
                 .FirstOrDefaultAsync(ct);
 
@@ -317,6 +319,7 @@ public static class PdfEndpoints
 
             var pdf = await db.PdfDocuments
                 .Where(p => p.Id == pdfId)
+                .AsNoTracking()
                 .Select(p => new
                 {
                     p.Id,
@@ -377,6 +380,7 @@ public static class PdfEndpoints
 
             var pdf = await db.PdfDocuments
                 .Where(p => p.Id == pdfId)
+                .AsNoTracking()
                 .Select(p => new { p.Id, p.UploadedByUserId, p.ProcessingStatus })
                 .FirstOrDefaultAsync(ct);
 

@@ -196,7 +196,9 @@ public static class AdminEndpoints
                 endDate = DateTime.SpecifyKind(endDate.Value, DateTimeKind.Utc);
 
             // Query low-quality responses with filters
-            var query = dbContext.AiRequestLogs.Where(log => log.IsLowQuality);
+            var query = dbContext.AiRequestLogs
+                .AsNoTracking()
+                .Where(log => log.IsLowQuality);
 
             if (startDate.HasValue)
                 query = query.Where(log => log.CreatedAt >= startDate.Value);
@@ -1874,7 +1876,7 @@ public static class AdminEndpoints
             if (!authorized) return error!;
 
             // Validate game exists (but proceed with cache invalidation even if not - idempotent)
-            var gameExists = await dbContext.Games.AnyAsync(g => g.Id == gameId, ct);
+            var gameExists = await dbContext.Games.AsNoTracking().AnyAsync(g => g.Id == gameId, ct);
             if (!gameExists)
             {
                 logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session.User.Id, gameId);

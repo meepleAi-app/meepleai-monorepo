@@ -71,7 +71,7 @@ public class GameRepository : IGameRepository
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Games.AnyAsync(g => g.Id == id, cancellationToken);
+        return await _dbContext.Games.AsNoTracking().AnyAsync(g => g.Id == id, cancellationToken);
     }
 
     /// <summary>

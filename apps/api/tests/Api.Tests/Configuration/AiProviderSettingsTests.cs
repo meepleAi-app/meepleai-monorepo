@@ -291,6 +291,38 @@ public class AiProviderSettingsTests
     }
 
     [Fact]
+    public void Validate_MissingAiSection_IsValid()
+    {
+        // Arrange - Missing AI section (legacy deployment) should not fail startup (Option C backward compatibility)
+        var settings = new AiProviderSettings
+        {
+            Providers = new Dictionary<string, ProviderConfig>() // Empty providers dictionary
+        };
+
+        // Act
+        var result = _validator.Validate(null, settings);
+
+        // Assert
+        Assert.True(result.Succeeded, "Missing AI section should not fail validation for backward compatibility");
+    }
+
+    [Fact]
+    public void Validate_NullProviders_IsValid()
+    {
+        // Arrange - Null providers (legacy deployment) should not fail startup
+        var settings = new AiProviderSettings
+        {
+            Providers = null!
+        };
+
+        // Act
+        var result = _validator.Validate(null, settings);
+
+        // Assert
+        Assert.True(result.Succeeded, "Null Providers should not fail validation for backward compatibility");
+    }
+
+    [Fact]
     public void Validate_EmptyFallbackChain_IsValid()
     {
         // Arrange - Empty FallbackChain is allowed (will use default circuit breaker logic)

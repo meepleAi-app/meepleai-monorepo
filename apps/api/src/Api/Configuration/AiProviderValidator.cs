@@ -12,7 +12,14 @@ public class AiProviderValidator : IValidateOptions<AiProviderSettings>
     {
         var errors = new List<string>();
 
-        // Validation 1: At least one provider must be enabled
+        // BGAI-021 (Option C): Allow missing/empty AI section for backward compatibility
+        // If no providers configured, skip validation (legacy deployments use LlmRouting only)
+        if (options.Providers == null || options.Providers.Count == 0)
+        {
+            return ValidateOptionsResult.Success;
+        }
+
+        // Validation 1: At least one provider must be enabled (if providers are configured)
         if (!options.Providers.Any(p => p.Value.Enabled))
         {
             errors.Add("At least one AI provider must be enabled (AI:Providers)");

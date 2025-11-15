@@ -12,7 +12,7 @@
 1. [Quick Start](./00-getting-started/quick-start.md) - Get up and running in 15 minutes
 2. [System Architecture](./01-architecture/overview/system-architecture.md) - Understand the technical design
 3. [API Specification](./03-api/board-game-ai-api-specification.md) - Learn the API
-4. [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md) - Quality standards
+4. [Testing Strategy](./02-development/testing/testing-strategy.md) - Quality standards
 5. [Deployment Guide](./05-operations/deployment/board-game-ai-deployment-guide.md) - Deploy to production
 
 **Find docs by role** → See [README.md](./README.md#-finding-documentation) for role-based navigation
@@ -68,9 +68,13 @@
 **Purpose**: Development guides, testing, refactoring, implementation notes
 
 #### Subdirectories
-- **[guides/](./02-development/guides/)** - Technical guides (2 files)
-  - [LLM Integration](./02-development/guides/llm-integration.md)
-  - [Unstructured Setup](./02-development/guides/unstructured-setup.md)
+- **[guides/](./02-development/guides/)** - Technical guides (6 files)
+  - [AI Agents Guide](./02-development/guides/ai-agents-guide.md)
+  - [Codebase Maintenance](./02-development/guides/codebase-maintenance.md)
+  - [Dependency Management](./02-development/guides/dependency-management.md)
+  - [LLM Integration Guide](./02-development/guides/llm-integration-guide.md)
+  - [Migration Management](./02-development/guides/migration-management.md)
+  - [PDF Processing Guide](./02-development/guides/pdf-processing-guide.md) ⭐
 
 - **[refactoring/](./02-development/refactoring/)** - DDD migration docs (4 files)
   - [Legacy Code Inventory](./02-development/refactoring/legacy-code-inventory.md) (150+ pages)
@@ -82,15 +86,13 @@
   - [RAG Service Migration](./02-development/implementation/bgai-023-ragservice-migration.md)
   - [Cost Tracking Verification](./02-development/implementation/bgai-026-cost-tracking.md)
 
-- **[testing/](./02-development/testing/)** - Testing documentation (22 files)
-  - [Test Writing Guide](./02-development/testing/test-writing-guide.md) ⭐
-  - [UI Element Identification Guide](./02-development/testing/ui-element-identification-guide.md) ⭐ **NEW** - Test selector best practices
-  - [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md) (30 pages)
-  - [Test Patterns](./02-development/testing/test-patterns.md)
-  - [Accessibility Testing](./02-development/testing/accessibility-testing-guide.md)
-  - [E2E Contribution Guide](./02-development/testing/e2e-contribution-guide.md)
-  - [Page Object Model Architecture](./02-development/testing/pom-architecture-design.md)
-  - _...and 15 more testing docs_
+- **[testing/](./02-development/testing/)** - Testing documentation (6 files)
+  - [Testing Guide](./02-development/testing/testing-guide.md) ⭐ - Comprehensive test writing guide (60+ pages)
+  - [Testing Strategy](./02-development/testing/testing-strategy.md) ⭐ - Test pyramid, quality gates (30 pages)
+  - [Testing Specialized](./02-development/testing/testing-specialized.md) - Manual, accessibility, concurrency, API testing
+  - [Testing Quick Reference](./02-development/testing/testing-quick-reference.md) - Pattern lookup
+  - [Testing React 19 Patterns](./02-development/testing/testing-react-19-patterns.md) - React 19 specific patterns
+  - [Manual Testing Guide](./02-development/testing/manual-testing-guide.md) (Italian) - Full QA procedures
 
 ### [03 - API](./03-api/)
 **Audience**: API consumers, frontend developers, integrators
@@ -103,13 +105,17 @@
 **Audience**: Frontend developers, UI/UX designers
 **Purpose**: Frontend architecture, design system, performance
 
+- [README](./04-frontend/README.md) - Frontend overview
 - [Architecture](./04-frontend/architecture.md)
+- [Design System](./04-frontend/design-system.md)
 - [Accessibility Standards](./04-frontend/accessibility-standards.md)
 - [Internationalization Strategy](./04-frontend/internationalization-strategy.md)
 - [Performance Requirements](./04-frontend/performance-requirements.md)
+- [React 19 & Next.js 16 Best Practices](./04-frontend/react19-nextjs16-best-practices.md)
 - [Shadcn/UI Installation](./04-frontend/shadcn-ui-installation.md)
 - [Testing Strategy](./04-frontend/testing-strategy.md)
 - [Use Cases](./04-frontend/use-cases.md)
+- [User Flows](./04-frontend/user-flows.md)
 
 ### [05 - Operations](./05-operations/)
 **Audience**: DevOps, SRE, on-call engineers
@@ -150,25 +156,44 @@
 **Purpose**: Planning, roadmap, team organization, sprint tracking
 
 #### Subdirectories
-- **[planning/](./07-project-management/planning/)** - Implementation plans (8 files)
+- **[planning/](./07-project-management/planning/)** - Implementation plans (10 files)
   - [Backend Implementation Plan](./07-project-management/planning/backend-implementation-plan.md)
   - [Frontend Implementation Plan](./07-project-management/planning/frontend-implementation-plan.md)
   - [Executive Summary Roadmap](./07-project-management/planning/executive-summary-development-roadmap.md)
   - [Issue Status Tracker](./07-project-management/planning/issue-status-tracker.md)
+  - [Manual Issue Creation Guide](./07-project-management/planning/manual-issue-creation-guide.md)
+  - [Sprint 5 Integration Tests Plan](./07-project-management/planning/sprint-5-integration-tests-plan.md)
   - _...and 4 more planning docs_
 
-- **[roadmap/](./07-project-management/roadmap/)** - Strategic roadmap (1 file)
+- **[roadmap/](./07-project-management/roadmap/)** - Strategic roadmap (7 files)
   - [Strategic Roadmap](./07-project-management/roadmap/board-game-ai-strategic-roadmap.md) (50 pages) ⭐
+  - [Code Quality Roadmap 2025](./07-project-management/roadmap/ROADMAP-CODE-QUALITY-2025.md) (11-week plan)
+  - [Frontend Roadmap 2025](./07-project-management/roadmap/frontend-roadmap-2025.md)
+  - [Quick Reference: Top 10 Issues](./07-project-management/roadmap/QUICK-REFERENCE-TOP-10-ISSUES.md)
+  - _...and 3 more roadmap docs_
 
-- **[organization/](./07-project-management/organization/)** - Team & execution (12 files)
+- **[organization/](./07-project-management/organization/)** - Team & execution (7 files)
+  - [Team Organization](./07-project-management/organization/team-organization.md) ⭐ - Team structure, roles, onboarding
   - [Execution Calendar](./07-project-management/organization/board-game-ai-execution-calendar.md)
   - [Sprint Overview](./07-project-management/organization/board-game-ai-sprint-overview.md)
   - [Onboarding Guide](./07-project-management/organization/onboarding_guide.md)
   - [Solo Developer Execution Plan](./07-project-management/organization/solo-developer-execution-plan.md)
-  - _...and 8 more org docs_
+  - [Project Prioritization 2025](./07-project-management/organization/project-prioritization-2025.md)
+  - [README](./07-project-management/organization/README.md)
 
-- **[completion-reports/](./07-project-management/completion-reports/)** - Phase reports (1 file)
+- **[tracking/](./07-project-management/tracking/)** - Metrics & baselines (5 files)
+  - [RAG Backward Compatibility Testing](./07-project-management/tracking/bgai-024-rag-backward-compatibility-testing.md)
+  - [RAG Performance Baseline](./07-project-management/tracking/bgai-025-rag-performance-baseline.md)
+  - [Integration Tests Known Issues](./07-project-management/tracking/integration-tests-known-issues.md)
+  - [Migration Ordering Issue](./07-project-management/tracking/migration-ordering-issue.md)
+  - [Time Provider Services Inventory](./07-project-management/tracking/time-provider-services-inventory.md)
+
+- **[improvement-plans/](./07-project-management/improvement-plans/)** - Improvement initiatives
+  - [Backend Improvements](./07-project-management/improvement-plans/backend/) (5 files)
+
+- **[completion-reports/](./07-project-management/completion-reports/)** - Phase reports (2 files)
   - [Phase 1a Completion](./07-project-management/completion-reports/phase-1a-completion-report.md)
+  - [Sprint 4 Completion](./07-project-management/completion-reports/sprint-4/)
 
 ### [08 - Business](./08-business/)
 **Audience**: Investors, founders, business stakeholders

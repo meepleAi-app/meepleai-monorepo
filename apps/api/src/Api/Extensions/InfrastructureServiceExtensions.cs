@@ -162,7 +162,8 @@ public static class InfrastructureServiceExtensions
         {
             var ollamaUrl = configuration["OLLAMA_URL"] ?? "http://localhost:11434";
             client.BaseAddress = new Uri(ollamaUrl);
-            client.Timeout = TimeSpan.FromSeconds(60);
+            var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
@@ -176,7 +177,8 @@ public static class InfrastructureServiceExtensions
         services.AddHttpClient("OpenAI", client =>
         {
             client.BaseAddress = new Uri("https://api.openai.com/v1/");
-            client.Timeout = TimeSpan.FromSeconds(30);
+            var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
@@ -190,7 +192,8 @@ public static class InfrastructureServiceExtensions
         services.AddHttpClient("OpenRouter", client =>
         {
             client.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
-            client.Timeout = TimeSpan.FromSeconds(30);
+            var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
@@ -205,7 +208,8 @@ public static class InfrastructureServiceExtensions
         {
             var qdrantUrl = configuration["QdrantUrl"] ?? "http://localhost:6333";
             client.BaseAddress = new Uri(qdrantUrl);
-            client.Timeout = TimeSpan.FromSeconds(30);
+            var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {

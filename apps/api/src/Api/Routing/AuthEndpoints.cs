@@ -80,7 +80,7 @@ public static class AuthEndpoints
         });
 
         // User login with 2FA support (AUTH-07) - DDD CQRS
-        group.MapPost("/auth/login", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/auth/login", async (HttpContext context, IMediator mediator, IConfigurationService configService, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Manual deserialization to support both camelCase and PascalCase JSON
             // ASP.NET Core 9.0 Minimal API auto-deserialization ignores ConfigureHttpJsonOptions
@@ -145,8 +145,9 @@ public static class AuthEndpoints
                     return Results.Unauthorized();
                 }
 
-                // Calculate session expiration (30 days default)
-                var expiresAt = DateTime.UtcNow.AddDays(30);
+                // Calculate session expiration from configuration (default: 30 days)
+                var sessionExpirationDays = await configService.GetValueAsync<int>("Authentication:SessionManagement:SessionExpirationDays", 30);
+                var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
                 writeSessionCookie(context, result.SessionToken, expiresAt);
                 logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
 
@@ -520,17 +521,17 @@ public static class AuthEndpoints
             IOAuthService oauthService,
             HttpContext context,
             IRateLimitService rateLimiter,
-            IConfiguration config) =>
+            IConfigurationService configService) =>
         {
-            // AUTH-06-P4: Rate limiting to prevent OAuth abuse
+            // AUTH-06-P4: Rate limiting to prevent OAuth abuse (configurable via admin UI)
             var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var oauthRateLimit = config.GetSection("RateLimit:OAuth").Get<RoleLimitConfiguration>()
-                ?? new() { MaxTokens = 10, RefillRate = 0.16667 };
+            var maxTokens = await configService.GetValueAsync<int>("RateLimit:OAuth:MaxTokens", 10);
+            var refillRate = await configService.GetValueAsync<double>("RateLimit:OAuth:RefillRate", 0.16667);
 
             var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
                 $"oauth:login:{ipAddress}",
-                oauthRateLimit.MaxTokens,
-                oauthRateLimit.RefillRate);
+                maxTokens,
+                refillRate);
 
             if (!rateLimitResult.Allowed)
             {
@@ -570,19 +571,20 @@ Rate limited to 10 requests per minute per IP address.
             IOAuthService oauthService,
             IMediator mediator,
             HttpContext context,
+            IConfigurationService configService,
             IConfiguration config,
             IRateLimitService rateLimiter,
             CancellationToken ct) =>
         {
-            // AUTH-06-P4: Rate limiting on callback to prevent abuse
+            // AUTH-06-P4: Rate limiting on callback to prevent abuse (configurable via admin UI)
             var callbackIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var oauthRateLimit = config.GetSection("RateLimit:OAuth").Get<RoleLimitConfiguration>()
-                ?? new() { MaxTokens = 10, RefillRate = 0.16667 };
+            var maxTokens = await configService.GetValueAsync<int>("RateLimit:OAuth:MaxTokens", 10);
+            var refillRate = await configService.GetValueAsync<double>("RateLimit:OAuth:RefillRate", 0.16667);
 
             var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
                 $"oauth:callback:{callbackIp}",
-                oauthRateLimit.MaxTokens,
-                oauthRateLimit.RefillRate);
+                maxTokens,
+                refillRate);
 
             if (!rateLimitResult.Allowed)
             {

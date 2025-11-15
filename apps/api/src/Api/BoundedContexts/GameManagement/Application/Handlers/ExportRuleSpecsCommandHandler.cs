@@ -34,12 +34,18 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
         }
 
         // Fetch all rule specs with their latest versions
+        // Note: Include must come AFTER GroupBy projection to materialize navigation properties
+        var latestSpecIds = await _dbContext.RuleSpecs
+            .AsNoTracking()
+            .Where(rs => command.GameIds.Contains(rs.GameId))
+            .GroupBy(rs => rs.GameId)
+            .Select(g => g.OrderByDescending(rs => rs.CreatedAt).First().Id)
+            .ToListAsync(cancellationToken);
+
         var ruleSpecs = await _dbContext.RuleSpecs
             .AsNoTracking()
             .Include(rs => rs.Atoms)
-            .Where(rs => command.GameIds.Contains(rs.GameId))
-            .GroupBy(rs => rs.GameId)
-            .Select(g => g.OrderByDescending(rs => rs.CreatedAt).First())
+            .Where(rs => latestSpecIds.Contains(rs.Id))
             .ToListAsync(cancellationToken);
 
         if (ruleSpecs.Count == 0)

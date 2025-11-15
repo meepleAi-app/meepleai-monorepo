@@ -564,30 +564,19 @@ public static class AiEndpoints
                     await context.Response.Body.FlushAsync(ct);
 
                     // Track response data for logging and chat persistence
-                    if (evt.Type == StreamingEventType.Token && evt.Data is System.Text.Json.JsonElement tokenElement)
+                    // Issue #1186: Handlers now emit strongly-typed objects, not JsonElements
+                    if (evt.Type == StreamingEventType.Token && evt.Data is StreamingToken tokenData)
                     {
-                        var tokenData = System.Text.Json.JsonSerializer.Deserialize<StreamingToken>(tokenElement.GetRawText());
-                        if (tokenData != null)
-                        {
-                            answerBuilder.Append(tokenData.token);
-                        }
+                        answerBuilder.Append(tokenData.token);
                     }
-                    else if (evt.Type == StreamingEventType.Citations && evt.Data is System.Text.Json.JsonElement citationsElement)
+                    else if (evt.Type == StreamingEventType.Citations && evt.Data is StreamingCitations citationsData)
                     {
-                        var citationsData = System.Text.Json.JsonSerializer.Deserialize<StreamingCitations>(citationsElement.GetRawText());
-                        if (citationsData != null)
-                        {
-                            snippets = citationsData.citations.ToList();
-                        }
+                        snippets = citationsData.citations.ToList();
                     }
-                    else if (evt.Type == StreamingEventType.Complete && evt.Data is System.Text.Json.JsonElement completeElement)
+                    else if (evt.Type == StreamingEventType.Complete && evt.Data is StreamingComplete completeData)
                     {
-                        var completeData = System.Text.Json.JsonSerializer.Deserialize<StreamingComplete>(completeElement.GetRawText());
-                        if (completeData != null)
-                        {
-                            totalTokens = completeData.totalTokens;
-                            confidence = completeData.confidence;
-                        }
+                        totalTokens = completeData.totalTokens;
+                        confidence = completeData.confidence;
 
                         // CHAT-02: Start follow-up generation in parallel (fire-and-forget)
                         if (generateFollowUps && followUpTask == null)

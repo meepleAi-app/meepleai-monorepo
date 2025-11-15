@@ -24,13 +24,31 @@ jest.mock('@/lib/api', () => ({
     },
     chatThreads: {
       getByGame: jest.fn(),
+      getById: jest.fn(),
       create: jest.fn(),
+      addMessage: jest.fn(),
+      updateMessage: jest.fn(),
+      deleteMessage: jest.fn(),
       delete: jest.fn(),
     },
   },
 }));
 
-const mockApi = api as jest.Mocked<typeof api>;
+const mockApi = api as jest.Mocked<typeof api> & {
+  chat: {
+    updateMessage: jest.MockedFunction<any>;
+    deleteMessage: jest.MockedFunction<any>;
+  };
+  chatThreads: {
+    getByGame: jest.MockedFunction<any>;
+    getById: jest.MockedFunction<any>;
+    create: jest.MockedFunction<any>;
+    addMessage: jest.MockedFunction<any>;
+    updateMessage: jest.MockedFunction<any>;
+    deleteMessage: jest.MockedFunction<any>;
+    delete: jest.MockedFunction<any>;
+  };
+};
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -121,7 +139,11 @@ describe('Provider Tree Integration', () => {
     mockApi.chat.updateMessage.mockReset();
     mockApi.chat.deleteMessage.mockReset();
     mockApi.chatThreads.getByGame.mockReset();
+    mockApi.chatThreads.getById.mockReset();
     mockApi.chatThreads.create.mockReset();
+    mockApi.chatThreads.addMessage.mockReset();
+    mockApi.chatThreads.updateMessage.mockReset();
+    mockApi.chatThreads.deleteMessage.mockReset();
     mockApi.chatThreads.delete.mockReset();
   });
 

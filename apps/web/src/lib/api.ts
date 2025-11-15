@@ -260,7 +260,7 @@ export interface ChatThreadDto {
   gameId: string | null;
   title: string | null;
   createdAt: string;
-  lastMessageAt: string;
+  lastMessageAt: string | null;
   messageCount: number;
   messages: ChatThreadMessageDto[];
 }
@@ -273,7 +273,7 @@ export interface ChatThreadMessageDto {
   backendMessageId?: string;
   endpoint?: string;
   gameId?: string;
-  feedback?: 'positive' | 'negative' | null;
+  feedback?: 'helpful' | 'not-helpful' | null;
 }
 
 export interface CreateChatThreadRequest {

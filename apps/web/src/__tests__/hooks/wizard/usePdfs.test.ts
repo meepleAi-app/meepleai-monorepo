@@ -180,8 +180,8 @@ describe('usePdfs', () => {
       });
 
       const { result, rerender } = renderHook(
-        ({ gameId }) => usePdfs(gameId),
-        { initialProps: { gameId: 'game-1' } }
+        ({ gameId }: { gameId: string | null }) => usePdfs(gameId),
+        { initialProps: { gameId: 'game-1' as string | null } }
       );
 
       await waitFor(() => {

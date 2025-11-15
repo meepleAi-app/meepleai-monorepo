@@ -74,7 +74,8 @@ describe('InlineCommentIndicator', () => {
         />
       );
 
-      const badge = container.querySelector('span[style*="position: absolute"]');
+      // Badge now uses Tailwind classes (absolute -top-1 -right-1)
+      const badge = container.querySelector('span.absolute.-top-1.-right-1');
       expect(badge).toBeInTheDocument();
       expect(badge).toHaveTextContent('3');
     });
@@ -107,7 +108,8 @@ describe('InlineCommentIndicator', () => {
         />
       );
 
-      const badge = container.querySelector('span[style*="position: absolute"]');
+      // Badge now uses Tailwind classes
+      const badge = container.querySelector('span.absolute.-top-1.-right-1');
       expect(badge).toHaveTextContent('15');
     });
   });
@@ -125,11 +127,8 @@ describe('InlineCommentIndicator', () => {
 
       const dot = screen.getByTestId('inline-comment-unresolved-dot') as HTMLSpanElement;
       expect(dot).toBeInTheDocument();
-      expect(dot).toHaveStyle({
-        width: '8px',
-        height: '8px',
-        borderRadius: '50%',
-      });
+      // Dot now uses Tailwind classes (w-2 h-2 rounded-full)
+      expect(dot).toHaveClass('w-2', 'h-2', 'rounded-full');
     });
 
     it('hides unresolved dot when hasUnresolved = false', () => {
@@ -208,9 +207,8 @@ describe('InlineCommentIndicator', () => {
         />
       );
 
-      const badge = Array.from(container.querySelectorAll('span')).find(
-        (span) => span.style.position === 'absolute' && span.textContent === '3'
-      );
+      // Badge uses Tailwind classes and inline style for background
+      const badge = container.querySelector('span.absolute.-top-1.-right-1');
       expect(badge).toHaveStyle({ background: '#ff9800' });
     });
 
@@ -224,9 +222,8 @@ describe('InlineCommentIndicator', () => {
         />
       );
 
-      const badge = Array.from(container.querySelectorAll('span')).find(
-        (span) => span.style.position === 'absolute' && span.textContent === '3'
-      );
+      // Badge uses Tailwind classes and inline style for background
+      const badge = container.querySelector('span.absolute.-top-1.-right-1');
       expect(badge).toHaveStyle({ background: '#0070f3' });
     });
   });
@@ -474,7 +471,7 @@ describe('InlineCommentIndicator', () => {
       await waitFor(() => {
         const tooltip = screen.getByText('Preview with arrow');
         const tooltipContainer = tooltip.parentElement;
-        const arrow = tooltipContainer?.querySelector('div[style*="border-top"]');
+        const arrow = tooltipContainer?.querySelector('div[class*="border-t-"]');
         expect(arrow).toBeInTheDocument();
       });
     });

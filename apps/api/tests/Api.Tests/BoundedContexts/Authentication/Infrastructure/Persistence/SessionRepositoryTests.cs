@@ -26,7 +26,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
         await Repository.AddAsync(session);
         await DbContext.SaveChangesAsync();
@@ -64,7 +64,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
 
         // Act
         var sessions = await Repository.GetByUserIdAsync(userId);
@@ -78,7 +78,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session1 = CreateTestSession(userId);
         await Task.Delay(10); // Ensure different timestamps
         var session2 = CreateTestSession(userId);
@@ -105,8 +105,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var user1Id = Guid.NewGuid();
-        var user2Id = Guid.NewGuid();
+        var user1Id = await CreateTestUserAsync("user1@test.com");
+        var user2Id = await CreateTestUserAsync("user2@test.com");
 
         var session1 = CreateTestSession(user1Id);
         var session2 = CreateTestSession(user1Id);
@@ -135,7 +135,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session1 = CreateTestSession(userId);
         var session2 = CreateTestSession(userId);
 
@@ -155,7 +155,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var activeSession = CreateTestSession(userId);
         var expiredSession = CreateTestSession(userId, TimeSpan.FromDays(-1)); // Already expired
 
@@ -176,7 +176,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var activeSession = CreateTestSession(userId);
         var revokedSession = CreateTestSession(userId);
         revokedSession.Revoke();
@@ -198,7 +198,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var active1 = CreateTestSession(userId);
         var active2 = CreateTestSession(userId);
         var expired = CreateTestSession(userId, TimeSpan.FromDays(-1));
@@ -229,7 +229,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId, ipAddress: "192.168.1.1", userAgent: "TestBrowser/1.0");
 
         // Act
@@ -250,7 +250,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(
             userId,
             ipAddress: "10.0.0.1",
@@ -279,7 +279,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
         await Repository.AddAsync(session);
         await DbContext.SaveChangesAsync();
@@ -302,7 +302,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
         await Repository.AddAsync(session);
         await DbContext.SaveChangesAsync();
@@ -329,7 +329,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session1 = CreateTestSession(userId);
         var session2 = CreateTestSession(userId);
         var session3 = CreateTestSession(userId);
@@ -353,7 +353,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session1 = CreateTestSession(userId);
         var session2 = CreateTestSession(userId);
         session2.Revoke();
@@ -383,8 +383,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var user1Id = Guid.NewGuid();
-        var user2Id = Guid.NewGuid();
+        var user1Id = await CreateTestUserAsync("user1@test.com");
+        var user2Id = await CreateTestUserAsync("user2@test.com");
 
         var user1Session1 = CreateTestSession(user1Id);
         var user1Session2 = CreateTestSession(user1Id);
@@ -415,7 +415,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(
             userId,
             ipAddress: "203.0.113.1",
@@ -443,7 +443,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
         await Repository.AddAsync(session);
         await DbContext.SaveChangesAsync();
@@ -469,7 +469,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         // Create session that expires in 1 second
         var session = CreateTestSession(userId, TimeSpan.FromSeconds(1));
         await Repository.AddAsync(session);
@@ -494,7 +494,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId, TimeSpan.FromDays(30));
         await Repository.AddAsync(session);
         await DbContext.SaveChangesAsync();
@@ -515,7 +515,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
         await Repository.AddAsync(session);
         await DbContext.SaveChangesAsync();
@@ -542,7 +542,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
         await Repository.AddAsync(session);
         await DbContext.SaveChangesAsync();
@@ -571,7 +571,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId, ipAddress: null);
 
         // Act
@@ -589,7 +589,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId, userAgent: null);
 
         // Act
@@ -607,7 +607,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var longUserAgent = new string('A', 500);
         var session = CreateTestSession(userId, userAgent: longUserAgent);
 
@@ -626,7 +626,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     {
         // Arrange
         await ResetDatabaseAsync();
-        var userId = Guid.NewGuid();
+        var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
         await Repository.AddAsync(session);
         await DbContext.SaveChangesAsync();
@@ -648,6 +648,34 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #endregion
 
     #region Helper Methods
+
+    private async Task<Guid> CreateTestUserAsync(string email = "test@example.com")
+    {
+        var userId = Guid.NewGuid();
+        var user = new User(
+            id: userId,
+            email: new Email(email),
+            displayName: "Test User",
+            passwordHash: PasswordHash.Create("TestPassword123!"),
+            role: Role.User
+        );
+
+        // Use UserRepository or direct DbSet access with correct entity type
+        var userEntity = new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = user.Id,
+            Email = user.Email.Value,
+            DisplayName = user.DisplayName,
+            PasswordHash = user.PasswordHash.Value,
+            Role = user.Role.Value,
+            CreatedAt = user.CreatedAt
+        };
+
+        DbContext.Set<Api.Infrastructure.Entities.UserEntity>().Add(userEntity);
+        await DbContext.SaveChangesAsync();
+
+        return userId;
+    }
 
     private static Session CreateTestSession(
         Guid userId,

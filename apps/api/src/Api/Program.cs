@@ -301,6 +301,9 @@ v1Api.MapAdminEndpoints();
 // DDD-PHASE3: KnowledgeBase bounded context endpoints
 v1Api.MapKnowledgeBaseEndpoints();
 
+// Issue #866: Agent management endpoints
+v1Api.MapAgentEndpoints();
+
 app.Run();
 
 // Bootstrap: Create initial admin user if database is empty

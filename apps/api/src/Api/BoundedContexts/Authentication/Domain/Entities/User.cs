@@ -16,10 +16,14 @@ public sealed class User : AggregateRoot<Guid>
     public Role Role { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
-    // 2FA properties
-    public string? TotpSecretEncrypted { get; private set; }
+    // 2FA properties (DDD Value Objects)
+    public TotpSecret? TotpSecret { get; private set; }
     public bool IsTwoFactorEnabled { get; private set; }
     public DateTime? TwoFactorEnabledAt { get; private set; }
+
+    // Backup codes collection (DDD)
+    private readonly List<BackupCode> _backupCodes = new();
+    public IReadOnlyCollection<BackupCode> BackupCodes => _backupCodes.AsReadOnly();
 
     // Navigation properties (not part of domain model, for EF Core only)
     private readonly List<Session> _sessions = new();
@@ -144,34 +148,53 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Enables two-factor authentication for this user.
+    /// Enables two-factor authentication for this user with TOTP secret and backup codes.
+    /// DDD: Uses TotpSecret and BackupCode value objects.
     /// </summary>
-    public void EnableTwoFactor(string encryptedTotpSecret)
+    /// <param name="totpSecret">Encrypted TOTP secret value object.</param>
+    /// <param name="backupCodes">List of backup code value objects (optional for testing).</param>
+    /// <exception cref="ArgumentNullException">Thrown when totpSecret is null.</exception>
+    /// <exception cref="DomainException">Thrown when 2FA is already enabled or backup codes are invalid.</exception>
+    public void Enable2FA(TotpSecret totpSecret, List<BackupCode>? backupCodes = null)
     {
-        if (string.IsNullOrWhiteSpace(encryptedTotpSecret))
-            throw new ValidationException(nameof(encryptedTotpSecret), "TOTP secret cannot be empty");
+        if (totpSecret == null)
+            throw new ArgumentNullException(nameof(totpSecret));
 
         if (IsTwoFactorEnabled)
             throw new DomainException("Two-factor authentication is already enabled");
 
-        TotpSecretEncrypted = encryptedTotpSecret;
+        // Validate backup codes if provided
+        if (backupCodes != null && backupCodes.Any(bc => bc.IsUsed))
+            throw new DomainException("Cannot enable 2FA with used backup codes");
+
+        TotpSecret = totpSecret;
         IsTwoFactorEnabled = true;
         TwoFactorEnabledAt = DateTime.UtcNow;
+
+        // Replace backup codes if provided
+        _backupCodes.Clear();
+        if (backupCodes != null)
+        {
+            _backupCodes.AddRange(backupCodes);
+        }
 
         // TODO: Add domain event TwoFactorEnabled
     }
 
     /// <summary>
     /// Disables two-factor authentication for this user.
+    /// DDD: Clears TotpSecret and all backup codes.
     /// </summary>
-    public void DisableTwoFactor()
+    /// <exception cref="DomainException">Thrown when 2FA is not enabled.</exception>
+    public void Disable2FA()
     {
         if (!IsTwoFactorEnabled)
             throw new DomainException("Two-factor authentication is not enabled");
 
-        TotpSecretEncrypted = null;
+        TotpSecret = null;
         IsTwoFactorEnabled = false;
         TwoFactorEnabledAt = null;
+        _backupCodes.Clear();
 
         // TODO: Add domain event TwoFactorDisabled
     }
@@ -180,6 +203,38 @@ public sealed class User : AggregateRoot<Guid>
     /// Checks if this user requires two-factor authentication.
     /// </summary>
     public bool RequiresTwoFactor() => IsTwoFactorEnabled;
+
+    /// <summary>
+    /// Marks a backup code as used.
+    /// DDD: Enforces single-use business rule through BackupCode value object.
+    /// </summary>
+    /// <param name="backupCodeHash">The hash of the backup code to mark as used.</param>
+    /// <param name="usedAt">The timestamp when the code was used.</param>
+    /// <exception cref="DomainException">Thrown when code not found or already used.</exception>
+    public void UseBackupCode(string backupCodeHash, DateTime usedAt)
+    {
+        var code = _backupCodes.FirstOrDefault(bc => bc.HashedValue == backupCodeHash);
+        if (code == null)
+            throw new DomainException("Backup code not found");
+
+        code.MarkAsUsed(usedAt);
+    }
+
+    /// <summary>
+    /// Gets the count of unused backup codes.
+    /// </summary>
+    public int GetUnusedBackupCodesCount()
+    {
+        return _backupCodes.Count(bc => !bc.IsUsed);
+    }
+
+    /// <summary>
+    /// Checks if a backup code exists and is unused.
+    /// </summary>
+    public bool HasUnusedBackupCode(string backupCodeHash)
+    {
+        return _backupCodes.Any(bc => bc.HashedValue == backupCodeHash && !bc.IsUsed);
+    }
 
     /// <summary>
     /// Links an OAuth provider account to this user.

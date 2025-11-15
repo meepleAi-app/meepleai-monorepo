@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -30,6 +29,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { categorizeError } from '@/lib/errorUtils';
 
 /**
  * Session status badge component
@@ -279,11 +280,13 @@ export default function ActiveSessionsPage() {
             </select>
           </div>
 
-          {/* Error Alert */}
+          {/* Error Display */}
           {error && (
-            <Alert variant="destructive" className="mb-4" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <ErrorDisplay
+              error={categorizeError(new Error(error))}
+              onRetry={fetchSessions}
+              showTechnicalDetails={process.env.NODE_ENV === 'development'}
+            />
           )}
 
           {/* Loading State */}

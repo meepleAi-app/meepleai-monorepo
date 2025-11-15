@@ -4,6 +4,8 @@ import Link from "next/link";
 import { api } from "../../../../../lib/api";
 import { cn } from "../../../../../lib/utils";
 import PromptEditor from "../../../../../components/PromptEditor";
+import { ErrorDisplay } from "../../../../../components/ErrorDisplay";
+import { categorizeError } from "../../../../../lib/errorUtils";
 
 type PromptVersion = {
   id: string;
@@ -83,15 +85,19 @@ export default function PromptVersionDetail() {
   if (error || !version) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-800 mb-4 text-lg">
-            {error || "Version not found"}
+        <div className="max-w-2xl w-full p-8">
+          <ErrorDisplay
+            error={categorizeError(new Error(error || "Version not found"))}
+            onRetry={fetchVersion}
+            showTechnicalDetails={process.env.NODE_ENV === 'development'}
+          />
+          <div className="text-center mt-4">
+            <Link href={`/admin/prompts/${id}`}>
+              <button className="px-4 py-2 bg-[#667eea] text-white border-none rounded-lg cursor-pointer">
+                Back to Template
+              </button>
+            </Link>
           </div>
-          <Link href={`/admin/prompts/${id}`}>
-            <button className="px-4 py-2 bg-[#667eea] text-white border-none rounded-lg cursor-pointer">
-              Back to Template
-            </button>
-          </Link>
         </div>
       </div>
     );

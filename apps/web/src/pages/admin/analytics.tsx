@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { api } from "../../lib/api";
+import { ErrorDisplay } from "../../components/ErrorDisplay";
+import { categorizeError } from "../../lib/errorUtils";
 
 // Types
 type DashboardMetrics = {
@@ -192,16 +194,12 @@ export default function AnalyticsDashboard() {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-red-800 mb-2">Error Loading Analytics</h2>
-            <p className="text-red-600">{error}</p>
-            <button
-              onClick={fetchStats}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Retry
-            </button>
-          </div>
+          <ErrorDisplay
+            error={categorizeError(new Error(error))}
+            onRetry={fetchStats}
+            onDismiss={() => window.location.href = '/admin'}
+            showTechnicalDetails={process.env.NODE_ENV === 'development'}
+          />
         </div>
       </div>
     );

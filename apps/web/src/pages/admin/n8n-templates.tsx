@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { ErrorDisplay } from '../../components/ErrorDisplay';
+import { categorizeError } from '../../lib/errorUtils';
 
 interface TemplateParameter {
   name: string;
@@ -141,19 +143,13 @@ const N8nTemplatesPage = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="text-2xl mr-3">❌</span>
-                <span>{error}</span>
-              </div>
-              <button
-                onClick={() => setError(null)}
-                className="text-red-700 hover:text-red-900 font-bold"
-              >
-                ×
-              </button>
-            </div>
+          <div className="mb-6">
+            <ErrorDisplay
+              error={categorizeError(new Error(error))}
+              onRetry={loadTemplates}
+              onDismiss={() => setError(null)}
+              showTechnicalDetails={process.env.NODE_ENV === 'development'}
+            />
           </div>
         )}
 

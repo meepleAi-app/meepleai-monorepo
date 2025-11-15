@@ -3,6 +3,8 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../../../../lib/api";
 import { cn } from "../../../../lib/utils";
+import { ErrorDisplay } from "../../../../components/ErrorDisplay";
+import { categorizeError } from "../../../../lib/errorUtils";
 
 type PromptAuditLog = {
   id: string;
@@ -114,9 +116,11 @@ export default function AuditLog() {
             {loading && <div className="text-center p-8 text-gray-500">Loading...</div>}
 
             {error && (
-              <div className="p-4 bg-red-100 text-red-800 rounded-lg mb-4">
-                {error}
-              </div>
+              <ErrorDisplay
+                error={categorizeError(new Error(error))}
+                onRetry={fetchAuditLogs}
+                showTechnicalDetails={process.env.NODE_ENV === 'development'}
+              />
             )}
 
             {!loading && logs.length === 0 && (

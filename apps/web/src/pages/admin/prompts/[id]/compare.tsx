@@ -4,6 +4,8 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { api } from "../../../../lib/api";
 import { cn } from "../../../../lib/utils";
+import { ErrorDisplay } from "../../../../components/ErrorDisplay";
+import { categorizeError } from "../../../../lib/errorUtils";
 
 // Dynamically import Monaco DiffEditor to avoid SSR issues
 const DiffEditor = dynamic(
@@ -92,9 +94,11 @@ export default function CompareVersions() {
             {loading && <div className="text-center py-8 text-gray-500">Loading...</div>}
 
             {error && (
-              <div className="p-4 bg-red-100 text-red-800 rounded-lg mb-4">
-                {error}
-              </div>
+              <ErrorDisplay
+                error={categorizeError(new Error(error))}
+                onRetry={fetchVersions}
+                showTechnicalDetails={process.env.NODE_ENV === 'development'}
+              />
             )}
 
             {!loading && versions.length < 2 && (

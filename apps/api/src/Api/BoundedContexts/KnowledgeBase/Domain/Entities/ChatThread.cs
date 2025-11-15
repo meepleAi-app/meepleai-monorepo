@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -138,5 +140,99 @@ public sealed class ChatThread : AggregateRoot<Guid>
         Status = ThreadStatus.Active;
 
         // TODO: Add domain event ThreadReopened
+    }
+
+    /// <summary>
+    /// Exports the chat thread in the specified format.
+    /// </summary>
+    /// <param name="format">The export format (JSON or Markdown).</param>
+    /// <returns>Exported chat data as a value object.</returns>
+    public ExportedChatData Export(ExportFormat format)
+    {
+        var content = format switch
+        {
+            ExportFormat.Json => ExportAsJson(),
+            ExportFormat.Markdown => ExportAsMarkdown(),
+            _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Invalid export format")
+        };
+
+        return new ExportedChatData(format, content);
+    }
+
+    /// <summary>
+    /// Exports thread as JSON.
+    /// </summary>
+    private string ExportAsJson()
+    {
+        var export = new
+        {
+            id = Id,
+            userId = UserId,
+            gameId = GameId,
+            title = Title ?? "Untitled Chat",
+            status = Status.Value,
+            createdAt = CreatedAt,
+            lastMessageAt = LastMessageAt,
+            messageCount = MessageCount,
+            messages = Messages.Select(m => new
+            {
+                role = m.Role,
+                content = m.Content,
+                timestamp = m.Timestamp
+            }).ToList()
+        };
+
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        return JsonSerializer.Serialize(export, options);
+    }
+
+    /// <summary>
+    /// Exports thread as Markdown.
+    /// </summary>
+    private string ExportAsMarkdown()
+    {
+        var sb = new StringBuilder();
+
+        // Header
+        sb.AppendLine($"# {Title ?? "Untitled Chat"}");
+        sb.AppendLine();
+        sb.AppendLine($"**Created:** {CreatedAt:yyyy-MM-dd HH:mm:ss UTC}  ");
+        sb.AppendLine($"**Last Activity:** {LastMessageAt:yyyy-MM-dd HH:mm:ss UTC}  ");
+        sb.AppendLine($"**Status:** {Status.Value}  ");
+        sb.AppendLine($"**Messages:** {MessageCount}");
+        sb.AppendLine();
+        sb.AppendLine("---");
+        sb.AppendLine();
+
+        // Messages
+        if (Messages.Count == 0)
+        {
+            sb.AppendLine("*No messages in this conversation.*");
+        }
+        else
+        {
+            foreach (var message in Messages)
+            {
+                var roleLabel = message.Role == ChatMessage.UserRole ? "👤 User" : "🤖 Assistant";
+                var timestamp = message.Timestamp.ToString("HH:mm:ss");
+
+                sb.AppendLine($"## {roleLabel} ({timestamp})");
+                sb.AppendLine();
+                sb.AppendLine(message.Content);
+                sb.AppendLine();
+                sb.AppendLine("---");
+                sb.AppendLine();
+            }
+        }
+
+        // Footer
+        sb.AppendLine($"*Exported on {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss UTC}*");
+
+        return sb.ToString();
     }
 }

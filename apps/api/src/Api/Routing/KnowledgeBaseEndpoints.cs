@@ -451,6 +451,83 @@ public static class KnowledgeBaseEndpoints
         .WithName("ReopenThread")
         .WithTags("ChatThreads");
 
+        // ISSUE-860: Export chat thread (DDD implementation)
+        group.MapGet("/chat-threads/{threadId:guid}/export", async (
+            Guid threadId,
+            [Microsoft.AspNetCore.Mvc.FromQuery] string? format,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            // SEC: Authorize BEFORE executing command
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
+            // Verify thread ownership before export
+            var threadQuery = new GetChatThreadByIdQuery(threadId);
+            var existingThread = await mediator.Send(threadQuery, ct);
+
+            if (existingThread == null)
+            {
+                return Results.NotFound(new { error = "Thread not found" });
+            }
+
+            if (existingThread.UserId != userId &&
+                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning("User {UserId} denied access to export thread {ThreadId} (owner: {OwnerId})",
+                    userId, threadId, existingThread.UserId);
+                return Results.Forbid();
+            }
+
+            try
+            {
+                // Default to JSON if no format specified
+                var exportFormat = format?.ToLowerInvariant() ?? "json";
+
+                var command = new ExportChatCommand(threadId, exportFormat);
+                var result = await mediator.Send(command, ct);
+
+                // Generate filename
+                var threadTitle = existingThread.Title?.Replace(" ", "_") ?? "chat";
+                var sanitizedTitle = new string(threadTitle.Where(c => char.IsLetterOrDigit(c) || c == '_' || c == '-').ToArray());
+                var filename = $"{sanitizedTitle}_{threadId.ToString()[..8]}.{result.FileExtension}";
+
+                logger.LogInformation("User {UserId} exported thread {ThreadId} in {Format} format",
+                    userId, threadId, result.Format);
+
+                // Return file with appropriate content type
+                return Results.Content(
+                    result.Content,
+                    result.ContentType,
+                    null,
+                    statusCode: 200);
+            }
+            catch (ArgumentException ex)
+            {
+                logger.LogWarning(ex, "Invalid export format requested for thread {ThreadId}", threadId);
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unexpected error exporting thread {ThreadId}", threadId);
+                return Results.Problem(ex.Message, statusCode: 500);
+            }
+        })
+        .WithName("ExportChatThread")
+        .WithTags("ChatThreads")
+        .Produces<string>(200, "application/json", "text/markdown")
+        .ProducesProblem(400)
+        .ProducesProblem(404)
+        .ProducesProblem(403)
+        .ProducesProblem(500);
+
         return group;
     }
 }

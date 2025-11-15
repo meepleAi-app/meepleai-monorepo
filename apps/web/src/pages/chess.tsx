@@ -234,7 +234,7 @@ export default function ChessPage() {
           <p className="mt-2">Devi effettuare l&apos;accesso per utilizzare la chat scacchi.</p>
           <Link
             href="/"
-            className="inline-block mt-4 px-4 py-2 bg-blue-500 text-white no-underline rounded"
+            className="inline-block mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white no-underline rounded transition-colors"
           >
             Vai al Login
           </Link>

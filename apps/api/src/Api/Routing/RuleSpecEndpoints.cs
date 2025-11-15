@@ -1,8 +1,12 @@
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Routing;
@@ -15,13 +19,13 @@ public static class RuleSpecEndpoints
 {
     public static RouteGroupBuilder MapRuleSpecEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/games/{gameId:guid}/rulespec", async (Guid gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec", async (Guid gameId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
             logger.LogInformation("Fetching RuleSpec for game {GameId}", gameId);
-            var ruleSpec = await ruleSpecService.GetRuleSpecAsync(gameId.ToString(), ct);
+            var ruleSpec = await mediator.Send(new GetRuleSpecQuery(gameId), ct);
 
             if (ruleSpec == null)
             {
@@ -32,7 +36,7 @@ public static class RuleSpecEndpoints
             return Results.Json(ruleSpec);
         });
 
-        group.MapPut("/games/{gameId:guid}/rulespec", async (Guid gameId, RuleSpec ruleSpec, HttpContext context, RuleSpecService ruleSpecService, AuditService auditService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPut("/games/{gameId:guid}/rulespec", async (Guid gameId, RuleSpec ruleSpec, HttpContext context, IMediator mediator, AuditService auditService, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
@@ -42,25 +46,41 @@ public static class RuleSpecEndpoints
                 return Results.BadRequest(new { error = "gameId in URL does not match gameId in RuleSpec" });
             }
 
+            if (!Guid.TryParse(session!.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
             try
             {
-                logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session!.User.Id, gameId);
-                var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId.ToString(), ruleSpec, session.User.Id, ct);
-                logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.version);
+                logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", userId, gameId);
 
-                // Audit trail for RuleSpec changes
+                // Convert Model to Command
+                var command = new UpdateRuleSpecCommand(
+                    GameId: gameId,
+                    Version: ruleSpec.version,
+                    Atoms: ruleSpec.rules.Select(r => new RuleAtomDto(r.id, r.text, r.section, r.page, r.line)).ToList(),
+                    UserId: userId
+                );
+
+                var updated = await mediator.Send(command, ct);
+                logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.Version);
+
+                // Audit trail
                 await auditService.LogAsync(
                     session.User.Id,
                     "UPDATE_RULESPEC",
                     "RuleSpec",
                     gameId.ToString(),
                     "Success",
-                    $"Updated RuleSpec to version {updated.version}",
+                    $"Updated RuleSpec to version {updated.Version}",
                     context.Connection.RemoteIpAddress?.ToString(),
                     context.Request.Headers.UserAgent.ToString(),
                     ct);
 
-                return Results.Json(updated);
+                // Convert DTO back to Model for backward compatibility
+                var modelResult = ToModel(updated);
+                return Results.Json(modelResult);
             }
             catch (InvalidOperationException ex)
             {
@@ -70,13 +90,13 @@ public static class RuleSpecEndpoints
         });
 
         // RULE-02: Get version history
-        group.MapGet("/games/{gameId:guid}/rulespec/history", async (Guid gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec/history", async (Guid gameId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Fetching RuleSpec version history for game {GameId}", gameId);
-            var history = await ruleSpecService.GetVersionHistoryAsync(gameId.ToString(), ct);
+            var history = await mediator.Send(new GetVersionHistoryQuery(gameId), ct);
             return Results.Json(history);
         });
 
@@ -88,24 +108,29 @@ public static class RuleSpecEndpoints
             string? author,
             string? searchQuery,
             HttpContext context,
-            RuleSpecService ruleSpecService,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
+            if (!Guid.TryParse(gameId, out var gameGuid))
+            {
+                return Results.BadRequest(new { error = "Invalid game ID format" });
+            }
+
             logger.LogInformation("Fetching RuleSpec version timeline for game {GameId}", gameId);
 
-            var filters = new VersionTimelineFilters
-            {
-                StartDate = startDate,
-                EndDate = endDate,
-                Author = author,
-                SearchQuery = searchQuery
-            };
+            var query = new GetVersionTimelineQuery(
+                GameId: gameGuid,
+                StartDate: startDate,
+                EndDate: endDate,
+                Author: author,
+                SearchQuery: searchQuery
+            );
 
-            var timeline = await ruleSpecService.GetVersionTimelineAsync(gameId, filters, ct);
+            var timeline = await mediator.Send(query, ct);
             return Results.Json(timeline);
         })
         .RequireAuthorization()
@@ -113,13 +138,13 @@ public static class RuleSpecEndpoints
         .WithTags("Versions");
 
         // RULE-02: Get specific version
-        group.MapGet("/games/{gameId:guid}/rulespec/versions/{version}", async (Guid gameId, string version, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec/versions/{version}", async (Guid gameId, string version, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Fetching RuleSpec version {Version} for game {GameId}", version, gameId);
-            var ruleSpec = await ruleSpecService.GetVersionAsync(gameId.ToString(), version, ct);
+            var ruleSpec = await mediator.Send(new GetRuleSpecVersionQuery(gameId, version), ct);
 
             if (ruleSpec == null)
             {
@@ -131,7 +156,7 @@ public static class RuleSpecEndpoints
         });
 
         // RULE-02: Compare two versions (diff)
-        group.MapGet("/games/{gameId:guid}/rulespec/diff", async (Guid gameId, string? from, string? to, HttpContext context, RuleSpecService ruleSpecService, RuleSpecDiffService diffService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec/diff", async (Guid gameId, string? from, string? to, HttpContext context, IMediator mediator, RuleSpecDiffService diffService, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
@@ -143,13 +168,17 @@ public static class RuleSpecEndpoints
 
             logger.LogInformation("Computing diff between versions {FromVersion} and {ToVersion} for game {GameId}", from, to, gameId);
 
-            var fromSpec = await ruleSpecService.GetVersionAsync(gameId.ToString(), from, ct);
-            var toSpec = await ruleSpecService.GetVersionAsync(gameId.ToString(), to, ct);
+            var fromSpecDto = await mediator.Send(new GetRuleSpecVersionQuery(gameId, from), ct);
+            var toSpecDto = await mediator.Send(new GetRuleSpecVersionQuery(gameId, to), ct);
 
-            if (fromSpec == null || toSpec == null)
+            if (fromSpecDto == null || toSpecDto == null)
             {
                 return Results.NotFound(new { error = "One or both RuleSpec versions not found" });
             }
+
+            // Convert DTOs to Models for RuleSpecDiffService (legacy service)
+            var fromSpec = ToModel(fromSpecDto);
+            var toSpec = ToModel(toSpecDto);
 
             var diff = diffService.ComputeDiff(fromSpec, toSpec);
             return Results.Json(diff);
@@ -525,7 +554,7 @@ public static class RuleSpecEndpoints
         .Produces(StatusCodes.Status404NotFound);
 
         // EDIT-07: Bulk RuleSpec operations
-        group.MapPost("/rulespecs/bulk/export", async (BulkExportRequest request, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/rulespecs/bulk/export", async (BulkExportRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
@@ -538,7 +567,20 @@ public static class RuleSpecEndpoints
             try
             {
                 logger.LogInformation("User {UserId} exporting {Count} rule specs", session!.User.Id, request.RuleSpecIds.Count);
-                var zipBytes = await ruleSpecService.CreateZipArchiveAsync(request.RuleSpecIds, ct);
+
+                // Convert List<string> to List<Guid>
+                var gameIds = new List<Guid>();
+                foreach (var id in request.RuleSpecIds)
+                {
+                    if (!Guid.TryParse(id, out var guid))
+                    {
+                        return Results.BadRequest(new { error = $"Invalid rule spec ID format: {id}" });
+                    }
+                    gameIds.Add(guid);
+                }
+
+                var command = new ExportRuleSpecsCommand(gameIds);
+                var zipBytes = await mediator.Send(command, ct);
 
                 var fileName = $"meepleai-rulespecs-{DateTime.UtcNow:yyyy-MM-dd}.zip";
                 logger.LogInformation("Successfully created ZIP archive {FileName} with {Size} bytes", fileName, zipBytes.Length);
@@ -557,11 +599,10 @@ public static class RuleSpecEndpoints
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in RuleSpecService; this catches unexpected infrastructure failures
+            // All business exceptions are handled in Command Handler; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (RuleSpecService)
                 logger.LogError(ex, "Unexpected error during rule spec export");
                 return Results.Problem("An error occurred during export", statusCode: StatusCodes.Status500InternalServerError);
             }
@@ -569,5 +610,14 @@ public static class RuleSpecEndpoints
         });
 
         return group;
+    }
+
+    /// <summary>
+    /// Converts RuleSpecDto to legacy RuleSpec Model for backward compatibility.
+    /// </summary>
+    private static RuleSpec ToModel(RuleSpecDto dto)
+    {
+        var atoms = dto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
+        return new RuleSpec(dto.GameId.ToString(), dto.Version, dto.CreatedAt, atoms);
     }
 }

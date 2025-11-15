@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
@@ -105,7 +106,7 @@ public static class AdminEndpoints
 
         // EDIT-07: Bulk RuleSpec operations
 
-        group.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>
+        group.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
@@ -115,7 +116,19 @@ public static class AdminEndpoints
                 return Results.BadRequest(new { error = "gameId is required" });
             }
 
-            var spec = await rules.GetOrCreateDemoAsync(request.gameId, ct);
+            if (!Guid.TryParse(request.gameId, out var gameGuid))
+            {
+                return Results.BadRequest(new { error = "Invalid game ID format" });
+            }
+
+            logger.LogInformation("Admin {UserId} creating demo RuleSpec for game {GameId}", session!.User.Id, gameGuid);
+            var command = new CreateDemoRuleSpecCommand(gameGuid);
+            var specDto = await mediator.Send(command, ct);
+
+            // Convert DTO to Model for backward compatibility
+            var atoms = specDto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
+            var spec = new RuleSpec(specDto.GameId.ToString(), specDto.Version, specDto.CreatedAt, atoms);
+
             return Results.Json(new { ok = true, spec });
         });
 

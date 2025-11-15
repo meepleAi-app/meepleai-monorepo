@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,10 @@ public static class GameManagementServiceExtensions
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+
+        // Register domain services (Issue #1185)
+        services.AddScoped<RuleSpecVersioningDomainService>();
+        services.AddScoped<RuleAtomParsingDomainService>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

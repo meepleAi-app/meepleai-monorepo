@@ -146,7 +146,7 @@ public static class AuthEndpoints
                 }
 
                 // Calculate session expiration from configuration (default: 30 days)
-                var sessionExpirationDays = await configService.GetValueAsync<int>("Authentication:SessionManagement:SessionExpirationDays", 30);
+                var sessionExpirationDays = await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30) ?? 30;
                 var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
                 writeSessionCookie(context, result.SessionToken, expiresAt);
                 logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
@@ -525,8 +525,8 @@ public static class AuthEndpoints
         {
             // AUTH-06-P4: Rate limiting to prevent OAuth abuse (configurable via admin UI)
             var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var maxTokens = await configService.GetValueAsync<int>("RateLimit:OAuth:MaxTokens", 10);
-            var refillRate = await configService.GetValueAsync<double>("RateLimit:OAuth:RefillRate", 0.16667);
+            var maxTokens = await configService.GetValueAsync<int?>("RateLimit:OAuth:MaxTokens", 10) ?? 10;
+            var refillRate = await configService.GetValueAsync<double?>("RateLimit:OAuth:RefillRate", 0.16667) ?? 0.16667;
 
             var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
                 $"oauth:login:{ipAddress}",
@@ -578,8 +578,8 @@ Rate limited to 10 requests per minute per IP address.
         {
             // AUTH-06-P4: Rate limiting on callback to prevent abuse (configurable via admin UI)
             var callbackIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var maxTokens = await configService.GetValueAsync<int>("RateLimit:OAuth:MaxTokens", 10);
-            var refillRate = await configService.GetValueAsync<double>("RateLimit:OAuth:RefillRate", 0.16667);
+            var maxTokens = await configService.GetValueAsync<int?>("RateLimit:OAuth:MaxTokens", 10) ?? 10;
+            var refillRate = await configService.GetValueAsync<double?>("RateLimit:OAuth:RefillRate", 0.16667) ?? 0.16667;
 
             var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
                 $"oauth:callback:{callbackIp}",

@@ -1,73 +1,62 @@
-using Api.Infrastructure;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Models;
-using System.Runtime.CompilerServices;
+using Api.Services;
+using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Api.Services;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// API-02: Streaming RAG service for progressive explain responses via SSE
-/// Emits events: StateUpdate -> Citations -> Outline -> ScriptChunk(s) -> Complete
+/// Handler for StreamExplainQuery.
+/// Implements streaming RAG explain flow with progressive SSE events.
+/// API-02: Emits StateUpdate → Citations → Outline → ScriptChunk(s) → Complete
 /// </summary>
-public class StreamingRagService : IStreamingRagService
+public class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQuery, RagStreamingEvent>
 {
-    private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
-    private readonly ILogger<StreamingRagService> _logger;
+    private readonly ILogger<StreamExplainQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
     // Script chunk size for streaming (characters per chunk)
     private const int ScriptChunkSize = 500;
 
-    public StreamingRagService(
-        MeepleAiDbContext dbContext,
+    public StreamExplainQueryHandler(
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
-        ILogger<StreamingRagService> logger,
+        ILogger<StreamExplainQueryHandler> logger,
         TimeProvider? timeProvider = null)
     {
-        _dbContext = dbContext;
-        _embeddingService = embeddingService;
-        _qdrantService = qdrantService;
-        _logger = logger;
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async IAsyncEnumerable<RagStreamingEvent> ExplainStreamAsync(
-        string gameId,
-        string topic,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<RagStreamingEvent> Handle(
+        StreamExplainQuery query,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(topic))
+        if (string.IsNullOrWhiteSpace(query.Topic))
         {
             yield return CreateEvent(StreamingEventType.Error,
                 new StreamingError("Please provide a topic to explain.", "EMPTY_TOPIC"));
             yield break;
         }
 
-        _logger.LogInformation("Starting streaming explain for game {GameId}, topic: {Topic}", gameId, topic);
+        _logger.LogInformation("Starting streaming explain for game {GameId}, topic: {Topic}",
+            query.GameId, query.Topic);
 
-        // Stream events, catching any exceptions
-        var stream = ExplainStreamInternalAsync(gameId, topic, cancellationToken);
-
-        // Use ConfigureAwaitOptions.None to avoid capturing context
-        await foreach (var evt in stream.WithCancellation(cancellationToken).ConfigureAwait(false))
-        {
-            yield return evt;
-        }
-    }
-
-    private async IAsyncEnumerable<RagStreamingEvent> ExplainStreamInternalAsync(
-        string gameId,
-        string topic,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
         // Step 1: Generate embedding
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Generating embeddings for topic..."));
 
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, cancellationToken);
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query.Topic, cancellationToken);
 
         if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
         {
@@ -83,13 +72,14 @@ public class StreamingRagService : IStreamingRagService
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Searching vector database for relevant content..."));
 
-        var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, limit: 5, cancellationToken);
+        var searchResult = await _qdrantService.SearchAsync(query.GameId, topicEmbedding, limit: 5, cancellationToken);
 
         if (!searchResult.Success || searchResult.Results.Count == 0)
         {
-            _logger.LogInformation("No vector results found for topic {Topic} in game {GameId}", topic, gameId);
+            _logger.LogInformation("No vector results found for topic {Topic} in game {GameId}",
+                query.Topic, query.GameId);
             yield return CreateEvent(StreamingEventType.Error,
-                new StreamingError($"No relevant information found about '{topic}' in the rulebook.", "NO_RESULTS"));
+                new StreamingError($"No relevant information found about '{query.Topic}' in the rulebook.", "NO_RESULTS"));
             yield break;
         }
 
@@ -109,7 +99,7 @@ public class StreamingRagService : IStreamingRagService
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Building outline structure..."));
 
-        var outline = BuildOutline(topic, searchResult.Results);
+        var outline = BuildOutline(query.Topic, searchResult.Results);
         yield return CreateEvent(StreamingEventType.Outline,
             new StreamingOutline(outline));
 
@@ -117,7 +107,7 @@ public class StreamingRagService : IStreamingRagService
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Generating explanation script..."));
 
-        var script = BuildScript(topic, searchResult.Results);
+        var script = BuildScript(query.Topic, searchResult.Results);
         var scriptChunks = ChunkScript(script);
 
         for (int i = 0; i < scriptChunks.Count; i++)
@@ -152,7 +142,7 @@ public class StreamingRagService : IStreamingRagService
 
         _logger.LogInformation(
             "Streaming explain completed for game {GameId}, topic: {Topic}, {ChunkCount} chunks sent",
-            gameId, topic, scriptChunks.Count);
+            query.GameId, query.Topic, scriptChunks.Count);
     }
 
     private RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

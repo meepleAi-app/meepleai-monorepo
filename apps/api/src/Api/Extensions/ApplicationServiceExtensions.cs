@@ -127,12 +127,11 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IKeywordSearchService, KeywordSearchService>(); // AI-14: PostgreSQL full-text keyword search
         services.AddScoped<IHybridSearchService, HybridSearchService>(); // AI-14: Hybrid search with RRF fusion
 
-        // Streaming services
-        services.AddScoped<IStreamingRagService, StreamingRagService>(); // API-02: Streaming RAG service
-        services.AddScoped<IStreamingQaService, StreamingQaService>(); // CHAT-01: Streaming QA service
+        // Issue #1186: Streaming services migrated to CQRS handlers
+        // Removed: IStreamingRagService, IStreamingQaService, SetupGuideService
+        // Now using: StreamExplainQueryHandler, StreamQaQueryHandler, StreamSetupGuideQueryHandler
 
         // Setup and prompt services
-        services.AddScoped<SetupGuideService>();
         services.AddScoped<IPromptTemplateService, PromptTemplateService>(); // AI-07.1: Prompt template service
         services.AddScoped<IPromptEvaluationService, PromptEvaluationService>(); // ADMIN-01 Phase 4: Prompt evaluation
 

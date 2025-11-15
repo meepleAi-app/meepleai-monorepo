@@ -55,7 +55,8 @@ public enum StreamingEventType
     Error,              // Error event
     Heartbeat,          // Keep-alive signal
     Token,              // CHAT-01: Individual LLM token for QA/Setup streaming
-    FollowUpQuestions   // CHAT-02: AI-generated follow-up questions
+    FollowUpQuestions,  // CHAT-02: AI-generated follow-up questions
+    SetupStep           // AI-03: Individual setup step for streaming setup guide
 }
 
 public record RagStreamingEvent(
@@ -79,6 +80,7 @@ public record StreamingComplete(
 public record StreamingError(string errorMessage, string? errorCode = null);
 public record StreamingHeartbeat(string message = "keep-alive");
 public record StreamingToken(string token); // CHAT-01: Individual LLM token
+public record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
 
 // CHAT-02: Follow-Up Questions models
 public record StreamingFollowUpQuestions(

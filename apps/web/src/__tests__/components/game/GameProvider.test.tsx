@@ -55,6 +55,9 @@ describe('GameProvider', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset all mock implementations to ensure clean state
+    mockApi.get.mockReset();
+    mockApi.post.mockReset();
   });
 
   describe('Initialization', () => {
@@ -255,7 +258,8 @@ describe('GameProvider', () => {
 
       mockApi.get
         .mockResolvedValueOnce(mockGames)
-        .mockResolvedValueOnce(mockAgents);
+        .mockResolvedValueOnce(mockAgents)
+        .mockResolvedValueOnce([]); // Empty agents for the new game
       mockApi.post
         .mockResolvedValueOnce(newGame);
 
@@ -310,17 +314,19 @@ describe('GameProvider', () => {
       mockApi.get
         .mockResolvedValueOnce(mockGames) // Initial load
         .mockResolvedValueOnce(mockAgents) // Initial agents
-        .mockResolvedValueOnce(updatedGames); // Refresh
+        .mockResolvedValueOnce(updatedGames) // Refresh
+        .mockResolvedValueOnce(mockAgents); // Agents after refresh
 
       const { result } = renderHook(() => useGame(), { wrapper });
 
+      await waitFor(() => expect(result.current.loading.games).toBe(false));
       await waitFor(() => expect(result.current.games).toEqual(mockGames));
 
       await act(async () => {
         await result.current.refreshGames();
       });
 
-      expect(result.current.games).toEqual(updatedGames);
+      await waitFor(() => expect(result.current.games).toEqual(updatedGames));
     });
   });
 
@@ -338,25 +344,41 @@ describe('GameProvider', () => {
 
   describe('derived state', () => {
     it('correctly computes selectedGame from games and selectedGameId', async () => {
+      // Clear any lingering mocks
+      mockApi.get.mockClear();
       mockApi.get
-        .mockResolvedValueOnce(mockGames)
-        .mockResolvedValueOnce(mockAgents);
+        .mockResolvedValueOnce(mockGames)  // First call for games
+        .mockResolvedValueOnce(mockAgents); // Second call for agents
 
       const { result } = renderHook(() => useGame(), { wrapper });
 
+      // Wait for games to load
+      await waitFor(() => expect(result.current.loading.games).toBe(false));
+
+      // Verify games are loaded correctly
+      expect(result.current.games).toEqual(mockGames);
+
+      // Wait for game selection
       await waitFor(() => expect(result.current.selectedGameId).toBe('game-1'));
 
+      // Verify derived state
       expect(result.current.selectedGame).toEqual(mockGames[0]);
       expect(result.current.selectedGame?.name).toBe('Gloomhaven');
     });
 
     it('returns null for selectedGame when no game selected', async () => {
-      mockApi.get.mockResolvedValueOnce([]);
+      // Clear any lingering mocks
+      mockApi.get.mockClear();
+      mockApi.get.mockResolvedValueOnce([]);  // Return empty games list
 
       const { result } = renderHook(() => useGame(), { wrapper });
 
+      // Wait for games to load
       await waitFor(() => expect(result.current.loading.games).toBe(false));
 
+      // Verify state when no games
+      expect(result.current.games).toEqual([]);
+      expect(result.current.selectedGameId).toBeNull();
       expect(result.current.selectedGame).toBeNull();
     });
   });

@@ -175,15 +175,19 @@ describe('useGames', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      await expect(async () => {
-        await act(async () => {
+      // Call createGame and expect it to throw
+      let errorThrown = false;
+      await act(async () => {
+        try {
           await result.current.createGame('Azul');
-        });
-      }).rejects.toThrow();
-
-      await waitFor(() => {
-        expect(result.current.error).toBe('Unable to create game. Please try again.');
+        } catch {
+          errorThrown = true;
+        }
       });
+
+      expect(errorThrown).toBe(true);
+      expect(result.current.error).toBe('Unable to create game. Please try again.');
+      expect(result.current.creating).toBe(false);
     });
 
     it('logs error when creation fails', async () => {

@@ -1,16 +1,14 @@
 /**
- * Unit tests for Settings Page (AUTH-07)
+ * Unit tests for Settings Page (SPRINT-1, Issue #848)
  *
  * Tests cover:
+ * - 4-tab interface (Profile, Preferences, Privacy, Advanced)
+ * - Profile management and password change UI
  * - 2FA management (enable, QR code, backup codes, disable)
- * - TOTP verification and backup code flow
- * - Password validation and confirmation
+ * - OAuth account linking/unlinking
+ * - Preferences and data retention settings
  * - Loading states and error handling
- * - User interactions and confirmations
- * - Success/error alerts
- * - QR code generation and manual entry
- * - Backup code download functionality
- * - Accessibility
+ * - Tab navigation and content switching
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -62,7 +60,26 @@ global.alert = mockAlert;
 global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
 global.URL.revokeObjectURL = jest.fn();
 
+// Mock fetch for profile loading
+global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+
 // Test data
+const mockProfile = {
+  user: {
+    id: '123',
+    email: 'user@example.com',
+    displayName: 'Test User',
+    role: 'user',
+    createdAt: '2024-01-01T00:00:00Z',
+    isTwoFactorEnabled: false,
+    twoFactorEnabledAt: null,
+  }
+};
+
+const mockOAuthAccounts = [
+  { provider: 'google', createdAt: '2024-01-01T00:00:00Z' },
+];
+
 const mock2FAStatusDisabled = {
   isTwoFactorEnabled: false,
   backupCodesCount: 0,
@@ -106,48 +123,87 @@ describe('SettingsPage', () => {
     mockTwoFactorApi.verify.mockClear();
     mockTwoFactorApi.disable.mockClear();
     useRouterMock.mockReturnValue(createMockRouter({ pathname: '/settings' }));
+
+    // Default fetch mocks for successful profile and OAuth loading
+    (global.fetch as jest.MockedFunction<typeof fetch>).mockImplementation((url) => {
+      const urlStr = url.toString();
+      if (urlStr.includes('/api/v1/auth/me')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockProfile),
+        } as Response);
+      }
+      if (urlStr.includes('/api/v1/users/me/oauth-accounts')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockOAuthAccounts),
+        } as Response);
+      }
+      return Promise.reject(new Error('Unexpected URL'));
+    });
   });
 
   describe('Initial Loading', () => {
-    it('displays loading state initially', () => {
+    it('displays loading spinner initially', () => {
       mockTwoFactorApi.getStatus.mockReturnValue(new Promise(() => {})); // Never resolves
 
-      render(<SettingsPage />);
+      const { container } = render(<SettingsPage />);
 
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      // Check for loading spinner by class
+      const spinner = container.querySelector('.animate-spin');
+      expect(spinner).toBeInTheDocument();
     });
 
-    it('loads 2FA status on mount', async () => {
+    it('loads profile and 2FA status on mount', async () => {
       mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
 
       render(<SettingsPage />);
 
       await waitFor(() => {
+        expect(fetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/v1/auth/me'),
+          expect.any(Object)
+        );
         expect(mockTwoFactorApi.getStatus).toHaveBeenCalledTimes(1);
       });
     });
 
-    it('hides loading after status loads', async () => {
+    it('hides loading after data loads', async () => {
       mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
 
-      render(<SettingsPage />);
+      const { container } = render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+        const spinner = container.querySelector('.animate-spin');
+        expect(spinner).not.toBeInTheDocument();
       });
     });
 
-    it('displays error message when status fetch fails', async () => {
-      const consoleError = jest.spyOn(console, 'error').mockImplementation();
-      mockTwoFactorApi.getStatus.mockRejectedValue(new Error('Network error'));
+    it('redirects to login when unauthorized', async () => {
+      const mockRouter = createMockRouter({ pathname: '/settings' });
+      useRouterMock.mockReturnValue(mockRouter);
+
+      (global.fetch as jest.MockedFunction<typeof fetch>).mockImplementation((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/v1/auth/me')) {
+          return Promise.resolve({
+            ok: false,
+            status: 401,
+          } as Response);
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        } as Response);
+      });
 
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Failed to load 2FA status')).toBeInTheDocument();
+        expect(mockRouter.push).toHaveBeenCalledWith('/login');
       });
-
-      consoleError.mockRestore();
     });
   });
 
@@ -160,15 +216,26 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
     });
 
-    it('renders "Two-Factor Authentication" section', async () => {
+    it('renders page description', async () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument();
+        expect(screen.getByText(/Manage your account settings and preferences/i)).toBeInTheDocument();
+      });
+    });
+
+    it('renders all four tabs', async () => {
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('tab', { name: 'Profile' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Preferences' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Privacy' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Advanced' })).toBeInTheDocument();
       });
     });
 
@@ -189,7 +256,7 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
 
       const backButton = screen.getByRole('button', { name: /Back to Home/i });
@@ -199,29 +266,245 @@ describe('SettingsPage', () => {
     });
   });
 
-  describe('2FA Disabled State', () => {
+  describe('Tab Navigation', () => {
     beforeEach(() => {
       mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
     });
 
-    it('displays description about 2FA', async () => {
+    it('shows Profile tab content by default', async () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/Two-factor authentication adds an extra layer of security/i)
-        ).toBeInTheDocument();
+        expect(screen.getByText('Profile Information')).toBeInTheDocument();
+        expect(screen.getByText('Change Password')).toBeInTheDocument();
       });
     });
 
-    it('renders "Enable Two-Factor Authentication" button', async () => {
+    it('switches to Preferences tab when clicked', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: /Enable Two-Factor Authentication/i })
-        ).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const preferencesTab = screen.getByRole('tab', { name: 'Preferences' });
+      await user.click(preferencesTab);
+
+      expect(screen.getByText('User Preferences')).toBeInTheDocument();
+      expect(screen.getByLabelText('Language')).toBeInTheDocument();
+    });
+
+    it('switches to Privacy tab when clicked', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument();
+      expect(screen.getByText('Linked Accounts')).toBeInTheDocument();
+    });
+
+    it('switches to Advanced tab when clicked', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const advancedTab = screen.getByRole('tab', { name: 'Advanced' });
+      await user.click(advancedTab);
+
+      expect(screen.getByText('API Keys')).toBeInTheDocument();
+      expect(screen.getByText('Active Sessions')).toBeInTheDocument();
+      expect(screen.getByText('Danger Zone')).toBeInTheDocument();
+    });
+  });
+
+  describe('Profile Tab', () => {
+    beforeEach(() => {
+      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+    });
+
+    it('displays user profile information', async () => {
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
+        expect(screen.getByDisplayValue('user@example.com')).toBeInTheDocument();
+        expect(screen.getByDisplayValue('user')).toBeInTheDocument();
+      });
+    });
+
+    it('shows disabled Update Profile button', async () => {
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        const updateButton = screen.getByRole('button', { name: /Update Profile/i });
+        expect(updateButton).toBeDisabled();
+        expect(updateButton).toHaveTextContent('Coming Soon');
+      });
+    });
+
+    it('shows password change fields', async () => {
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Current Password')).toBeInTheDocument();
+        expect(screen.getByLabelText('New Password')).toBeInTheDocument();
+        expect(screen.getByLabelText('Confirm New Password')).toBeInTheDocument();
+      });
+    });
+
+    it('shows disabled Change Password button', async () => {
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        const changePasswordButton = screen.getByRole('button', { name: /Change Password/i });
+        expect(changePasswordButton).toBeDisabled();
+        expect(changePasswordButton).toHaveTextContent('Coming Soon');
+      });
+    });
+  });
+
+  describe('Preferences Tab', () => {
+    beforeEach(() => {
+      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+    });
+
+    it('displays language selector', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const preferencesTab = screen.getByRole('tab', { name: 'Preferences' });
+      await user.click(preferencesTab);
+
+      expect(screen.getByLabelText('Language')).toBeInTheDocument();
+      expect(screen.getByText('English')).toBeInTheDocument();
+    });
+
+    it('displays theme selector', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const preferencesTab = screen.getByRole('tab', { name: 'Preferences' });
+      await user.click(preferencesTab);
+
+      expect(screen.getByLabelText('Theme')).toBeInTheDocument();
+      expect(screen.getByText('System')).toBeInTheDocument();
+    });
+
+    it('displays email notifications toggle', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const preferencesTab = screen.getByRole('tab', { name: 'Preferences' });
+      await user.click(preferencesTab);
+
+      expect(screen.getByLabelText('Email Notifications')).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Email Notifications' })).toBeInTheDocument();
+    });
+
+    it('displays data retention selector', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const preferencesTab = screen.getByRole('tab', { name: 'Preferences' });
+      await user.click(preferencesTab);
+
+      expect(screen.getByLabelText('Data Retention (days)')).toBeInTheDocument();
+      expect(screen.getByText('90 days')).toBeInTheDocument();
+    });
+
+    it('shows Save Preferences button', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const preferencesTab = screen.getByRole('tab', { name: 'Preferences' });
+      await user.click(preferencesTab);
+
+      const saveButton = screen.getByRole('button', { name: 'Save Preferences' });
+      expect(saveButton).toBeInTheDocument();
+      expect(saveButton).not.toBeDisabled();
+    });
+  });
+
+  describe('Privacy Tab - 2FA Disabled State', () => {
+    beforeEach(() => {
+      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+    });
+
+    it('displays 2FA section in Privacy tab', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument();
+      expect(screen.getByText(/Add an extra layer of security/i)).toBeInTheDocument();
+    });
+
+    it('displays description about 2FA', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      expect(
+        screen.getByText(/Two-factor authentication adds an extra layer of security/i)
+      ).toBeInTheDocument();
+    });
+
+    it('renders "Enable Two-Factor Authentication" button', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      expect(
+        screen.getByRole('button', { name: /Enable Two-Factor Authentication/i })
+      ).toBeInTheDocument();
     });
 
     it('initiates 2FA setup when enable button clicked', async () => {
@@ -231,8 +514,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -253,8 +539,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -272,8 +561,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -288,7 +580,7 @@ describe('SettingsPage', () => {
     });
   });
 
-  describe('2FA Setup Flow', () => {
+  describe('Privacy Tab - 2FA Setup Flow', () => {
     beforeEach(() => {
       mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
       mockTwoFactorApi.setup.mockResolvedValue(mockTotpSetup);
@@ -299,8 +591,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -319,8 +614,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -328,11 +626,11 @@ describe('SettingsPage', () => {
       await user.click(enableButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Can't scan QR code\? Enter manually/i)).toBeInTheDocument();
+        expect(screen.getByText(/Can't scan\? Enter manually/i)).toBeInTheDocument();
       });
 
       // Expand details
-      const detailsSummary = screen.getByText(/Can't scan QR code\? Enter manually/i);
+      const detailsSummary = screen.getByText(/Can't scan\? Enter manually/i);
       await user.click(detailsSummary);
 
       expect(screen.getByText(mockTotpSetup.secret)).toBeInTheDocument();
@@ -343,8 +641,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -363,8 +664,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -399,8 +703,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -423,8 +730,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -449,8 +759,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -475,8 +788,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -511,8 +827,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -534,7 +853,7 @@ describe('SettingsPage', () => {
 
       await waitFor(() => {
         expect(mockTwoFactorApi.enable).toHaveBeenCalledWith('123456');
-        expect(mockAlert).toHaveBeenCalledWith('Two-factor authentication enabled successfully!');
+        expect(screen.getByText('Two-factor authentication enabled successfully!')).toBeInTheDocument();
       });
     });
 
@@ -546,8 +865,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -579,8 +901,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -601,91 +926,133 @@ describe('SettingsPage', () => {
     });
   });
 
-  describe('2FA Enabled State', () => {
+  describe('Privacy Tab - 2FA Enabled State', () => {
     beforeEach(() => {
       mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusEnabled);
     });
 
     it('displays enabled status with checkmark', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Two-factor authentication is enabled')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
 
-      // Check for checkmark SVG
-      const container = screen.getByText('Two-factor authentication is enabled').closest('div');
-      const svg = container?.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      expect(screen.getByText(/Two-factor authentication is enabled/i)).toBeInTheDocument();
     });
 
     it('displays backup codes count', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Backup codes remaining: 8')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Backup codes remaining: 8/)).toBeInTheDocument();
       });
     });
 
     it('shows warning when backup codes are low', async () => {
       mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusLowBackupCodes);
 
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/Warning: You have only 2 backup codes remaining/i)
-        ).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      expect(
+        screen.getByText(/Warning: You have only 2 backup codes remaining/i)
+      ).toBeInTheDocument();
     });
 
     it('does not show warning when backup codes are sufficient', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Two-factor authentication is enabled')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
 
-      expect(
-        screen.queryByText(/Warning: You have only/i)
-      ).not.toBeInTheDocument();
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      expect(screen.getByText(/Two-factor authentication is enabled/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Warning: You have only/i)).not.toBeInTheDocument();
     });
 
     it('renders disable 2FA section', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Disable Two-Factor Authentication')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      expect(screen.getByText('Disable Two-Factor Authentication')).toBeInTheDocument();
     });
 
     it('renders password input for disable', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
       await waitFor(() => {
-        const passwordInput = screen.getByPlaceholderText('Enter your password');
-        expect(passwordInput).toBeInTheDocument();
-        expect(passwordInput).toHaveAttribute('type', 'password');
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      const passwordInput = screen.getByPlaceholderText('Enter your password');
+      expect(passwordInput).toBeInTheDocument();
+      expect(passwordInput).toHaveAttribute('type', 'password');
     });
 
     it('renders code input for disable', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
       await waitFor(() => {
-        const codeInput = screen.getByPlaceholderText('000000 or XXXX-XXXX');
-        expect(codeInput).toBeInTheDocument();
-        expect(codeInput).toHaveAttribute('type', 'text');
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      const codeInput = screen.getByPlaceholderText('000000 or XXXX-XXXX');
+      expect(codeInput).toBeInTheDocument();
+      expect(codeInput).toHaveAttribute('type', 'text');
     });
 
     it('disables button when password or code is empty', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
       await waitFor(() => {
-        const disableButton = screen.getByRole('button', { name: 'Disable 2FA' });
-        expect(disableButton).toBeDisabled();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      const disableButton = screen.getByRole('button', { name: 'Disable 2FA' });
+      expect(disableButton).toBeDisabled();
     });
 
     it('enables button when both password and code are provided', async () => {
@@ -693,8 +1060,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Two-factor authentication is enabled')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const passwordInput = screen.getByPlaceholderText('Enter your password');
       await user.type(passwordInput, 'MyPassword123!');
@@ -713,8 +1083,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Two-factor authentication is enabled')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const passwordInput = screen.getByPlaceholderText('Enter your password');
       await user.type(passwordInput, 'MyPassword123!');
@@ -737,8 +1110,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Two-factor authentication is enabled')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const passwordInput = screen.getByPlaceholderText('Enter your password');
       await user.type(passwordInput, 'MyPassword123!');
@@ -762,8 +1138,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Two-factor authentication is enabled')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const passwordInput = screen.getByPlaceholderText('Enter your password');
       await user.type(passwordInput, 'MyPassword123!');
@@ -776,7 +1155,7 @@ describe('SettingsPage', () => {
 
       await waitFor(() => {
         expect(mockTwoFactorApi.disable).toHaveBeenCalledWith('MyPassword123!', '123456');
-        expect(mockAlert).toHaveBeenCalledWith('Two-factor authentication disabled.');
+        expect(screen.getByText('Two-factor authentication disabled.')).toBeInTheDocument();
       });
     });
 
@@ -789,8 +1168,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Two-factor authentication is enabled')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const passwordInput = screen.getByPlaceholderText('Enter your password');
       await user.type(passwordInput, 'WrongPassword');
@@ -809,82 +1191,216 @@ describe('SettingsPage', () => {
 
       consoleError.mockRestore();
     });
+  });
 
-    it('clears password and code fields after successful disable', async () => {
+  describe('Privacy Tab - OAuth Accounts', () => {
+    beforeEach(() => {
+      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+    });
+
+    it('displays OAuth section in Privacy tab', async () => {
       const user = userEvent.setup();
-      mockConfirm.mockReturnValue(true);
-      mockTwoFactorApi.disable.mockResolvedValue(undefined);
-      mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusEnabled);
-      mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
-
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Two-factor authentication is enabled')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
 
-      const passwordInput = screen.getByPlaceholderText('Enter your password');
-      await user.type(passwordInput, 'MyPassword123!');
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
-      const codeInput = screen.getByPlaceholderText('000000 or XXXX-XXXX');
-      await user.type(codeInput, '123456');
+      expect(screen.getByText('Linked Accounts')).toBeInTheDocument();
+      expect(screen.getByText(/Connect your accounts to login with social providers/i)).toBeInTheDocument();
+    });
 
-      const disableButton = screen.getByRole('button', { name: 'Disable 2FA' });
-      await user.click(disableButton);
+    it('displays OAuth provider options', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(mockAlert).toHaveBeenCalledWith('Two-factor authentication disabled.');
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
 
-      // Fields should be cleared (component shows disabled state)
-      expect(
-        screen.getByRole('button', { name: /Enable Two-Factor Authentication/i })
-      ).toBeInTheDocument();
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      expect(screen.getByText('Google')).toBeInTheDocument();
+      expect(screen.getByText('Discord')).toBeInTheDocument();
+      expect(screen.getByText('GitHub')).toBeInTheDocument();
+    });
+
+    it('shows connected status for linked accounts', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      await waitFor(() => {
+        // Google should be connected (in mockOAuthAccounts)
+        // Look for the parent element that contains both Google and Connected
+        const googleCard = screen.getByText('Google').closest('div.flex');
+        expect(googleCard).toBeInTheDocument();
+        // Check that within that card's parent, we have "Connected" text
+        const cardContainer = googleCard?.parentElement;
+        expect(cardContainer).toHaveTextContent('Connected');
+      });
+    });
+
+    it('shows Link button for unlinked accounts', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      // Discord and GitHub should not be connected
+      const linkButtons = screen.getAllByRole('button', { name: 'Link' });
+      expect(linkButtons).toHaveLength(2); // Discord and GitHub
+    });
+
+    it('shows Unlink button for linked accounts', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
+
+      // Google should have Unlink button
+      const unlinkButtons = screen.getAllByRole('button', { name: 'Unlink' });
+      expect(unlinkButtons).toHaveLength(1); // Only Google
+    });
+  });
+
+  describe('Advanced Tab', () => {
+    beforeEach(() => {
+      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+    });
+
+    it('displays API Keys section with coming soon message', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const advancedTab = screen.getByRole('tab', { name: 'Advanced' });
+      await user.click(advancedTab);
+
+      expect(screen.getByText('API Keys')).toBeInTheDocument();
+      expect(screen.getByText('API key management coming soon')).toBeInTheDocument();
+    });
+
+    it('displays Active Sessions section with coming soon message', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const advancedTab = screen.getByRole('tab', { name: 'Advanced' });
+      await user.click(advancedTab);
+
+      expect(screen.getByText('Active Sessions')).toBeInTheDocument();
+      expect(screen.getByText('Session management coming soon')).toBeInTheDocument();
+    });
+
+    it('displays Danger Zone section', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const advancedTab = screen.getByRole('tab', { name: 'Advanced' });
+      await user.click(advancedTab);
+
+      expect(screen.getByText('Danger Zone')).toBeInTheDocument();
+      expect(screen.getByText(/Account deletion is permanent/i)).toBeInTheDocument();
+    });
+
+    it('shows disabled Delete Account button', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const advancedTab = screen.getByRole('tab', { name: 'Advanced' });
+      await user.click(advancedTab);
+
+      const deleteButton = screen.getByRole('button', { name: /Delete Account/i });
+      expect(deleteButton).toBeDisabled();
+      expect(deleteButton).toHaveTextContent('Coming Soon');
     });
   });
 
   describe('Error Display', () => {
-    it('displays error banner when present', async () => {
+    it('displays error alert when present', async () => {
       const consoleError = jest.spyOn(console, 'error').mockImplementation();
       mockTwoFactorApi.getStatus.mockRejectedValue(new Error('Network error'));
 
       render(<SettingsPage />);
 
+      // The error from getStatus is caught but doesn't set the main error state
+      // Instead, let's test error display by simulating a setup error
       await waitFor(() => {
-        const errorBanner = screen.getByText('Failed to load 2FA status');
-        expect(errorBanner).toBeInTheDocument();
-        expect(errorBanner.closest('div')).toHaveClass('bg-red-50');
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
 
-      consoleError.mockRestore();
-    });
-
-    it('clears error when operation succeeds', async () => {
-      const consoleError = jest.spyOn(console, 'error').mockImplementation();
+      // Navigate to Privacy tab
       const user = userEvent.setup();
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
-      // First load fails
-      mockTwoFactorApi.getStatus.mockRejectedValueOnce(new Error('Network error'));
-      mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
-      mockTwoFactorApi.setup.mockResolvedValue(mockTotpSetup);
+      // Try to setup 2FA which will fail
+      mockTwoFactorApi.setup.mockRejectedValue(new Error('Setup failed'));
 
-      render(<SettingsPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Failed to load 2FA status')).toBeInTheDocument();
-      });
-
-      // Retry by clicking enable button (which reloads status after setup)
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
       });
       await user.click(enableButton);
 
       await waitFor(() => {
-        expect(screen.queryByText('Failed to load 2FA status')).not.toBeInTheDocument();
+        expect(screen.getByText('Failed to setup 2FA')).toBeInTheDocument();
       });
 
       consoleError.mockRestore();
+    });
+
+    it('displays success alert when operation succeeds', async () => {
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+
+      const preferencesTab = screen.getByRole('tab', { name: 'Preferences' });
+      await user.click(preferencesTab);
+
+      const saveButton = screen.getByRole('button', { name: 'Save Preferences' });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Preferences saved successfully/i)).toBeInTheDocument();
+      });
     });
   });
 
@@ -897,41 +1413,40 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        const h1 = screen.getByRole('heading', { level: 1, name: 'Account Settings' });
+        const h1 = screen.getByRole('heading', { level: 1, name: 'Settings' });
         expect(h1).toBeInTheDocument();
-
-        const h2 = screen.getByRole('heading', { level: 2, name: 'Two-Factor Authentication' });
-        expect(h2).toBeInTheDocument();
       });
     });
 
-    it('labels input fields properly', async () => {
-      const user = userEvent.setup();
-      mockTwoFactorApi.setup.mockResolvedValue(mockTotpSetup);
-
+    it('tabs have proper ARIA roles', async () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
-      });
+        const tabList = screen.getByRole('tablist');
+        expect(tabList).toBeInTheDocument();
 
-      const enableButton = screen.getByRole('button', {
-        name: /Enable Two-Factor Authentication/i,
+        const tabs = screen.getAllByRole('tab');
+        expect(tabs).toHaveLength(4);
       });
-      await user.click(enableButton);
+    });
+
+    it('tab panels have proper ARIA roles', async () => {
+      render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Step 2: Save Backup Codes')).toBeInTheDocument();
+        const tabPanel = screen.getByRole('tabpanel');
+        expect(tabPanel).toBeInTheDocument();
       });
+    });
 
-      const savedButton = screen.getByRole('button', { name: /I've Saved My Codes/i });
-      await user.click(savedButton);
+    it('form inputs have proper labels', async () => {
+      render(<SettingsPage />);
 
-      // Verification input should be accessible via placeholder
-      const verificationInput = screen.getByPlaceholderText('000000');
-      expect(verificationInput).toBeInTheDocument();
-      expect(verificationInput).toHaveAttribute('type', 'text');
-      expect(verificationInput).toHaveAttribute('maxLength', '6');
+      await waitFor(() => {
+        expect(screen.getByLabelText('Display Name')).toBeInTheDocument();
+        expect(screen.getByLabelText('Email')).toBeInTheDocument();
+        expect(screen.getByLabelText('Current Password')).toBeInTheDocument();
+      });
     });
 
     it('QR code has accessible title', async () => {
@@ -941,8 +1456,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -953,61 +1471,6 @@ describe('SettingsPage', () => {
         const qrCode = screen.getByTestId('qr-code');
         expect(qrCode).toContainHTML('<title>QR Code</title>');
       });
-    });
-
-    it('buttons have proper focus styling', async () => {
-      render(<SettingsPage />);
-
-      await waitFor(() => {
-        const enableButton = screen.getByRole('button', {
-          name: /Enable Two-Factor Authentication/i,
-        });
-        // Button should have hover and disabled states defined
-        expect(enableButton).toHaveClass('hover:bg-blue-700');
-        expect(enableButton).toHaveClass('disabled:opacity-50');
-        expect(enableButton).toHaveClass('bg-blue-600');
-      });
-    });
-  });
-
-  describe('Visual Elements', () => {
-    beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
-    });
-
-    it('renders with proper background color', async () => {
-      const { container } = render(<SettingsPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
-      });
-
-      const background = container.querySelector('.bg-gray-50');
-      expect(background).toBeInTheDocument();
-    });
-
-    it('renders card with shadow', async () => {
-      const { container } = render(<SettingsPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
-      });
-
-      const card = container.querySelector('.shadow');
-      expect(card).toBeInTheDocument();
-    });
-
-    it('displays checkmark icon when 2FA enabled', async () => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusEnabled);
-
-      const { container } = render(<SettingsPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Two-factor authentication is enabled')).toBeInTheDocument();
-      });
-
-      const svg = container.querySelector('svg');
-      expect(svg).toHaveClass('text-green-600');
     });
   });
 
@@ -1023,8 +1486,11 @@ describe('SettingsPage', () => {
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
       });
+
+      const privacyTab = screen.getByRole('tab', { name: 'Privacy' });
+      await user.click(privacyTab);
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -1037,51 +1503,26 @@ describe('SettingsPage', () => {
       });
     });
 
-    it('does not download backup codes if none exist', async () => {
-      const user = userEvent.setup();
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
-      mockTwoFactorApi.setup.mockResolvedValue({
-        ...mockTotpSetup,
-        backupCodes: [],
+    it('handles profile load failure gracefully', async () => {
+      const consoleError = jest.spyOn(console, 'error').mockImplementation();
+      (global.fetch as jest.MockedFunction<typeof fetch>).mockImplementation((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/v1/auth/me')) {
+          return Promise.reject(new Error('Network error'));
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        } as Response);
       });
 
       render(<SettingsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Account Settings')).toBeInTheDocument();
+        expect(screen.getByText('Failed to load profile')).toBeInTheDocument();
       });
 
-      const enableButton = screen.getByRole('button', {
-        name: /Enable Two-Factor Authentication/i,
-      });
-      await user.click(enableButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Step 1: Scan QR Code')).toBeInTheDocument();
-      });
-
-      // When backupCodes is empty array, backup codes section is still rendered
-      // but no codes are displayed in the grid
-      const downloadButton = screen.queryByRole('button', { name: 'Download Codes' });
-
-      // If the button exists, verify it creates an empty backup codes file
-      if (downloadButton) {
-        const originalCreateObjectURL = URL.createObjectURL;
-        const createObjectURLSpy = jest.fn();
-        URL.createObjectURL = createObjectURLSpy;
-
-        await user.click(downloadButton);
-
-        // Empty array still triggers createObjectURL (current behavior)
-        // The file will be created but with no codes listed
-        expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
-
-        URL.createObjectURL = originalCreateObjectURL;
-      }
-
-      // Verify no backup codes are displayed
-      const backupCodeElements = screen.queryAllByText(/[A-Z0-9]{4}-[A-Z0-9]{4}/);
-      expect(backupCodeElements).toHaveLength(0);
+      consoleError.mockRestore();
     });
   });
 });

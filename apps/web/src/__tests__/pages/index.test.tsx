@@ -80,7 +80,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('shows "Go to Chat" button when user is authenticated', async () => {
-      mockedApi.get.mockResolvedValueOnce({
+      mockedApi.get.mockResolvedValue({
         user: {
           id: 'user-1',
           email: 'user@example.com',
@@ -126,7 +126,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('shows navigation links when authenticated', async () => {
-      mockedApi.get.mockResolvedValueOnce({
+      mockedApi.get.mockResolvedValue({
         user: {
           id: 'user-1',
           email: 'user@example.com',
@@ -154,7 +154,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('shows Admin link for admin users', async () => {
-      mockedApi.get.mockResolvedValueOnce({
+      mockedApi.get.mockResolvedValue({
         user: {
           id: 'admin-1',
           email: 'admin@example.com',
@@ -172,7 +172,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('does not show Admin link for non-admin users', async () => {
-      mockedApi.get.mockResolvedValueOnce({
+      mockedApi.get.mockResolvedValue({
         user: {
           id: 'user-1',
           email: 'user@example.com',
@@ -205,7 +205,7 @@ describe('Home page (Landing Page)', () => {
 
       // Modal should open - check for modal title
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
       });
     });
 
@@ -221,7 +221,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
       });
 
       // Find Register tab
@@ -239,7 +239,7 @@ describe('Home page (Landing Page)', () => {
     it('clicking Go to Chat button navigates when authenticated', async () => {
       const user = userEvent.setup();
 
-      mockedApi.get.mockResolvedValueOnce({
+      mockedApi.get.mockResolvedValue({
         user: {
           id: 'user-1',
           email: 'user@example.com',
@@ -263,7 +263,7 @@ describe('Home page (Landing Page)', () => {
     it('clicking Start Chatting button navigates when authenticated', async () => {
       const user = userEvent.setup();
 
-      mockedApi.get.mockResolvedValueOnce({
+      mockedApi.get.mockResolvedValue({
         user: {
           id: 'user-1',
           email: 'user@example.com',
@@ -290,7 +290,7 @@ describe('Home page (Landing Page)', () => {
     it('logs out the user and clears the session state', async () => {
       const user = userEvent.setup();
 
-      mockedApi.get.mockResolvedValueOnce({
+      mockedApi.get.mockResolvedValue({
         user: {
           id: 'user-1',
           email: 'user@example.com',
@@ -324,7 +324,7 @@ describe('Home page (Landing Page)', () => {
       const user = userEvent.setup();
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-      mockedApi.get.mockResolvedValueOnce({
+      mockedApi.get.mockResolvedValue({
         user: {
           id: 'user-1',
           email: 'user@example.com',
@@ -401,7 +401,7 @@ describe('Home page (Landing Page)', () => {
     it('CTA button redirects to chat when authenticated', async () => {
       const user = userEvent.setup();
 
-      mockedApi.get.mockResolvedValueOnce({
+      mockedApi.get.mockResolvedValue({
         user: {
           id: 'user-1',
           email: 'user@example.com',
@@ -455,6 +455,11 @@ describe('Home page (Landing Page)', () => {
   describe('Auth Modal Forms', () => {
     it('submits login form successfully', async () => {
       const user = userEvent.setup();
+
+      // Setup the default response for auth check
+      mockedApi.get.mockResolvedValue(null);
+
+      // Setup the login response
       mockedApi.post.mockResolvedValueOnce({
         user: {
           id: 'user-1',
@@ -477,7 +482,7 @@ describe('Home page (Landing Page)', () => {
 
       // Wait for modal AND form to be visible
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
         expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
@@ -496,7 +501,7 @@ describe('Home page (Landing Page)', () => {
       await user.type(passwordInput, 'password123');
 
       // Submit
-      const loginButton = await screen.findByRole('button', { name: 'Login' });
+      const loginButton = await screen.findByRole('button', { name: 'Sign In' });
       await user.click(loginButton);
 
       await waitFor(() => {
@@ -511,6 +516,11 @@ describe('Home page (Landing Page)', () => {
 
     it('submits register form successfully', async () => {
       const user = userEvent.setup();
+
+      // Setup the default response for auth check
+      mockedApi.get.mockResolvedValue(null);
+
+      // Setup the register response
       mockedApi.post.mockResolvedValueOnce({
         user: {
           id: 'user-2',
@@ -532,7 +542,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
       });
 
       // Switch to register tab
@@ -547,23 +557,21 @@ describe('Home page (Landing Page)', () => {
       // Get the tab panel and find inputs within it
       const tabPanel = screen.getByRole('tabpanel');
 
-      // Find inputs by role - register form has 3 text inputs: email, password (but it's type=password), display name
+      // Find inputs by role - register form has 2 text inputs: email, display name
       const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
       const emailInput = inputs[0]; // First input: email (type="email" has textbox role)
-      const displayNameInput = inputs[1]; // Third input: display name
+      const displayNameInput = inputs[1]; // Second input: display name
 
-      // Password input has type="password" so won't have textbox role
-      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
-      expect(passwordInput).toBeInTheDocument();
-
-      // Role select
-      const roleSelect = tabPanel.querySelector('select') as HTMLSelectElement;
-      expect(roleSelect).toBeInTheDocument();
+      // Password inputs have type="password" so won't have textbox role
+      const passwordInputs = tabPanel.querySelectorAll('input[type="password"]');
+      expect(passwordInputs).toHaveLength(2); // password and confirmPassword
+      const passwordInput = passwordInputs[0] as HTMLInputElement;
+      const confirmPasswordInput = passwordInputs[1] as HTMLInputElement;
 
       await user.type(emailInput, 'new@example.com');
-      await user.type(passwordInput, 'newpassword123');
+      await user.type(passwordInput, 'NewPassword123');
+      await user.type(confirmPasswordInput, 'NewPassword123');
       await user.type(displayNameInput, 'New User');
-      await user.selectOptions(roleSelect, 'Editor');
 
       // Submit
       const createButton = screen.getByRole('button', { name: 'Create Account' });
@@ -572,9 +580,9 @@ describe('Home page (Landing Page)', () => {
       await waitFor(() => {
         expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', {
           email: 'new@example.com',
-          password: 'newpassword123',
+          password: 'NewPassword123',
           displayName: 'New User',
-          role: 'Editor'
+          role: 'User' // Default role when selector is not shown
         });
       });
 
@@ -583,6 +591,10 @@ describe('Home page (Landing Page)', () => {
 
     it('displays login error message', async () => {
       const user = userEvent.setup();
+
+      // Setup the default response for auth check
+      mockedApi.get.mockResolvedValue(null);
+
       mockedApi.post.mockRejectedValueOnce({ message: 'Invalid credentials' });
 
       render(<Home />);
@@ -596,7 +608,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
         expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
@@ -609,7 +621,7 @@ describe('Home page (Landing Page)', () => {
       await user.type(emailInput, 'bad@example.com');
       await user.type(passwordInput, 'wrongpassword');
 
-      const loginButton = screen.getByRole('button', { name: 'Login' });
+      const loginButton = screen.getByRole('button', { name: 'Sign In' });
       await user.click(loginButton);
 
       await waitFor(() => {
@@ -619,6 +631,10 @@ describe('Home page (Landing Page)', () => {
 
     it('displays register error message', async () => {
       const user = userEvent.setup();
+
+      // Setup the default response for auth check
+      mockedApi.get.mockResolvedValue(null);
+
       mockedApi.post.mockRejectedValueOnce({ message: 'Email already exists' });
 
       render(<Home />);
@@ -632,7 +648,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
       });
 
       // Switch to register tab
@@ -648,10 +664,15 @@ describe('Home page (Landing Page)', () => {
       const tabPanel = screen.getByRole('tabpanel');
       const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
       const emailInput = inputs[0];
-      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
+
+      // Password inputs have type="password" so won't have textbox role
+      const passwordInputs = tabPanel.querySelectorAll('input[type="password"]');
+      const passwordInput = passwordInputs[0] as HTMLInputElement;
+      const confirmPasswordInput = passwordInputs[1] as HTMLInputElement;
 
       await user.type(emailInput, 'existing@example.com');
-      await user.type(passwordInput, 'password123');
+      await user.type(passwordInput, 'Password123');
+      await user.type(confirmPasswordInput, 'Password123');
 
       const createButton = screen.getByRole('button', { name: 'Create Account' });
       await user.click(createButton);
@@ -663,6 +684,10 @@ describe('Home page (Landing Page)', () => {
 
     it('clears error message when switching tabs', async () => {
       const user = userEvent.setup();
+
+      // Setup the default response for auth check
+      mockedApi.get.mockResolvedValue(null);
+
       mockedApi.post.mockRejectedValueOnce({ message: 'Login failed' });
 
       render(<Home />);
@@ -676,7 +701,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
         expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
@@ -687,12 +712,13 @@ describe('Home page (Landing Page)', () => {
       const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
 
       await user.type(emailInput, 'test@example.com');
-      await user.type(passwordInput, 'wrong');
+      await user.type(passwordInput, 'WrongPassword123');
 
-      const loginButton = screen.getByRole('button', { name: 'Login' });
+      const loginButton = screen.getByRole('button', { name: 'Sign In' });
       await user.click(loginButton);
 
       await waitFor(() => {
+        // The actual error message from the rejected promise
         expect(screen.getByText('Login failed')).toBeInTheDocument();
       });
 
@@ -707,6 +733,10 @@ describe('Home page (Landing Page)', () => {
 
     it('clears error when modal is closed', async () => {
       const user = userEvent.setup();
+
+      // Setup the default response for auth check
+      mockedApi.get.mockResolvedValue(null);
+
       mockedApi.post.mockRejectedValueOnce({ message: 'Test error' });
 
       render(<Home />);
@@ -720,7 +750,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
         expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
@@ -731,9 +761,9 @@ describe('Home page (Landing Page)', () => {
       const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
 
       await user.type(emailInput, 'test@example.com');
-      await user.type(passwordInput, 'wrong');
+      await user.type(passwordInput, 'WrongPassword123');
 
-      const loginButton = screen.getByRole('button', { name: 'Login' });
+      const loginButton = screen.getByRole('button', { name: 'Sign In' });
       await user.click(loginButton);
 
       await waitFor(() => {
@@ -747,6 +777,10 @@ describe('Home page (Landing Page)', () => {
 
     it('submits register form with optional display name omitted', async () => {
       const user = userEvent.setup();
+
+      // Setup the default response for auth check
+      mockedApi.get.mockResolvedValue(null);
+
       mockedApi.post.mockResolvedValueOnce({
         user: {
           id: 'user-3',
@@ -767,7 +801,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
       });
 
       // Switch to register tab
@@ -783,10 +817,15 @@ describe('Home page (Landing Page)', () => {
       const tabPanel = screen.getByRole('tabpanel');
       const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
       const emailInput = inputs[0];
-      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
+
+      // Password inputs have type="password" so won't have textbox role
+      const passwordInputs = tabPanel.querySelectorAll('input[type="password"]');
+      const passwordInput = passwordInputs[0] as HTMLInputElement;
+      const confirmPasswordInput = passwordInputs[1] as HTMLInputElement;
 
       await user.type(emailInput, 'minimal@example.com');
-      await user.type(passwordInput, 'password123');
+      await user.type(passwordInput, 'Password123');
+      await user.type(confirmPasswordInput, 'Password123');
 
       // Display name is optional - leave it empty
 
@@ -796,7 +835,7 @@ describe('Home page (Landing Page)', () => {
       await waitFor(() => {
         expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', {
           email: 'minimal@example.com',
-          password: 'password123',
+          password: 'Password123',
           displayName: undefined,
           role: 'User'
         });
@@ -837,6 +876,10 @@ describe('Home page (Landing Page)', () => {
 
     it('handles login error with generic message when no error message provided', async () => {
       const user = userEvent.setup();
+
+      // Setup the default response for auth check
+      mockedApi.get.mockResolvedValue(null);
+
       mockedApi.post.mockRejectedValueOnce(new Error());
 
       render(<Home />);
@@ -850,7 +893,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
         expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
@@ -863,16 +906,20 @@ describe('Home page (Landing Page)', () => {
       await user.type(emailInput, 'test@example.com');
       await user.type(passwordInput, 'password');
 
-      const loginButton = screen.getByRole('button', { name: 'Login' });
+      const loginButton = screen.getByRole('button', { name: 'Sign In' });
       await user.click(loginButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Accesso non riuscito.')).toBeInTheDocument();
+        expect(screen.getByText('Login failed. Please check your credentials.')).toBeInTheDocument();
       });
     });
 
     it('handles register error with generic message when no error message provided', async () => {
       const user = userEvent.setup();
+
+      // Setup the default response for auth check
+      mockedApi.get.mockResolvedValue(null);
+
       mockedApi.post.mockRejectedValueOnce({});
 
       render(<Home />);
@@ -886,7 +933,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
       });
 
       // Switch to register tab
@@ -902,22 +949,27 @@ describe('Home page (Landing Page)', () => {
       const tabPanel = screen.getByRole('tabpanel');
       const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
       const emailInput = inputs[0];
-      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
+
+      // Password inputs have type="password" so won't have textbox role
+      const passwordInputs = tabPanel.querySelectorAll('input[type="password"]');
+      const passwordInput = passwordInputs[0] as HTMLInputElement;
+      const confirmPasswordInput = passwordInputs[1] as HTMLInputElement;
 
       await user.type(emailInput, 'test@example.com');
-      await user.type(passwordInput, 'password123');
+      await user.type(passwordInput, 'Password123');
+      await user.type(confirmPasswordInput, 'Password123');
 
       const createButton = screen.getByRole('button', { name: 'Create Account' });
       await user.click(createButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Registrazione non riuscita.')).toBeInTheDocument();
+        expect(screen.getByText('Registration failed. Please try again.')).toBeInTheDocument();
       });
     });
   });
 
   describe('Additional Coverage', () => {
-    it('renders all role options in register form', async () => {
+    it('register form does not show role selector when showRoleSelector is false', async () => {
       const user = userEvent.setup();
       render(<Home />);
 
@@ -930,7 +982,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
       });
 
       // Switch to register tab
@@ -941,15 +993,9 @@ describe('Home page (Landing Page)', () => {
         expect(screen.getByText('Create Your Account')).toBeInTheDocument();
       });
 
-      // Check all role options exist
-      const roleSelect = await screen.findByLabelText(/Select user role/i);
-      expect(roleSelect).toBeInTheDocument();
-
-      const options = within(roleSelect as HTMLElement).getAllByRole('option');
-      expect(options).toHaveLength(3);
-      expect(options[0]).toHaveValue('User');
-      expect(options[1]).toHaveValue('Editor');
-      expect(options[2]).toHaveValue('Admin');
+      // Role selector should NOT be present when showRoleSelector is false
+      const roleSelect = screen.queryByLabelText(/Select user role/i);
+      expect(roleSelect).not.toBeInTheDocument();
     });
 
     it('switches between login and register tabs with Login tab initially selected', async () => {
@@ -965,7 +1011,7 @@ describe('Home page (Landing Page)', () => {
       await user.click(getStartedButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to MeepleAI')).toBeInTheDocument();
       });
 
       // Check login tab is initially selected

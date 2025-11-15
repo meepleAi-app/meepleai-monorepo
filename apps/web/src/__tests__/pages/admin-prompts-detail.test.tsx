@@ -110,7 +110,7 @@ describe("PromptTemplateDetail Page", () => {
 
       const { container } = render(<PromptTemplateDetail />);
       const loadingDiv = container.querySelector(
-        'div[style*="min-height"]'
+        '.min-h-screen'
       );
 
       expect(loadingDiv).toBeInTheDocument();

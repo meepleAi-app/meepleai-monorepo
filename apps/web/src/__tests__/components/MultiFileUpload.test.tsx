@@ -1254,7 +1254,7 @@ describe('MultiFileUpload Component', () => {
       const heading = screen.getByRole('heading', { level: 3 });
       // Shadcn/UI uses Tailwind CSS classes, not inline styles
       expect(heading).toBeInTheDocument();
-      expect(heading).toHaveTextContent('Upload PDF Game Rules');
+      expect(heading).toHaveTextContent('Multi-File Upload');
     });
 
     it('applies correct game badge styles', () => {

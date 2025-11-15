@@ -135,6 +135,17 @@ export const resetAllMocks = () => {
   (mockApi.chat.updateMessage as jest.Mock).mockReset();
   (mockApi.chat.deleteMessage as jest.Mock).mockReset();
 
+  // Reset ChatThreads API mocks (SPRINT-3 #858)
+  if (mockApi.chatThreads) {
+    (mockApi.chatThreads.getByGame as jest.Mock)?.mockReset();
+    (mockApi.chatThreads.getById as jest.Mock)?.mockReset();
+    (mockApi.chatThreads.create as jest.Mock)?.mockReset();
+    (mockApi.chatThreads.delete as jest.Mock)?.mockReset();
+    (mockApi.chatThreads.addMessage as jest.Mock)?.mockReset();
+    (mockApi.chatThreads.updateMessage as jest.Mock)?.mockReset();
+    (mockApi.chatThreads.deleteMessage as jest.Mock)?.mockReset();
+  }
+
   // Reset streaming mocks
   mockStartStreaming.mockReset();
   mockStopStreaming.mockReset();

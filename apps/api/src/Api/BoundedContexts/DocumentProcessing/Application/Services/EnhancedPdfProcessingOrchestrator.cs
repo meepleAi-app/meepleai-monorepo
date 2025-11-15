@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -33,11 +34,12 @@ public class EnhancedPdfProcessingOrchestrator
     /// ISSUE-1174: Constructor uses keyed services to resolve stage extractors.
     /// This prevents circular DI dependency where IPdfTextExtractor would otherwise
     /// resolve to OrchestratedPdfTextExtractor → creating a circular chain.
+    /// POST-MERGE: Uses PdfExtractorKeys constants for compile-time safety.
     /// </summary>
     public EnhancedPdfProcessingOrchestrator(
-        [FromKeyedServices("unstructured")] IPdfTextExtractor unstructuredExtractor,
-        [FromKeyedServices("smoldocling")] IPdfTextExtractor smolDoclingExtractor,
-        [FromKeyedServices("docnet")] IPdfTextExtractor docnetExtractor,
+        [FromKeyedServices(DocumentProcessingServiceExtensions.PdfExtractorKeys.Unstructured)] IPdfTextExtractor unstructuredExtractor,
+        [FromKeyedServices(DocumentProcessingServiceExtensions.PdfExtractorKeys.SmolDocling)] IPdfTextExtractor smolDoclingExtractor,
+        [FromKeyedServices(DocumentProcessingServiceExtensions.PdfExtractorKeys.Docnet)] IPdfTextExtractor docnetExtractor,
         ILogger<EnhancedPdfProcessingOrchestrator> logger,
         IConfiguration configuration,
         IOptions<PdfProcessingOptions> options)

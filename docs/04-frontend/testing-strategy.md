@@ -183,6 +183,41 @@ quality_gates:
 
 ---
 
+## Element Identification Strategy
+
+### Query Priority (from Testing Library)
+
+1. **Accessible Queries** (Preferred)
+   - `getByRole()` - Best for semantic elements
+   - `getByLabelText()` - Best for form inputs
+   - `getByPlaceholderText()` - Good for inputs
+   - `getByText()` - Use with i18n helpers
+
+2. **Test IDs** (When Necessary)
+   - `getByTestId()` - Explicit identifiers
+   - Use when accessible queries insufficient
+
+3. **Avoid** (Fragile)
+   - CSS selectors (`.className`)
+   - Index-based selectors (`.nth()`, `.first()`)
+   - DOM traversal (`closest()`, `querySelector()`)
+
+### Test ID Naming Convention
+
+```typescript
+[component]-[id?]-[element?]-[action?]
+
+Examples:
+- message-123                  (message with ID 123)
+- message-123-delete           (delete button for message 123)
+- chat-message-list            (message list container)
+- user-row-456                 (user table row with ID 456)
+```
+
+**See**: [UI Element Identification Guide](../../02-development/testing/ui-element-identification-guide.md) for comprehensive guidelines and migration roadmap.
+
+---
+
 ## Testing Best Practices
 
 1. **AAA Pattern**: Arrange, Act, Assert
@@ -190,12 +225,16 @@ quality_gates:
 3. **Isolation**: Each test independent
 4. **Fast**: Unit tests <1s, integration <5s
 5. **Readable**: Clear test names and assertions
+6. **Accessible Queries**: Prefer `getByRole()` over test IDs
+7. **Unique Identifiers**: Never use index-based selectors in lists
 
 ---
 
 **See Also**:
-- [Test Writing Guide](../../testing/test-writing-guide.md)
+- [UI Element Identification Guide](../../02-development/testing/ui-element-identification-guide.md) ⭐ **NEW**
+- [Test Writing Guide](../../02-development/testing/test-writing-guide.md)
 - [Accessibility Standards](./accessibility-standards.md)
+- [E2E Patterns](../../02-development/testing/e2e-patterns.md)
 
 ---
 

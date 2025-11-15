@@ -2,7 +2,7 @@
 
 **Project**: Italian Board Game Rules AI Assistant
 **Version**: 2.0
-**Last Updated**: 2025-11-13
+**Last Updated**: 2025-11-15
 
 ---
 
@@ -81,8 +81,9 @@
   - [RAG Service Migration](./02-development/implementation/bgai-023-ragservice-migration.md)
   - [Cost Tracking Verification](./02-development/implementation/bgai-026-cost-tracking.md)
 
-- **[testing/](./02-development/testing/)** - Testing documentation (21 files)
+- **[testing/](./02-development/testing/)** - Testing documentation (22 files)
   - [Test Writing Guide](./02-development/testing/test-writing-guide.md) ⭐
+  - [UI Element Identification Guide](./02-development/testing/ui-element-identification-guide.md) ⭐ **NEW** - Test selector best practices
   - [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md) (30 pages)
   - [Test Patterns](./02-development/testing/test-patterns.md)
   - [Accessibility Testing](./02-development/testing/accessibility-testing-guide.md)
@@ -226,8 +227,8 @@
 
 ## 📊 Documentation Statistics
 
-- **Total Files**: 115 markdown documents
-- **Total Pages**: ~800 pages (estimated)
+- **Total Files**: 116 markdown documents
+- **Total Pages**: ~810 pages (estimated)
 - **Categories**: 11 numbered folders (00-10)
 - **Largest Docs**:
   - Legacy Code Inventory: 150+ pages
@@ -341,5 +342,5 @@ See [README.md - Contributing Documentation](./README.md#-contributing-documenta
 **Index Metadata**:
 - **Version**: 2.0
 - **Maintainer**: Documentation Team
-- **Last Updated**: 2025-11-13
-- **Next Review**: 2025-12-13
+- **Last Updated**: 2025-11-15
+- **Next Review**: 2025-12-15

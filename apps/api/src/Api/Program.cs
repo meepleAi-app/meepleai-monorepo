@@ -137,6 +137,11 @@ builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSec
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 
+// BGAI-021 (Issue #963): AI provider configuration with startup validation
+builder.Services.Configure<AiProviderSettings>(builder.Configuration.GetSection(AiProviderSettings.SectionName));
+builder.Services.AddSingleton<IValidateOptions<AiProviderSettings>, AiProviderValidator>();
+builder.Services.AddOptions<AiProviderSettings>().ValidateOnStart(); // Trigger validation on startup
+
 // Infrastructure services (DB, Cache, HTTP clients)
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
 

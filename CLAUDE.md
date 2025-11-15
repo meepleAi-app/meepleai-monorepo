@@ -210,11 +210,12 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 
 **100% Complete** (2025-11-15):
 - ✅ 7/7 contexts migrated to CQRS (ALL at 100%)
-- ✅ 75+ CQRS handlers operational (including 3 streaming handlers)
-- ✅ 3,010 lines legacy code removed
-- ✅ 63+ endpoints migrated to MediatR
+- ✅ 83+ CQRS handlers operational (including 3 streaming handlers + 8 agent handlers)
+- ✅ 4,334 lines legacy code removed (+1,324 from Issue #1188)
+- ✅ 71+ endpoints migrated to MediatR (+8 agent endpoints)
 - ✅ Zero build errors
 - ✅ Streaming RAG/QA/Setup migrated to IAsyncEnumerable pattern
+- ✅ Agent services (Chess, Feedback, FollowUp) migrated to CQRS (#1188)
 
 **Contexts**: All 7 contexts at 100% - Authentication, GameManagement, KnowledgeBase, DocumentProcessing, WorkflowIntegration, SystemConfiguration, Administration
 

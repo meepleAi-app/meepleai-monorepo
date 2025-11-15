@@ -1,43 +1,35 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// Handles chat thread closure command.
+/// Handler for GetUserChatsQuery.
+/// Retrieves all chat threads for a user with pagination.
 /// </summary>
-public class CloseThreadCommandHandler : ICommandHandler<CloseThreadCommand, ChatThreadDto>
+public class GetUserChatsQueryHandler : IQueryHandler<GetUserChatsQuery, IReadOnlyList<ChatThreadDto>>
 {
     private readonly IChatThreadRepository _threadRepository;
-    private readonly IUnitOfWork _unitOfWork;
 
-    public CloseThreadCommandHandler(
-        IChatThreadRepository threadRepository,
-        IUnitOfWork unitOfWork)
+    public GetUserChatsQueryHandler(IChatThreadRepository threadRepository)
     {
         _threadRepository = threadRepository;
-        _unitOfWork = unitOfWork;
     }
 
-    public async Task<ChatThreadDto> Handle(CloseThreadCommand command, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ChatThreadDto>> Handle(GetUserChatsQuery request, CancellationToken cancellationToken)
     {
-        // Retrieve thread
-        var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken);
-        if (thread == null)
-            throw new InvalidOperationException($"Thread with ID {command.ThreadId} not found");
+        // Get user's threads (repository returns ordered by LastMessageAt descending)
+        var threads = await _threadRepository.FindByUserIdAsync(request.UserId, cancellationToken);
 
-        // Close thread (domain logic validates state)
-        thread.CloseThread();
+        // Apply pagination
+        var paginatedThreads = threads
+            .Skip(request.Skip)
+            .Take(request.Take)
+            .ToList();
 
-        // Persist
-        await _threadRepository.UpdateAsync(thread, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Map to DTO
-        return MapToDto(thread);
+        return paginatedThreads.Select(MapToDto).ToList();
     }
 
     private static ChatThreadDto MapToDto(Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread thread)

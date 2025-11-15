@@ -29,9 +29,19 @@ public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatT
         var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken)
             ?? throw new InvalidOperationException($"Chat thread with ID {command.ThreadId} not found");
 
-        // Add message via domain method
-        var message = new ChatMessage(command.Content, command.Role);
-        thread.AddMessage(message);
+        // Add message via domain method (handles sequencing internally)
+        if (command.Role == ChatMessage.UserRole)
+        {
+            thread.AddUserMessage(command.Content);
+        }
+        else if (command.Role == ChatMessage.AssistantRole)
+        {
+            thread.AddAssistantMessage(command.Content);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Unknown role: {command.Role}");
+        }
 
         // Persist
         await _threadRepository.UpdateAsync(thread, cancellationToken);
@@ -44,9 +54,16 @@ public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatT
     private static ChatThreadDto MapToDto(Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread thread)
     {
         var messageDtos = thread.Messages.Select(m => new ChatMessageDto(
+            Id: m.Id,
             Content: m.Content,
             Role: m.Role,
-            Timestamp: m.Timestamp
+            Timestamp: m.Timestamp,
+            SequenceNumber: m.SequenceNumber,
+            UpdatedAt: m.UpdatedAt,
+            IsDeleted: m.IsDeleted,
+            DeletedAt: m.DeletedAt,
+            DeletedByUserId: m.DeletedByUserId,
+            IsInvalidated: m.IsInvalidated
         )).ToList();
 
         return new ChatThreadDto(

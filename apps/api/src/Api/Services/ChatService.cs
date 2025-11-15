@@ -5,6 +5,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
 
+/// <summary>
+/// LEGACY SERVICE - Use KnowledgeBase bounded context CQRS handlers instead.
+/// This service is deprecated and will be removed in a future version.
+/// See: KnowledgeBaseEndpoints.cs for new DDD/CQRS endpoints using /chat-threads.
+/// Issue #1184: Migrated to CQRS pattern.
+/// </summary>
+[Obsolete("Use CQRS handlers in KnowledgeBase bounded context instead. See KnowledgeBaseEndpoints.cs")]
 public class ChatService
 {
     private readonly MeepleAiDbContext _db;

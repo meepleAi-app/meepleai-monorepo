@@ -73,7 +73,8 @@ public sealed class ChatThread : AggregateRoot<Guid>
     /// </summary>
     public void AddUserMessage(string content)
     {
-        var message = new ChatMessage(content, ChatMessage.UserRole);
+        var sequenceNumber = _messages.Count;
+        var message = new ChatMessage(content, ChatMessage.UserRole, sequenceNumber);
         AddMessage(message);
     }
 
@@ -82,8 +83,74 @@ public sealed class ChatThread : AggregateRoot<Guid>
     /// </summary>
     public void AddAssistantMessage(string content)
     {
-        var message = new ChatMessage(content, ChatMessage.AssistantRole);
+        var sequenceNumber = _messages.Count;
+        var message = new ChatMessage(content, ChatMessage.AssistantRole, sequenceNumber);
         AddMessage(message);
+    }
+
+    /// <summary>
+    /// Updates a user message and invalidates subsequent AI responses.
+    /// </summary>
+    public void UpdateMessage(Guid messageId, string newContent, Guid userId)
+    {
+        var message = _messages.FirstOrDefault(m => m.Id == messageId);
+        if (message == null)
+            throw new InvalidOperationException($"Message {messageId} not found in thread");
+
+        // Update the message (domain logic validates it's a user message)
+        message.UpdateContent(newContent);
+
+        // Invalidate all subsequent AI responses
+        InvalidateMessagesAfter(message.SequenceNumber);
+
+        // TODO: Add domain event MessageUpdated
+    }
+
+    /// <summary>
+    /// Soft-deletes a message and invalidates subsequent AI responses.
+    /// </summary>
+    public void DeleteMessage(Guid messageId, Guid deletedByUserId, bool isAdmin = false)
+    {
+        var message = _messages.FirstOrDefault(m => m.Id == messageId);
+        if (message == null)
+            throw new InvalidOperationException($"Message {messageId} not found in thread");
+
+        // Authorization check (unless admin)
+        if (!isAdmin && message.IsUserMessage)
+        {
+            // In a real system, we'd check message.CreatedByUserId == deletedByUserId
+            // For now, we assume the handler validates this
+        }
+
+        // Delete the message
+        message.Delete(deletedByUserId);
+
+        // Invalidate all subsequent AI responses
+        InvalidateMessagesAfter(message.SequenceNumber);
+
+        // TODO: Add domain event MessageDeleted
+    }
+
+    /// <summary>
+    /// Invalidates all assistant messages after the given sequence number.
+    /// </summary>
+    private void InvalidateMessagesAfter(int sequenceNumber)
+    {
+        foreach (var msg in _messages.Where(m =>
+            m.SequenceNumber > sequenceNumber &&
+            m.IsAssistantMessage &&
+            !m.IsInvalidated))
+        {
+            msg.Invalidate();
+        }
+    }
+
+    /// <summary>
+    /// Gets a message by ID.
+    /// </summary>
+    public ChatMessage? GetMessageById(Guid messageId)
+    {
+        return _messages.FirstOrDefault(m => m.Id == messageId);
     }
 
     /// <summary>

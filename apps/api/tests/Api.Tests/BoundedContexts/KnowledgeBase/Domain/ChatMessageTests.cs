@@ -10,11 +10,12 @@ public class ChatMessageTests
     public void ChatMessage_WithValidContent_CreatesSuccessfully()
     {
         // Arrange & Act
-        var message = new ChatMessage("Hello", ChatMessage.UserRole);
+        var message = new ChatMessage("Hello", ChatMessage.UserRole, sequenceNumber: 1);
 
         // Assert
         Assert.Equal("Hello", message.Content);
         Assert.Equal(ChatMessage.UserRole, message.Role);
+        Assert.Equal(1, message.SequenceNumber);
         Assert.True(message.IsUserMessage);
         Assert.False(message.IsAssistantMessage);
     }
@@ -23,10 +24,11 @@ public class ChatMessageTests
     public void ChatMessage_AssistantRole_SetsCorrectly()
     {
         // Arrange & Act
-        var message = new ChatMessage("Response", ChatMessage.AssistantRole);
+        var message = new ChatMessage("Response", ChatMessage.AssistantRole, sequenceNumber: 2);
 
         // Assert
         Assert.Equal(ChatMessage.AssistantRole, message.Role);
+        Assert.Equal(2, message.SequenceNumber);
         Assert.True(message.IsAssistantMessage);
         Assert.False(message.IsUserMessage);
     }
@@ -38,7 +40,7 @@ public class ChatMessageTests
     {
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() =>
-            new ChatMessage(invalidContent, ChatMessage.UserRole));
+            new ChatMessage(invalidContent, ChatMessage.UserRole, sequenceNumber: 1));
         Assert.Contains("content cannot be empty", exception.Message);
     }
 
@@ -50,7 +52,7 @@ public class ChatMessageTests
 
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() =>
-            new ChatMessage(longContent, ChatMessage.UserRole));
+            new ChatMessage(longContent, ChatMessage.UserRole, sequenceNumber: 1));
         Assert.Contains("cannot exceed 10,000 characters", exception.Message);
     }
 
@@ -59,7 +61,7 @@ public class ChatMessageTests
     {
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() =>
-            new ChatMessage("Content", "invalid_role"));
+            new ChatMessage("Content", "invalid_role", sequenceNumber: 1));
         Assert.Contains("must be 'user' or 'assistant'", exception.Message);
     }
 
@@ -67,7 +69,7 @@ public class ChatMessageTests
     public void ChatMessage_TrimsWhitespace()
     {
         // Arrange & Act
-        var message = new ChatMessage("  Content  ", ChatMessage.UserRole);
+        var message = new ChatMessage("  Content  ", ChatMessage.UserRole, sequenceNumber: 1);
 
         // Assert
         Assert.Equal("Content", message.Content);
@@ -80,7 +82,7 @@ public class ChatMessageTests
         var before = DateTime.UtcNow;
 
         // Act
-        var message = new ChatMessage("Test", ChatMessage.UserRole);
+        var message = new ChatMessage("Test", ChatMessage.UserRole, sequenceNumber: 1);
 
         // Assert
         var after = DateTime.UtcNow;

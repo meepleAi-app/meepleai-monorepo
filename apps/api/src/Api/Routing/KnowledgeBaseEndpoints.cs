@@ -248,19 +248,13 @@ public static class KnowledgeBaseEndpoints
             {
                 if (gameId.HasValue)
                 {
-                    var query = new GetChatThreadsByGameQuery(gameId.Value);
-                    var results = await mediator.Send(query, ct);
-
-                    // Filter by user (non-admin can only see own threads)
                     if (!Guid.TryParse(session.User.Id, out var userId))
                     {
                         return Results.BadRequest(new { error = "Invalid user ID" });
                     }
 
-                    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-                    {
-                        results = results.Where(t => t.UserId == userId).ToList();
-                    }
+                    var query = new GetChatThreadsByGameQuery(gameId.Value, userId);
+                    var results = await mediator.Send(query, ct);
 
                     return Results.Ok(new { threads = results, count = results.Count });
                 }
@@ -527,6 +521,155 @@ public static class KnowledgeBaseEndpoints
         .ProducesProblem(404)
         .ProducesProblem(403)
         .ProducesProblem(500);
+
+        // ISSUE-1184: Update message in thread
+        group.MapPut("/chat-threads/{threadId:guid}/messages/{messageId:guid}", async (
+            Guid threadId,
+            Guid messageId,
+            UpdateMessageRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
+            if (string.IsNullOrWhiteSpace(req.Content))
+            {
+                return Results.BadRequest(new { error = "Content is required" });
+            }
+
+            try
+            {
+                var command = new UpdateMessageCommand(threadId, messageId, req.Content, userId);
+                var result = await mediator.Send(command, ct);
+
+                logger.LogInformation("User {UserId} updated message {MessageId} in thread {ThreadId}",
+                    userId, messageId, threadId);
+
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                logger.LogWarning(ex, "Message or thread not found: {Message}", ex.Message);
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                logger.LogWarning(ex, "Unauthorized message update attempt");
+                return Results.Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                logger.LogWarning(ex, "Invalid message update operation");
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unexpected error updating message {MessageId}", messageId);
+                return Results.Problem(ex.Message, statusCode: 500);
+            }
+        })
+        .WithName("UpdateChatMessage")
+        .WithTags("ChatThreads");
+
+        // ISSUE-1184: Delete message from thread
+        group.MapDelete("/chat-threads/{threadId:guid}/messages/{messageId:guid}", async (
+            Guid threadId,
+            Guid messageId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
+            var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+            try
+            {
+                var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
+                var result = await mediator.Send(command, ct);
+
+                logger.LogInformation("User {UserId} deleted message {MessageId} from thread {ThreadId} (admin: {IsAdmin})",
+                    userId, messageId, threadId, isAdmin);
+
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                logger.LogWarning(ex, "Message or thread not found: {Message}", ex.Message);
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                logger.LogWarning(ex, "Unauthorized message deletion attempt");
+                return Results.Forbid();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unexpected error deleting message {MessageId}", messageId);
+                return Results.Problem(ex.Message, statusCode: 500);
+            }
+        })
+        .WithName("DeleteChatMessage")
+        .WithTags("ChatThreads");
+
+        // ISSUE-1184: Delete chat thread
+        group.MapDelete("/chat-threads/{threadId:guid}", async (
+            Guid threadId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
+            try
+            {
+                var command = new DeleteChatThreadCommand(threadId, userId);
+                await mediator.Send(command, ct);
+
+                logger.LogInformation("User {UserId} deleted thread {ThreadId}", userId, threadId);
+
+                return Results.NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                logger.LogWarning(ex, "Thread not found: {Message}", ex.Message);
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                logger.LogWarning(ex, "Unauthorized thread deletion attempt");
+                return Results.Forbid();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unexpected error deleting thread {ThreadId}", threadId);
+                return Results.Problem(ex.Message, statusCode: 500);
+            }
+        })
+        .WithName("DeleteChatThread")
+        .WithTags("ChatThreads");
 
         return group;
     }

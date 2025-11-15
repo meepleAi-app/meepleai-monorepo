@@ -164,7 +164,6 @@ Add this section to `appsettings.json`:
       "Ollama": {
         "Enabled": true,
         "BaseUrl": "http://localhost:11434",
-        "ApiKey": "",
         "Models": [
           "llama3:8b",
           "mistral",
@@ -175,7 +174,6 @@ Add this section to `appsettings.json`:
       "OpenRouter": {
         "Enabled": true,
         "BaseUrl": "https://openrouter.ai/api/v1",
-        "ApiKey": "${OPENROUTER_API_KEY}",
         "Models": [
           "meta-llama/llama-3.3-70b-instruct:free",
           "anthropic/claude-3.5-haiku",
@@ -203,13 +201,11 @@ AI (root section)
 │   ├── Ollama (ProviderConfig)
 │   │   ├── Enabled (bool)
 │   │   ├── BaseUrl (string)
-│   │   ├── ApiKey (string)
 │   │   ├── Models (string[])
 │   │   └── HealthCheckIntervalSeconds (int)
 │   └── OpenRouter (ProviderConfig)
 │       ├── Enabled (bool)
 │       ├── BaseUrl (string)
-│       ├── ApiKey (string)
 │       ├── Models (string[])
 │       └── HealthCheckIntervalSeconds (int)
 ├── FallbackChain (string[])
@@ -218,6 +214,8 @@ AI (root section)
     ├── OpenDurationSeconds (int)
     └── SuccessThreshold (int)
 ```
+
+**Note**: API keys (e.g., OpenRouter) are configured via environment variables (`OPENROUTER_API_KEY` or `OPENROUTER_API_KEY_FILE`), not in the configuration hierarchy.
 
 ---
 
@@ -271,7 +269,6 @@ AI (root section)
 |----------|------|----------|---------|-------------|
 | **Enabled** | `bool` | Yes | `true` | Runtime toggle for provider availability |
 | **BaseUrl** | `string` | Yes (if enabled) | - | Provider API endpoint URL |
-| **ApiKey** | `string` | No | `""` | API authentication key (supports env vars) |
 | **Models** | `string[]` | No | `[]` | List of available models for this provider |
 | **HealthCheckIntervalSeconds** | `int` | No | `60` | Health check frequency in seconds |
 
@@ -279,6 +276,13 @@ AI (root section)
 1. At least one provider must have `Enabled = true`
 2. Enabled providers must have non-empty `BaseUrl`
 3. `HealthCheckIntervalSeconds` must be positive (> 0)
+
+**⚠️ API Key Configuration**:
+API keys are **NOT** configured in `appsettings.json`. Instead, use environment variables:
+- `OPENROUTER_API_KEY`: Direct environment variable (development)
+- `OPENROUTER_API_KEY_FILE`: Path to Docker secret file (production)
+
+See [API Key Configuration](#api-key-configuration) section below for details.
 
 **Example**:
 ```json
@@ -288,14 +292,12 @@ AI (root section)
       "Ollama": {
         "Enabled": true,
         "BaseUrl": "http://localhost:11434",
-        "ApiKey": "",  // Ollama doesn't require API key
         "Models": ["llama3:8b", "mistral"],
         "HealthCheckIntervalSeconds": 60
       },
       "OpenRouter": {
         "Enabled": false,  // Disabled provider
         "BaseUrl": "https://openrouter.ai/api/v1",
-        "ApiKey": "${OPENROUTER_API_KEY}",  // Environment variable
         "Models": ["meta-llama/llama-3.3-70b-instruct:free"],
         "HealthCheckIntervalSeconds": 120
       }
@@ -303,6 +305,8 @@ AI (root section)
   }
 }
 ```
+
+**Note**: OpenRouter API key is configured via `OPENROUTER_API_KEY` environment variable, not in `appsettings.json`.
 
 ---
 
@@ -418,8 +422,7 @@ AI (root section)
       },
       "OpenRouter": {
         "Enabled": true,
-        "BaseUrl": "https://openrouter.ai/api/v1",
-        "ApiKey": "${OPENROUTER_API_KEY}"
+        "BaseUrl": "https://openrouter.ai/api/v1"
       }
     }
   }
@@ -538,23 +541,39 @@ Reason: "Admin tier routing (LlmRouting.AdminModel)"
 
 ## Advanced Features
 
-### Environment Variable Substitution
+### API Key Configuration
 
-**API keys should NEVER be committed to `appsettings.json`**. Use environment variable substitution:
+**⚠️ CRITICAL**: API keys are **NOT** configured in `appsettings.json`. They are read from environment variables using the Docker Secrets pattern (SEC-708).
 
-```json
-{
-  "AI": {
-    "Providers": {
-      "OpenRouter": {
-        "ApiKey": "${OPENROUTER_API_KEY}"  // Replaced at runtime
-      }
-    }
-  }
-}
+#### How It Works
+
+The system reads API keys from environment variables in this priority order:
+
+1. **`{KEY}_FILE`**: Path to a Docker secret file (production recommended)
+2. **`{KEY}`**: Direct environment variable value (development only)
+
+**Example for OpenRouter**:
+- `OPENROUTER_API_KEY_FILE=/run/secrets/openrouter_api_key` (Docker Secrets)
+- `OPENROUTER_API_KEY=sk-or-v1-abc123...` (Direct value)
+
+#### Setup Methods
+
+**Option 1: Docker Secrets (Production)**
+```yaml
+# docker-compose.yml
+services:
+  api:
+    environment:
+      - OPENROUTER_API_KEY_FILE=/run/secrets/openrouter_api_key
+    secrets:
+      - openrouter_api_key
+
+secrets:
+  openrouter_api_key:
+    file: ./secrets/openrouter_api_key.txt
 ```
 
-**Environment Variable Setup**:
+**Option 2: Environment Variables (Development)**
 
 **Linux/macOS**:
 ```bash
@@ -566,10 +585,44 @@ export OPENROUTER_API_KEY="sk-or-v1-abc123..."
 $env:OPENROUTER_API_KEY = "sk-or-v1-abc123..."
 ```
 
-**Docker**:
-```yaml
-environment:
-  - OPENROUTER_API_KEY=sk-or-v1-abc123...
+**Docker Compose (.env file)**:
+```bash
+# .env file (DO NOT commit to Git)
+OPENROUTER_API_KEY=sk-or-v1-abc123...
+```
+
+#### Verification
+
+Check logs on startup to verify API key loading:
+
+```
+✅ Loaded secret 'OPENROUTER_API_KEY' from file: /run/secrets/openrouter_api_key (45 bytes)
+```
+
+Or for direct value:
+
+```
+⚠️  Loaded secret 'OPENROUTER_API_KEY' from direct configuration (not recommended for production)
+```
+
+#### Common Mistakes
+
+❌ **WRONG**: Putting API key in `appsettings.json`
+```json
+{
+  "AI": {
+    "Providers": {
+      "OpenRouter": {
+        "ApiKey": "sk-or-v1-abc123..."  // ❌ This is ignored!
+      }
+    }
+  }
+}
+```
+
+✅ **CORRECT**: Using environment variable
+```bash
+export OPENROUTER_API_KEY="sk-or-v1-abc123..."
 ```
 
 ---
@@ -800,7 +853,6 @@ OpenRouter is a cloud service with potential network issues. Use conservative ci
       "OpenRouter": {
         "Enabled": true,
         "BaseUrl": "https://openrouter.ai/api/v1",
-        "ApiKey": "${OPENROUTER_API_KEY}",  // Secure env var
         "Models": [
           "meta-llama/llama-3.3-70b-instruct:free",
           "anthropic/claude-3.5-haiku"
@@ -841,7 +893,6 @@ OpenRouter is a cloud service with potential network issues. Use conservative ci
       "OpenRouter": {
         "Enabled": true,
         "BaseUrl": "https://openrouter.ai/api/v1",
-        "ApiKey": "${OPENROUTER_API_KEY_QA}",  // QA-specific key
         "Models": ["openai/gpt-4o-mini"]  // Test model
       }
     },
@@ -878,7 +929,6 @@ OpenRouter is a cloud service with potential network issues. Use conservative ci
       "OpenRouter": {
         "Enabled": true,
         "BaseUrl": "https://openrouter.ai/api/v1",
-        "ApiKey": "${OPENROUTER_API_KEY}",
         "Models": [
           "meta-llama/llama-3.3-70b-instruct:free",  // Use free models
           "anthropic/claude-3.5-haiku"
@@ -922,7 +972,6 @@ OpenRouter is a cloud service with potential network issues. Use conservative ci
       "OpenRouter": {
         "Enabled": true,
         "BaseUrl": "https://openrouter.ai/api/v1",
-        "ApiKey": "${OPENROUTER_API_KEY}",
         "Models": ["meta-llama/llama-3.3-70b-instruct:free"]
       }
     },
@@ -1099,13 +1148,18 @@ OpenRouter is a cloud service with potential network issues. Use conservative ci
 
 ---
 
-#### Issue: Environment Variable Not Substituted
+#### Issue: API Key Not Loaded
 
-**Symptom**: `ApiKey` shows literal `${OPENROUTER_API_KEY}` in logs
+**Symptom**: Application fails to start with error:
+```
+InvalidOperationException: OPENROUTER_API_KEY not configured.
+Set either OPENROUTER_API_KEY or OPENROUTER_API_KEY_FILE environment variable.
+```
 
 **Diagnosis**:
-1. Environment variable not set
-2. Variable name mismatch (case-sensitive)
+1. Environment variable `OPENROUTER_API_KEY` not set
+2. Docker secret file `OPENROUTER_API_KEY_FILE` not configured
+3. Variable name mismatch (case-sensitive)
 
 **Solution**:
 ```bash
@@ -1115,13 +1169,21 @@ export OPENROUTER_API_KEY="sk-or-v1-abc123..."
 # Windows PowerShell
 $env:OPENROUTER_API_KEY = "sk-or-v1-abc123..."
 
+# Docker Secrets
+OPENROUTER_API_KEY_FILE=/run/secrets/openrouter_api_key
+
 # Verify
 echo $OPENROUTER_API_KEY
 ```
 
 **Verify in Logs**:
 ```
-[Debug] OpenRouter API key loaded from environment (length: 40)
+✅ Loaded secret 'OPENROUTER_API_KEY' from file: /run/secrets/openrouter_api_key (45 bytes)
+```
+
+Or for direct value:
+```
+⚠️  Loaded secret 'OPENROUTER_API_KEY' from direct configuration (not recommended for production)
 ```
 
 ---
@@ -1160,9 +1222,11 @@ Use this checklist to verify your configuration:
   }
   ```
 
-- [ ] **API keys in environment variables** (not committed)
-  ```json
-  "ApiKey": "${OPENROUTER_API_KEY}"  // Environment variable
+- [ ] **API keys in environment variables** (not in appsettings.json)
+  ```bash
+  export OPENROUTER_API_KEY="sk-or-v1-abc123..."
+  # OR
+  OPENROUTER_API_KEY_FILE=/run/secrets/openrouter_api_key
   ```
 
 - [ ] **Circuit breaker values positive**
@@ -1181,24 +1245,38 @@ Use this checklist to verify your configuration:
 ### Security
 
 1. **Never commit API keys**
-   ```json
-   // GOOD
-   "ApiKey": "${OPENROUTER_API_KEY}"
+   ```bash
+   # ✅ CORRECT: Use environment variables
+   export OPENROUTER_API_KEY="sk-or-v1-abc123..."
 
-   // BAD
-   "ApiKey": "sk-or-v1-abc123..."  // Committed to Git!
+   # ✅ CORRECT: Use Docker Secrets
+   OPENROUTER_API_KEY_FILE=/run/secrets/openrouter_api_key
    ```
 
-2. **Use environment-specific keys**
+2. **Do NOT put API keys in appsettings.json**
+   ```json
+   // ❌ WRONG: This is completely ignored by the system!
+   {
+     "AI": {
+       "Providers": {
+         "OpenRouter": {
+           "ApiKey": "sk-or-v1-abc123..."  // ❌ Never do this!
+         }
+       }
+     }
+   }
+   ```
+
+3. **Use environment-specific keys**
    ```bash
    # Development
    export OPENROUTER_API_KEY="sk-or-dev-..."
 
    # Production
-   export OPENROUTER_API_KEY="sk-or-prod-..."
+   OPENROUTER_API_KEY_FILE=/run/secrets/openrouter_api_key
    ```
 
-3. **Secure production secrets**
+4. **Secure production secrets**
    - Use Azure Key Vault, AWS Secrets Manager, or HashiCorp Vault
    - Never store secrets in `appsettings.json`
    - Rotate API keys regularly

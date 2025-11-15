@@ -61,15 +61,16 @@ public class ProviderConfig
     public string BaseUrl { get; set; } = "";
 
     /// <summary>
-    /// API key for authenticated providers (OpenRouter).
-    /// Supports environment variable substitution: ${ENV_VAR_NAME}
-    /// </summary>
-    public string? ApiKey { get; set; }
-
-    /// <summary>
     /// List of models available from this provider.
     /// Used for validation and model selection.
     /// </summary>
+    /// <remarks>
+    /// Note: API keys (e.g., OpenRouter) are NOT configured here.
+    /// They are read from environment variables using SecretsHelper (SEC-708):
+    /// - OPENROUTER_API_KEY: Direct environment variable
+    /// - OPENROUTER_API_KEY_FILE: Path to Docker secret file
+    /// See: Infrastructure/SecretsHelper.cs for implementation.
+    /// </remarks>
     public List<string> Models { get; set; } = new();
 
     /// <summary>

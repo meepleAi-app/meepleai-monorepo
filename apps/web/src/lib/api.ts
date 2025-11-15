@@ -1000,10 +1000,11 @@ export const api = {
 
     async enable(code: string): Promise<Enable2FAResult> {
       const response = await api.post<{ message: string; backupCodes?: string[] }>('/api/v1/auth/2fa/enable', { code });
-      // Backend returns { message, backupCodes } on success, or throws on error
+      // Backend returns 204 No Content or { message, backupCodes }
+      // Guard against empty response (P1 Badge fix)
       return {
         success: true,
-        backupCodes: response.backupCodes || null,
+        backupCodes: response?.backupCodes || null,
         errorMessage: null
       };
     },

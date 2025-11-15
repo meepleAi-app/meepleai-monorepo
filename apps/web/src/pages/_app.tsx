@@ -9,6 +9,9 @@ import { SessionWarningModal } from '../components/SessionWarningModal';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { api } from '@/lib/api';
+import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
+import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useState } from 'react';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -28,6 +31,20 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
 function AppContent({ Component, pageProps }: AppProps) {
   // AUTH-05: Session timeout monitoring
   const { remainingMinutes, isNearExpiry } = useSessionCheck();
+
+  // Issue #1100: Keyboard shortcuts system
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+
+  // Global keyboard shortcuts
+  useGlobalKeyboardShortcuts({
+    onOpenCommandPalette: () => setShowCommandPalette(true),
+    onOpenShortcutsHelp: () => setShowShortcutsHelp(true),
+    onCloseModal: () => {
+      setShowShortcutsHelp(false);
+      setShowCommandPalette(false);
+    },
+  });
 
   const handleStayLoggedIn = async () => {
     try {
@@ -63,6 +80,12 @@ function AppContent({ Component, pageProps }: AppProps) {
           onLogOut={handleLogOut}
         />
       )}
+
+      {/* Issue #1100: Keyboard shortcuts help modal */}
+      <KeyboardShortcutsHelp
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
     </>
   );
 }

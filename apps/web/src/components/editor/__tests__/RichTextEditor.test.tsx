@@ -121,8 +121,9 @@ describe("RichTextEditor", () => {
       />
     );
 
-    const editorWrapper = container.querySelector("div[style*='border']");
-    expect(editorWrapper).toHaveStyle({ border: "2px solid #ccc" });
+    // Border now uses Tailwind classes (border-2 border-gray-300)
+    const editorWrapper = container.querySelector("div.border-2.border-gray-300");
+    expect(editorWrapper).toBeInTheDocument();
   });
 
   it("applies invalid styling when isValid is false", () => {
@@ -134,8 +135,9 @@ describe("RichTextEditor", () => {
       />
     );
 
-    const editorWrapper = container.querySelector("div[style*='border']");
-    expect(editorWrapper).toHaveStyle({ border: "2px solid #d93025" });
+    // Border now uses Tailwind classes (border-2 border-red-500)
+    const editorWrapper = container.querySelector("div.border-2.border-red-500");
+    expect(editorWrapper).toBeInTheDocument();
   });
 
   it("calls onChange when content changes", () => {

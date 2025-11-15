@@ -63,7 +63,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: mockComments,
       totalCount: 1
-    });
+    } as any);
 
     render(
       <CommentThread
@@ -84,7 +84,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [],
       totalCount: 0
-    });
+    } as any);
 
     render(
       <CommentThread
@@ -106,7 +106,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [],
       totalCount: 0
-    });
+    } as any);
 
     mockedApi.createComment.mockResolvedValue({
       ...mockComments[0],
@@ -139,7 +139,7 @@ describe('CommentThread', () => {
         commentText: 'New test comment'
       }],
       totalCount: 1
-    });
+    } as any);
 
     const submitButton = screen.getByRole('button', { name: /aggiungi commento/i });
     await user.click(submitButton);
@@ -159,7 +159,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [],
       totalCount: 0
-    });
+    } as any);
 
     render(
       <CommentThread
@@ -181,7 +181,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [],
       totalCount: 0
-    });
+    } as any);
 
     render(
       <CommentThread
@@ -227,7 +227,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
-    });
+    } as any);
 
     mockedApi.updateComment.mockRejectedValue(new Error('Update failed'));
 
@@ -254,7 +254,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
-    });
+    } as any);
 
     render(
       <CommentThread
@@ -280,7 +280,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
-    });
+    } as any);
 
     mockedApi.deleteComment.mockRejectedValue(new Error('Delete failed'));
 
@@ -307,7 +307,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
-    });
+    } as any);
 
     mockedApi.createReply.mockRejectedValue(new Error('Reply failed'));
 
@@ -333,7 +333,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
-    });
+    } as any);
 
     mockedApi.resolveComment.mockRejectedValue(new Error('Resolve failed'));
 
@@ -367,7 +367,7 @@ describe('CommentThread', () => {
     mockedApi.getComments.mockResolvedValue({
       comments: [resolvedComment],
       totalCount: 1
-    });
+    } as any);
 
     mockedApi.unresolveComment.mockRejectedValue(new Error('Unresolve failed'));
 

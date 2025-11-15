@@ -398,7 +398,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
 
       try {
         // Create thread if none exists
-        let threadId = activeChatId;
+        let threadId: string = activeChatId ?? '';
         if (!threadId) {
           // SPRINT-3 #858: Create thread using DDD
           const newThread = await api.chatThreads.create({

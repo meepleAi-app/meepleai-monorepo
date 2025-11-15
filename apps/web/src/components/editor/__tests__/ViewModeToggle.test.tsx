@@ -19,44 +19,32 @@ describe("ViewModeToggle", () => {
     render(<ViewModeToggle mode="rich" onModeChange={mockOnModeChange} />);
 
     const richButton = screen.getByText(/📝 Editor Visuale/);
-    expect(richButton).toHaveStyle({
-      background: "white",
-      color: "#0070f3",
-      fontWeight: "bold"
-    });
+    // Check Tailwind classes instead of inline styles
+    expect(richButton).toHaveClass("bg-white", "text-blue-600", "font-bold", "shadow-sm");
   });
 
   it("highlights json mode when active", () => {
     render(<ViewModeToggle mode="json" onModeChange={mockOnModeChange} />);
 
     const jsonButton = screen.getByText(/\{ \} Codice JSON/);
-    expect(jsonButton).toHaveStyle({
-      background: "white",
-      color: "#0070f3",
-      fontWeight: "bold"
-    });
+    // Check Tailwind classes instead of inline styles
+    expect(jsonButton).toHaveClass("bg-white", "text-blue-600", "font-bold", "shadow-sm");
   });
 
   it("does not highlight inactive rich mode", () => {
     render(<ViewModeToggle mode="json" onModeChange={mockOnModeChange} />);
 
     const richButton = screen.getByText(/📝 Editor Visuale/);
-    expect(richButton).toHaveStyle({
-      background: "transparent",
-      color: "#666",
-      fontWeight: "normal"
-    });
+    // Check Tailwind classes instead of inline styles
+    expect(richButton).toHaveClass("bg-transparent", "text-gray-600", "font-normal");
   });
 
   it("does not highlight inactive json mode", () => {
     render(<ViewModeToggle mode="rich" onModeChange={mockOnModeChange} />);
 
     const jsonButton = screen.getByText(/\{ \} Codice JSON/);
-    expect(jsonButton).toHaveStyle({
-      background: "transparent",
-      color: "#666",
-      fontWeight: "normal"
-    });
+    // Check Tailwind classes instead of inline styles
+    expect(jsonButton).toHaveClass("bg-transparent", "text-gray-600", "font-normal");
   });
 
   it("calls onModeChange with 'rich' when rich button is clicked", () => {
@@ -102,29 +90,23 @@ describe("ViewModeToggle", () => {
     const { container } = render(<ViewModeToggle mode="rich" onModeChange={mockOnModeChange} />);
 
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveStyle({
-      display: "inline-flex",
-      background: "#f0f0f0",
-      borderRadius: "4px",
-      padding: "2px"
-    });
+    // Check Tailwind classes instead of inline styles
+    expect(wrapper).toHaveClass("inline-flex", "bg-gray-100", "rounded", "p-0.5");
   });
 
   it("applies box shadow to active button", () => {
     render(<ViewModeToggle mode="rich" onModeChange={mockOnModeChange} />);
 
     const richButton = screen.getByText(/📝 Editor Visuale/);
-    expect(richButton).toHaveStyle({
-      boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-    });
+    // Check Tailwind class shadow-sm instead of inline style
+    expect(richButton).toHaveClass("shadow-sm");
   });
 
   it("does not apply box shadow to inactive button", () => {
     render(<ViewModeToggle mode="rich" onModeChange={mockOnModeChange} />);
 
     const jsonButton = screen.getByText(/\{ \} Codice JSON/);
-    expect(jsonButton).toHaveStyle({
-      boxShadow: "none"
-    });
+    // Inactive buttons don't have shadow-sm class
+    expect(jsonButton).not.toHaveClass("shadow-sm");
   });
 });

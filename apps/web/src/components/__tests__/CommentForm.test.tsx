@@ -94,7 +94,8 @@ describe("CommentForm", () => {
         name: "Aggiungi Commento"
       });
 
-      expect(submitButton).toHaveStyle({ cursor: "not-allowed" });
+      // Check Tailwind class instead of inline style
+      expect(submitButton).toHaveClass("cursor-not-allowed");
     });
 
     it("applies correct cursor style when button is enabled", async () => {
@@ -107,7 +108,8 @@ describe("CommentForm", () => {
 
       await user.type(textarea, "Valid comment");
 
-      expect(submitButton).toHaveStyle({ cursor: "pointer" });
+      // Check Tailwind class instead of inline style
+      expect(submitButton).toHaveClass("cursor-pointer");
     });
   });
 

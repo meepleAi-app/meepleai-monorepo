@@ -138,9 +138,8 @@ describe("EditorToolbar", () => {
     render(<EditorToolbar editor={mockEditor as Editor} />);
 
     const boldButton = screen.getByTitle(/Grassetto/);
-    // Check for the hex color and white text
-    expect(boldButton).toHaveStyle({ background: "#0070f3" });
-    expect(boldButton).toHaveStyle({ fontWeight: "bold" });
+    // Check for Tailwind classes instead of inline styles
+    expect(boldButton).toHaveClass("bg-primary", "text-white", "font-bold");
   });
 
   it("disables buttons when editor cannot perform action", () => {
@@ -174,7 +173,8 @@ describe("EditorToolbar", () => {
 
     const undoButton = screen.getByTitle(/Annulla/);
     expect(undoButton).toBeDisabled();
-    expect(undoButton).toHaveStyle({ cursor: "not-allowed" });
+    // Check Tailwind class instead of inline style
+    expect(undoButton).toHaveClass("cursor-not-allowed");
   });
 
   it("calls unsetAllMarks when clear formatting is clicked", () => {
@@ -198,8 +198,8 @@ describe("EditorToolbar", () => {
   it("renders toolbar dividers for visual grouping", () => {
     const { container } = render(<EditorToolbar editor={mockEditor as Editor} />);
 
-    // Dividers are rendered as div elements with specific styling
-    const dividers = container.querySelectorAll("div[style*='background']");
+    // Dividers now use Tailwind classes (bg-gray-200)
+    const dividers = container.querySelectorAll("div.bg-gray-200");
     expect(dividers.length).toBeGreaterThan(0);
   });
 });

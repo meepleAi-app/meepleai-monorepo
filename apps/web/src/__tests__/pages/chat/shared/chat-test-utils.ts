@@ -24,7 +24,17 @@ export const setMockOnError = (callback: ((error: string) => void) | null) => {
 };
 
 // Mock API reference
-export const mockApi = api as jest.Mocked<typeof api>;
+export const mockApi = api as jest.Mocked<typeof api> & {
+  chatThreads: {
+    getByGame: jest.MockedFunction<any>;
+    getById: jest.MockedFunction<any>;
+    create: jest.MockedFunction<any>;
+    addMessage: jest.MockedFunction<any>;
+    updateMessage: jest.MockedFunction<any>;
+    deleteMessage: jest.MockedFunction<any>;
+    delete: jest.MockedFunction<any>;
+  };
+};
 
 // Original window functions for restoration
 export const originalConfirm = window.confirm;

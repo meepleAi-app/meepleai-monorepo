@@ -137,10 +137,10 @@ describe('ProfilePage', () => {
     const { container } = render(<ProfilePage />);
 
     // Check the component has the expected DOM structure
-    const minHeightContainer = container.querySelector('.min-h-screen');
-    const centerContainer = container.querySelector('.text-center');
-    const spinner = container.querySelector('.animate-spin');
-    const message = container.querySelector('p');
+    const minHeightContainer = container.querySelector('.min-h-screen') as HTMLElement;
+    const centerContainer = container.querySelector('.text-center') as HTMLElement;
+    const spinner = container.querySelector('.animate-spin') as HTMLElement;
+    const message = container.querySelector('p') as HTMLElement;
 
     expect(minHeightContainer).toBeInTheDocument();
     expect(centerContainer).toBeInTheDocument();

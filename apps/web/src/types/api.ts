@@ -13,6 +13,7 @@ export interface RuleSpecCommentsResponse {
   version: string;
   comments: RuleSpecComment[];
   totalComments: number;
+  totalCount?: number; // Alias for backward compatibility with tests
 }
 
 /**

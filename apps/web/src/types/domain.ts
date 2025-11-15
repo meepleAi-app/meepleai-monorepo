@@ -59,7 +59,7 @@ export interface ChatThread {
   gameId: string | null;
   title: string | null;
   createdAt: string;
-  lastMessageAt: string;
+  lastMessageAt: string | null;
   messageCount: number;
   messages: ChatThreadMessage[];
 }
@@ -75,7 +75,7 @@ export interface ChatThreadMessage {
   backendMessageId?: string;
   endpoint?: string;
   gameId?: string;
-  feedback?: 'positive' | 'negative' | null;
+  feedback?: 'helpful' | 'not-helpful' | null;
 }
 
 /**

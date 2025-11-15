@@ -286,10 +286,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # NOTE: Typecheck temporarily disabled due to pre-existing TypeScript errors in codebase
-      # Re-enable after TypeScript errors are resolved (tracked in separate issue)
-      # - name: Typecheck
-      #   run: pnpm typecheck
+      - name: Typecheck
+        run: pnpm typecheck
 
       - name: Run unit tests with coverage
         env:

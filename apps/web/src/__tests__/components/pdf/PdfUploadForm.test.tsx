@@ -379,7 +379,7 @@ describe('PdfUploadForm', () => {
       const file = createPdfFile('test.pdf');
 
       const { retryWithBackoff } = require('@/lib/retryUtils');
-      retryWithBackoff.mockImplementation(async (fn, options) => {
+      retryWithBackoff.mockImplementation(async (fn: () => Promise<unknown>, options: { onRetry: (error: Error, attempt: number, delay: number) => void }) => {
         await options.onRetry(new Error('Failed'), 1, 2000);
         return fn();
       });

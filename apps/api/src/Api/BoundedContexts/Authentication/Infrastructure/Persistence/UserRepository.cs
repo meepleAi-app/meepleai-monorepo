@@ -21,6 +21,7 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var userEntity = await _dbContext.Users
+            .Include(u => u.BackupCodes)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
@@ -30,6 +31,7 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken = default)
     {
         var userEntity = await _dbContext.Users
+            .Include(u => u.BackupCodes)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email == email.Value, cancellationToken);
 
@@ -53,6 +55,7 @@ public class UserRepository : IUserRepository
     public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var userEntities = await _dbContext.Users
+            .Include(u => u.BackupCodes)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
@@ -61,14 +64,74 @@ public class UserRepository : IUserRepository
 
     public async Task AddAsync(User entity, CancellationToken cancellationToken = default)
     {
-        var userEntity = MapToPersistence(entity);
+        var userEntity = new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = entity.Id,
+            Email = entity.Email.Value,
+            DisplayName = entity.DisplayName,
+            PasswordHash = entity.PasswordHash.Value,
+            Role = entity.Role.Value,
+            CreatedAt = entity.CreatedAt,
+            TotpSecretEncrypted = entity.TotpSecret?.EncryptedValue,
+            IsTwoFactorEnabled = entity.IsTwoFactorEnabled,
+            TwoFactorEnabledAt = entity.TwoFactorEnabledAt
+        };
+
+        // Map backup codes
+        foreach (var backupCode in entity.BackupCodes)
+        {
+            userEntity.BackupCodes.Add(new Api.Infrastructure.Entities.UserBackupCodeEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = entity.Id,
+                CodeHash = backupCode.HashedValue,
+                IsUsed = backupCode.IsUsed,
+                UsedAt = backupCode.UsedAt,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
         await _dbContext.Users.AddAsync(userEntity, cancellationToken);
     }
 
     public async Task UpdateAsync(User entity, CancellationToken cancellationToken = default)
     {
-        var userEntity = MapToPersistence(entity);
-        _dbContext.Users.Update(userEntity);
+        // Load the existing user with backup codes to properly manage the child collection
+        var existingUser = await _dbContext.Users
+            .Include(u => u.BackupCodes)
+            .FirstOrDefaultAsync(u => u.Id == entity.Id, cancellationToken);
+
+        if (existingUser == null)
+        {
+            throw new InvalidOperationException($"User with ID {entity.Id} not found for update");
+        }
+
+        // Update scalar properties
+        existingUser.Email = entity.Email.Value;
+        existingUser.DisplayName = entity.DisplayName;
+        existingUser.PasswordHash = entity.PasswordHash.Value;
+        existingUser.Role = entity.Role.Value;
+        existingUser.TotpSecretEncrypted = entity.TotpSecret?.EncryptedValue;
+        existingUser.IsTwoFactorEnabled = entity.IsTwoFactorEnabled;
+        existingUser.TwoFactorEnabledAt = entity.TwoFactorEnabledAt;
+
+        // Synchronize backup codes collection (delete old, add new)
+        // This ensures we don't duplicate codes on every update
+        existingUser.BackupCodes.Clear();
+
+        foreach (var backupCode in entity.BackupCodes)
+        {
+            existingUser.BackupCodes.Add(new Api.Infrastructure.Entities.UserBackupCodeEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = entity.Id,
+                CodeHash = backupCode.HashedValue,
+                IsUsed = backupCode.IsUsed,
+                UsedAt = backupCode.UsedAt,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
         await Task.CompletedTask;
     }
 
@@ -141,33 +204,21 @@ public class UserRepository : IUserRepository
                 .Select(bc => BackupCode.FromHashed(bc.CodeHash, bc.IsUsed, bc.UsedAt))
                 .ToList();
 
-            // Use reflection to call Enable2FA
-            var enable2FAMethod = typeof(User).GetMethod("Enable2FA");
-            if (enable2FAMethod != null)
+            // Set properties directly via reflection to avoid mutating TwoFactorEnabledAt
+            var totpSecretProp = typeof(User).GetProperty("TotpSecret");
+            var isTwoFactorEnabledProp = typeof(User).GetProperty("IsTwoFactorEnabled");
+            var twoFactorEnabledAtProp = typeof(User).GetProperty("TwoFactorEnabledAt");
+            var backupCodesField = typeof(User).GetField("_backupCodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            totpSecretProp?.SetValue(user, totpSecret);
+            isTwoFactorEnabledProp?.SetValue(user, entity.IsTwoFactorEnabled);
+            twoFactorEnabledAtProp?.SetValue(user, entity.TwoFactorEnabledAt);
+
+            if (backupCodesField != null)
             {
-                try
-                {
-                    enable2FAMethod.Invoke(user, new object[] { totpSecret, backupCodes });
-                }
-                catch (Exception ex)
-                {
-                    // If Enable2FA throws (e.g., already enabled), set properties directly via reflection
-                    var totpSecretProp = typeof(User).GetProperty("TotpSecret");
-                    var isTwoFactorEnabledProp = typeof(User).GetProperty("IsTwoFactorEnabled");
-                    var twoFactorEnabledAtProp = typeof(User).GetProperty("TwoFactorEnabledAt");
-                    var backupCodesField = typeof(User).GetField("_backupCodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-                    totpSecretProp?.SetValue(user, totpSecret);
-                    isTwoFactorEnabledProp?.SetValue(user, entity.IsTwoFactorEnabled);
-                    twoFactorEnabledAtProp?.SetValue(user, entity.TwoFactorEnabledAt);
-
-                    if (backupCodesField != null)
-                    {
-                        var backupCodesList = (List<BackupCode>)backupCodesField.GetValue(user)!;
-                        backupCodesList.Clear();
-                        backupCodesList.AddRange(backupCodes);
-                    }
-                }
+                var backupCodesList = (List<BackupCode>)backupCodesField.GetValue(user)!;
+                backupCodesList.Clear();
+                backupCodesList.AddRange(backupCodes);
             }
         }
 
@@ -180,41 +231,5 @@ public class UserRepository : IUserRepository
         return await _dbContext.Users
             .AsNoTracking()
             .CountAsync(u => u.Role == adminRole, cancellationToken);
-    }
-
-    /// <summary>
-    /// Maps domain entity to persistence entity.
-    /// </summary>
-    private static Api.Infrastructure.Entities.UserEntity MapToPersistence(User domainEntity)
-    {
-        var userEntity = new Api.Infrastructure.Entities.UserEntity
-        {
-            Id = domainEntity.Id,
-            Email = domainEntity.Email.Value,
-            DisplayName = domainEntity.DisplayName,
-            PasswordHash = domainEntity.PasswordHash.Value,
-            Role = domainEntity.Role.Value,
-            CreatedAt = domainEntity.CreatedAt,
-            TotpSecretEncrypted = domainEntity.TotpSecret?.EncryptedValue,
-            IsTwoFactorEnabled = domainEntity.IsTwoFactorEnabled,
-            TwoFactorEnabledAt = domainEntity.TwoFactorEnabledAt
-        };
-
-        // Map backup codes
-        var backupCodeEntities = domainEntity.BackupCodes
-            .Select(bc => new Api.Infrastructure.Entities.UserBackupCodeEntity
-            {
-                Id = Guid.NewGuid(),
-                UserId = domainEntity.Id,
-                CodeHash = bc.HashedValue,
-                IsUsed = bc.IsUsed,
-                UsedAt = bc.UsedAt,
-                CreatedAt = DateTime.UtcNow
-            })
-            .ToList();
-
-        userEntity.BackupCodes = backupCodeEntities;
-
-        return userEntity;
     }
 }

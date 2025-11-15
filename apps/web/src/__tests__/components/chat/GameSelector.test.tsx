@@ -551,7 +551,7 @@ describe('GameSelector Component', () => {
       setupMockContext({ games, loading: { games: false } });
       const { rerender } = render(<GameSelector />);
 
-      let select = screen.getByRole('combobox');
+      const select = screen.getByRole('combobox');
       expect(select).not.toHaveClass('cursor-not-allowed');
 
       // Change to loading

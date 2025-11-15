@@ -192,7 +192,7 @@ test.describe('Session Expiration Behavior', () => {
     auth.authenticate();
 
     // Mock session status API to return 3 minutes remaining (near expiry)
-    let remainingMinutes = 3;
+    const remainingMinutes = 3;
     await page.route(`${apiBase}/api/v1/auth/session/status`, async (route) => {
       await route.fulfill({
         status: 200,

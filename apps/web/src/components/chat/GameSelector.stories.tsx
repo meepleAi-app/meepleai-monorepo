@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { GameSelector } from './GameSelector';
-import { ChatProvider } from './ChatProvider';
+import { ChatContext } from './ChatProvider';
 import React from 'react';
 
 /**
@@ -67,9 +67,9 @@ const MockChatProvider: React.FC<{
   };
 
   return (
-    <ChatProvider value={mockContextValue as any}>
+    <ChatContext.Provider value={mockContextValue as any}>
       {children}
-    </ChatProvider>
+    </ChatContext.Provider>
   );
 };
 

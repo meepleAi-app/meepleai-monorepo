@@ -7,13 +7,14 @@
  * Migrated to shadcn/ui components.
  */
 
-import React, { FormEvent, useState } from 'react';
+import React, { FormEvent, useState, useCallback } from 'react';
 import { useChatContext } from './ChatProvider';
 import { useChatOptimistic } from '@/hooks/useChatOptimistic';
 import { LoadingButton } from '../loading/LoadingButton';
 import { SearchModeToggle, SearchMode } from '@/components';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useMessageInputShortcuts, modKey } from '@/hooks/useKeyboardShortcuts';
 
 export function MessageInput() {
   const {
@@ -30,8 +31,10 @@ export function MessageInput() {
   const { sendMessageOptimistic, isOptimisticUpdate } = useChatOptimistic();
   const [isSending, setIsSending] = useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async (e?: FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     if (!inputValue.trim() || !selectedGameId || !selectedAgentId) {
       return;
     }
@@ -53,9 +56,12 @@ export function MessageInput() {
     } finally {
       setIsSending(false);
     }
-  };
+  }, [inputValue, selectedGameId, selectedAgentId, sendMessageOptimistic, setInputValue]);
 
   const isDisabled = loading.sending || isSending || isOptimisticUpdate || !selectedGameId || !selectedAgentId;
+
+  // Issue #1100: Cmd+Enter to send message
+  useMessageInputShortcuts(() => handleSubmit(), !isDisabled && !!inputValue.trim());
   const isSendDisabled = !inputValue.trim() || isDisabled;
 
   return (
@@ -88,8 +94,12 @@ export function MessageInput() {
           loadingText="Invio..."
           disabled={isSendDisabled}
           aria-label="Send message"
+          title={`Send message (${modKey}+Enter)`}
         >
           Invia
+          <kbd className="ml-2 hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-60">
+            {modKey}↵
+          </kbd>
         </LoadingButton>
       </form>
     </div>

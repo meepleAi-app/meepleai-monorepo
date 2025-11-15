@@ -244,6 +244,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <kbd>↑↓</kbd> Navigate
               <kbd>Enter</kbd> Select
               <kbd>Esc</kbd> Close
+              <kbd>?</kbd> Shortcuts Help
             </div>
           </div>
         </Command>

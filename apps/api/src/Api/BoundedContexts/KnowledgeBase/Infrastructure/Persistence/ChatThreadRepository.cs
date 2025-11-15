@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
@@ -118,19 +119,52 @@ public class ChatThreadRepository : IChatThreadRepository
 
     /// <summary>
     /// Maps persistence entity to domain entity.
+    /// Handles legacy data migration for messages without Id/SequenceNumber (Issue #1215).
     /// </summary>
     private static ChatThread MapToDomain(Api.Infrastructure.Entities.ChatThreadEntity entity)
     {
-        // Deserialize messages from JSON using internal DTO
-        var messageDtos = JsonSerializer.Deserialize<List<PersistenceChatMessageDto>>(entity.MessagesJson)
+        // Deserialize messages from JSON using flexible DTO that handles both legacy and modern formats
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            Converters = { new LegacyPersistenceChatMessageDtoConverter() }
+        };
+
+        var messageDtos = JsonSerializer.Deserialize<List<PersistenceChatMessageDto>>(entity.MessagesJson, jsonOptions)
             ?? new List<PersistenceChatMessageDto>();
-        var messages = messageDtos.Select(dto => new ChatMessage(
-            content: dto.Content,
-            role: dto.Role,
-            sequenceNumber: dto.SequenceNumber,
-            timestamp: dto.Timestamp,
-            id: dto.Id
-        )).ToList();
+
+        // ISSUE-1215: Generate stable fallback values for legacy messages and hydrate all fields
+        var messages = messageDtos.Select((dto, index) =>
+        {
+            var message = new ChatMessage(
+                content: dto.Content,
+                role: dto.Role,
+                sequenceNumber: dto.SequenceNumber > 0 ? dto.SequenceNumber : index + 1, // Fallback to index+1
+                timestamp: dto.Timestamp,
+                id: dto.Id != Guid.Empty ? dto.Id : GenerateStableGuid(entity.Id, dto.Content, dto.Timestamp, index) // Fallback to deterministic GUID
+            );
+
+            // Use reflection to hydrate additional fields from persistence (UpdatedAt, IsDeleted, etc.)
+            if (dto.UpdatedAt.HasValue)
+            {
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.UpdatedAt))?.SetValue(message, dto.UpdatedAt);
+            }
+
+            if (dto.IsDeleted)
+            {
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.IsDeleted))?.SetValue(message, dto.IsDeleted);
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.DeletedAt))?.SetValue(message, dto.DeletedAt);
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.DeletedByUserId))?.SetValue(message, dto.DeletedByUserId);
+            }
+
+            if (dto.IsInvalidated)
+            {
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.IsInvalidated))?.SetValue(message, dto.IsInvalidated);
+            }
+
+            return message;
+        }).ToList();
 
         // Create thread
         var thread = new ChatThread(
@@ -196,6 +230,27 @@ public class ChatThreadRepository : IChatThreadRepository
         };
     }
 
+    /// <summary>
+    /// Generates a deterministic GUID for legacy messages without IDs.
+    /// Uses SHA-256 hash of thread ID + content + timestamp + index to ensure stability.
+    /// Same inputs always produce the same GUID (Issue #1215).
+    /// </summary>
+    private static Guid GenerateStableGuid(Guid threadId, string content, DateTime timestamp, int index)
+    {
+        var input = $"{threadId}|{content}|{timestamp:O}|{index}";
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(input));
+
+        // Use first 16 bytes of hash as GUID
+        var guidBytes = new byte[16];
+        Array.Copy(hash, 0, guidBytes, 0, 16);
+
+        // Set version to 5 (SHA-1 name-based) and variant bits per RFC 4122
+        guidBytes[7] = (byte)((guidBytes[7] & 0x0F) | 0x50); // Version 5
+        guidBytes[8] = (byte)((guidBytes[8] & 0x3F) | 0x80); // Variant bits
+
+        return new Guid(guidBytes);
+    }
+
     // DTO for JSON serialization (internal to repository)
     private record PersistenceChatMessageDto(
         Guid Id,
@@ -209,4 +264,66 @@ public class ChatThreadRepository : IChatThreadRepository
         Guid? DeletedByUserId = null,
         bool IsInvalidated = false
     );
+
+    /// <summary>
+    /// Custom JSON converter to handle legacy messages without Id/SequenceNumber fields.
+    /// Allows deserialization of both old format (no Id/SequenceNumber) and new format.
+    /// </summary>
+    private class LegacyPersistenceChatMessageDtoConverter : System.Text.Json.Serialization.JsonConverter<PersistenceChatMessageDto>
+    {
+        public override PersistenceChatMessageDto Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            using var doc = JsonDocument.ParseValue(ref reader);
+            var root = doc.RootElement;
+
+            // Required fields
+            var content = root.GetProperty("Content").GetString() ?? string.Empty;
+            var role = root.GetProperty("Role").GetString() ?? string.Empty;
+            var timestamp = root.GetProperty("Timestamp").GetDateTime();
+
+            // Optional fields with defaults for legacy data
+            var id = root.TryGetProperty("Id", out var idProp) && idProp.ValueKind != JsonValueKind.Null
+                ? idProp.GetGuid()
+                : Guid.Empty; // Will be generated later
+
+            var sequenceNumber = root.TryGetProperty("SequenceNumber", out var seqProp)
+                ? seqProp.GetInt32()
+                : 0; // Will be generated later
+
+            var updatedAt = root.TryGetProperty("UpdatedAt", out var updatedAtProp) && updatedAtProp.ValueKind != JsonValueKind.Null
+                ? updatedAtProp.GetDateTime()
+                : (DateTime?)null;
+
+            var isDeleted = root.TryGetProperty("IsDeleted", out var isDeletedProp) && isDeletedProp.GetBoolean();
+
+            var deletedAt = root.TryGetProperty("DeletedAt", out var deletedAtProp) && deletedAtProp.ValueKind != JsonValueKind.Null
+                ? deletedAtProp.GetDateTime()
+                : (DateTime?)null;
+
+            var deletedByUserId = root.TryGetProperty("DeletedByUserId", out var deletedByUserIdProp) && deletedByUserIdProp.ValueKind != JsonValueKind.Null
+                ? deletedByUserIdProp.GetGuid()
+                : (Guid?)null;
+
+            var isInvalidated = root.TryGetProperty("IsInvalidated", out var isInvalidatedProp) && isInvalidatedProp.GetBoolean();
+
+            return new PersistenceChatMessageDto(
+                Id: id,
+                Content: content,
+                Role: role,
+                Timestamp: timestamp,
+                SequenceNumber: sequenceNumber,
+                UpdatedAt: updatedAt,
+                IsDeleted: isDeleted,
+                DeletedAt: deletedAt,
+                DeletedByUserId: deletedByUserId,
+                IsInvalidated: isInvalidated
+            );
+        }
+
+        public override void Write(Utf8JsonWriter writer, PersistenceChatMessageDto value, JsonSerializerOptions options)
+        {
+            // Use default serialization for writing
+            JsonSerializer.Serialize(writer, value, options);
+        }
+    }
 }

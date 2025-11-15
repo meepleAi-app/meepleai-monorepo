@@ -130,8 +130,8 @@ describe('GameDetailPage', () => {
 
       render(<GameDetailPage />);
 
-      // Check for skeleton elements instead of role="status"
-      const skeletons = document.querySelectorAll('[class*="skeleton"]');
+      // Check for skeleton elements by animate-pulse class (actual Skeleton component class)
+      const skeletons = document.querySelectorAll('.animate-pulse');
       expect(skeletons.length).toBeGreaterThan(0);
     });
 

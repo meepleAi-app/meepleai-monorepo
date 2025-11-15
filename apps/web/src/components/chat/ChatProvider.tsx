@@ -347,6 +347,10 @@ export function ChatProvider({ children }: PropsWithChildren) {
       });
 
       if (newThread) {
+        // Enforce thread limit after creating new thread (Issue #858)
+        const updatedThreads = [newThread, ...(state.chatsByGame[selectedGameId] ?? [])];
+        await enforceThreadLimit(selectedGameId, updatedThreads);
+
         setState((prev) => ({
           ...prev,
           chatsByGame: {

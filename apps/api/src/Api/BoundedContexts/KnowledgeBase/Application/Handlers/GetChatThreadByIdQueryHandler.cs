@@ -28,9 +28,16 @@ public class GetChatThreadByIdQueryHandler : IQueryHandler<GetChatThreadByIdQuer
     private static ChatThreadDto MapToDto(ChatThread thread)
     {
         var messageDtos = thread.Messages.Select(m => new ChatMessageDto(
+            Id: m.Id,
             Content: m.Content,
             Role: m.Role,
-            Timestamp: m.Timestamp
+            Timestamp: m.Timestamp,
+            SequenceNumber: m.SequenceNumber,
+            UpdatedAt: m.UpdatedAt,
+            IsDeleted: m.IsDeleted,
+            DeletedAt: m.DeletedAt,
+            DeletedByUserId: m.DeletedByUserId,
+            IsInvalidated: m.IsInvalidated
         )).ToList();
 
         return new ChatThreadDto(

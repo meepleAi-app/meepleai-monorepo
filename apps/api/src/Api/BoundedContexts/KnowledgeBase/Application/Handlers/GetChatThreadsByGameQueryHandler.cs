@@ -20,17 +20,31 @@ public class GetChatThreadsByGameQueryHandler : IQueryHandler<GetChatThreadsByGa
 
     public async Task<IReadOnlyList<ChatThreadDto>> Handle(GetChatThreadsByGameQuery query, CancellationToken cancellationToken)
     {
-        var threads = await _threadRepository.FindByGameIdAsync(query.GameId, cancellationToken);
+        // Get threads for user and game
+        var threads = await _threadRepository.FindByUserIdAndGameIdAsync(query.UserId, query.GameId, cancellationToken);
 
-        return threads.Select(MapToDto).ToList();
+        // Apply pagination
+        var paginatedThreads = threads
+            .Skip(query.Skip)
+            .Take(query.Take)
+            .ToList();
+
+        return paginatedThreads.Select(MapToDto).ToList();
     }
 
     private static ChatThreadDto MapToDto(ChatThread thread)
     {
         var messageDtos = thread.Messages.Select(m => new ChatMessageDto(
+            Id: m.Id,
             Content: m.Content,
             Role: m.Role,
-            Timestamp: m.Timestamp
+            Timestamp: m.Timestamp,
+            SequenceNumber: m.SequenceNumber,
+            UpdatedAt: m.UpdatedAt,
+            IsDeleted: m.IsDeleted,
+            DeletedAt: m.DeletedAt,
+            DeletedByUserId: m.DeletedByUserId,
+            IsInvalidated: m.IsInvalidated
         )).ToList();
 
         return new ChatThreadDto(

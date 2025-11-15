@@ -121,9 +121,16 @@ public class ChatThreadRepository : IChatThreadRepository
     /// </summary>
     private static ChatThread MapToDomain(Api.Infrastructure.Entities.ChatThreadEntity entity)
     {
-        // Deserialize messages from JSON
-        var messageDtos = JsonSerializer.Deserialize<List<ChatMessageDto>>(entity.MessagesJson) ?? new List<ChatMessageDto>();
-        var messages = messageDtos.Select(dto => new ChatMessage(dto.Content, dto.Role, dto.Timestamp)).ToList();
+        // Deserialize messages from JSON using internal DTO
+        var messageDtos = JsonSerializer.Deserialize<List<PersistenceChatMessageDto>>(entity.MessagesJson)
+            ?? new List<PersistenceChatMessageDto>();
+        var messages = messageDtos.Select(dto => new ChatMessage(
+            content: dto.Content,
+            role: dto.Role,
+            sequenceNumber: dto.SequenceNumber,
+            timestamp: dto.Timestamp,
+            id: dto.Id
+        )).ToList();
 
         // Create thread
         var thread = new ChatThread(
@@ -160,11 +167,18 @@ public class ChatThreadRepository : IChatThreadRepository
     /// </summary>
     private static Api.Infrastructure.Entities.ChatThreadEntity MapToPersistence(ChatThread domainEntity)
     {
-        // Serialize messages to JSON
-        var messageDtos = domainEntity.Messages.Select(m => new ChatMessageDto(
+        // Serialize messages to JSON with all fields
+        var messageDtos = domainEntity.Messages.Select(m => new PersistenceChatMessageDto(
+            Id: m.Id,
             Content: m.Content,
             Role: m.Role,
-            Timestamp: m.Timestamp
+            Timestamp: m.Timestamp,
+            SequenceNumber: m.SequenceNumber,
+            UpdatedAt: m.UpdatedAt,
+            IsDeleted: m.IsDeleted,
+            DeletedAt: m.DeletedAt,
+            DeletedByUserId: m.DeletedByUserId,
+            IsInvalidated: m.IsInvalidated
         )).ToList();
 
         var messagesJson = JsonSerializer.Serialize(messageDtos);
@@ -182,6 +196,17 @@ public class ChatThreadRepository : IChatThreadRepository
         };
     }
 
-    // Simple DTO for JSON serialization
-    private record ChatMessageDto(string Content, string Role, DateTime Timestamp);
+    // DTO for JSON serialization (internal to repository)
+    private record PersistenceChatMessageDto(
+        Guid Id,
+        string Content,
+        string Role,
+        DateTime Timestamp,
+        int SequenceNumber,
+        DateTime? UpdatedAt = null,
+        bool IsDeleted = false,
+        DateTime? DeletedAt = null,
+        Guid? DeletedByUserId = null,
+        bool IsInvalidated = false
+    );
 }

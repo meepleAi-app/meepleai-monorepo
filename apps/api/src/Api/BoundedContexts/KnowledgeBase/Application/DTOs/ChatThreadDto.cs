@@ -17,11 +17,19 @@ public record ChatThreadDto(
 
 /// <summary>
 /// DTO for chat message.
+/// Enhanced to support update/delete operations (Issue #1184).
 /// </summary>
 public record ChatMessageDto(
+    Guid Id,
     string Content,
     string Role,
-    DateTime Timestamp
+    DateTime Timestamp,
+    int SequenceNumber,
+    DateTime? UpdatedAt = null,
+    bool IsDeleted = false,
+    DateTime? DeletedAt = null,
+    Guid? DeletedByUserId = null,
+    bool IsInvalidated = false
 );
 
 /// <summary>

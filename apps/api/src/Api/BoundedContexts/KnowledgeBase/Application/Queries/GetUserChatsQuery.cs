@@ -4,10 +4,9 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
-/// Query to retrieve chat threads for a specific game and user.
+/// Query to retrieve all chat threads for a user.
 /// </summary>
-public record GetChatThreadsByGameQuery(
-    Guid GameId,
+public record GetUserChatsQuery(
     Guid UserId,
     int Skip = 0,
     int Take = 50

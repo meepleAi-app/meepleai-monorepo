@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
@@ -20,23 +23,83 @@ public class EnhancedPdfProcessingOrchestrator
     private readonly IPdfTextExtractor _docnetExtractor;
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IConfiguration _configuration;
+    private readonly PdfProcessingOptions _options;
 
     // Quality thresholds from ADR-003
     private const double Stage1QualityThreshold = 0.80; // Unstructured acceptance threshold
     private const double Stage2QualityThreshold = 0.70; // SmolDocling acceptance threshold
 
+    /// <summary>
+    /// ISSUE-1174: Constructor uses keyed services to resolve stage extractors.
+    /// This prevents circular DI dependency where IPdfTextExtractor would otherwise
+    /// resolve to OrchestratedPdfTextExtractor → creating a circular chain.
+    /// </summary>
     public EnhancedPdfProcessingOrchestrator(
-        IPdfTextExtractor unstructuredExtractor,
-        IPdfTextExtractor smolDoclingExtractor,
-        IPdfTextExtractor docnetExtractor,
+        [FromKeyedServices("unstructured")] IPdfTextExtractor unstructuredExtractor,
+        [FromKeyedServices("smoldocling")] IPdfTextExtractor smolDoclingExtractor,
+        [FromKeyedServices("docnet")] IPdfTextExtractor docnetExtractor,
         ILogger<EnhancedPdfProcessingOrchestrator> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IOptions<PdfProcessingOptions> options)
     {
         _unstructuredExtractor = unstructuredExtractor;
         _smolDoclingExtractor = smolDoclingExtractor;
         _docnetExtractor = docnetExtractor;
         _logger = logger;
         _configuration = configuration;
+        _options = options.Value;
+    }
+
+    /// <summary>
+    /// BGAI-087: Loads PDF data using size-based strategy (memory vs temp file)
+    /// </summary>
+    private async Task<PdfDataHandle> LoadPdfBytesAsync(
+        Stream pdfStream,
+        string requestId,
+        CancellationToken ct)
+    {
+        var threshold = _options.LargePdfThresholdBytes;
+        var useTempFile = _options.UseTempFileForLargePdfs;
+        var pdfSize = pdfStream.CanSeek ? pdfStream.Length : -1;
+
+        // Large PDF + temp file enabled: Use temp file
+        if (useTempFile && pdfStream.CanSeek && pdfSize >= threshold)
+        {
+            _logger.LogInformation(
+                "[{RequestId}] PDF size {Size}MB ≥ threshold {Threshold}MB - using temp file strategy",
+                requestId, pdfSize / 1_000_000.0, threshold / 1_000_000.0);
+
+            var tempFile = Path.GetTempFileName();
+            try
+            {
+                await using var fileStream = new FileStream(
+                    tempFile,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    bufferSize: 81920,
+                    useAsync: true);
+
+                await pdfStream.CopyToAsync(fileStream, ct);
+                return PdfDataHandle.FromTempFile(tempFile);
+            }
+            catch
+            {
+                // Cleanup temp file on error
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+                throw;
+            }
+        }
+
+        // Small PDF or temp file disabled: Use memory
+        _logger.LogDebug(
+            "[{RequestId}] PDF size {Size}MB < threshold {Threshold}MB - using in-memory strategy",
+            requestId, pdfSize / 1_000_000.0, threshold / 1_000_000.0);
+
+        using var memoryStream = new MemoryStream();
+        await pdfStream.CopyToAsync(memoryStream, ct);
+        return PdfDataHandle.FromBytes(memoryStream.ToArray());
     }
 
     /// <summary>
@@ -73,64 +136,66 @@ public class EnhancedPdfProcessingOrchestrator
             "[{RequestId}] Starting 3-stage PDF extraction pipeline (size: {Size} bytes)",
             requestId, pdfStream.CanSeek ? pdfStream.Length : -1);
 
-        // Copy stream to byte array for multiple extraction attempts
-        byte[] pdfBytes;
-        using (var memoryStream = new MemoryStream())
-        {
-            await pdfStream.CopyToAsync(memoryStream, ct);
-            pdfBytes = memoryStream.ToArray();
-        }
+        // BGAI-087: Load PDF with size-based strategy (memory vs temp file)
+        using var pdfData = await LoadPdfBytesAsync(pdfStream, requestId, ct);
 
-        // Stage 1: Unstructured (fastest, high quality target)
-        var stage1Result = await TryExtractWithStage(
-            1,
-            "Unstructured",
-            _unstructuredExtractor,
-            pdfBytes,
-            Stage1QualityThreshold,
-            enableOcrFallback,
-            requestId,
-            ct);
-
-        if (stage1Result != null)
+        try
         {
+            // Stage 1: Unstructured (fastest, high quality target)
+            var stage1Result = await TryExtractWithStage(
+                1,
+                "Unstructured",
+                _unstructuredExtractor,
+                pdfData,
+                Stage1QualityThreshold,
+                enableOcrFallback,
+                requestId,
+                ct);
+
+            if (stage1Result != null)
+            {
+                overallStopwatch.Stop();
+                return CreateEnhancedResult(stage1Result, 1, "Unstructured", overallStopwatch.Elapsed, requestId);
+            }
+
+            // Stage 2: SmolDocling (VLM-based, complex layouts)
+            var stage2Result = await TryExtractWithStage(
+                2,
+                "SmolDocling",
+                _smolDoclingExtractor,
+                pdfData,
+                Stage2QualityThreshold,
+                enableOcrFallback,
+                requestId,
+                ct);
+
+            if (stage2Result != null)
+            {
+                overallStopwatch.Stop();
+                return CreateEnhancedResult(stage2Result, 2, "SmolDocling", overallStopwatch.Elapsed, requestId);
+            }
+
+            // Stage 3: Docnet (fallback, best effort)
+            _logger.LogWarning(
+                "[{RequestId}] Stages 1-2 failed or low quality, using Stage 3 (Docnet) fallback",
+                requestId);
+
+            var stage3Stopwatch = Stopwatch.StartNew();
+            await using var fallbackStream = pdfData.GetStream();
+            var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct);
+            stage3Stopwatch.Stop();
+
+            _logger.LogInformation(
+                "[{RequestId}] Stage 3 (Docnet) completed in {DurationMs}ms - Success={Success}, Quality={Quality}",
+                requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.Quality);
+
             overallStopwatch.Stop();
-            return CreateEnhancedResult(stage1Result, 1, "Unstructured", overallStopwatch.Elapsed, requestId);
+            return CreateEnhancedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
         }
-
-        // Stage 2: SmolDocling (VLM-based, complex layouts)
-        var stage2Result = await TryExtractWithStage(
-            2,
-            "SmolDocling",
-            _smolDoclingExtractor,
-            pdfBytes,
-            Stage2QualityThreshold,
-            enableOcrFallback,
-            requestId,
-            ct);
-
-        if (stage2Result != null)
+        finally
         {
-            overallStopwatch.Stop();
-            return CreateEnhancedResult(stage2Result, 2, "SmolDocling", overallStopwatch.Elapsed, requestId);
+            // BGAI-087: Ensure temp file cleanup via Dispose
         }
-
-        // Stage 3: Docnet (fallback, best effort)
-        _logger.LogWarning(
-            "[{RequestId}] Stages 1-2 failed or low quality, using Stage 3 (Docnet) fallback",
-            requestId);
-
-        var stage3Stopwatch = Stopwatch.StartNew();
-        await using var fallbackStream = new MemoryStream(pdfBytes);
-        var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct);
-        stage3Stopwatch.Stop();
-
-        _logger.LogInformation(
-            "[{RequestId}] Stage 3 (Docnet) completed in {DurationMs}ms - Success={Success}, Quality={Quality}",
-            requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.Quality);
-
-        overallStopwatch.Stop();
-        return CreateEnhancedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
     }
 
     /// <summary>
@@ -140,7 +205,7 @@ public class EnhancedPdfProcessingOrchestrator
         int stageNumber,
         string stageName,
         IPdfTextExtractor extractor,
-        byte[] pdfBytes,
+        PdfDataHandle pdfData,
         double qualityThreshold,
         bool enableOcrFallback,
         string requestId,
@@ -154,7 +219,7 @@ public class EnhancedPdfProcessingOrchestrator
 
         try
         {
-            await using var stream = new MemoryStream(pdfBytes);
+            await using var stream = pdfData.GetStream();
             var result = await extractor.ExtractTextAsync(stream, enableOcrFallback, ct);
             stageStopwatch.Stop();
 
@@ -260,41 +325,62 @@ public class EnhancedPdfProcessingOrchestrator
             "[{RequestId}] Starting 3-stage paged PDF extraction pipeline",
             requestId);
 
-        // Copy stream to byte array for multiple extraction attempts
-        byte[] pdfBytes;
-        using (var memoryStream = new MemoryStream())
-        {
-            await pdfStream.CopyToAsync(memoryStream, ct);
-            pdfBytes = memoryStream.ToArray();
-        }
+        // ISSUE-1160: Defense in depth - Validate file size before processing (same as non-paged method)
+        var maxSize = _configuration.GetValue<long>(
+            "PdfProcessing:MaxFileSizeBytes",
+            104857600); // 100 MB default
 
-        // Stage 1: Unstructured
-        var stage1Result = await TryExtractPagedWithStage(
-            1,
-            "Unstructured",
-            _unstructuredExtractor,
-            pdfBytes,
-            Stage1QualityThreshold,
-            enableOcrFallback,
-            requestId,
-            ct);
-
-        if (stage1Result != null)
+        if (pdfStream.CanSeek && pdfStream.Length > maxSize)
         {
+            _logger.LogWarning(
+                "[{RequestId}] PDF size {Size} bytes exceeds maximum {Max} bytes - rejecting paged extraction",
+                requestId, pdfStream.Length, maxSize);
+
             overallStopwatch.Stop();
-            return CreateEnhancedPagedResult(stage1Result, 1, "Unstructured", overallStopwatch.Elapsed, requestId);
+            return new EnhancedPagedExtractionResult(
+                Success: false,
+                PageChunks: new List<PageTextChunk>(),
+                TotalPages: 0,
+                TotalCharacters: 0,
+                OcrTriggered: false,
+                StageUsed: 0,
+                StageName: "Validation",
+                TotalDurationMs: (int)overallStopwatch.Elapsed.TotalMilliseconds,
+                ErrorMessage: $"PDF size ({pdfStream.Length / 1_000_000:F1} MB) exceeds maximum allowed ({maxSize / 1_000_000} MB)");
         }
 
-        // Stage 2: SmolDocling
-        var stage2Result = await TryExtractPagedWithStage(
-            2,
-            "SmolDocling",
-            _smolDoclingExtractor,
-            pdfBytes,
-            Stage2QualityThreshold,
-            enableOcrFallback,
-            requestId,
-            ct);
+        // BGAI-087: Load PDF with size-based strategy (memory vs temp file)
+        using var pdfData = await LoadPdfBytesAsync(pdfStream, requestId, ct);
+
+        try
+        {
+            // Stage 1: Unstructured
+            var stage1Result = await TryExtractPagedWithStage(
+                1,
+                "Unstructured",
+                _unstructuredExtractor,
+                pdfData,
+                Stage1QualityThreshold,
+                enableOcrFallback,
+                requestId,
+                ct);
+
+            if (stage1Result != null)
+            {
+                overallStopwatch.Stop();
+                return CreateEnhancedPagedResult(stage1Result, 1, "Unstructured", overallStopwatch.Elapsed, requestId);
+            }
+
+            // Stage 2: SmolDocling
+            var stage2Result = await TryExtractPagedWithStage(
+                2,
+                "SmolDocling",
+                _smolDoclingExtractor,
+                pdfData,
+                Stage2QualityThreshold,
+                enableOcrFallback,
+                requestId,
+                ct);
 
         if (stage2Result != null)
         {
@@ -302,22 +388,27 @@ public class EnhancedPdfProcessingOrchestrator
             return CreateEnhancedPagedResult(stage2Result, 2, "SmolDocling", overallStopwatch.Elapsed, requestId);
         }
 
-        // Stage 3: Docnet (fallback)
-        _logger.LogWarning(
-            "[{RequestId}] Stages 1-2 failed for paged extraction, using Stage 3 (Docnet) fallback",
-            requestId);
+            // Stage 3: Docnet (fallback)
+            _logger.LogWarning(
+                "[{RequestId}] Stages 1-2 failed for paged extraction, using Stage 3 (Docnet) fallback",
+                requestId);
 
-        var stage3Stopwatch = Stopwatch.StartNew();
-        await using var fallbackStream = new MemoryStream(pdfBytes);
-        var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct);
-        stage3Stopwatch.Stop();
+            var stage3Stopwatch = Stopwatch.StartNew();
+            await using var fallbackStream = pdfData.GetStream();
+            var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct);
+            stage3Stopwatch.Stop();
 
-        _logger.LogInformation(
-            "[{RequestId}] Stage 3 (Docnet) paged extraction completed in {DurationMs}ms - Success={Success}, Chunks={Chunks}",
-            requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.PageChunks.Count);
+            _logger.LogInformation(
+                "[{RequestId}] Stage 3 (Docnet) paged extraction completed in {DurationMs}ms - Success={Success}, Chunks={Chunks}",
+                requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.PageChunks.Count);
 
-        overallStopwatch.Stop();
-        return CreateEnhancedPagedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
+            overallStopwatch.Stop();
+            return CreateEnhancedPagedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
+        }
+        finally
+        {
+            // BGAI-087: Ensure temp file cleanup via Dispose
+        }
     }
 
     /// <summary>
@@ -327,7 +418,7 @@ public class EnhancedPdfProcessingOrchestrator
         int stageNumber,
         string stageName,
         IPdfTextExtractor extractor,
-        byte[] pdfBytes,
+        PdfDataHandle pdfData,
         double qualityThreshold,
         bool enableOcrFallback,
         string requestId,
@@ -341,7 +432,7 @@ public class EnhancedPdfProcessingOrchestrator
 
         try
         {
-            await using var stream = new MemoryStream(pdfBytes);
+            await using var stream = pdfData.GetStream();
             var result = await extractor.ExtractPagedTextAsync(stream, enableOcrFallback, ct);
             stageStopwatch.Stop();
 
@@ -457,6 +548,72 @@ public class EnhancedPdfProcessingOrchestrator
             StageName: stageName,
             TotalDurationMs: (int)totalDuration.TotalMilliseconds,
             ErrorMessage: pagedResult.ErrorMessage);
+    }
+
+    /// <summary>
+    /// BGAI-087: Handles PDF data with automatic cleanup for temp files
+    /// Supports both in-memory (byte[]) and temp file storage strategies
+    /// </summary>
+    private sealed class PdfDataHandle : IDisposable
+    {
+        private byte[]? _bytes;
+        private string? _tempFilePath;
+
+        private PdfDataHandle() { }
+
+        public bool IsMemoryBased => _bytes != null;
+
+        public static PdfDataHandle FromBytes(byte[] bytes)
+        {
+            return new PdfDataHandle { _bytes = bytes };
+        }
+
+        public static PdfDataHandle FromTempFile(string tempFilePath)
+        {
+            return new PdfDataHandle { _tempFilePath = tempFilePath };
+        }
+
+        /// <summary>
+        /// Gets a new stream for PDF data (caller must dispose)
+        /// </summary>
+        public Stream GetStream()
+        {
+            if (_bytes != null)
+            {
+                return new MemoryStream(_bytes);
+            }
+
+            if (_tempFilePath != null)
+            {
+                return new FileStream(
+                    _tempFilePath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: 81920,
+                    useAsync: true);
+            }
+
+            throw new InvalidOperationException("PdfDataHandle not initialized");
+        }
+
+        public void Dispose()
+        {
+            if (_tempFilePath != null && File.Exists(_tempFilePath))
+            {
+                try
+                {
+                    File.Delete(_tempFilePath);
+                }
+                catch
+                {
+                    // Best effort cleanup - log errors in production
+                }
+            }
+
+            _bytes = null;
+            _tempFilePath = null;
+        }
     }
 }
 

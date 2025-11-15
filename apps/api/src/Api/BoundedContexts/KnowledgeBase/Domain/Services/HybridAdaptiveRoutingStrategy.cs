@@ -85,7 +85,7 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
             settings.Providers[settings.PreferredProvider].Enabled)
         {
             var preferredConfig = settings.Providers[settings.PreferredProvider];
-            var preferredModel = preferredConfig.Models.FirstOrDefault() ?? GetDefaultModelForProvider(settings.PreferredProvider);
+            var preferredModel = preferredConfig.Models.FirstOrDefault() ?? GetDefaultModelForProvider(settings.PreferredProvider, userRole);
 
             _logger.LogDebug(
                 "[{UserId}] Routing to PreferredProvider {Provider} ({Model}) - overriding user-tier routing",
@@ -117,11 +117,18 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 
             // Try alternative provider
             var alternativeProvider = selectedProvider == "Ollama" ? "OpenRouter" : "Ollama";
-            if (settings.Providers.ContainsKey(alternativeProvider) &&
-                settings.Providers[alternativeProvider].Enabled)
+
+            // ISSUE-1159: Treat missing providers as implicitly enabled (using default configuration)
+            var alternativeEnabled = !settings.Providers.ContainsKey(alternativeProvider) ||
+                                     settings.Providers[alternativeProvider].Enabled;
+
+            if (alternativeEnabled)
             {
-                var alternativeModel = settings.Providers[alternativeProvider].Models.FirstOrDefault()
-                    ?? GetDefaultModelForProvider(alternativeProvider);
+                // Get model from config or use default
+                var alternativeModel = settings.Providers.ContainsKey(alternativeProvider) &&
+                                       settings.Providers[alternativeProvider].Models.Any()
+                    ? settings.Providers[alternativeProvider].Models.First()
+                    : GetDefaultModelForProvider(alternativeProvider, userRole);
 
                 _logger.LogInformation(
                     "[{UserId}] Fallback to {Provider} ({Model}) - primary provider disabled",
@@ -133,10 +140,9 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
                     $"Fallback from {selectedProvider} (disabled in AI:Providers)");
             }
 
-            // No enabled providers - throw exception
+            // Both providers explicitly disabled - throw exception
             throw new InvalidOperationException(
-                $"Provider {selectedProvider} is disabled and no enabled fallback provider found. " +
-                "Check AI:Providers configuration.");
+                "Both AI providers are disabled. At least one provider must be enabled.");
         }
 
         // Provider is enabled or AI section not configured (backward compatible)
@@ -219,13 +225,16 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 
     /// <summary>
     /// BGAI-022: Get default model for a provider when not specified in configuration
+    /// ISSUE-1159: Enhanced to support tier-aware defaults for better fallback behavior
     /// </summary>
-    private static string GetDefaultModelForProvider(string providerName)
+    private static string GetDefaultModelForProvider(string providerName, Role? userRole = null)
     {
         return providerName.ToLowerInvariant() switch
         {
             "ollama" => "llama3:8b",
-            "openrouter" => "meta-llama/llama-3.3-70b-instruct:free",
+            "openrouter" => userRole?.Value == "admin"
+                ? "anthropic/claude-3.5-haiku"
+                : "meta-llama/llama-3.3-70b-instruct:free",
             _ => "llama3:8b"
         };
     }

@@ -1,8 +1,10 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -19,12 +21,18 @@ public class EnhancedPdfProcessingOrchestratorTests
 {
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IOptions<PdfProcessingOptions> _options;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public EnhancedPdfProcessingOrchestratorTests()
     {
         _logger = Mock.Of<ILogger<EnhancedPdfProcessingOrchestrator>>();
         _configuration = new ConfigurationBuilder().Build();
+        _options = Options.Create(new PdfProcessingOptions
+        {
+            LargePdfThresholdBytes = 52428800,
+            UseTempFileForLargePdfs = true
+        });
     }
 
     [Fact]
@@ -36,7 +44,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Stage3 text");
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -66,7 +74,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Stage3");
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -94,7 +102,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Stage3 fallback");
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -121,7 +129,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, text: "Stage3");
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -147,7 +155,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: false, quality: ExtractionQuality.VeryLow, text: "", errorMsg: "Stage3 error");
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -174,7 +182,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Stage3");
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -196,7 +204,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, pageCount: 10, charsPerPage: 300);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -224,7 +232,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, pageCount: 5, charsPerPage: 200);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -253,7 +261,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, pageCount: 10, charsPerPage: 100); // 0.10
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -285,7 +293,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, pageCount: 5, charsPerPage: 300); // Best effort
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -315,7 +323,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, pageCount: 8, charsPerPage: 500);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -344,7 +352,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Slow");
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration);
+            stage1, stage2, stage3, _logger, _configuration, _options);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -376,7 +384,7 @@ public class EnhancedPdfProcessingOrchestratorTests
             var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, text: "Stage3");
 
             var orchestrator = new EnhancedPdfProcessingOrchestrator(
-                stage1, stage2, stage3, _logger, _configuration);
+                stage1, stage2, stage3, _logger, _configuration, _options);
 
             await using var pdfStream = CreateDummyPdfStream();
             var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);
@@ -413,8 +421,9 @@ public class EnhancedPdfProcessingOrchestratorTests
             })
             .Build();
 
+        var options = Options.Create(new PdfProcessingOptions { LargePdfThresholdBytes = 52428800, UseTempFileForLargePdfs = true });
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, config);
+            stage1, stage2, stage3, _logger, config, options);
 
         await using var pdfStream = CreateTestPdfStream(size);
 
@@ -460,8 +469,9 @@ public class EnhancedPdfProcessingOrchestratorTests
             })
             .Build();
 
+        var options = Options.Create(new PdfProcessingOptions { LargePdfThresholdBytes = 52428800, UseTempFileForLargePdfs = true });
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, config);
+            stage1, stage2, stage3, _logger, config, options);
 
         // Create non-seekable stream wrapper
         await using var baseStream = CreateDummyPdfStream();
@@ -485,9 +495,10 @@ public class EnhancedPdfProcessingOrchestratorTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Stage3");
 
         var emptyConfig = new ConfigurationBuilder().Build(); // No PdfProcessing:MaxFileSizeBytes
+        var options = Options.Create(new PdfProcessingOptions { LargePdfThresholdBytes = 52428800, UseTempFileForLargePdfs = true });
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, emptyConfig);
+            stage1, stage2, stage3, _logger, emptyConfig, options);
 
         // 110 MB stream - should exceed default 100 MB
         await using var pdfStream = CreateTestPdfStream(115343360); // 110 * 1024 * 1024

@@ -256,8 +256,13 @@ describe('FollowUpQuestions Component', () => {
         <FollowUpQuestions questions={questions} onQuestionClick={mockOnQuestionClick} />
       );
 
-      const buttonContainer = container.querySelector('div[style*="display: flex"]');
-      expect(buttonContainer).toBeInTheDocument(); // Style assertion removed - Shadcn/UI uses Tailwind CSS classes
+      // Shadcn/UI components use Tailwind CSS classes for layout, not inline styles
+      // Check that buttons are rendered in a container (the actual flex layout is handled by CSS)
+      const buttons = container.querySelectorAll('button');
+      expect(buttons).toHaveLength(3);
+      expect(buttons[0]).toHaveTextContent('Q1');
+      expect(buttons[1]).toHaveTextContent('Q2');
+      expect(buttons[2]).toHaveTextContent('Q3');
     });
   });
 

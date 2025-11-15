@@ -22,6 +22,11 @@ jest.mock('@/lib/api', () => ({
       updateMessage: jest.fn(),
       deleteMessage: jest.fn(),
     },
+    chatThreads: {
+      getByGame: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
   },
 }));
 
@@ -109,17 +114,33 @@ describe('Provider Tree Integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorageMock.clear();
+    // Reset all mocks to ensure clean state
+    mockApi.get.mockReset();
+    mockApi.post.mockReset();
+    mockApi.delete.mockReset();
+    mockApi.chat.updateMessage.mockReset();
+    mockApi.chat.deleteMessage.mockReset();
+    mockApi.chatThreads.getByGame.mockReset();
+    mockApi.chatThreads.create.mockReset();
+    mockApi.chatThreads.delete.mockReset();
   });
 
   describe('Full Provider Tree', () => {
     it('successfully initializes entire provider hierarchy', async () => {
-      mockApi.get
-        .mockResolvedValueOnce({ user: mockUser }) // Auth
-        .mockResolvedValueOnce(mockGames) // Games
-        .mockResolvedValueOnce(mockAgents) // Agents
-        .mockResolvedValueOnce(mockChats); // Chats
+      // Setup mocks - Auth provider makes first call to /api/v1/auth/me
+      mockApi.get.mockImplementation((url) => {
+        if (url === '/api/v1/auth/me') return Promise.resolve({ user: mockUser });
+        if (url === '/api/v1/games') return Promise.resolve(mockGames);
+        if (url === '/api/v1/games/game-1/agents') return Promise.resolve(mockAgents);
+        return Promise.resolve(null);
+      });
+
+      mockApi.chatThreads.getByGame.mockResolvedValue(mockChats);
 
       const { result } = renderHook(() => useChatContext(), { wrapper: FullProviderTree });
+
+      // Wait for auth to load first
+      await waitFor(() => expect(result.current.authUser).not.toBeNull(), { timeout: 3000 });
 
       // Wait for all providers to initialize
       await waitFor(() => expect(result.current.loading.games).toBe(false));
@@ -164,16 +185,25 @@ describe('Provider Tree Integration', () => {
         },
       ];
 
-      mockApi.get
-        .mockResolvedValueOnce({ user: mockUser })
-        .mockResolvedValueOnce([...mockGames, game2])
-        .mockResolvedValueOnce(mockAgents) // game-1 agents
-        .mockResolvedValueOnce(mockChats) // game-1 chats
-        .mockResolvedValueOnce(game2Agents) // game-2 agents
-        .mockResolvedValueOnce(game2Chats); // game-2 chats
+      // Setup mocks with proper implementation for game switching
+      mockApi.get.mockImplementation((url) => {
+        if (url === '/api/v1/auth/me') return Promise.resolve({ user: mockUser });
+        if (url === '/api/v1/games') return Promise.resolve([...mockGames, game2]);
+        if (url === '/api/v1/games/game-1/agents') return Promise.resolve(mockAgents);
+        if (url === '/api/v1/games/game-2/agents') return Promise.resolve(game2Agents);
+        return Promise.resolve(null);
+      });
+
+      let chatCallCount = 0;
+      mockApi.chatThreads.getByGame.mockImplementation(() => {
+        chatCallCount++;
+        return Promise.resolve(chatCallCount === 1 ? mockChats : game2Chats);
+      });
 
       const { result } = renderHook(() => useChatContext(), { wrapper: FullProviderTree });
 
+      // Wait for auth and initial data to load
+      await waitFor(() => expect(result.current.authUser).not.toBeNull(), { timeout: 3000 });
       await waitFor(() => expect(result.current.games.length).toBe(2));
 
       // Change game
@@ -193,14 +223,20 @@ describe('Provider Tree Integration', () => {
 
   describe('Backward Compatibility (useChatContext)', () => {
     it('provides unified access to all provider state', async () => {
-      mockApi.get
-        .mockResolvedValueOnce({ user: mockUser })
-        .mockResolvedValueOnce(mockGames)
-        .mockResolvedValueOnce(mockAgents)
-        .mockResolvedValueOnce(mockChats);
+      // Setup mocks with proper implementation
+      mockApi.get.mockImplementation((url) => {
+        if (url === '/api/v1/auth/me') return Promise.resolve({ user: mockUser });
+        if (url === '/api/v1/games') return Promise.resolve(mockGames);
+        if (url === '/api/v1/games/game-1/agents') return Promise.resolve(mockAgents);
+        return Promise.resolve(null);
+      });
+
+      mockApi.chatThreads.getByGame.mockResolvedValue(mockChats);
 
       const { result } = renderHook(() => useChatContext(), { wrapper: FullProviderTree });
 
+      // Wait for auth and initial data to load
+      await waitFor(() => expect(result.current.authUser).not.toBeNull(), { timeout: 3000 });
       await waitFor(() => expect(result.current.loading.games).toBe(false));
 
       // Verify useChatContext provides access to all providers
@@ -211,14 +247,20 @@ describe('Provider Tree Integration', () => {
     });
 
     it('maintains same API as old ChatProvider', async () => {
-      mockApi.get
-        .mockResolvedValueOnce({ user: mockUser })
-        .mockResolvedValueOnce(mockGames)
-        .mockResolvedValueOnce(mockAgents)
-        .mockResolvedValueOnce(mockChats);
+      // Setup mocks with proper implementation
+      mockApi.get.mockImplementation((url) => {
+        if (url === '/api/v1/auth/me') return Promise.resolve({ user: mockUser });
+        if (url === '/api/v1/games') return Promise.resolve(mockGames);
+        if (url === '/api/v1/games/game-1/agents') return Promise.resolve(mockAgents);
+        return Promise.resolve(null);
+      });
+
+      mockApi.chatThreads.getByGame.mockResolvedValue(mockChats);
 
       const { result } = renderHook(() => useChatContext(), { wrapper: FullProviderTree });
 
+      // Wait for auth and initial data to load
+      await waitFor(() => expect(result.current.authUser).not.toBeNull(), { timeout: 3000 });
       await waitFor(() => expect(result.current.loading.games).toBe(false));
 
       // Verify all old ChatProvider methods are available
@@ -240,39 +282,50 @@ describe('Provider Tree Integration', () => {
 
   describe('Individual Provider Access', () => {
     it('allows accessing individual providers', async () => {
-      mockApi.get
-        .mockResolvedValueOnce({ user: mockUser })
-        .mockResolvedValueOnce(mockGames)
-        .mockResolvedValueOnce(mockAgents)
-        .mockResolvedValueOnce(mockChats);
+      // Setup mocks with proper implementation
+      mockApi.get.mockImplementation((url) => {
+        if (url === '/api/v1/auth/me') return Promise.resolve({ user: mockUser });
+        if (url === '/api/v1/games') return Promise.resolve(mockGames);
+        if (url === '/api/v1/games/game-1/agents') return Promise.resolve(mockAgents);
+        return Promise.resolve(null);
+      });
 
-      const AuthHook = () => useAuth();
-      const GameHook = () => useGame();
-      const ChatHook = () => useChat();
-      const UIHook = () => useUI();
+      mockApi.chatThreads.getByGame.mockResolvedValue(mockChats);
 
-      const { result: authResult } = renderHook(AuthHook, { wrapper: FullProviderTree });
-      const { result: gameResult } = renderHook(GameHook, { wrapper: FullProviderTree });
-      const { result: chatResult } = renderHook(ChatHook, { wrapper: FullProviderTree });
-      const { result: uiResult } = renderHook(UIHook, { wrapper: FullProviderTree });
+      // Use a single hook that accesses all contexts to ensure state is shared
+      const AllHooks = () => ({
+        auth: useAuth(),
+        game: useGame(),
+        chat: useChat(),
+        ui: useUI(),
+      });
 
-      await waitFor(() => expect(gameResult.current.loading.games).toBe(false));
+      const { result } = renderHook(AllHooks, { wrapper: FullProviderTree });
+
+      // Wait for auth to load first
+      await waitFor(() => expect(result.current.auth.user).not.toBeNull(), { timeout: 3000 });
+      await waitFor(() => expect(result.current.game.loading.games).toBe(false));
+      await waitFor(() => expect(result.current.chat.loading.chats).toBe(false));
 
       // Verify individual hooks work
-      expect(authResult.current.user).toEqual(mockUser);
-      expect(gameResult.current.games).toEqual(mockGames);
-      expect(chatResult.current.chats).toEqual(mockChats);
-      expect(uiResult.current.sidebarCollapsed).toBe(false);
+      expect(result.current.auth.user).toEqual(mockUser);
+      expect(result.current.game.games).toEqual(mockGames);
+      expect(result.current.chat.chats).toEqual(mockChats);
+      expect(result.current.ui.sidebarCollapsed).toBe(false);
     });
   });
 
   describe('State Isolation', () => {
     it('changes in UI state do not trigger game/chat rerenders', async () => {
-      mockApi.get
-        .mockResolvedValueOnce({ user: mockUser })
-        .mockResolvedValueOnce(mockGames)
-        .mockResolvedValueOnce(mockAgents)
-        .mockResolvedValueOnce(mockChats);
+      // Setup mocks with proper implementation
+      mockApi.get.mockImplementation((url) => {
+        if (url === '/api/v1/auth/me') return Promise.resolve({ user: mockUser });
+        if (url === '/api/v1/games') return Promise.resolve(mockGames);
+        if (url === '/api/v1/games/game-1/agents') return Promise.resolve(mockAgents);
+        return Promise.resolve(null);
+      });
+
+      mockApi.chatThreads.getByGame.mockResolvedValue(mockChats);
 
       let uiRenderCount = 0;
       let gameRenderCount = 0;
@@ -294,6 +347,7 @@ describe('Provider Tree Integration', () => {
 
       const { result } = renderHook(TrackingHook, { wrapper: FullProviderTree });
 
+      // Wait for initial load to complete
       await waitFor(() => expect(result.current.game.loading.games).toBe(false));
 
       const initialGameRenderCount = gameRenderCount;
@@ -311,14 +365,20 @@ describe('Provider Tree Integration', () => {
 
   describe('localStorage Integration', () => {
     it('persists chat state across provider remounts', async () => {
-      mockApi.get
-        .mockResolvedValueOnce({ user: mockUser })
-        .mockResolvedValueOnce(mockGames)
-        .mockResolvedValueOnce(mockAgents)
-        .mockResolvedValueOnce(mockChats);
+      // Setup mocks with proper implementation
+      mockApi.get.mockImplementation((url) => {
+        if (url === '/api/v1/auth/me') return Promise.resolve({ user: mockUser });
+        if (url === '/api/v1/games') return Promise.resolve(mockGames);
+        if (url === '/api/v1/games/game-1/agents') return Promise.resolve(mockAgents);
+        return Promise.resolve(null);
+      });
+
+      mockApi.chatThreads.getByGame.mockResolvedValue(mockChats);
 
       const { unmount, result } = renderHook(() => useChatContext(), { wrapper: FullProviderTree });
 
+      // Wait for auth and chats to load
+      await waitFor(() => expect(result.current.authUser).not.toBeNull(), { timeout: 3000 });
       await waitFor(() => expect(result.current.chats).toEqual(mockChats));
 
       // Verify localStorage was called
@@ -333,14 +393,20 @@ describe('Provider Tree Integration', () => {
       const storedData = localStorageMock.setItem.mock.calls[localStorageMock.setItem.mock.calls.length - 1][1];
       localStorageMock.getItem.mockReturnValueOnce(storedData);
 
-      mockApi.get
-        .mockResolvedValueOnce({ user: mockUser })
-        .mockResolvedValueOnce(mockGames)
-        .mockResolvedValueOnce(mockAgents)
-        .mockResolvedValueOnce(mockChats);
+      // Setup mocks with proper implementation
+      mockApi.get.mockImplementation((url) => {
+        if (url === '/api/v1/auth/me') return Promise.resolve({ user: mockUser });
+        if (url === '/api/v1/games') return Promise.resolve(mockGames);
+        if (url === '/api/v1/games/game-1/agents') return Promise.resolve(mockAgents);
+        return Promise.resolve(null);
+      });
+
+      mockApi.chatThreads.getByGame.mockResolvedValue(mockChats);
 
       const { result: result2 } = renderHook(() => useChatContext(), { wrapper: FullProviderTree });
 
+      // Wait for auth and chats to reload
+      await waitFor(() => expect(result2.current.authUser).not.toBeNull(), { timeout: 3000 });
       await waitFor(() => expect(result2.current.loading.chats).toBe(false));
 
       // State should be restored from localStorage

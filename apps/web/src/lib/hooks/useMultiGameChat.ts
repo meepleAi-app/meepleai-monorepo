@@ -16,12 +16,15 @@ import { api } from "../api";
  * - Supports multiple concurrent chats per game
  */
 
+import { Citation } from '@/types'; // #859
+
 // Type definitions
 export type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
   snippets?: Snippet[];
+  citations?: Citation[]; // #859: PDF citations from RAG
   feedback?: "helpful" | "not-helpful" | null;
   endpoint?: string;
   gameId?: string;

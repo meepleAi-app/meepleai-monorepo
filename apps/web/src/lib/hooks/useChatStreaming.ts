@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { Citation } from '@/types'; // #859
 
 // Event types that match the backend
 type StreamingEventType = 'token' | 'stateUpdate' | 'citations' | 'complete' | 'error' | 'heartbeat' | 'followUpQuestions';
@@ -14,18 +15,22 @@ type StateUpdateData = {
   state: string;
 };
 
+// #859: Updated to support both snippets (legacy) and citations (new)
 type CitationsData = {
-  snippets: Snippet[];
+  snippets?: Snippet[];
+  citations?: Citation[];
 };
 
 type TokenData = {
   token: string;
 };
 
+// #859: Updated to support both snippets and citations
 type CompleteData = {
   totalTokens: number;
   confidence?: number;
-  snippets: Snippet[];
+  snippets?: Snippet[];
+  citations?: Citation[];
 };
 
 type ErrorData = {
@@ -42,10 +47,12 @@ type StreamingEvent = {
   data: StateUpdateData | CitationsData | TokenData | CompleteData | ErrorData | FollowUpQuestionsData | null;
 };
 
+// #859: Added citations to streaming state
 export type StreamingState = {
   state: string | null;
   currentAnswer: string;
   snippets: Snippet[];
+  citations: Citation[]; // #859: PDF citations from RAG
   followUpQuestions: string[]; // CHAT-02
   totalTokens: number;
   confidence: number | null;
@@ -63,6 +70,7 @@ const INITIAL_STATE: StreamingState = {
   state: null,
   currentAnswer: '',
   snippets: [],
+  citations: [], // #859
   followUpQuestions: [], // CHAT-02
   totalTokens: 0,
   confidence: null,
@@ -91,8 +99,9 @@ const INITIAL_STATE: StreamingState = {
  * streamingControls.stopStreaming();
  * ```
  */
+// #859: Updated onComplete callback to include citations
 export function useChatStreaming(callbacks?: {
-  onComplete?: (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[] }) => void;
+  onComplete?: (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[]; citations?: Citation[] }) => void;
   onError?: (error: string) => void;
 }): [StreamingState, StreamingControls] {
   const [state, setState] = useState<StreamingState>(INITIAL_STATE);
@@ -203,12 +212,16 @@ export function useChatStreaming(callbacks?: {
                     }));
                     break;
 
-                  case 'citations':
+                  case 'citations': {
+                    // #859: Handle both snippets (legacy) and citations (new)
+                    const citationsData = eventData as CitationsData;
                     setState((prev) => ({
                       ...prev,
-                      snippets: (eventData as CitationsData)?.snippets || [],
+                      snippets: citationsData?.snippets || prev.snippets,
+                      citations: citationsData?.citations || prev.citations,
                     }));
                     break;
+                  }
 
                   case 'token':
                     setState((prev) => ({
@@ -229,11 +242,13 @@ export function useChatStreaming(callbacks?: {
                   case 'complete': {
                     const completeData = eventData as CompleteData;
                     setState((prev) => {
+                      // #859: Include citations in final state
                       const finalState = {
                         ...prev,
                         totalTokens: completeData?.totalTokens || 0,
                         confidence: completeData?.confidence || null,
                         snippets: completeData?.snippets || prev.snippets,
+                        citations: completeData?.citations || prev.citations, // #859
                         isStreaming: false,
                         state: null,
                       };
@@ -244,6 +259,7 @@ export function useChatStreaming(callbacks?: {
                           totalTokens: finalState.totalTokens,
                           confidence: finalState.confidence,
                           followUpQuestions: prev.followUpQuestions.length > 0 ? prev.followUpQuestions : undefined,
+                          citations: finalState.citations.length > 0 ? finalState.citations : undefined, // #859
                         });
                       }
 

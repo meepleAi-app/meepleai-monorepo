@@ -16,6 +16,7 @@ import { useChatContext } from './ChatProvider';
 import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
 import { FollowUpQuestions } from '../FollowUpQuestions';
+import { CitationList } from '../citations'; // #859
 
 interface MessageProps {
   message: MessageType;
@@ -129,6 +130,17 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
             questions={message.followUpQuestions}
             onQuestionClick={handleFollowUpClick}
             disabled={loading.sending}
+          />
+        </div>
+      )}
+
+      {/* #859: Citations for assistant messages */}
+      {!isUser && !isDeleted && message.citations && message.citations.length > 0 && (
+        <div className="max-w-[75%]" data-testid="message-citations">
+          <CitationList
+            citations={message.citations}
+            showRelevanceScores={false}
+            collapsible={true}
           />
         </div>
       )}

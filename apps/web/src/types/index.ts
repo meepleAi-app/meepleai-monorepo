@@ -71,3 +71,19 @@ export {
 export type {
   ProcessingProgress
 } from './pdf';
+
+// Search Types (#1101)
+export type {
+  SearchResultType,
+  BaseSearchResult,
+  MessageSearchResult,
+  ChatSearchResult,
+  GameSearchResult,
+  AgentSearchResult,
+  PdfSearchResult,
+  SearchResult,
+  SearchFilters,
+  SearchOptions,
+  RecentSearch,
+  SearchState
+} from './search';

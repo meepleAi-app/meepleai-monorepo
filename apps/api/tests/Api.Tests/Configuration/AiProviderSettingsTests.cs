@@ -21,7 +21,7 @@ public class AiProviderSettingsTests
             Providers = new Dictionary<string, ProviderConfig>
             {
                 ["Ollama"] = new() { Enabled = true, BaseUrl = "http://localhost:11434", Models = ["llama3:8b"] },
-                ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", ApiKey = "sk-test", Models = ["gpt-4"] }
+                ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = ["gpt-4"] }
             },
             FallbackChain = ["Ollama", "OpenRouter"],
             CircuitBreaker = new CircuitBreakerConfig

@@ -223,11 +223,13 @@ services:
 
 ```csharp
 // appsettings.json
+// NOTE: This configuration structure is DEPRECATED (v1.0)
+// See docs/03-api/ai-provider-configuration.md for current BGAI-021/022 structure
 {
   "AI": {
     "Provider": "OpenRouter",  // "OpenRouter" or "Ollama"
     "OpenRouter": {
-      "ApiKey": "${OPENROUTER_API_KEY}",
+      // API key configured via environment variable: OPENROUTER_API_KEY or OPENROUTER_API_KEY_FILE
       "Enabled": true,
       "Models": {
         "Primary": "openai/gpt-4-turbo",

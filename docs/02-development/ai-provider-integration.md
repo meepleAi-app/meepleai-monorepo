@@ -120,14 +120,15 @@ public class ProviderConfig
     public string BaseUrl { get; set; } = string.Empty;
 
     /// <summary>
-    /// API authentication key (supports environment variable substitution)
-    /// Example: "${OPENROUTER_API_KEY}"
-    /// </summary>
-    public string ApiKey { get; set; } = string.Empty;
-
-    /// <summary>
     /// Available models for this provider
     /// </summary>
+    /// <remarks>
+    /// Note: API keys (e.g., OpenRouter) are NOT configured in appsettings.json.
+    /// They are read from environment variables using SecretsHelper (SEC-708):
+    /// - OPENROUTER_API_KEY: Direct environment variable
+    /// - OPENROUTER_API_KEY_FILE: Path to Docker secret file
+    /// See: Infrastructure/SecretsHelper.cs for implementation details.
+    /// </remarks>
     public List<string> Models { get; set; } = new();
 
     /// <summary>

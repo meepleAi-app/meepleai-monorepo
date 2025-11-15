@@ -311,7 +311,7 @@ export default function SetupPage() {
 
   // Main setup guide interface
   return (
-    <main className="min-h-screen bg-gray-50 font-sans">
+    <main className="min-h-dvh bg-gray-50 font-sans">
       {/* Header */}
       <div className="bg-white border-b border-gray-300 p-4 sticky top-0 z-[100]">
         <div className="max-w-[900px] mx-auto flex justify-between items-center">

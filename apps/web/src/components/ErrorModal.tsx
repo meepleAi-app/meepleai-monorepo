@@ -101,9 +101,9 @@ export function ErrorModal({
       />
 
       {/* Modal */}
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex items-center justify-center min-h-dvh px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         {/* Centering trick */}
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
+        <span className="hidden sm:inline-block sm:align-middle sm:h-dvh" aria-hidden="true">
           &#8203;
         </span>
 
@@ -218,3 +218,4 @@ export function ErrorModal({
     </div>
   );
 }
+

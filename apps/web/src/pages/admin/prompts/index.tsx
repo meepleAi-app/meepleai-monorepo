@@ -212,7 +212,7 @@ export default function AdminPrompts() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+    <div className="min-h-dvh" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
       <div className="max-w-7xl mx-auto p-8">
         <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
           {/* Header */}

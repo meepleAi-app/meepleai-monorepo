@@ -20,7 +20,7 @@ export default function Home() {
   const [keyFeaturesRef, keyFeaturesInView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-dvh bg-slate-950 text-white">
       {/* Header */}
       <header className="sticky top-0 glass z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
@@ -73,7 +73,7 @@ export default function Home() {
       {/* Main Content */}
       <main id="main-content">
         {/* Hero Section */}
-        <section ref={heroRef} className="relative min-h-screen flex items-center px-6 py-20">
+        <section ref={heroRef} className="relative min-h-dvh flex items-center px-6 py-20">
         <div className="max-w-7xl mx-auto w-full grid md:grid-cols-2 gap-12 items-center">
           {/* Hero Content */}
           <motion.div
@@ -154,7 +154,7 @@ export default function Home() {
                     <p className="text-sm">
                       <strong>🤖 MeepleAI:</strong> En passant is a special pawn capture that can only occur immediately after a pawn moves two squares forward from its starting position and lands beside an opponent&apos;s pawn...
                     </p>
-                    <p className="text-xs text-slate-400 mt-2 italic">
+                    <p className="text-xs text-slate-300 mt-2 italic">
                       📖 Sources: Chess Rules (FIDE) - Page 12
                     </p>
                   </Card>
@@ -170,7 +170,7 @@ export default function Home() {
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          <svg className="w-6 h-6 text-slate-500" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-6 h-6 text-slate-300" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
             <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
           </svg>
         </motion.div>
@@ -308,7 +308,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto pt-8 border-t border-white/10 text-center text-sm text-slate-400">
+        <div className="max-w-6xl mx-auto pt-8 border-t border-white/10 text-center text-sm text-slate-300">
           <p>© 2025 MeepleAI. Open source project.</p>
         </div>
       </footer>

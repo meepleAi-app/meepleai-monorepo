@@ -112,7 +112,7 @@ export default function BulkExport() {
 
   if (!authUser) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+      <div className="min-h-dvh bg-slate-950 text-white flex items-center justify-center">
         <p>Loading...</p>
       </div>
     );
@@ -120,7 +120,7 @@ export default function BulkExport() {
 
   if (authUser.role !== "Editor" && authUser.role !== "Admin") {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+      <div className="min-h-dvh bg-slate-950 text-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
           <p className="text-slate-400 mb-6">Editor or Admin role required.</p>
@@ -133,7 +133,7 @@ export default function BulkExport() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-dvh bg-slate-950 text-white">
       {/* Header */}
       <header className="sticky top-0 glass z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
@@ -256,3 +256,4 @@ export default function BulkExport() {
     </div>
   );
 }
+

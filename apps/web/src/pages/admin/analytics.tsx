@@ -176,7 +176,7 @@ export default function AnalyticsDashboard() {
 
   if (loading && !stats) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-dvh bg-gray-50 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-300 rounded w-1/4 mb-8"></div>
@@ -193,7 +193,7 @@ export default function AnalyticsDashboard() {
 
   if (error && !stats) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-dvh bg-gray-50 p-8">
         <div className="max-w-7xl mx-auto">
           <ErrorDisplay
             error={categorizeError(new Error(error))}
@@ -207,7 +207,7 @@ export default function AnalyticsDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-dvh bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">

@@ -311,7 +311,7 @@ export default function SettingsPage() {
 
   if (loading && !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
     );
@@ -323,7 +323,7 @@ export default function SettingsPage() {
         <title>Settings - MeepleAI</title>
       </Head>
 
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4">
+      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 py-8 px-4">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
           <div className="mb-8">
@@ -860,3 +860,4 @@ export default function SettingsPage() {
     </>
   );
 }
+

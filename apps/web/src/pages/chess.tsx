@@ -225,7 +225,7 @@ export default function ChessPage() {
   // Render login required state
   if (!authUser) {
     return (
-      <main className="p-6 max-w-[900px] mx-auto font-sans bg-white min-h-screen">
+      <main className="p-6 max-w-[900px] mx-auto font-sans bg-white min-h-dvh">
         <Link href="/" className="text-blue-600 underline">
           ← Torna alla Home
         </Link>
@@ -234,7 +234,7 @@ export default function ChessPage() {
           <p className="mt-2">Devi effettuare l&apos;accesso per utilizzare la chat scacchi.</p>
           <Link
             href="/"
-            className="inline-block mt-4 px-4 py-2 bg-blue-500 text-white no-underline rounded"
+            className="inline-block mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white no-underline rounded transition-colors"
           >
             Vai al Login
           </Link>
@@ -245,7 +245,7 @@ export default function ChessPage() {
 
   // Main chess interface
   return (
-    <main className="flex h-screen font-sans overflow-hidden bg-gray-50">
+    <main className="flex h-dvh font-sans overflow-hidden bg-gray-50">
       {/* Chess Board Panel */}
       <div className="flex-shrink-0 w-[600px] flex flex-col p-6 bg-white border-r border-gray-300">
         {/* Board Header */}

@@ -132,7 +132,7 @@ describe('Login Page', () => {
   describe('Styling', () => {
     it('applies gradient background styling', () => {
       const { container } = render(<LoginPage />);
-      const backgroundDiv = container.querySelector('.min-h-screen');
+      const backgroundDiv = container.querySelector('.min-h-dvh');
       expect(backgroundDiv).toHaveClass('bg-gradient-to-br');
       expect(backgroundDiv).toHaveClass('from-slate-50');
       expect(backgroundDiv).toHaveClass('to-slate-100');
@@ -140,14 +140,14 @@ describe('Login Page', () => {
 
     it('supports dark mode styling classes', () => {
       const { container } = render(<LoginPage />);
-      const backgroundDiv = container.querySelector('.min-h-screen');
+      const backgroundDiv = container.querySelector('.min-h-dvh');
       expect(backgroundDiv).toHaveClass('dark:from-slate-900');
       expect(backgroundDiv).toHaveClass('dark:to-slate-800');
     });
 
     it('centers content properly', () => {
       const { container } = render(<LoginPage />);
-      const backgroundDiv = container.querySelector('.min-h-screen');
+      const backgroundDiv = container.querySelector('.min-h-dvh');
       expect(backgroundDiv).toHaveClass('flex');
       expect(backgroundDiv).toHaveClass('items-center');
       expect(backgroundDiv).toHaveClass('justify-center');

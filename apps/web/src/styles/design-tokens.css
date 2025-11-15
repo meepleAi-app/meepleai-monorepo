@@ -64,6 +64,11 @@
     --size-icon-lg: 1.5rem;       /* 24px */
     --size-icon-xl: 2rem;         /* 32px */
 
+    /* Mobile-specific sizing (Issue #1092) */
+    --size-mobile-nav-height: 4.5rem;      /* 72px - bottom nav bar */
+    --size-mobile-sheet-width: 20rem;      /* 320px - mobile drawer */
+    --size-mobile-header-height: 3.5rem;   /* 56px - mobile header */
+
     /* ============================================================================
      * TYPOGRAPHY SYSTEM
      * System font stack for optimal performance
@@ -300,6 +305,31 @@
     --scrollbar-width: 0.5rem;                 /* 8px */
     --scrollbar-track-color: var(--color-muted);
     --scrollbar-thumb-color: var(--color-muted-foreground);
+
+    /* ============================================================================
+     * MOBILE-SPECIFIC TOKENS (Issue #1092)
+     * Responsive design utilities for mobile viewports (< 768px)
+     * ============================================================================ */
+
+    /* Viewport units - Dynamic Viewport Height (fixes iOS viewport issues) */
+    --vh-dynamic: 1dvh;                        /* Dynamic viewport height unit */
+    --vw-dynamic: 1dvw;                        /* Dynamic viewport width unit */
+
+    /* Mobile breakpoint reference */
+    --mobile-max-width: 767px;                 /* < 768px = mobile */
+    --tablet-min-width: 768px;                 /* ≥ 768px = tablet/desktop */
+
+    /* Mobile spacing adjustments */
+    --space-mobile-xs: var(--space-2);         /* 8px */
+    --space-mobile-sm: var(--space-3);         /* 12px */
+    --space-mobile-md: var(--space-4);         /* 16px */
+    --space-mobile-lg: var(--space-6);         /* 24px */
+
+    /* Mobile component sizing */
+    --mobile-sidebar-width: var(--size-mobile-sheet-width);
+    --mobile-nav-height: var(--size-mobile-nav-height);
+    --mobile-header-height: var(--size-mobile-header-height);
+    --mobile-action-button-height: var(--size-touch-min);  /* 44px minimum */
   }
 
   /* Dark mode adjustments */

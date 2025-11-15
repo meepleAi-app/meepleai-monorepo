@@ -427,7 +427,7 @@ describe('OAuth Callback Page', () => {
       expect(heading).toHaveTextContent('Login successful!');
 
       // Check for main container
-      const mainContainer = container.querySelector('.min-h-screen');
+      const mainContainer = container.querySelector('.min-h-dvh');
       expect(mainContainer).toBeInTheDocument();
     });
 
@@ -557,7 +557,7 @@ describe('OAuth Callback Page', () => {
 
       const layout = container.querySelector('.flex.items-center.justify-center');
       expect(layout).toBeInTheDocument();
-      expect(layout).toHaveClass('min-h-screen');
+      expect(layout).toHaveClass('min-h-dvh');
     });
   });
 
@@ -617,3 +617,4 @@ describe('OAuth Callback Page', () => {
     });
   });
 });
+

@@ -122,7 +122,7 @@ export default function ConfigurationManagement() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
           <p className="text-slate-600 dark:text-slate-400">Loading configurations...</p>
@@ -134,7 +134,7 @@ export default function ConfigurationManagement() {
   // Error state (if not auth error)
   if (error && !error.includes("Unauthorized") && !error.includes("403")) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <div className="max-w-2xl w-full px-4">
           <ErrorDisplay
             error={categorizeError(new Error(error))}
@@ -152,7 +152,7 @@ export default function ConfigurationManagement() {
         <title>Configuration Management - MeepleAI Admin</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="min-h-dvh bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         {/* Restart Reminder Banner - Sticky Top */}
         {showBanner && (
           <div className="sticky top-0 z-50 bg-yellow-50 border-b border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">

@@ -28,7 +28,7 @@ export default function LoginPage() {
         <title>Login - MeepleAI</title>
       </Head>
 
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
+      <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
         {/* Unified Auth Modal */}
         <AuthModal
           isOpen={showAuthModal}
@@ -41,3 +41,4 @@ export default function LoginPage() {
     </>
   );
 }
+

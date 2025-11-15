@@ -1186,12 +1186,27 @@ export const api = {
     },
 
     /**
-     * Get all sessions for a specific game
+     * Get all sessions for a specific game (active + history)
      * @param gameId Game ID
      */
     async getSessions(gameId: string): Promise<GameSessionDto[]> {
-      const response = await api.get<GameSessionDto[]>(`/api/v1/games/${gameId}/sessions/active`);
-      return response ?? [];
+      // Fetch both active sessions and history in parallel
+      const [activeSessions, historyResponse] = await Promise.all([
+        api.get<GameSessionDto[]>(`/api/v1/games/${gameId}/sessions/active`),
+        api.get<PaginatedSessionsResponse>(`/api/v1/sessions/history?gameId=${gameId}&limit=1000`)
+      ]);
+
+      // Combine active and historical sessions
+      const active = activeSessions ?? [];
+      const history = historyResponse?.sessions ?? [];
+
+      // Merge and remove duplicates (in case a session appears in both)
+      const allSessions = [...active, ...history];
+      const uniqueSessions = Array.from(
+        new Map(allSessions.map(session => [session.id, session])).values()
+      );
+
+      return uniqueSessions;
     },
 
     /**

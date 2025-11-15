@@ -286,7 +286,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **ADR PDF Processing** | `docs/01-architecture/adr/adr-003b-unstructured-pdf.md` |
 | **Security** | `SECURITY.md`, `docs/06-security/code-scanning-remediation-summary.md` |
 | **OAuth Security** | `docs/06-security/oauth-security.md` |
-| **Testing** | `docs/02-development/testing/test-writing-guide.md` |
+| **Testing** | `docs/02-development/testing/testing-guide.md` |
 | **Shadcn/UI** | `docs/04-frontend/shadcn-ui-installation.md` |
 | **AI Provider Config** | `docs/03-api/ai-provider-configuration.md`, `docs/02-development/ai-provider-integration.md` |
 

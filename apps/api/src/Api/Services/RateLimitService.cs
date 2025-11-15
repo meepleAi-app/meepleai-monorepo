@@ -182,7 +182,7 @@ public class RateLimitService : IRateLimitService
 
         // 1. Try DB config with role-specific key (e.g., RateLimit.MaxTokens.admin)
         var roleKey = $"RateLimit.{limitType}.{role}";
-        var value = await _configService.GetValueAsync<T?>(roleKey, ct);
+        var value = await _configService.GetValueAsync<T?>(roleKey);
         if (value.HasValue)
         {
             var validated = ValidateRateLimit(value.Value, limitType, role);
@@ -193,7 +193,7 @@ public class RateLimitService : IRateLimitService
 
         // 2. Try DB config with global key (e.g., RateLimit.MaxTokens)
         var globalKey = $"RateLimit.{limitType}";
-        value = await _configService.GetValueAsync<T?>(globalKey, ct);
+        value = await _configService.GetValueAsync<T?>(globalKey);
         if (value.HasValue)
         {
             var validated = ValidateRateLimit(value.Value, limitType, role);

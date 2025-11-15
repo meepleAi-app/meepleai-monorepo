@@ -1,37 +1,43 @@
 using System.Text.Json;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.Models;
+using Api.Services;
+using MediatR;
 
-namespace Api.Services;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// CHESS-03: Service for indexing and managing chess knowledge in the vector database
+/// Handler for IndexChessKnowledgeCommand.
+/// Indexes all chess knowledge from ChessKnowledge.json into Qdrant.
 /// </summary>
-public class ChessKnowledgeService : IChessKnowledgeService
+public sealed class IndexChessKnowledgeCommandHandler
+    : IRequestHandler<IndexChessKnowledgeCommand, Api.Services.ChessIndexResult>
 {
     private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly ITextChunkingService _chunkingService;
-    private readonly ILogger<ChessKnowledgeService> _logger;
     private readonly IWebHostEnvironment _environment;
+    private readonly ILogger<IndexChessKnowledgeCommandHandler> _logger;
+
     private const string ChessCategory = "chess";
 
-    public ChessKnowledgeService(
+    public IndexChessKnowledgeCommandHandler(
         IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         ITextChunkingService chunkingService,
         IWebHostEnvironment environment,
-        ILogger<ChessKnowledgeService> logger)
+        ILogger<IndexChessKnowledgeCommandHandler> logger)
     {
-        _qdrantService = qdrantService;
-        _embeddingService = embeddingService;
-        _chunkingService = chunkingService;
-        _environment = environment;
-        _logger = logger;
+        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
+        _environment = environment ?? throw new ArgumentNullException(nameof(environment));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    /// <summary>
-    /// Index all chess knowledge into Qdrant from the ChessKnowledge.json file
-    /// </summary>
-    public async Task<ChessIndexResult> IndexChessKnowledgeAsync(CancellationToken ct = default)
+    public async Task<Api.Services.ChessIndexResult> Handle(
+        IndexChessKnowledgeCommand request,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -42,10 +48,10 @@ public class ChessKnowledgeService : IChessKnowledgeService
             if (!File.Exists(knowledgePath))
             {
                 _logger.LogError("Chess knowledge file not found at {Path}", knowledgePath);
-                return ChessIndexResult.CreateFailure($"Knowledge file not found: {knowledgePath}");
+                return Api.Services.ChessIndexResult.CreateFailure($"Knowledge file not found: {knowledgePath}");
             }
 
-            var jsonContent = await File.ReadAllTextAsync(knowledgePath, ct);
+            var jsonContent = await File.ReadAllTextAsync(knowledgePath, cancellationToken);
             var knowledge = JsonSerializer.Deserialize<ChessKnowledge>(jsonContent, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -53,7 +59,7 @@ public class ChessKnowledgeService : IChessKnowledgeService
 
             if (knowledge == null)
             {
-                return ChessIndexResult.CreateFailure("Failed to deserialize chess knowledge");
+                return Api.Services.ChessIndexResult.CreateFailure("Failed to deserialize chess knowledge");
             }
 
             // Collect all knowledge items
@@ -65,7 +71,7 @@ public class ChessKnowledgeService : IChessKnowledgeService
 
             if (allItems.Count == 0)
             {
-                return ChessIndexResult.CreateFailure("No knowledge items found");
+                return Api.Services.ChessIndexResult.CreateFailure("No knowledge items found");
             }
 
             _logger.LogInformation("Found {Count} chess knowledge items to index", allItems.Count);
@@ -89,11 +95,14 @@ public class ChessKnowledgeService : IChessKnowledgeService
 
                 // Generate embeddings for all chunks
                 var texts = chunkInputs.Select(c => c.Text).ToList();
-                var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, ct);
+                var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken);
 
                 if (!embeddingResult.Success)
                 {
-                    _logger.LogError("Failed to generate embeddings for {Title}: {Error}", item.Title, embeddingResult.ErrorMessage);
+                    _logger.LogError(
+                        "Failed to generate embeddings for {Title}: {Error}",
+                        item.Title,
+                        embeddingResult.ErrorMessage);
                     continue;
                 }
 
@@ -117,11 +126,17 @@ public class ChessKnowledgeService : IChessKnowledgeService
                 };
 
                 // Index the chunks
-                var indexResult = await _qdrantService.IndexChunksWithMetadataAsync(metadata, chunks, ct);
+                var indexResult = await _qdrantService.IndexChunksWithMetadataAsync(
+                    metadata,
+                    chunks,
+                    cancellationToken);
 
                 if (!indexResult.Success)
                 {
-                    _logger.LogError("Failed to index chunks for {Title}: {Error}", item.Title, indexResult.ErrorMessage);
+                    _logger.LogError(
+                        "Failed to index chunks for {Title}: {Error}",
+                        item.Title,
+                        indexResult.ErrorMessage);
                     continue;
                 }
 
@@ -130,14 +145,19 @@ public class ChessKnowledgeService : IChessKnowledgeService
                 var subcategory = item.Category;
                 categoryCounts[subcategory] = categoryCounts.GetValueOrDefault(subcategory, 0) + 1;
 
-                _logger.LogInformation("Indexed {ChunkCount} chunks for {Title} ({Category})",
-                    indexResult.IndexedCount, item.Title, item.Category);
+                _logger.LogInformation(
+                    "Indexed {ChunkCount} chunks for {Title} ({Category})",
+                    indexResult.IndexedCount,
+                    item.Title,
+                    item.Category);
             }
 
-            _logger.LogInformation("Chess knowledge indexing completed: {TotalItems} items, {TotalChunks} chunks",
-                allItems.Count, totalChunks);
+            _logger.LogInformation(
+                "Chess knowledge indexing completed: {TotalItems} items, {TotalChunks} chunks",
+                allItems.Count,
+                totalChunks);
 
-            return ChessIndexResult.CreateSuccess(allItems.Count, totalChunks, categoryCounts);
+            return Api.Services.ChessIndexResult.CreateSuccess(allItems.Count, totalChunks, categoryCounts);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -150,80 +170,11 @@ public class ChessKnowledgeService : IChessKnowledgeService
             // without context about which indexing stage failed.
             // Context: Indexing failures typically from Qdrant unavailable or file read errors
             _logger.LogError(ex, "Error during chess knowledge indexing");
-            return ChessIndexResult.CreateFailure($"Indexing error: {ex.Message}");
+            return Api.Services.ChessIndexResult.CreateFailure($"Indexing error: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// Search chess knowledge with specified query
-    /// </summary>
-    public async Task<SearchResult> SearchChessKnowledgeAsync(string query, int limit = 5, CancellationToken ct = default)
-    {
-        try
-        {
-            _logger.LogInformation("Searching chess knowledge: {Query}", query);
-
-            // Generate embedding for query
-            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, ct);
-            if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
-            {
-                _logger.LogError("Failed to generate query embedding: {Error}", embeddingResult.ErrorMessage);
-                return SearchResult.CreateFailure("Failed to generate query embedding");
-            }
-
-            // Search by chess category
-            var searchResult = await _qdrantService.SearchByCategoryAsync(
-                ChessCategory,
-                embeddingResult.Embeddings[0],
-                limit,
-                ct);
-
-            _logger.LogInformation("Chess knowledge search completed: {ResultCount} results", searchResult.Results.Count);
-            return searchResult;
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-#pragma warning restore CA1031
-        {
-            // ERROR STATE MANAGEMENT: Chess knowledge search failures return structured error result
-            // Rationale: Search involves multiple external systems (embedding API, Qdrant). Returning
-            // a typed failure result allows callers to distinguish success/failure and display appropriate
-            // error messages. Throwing would cause 500 errors without context about which search stage
-            // failed (embedding generation vs vector search).
-            // Context: Search failures typically from embedding API timeout or Qdrant unavailable
-            _logger.LogError(ex, "Error during chess knowledge search");
-            return SearchResult.CreateFailure($"Search error: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Delete all chess knowledge from the vector database
-    /// </summary>
-    public async Task<bool> DeleteChessKnowledgeAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            _logger.LogInformation("Deleting all chess knowledge");
-            var result = await _qdrantService.DeleteByCategoryAsync(ChessCategory, ct);
-            _logger.LogInformation("Chess knowledge deletion completed: {Success}", result);
-            return result;
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-#pragma warning restore CA1031
-        {
-            // ERROR STATE MANAGEMENT: Chess knowledge deletion failures return false
-            // Rationale: Deletion failure (typically Qdrant unavailable) should allow the API to
-            // respond with a meaningful error. Returning false lets callers check success and display
-            // appropriate error messages to administrators. Throwing would cause 500 errors without
-            // context about the Qdrant connectivity issue.
-            // Context: Deletion failures typically from Qdrant unavailable or network timeout
-            _logger.LogError(ex, "Error during chess knowledge deletion");
-            return false;
-        }
-    }
-
-    private string DetermineKnowledgeType(ChessKnowledgeItem item, ChessKnowledge knowledge)
+    private static string DetermineKnowledgeType(ChessKnowledgeItem item, ChessKnowledge knowledge)
     {
         if (knowledge.Rules?.Contains(item) == true) return "rule";
         if (knowledge.Openings?.Contains(item) == true) return "opening";

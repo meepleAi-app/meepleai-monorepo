@@ -1,46 +1,50 @@
-using Api.Models;
 using System.Text.RegularExpressions;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.Models;
+using Api.Services;
+using MediatR;
 
-namespace Api.Services;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// CHESS-04: Specialized chess conversational agent
-/// Answers questions about rules, explains openings, suggests tactics,
-/// and analyzes positions using RAG on chess knowledge base
+/// Handler for InvokeChessAgentCommand.
+/// CHESS-04: Specialized chess conversational agent.
+/// Answers questions about rules, explains openings, suggests tactics, and analyzes positions using RAG.
 /// </summary>
-public class ChessAgentService : IChessAgentService
+public sealed class InvokeChessAgentCommandHandler
+    : IRequestHandler<InvokeChessAgentCommand, ChessAgentResponse>
 {
-    private readonly IChessKnowledgeService _chessKnowledge;
+    private readonly IMediator _mediator;
     private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<ChessAgentService> _logger;
+    private readonly ILogger<InvokeChessAgentCommandHandler> _logger;
 
-    private const string ChessGameId = "chess"; // Standard game ID for chess knowledge
+    private const string ChessGameId = "chess";
 
-    public ChessAgentService(
-        IChessKnowledgeService chessKnowledge,
+    public InvokeChessAgentCommandHandler(
+        IMediator mediator,
         ILlmService llmService,
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
         IConfiguration configuration,
-        ILogger<ChessAgentService> logger)
+        ILogger<InvokeChessAgentCommandHandler> logger)
     {
-        _chessKnowledge = chessKnowledge;
-        _llmService = llmService;
-        _cache = cache;
-        _promptTemplateService = promptTemplateService;
-        _configuration = configuration;
-        _logger = logger;
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    /// <summary>
-    /// Process chess question with optional FEN position analysis
-    /// </summary>
-    public async Task<ChessAgentResponse> AskAsync(ChessAgentRequest request, CancellationToken ct = default)
+    public async Task<ChessAgentResponse> Handle(
+        InvokeChessAgentCommand request,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.question))
+        if (string.IsNullOrWhiteSpace(request.Question))
         {
             return CreateEmptyResponse("Please provide a question.");
         }
@@ -48,34 +52,44 @@ public class ChessAgentService : IChessAgentService
         try
         {
             // Check cache first
-            var cacheKey = _cache.GenerateQaCacheKey(ChessGameId, $"{request.question}|{request.fenPosition ?? ""}");
-            var cachedResponse = await _cache.GetAsync<ChessAgentResponse>(cacheKey, ct);
+            var cacheKey = _cache.GenerateQaCacheKey(
+                ChessGameId,
+                $"{request.Question}|{request.FenPosition ?? ""}");
+            var cachedResponse = await _cache.GetAsync<ChessAgentResponse>(cacheKey, cancellationToken);
             if (cachedResponse != null)
             {
-                LogInformation("Returning cached chess agent response");
+                _logger.LogInformation("Returning cached chess agent response");
                 return cachedResponse;
             }
+
             // Step 1: Validate FEN position if provided
-            bool hasFenPosition = !string.IsNullOrWhiteSpace(request.fenPosition);
+            bool hasFenPosition = !string.IsNullOrWhiteSpace(request.FenPosition);
             string? fenValidationError = null;
             if (hasFenPosition)
             {
-                fenValidationError = ValidateFenPosition(request.fenPosition!);
+                fenValidationError = ValidateFenPosition(request.FenPosition!);
                 if (fenValidationError != null)
                 {
-                    _logger.LogWarning("Invalid FEN position provided: {FEN}, error: {Error}",
-                        request.fenPosition, fenValidationError);
-                    // Continue anyway, but note the error
+                    _logger.LogWarning(
+                        "Invalid FEN position provided: {FEN}, error: {Error}",
+                        request.FenPosition,
+                        fenValidationError);
                 }
             }
 
-            // Step 2: Search chess knowledge base
-            var searchQuery = BuildSearchQuery(request.question, request.fenPosition);
-            var searchResult = await _chessKnowledge.SearchChessKnowledgeAsync(searchQuery, limit: 5, ct);
+            // Step 2: Search chess knowledge base using CQRS query
+            var searchQuery = BuildSearchQuery(request.Question, request.FenPosition);
+            var searchResult = await _mediator.Send(
+                new SearchChessKnowledgeQuery
+                {
+                    Query = searchQuery,
+                    Limit = 5
+                },
+                cancellationToken);
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {
-                LogInformation("No chess knowledge found for query: {Query}", request.question);
+                _logger.LogInformation("No chess knowledge found for query: {Query}", request.Question);
                 return CreateEmptyResponse("I don't have enough information to answer that question about chess.");
             }
 
@@ -85,18 +99,17 @@ public class ChessAgentService : IChessAgentService
                 $"ChessKnowledge:{r.ChunkIndex}",
                 r.Page,
                 0,
-                r.Score // AI-11: Include actual search score for quality tracking
+                r.Score
             )).ToList();
 
             var context = string.Join("\n\n---\n\n", searchResult.Results.Select((r, i) =>
                 $"[Source {i + 1}]\n{r.Text}"));
 
             // Step 4: Generate response using LLM with chess-specialized prompt
-            // ADMIN-01 Phase 3: Use database-driven prompt with fallback
-            var systemPrompt = await BuildChessSystemPromptAsync(hasFenPosition, fenValidationError, ct);
-            var userPrompt = BuildChessUserPrompt(request.question, request.fenPosition, context, fenValidationError);
+            var systemPrompt = await BuildChessSystemPromptAsync(hasFenPosition, fenValidationError, cancellationToken);
+            var userPrompt = BuildChessUserPrompt(request.Question, request.FenPosition, context, fenValidationError);
 
-            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, ct);
+            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken);
 
             if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
             {
@@ -105,15 +118,16 @@ public class ChessAgentService : IChessAgentService
             }
 
             // Step 5: Parse LLM response to extract structured information
-            var parsedResponse = ParseLlmResponse(llmResult.Response, request.fenPosition);
+            var parsedResponse = ParseLlmResponse(llmResult.Response, request.FenPosition);
 
             var confidence = searchResult.Results.Count > 0
                 ? (double?)searchResult.Results.Max(r => r.Score)
                 : null;
 
-            LogInformation(
+            _logger.LogInformation(
                 "Chess agent query answered with {SourceCount} sources, {MoveCount} suggested moves",
-                sources.Count, parsedResponse.SuggestedMoves.Count);
+                sources.Count,
+                parsedResponse.SuggestedMoves.Count);
 
             var metadata = llmResult.Metadata.Count > 0
                 ? new Dictionary<string, string>(llmResult.Metadata)
@@ -131,44 +145,47 @@ public class ChessAgentService : IChessAgentService
                 metadata);
 
             // Cache the response
-            await _cache.SetAsync(cacheKey, response, 86400, ct);
+            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
 
             return response;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - graceful degradation for AI/LLM operations
-        // GRACEFUL DEGRADATION: Chess agent query failures return empty response
-        // Rationale: Chess agent is a helpful feature but not critical. If RAG/LLM pipeline
-        // fails, returning an error response allows the API to respond successfully (200 OK)
-        // and lets the UI display the error message. Throwing would cause 500 errors and poor UX.
-        // Alternative: Callers can check IsEmpty flag or error message to detect failures.
-        // Context: Failures typically from Qdrant/OpenRouter/LLM timeout or rate limiting
         catch (Exception ex)
+#pragma warning restore CA1031
         {
+            // GRACEFUL DEGRADATION: Chess agent query failures return empty response
+            // Rationale: Chess agent is a helpful feature but not critical. If RAG/LLM pipeline
+            // fails, returning an error response allows the API to respond successfully (200 OK)
+            // and lets the UI display the error message. Throwing would cause 500 errors and poor UX.
+            // Alternative: Callers can check IsEmpty flag or error message to detect failures.
+            // Context: Failures typically from Qdrant/OpenRouter/LLM timeout or rate limiting
             _logger.LogError(ex, "Error during chess agent query");
             return CreateEmptyResponse("An error occurred while processing your question.");
         }
-#pragma warning restore CA1031
     }
 
     /// <summary>
-    /// ADMIN-01 Phase 3: Build chess system prompt using database-driven prompt management with fallback
+    /// ADMIN-01 Phase 3: Build chess system prompt using database-driven prompt management with fallback.
     /// </summary>
-    private async Task<string> BuildChessSystemPromptAsync(bool hasFenPosition, string? fenValidationError, CancellationToken ct = default)
+    private async Task<string> BuildChessSystemPromptAsync(
+        bool hasFenPosition,
+        string? fenValidationError,
+        CancellationToken cancellationToken = default)
     {
-        // ADMIN-01: Check feature flag for database-driven prompts
         var usePromptDatabase = _configuration.GetValue<bool>("Features:PromptDatabase", false);
 
         if (usePromptDatabase)
         {
             try
             {
-                var promptTemplate = await _promptTemplateService.GetActivePromptAsync("chess-system-prompt", ct);
+                var promptTemplate = await _promptTemplateService.GetActivePromptAsync(
+                    "chess-system-prompt",
+                    cancellationToken);
+
                 if (!string.IsNullOrWhiteSpace(promptTemplate))
                 {
                     _logger.LogDebug("Using database-driven chess system prompt");
 
-                    // Apply dynamic sections for FEN position analysis
                     var prompt = promptTemplate;
 
                     if (hasFenPosition)
@@ -193,32 +210,25 @@ WARNING: The provided FEN position appears invalid: {fenValidationError}
                 }
                 else
                 {
-                    _logger.LogWarning("Database prompt 'chess-system-prompt' not found, falling back to hardcoded prompt");
+                    _logger.LogWarning(
+                        "Database prompt 'chess-system-prompt' not found, falling back to hardcoded prompt");
                 }
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Service boundary - fallback pattern for database prompt retrieval
-            // FALLBACK PATTERN: Database prompt retrieval failures use hardcoded prompt
-            // Rationale: Dynamic prompt loading from DB is an enhancement (ADMIN-01 Phase 3).
-            // If PromptTemplateService fails (DB unavailable, Redis timeout, corruption), we
-            // must still provide chess agent functionality. Fallback to hardcoded prompt ensures
-            // feature availability during infrastructure failures. Feature flag controls opt-in.
-            // Context: DB/Redis failures are typically transient (connection loss, resource exhaustion)
             catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to retrieve chess system prompt from database, falling back to hardcoded prompt");
-            }
 #pragma warning restore CA1031
+            {
+                // FALLBACK PATTERN: Database prompt retrieval failures use hardcoded prompt
+                _logger.LogWarning(
+                    ex,
+                    "Failed to retrieve chess system prompt from database, falling back to hardcoded prompt");
+            }
         }
 
-        // Fallback: Use hardcoded prompt (backward compatibility)
         return BuildChessSystemPromptFallback(hasFenPosition, fenValidationError);
     }
 
-    /// <summary>
-    /// ADMIN-01 Phase 3: Hardcoded fallback prompt for backward compatibility
-    /// </summary>
-    private string BuildChessSystemPromptFallback(bool hasFenPosition, string? fenValidationError)
+    private static string BuildChessSystemPromptFallback(bool hasFenPosition, string? fenValidationError)
     {
         var prompt = @"You are a specialized chess AI assistant with deep knowledge of chess rules, openings, tactics, and strategies.
 
@@ -264,7 +274,11 @@ RESPONSE FORMAT:
         return prompt;
     }
 
-    private string BuildChessUserPrompt(string question, string? fenPosition, string context, string? fenValidationError)
+    private static string BuildChessUserPrompt(
+        string question,
+        string? fenPosition,
+        string context,
+        string? fenValidationError)
     {
         var prompt = $@"CHESS KNOWLEDGE BASE:
 {context}
@@ -293,9 +307,8 @@ ANSWER:";
         return prompt;
     }
 
-    private string BuildSearchQuery(string question, string? fenPosition)
+    private static string BuildSearchQuery(string question, string? fenPosition)
     {
-        // Enhance query with FEN-related keywords if position provided
         if (!string.IsNullOrWhiteSpace(fenPosition))
         {
             return $"{question} position analysis tactics strategy";
@@ -303,17 +316,13 @@ ANSWER:";
         return question;
     }
 
-    /// <summary>
-    /// Basic FEN validation (8 ranks, valid characters, spaces)
-    /// </summary>
-    private string? ValidateFenPosition(string fen)
+    private static string? ValidateFenPosition(string fen)
     {
         if (string.IsNullOrWhiteSpace(fen))
         {
             return "FEN position is empty";
         }
 
-        // FEN format: position active-color castling en-passant halfmove fullmove
         var parts = fen.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 1)
         {
@@ -328,7 +337,6 @@ ANSWER:";
             return $"FEN must have 8 ranks, found {ranks.Length}";
         }
 
-        // Validate each rank
         var validPieces = new HashSet<char> { 'p', 'n', 'b', 'r', 'q', 'k', 'P', 'N', 'B', 'R', 'Q', 'K' };
         foreach (var rank in ranks)
         {
@@ -355,16 +363,16 @@ ANSWER:";
             }
         }
 
-        return null; // Valid
+        return null;
     }
 
-    private ParsedChessResponse ParseLlmResponse(string response, string? fenPosition)
+    private static ParsedChessResponse ParseLlmResponse(string response, string? fenPosition)
     {
         var answer = response.Trim();
         var suggestedMoves = new List<string>();
         ChessAnalysis? analysis = null;
 
-        // Extract suggested moves (look for patterns like "1. e4" or "Move: e4")
+        // Extract suggested moves
         var movePatterns = new[]
         {
             @"\d+\.\s*([a-h][1-8]|[NBRQK][a-h]?[1-8]?x?[a-h][1-8]|O-O(?:-O)?)[+#]?:?\s*([^\n]+)",
@@ -396,13 +404,10 @@ ANSWER:";
         // If FEN position was provided, extract position analysis
         if (!string.IsNullOrWhiteSpace(fenPosition))
         {
-            // Look for evaluation keywords
             var evaluationKeywords = new[] { "advantage", "equal", "better", "worse", "winning", "losing", "unclear", "balanced" };
             var evaluationSummary = evaluationKeywords.FirstOrDefault(kw =>
                 answer.Contains(kw, StringComparison.OrdinalIgnoreCase));
 
-            // Extract key considerations (sentences with tactical/strategic keywords)
-            // CODE-04: Use LINQ for filtering and transformation
             var tacticalKeywords = new[] { "threat", "attack", "defend", "weakness", "strength", "control", "development", "king safety" };
 
             var sentences = answer.Split('.', StringSplitOptions.RemoveEmptyEntries);
@@ -417,15 +422,14 @@ ANSWER:";
                 analysis = new ChessAnalysis(
                     fenPosition,
                     evaluationSummary,
-                    considerations.Take(5).ToList() // Limit to top 5 considerations
-                );
+                    considerations.Take(5).ToList());
             }
         }
 
         return new ParsedChessResponse(answer, analysis, suggestedMoves.Distinct().Take(6).ToList());
     }
 
-    private ChessAgentResponse CreateEmptyResponse(string message, IReadOnlyList<Snippet>? sources = null)
+    private static ChessAgentResponse CreateEmptyResponse(string message, IReadOnlyList<Snippet>? sources = null)
     {
         return new ChessAgentResponse(
             message,
@@ -436,21 +440,11 @@ ANSWER:";
             0,
             0,
             null,
-            null
-        );
-    }
-
-    private void LogInformation(string message, params object?[] args)
-    {
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(message, args);
-        }
+            null);
     }
 
     private record ParsedChessResponse(
         string Answer,
         ChessAnalysis? Analysis,
-        IReadOnlyList<string> SuggestedMoves
-    );
+        IReadOnlyList<string> SuggestedMoves);
 }

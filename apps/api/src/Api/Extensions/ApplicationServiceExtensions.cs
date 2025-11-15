@@ -7,7 +7,6 @@ using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection
 using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
 using Api.Services;
-using Api.Services.Chat;
 using Api.Services.Pdf;
 using Api.Services.Qdrant;
 using Api.Services.Rag;
@@ -27,7 +26,6 @@ public static class ApplicationServiceExtensions
         services.AddPdfServices();
         services.AddChatServices();
         services.AddAdminServices();
-        services.AddChessServices();
         services.AddBggServices();
         services.AddQualityServices();
 
@@ -144,7 +142,6 @@ public static class ApplicationServiceExtensions
         // Audit and logging
         services.AddScoped<AuditService>();
         services.AddScoped<AiRequestLogService>();
-        services.AddScoped<AgentFeedbackService>();
 
         return services;
     }
@@ -178,7 +175,6 @@ public static class ApplicationServiceExtensions
     private static IServiceCollection AddChatServices(this IServiceCollection services)
     {
         services.AddScoped<ChatService>();
-        services.AddScoped<IFollowUpQuestionService, FollowUpQuestionService>(); // CHAT-02: Follow-up question generation
 
         // CHAT-05: Chat export services
         services.AddScoped<IChatExportService, ChatExportService>();
@@ -197,17 +193,6 @@ public static class ApplicationServiceExtensions
         // ADMIN-02: Analytics dashboard service (still used by handlers as infrastructure)
         services.AddScoped<IAdminStatsService, AdminStatsService>();
         services.AddScoped<AdminStatsService>();
-
-        return services;
-    }
-
-    private static IServiceCollection AddChessServices(this IServiceCollection services)
-    {
-        // CHESS-03: Chess knowledge indexing service
-        services.AddScoped<IChessKnowledgeService, ChessKnowledgeService>();
-
-        // CHESS-04: Chess conversational agent service
-        services.AddScoped<IChessAgentService, ChessAgentService>();
 
         return services;
     }

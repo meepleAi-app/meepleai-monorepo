@@ -38,6 +38,9 @@
   ],
   "exclude": [
     "node_modules",
-    "scripts"
+    "scripts",
+    "**/*.stories.tsx",
+    "**/*.stories.ts",
+    ".storybook"
   ]
 }

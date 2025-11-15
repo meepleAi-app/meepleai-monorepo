@@ -14,7 +14,7 @@
  *   await sendMessageOptimistic(content);
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { Message } from '@/types';
 import { useChatContext } from './useChatContext';
@@ -51,7 +51,8 @@ export function useChatOptimistic(): UseChatOptimisticResult {
   } = useChatContext();
 
   const { mutate } = useSWRConfig();
-  const optimisticIdRef = useRef<string | null>(null);
+  // State to track optimistic update (reactive, not ref)
+  const [optimisticId, setOptimisticId] = useState<string | null>(null);
 
   // SWR key for current chat messages
   const swrKey = activeChatId ? `/api/v1/chats/${activeChatId}/messages` : null;
@@ -70,7 +71,7 @@ export function useChatOptimistic(): UseChatOptimisticResult {
   );
 
   const messages = swrMessages ?? contextMessages;
-  const isOptimisticUpdate = optimisticIdRef.current !== null;
+  const isOptimisticUpdate = optimisticId !== null;
 
   /**
    * Send message with optimistic update
@@ -97,8 +98,8 @@ export function useChatOptimistic(): UseChatOptimisticResult {
         isOptimistic: true, // #1167: Flag for UI rendering
       };
 
-      // Track optimistic update
-      optimisticIdRef.current = tempId;
+      // Track optimistic update (reactive state)
+      setOptimisticId(tempId);
 
       // 2. Optimistically update UI
       // mutate with false = update cache without revalidation
@@ -114,8 +115,8 @@ export function useChatOptimistic(): UseChatOptimisticResult {
         // 3. Send to backend (ChatProvider handles thread creation if needed)
         await contextSendMessage(content);
 
-        // 4. Clear optimistic state
-        optimisticIdRef.current = null;
+        // 4. Clear optimistic state (reactive)
+        setOptimisticId(null);
 
         // 5. Revalidate to get real message from backend
         // ChatProvider will reload messages, which updates our fallbackData
@@ -133,7 +134,8 @@ export function useChatOptimistic(): UseChatOptimisticResult {
           );
         }
 
-        optimisticIdRef.current = null;
+        // Clear optimistic state on error (reactive)
+        setOptimisticId(null);
 
         // Re-throw so caller can show error toast
         throw err;

@@ -713,3 +713,9 @@ export function useChat(): ChatContextValue {
  * @deprecated Use useChatContext from '@/hooks/useChatContext' instead
  */
 export { useChatContext } from '@/hooks/useChatContext';
+
+/**
+ * Export ChatContext for testing/Storybook usage
+ * Use ChatContext.Provider directly with a mock value for stories
+ */
+export { ChatContext };

@@ -46,7 +46,7 @@ test.describe('Admin User Management E2E Flow', () => {
     ];
 
     let nextUserId = 3;
-    let users = [...sampleUsers];
+    const users = [...sampleUsers];
 
     // Mock GET /api/v1/admin/users
     await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async (route) => {
@@ -384,7 +384,7 @@ test.describe('Admin User Management E2E Flow', () => {
         const sortBy = url.searchParams.get('sortBy') || 'createdAt';
         const sortOrder = url.searchParams.get('sortOrder') || 'desc';
 
-        let sortedUsers = [...users];
+        const sortedUsers = [...users];
         sortedUsers.sort((a, b) => {
           let aVal: string | Date = a[sortBy as keyof typeof a] || '';
           let bVal: string | Date = b[sortBy as keyof typeof b] || '';

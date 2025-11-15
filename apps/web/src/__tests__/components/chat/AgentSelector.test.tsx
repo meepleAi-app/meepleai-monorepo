@@ -686,7 +686,7 @@ describe('AgentSelector Component', () => {
       setupMockContext({ selectedGameId: 'game-1', agents, loading: { agents: false } });
       const { rerender } = render(<AgentSelector />);
 
-      let select = screen.getByRole('combobox');
+      const select = screen.getByRole('combobox');
       expect(select).not.toHaveClass('cursor-not-allowed');
 
       // Change to loading

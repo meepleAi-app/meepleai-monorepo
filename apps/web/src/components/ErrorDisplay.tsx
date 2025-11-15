@@ -43,6 +43,12 @@ export function ErrorDisplay({
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
 
+  // Reset retry state when error changes (P1 Badge fix)
+  useEffect(() => {
+    setRetryCount(0);
+    setIsRetrying(false);
+  }, [error]);
+
   // Show toast for transient errors on mount
   useEffect(() => {
     if (showToast && shouldShowToast(error)) {

@@ -132,7 +132,10 @@ export const WithAction: Story = {
           toast('Event has been created', {
             action: {
               label: 'Undo',
-              onClick: () => console.log('Undo'),
+              // onClick: () => console.log('Undo'),
+              onClick: () => {
+                // Handle undo action
+              },
             },
           })
         }

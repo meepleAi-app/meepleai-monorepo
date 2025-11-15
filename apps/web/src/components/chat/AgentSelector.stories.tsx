@@ -174,55 +174,57 @@ export const MultipleAgents: Story = {
 /**
  * Interactive agent selection demo
  */
-export const Interactive: Story = {
-  render: () => {
-    const [selectedGameId, setSelectedGameId] = React.useState('game-1');
-    const [agents, setAgents] = React.useState([
-      { id: 'agent-1', name: 'Rules Expert' },
-      { id: 'agent-2', name: 'Strategy Guide' },
-      { id: 'agent-3', name: 'General Assistant' },
-    ]);
+const InteractiveAgentSelectorComponent = () => {
+  const [selectedGameId, setSelectedGameId] = React.useState('game-1');
+  const [agents, setAgents] = React.useState([
+    { id: 'agent-1', name: 'Rules Expert' },
+    { id: 'agent-2', name: 'Strategy Guide' },
+    { id: 'agent-3', name: 'General Assistant' },
+  ]);
 
-    return (
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSelectedGameId('game-1')}
-            className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
-          >
-            Game 1 (3 agents)
-          </button>
-          <button
-            onClick={() => {
-              setSelectedGameId('game-2');
-              setAgents([
-                { id: 'agent-4', name: 'Expert Helper' },
-                { id: 'agent-5', name: 'Quick Guide' },
-              ]);
-            }}
-            className="px-3 py-1 bg-green-500 text-white rounded text-sm"
-          >
-            Game 2 (2 agents)
-          </button>
-          <button
-            onClick={() => {
-              setSelectedGameId(null as any);
-            }}
-            className="px-3 py-1 bg-gray-500 text-white rounded text-sm"
-          >
-            No Game
-          </button>
-        </div>
-
-        <MockChatProvider
-          mockAgents={agents}
-          mockSelectedGameId={selectedGameId}
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <button
+          onClick={() => setSelectedGameId('game-1')}
+          className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
         >
-          <AgentSelector />
-        </MockChatProvider>
+          Game 1 (3 agents)
+        </button>
+        <button
+          onClick={() => {
+            setSelectedGameId('game-2');
+            setAgents([
+              { id: 'agent-4', name: 'Expert Helper' },
+              { id: 'agent-5', name: 'Quick Guide' },
+            ]);
+          }}
+          className="px-3 py-1 bg-green-500 text-white rounded text-sm"
+        >
+          Game 2 (2 agents)
+        </button>
+        <button
+          onClick={() => {
+            setSelectedGameId(null as any);
+          }}
+          className="px-3 py-1 bg-gray-500 text-white rounded text-sm"
+        >
+          No Game
+        </button>
       </div>
-    );
-  },
+
+      <MockChatProvider
+        mockAgents={agents}
+        mockSelectedGameId={selectedGameId}
+      >
+        <AgentSelector />
+      </MockChatProvider>
+    </div>
+  );
+};
+
+export const Interactive: Story = {
+  render: () => <InteractiveAgentSelectorComponent />,
 };
 
 /**

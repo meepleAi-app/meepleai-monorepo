@@ -77,22 +77,24 @@ export const ThreeQuarters: Story = {
 /**
  * Animated progress
  */
+const AnimatedProgressComponent = () => {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) return 0;
+        return prev + 10;
+      });
+    }, 500);
+    return () => clearInterval(timer);
+  }, []);
+
+  return <Progress value={progress} className="w-[60%]" />;
+};
+
 export const Animated: Story = {
-  render: () => {
-    const [progress, setProgress] = useState(0);
-
-    useEffect(() => {
-      const timer = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) return 0;
-          return prev + 10;
-        });
-      }, 500);
-      return () => clearInterval(timer);
-    }, []);
-
-    return <Progress value={progress} className="w-[60%]" />;
-  },
+  render: () => <AnimatedProgressComponent />,
 };
 
 /**
@@ -144,34 +146,36 @@ export const Multiple: Story = {
 /**
  * Upload progress simulation
  */
-export const UploadSimulation: Story = {
-  render: () => {
-    const [progress, setProgress] = useState(0);
+const UploadSimulationComponent = () => {
+  const [progress, setProgress] = useState(0);
 
-    useEffect(() => {
-      const timer = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(timer);
-            return 100;
-          }
-          return prev + 2;
-        });
-      }, 100);
-      return () => clearInterval(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(timer);
+          return 100;
+        }
+        return prev + 2;
+      });
+    }, 100);
+    return () => clearInterval(timer);
+  }, []);
 
-    return (
-      <div className="w-[60%] space-y-2">
-        <div className="flex justify-between text-sm">
-          <span>Uploading file.pdf</span>
-          <span>{progress}%</span>
-        </div>
-        <Progress value={progress} />
-        {progress === 100 && (
-          <p className="text-sm text-muted-foreground">Upload complete!</p>
-        )}
+  return (
+    <div className="w-[60%] space-y-2">
+      <div className="flex justify-between text-sm">
+        <span>Uploading file.pdf</span>
+        <span>{progress}%</span>
       </div>
-    );
-  },
+      <Progress value={progress} />
+      {progress === 100 && (
+        <p className="text-sm text-muted-foreground">Upload complete!</p>
+      )}
+    </div>
+  );
+};
+
+export const UploadSimulation: Story = {
+  render: () => <UploadSimulationComponent />,
 };

@@ -62,22 +62,24 @@ export const CustomAgent: Story = {
 /**
  * Interactive toggle demo
  */
-export const Interactive: Story = {
-  render: () => {
-    const [isTyping, setIsTyping] = React.useState(false);
+const InteractiveTypingComponent = () => {
+  const [isTyping, setIsTyping] = React.useState(false);
 
-    return (
-      <div className="space-y-4">
-        <button
-          onClick={() => setIsTyping(!isTyping)}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          {isTyping ? 'Stop Typing' : 'Start Typing'}
-        </button>
-        <TypingIndicator visible={isTyping} agentName="AI Assistant" />
-      </div>
-    );
-  },
+  return (
+    <div className="space-y-4">
+      <button
+        onClick={() => setIsTyping(!isTyping)}
+        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+      >
+        {isTyping ? 'Stop Typing' : 'Start Typing'}
+      </button>
+      <TypingIndicator visible={isTyping} agentName="AI Assistant" />
+    </div>
+  );
+};
+
+export const Interactive: Story = {
+  render: () => <InteractiveTypingComponent />,
 };
 
 /**
@@ -119,37 +121,40 @@ export const InChatContext: Story = {
 /**
  * Auto-appear and disappear simulation
  */
-export const AutoSimulation: Story = {
-  render: () => {
-    const [isTyping, setIsTyping] = React.useState(true);
-    const [showMessage, setShowMessage] = React.useState(false);
+const AutoSimulationComponent = () => {
+  const [isTyping, setIsTyping] = React.useState(true);
+  const [showMessage, setShowMessage] = React.useState(false);
 
-    React.useEffect(() => {
-      // Simulate typing for 3 seconds, then show message
-      const timer = setTimeout(() => {
-        setIsTyping(false);
-        setShowMessage(true);
-      }, 3000);
+  React.useEffect(() => {
+    // Simulate typing for 3 seconds, then show message
+    const timer = setTimeout(() => {
+      setIsTyping(false);
+      setShowMessage(true);
+    }, 3000);
 
-      return () => clearTimeout(timer);
-    }, []);
+    return () => clearTimeout(timer);
+  }, []);
 
-    return (
-      <div className="max-w-md space-y-3">
-        <div className="flex items-start space-x-3">
-          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-            AI
-          </div>
-          {isTyping && <TypingIndicator visible={true} agentName="AI Assistant" />}
-          {showMessage && (
-            <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-3 max-w-xs">
-              <p className="text-sm">Wingspan is a beautiful bird-collection engine-building game!</p>
-            </div>
-          )}
+  return (
+    <div className="max-w-md space-y-3">
+      <div className="flex items-start space-x-3">
+        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+          AI
         </div>
+        {isTyping ? (
+          <TypingIndicator visible={true} agentName="AI Assistant" />
+        ) : showMessage ? (
+          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-3 max-w-xs">
+            <p className="text-sm">Here is the information about Wingspan...</p>
+          </div>
+        ) : null}
       </div>
-    );
-  },
+    </div>
+  );
+};
+
+export const AutoSimulation: Story = {
+  render: () => <AutoSimulationComponent />,
 };
 
 /**

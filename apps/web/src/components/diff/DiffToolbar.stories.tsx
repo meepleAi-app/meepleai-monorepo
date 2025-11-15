@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { DiffToolbar } from './DiffToolbar';
 import { DiffStatistics as DiffStats } from '@/lib/diffProcessor';
 import { fn } from '@storybook/test';
+import React from 'react';
 
 /**
  * DiffToolbar - Toolbar with statistics, search, and navigation controls.
@@ -182,26 +183,28 @@ export const LastMatch: Story = {
 /**
  * Interactive search demo
  */
-export const Interactive: Story = {
-  render: () => {
-    const [searchQuery, setSearchQuery] = React.useState('');
-    const [currentIndex, setCurrentIndex] = React.useState(0);
-    const totalChanges = 5;
+const InteractiveDiffToolbarComponent = () => {
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const totalChanges = 5;
 
-    return (
-      <DiffToolbar
-        statistics={mockStats}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        currentChangeIndex={currentIndex}
-        totalChanges={searchQuery ? totalChanges : 0}
-        onNavigatePrev={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-        onNavigateNext={() => setCurrentIndex(Math.min(totalChanges - 1, currentIndex + 1))}
-        showNavigation={true}
-        compact={false}
-      />
-    );
-  },
+  return (
+    <DiffToolbar
+      statistics={mockStats}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      currentChangeIndex={currentIndex}
+      totalChanges={searchQuery ? totalChanges : 0}
+      onNavigatePrev={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+      onNavigateNext={() => setCurrentIndex(Math.min(totalChanges - 1, currentIndex + 1))}
+      showNavigation={true}
+      compact={false}
+    />
+  );
+};
+
+export const Interactive: Story = {
+  render: () => <InteractiveDiffToolbarComponent />,
 };
 
 /**
@@ -270,6 +273,3 @@ export const Mobile: Story = {
     compact: true,
   },
 };
-
-// Import React for interactive stories
-import React from 'react';

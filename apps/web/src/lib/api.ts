@@ -162,6 +162,19 @@ export interface GameSessionDto {
   durationMinutes: number;
 }
 
+// SPRINT-2: PDF Document types (Issue #855)
+export interface PdfDocumentDto {
+  id: string;
+  gameId: string;
+  fileName: string;
+  filePath: string;
+  fileSizeBytes: number;
+  processingStatus: string; // Pending, Processing, Completed, Failed
+  uploadedAt: string;
+  processedAt: string | null;
+  pageCount: number | null;
+}
+
 export interface StartSessionRequest {
   gameId: string;
   players: SessionPlayerDto[];
@@ -1170,6 +1183,24 @@ export const api = {
      */
     async getById(id: string): Promise<Game | null> {
       return api.get<Game>(`/api/v1/games/${id}`);
+    },
+
+    /**
+     * Get all sessions for a specific game
+     * @param gameId Game ID
+     */
+    async getSessions(gameId: string): Promise<GameSessionDto[]> {
+      const response = await api.get<GameSessionDto[]>(`/api/v1/games/${gameId}/sessions/active`);
+      return response ?? [];
+    },
+
+    /**
+     * Get PDF documents for a specific game
+     * @param gameId Game ID
+     */
+    async getDocuments(gameId: string): Promise<PdfDocumentDto[]> {
+      const response = await api.get<PdfDocumentDto[]>(`/api/v1/games/${gameId}/documents`);
+      return response ?? [];
     }
   },
 

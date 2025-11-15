@@ -282,6 +282,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **Security** | `docs/SECURITY.md`, `docs/security-scanning.md` |
 | **Testing** | `docs/testing/test-writing-guide.md` |
 | **Shadcn/UI** | `docs/frontend/shadcn-ui-installation.md` |
+| **AI Provider Config** | `docs/03-api/ai-provider-configuration.md` (Admin), `docs/02-development/ai-provider-integration.md` (Dev) |
 
 ---
 

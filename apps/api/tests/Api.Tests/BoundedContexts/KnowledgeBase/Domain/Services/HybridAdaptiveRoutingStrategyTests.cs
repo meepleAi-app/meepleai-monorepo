@@ -1,8 +1,10 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 using AuthUser = Api.BoundedContexts.Authentication.Domain.Entities.User;
@@ -12,11 +14,13 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// <summary>
 /// Unit tests for HybridAdaptiveRoutingStrategy
 /// ISSUE-958: Validates user-tier routing and traffic split logic
+/// BGAI-022: Validates AI:Provider configuration integration
 /// </summary>
 public class HybridAdaptiveRoutingStrategyTests
 {
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IOptions<AiProviderSettings> _aiSettings;
 
     public HybridAdaptiveRoutingStrategyTests()
     {
@@ -39,13 +43,25 @@ public class HybridAdaptiveRoutingStrategyTests
         _configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(configData!)
             .Build();
+
+        // BGAI-022: Default AI settings with both providers enabled (backward compatible)
+        _aiSettings = Options.Create(new AiProviderSettings
+        {
+            PreferredProvider = "", // Empty = use user-tier routing
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["Ollama"] = new() { Enabled = true, BaseUrl = "http://localhost:11434", Models = ["llama3:8b"] },
+                ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = ["gpt-4"] }
+            },
+            FallbackChain = ["Ollama", "OpenRouter"]
+        });
     }
 
     [Fact]
     public void Test01_AnonymousUser_RoutesFreeModel()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
 
         // Act - Run multiple times to test traffic split
         var decisions = Enumerable.Range(0, 100)
@@ -80,7 +96,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void Test02_UserRole_Routes80PercentFree()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
         var user = CreateUser(Role.User);
 
         // Act - Run 100 times
@@ -100,7 +116,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void Test03_EditorRole_Routes50PercentOpenRouter()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
         var editor = CreateUser(Role.Editor);
 
         // Act - Run 100 times
@@ -124,7 +140,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void Test04_AdminRole_Routes80PercentPremium()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
         var admin = CreateUser(Role.Admin);
 
         // Act - Run 100 times
@@ -148,7 +164,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void Test05_RoutingDecision_ContainsReason()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
         var user = CreateUser(Role.User);
 
         // Act
@@ -166,7 +182,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void Test06_FreeModelSelection_UsesOpenRouterProvider()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
         var user = CreateUser(Role.User);
 
         // Act - Get 50 decisions
@@ -188,7 +204,7 @@ public class HybridAdaptiveRoutingStrategyTests
     public void Test07_LocalOllamaModel_UsesOllamaProvider()
     {
         // Arrange
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
         var editor = CreateUser(Role.Editor);
 
         // Act - Get 50 decisions
@@ -220,7 +236,7 @@ public class HybridAdaptiveRoutingStrategyTests
             .AddInMemoryCollection(customConfig!)
             .Build();
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, _aiSettings);
         var user = CreateUser(Role.User);
 
         // Act
@@ -245,7 +261,7 @@ public class HybridAdaptiveRoutingStrategyTests
             .AddInMemoryCollection(zeroConfig!)
             .Build();
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, _aiSettings);
         var user = CreateUser(Role.User);
 
         // Act - Run 20 times
@@ -276,7 +292,7 @@ public class HybridAdaptiveRoutingStrategyTests
             .AddInMemoryCollection(fullConfig!)
             .Build();
 
-        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config);
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, _aiSettings);
         var editor = CreateUser(Role.Editor);
 
         // Act - Run 20 times
@@ -291,6 +307,148 @@ public class HybridAdaptiveRoutingStrategyTests
             Assert.Equal("OpenRouter", d.ProviderName);
         });
     }
+
+    #region BGAI-022: AI Provider Configuration Integration Tests
+
+    [Fact]
+    public void Test11_PreferredProvider_OverridesUserTierRouting()
+    {
+        // Arrange - PreferredProvider set to Ollama
+        var preferredSettings = Options.Create(new AiProviderSettings
+        {
+            PreferredProvider = "Ollama",
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["Ollama"] = new() { Enabled = true, BaseUrl = "http://localhost:11434", Models = ["mistral"] },
+                ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = ["gpt-4"] }
+            }
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, preferredSettings);
+        var admin = CreateUser(Role.Admin); // Admin would normally get 80% OpenRouter
+
+        // Act
+        var decision = strategy.SelectProvider(admin);
+
+        // Assert - Should use PreferredProvider (Ollama) instead of user-tier routing
+        Assert.Equal("Ollama", decision.ProviderName);
+        Assert.Equal("mistral", decision.ModelId);
+        Assert.Contains("PreferredProvider override", decision.Reason);
+    }
+
+    [Fact]
+    public void Test12_DisabledProvider_FallsBackToAlternative()
+    {
+        // Arrange - Ollama disabled, OpenRouter enabled
+        // Use 0% OpenRouter to force Ollama selection, then verify fallback
+        var customConfig = new Dictionary<string, string>
+        {
+            ["LlmRouting:EditorModel"] = "llama3:8b",
+            ["LlmRouting:EditorOpenRouterPercent"] = "0" // Force Ollama selection
+        };
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(customConfig!)
+            .Build();
+
+        var disabledSettings = Options.Create(new AiProviderSettings
+        {
+            PreferredProvider = "",
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["Ollama"] = new() { Enabled = false, BaseUrl = "http://localhost:11434" },
+                ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = ["gpt-4"] }
+            }
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, config, disabledSettings);
+        var editor = CreateUser(Role.Editor);
+
+        // Act - Run 20 times
+        var decisions = Enumerable.Range(0, 20)
+            .Select(_ => strategy.SelectProvider(editor))
+            .ToList();
+
+        // Assert - All should fallback to OpenRouter (Ollama disabled)
+        Assert.All(decisions, d =>
+        {
+            Assert.Equal("OpenRouter", d.ProviderName);
+            Assert.Contains("Fallback from Ollama", d.Reason);
+        });
+    }
+
+    [Fact]
+    public void Test13_AllProvidersDisabled_ThrowsException()
+    {
+        // Arrange - Both providers disabled
+        var allDisabledSettings = Options.Create(new AiProviderSettings
+        {
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["Ollama"] = new() { Enabled = false, BaseUrl = "http://localhost:11434" },
+                ["OpenRouter"] = new() { Enabled = false, BaseUrl = "https://openrouter.ai/api/v1" }
+            }
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, allDisabledSettings);
+        var user = CreateUser(Role.User);
+
+        // Act & Assert - Should throw when all providers disabled
+        var exception = Assert.Throws<InvalidOperationException>(() => strategy.SelectProvider(user));
+        Assert.Contains("disabled and no enabled fallback provider found", exception.Message);
+    }
+
+    [Fact]
+    public void Test14_EmptyPreferredProvider_UsesUserTierRouting()
+    {
+        // Arrange - Empty PreferredProvider (Option C backward compatibility)
+        var emptyPreferredSettings = Options.Create(new AiProviderSettings
+        {
+            PreferredProvider = "", // Empty = use user-tier routing
+            Providers = new Dictionary<string, ProviderConfig>
+            {
+                ["Ollama"] = new() { Enabled = true, BaseUrl = "http://localhost:11434" },
+                ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1" }
+            }
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, emptyPreferredSettings);
+        var admin = CreateUser(Role.Admin);
+
+        // Act - Run 100 times to test traffic split
+        var decisions = Enumerable.Range(0, 100)
+            .Select(_ => strategy.SelectProvider(admin))
+            .ToList();
+
+        // Assert - Should use existing user-tier routing (Admin = 80% OpenRouter)
+        var openRouterCount = decisions.Count(d => d.ProviderName == "OpenRouter");
+        Assert.True(openRouterCount > 60, $"Admin should get ~80% OpenRouter, got {openRouterCount}%");
+        Assert.All(decisions, d => Assert.DoesNotContain("PreferredProvider", d.Reason));
+    }
+
+    [Fact]
+    public void Test15_MissingAiSection_UsesUserTierRouting()
+    {
+        // Arrange - Empty providers (backward compatibility for legacy deployments)
+        var emptySettings = Options.Create(new AiProviderSettings
+        {
+            Providers = new Dictionary<string, ProviderConfig>() // Empty
+        });
+
+        var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, emptySettings);
+        var user = CreateUser(Role.User);
+
+        // Act
+        var decision = strategy.SelectProvider(user);
+
+        // Assert - Should work normally with user-tier routing (no AI config interference)
+        Assert.NotNull(decision);
+        Assert.True(
+            decision.ModelId == "meta-llama/llama-3.3-70b-instruct:free" ||
+            decision.ModelId == "openai/gpt-4o-mini");
+    }
+
+    #endregion
 
     #region Helper Methods
 

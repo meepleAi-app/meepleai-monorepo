@@ -4,8 +4,10 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -13,6 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// Hybrid LLM service coordinating multiple providers (Ollama, OpenRouter) with adaptive routing
 /// ISSUE-958: Implements hybrid architecture with user-tier based routing and traffic split
 /// ISSUE-962 (BGAI-020): Enhanced with circuit breaker, health monitoring, and latency tracking
+/// BGAI-022 (Issue #1153): Integrated with AI:Provider runtime configuration
 /// </summary>
 /// <remarks>
 /// Architecture:
@@ -32,6 +35,11 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// - Health monitoring: Integration with ProviderHealthCheckService
 /// - Latency tracking: Real-time performance metrics (avg, P50, P95, P99)
 /// - Automatic failover: Routes to healthy providers
+///
+/// Runtime Configuration (BGAI-022):
+/// - AI:Providers[x].Enabled: Runtime provider enable/disable
+/// - AI:FallbackChain: Circuit breaker fallback order
+/// - Backward compatible: Works without AI section (uses defaults)
 /// </remarks>
 public class HybridLlmService : ILlmService
 {
@@ -40,6 +48,7 @@ public class HybridLlmService : ILlmService
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<HybridLlmService> _logger;
     private readonly ProviderHealthCheckService? _healthCheckService;
+    private readonly IOptions<AiProviderSettings> _aiSettings;
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new();
@@ -55,12 +64,14 @@ public class HybridLlmService : ILlmService
         ILlmRoutingStrategy routingStrategy,
         ILlmCostLogRepository costLogRepository,
         ILogger<HybridLlmService> logger,
+        IOptions<AiProviderSettings> aiSettings,
         ProviderHealthCheckService? healthCheckService = null)
     {
         _clients = clients ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
         _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
 
         if (!_clients.Any())
@@ -77,7 +88,7 @@ public class HybridLlmService : ILlmService
 
         var healthCheckStatus = _healthCheckService != null ? "enabled" : "disabled";
         _logger.LogInformation(
-            "HybridLlmService initialized with {ClientCount} providers: {Providers} (cost tracking + circuit breaker + latency tracking + health checks {HealthCheckStatus})",
+            "HybridLlmService initialized with {ClientCount} providers: {Providers} (cost tracking + circuit breaker + latency tracking + health checks {HealthCheckStatus} + AI config integration)",
             _clients.Count(),
             string.Join(", ", _clients.Select(c => c.ProviderName)),
             healthCheckStatus);
@@ -403,27 +414,36 @@ public class HybridLlmService : ILlmService
 
     /// <summary>
     /// ISSUE-962: Get LLM client with circuit breaker and health awareness
+    /// BGAI-022: Enhanced with FallbackChain support
     /// </summary>
     private ILlmClient? GetClientWithCircuitBreaker(string providerName)
     {
         var client = GetClient(providerName);
         if (client == null) return null;
 
-        // Check if provider is available (circuit breaker + health status)
+        // Check if provider is available (circuit breaker + health status + enabled flag)
         if (!IsProviderAvailable(client.ProviderName))
         {
             _logger.LogWarning(
-                "Provider {Provider} unavailable (circuit open or unhealthy). Trying fallback...",
+                "Provider {Provider} unavailable (circuit open, unhealthy, or disabled). Trying fallback...",
                 client.ProviderName);
 
-            // Try to find alternative provider
-            foreach (var fallbackClient in _clients.Where(c => c.ProviderName != client.ProviderName))
+            // BGAI-022: Use FallbackChain if configured, otherwise use all clients
+            var settings = _aiSettings.Value;
+            var fallbackOrder = settings.FallbackChain?.Any() == true
+                ? settings.FallbackChain.Where(p => p != client.ProviderName)
+                : _clients.Where(c => c.ProviderName != client.ProviderName).Select(c => c.ProviderName);
+
+            foreach (var fallbackProviderName in fallbackOrder)
             {
-                if (IsProviderAvailable(fallbackClient.ProviderName))
+                var fallbackClient = GetClient(fallbackProviderName);
+                if (fallbackClient != null && IsProviderAvailable(fallbackClient.ProviderName))
                 {
                     _logger.LogInformation(
-                        "Using fallback provider {Fallback} (primary {Primary} unavailable)",
-                        fallbackClient.ProviderName, client.ProviderName);
+                        "Using fallback provider {Fallback} ({Order}) - primary {Primary} unavailable",
+                        fallbackClient.ProviderName,
+                        settings.FallbackChain?.Any() == true ? "from FallbackChain" : "auto-selected",
+                        client.ProviderName);
                     return fallbackClient;
                 }
             }
@@ -437,11 +457,23 @@ public class HybridLlmService : ILlmService
 
     /// <summary>
     /// ISSUE-962: Check if provider is available (circuit breaker + health check)
+    /// BGAI-022: Enhanced with Enabled flag check
     /// </summary>
     private bool IsProviderAvailable(string providerName)
     {
         lock (_monitoringLock)
         {
+            // BGAI-022: Check if provider is enabled in configuration
+            var settings = _aiSettings.Value;
+            if (settings.Providers?.ContainsKey(providerName) == true &&
+                !settings.Providers[providerName].Enabled)
+            {
+                _logger.LogDebug(
+                    "Provider {Provider} is disabled in configuration (AI:Providers:{Provider}:Enabled = false)",
+                    providerName, providerName);
+                return false; // Disabled in config - provider unavailable
+            }
+
             // Check circuit breaker
             if (_circuitBreakers.TryGetValue(providerName, out var breaker))
             {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Game, BggGameDetails, api } from '@/lib/api';
 import {
   Dialog,
@@ -10,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Clock, Calendar, Star, TrendingUp, ExternalLink } from 'lucide-react';
+import { Users, Clock, Calendar, Star, TrendingUp, ExternalLink, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface GameDetailModalProps {
@@ -249,6 +250,15 @@ export function GameDetailModal({ game, open, onOpenChange }: GameDetailModalPro
               )}
             </>
           )}
+
+          {/* Full Details Link (Issue #855) */}
+          <Separator className="my-4" />
+          <Button asChild className="w-full">
+            <Link href={`/games/${game.id}`}>
+              View Full Details
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

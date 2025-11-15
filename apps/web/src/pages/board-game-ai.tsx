@@ -7,6 +7,7 @@ import { api } from "../lib/api";
 import { AccessibleButton } from "@/components/accessible";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { LoadingButton } from "@/components/loading/LoadingButton";
 
 type AuthUser = {
   id: string;
@@ -135,20 +136,21 @@ export default function BoardGameAI() {
                 Get instant, accurate answers to any board game rule question. Our AI understands complex rule interactions and provides precise citations from official rulebooks.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button
-                  asChild
+                <LoadingButton
+                  onClick={handleGetStarted}
+                  isLoading={loading}
+                  loadingText="Loading..."
                   className="text-lg"
                   data-testid="hero-get-started"
-                  disabled={loading}
+                  asChild
                 >
                   <motion.button
-                    onClick={handleGetStarted}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    {loading ? "Loading..." : authUser ? "Ask a Question" : "Get Started Free"}
+                    {authUser ? "Ask a Question" : "Get Started Free"}
                   </motion.button>
-                </Button>
+                </LoadingButton>
                 <Button
                   asChild
                   variant="outline"
@@ -344,20 +346,21 @@ export default function BoardGameAI() {
             <p className="text-xl opacity-90">
               Join thousands of board game enthusiasts who trust AI for accurate rule clarifications
             </p>
-            <Button
-              asChild
+            <LoadingButton
+              onClick={handleGetStarted}
+              isLoading={loading}
+              loadingText="Loading..."
               className="text-lg bg-white text-primary hover:bg-slate-100"
               data-testid="cta-get-started"
-              disabled={loading}
+              asChild
             >
               <motion.button
-                onClick={handleGetStarted}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                {loading ? "Loading..." : authUser ? "Ask Your First Question" : "Get Started Free"}
+                {authUser ? "Ask Your First Question" : "Get Started Free"}
               </motion.button>
-            </Button>
+            </LoadingButton>
             <p className="text-sm text-slate-50 mt-4">
               💡 No credit card required • 95%+ accuracy • Instant answers
             </p>

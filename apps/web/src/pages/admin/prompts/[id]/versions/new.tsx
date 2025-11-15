@@ -4,6 +4,7 @@ import Link from "next/link";
 import { api } from "../../../../../lib/api";
 import { cn } from "../../../../../lib/utils";
 import PromptEditor from "../../../../../components/PromptEditor";
+import { LoadingButton } from "../../../../../components/loading/LoadingButton";
 
 type ToastState = {
   show: boolean;
@@ -174,16 +175,14 @@ export default function NewPromptVersion() {
                   Cancel
                 </button>
               </Link>
-              <button
+              <LoadingButton
                 type="submit"
-                disabled={loading}
-                className={cn(
-                  "px-6 py-3 text-white border-none rounded-lg font-semibold",
-                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#667eea] cursor-pointer"
-                )}
+                isLoading={loading}
+                loadingText="Creating..."
+                className="px-6 py-3 bg-[#667eea] text-white border-none rounded-lg font-semibold hover:opacity-90"
               >
-                {loading ? "Creating..." : "Create Version"}
-              </button>
+                Create Version
+              </LoadingButton>
             </div>
           </form>
         </div>

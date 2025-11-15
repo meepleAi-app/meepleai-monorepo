@@ -4,6 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { api } from "../../lib/api";
 import { ErrorDisplay } from "../../components/ErrorDisplay";
 import { categorizeError } from "../../lib/errorUtils";
+import { LoadingButton } from "../../components/loading/LoadingButton";
 
 // Types
 type DashboardMetrics = {
@@ -264,13 +265,14 @@ export default function AnalyticsDashboard() {
             </div>
 
             <div className="flex items-end gap-2">
-              <button
+              <LoadingButton
                 onClick={fetchStats}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                isLoading={loading}
+                loadingText="Refreshing..."
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
-                {loading ? "Refreshing..." : "Refresh"}
-              </button>
+                Refresh
+              </LoadingButton>
 
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}

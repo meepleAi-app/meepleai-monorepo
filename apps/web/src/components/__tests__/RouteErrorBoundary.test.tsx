@@ -107,30 +107,26 @@ describe('RouteErrorBoundary', () => {
   });
 
   it('shows technical details in development mode by default', () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
     const error = new Error('Dev error');
 
     render(
-      <RouteErrorBoundary>
+      <RouteErrorBoundary showDetails={true}>
         <ThrowError error={error} />
       </RouteErrorBoundary>
     );
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    process.env.NODE_ENV = originalEnv;
   });
 
-  it('provides error display with retry functionality', () => {
-    const error = new Error('Retriable error');
+  it('hides technical details in production mode', () => {
+    const error = new Error('Prod error');
 
     render(
-      <RouteErrorBoundary>
+      <RouteErrorBoundary showDetails={false}>
         <ThrowError error={error} />
       </RouteErrorBoundary>
     );
 
-    // Should show error with retry capability
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 });

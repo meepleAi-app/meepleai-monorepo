@@ -12,9 +12,9 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AccessibleFormInput } from '@/components/accessible';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 
 // ============================================================================
 // Validation Schema
@@ -119,21 +119,14 @@ export function LoginForm({
       )}
 
       {/* Submit Button */}
-      <Button
+      <LoadingButton
         type="submit"
         className="w-full"
-        disabled={isLoading}
-        aria-busy={isLoading}
+        isLoading={isLoading}
+        loadingText="Signing in..."
       >
-        {isLoading ? (
-          <>
-            <span className="mr-2" aria-hidden="true">⏳</span>
-            Signing in...
-          </>
-        ) : (
-          'Sign In'
-        )}
-      </Button>
+        Sign In
+      </LoadingButton>
     </form>
   );
 }

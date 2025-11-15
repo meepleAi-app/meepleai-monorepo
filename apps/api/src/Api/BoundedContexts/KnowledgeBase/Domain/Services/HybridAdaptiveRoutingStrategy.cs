@@ -1,17 +1,22 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 
 /// <summary>
 /// Hybrid adaptive routing strategy combining user-type and traffic split
 /// ISSUE-958: Implements Option B - Ollama Primary + OpenRouter Fallback
+/// BGAI-022 (Issue #1153): Enhanced with AI:Provider configuration integration
 /// </summary>
 /// <remarks>
-/// Routing Logic:
-/// 1. User-type mapping: Admin → premium models, Editor → standard, User/Anonymous → free
-/// 2. Traffic split override: Configurable percentage for A/B testing per tier
-/// 3. Cost optimization: 80% free tier (Ollama/Llama 3.3 70B), 20% paid (GPT-4o-mini)
+/// Routing Logic (BGAI-022 - Approach B):
+/// 1. PreferredProvider override: If AI:PreferredProvider set, skip user-tier routing
+/// 2. Provider enabled check: Only select enabled providers (AI:Providers[x].Enabled)
+/// 3. User-type mapping: Admin → premium models, Editor → standard, User/Anonymous → free
+/// 4. Traffic split override: Configurable percentage for A/B testing per tier
+/// 5. Cost optimization: 80% free tier (Ollama/Llama 3.3 70B), 20% paid (GPT-4o-mini)
 ///
 /// Default Model Configuration:
 /// - Anonymous/User: 80% llama3.3:70b-instruct-q4_K_M (free tier), 20% openai/gpt-4o-mini
@@ -22,6 +27,7 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 {
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IOptions<AiProviderSettings> _aiSettings;
 
     // Model configuration keys
     private const string AnonymousModelKey = "LlmRouting:AnonymousModel";
@@ -55,10 +61,12 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 
     public HybridAdaptiveRoutingStrategy(
         ILogger<HybridAdaptiveRoutingStrategy> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IOptions<AiProviderSettings> aiSettings)
     {
         _logger = logger;
         _configuration = configuration;
+        _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
     }
 
     /// <inheritdoc/>
@@ -69,12 +77,69 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         var userRole = user?.Role ?? Role.User;
         var userId = user?.Id.ToString() ?? "anonymous";
 
-        // Get user-tier specific models and traffic split
+        var settings = _aiSettings.Value;
+
+        // BGAI-022 Step 1: Check PreferredProvider override (Approach B)
+        if (!string.IsNullOrEmpty(settings.PreferredProvider) &&
+            settings.Providers?.ContainsKey(settings.PreferredProvider) == true &&
+            settings.Providers[settings.PreferredProvider].Enabled)
+        {
+            var preferredConfig = settings.Providers[settings.PreferredProvider];
+            var preferredModel = preferredConfig.Models.FirstOrDefault() ?? GetDefaultModelForProvider(settings.PreferredProvider);
+
+            _logger.LogDebug(
+                "[{UserId}] Routing to PreferredProvider {Provider} ({Model}) - overriding user-tier routing",
+                userId, settings.PreferredProvider, preferredModel);
+
+            return new LlmRoutingDecision(
+                settings.PreferredProvider,
+                preferredModel,
+                $"PreferredProvider override (AI:PreferredProvider = {settings.PreferredProvider})");
+        }
+
+        // BGAI-022 Step 2: Use existing user-tier routing
         var (ollamaModel, openRouterModel, openRouterPercent) = GetTierConfiguration(userRole, isAnonymous);
 
         // Traffic split: Random selection based on configured percentage
         var useOpenRouter = ShouldUseOpenRouter(openRouterPercent);
 
+        // BGAI-022 Step 3: Check if selected provider is enabled
+        var selectedProvider = useOpenRouter ? "OpenRouter" : (ollamaModel.Contains('/') ? "OpenRouter" : "Ollama");
+        var selectedModel = useOpenRouter ? openRouterModel : ollamaModel;
+
+        // Verify provider is enabled (backward compatible: if AI section missing, allow all)
+        if (settings.Providers?.ContainsKey(selectedProvider) == true &&
+            !settings.Providers[selectedProvider].Enabled)
+        {
+            _logger.LogWarning(
+                "[{UserId}] Selected provider {Provider} is disabled (AI:Providers:{Provider}:Enabled = false), trying fallback",
+                userId, selectedProvider, selectedProvider);
+
+            // Try alternative provider
+            var alternativeProvider = selectedProvider == "Ollama" ? "OpenRouter" : "Ollama";
+            if (settings.Providers.ContainsKey(alternativeProvider) &&
+                settings.Providers[alternativeProvider].Enabled)
+            {
+                var alternativeModel = settings.Providers[alternativeProvider].Models.FirstOrDefault()
+                    ?? GetDefaultModelForProvider(alternativeProvider);
+
+                _logger.LogInformation(
+                    "[{UserId}] Fallback to {Provider} ({Model}) - primary provider disabled",
+                    userId, alternativeProvider, alternativeModel);
+
+                return new LlmRoutingDecision(
+                    alternativeProvider,
+                    alternativeModel,
+                    $"Fallback from {selectedProvider} (disabled in AI:Providers)");
+            }
+
+            // No enabled providers - throw exception
+            throw new InvalidOperationException(
+                $"Provider {selectedProvider} is disabled and no enabled fallback provider found. " +
+                "Check AI:Providers configuration.");
+        }
+
+        // Provider is enabled or AI section not configured (backward compatible)
         if (useOpenRouter)
         {
             _logger.LogDebug(
@@ -150,5 +215,18 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 #pragma warning restore SCS0005
 
         return random < openRouterPercent;
+    }
+
+    /// <summary>
+    /// BGAI-022: Get default model for a provider when not specified in configuration
+    /// </summary>
+    private static string GetDefaultModelForProvider(string providerName)
+    {
+        return providerName.ToLowerInvariant() switch
+        {
+            "ollama" => "llama3:8b",
+            "openrouter" => "meta-llama/llama-3.3-70b-instruct:free",
+            _ => "llama3:8b"
+        };
     }
 }

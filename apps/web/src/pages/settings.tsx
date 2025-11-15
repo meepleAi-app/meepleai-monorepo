@@ -26,6 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 import {
   api,
   type UserProfile,
@@ -626,9 +627,13 @@ export default function SettingsPage() {
                             Two-factor authentication adds an extra layer of security to your account.
                             You'll need your password and a code from your authenticator app to log in.
                           </p>
-                          <Button onClick={handleSetup2FA} disabled={loading}>
-                            {loading ? 'Setting up...' : 'Enable Two-Factor Authentication'}
-                          </Button>
+                          <LoadingButton
+                            onClick={handleSetup2FA}
+                            isLoading={loading}
+                            loadingText="Setting up..."
+                          >
+                            Enable Two-Factor Authentication
+                          </LoadingButton>
                         </div>
                       ) : (
                         <div className="space-y-6">

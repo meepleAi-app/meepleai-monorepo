@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { ErrorDisplay } from '../../components/ErrorDisplay';
 import { categorizeError } from '../../lib/errorUtils';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 
 interface TemplateParameter {
   name: string;
@@ -446,31 +447,23 @@ const TemplateImportModal = ({ template, onImport, onClose, importing }: Templat
 
           {/* Modal Footer */}
           <div className="flex gap-3 mt-8 pt-6 border-t border-gray-200">
-            <button
+            <LoadingButton
               type="submit"
-              disabled={importing}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+              isLoading={importing}
+              loadingText="Importing..."
+              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
             >
-              {importing ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Importing...
-                </span>
-              ) : (
-                'Import Template'
-              )}
-            </button>
-            <button
+              Import Template
+            </LoadingButton>
+            <LoadingButton
               type="button"
               onClick={onClose}
-              disabled={importing}
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+              isLoading={importing}
+              variant="outline"
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
             >
               Cancel
-            </button>
+            </LoadingButton>
           </div>
         </form>
       </div>

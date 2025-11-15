@@ -12,8 +12,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@/components/ui/button';
 import { AccessibleFormInput } from '@/components/accessible';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // ============================================================================
@@ -203,21 +203,14 @@ export function RegisterForm({
       )}
 
       {/* Submit Button */}
-      <Button
+      <LoadingButton
         type="submit"
         className="w-full"
-        disabled={isLoading}
-        aria-busy={isLoading}
+        isLoading={isLoading}
+        loadingText="Creating account..."
       >
-        {isLoading ? (
-          <>
-            <span className="mr-2" aria-hidden="true">⏳</span>
-            Creating account...
-          </>
-        ) : (
-          'Create Account'
-        )}
-      </Button>
+        Create Account
+      </LoadingButton>
     </form>
   );
 }

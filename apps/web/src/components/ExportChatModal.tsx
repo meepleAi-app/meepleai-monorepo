@@ -28,6 +28,7 @@
 import { useState } from 'react';
 import { AccessibleModal } from './accessible/AccessibleModal';
 import { api, ExportFormat } from '@/lib/api';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 
 export interface ExportChatModalProps {
   /**
@@ -278,9 +279,10 @@ export function ExportChatModal({
 
         {/* Action Buttons */}
         <div className="flex gap-3 justify-end">
-          <button
+          <LoadingButton
             onClick={handleCancel}
-            disabled={isExporting}
+            isLoading={isExporting}
+            variant="outline"
             className="
               px-4
               py-2
@@ -293,67 +295,25 @@ export function ExportChatModal({
               border
               border-slate-300
               dark:border-slate-600
-              rounded-lg
               hover:bg-slate-50
               dark:hover:bg-slate-700
-              focus:outline-none
-              focus:ring-2
-              focus:ring-ring
-              disabled:opacity-50
-              disabled:cursor-not-allowed
-              transition-colors
             "
           >
             Annulla
-          </button>
-          <button
+          </LoadingButton>
+          <LoadingButton
             onClick={() => void handleExport()}
-            disabled={isExporting}
+            isLoading={isExporting}
+            loadingText="Esportazione..."
             className="
               px-4
               py-2
               text-sm
               font-medium
-              text-primary-foreground
-              bg-primary
-              hover:bg-primary/90
-              rounded-lg
-              focus:outline-none
-              focus:ring-2
-              focus:ring-ring
-              disabled:opacity-50
-              disabled:cursor-not-allowed
-              transition-colors
-              inline-flex
-              items-center
-              gap-2
             "
           >
-            {isExporting && (
-              <svg
-                className="animate-spin h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-            )}
-            {isExporting ? 'Esportazione...' : 'Esporta'}
-          </button>
+            Esporta
+          </LoadingButton>
         </div>
       </div>
     </AccessibleModal>

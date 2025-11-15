@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/table';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { categorizeError } from '@/lib/errorUtils';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 
 /**
  * Session status badge component
@@ -72,37 +73,40 @@ function SessionActions({
   return (
     <div className="flex gap-2" role="group" aria-label="Session actions">
       {canPause && (
-        <Button
+        <LoadingButton
           size="sm"
           variant="outline"
           onClick={() => onPause(session.id)}
-          disabled={isLoading}
+          isLoading={isLoading}
+          loadingText="Pausing..."
           aria-label={`Pause session for ${session.players?.[0]?.playerName || 'game'}`}
         >
           Pause
-        </Button>
+        </LoadingButton>
       )}
       {canResume && (
-        <Button
+        <LoadingButton
           size="sm"
           variant="outline"
           onClick={() => onResume(session.id)}
-          disabled={isLoading}
+          isLoading={isLoading}
+          loadingText="Resuming..."
           aria-label={`Resume session for ${session.players?.[0]?.playerName || 'game'}`}
         >
           Resume
-        </Button>
+        </LoadingButton>
       )}
       {canEnd && (
-        <Button
+        <LoadingButton
           size="sm"
           variant="destructive"
           onClick={() => onEnd(session.id)}
-          disabled={isLoading}
+          isLoading={isLoading}
+          loadingText="Ending..."
           aria-label={`End session for ${session.players?.[0]?.playerName || 'game'}`}
         >
           End Session
-        </Button>
+        </LoadingButton>
       )}
     </div>
   );

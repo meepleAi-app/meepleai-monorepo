@@ -43,7 +43,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Game, SessionPlayerDto, GameSessionDto, api } from '@/lib/api';
-import { Plus, Trash2, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Trash2, AlertCircle } from 'lucide-react';
+import { LoadingButton } from '@/components/loading/LoadingButton';
 
 export interface SessionSetupModalProps {
   /** Whether the modal is open */
@@ -417,22 +418,23 @@ export function SessionSetupModal({
         </div>
 
         <DialogFooter>
-          <Button
+          <LoadingButton
             type="button"
             variant="outline"
             onClick={onClose}
-            disabled={isSubmitting}
+            isLoading={isSubmitting}
           >
             Cancel
-          </Button>
-          <Button
+          </LoadingButton>
+          <LoadingButton
             type="submit"
             onClick={handleSubmit}
-            disabled={isSubmitting || players.length < minPlayers}
+            isLoading={isSubmitting}
+            loadingText="Starting Session..."
+            disabled={players.length < minPlayers}
           >
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? 'Starting Session...' : 'Start Session'}
-          </Button>
+            Start Session
+          </LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

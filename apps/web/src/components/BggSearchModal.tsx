@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { api, BggSearchResult, BggGameDetails } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
+import { LoadingButton } from "@/components/loading/LoadingButton";
 
 interface BggSearchModalProps {
   isOpen: boolean;
@@ -177,13 +178,14 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
                   </div>
 
                   {/* Select Button */}
-                  <button
+                  <LoadingButton
                     onClick={() => handleSelectGame(result.bggId)}
-                    disabled={loadingDetails}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors self-center"
+                    isLoading={loadingDetails}
+                    loadingText="Loading..."
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors self-center"
                   >
-                    {loadingDetails ? "Loading..." : "Select"}
-                  </button>
+                    Select
+                  </LoadingButton>
                 </div>
               </div>
             ))}

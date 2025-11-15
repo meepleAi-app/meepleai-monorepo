@@ -1,0 +1,30 @@
+Priority,Week,Issue,Title,Area,Category,Effort,Impact,Status,Notes
+P0,1,#1183,Fix Deadlock Risk in RateLimitService,Backend,Bug,2-3h,Critical,Open,BLOCCA: Tutti endpoint auth. File: RateLimitService.cs:160-161
+P1,1,#1192,Add AsNoTracking to Read-Only Queries,Backend,Performance,4-6h,High,Open,~30% query performance boost. Pattern: .AsNoTracking()
+P1,1,#1187,Replace Hardcoded Configuration Values,Backend,Tech Debt,3-4h,Medium,Open,Move const to appsettings.json/DB
+P1,2,#1184,Migrate ChatService to CQRS,Backend,Architecture,2-3d,High,Open,DDD Migration. Remove ChatService.cs
+P1,2,#1188,Migrate Agent Services to CQRS,Backend,Architecture,2-3d,High,Open,DDD Migration. Remove AgentService.cs
+P1,3,#1189,Migrate RuleSpec Comment/Diff to CQRS,Backend,Architecture,2-3d,High,Open,DDD Migration. CommentService + DiffService
+P1,3,#1185,Migrate RuleSpecService to CQRS,Backend,Architecture,3-4d,High,Open,DDD Migration (LARGE). Remove RuleSpecService.cs
+P2,4,#1191,Complete OAuth Callback Migration to CQRS,Backend,Architecture,2d,Medium,Open,OAuth flow alignment
+P2,4,#1186,Implement Streaming Query Handlers,Backend,Architecture,2-3d,High,Open,RAG/QA real-time streaming. IAsyncEnumerable<T>
+P2,4,#1190,Implement Domain Events for All Aggregates,Backend,Architecture,2-3d,High,Open,Event-driven architecture. Cross-context events
+P2,5,#1193,Improve Session Authorization and Rate Limiting,Backend,Security,3-4d,Medium,Open,Enhanced security checks
+P2,5,#1194,Centralize Error Handling with Middleware,Backend,Middleware,2-3d,Medium,Open,Consistent error responses
+P1,6-7,#974,MultiModelValidationService (GPT-4 + Claude),Backend,Validation,1w,High,Open,Month 3: Multi-Model Validation
+P1,6-7,#975,Consensus similarity calculation (≥0.90),Backend,Validation,3d,High,Open,Cosine similarity for consensus
+P1,6-7,#973,Unit tests for 3 validation layers,Backend,Testing,2d,Medium,Open,Testing validation layers
+P1,6-7,#976,Unit tests for consensus validation (18 tests),Backend,Testing,2d,Medium,Open,Consensus testing
+P1,8,#977,Wire all 5 validation layers in RAG pipeline,Backend,Integration,1w,High,Open,Integration work
+P1,8,#979,Performance optimization (parallel validation),Backend,Performance,3d,High,Open,Parallel validation optimization
+P1,9,#978,End-to-end testing (Q→Validated Response),Backend,Testing,3d,High,Open,E2E validation testing
+P1,9,#981,Accuracy baseline measurement (80%+ target),Backend,Quality,2d,High,Open,Quality metrics
+P1,9,#980,Bug fixes for validation edge cases,Backend,Quality,2d,Medium,Open,Edge cases
+P1,9,#982,Update ADRs with validation implementation,Docs,Documentation,1d,Low,Open,Architecture Decision Records
+P2,10-11,#1098,Comprehensive Component Unit Tests,Frontend,Testing,1w,Medium,Open,Sprint 3: Component tests
+P2,10-11,#1099,Landing Page Performance and UX,Frontend,Performance,4-5d,Medium,Open,Sprint 3: Landing page
+P2,10-11,#1100,Keyboard Shortcuts System,Frontend,Feature,3-4d,Medium,Open,Sprint 3: Shortcuts
+P2,10-11,#864,Active Session Management UI,Frontend,Feature,4-5d,Medium,Open,Sprint 4: Session UI
+P2,10-11,#865,Session History & Statistics,Frontend,Feature,3-4d,Medium,Open,Sprint 4: Session stats
+P2,10-11,#868,Agent Selection UI,Frontend,Feature,3-4d,Medium,Open,Sprint 5: Agent UI
+P2,10-11,#869,Move Validation (RuleSpec v2 Integration),Backend,Validation,4-5d,Medium,Open,Sprint 5: Move validation

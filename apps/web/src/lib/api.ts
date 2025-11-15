@@ -79,10 +79,27 @@ export interface TotpSetupResponse {
   backupCodes: string[];
 }
 
-export interface TwoFactorStatusResponse {
-  isTwoFactorEnabled: boolean;
-  backupCodesCount: number;
+// SPRINT-1 Issue #1148: Updated to match backend DDD CQRS DTOs
+export interface TwoFactorStatusDto {
+  isEnabled: boolean;
+  enabledAt: string | null;
+  unusedBackupCodesCount: number;
 }
+
+export interface Enable2FAResult {
+  success: boolean;
+  backupCodes?: string[] | null;
+  errorMessage?: string | null;
+}
+
+export interface Disable2FAResult {
+  success: boolean;
+  errorMessage?: string | null;
+}
+
+// Legacy type alias for backward compatibility (deprecated)
+/** @deprecated Use TwoFactorStatusDto instead */
+export type TwoFactorStatusResponse = TwoFactorStatusDto;
 
 // SPRINT-2: Game Library types (Issue #854)
 export interface Game {
@@ -971,25 +988,37 @@ export const api = {
   },
 
   // AUTH-07: Two-Factor Authentication API
+  // SPRINT-1 Issue #1148: Updated to use backend DDD CQRS endpoints
   twoFactor: {
-    async getStatus(): Promise<TwoFactorStatusResponse> {
-      return api.get<TwoFactorStatusResponse>('/api/v1/users/me/2fa/status') as Promise<TwoFactorStatusResponse>;
+    async getStatus(): Promise<TwoFactorStatusDto> {
+      return api.get<TwoFactorStatusDto>('/api/v1/users/me/2fa/status') as Promise<TwoFactorStatusDto>;
     },
 
     async setup(): Promise<TotpSetupResponse> {
       return api.post<TotpSetupResponse>('/api/v1/auth/2fa/setup');
     },
 
-    async enable(code: string): Promise<void> {
-      await api.post<void>('/api/v1/auth/2fa/enable', { code });
+    async enable(code: string): Promise<Enable2FAResult> {
+      const response = await api.post<{ message: string; backupCodes?: string[] }>('/api/v1/auth/2fa/enable', { code });
+      // Backend returns { message, backupCodes } on success, or throws on error
+      return {
+        success: true,
+        backupCodes: response.backupCodes || null,
+        errorMessage: null
+      };
     },
 
     async verify(code: string): Promise<void> {
       await api.post<void>('/api/v1/auth/2fa/verify', { code });
     },
 
-    async disable(password: string, code: string): Promise<void> {
-      await api.post<void>('/api/v1/auth/2fa/disable', { password, code });
+    async disable(password: string, code: string): Promise<Disable2FAResult> {
+      const response = await api.post<{ message: string }>('/api/v1/auth/2fa/disable', { password, code });
+      // Backend returns { message } on success, or throws on error
+      return {
+        success: true,
+        errorMessage: null
+      };
     }
   },
 

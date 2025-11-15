@@ -11,7 +11,7 @@ import type {
   ConfigurationExportDto,
   ConfigurationImportRequest,
   ConfigurationHistoryDto,
-  TwoFactorStatusResponse,
+  TwoFactorStatusDto,
   TotpSetupResponse
 } from "../api";
 
@@ -1411,9 +1411,10 @@ describe("api - Final Coverage", () => {
     describe("getStatus", () => {
       it("should fetch 2FA status", async () => {
         // Arrange
-        const mockStatus: TwoFactorStatusResponse = {
-          isTwoFactorEnabled: true,
-          backupCodesCount: 8
+        const mockStatus: TwoFactorStatusDto = {
+          isEnabled: true,
+          enabledAt: '2024-01-01T00:00:00Z',
+          unusedBackupCodesCount: 8
         };
         setFetchResponse(200, mockStatus);
 
@@ -1430,9 +1431,10 @@ describe("api - Final Coverage", () => {
 
       it("should handle disabled 2FA status", async () => {
         // Arrange
-        const mockStatus: TwoFactorStatusResponse = {
-          isTwoFactorEnabled: false,
-          backupCodesCount: 0
+        const mockStatus: TwoFactorStatusDto = {
+          isEnabled: false,
+          enabledAt: null,
+          unusedBackupCodesCount: 0
         };
         setFetchResponse(200, mockStatus);
 
@@ -1440,8 +1442,8 @@ describe("api - Final Coverage", () => {
         const result = await api.twoFactor.getStatus();
 
         // Assert
-        expect(result.isTwoFactorEnabled).toBe(false);
-        expect(result.backupCodesCount).toBe(0);
+        expect(result.isEnabled).toBe(false);
+        expect(result.unusedBackupCodesCount).toBe(0);
       });
 
       it("should handle 401 Unauthorized", async () => {

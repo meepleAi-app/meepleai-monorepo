@@ -81,18 +81,21 @@ const mockOAuthAccounts = [
 ];
 
 const mock2FAStatusDisabled = {
-  isTwoFactorEnabled: false,
-  backupCodesCount: 0,
+  isEnabled: false,
+  enabledAt: null,
+  unusedBackupCodesCount: 0,
 };
 
 const mock2FAStatusEnabled = {
-  isTwoFactorEnabled: true,
-  backupCodesCount: 8,
+  isEnabled: true,
+  enabledAt: '2024-01-01T00:00:00Z',
+  unusedBackupCodesCount: 8,
 };
 
 const mock2FAStatusLowBackupCodes = {
-  isTwoFactorEnabled: true,
-  backupCodesCount: 2,
+  isEnabled: true,
+  enabledAt: '2024-01-01T00:00:00Z',
+  unusedBackupCodesCount: 2,
 };
 
 const mockTotpSetup = {
@@ -820,7 +823,7 @@ describe('SettingsPage', () => {
 
     it('enables 2FA with valid code', async () => {
       const user = userEvent.setup();
-      mockTwoFactorApi.enable.mockResolvedValue(undefined);
+      mockTwoFactorApi.enable.mockResolvedValue({ success: true, backupCodes: null, errorMessage: null });
       mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
       mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusEnabled);
 
@@ -1131,7 +1134,7 @@ describe('SettingsPage', () => {
     it('disables 2FA successfully', async () => {
       const user = userEvent.setup();
       mockConfirm.mockReturnValue(true);
-      mockTwoFactorApi.disable.mockResolvedValue(undefined);
+      mockTwoFactorApi.disable.mockResolvedValue({ success: true, errorMessage: null });
       mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusEnabled);
       mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
 

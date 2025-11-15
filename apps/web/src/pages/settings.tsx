@@ -31,7 +31,7 @@ import {
   type UserProfile,
   type UserPreferences,
   type TotpSetupResponse,
-  type TwoFactorStatusResponse
+  type TwoFactorStatusDto
 } from '@/lib/api';
 
 // OAuth provider configuration
@@ -74,7 +74,7 @@ export default function SettingsPage() {
   });
 
   // 2FA state
-  const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatusResponse | null>(null);
+  const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatusDto | null>(null);
   const [setup, setSetup] = useState<TotpSetupResponse | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [showBackupCodes, setShowBackupCodes] = useState(false);
@@ -566,20 +566,20 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {twoFactorStatus?.isTwoFactorEnabled ? (
+                  {twoFactorStatus?.isEnabled ? (
                     <div className="space-y-4">
                       <Alert className="border-green-500 bg-green-50 dark:bg-green-900/20">
                         <AlertDescription className="text-green-800 dark:text-green-200">
                           ✓ Two-factor authentication is enabled
                           <br />
-                          Backup codes remaining: {twoFactorStatus.backupCodesCount}
+                          Backup codes remaining: {twoFactorStatus.unusedBackupCodesCount}
                         </AlertDescription>
                       </Alert>
 
-                      {twoFactorStatus.backupCodesCount < 3 && (
+                      {twoFactorStatus.unusedBackupCodesCount < 3 && (
                         <Alert variant="destructive">
                           <AlertDescription>
-                            ⚠️ Warning: You have only {twoFactorStatus.backupCodesCount} backup codes remaining.
+                            ⚠️ Warning: You have only {twoFactorStatus.unusedBackupCodesCount} backup codes remaining.
                             Consider disabling and re-enabling 2FA to generate new backup codes.
                           </AlertDescription>
                         </Alert>

@@ -54,9 +54,24 @@ public class EnhancedPdfProcessingOrchestrator
         var requestId = Guid.NewGuid().ToString();
         var overallStopwatch = Stopwatch.StartNew();
 
+        // Defense in depth: Validate file size before processing
+        var maxSize = _configuration.GetValue<long>(
+            "PdfProcessing:MaxFileSizeBytes",
+            104857600); // 100 MB default
+
+        if (pdfStream.CanSeek && pdfStream.Length > maxSize)
+        {
+            _logger.LogWarning(
+                "[{RequestId}] PDF size {Size} bytes exceeds maximum {Max} bytes - rejecting",
+                requestId, pdfStream.Length, maxSize);
+
+            return EnhancedExtractionResult.CreateFailure(
+                $"PDF size ({pdfStream.Length / 1_000_000:F1} MB) exceeds maximum allowed ({maxSize / 1_000_000} MB)");
+        }
+
         _logger.LogInformation(
-            "[{RequestId}] Starting 3-stage PDF extraction pipeline",
-            requestId);
+            "[{RequestId}] Starting 3-stage PDF extraction pipeline (size: {Size} bytes)",
+            requestId, pdfStream.CanSeek ? pdfStream.Length : -1);
 
         // Copy stream to byte array for multiple extraction attempts
         byte[] pdfBytes;
@@ -480,6 +495,24 @@ public record EnhancedExtractionResult(
             StageName: stageName,
             TotalDurationMs: totalDurationMs,
             ErrorMessage: result.ErrorMessage);
+    }
+
+    /// <summary>
+    /// Creates failure result with error message (defense in depth validation)
+    /// </summary>
+    public static EnhancedExtractionResult CreateFailure(string errorMessage)
+    {
+        return new EnhancedExtractionResult(
+            Success: false,
+            ExtractedText: string.Empty,
+            PageCount: 0,
+            CharacterCount: 0,
+            OcrTriggered: false,
+            Quality: ExtractionQuality.VeryLow,
+            StageUsed: 0,
+            StageName: "None",
+            TotalDurationMs: 0,
+            ErrorMessage: errorMessage);
     }
 }
 

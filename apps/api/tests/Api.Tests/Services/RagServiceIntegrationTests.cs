@@ -8,6 +8,7 @@ using Api.Models;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.Services.Rag;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -44,7 +45,8 @@ public class RagServiceIntegrationTests : IDisposable
             .UseInMemoryDatabase(databaseName: $"RagServiceTestDb_{Guid.NewGuid()}")
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object);
 
         // Initialize all mocks
         _mockEmbeddingService = new Mock<IEmbeddingService>();

@@ -131,9 +131,10 @@ docs/                Architecture, ADRs, guides
 **Examples**:
 ```csharp
 // Authentication
-POST   /api/v1/auth/register      → RegisterCommand
-POST   /api/v1/auth/login         → LoginCommand (2FA support)
-POST   /api/v1/auth/logout        → LogoutCommand
+POST   /api/v1/auth/register               → RegisterCommand
+POST   /api/v1/auth/login                  → LoginCommand (2FA support)
+POST   /api/v1/auth/logout                 → LogoutCommand
+GET    /api/v1/auth/oauth/{provider}/callback → HandleOAuthCallbackCommand (CQRS)
 
 // Games
 GET    /api/v1/games              → GetAllGamesQuery
@@ -211,15 +212,16 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 **100% Complete** (2025-11-16):
 - ✅ 7/7 contexts migrated to CQRS (ALL at 100%)
 - ✅ 96+ CQRS handlers operational (including 3 streaming handlers + 8 agent handlers + 13 RuleSpec comment/diff handlers)
-- ✅ 5,034 lines legacy code removed (+700 from Issue #1189: RuleSpec Comment/Diff services)
-- ✅ 82+ endpoints migrated to MediatR (+11 RuleSpec comment/diff endpoints)
+- ✅ 5,180 lines legacy code removed (+146 from Issue #1191: OAuth callback service method)
+- ✅ 83+ endpoints migrated to MediatR (OAuth callback fully CQRS-compliant)
 - ✅ Zero build errors
 - ✅ Streaming RAG/QA/Setup migrated to IAsyncEnumerable pattern
 - ✅ Agent services (Chess, Feedback, FollowUp) migrated to CQRS (#1188)
 - ✅ RuleSpec Comment/Diff services migrated to CQRS (#1189)
 - ✅ **Domain Events**: 40 events + 39 handlers + integration events (#1190)
+- ✅ OAuth callback legacy code removed (#1191)
 
-**Contexts**: All 7 contexts at 100% - Authentication, GameManagement, KnowledgeBase, DocumentProcessing, WorkflowIntegration, SystemConfiguration, Administration
+**Contexts**: All 7 contexts at 100% - Authentication (OAuth fully CQRS-compliant), GameManagement, KnowledgeBase, DocumentProcessing, WorkflowIntegration, SystemConfiguration, Administration
 
 **Domain Events** (Issue #1190 - Complete):
 - **Infrastructure**: Event dispatcher in DbContext, base handler with auto-audit

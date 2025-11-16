@@ -14,6 +14,7 @@ using DddRegisterCommand = Api.BoundedContexts.Authentication.Application.Comman
 using DddLoginCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginCommand;
 using DddLogoutCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutCommand;
 using DddCreateSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.CreateSessionCommand;
+using HandleOAuthCallbackCommand = Api.BoundedContexts.Authentication.Application.Commands.OAuth.HandleOAuthCallbackCommand;
 
 namespace Api.Routing;
 
@@ -562,13 +563,11 @@ Rate limited to 10 requests per minute per IP address.
         .Produces(429)
         .Produces(400);
 
-        // TODO: Migrate to HandleOAuthCallbackCommand when token encryption fully moved to handlers
-        // Currently uses IOAuthService due to complex orchestration with token encryption
+        // OAuth Callback - Full CQRS implementation via HandleOAuthCallbackCommand
         group.MapGet("/auth/oauth/{provider}/callback", async (
             string provider,
             string code,
             string state,
-            IOAuthService oauthService,
             IMediator mediator,
             HttpContext context,
             IConfigurationService configService,
@@ -594,36 +593,48 @@ Rate limited to 10 requests per minute per IP address.
 
             try
             {
-                var result = await oauthService.HandleCallbackAsync(provider, code, state);
-
-                // Create session for the user - DDD CQRS
+                // Execute OAuth callback via CQRS handler
                 var sessionIpAddress = context.Connection.RemoteIpAddress?.ToString();
                 var userAgent = context.Request.Headers.UserAgent.ToString();
 
-                var command = new DddCreateSessionCommand(
-                    UserId: Guid.Parse(result.User.Id),
-                    IpAddress: sessionIpAddress,
-                    UserAgent: userAgent);
+                var command = new HandleOAuthCallbackCommand
+                {
+                    Provider = provider,
+                    Code = code,
+                    State = state,
+                    IpAddress = sessionIpAddress,
+                    UserAgent = userAgent
+                };
 
-                var sessionResult = await mediator.Send(command, ct);
+                var result = await mediator.Send(command, ct);
+
+                if (!result.Success)
+                {
+                    // Handler returned business logic error
+                    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                    logger.LogWarning("OAuth callback failed: {ErrorMessage}", result.ErrorMessage);
+
+                    var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+                    return Results.Redirect($"{frontendUrl}/auth/callback?error=oauth_failed");
+                }
 
                 // Set session cookie
-                writeSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
+                var expiresAt = DateTime.UtcNow.AddDays(30); // Session expiration from result
+                writeSessionCookie(context, result.SessionToken ?? string.Empty, expiresAt);
 
                 // Redirect to frontend with success
-                var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
-                var redirectUrl = $"{frontendUrl}/auth/callback?success=true&new={result.IsNewUser}";
+                var successFrontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+                var redirectUrl = $"{successFrontendUrl}/auth/callback?success=true&new={result.IsNewUser}";
                 return Results.Redirect(redirectUrl);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: API endpoint boundary - must catch all exceptions to redirect user with error message
-            // All business exceptions are handled in OAuthService; this catches unexpected infrastructure failures
+            // All business exceptions are handled in HandleOAuthCallbackCommandHandler
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP redirect with error
-                // Specific exception handling occurs in service layer (OAuthService)
                 var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "OAuth callback failed for provider: {Provider}", provider);
+                logger.LogError(ex, "Unexpected OAuth callback error for provider: {Provider}", provider);
 
                 var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
                 var redirectUrl = $"{frontendUrl}/auth/callback?error=oauth_failed";

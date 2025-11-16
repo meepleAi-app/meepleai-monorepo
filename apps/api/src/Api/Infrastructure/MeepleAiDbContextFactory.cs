@@ -1,4 +1,5 @@
 using System;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -31,6 +32,52 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
 
         optionsBuilder.UseNpgsql(connectionString);
 
-        return new MeepleAiDbContext(optionsBuilder.Options);
+        // Create a no-op mediator for design-time operations (migrations)
+        var mediator = new NoOpMediator();
+        return new MeepleAiDbContext(optionsBuilder.Options, mediator);
+    }
+
+    /// <summary>
+    /// No-op mediator for design-time DbContext creation.
+    /// Domain events are not dispatched during migrations.
+    /// </summary>
+    private class NoOpMediator : IMediator
+    {
+        public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException("Stream not supported in design-time context");
+        }
+
+        public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException("Stream not supported in design-time context");
+        }
+
+        public Task Publish(object notification, CancellationToken cancellationToken = default)
+        {
+            // No-op: don't dispatch events during migrations
+            return Task.CompletedTask;
+        }
+
+        public Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default) where TNotification : INotification
+        {
+            // No-op: don't dispatch events during migrations
+            return Task.CompletedTask;
+        }
+
+        public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException("Send not supported in design-time context");
+        }
+
+        public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest
+        {
+            throw new NotImplementedException("Send not supported in design-time context");
+        }
+
+        public Task<object?> Send(object request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException("Send not supported in design-time context");
+        }
     }
 }

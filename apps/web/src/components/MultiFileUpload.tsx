@@ -107,18 +107,15 @@ export function MultiFileUpload({
     clearCompleted,
     clearAll,
     getStats,
-    startUpload
+    startUpload,
+    isWorkerReady,
+    workerError
   } = useUploadQueue({
-    concurrencyLimit: 3,
-    maxRetries: 3,
-    autoUpload,
-    onUploadStart,
-    onUploadSuccess,
-    onUploadError,
-    onQueueAdd,
-    onRetry,
     onUploadComplete: () => {
       onUploadComplete?.();
+    },
+    onUploadError: (item, error) => {
+      onUploadError?.(item, error);
     },
     onAllComplete: (stats) => {
       setShowSummary(true);
@@ -161,7 +158,7 @@ export function MultiFileUpload({
     }
 
     if (validFiles.length > 0) {
-      addFiles(validFiles, gameId, language);
+      await addFiles(validFiles, gameId, language);
       setShowSummary(false);
     }
   }, [gameId, language, addFiles]);
@@ -243,6 +240,30 @@ export function MultiFileUpload({
           Target Game: {gameName} ({gameId})
         </Badge>
       </div>
+
+      {/* Worker Error */}
+      {workerError && (
+        <div
+          role="alert"
+          className="p-3 bg-red-50 border border-red-600 rounded-md mb-4"
+          data-testid="worker-error"
+        >
+          <div className="text-sm font-semibold text-red-600 mb-2">
+            Upload System Error:
+          </div>
+          <p className="text-xs text-red-600 mb-2">
+            {workerError.message}
+          </p>
+          <Button
+            onClick={() => window.location.reload()}
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-600"
+          >
+            Reload Page
+          </Button>
+        </div>
+      )}
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (

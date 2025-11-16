@@ -1,422 +1,118 @@
 /**
- * PDF-05: Multi-file upload queue hook
+ * FE-IMP-008: Multi-file upload queue hook (Web Worker + useSyncExternalStore)
  * Manages concurrent PDF uploads with progress tracking, retry, and cancellation
+ *
+ * BREAKING CHANGES from legacy version:
+ * - Now uses Web Worker for off-main-thread processing
+ * - Queue persists across page refreshes (localStorage)
+ * - Multi-tab synchronization via BroadcastChannel
+ * - Uses React 19's useSyncExternalStore for zero-tearing state
+ *
+ * Backward compatible API with legacy useUploadQueue
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
-import { extractCorrelationId } from '../lib/errorUtils';
-import { ApiError } from '../lib/api';
+import { useSyncExternalStore, useEffect, useCallback } from 'react';
+import {
+  uploadQueueStore,
+  type UploadQueueItem,
+  type UploadQueueStats,
+  type UploadStatus,
+  type UseUploadQueueOptions
+} from '../stores/UploadQueueStore';
 
-export type UploadStatus = 'pending' | 'uploading' | 'processing' | 'success' | 'failed' | 'cancelled';
+export type { UploadStatus, UploadQueueItem, UploadQueueStats };
 
-export interface UploadQueueItem {
-  id: string;
-  file: File;
-  gameId: string;
-  language: string; // Document language for OCR/parsing
-  status: UploadStatus;
-  progress: number;
-  error?: string;
-  pdfId?: string;
-  correlationId?: string;
-  retryCount: number;
+export interface UseUploadQueueReturn {
+  queue: UploadQueueItem[];
+  addFiles: (files: File[], gameId: string, language: string) => Promise<void>;
+  removeFile: (id: string) => void;
+  cancelUpload: (id: string) => void;
+  retryUpload: (id: string) => void;
+  clearCompleted: () => void;
+  clearAll: () => void;
+  getStats: () => UploadQueueStats;
+  startUpload: () => void;
+  isWorkerReady: boolean;
+  workerError: Error | null;
 }
-
-export interface UploadQueueStats {
-  total: number;
-  pending: number;
-  uploading: number;
-  processing: number;
-  succeeded: number;
-  failed: number;
-  cancelled: number;
-}
-
-export interface UseUploadQueueOptions {
-  concurrencyLimit?: number;
-  maxRetries?: number;
-  autoUpload?: boolean; // Auto-start uploads when files added (default: true for production, false for testing)
-  onUploadComplete?: (item: UploadQueueItem) => void;
-  onUploadError?: (item: UploadQueueItem, error: string) => void;
-  onAllComplete?: (stats: UploadQueueStats) => void;
-  // Test observability hooks - fire synchronously before async operations
-  onUploadStart?: (item: UploadQueueItem) => void; // Called immediately before upload begins
-  onUploadSuccess?: (item: UploadQueueItem) => void; // Called immediately after successful upload
-  onQueueAdd?: (items: UploadQueueItem[]) => void; // Called immediately after files added to queue
-  onRetry?: (item: UploadQueueItem, attempt: number, error: Error) => void; // Called on each retry attempt
-}
-
-interface UploadOperation {
-  id: string;
-  abortController: AbortController;
-}
-
-const API_BASE = typeof window !== 'undefined'
-  ? (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080')
-  : '';
 
 /**
- * Custom hook for managing multi-file PDF uploads with concurrency control
+ * Custom hook for managing multi-file PDF uploads with Web Worker concurrency control
+ *
+ * @param options - Configuration and callback options
+ * @returns Upload queue state and control functions
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   queue,
+ *   addFiles,
+ *   cancelUpload,
+ *   getStats
+ * } = useUploadQueue({
+ *   onUploadComplete: (item) => console.log('Uploaded:', item.pdfId),
+ *   onAllComplete: (stats) => console.log('All done:', stats)
+ * });
+ *
+ * // Add files to queue
+ * await addFiles(selectedFiles, 'game-123', 'en');
+ * ```
  */
-export function useUploadQueue(options: UseUploadQueueOptions = {}) {
-  const {
-    concurrencyLimit = 3,
-    maxRetries = 3,
-    autoUpload = true, // Default to true for production behavior
-    onUploadComplete,
-    onUploadError,
-    onAllComplete,
-    onUploadStart,
-    onUploadSuccess,
-    onQueueAdd,
-    onRetry
-  } = options;
+export function useUploadQueue(options: UseUploadQueueOptions = {}): UseUploadQueueReturn {
+  // Set options on store (callbacks)
+  useEffect(() => {
+    uploadQueueStore.setOptions(options);
+  }, [options]);
 
-  const [queue, setQueue] = useState<UploadQueueItem[]>([]);
-  const activeUploadsRef = useRef<Map<string, UploadOperation>>(new Map());
-  const processingRef = useRef(false);
-  const allCompleteNotifiedRef = useRef(false);
-
-  /**
-   * Adds files to the upload queue
-   */
-  const addFiles = useCallback((files: File[], gameId: string, language: string) => {
-    const newItems: UploadQueueItem[] = files.map(file => ({
-      id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
-      file,
-      gameId,
-      language,
-      status: 'pending',
-      progress: 0,
-      retryCount: 0
-    }));
-
-    setQueue(prev => [...prev, ...newItems]);
-    allCompleteNotifiedRef.current = false;
-
-    // Test observability: notify immediately after queue update (synchronous)
-    onQueueAdd?.(newItems);
-  }, [onQueueAdd]);
-
-  /**
-   * Removes a file from the queue (only if not uploading)
-   */
-  const removeFile = useCallback((id: string) => {
-    setQueue(prev => {
-      const item = prev.find(i => i.id === id);
-      if (item && item.status === 'uploading') {
-        // Can't remove while uploading, must cancel first
-        return prev;
-      }
-      return prev.filter(i => i.id !== id);
-    });
-  }, []);
-
-  /**
-   * Cancels an ongoing upload
-   */
-  const cancelUpload = useCallback((id: string) => {
-    const operation = activeUploadsRef.current.get(id);
-    if (operation) {
-      operation.abortController.abort();
-      activeUploadsRef.current.delete(id);
-    }
-
-    setQueue(prev =>
-      prev.map(item =>
-        item.id === id
-          ? { ...item, status: 'cancelled' as UploadStatus, progress: 0 }
-          : item
-      )
-    );
-  }, []);
-
-  /**
-   * Retries a failed upload
-   */
-  const retryUpload = useCallback((id: string) => {
-    setQueue(prev =>
-      prev.map(item =>
-        item.id === id
-          ? { ...item, status: 'pending', progress: 0, error: undefined }
-          : item
-      )
-    );
-    allCompleteNotifiedRef.current = false;
-  }, []);
-
-  /**
-   * Clears all completed uploads from the queue
-   */
-  const clearCompleted = useCallback(() => {
-    setQueue(prev =>
-      prev.filter(item =>
-        item.status !== 'success' && item.status !== 'failed' && item.status !== 'cancelled'
-      )
-    );
-  }, []);
-
-  /**
-   * Clears the entire queue (cancels active uploads)
-   */
-  const clearAll = useCallback(() => {
-    // Cancel all active uploads
-    activeUploadsRef.current.forEach(operation => {
-      operation.abortController.abort();
-    });
-    activeUploadsRef.current.clear();
-
-    setQueue([]);
-    allCompleteNotifiedRef.current = false;
-  }, []);
-
-  /**
-   * Gets current queue statistics
-   */
-  const getStats = useCallback((): UploadQueueStats => {
-    const stats = queue.reduce(
-      (acc, item) => {
-        acc.total++;
-        if (item.status === 'pending') acc.pending++;
-        else if (item.status === 'uploading') acc.uploading++;
-        else if (item.status === 'processing') acc.processing++;
-        else if (item.status === 'success') acc.succeeded++;
-        else if (item.status === 'failed') acc.failed++;
-        else if (item.status === 'cancelled') acc.cancelled++;
-        return acc;
-      },
-      {
-        total: 0,
-        pending: 0,
-        uploading: 0,
-        processing: 0,
-        succeeded: 0,
-        failed: 0,
-        cancelled: 0
-      }
-    );
-
-    return stats;
-  }, [queue]);
-
-  /**
-   * Uploads a single file with retry logic
-   */
-  const uploadFile = useCallback(
-    async (item: UploadQueueItem): Promise<void> => {
-      const abortController = new AbortController();
-      const operation: UploadOperation = { id: item.id, abortController };
-      activeUploadsRef.current.set(item.id, operation);
-
-      // Test observability: notify immediately before upload starts (synchronous)
-      onUploadStart?.(item);
-
-      try {
-        // Update status to uploading
-        setQueue(prev =>
-          prev.map(i =>
-            i.id === item.id
-              ? { ...i, status: 'uploading', progress: 10 }
-              : i
-          )
-        );
-
-        const formData = new FormData();
-        formData.append('file', item.file);
-        formData.append('gameId', item.gameId);
-        formData.append('language', item.language);
-
-        // Use retry logic with exponential backoff
-        const response = await retryWithBackoff(
-          async () => {
-            const res = await fetch(`${API_BASE}/api/v1/ingest/pdf`, {
-              method: 'POST',
-              body: formData,
-              credentials: 'include',
-              signal: abortController.signal
-            });
-
-            if (!res.ok) {
-              const correlationId = extractCorrelationId(res);
-              const errorBody = await res.json().catch(() => ({}));
-              const errorMessage = errorBody.error ?? res.statusText;
-
-              const apiError = new ApiError(errorMessage, res.status, correlationId, res);
-              throw apiError;
-            }
-
-            return res;
-          },
-          {
-            maxAttempts: maxRetries,
-            shouldRetry: (error) => {
-              // Don't retry if aborted
-              if (error instanceof DOMException && error.name === 'AbortError') {
-                return false;
-              }
-              return isRetryableError(error);
-            },
-            onRetry: (error, attempt) => {
-              // Test observability: notify immediately on retry (synchronous)
-              if (onRetry) {
-                const currentItem = queue.find(i => i.id === item.id) || item;
-                const errorObj = error instanceof Error ? error : new Error(String(error));
-                onRetry(currentItem, attempt, errorObj);
-              }
-
-              setQueue(prev =>
-                prev.map(i =>
-                  i.id === item.id
-                    ? { ...i, retryCount: attempt }
-                    : i
-                )
-              );
-            }
-          }
-        );
-
-        const data = await response.json() as { documentId: string };
-
-        // Update to processing status
-        setQueue(prev =>
-          prev.map(i =>
-            i.id === item.id
-              ? {
-                  ...i,
-                  status: 'processing',
-                  progress: 50,
-                  pdfId: data.documentId
-                }
-              : i
-          )
-        );
-
-        // Simulate processing completion (in real app, would poll status)
-        // For now, mark as success after a short delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        setQueue(prev =>
-          prev.map(i =>
-            i.id === item.id
-              ? { ...i, status: 'success', progress: 100 }
-              : i
-          )
-        );
-
-        const completedItem = { ...item, status: 'success' as UploadStatus, progress: 100, pdfId: data.documentId };
-
-        // Test observability: notify immediately after successful upload (synchronous)
-        onUploadSuccess?.(completedItem);
-
-        onUploadComplete?.(completedItem);
-
-      } catch (error: unknown) {
-        // Check if it was cancelled
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          // Already handled by cancelUpload
-          return;
-        }
-
-        const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-        const correlationId = error instanceof ApiError ? error.correlationId : undefined;
-
-        const failedItem = { ...item, status: 'failed' as UploadStatus, error: errorMessage, correlationId };
-
-        // Test observability: notify immediately about error (synchronous, before state update)
-        onUploadError?.(failedItem, errorMessage);
-
-        setQueue(prev =>
-          prev.map(i =>
-            i.id === item.id
-              ? {
-                  ...i,
-                  status: 'failed',
-                  progress: 0,
-                  error: errorMessage,
-                  correlationId
-                }
-              : i
-          )
-        );
-
-      } finally {
-        activeUploadsRef.current.delete(item.id);
-      }
-    },
-    [maxRetries, onUploadComplete, onUploadError, onUploadStart, onUploadSuccess, onRetry, queue]
+  // Subscribe to worker state using useSyncExternalStore
+  const state = useSyncExternalStore(
+    uploadQueueStore.subscribe,
+    uploadQueueStore.getSnapshot,
+    uploadQueueStore.getServerSnapshot
   );
 
-  /**
-   * Processes the next batch of pending uploads
-   */
-  const processQueue = useCallback(async () => {
-    if (processingRef.current) {
-      return;
-    }
+  // Worker status
+  const isWorkerReady = uploadQueueStore.isWorkerReady();
+  const workerError = uploadQueueStore.getError();
 
-    processingRef.current = true;
+  // Memoized control functions
+  const addFiles = useCallback(
+    async (files: File[], gameId: string, language: string) => {
+      await uploadQueueStore.addFiles(files, gameId, language);
+    },
+    []
+  );
 
-    try {
-      while (true) {
-        // Use activeUploadsRef instead of queue state for accurate count
-        // queue state updates asynchronously, but ref is synchronous!
-        const activeCount = activeUploadsRef.current.size;
-        const stats = getStats();
+  const removeFile = useCallback((id: string) => {
+    uploadQueueStore.removeFile(id);
+  }, []);
 
-        // Check if we can start more uploads
-        if (activeCount >= concurrencyLimit) {
-          break;
-        }
+  const cancelUpload = useCallback((id: string) => {
+    uploadQueueStore.cancelUpload(id);
+  }, []);
 
-        // Find next pending item that's not already being uploaded
-        const nextItem = queue.find(item =>
-          item.status === 'pending' && !activeUploadsRef.current.has(item.id)
-        );
-        if (!nextItem) {
-          break;
-        }
+  const retryUpload = useCallback((id: string) => {
+    uploadQueueStore.retryUpload(id);
+  }, []);
 
-        // Start upload (don't await - run in background)
-        void uploadFile(nextItem);
+  const clearCompleted = useCallback(() => {
+    uploadQueueStore.clearCompleted();
+  }, []);
 
-        // Small delay to prevent tight loop
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
-    } finally {
-      processingRef.current = false;
-    }
-  }, [queue, concurrencyLimit, uploadFile, getStats]);
+  const clearAll = useCallback(() => {
+    uploadQueueStore.clearAll();
+  }, []);
 
-  /**
-   * Effect to process queue when it changes (only if autoUpload is enabled)
-   */
-  useEffect(() => {
-    if (autoUpload) {
-      void processQueue();
-    }
-  }, [processQueue, autoUpload]);
+  const getStats = useCallback((): UploadQueueStats => {
+    return uploadQueueStore.getStats();
+  }, []);
 
-  /**
-   * Effect to notify when all uploads complete
-   */
-  useEffect(() => {
-    if (allCompleteNotifiedRef.current) {
-      return;
-    }
-
-    const stats = getStats();
-    const hasItems = stats.total > 0;
-    const allDone = stats.pending === 0 && stats.uploading === 0 && stats.processing === 0;
-
-    if (hasItems && allDone && onAllComplete) {
-      allCompleteNotifiedRef.current = true;
-      onAllComplete(stats);
-    }
-  }, [queue, getStats, onAllComplete]);
+  const startUpload = useCallback(() => {
+    uploadQueueStore.startProcessing();
+  }, []);
 
   return {
-    queue,
+    queue: state.items,
     addFiles,
     removeFile,
     cancelUpload,
@@ -424,6 +120,44 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
     clearCompleted,
     clearAll,
     getStats,
-    startUpload: processQueue // Expose manual upload trigger for testing
+    startUpload,
+    isWorkerReady,
+    workerError
+  };
+}
+
+/**
+ * Hook for accessing upload queue metrics without full state subscription
+ * Useful for dashboard/status components that only need stats
+ */
+export function useUploadQueueStats(): UploadQueueStats {
+  const state = useSyncExternalStore(
+    uploadQueueStore.subscribe,
+    uploadQueueStore.getSnapshot,
+    uploadQueueStore.getServerSnapshot
+  );
+
+  return uploadQueueStore.getStats();
+}
+
+/**
+ * Hook for accessing worker status
+ * Useful for error boundaries or status indicators
+ */
+export function useUploadQueueStatus(): {
+  isReady: boolean;
+  error: Error | null;
+  itemCount: number;
+} {
+  const state = useSyncExternalStore(
+    uploadQueueStore.subscribe,
+    uploadQueueStore.getSnapshot,
+    uploadQueueStore.getServerSnapshot
+  );
+
+  return {
+    isReady: uploadQueueStore.isWorkerReady(),
+    error: uploadQueueStore.getError(),
+    itemCount: state.items.length
   };
 }

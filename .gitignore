@@ -468,3 +468,6 @@ apps/web/e2e-test-output.txt
 .playwright-mcp/
 alerts.json
 tools/test-llm-comparison.py
+
+# .NET SDK directory (should be installed locally, not committed)
+.dotnet/

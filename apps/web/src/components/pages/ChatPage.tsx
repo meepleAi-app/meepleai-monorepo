@@ -1,3 +1,15 @@
+'use client';
+
+/**
+ * Chat Page Client Component
+ *
+ * Main chat interface with Zustand store for state management.
+ * Extracted from Pages Router for App Router compatibility.
+ *
+ * Issue #1077: FE-IMP-001 - Bootstrap App Router
+ * Issue #1083: Zustand Chat Store Migration
+ */
+
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";

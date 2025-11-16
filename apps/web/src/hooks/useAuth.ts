@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation'; // App Router
 import { api } from '@/lib/api';
 
 // ============================================================================

@@ -173,8 +173,6 @@ public static class ApplicationServiceExtensions
 
     private static IServiceCollection AddChatServices(this IServiceCollection services)
     {
-        services.AddScoped<ChatService>();
-
         // CHAT-05: Chat export services
         services.AddScoped<IChatExportService, ChatExportService>();
         services.AddScoped<IExportFormatter, TxtExportFormatter>();
@@ -191,7 +189,6 @@ public static class ApplicationServiceExtensions
 
         // ADMIN-02: Analytics dashboard service (still used by handlers as infrastructure)
         services.AddScoped<IAdminStatsService, AdminStatsService>();
-        services.AddScoped<AdminStatsService>();
 
         return services;
     }

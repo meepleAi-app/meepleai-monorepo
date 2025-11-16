@@ -1,0 +1,74 @@
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Models;
+using Api.SharedKernel.Application.Interfaces;
+using Microsoft.EntityFrameworkCore;
+
+namespace Api.BoundedContexts.Administration.Application.Handlers;
+
+/// <summary>
+/// Handles creation of a new prompt template.
+/// </summary>
+public class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTemplateCommand, PromptTemplateDto>
+{
+    private readonly MeepleAiDbContext _dbContext;
+    private readonly TimeProvider _timeProvider;
+
+    public CreatePromptTemplateCommandHandler(
+        MeepleAiDbContext dbContext,
+        TimeProvider timeProvider)
+    {
+        _dbContext = dbContext;
+        _timeProvider = timeProvider;
+    }
+
+    public async Task<PromptTemplateDto> Handle(
+        CreatePromptTemplateCommand command,
+        CancellationToken cancellationToken)
+    {
+        // Verify template name is unique
+        var exists = await _dbContext.Set<PromptTemplateEntity>()
+            .AnyAsync(t => t.Name == command.Name, cancellationToken);
+
+        if (exists)
+        {
+            throw new InvalidOperationException($"Template with name '{command.Name}' already exists");
+        }
+
+        // Load user for navigation property
+        var user = await _dbContext.Set<UserEntity>().FindAsync([command.CreatedByUserId], cancellationToken);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"User {command.CreatedByUserId} not found");
+        }
+
+        // Create template
+        var template = new PromptTemplateEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = command.Name,
+            Description = command.Description,
+            Category = command.Category,
+            CreatedByUserId = command.CreatedByUserId,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+            CreatedBy = user
+        };
+
+        _dbContext.Set<PromptTemplateEntity>().Add(template);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new PromptTemplateDto
+        {
+            Id = template.Id.ToString(),
+            Name = template.Name,
+            Description = template.Description,
+            Category = template.Category,
+            CreatedByUserId = template.CreatedByUserId.ToString(),
+            CreatedByEmail = user.Email,
+            CreatedAt = template.CreatedAt,
+            VersionCount = 0,
+            ActiveVersionNumber = null
+        };
+    }
+}

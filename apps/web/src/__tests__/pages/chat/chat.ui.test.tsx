@@ -4,7 +4,7 @@
  * Tests for UI interactions and visual elements in the chat interface.
  * This file focuses on sidebar toggling, header displays, and chat preview formatting.
  *
- * Uses component mocking for isolated, fast testing like chat.test.tsx
+ * Migrated to Zustand (Issue #1083)
  */
 
 import React from 'react';
@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event';
 import ChatPage from '../../../pages/chat';
 import { api } from '../../../lib/api';
 import { createWrapper } from '../../utils/test-providers';
+import { useChatStore } from '@/store/chat';
 
 // Mock ChatProvider with context values
 const mockUseChatContext = jest.fn();
@@ -24,7 +25,12 @@ jest.mock('../../../components/chat/ChatProvider', () => ({
   useChatContext: () => mockUseChatContext(),
 }));
 
-// Mock ChatSidebar with collapse functionality
+// Mock BottomNav to avoid loading state issues
+jest.mock('../../../components/chat/BottomNav', () => ({
+  BottomNav: () => null,
+}));
+
+// Mock ChatSidebar with collapse functionality using Zustand
 const mockSidebarProps = {
   isCollapsed: false,
   onToggleCollapse: jest.fn(),
@@ -33,9 +39,9 @@ const mockSidebarProps = {
 jest.mock('../../../components/chat/ChatSidebar', () => ({
   ChatSidebar: () => {
     const React = require('react');
+    const { useChatStore } = require('@/store/chat');
     const [isCollapsed, setIsCollapsed] = React.useState(mockSidebarProps.isCollapsed);
-    const { useChatContext } = require('../../../components/chat/ChatProvider');
-    const { selectedGameId } = useChatContext();
+    const { selectedGameId } = useChatStore();
 
     React.useEffect(() => {
       setIsCollapsed(mockSidebarProps.isCollapsed);
@@ -62,14 +68,18 @@ jest.mock('../../../components/chat/ChatSidebar', () => ({
   },
 }));
 
-// Mock ChatContent with header
+// Mock ChatContent with header using Zustand
 jest.mock('../../../components/chat/ChatContent', () => ({
   ChatContent: () => {
-    const { useChatContext } = require('../../../components/chat/ChatProvider');
-    const { selectedGameId, selectedAgentId, activeChatId } = useChatContext();
+    const { useChatStore } = require('@/store/chat');
+    const { useActiveChat, useSelectedGame, useSelectedAgent } = require('@/store/chat');
 
-    const gameName = selectedGameId === 'game-1' ? 'Chess' : undefined;
-    const agentName = selectedAgentId === 'agent-1' && activeChatId ? 'Chess Expert' : undefined;
+    const selectedGame = useSelectedGame();
+    const selectedAgent = useSelectedAgent();
+    const activeChat = useActiveChat();
+
+    const gameName = selectedGame?.name;
+    const agentName = selectedAgent && activeChat ? selectedAgent.name : undefined;
 
     return (
       <div data-testid="chat-content">
@@ -97,6 +107,20 @@ jest.mock('../../../lib/api');
 
 const mockApi = api as jest.Mocked<typeof api>;
 
+// Mock Zustand store
+jest.mock('@/store/chat', () => {
+  const actual = jest.requireActual('@/store/chat');
+  return {
+    ...actual,
+    useChatStore: jest.fn(),
+    useSelectedGame: jest.fn(() => undefined),
+    useSelectedAgent: jest.fn(() => undefined),
+    useActiveChat: jest.fn(() => null),
+  };
+});
+
+const mockUseChatStore = useChatStore as jest.MockedFunction<typeof useChatStore>;
+
 describe('ChatPage - UI Interactions', () => {
   const userResponse = {
     user: {
@@ -108,19 +132,98 @@ describe('ChatPage - UI Interactions', () => {
     expiresAt: new Date(Date.now() + 3600000).toISOString(),
   };
 
+  const defaultStoreState = {
+    // Session state
+    selectedGameId: null,
+    selectedAgentId: null,
+    sidebarCollapsed: false,
+    selectGame: jest.fn(),
+    selectAgent: jest.fn(),
+    toggleSidebar: jest.fn(),
+    setSidebarCollapsed: jest.fn(),
+
+    // Game state
+    games: [],
+    agents: [],
+    setGames: jest.fn(),
+    setAgents: jest.fn(),
+    loadGames: jest.fn(),
+    loadAgents: jest.fn(),
+
+    // Chat state
+    chatsByGame: {},
+    activeChatIds: {},
+    loadChats: jest.fn(),
+    createChat: jest.fn(),
+    deleteChat: jest.fn(),
+    selectChat: jest.fn(),
+    updateChatTitle: jest.fn(),
+
+    // Messages state
+    messagesByChat: {},
+    loadMessages: jest.fn(),
+    sendMessage: jest.fn(),
+    editMessage: jest.fn(),
+    deleteMessage: jest.fn(),
+    setMessageFeedback: jest.fn(),
+    addOptimisticMessage: jest.fn(),
+    removeOptimisticMessage: jest.fn(),
+    updateMessageInThread: jest.fn(),
+
+    // UI state
+    loading: {
+      chats: false,
+      messages: false,
+      sending: false,
+      creating: false,
+      updating: false,
+      deleting: false,
+      games: false,
+      agents: false,
+    },
+    error: null,
+    inputValue: '',
+    editingMessageId: null,
+    editContent: '',
+    searchMode: 'hybrid',
+    setLoading: jest.fn(),
+    setError: jest.fn(),
+    clearError: jest.fn(),
+    setInputValue: jest.fn(),
+    startEdit: jest.fn(),
+    cancelEdit: jest.fn(),
+    saveEdit: jest.fn(),
+    setEditContent: jest.fn(),
+    setSearchMode: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockSidebarProps.isCollapsed = false;
     mockSidebarProps.onToggleCollapse.mockClear();
 
-    // Default mock context
+    // Default mock context with loading state
     mockUseChatContext.mockReturnValue({
       selectedGameId: null,
       selectedAgentId: null,
       activeChatId: null,
       messages: [],
       isStreaming: false,
+      loading: {
+        chats: false,
+        messages: false,
+        sending: false,
+        creating: false,
+        updating: false,
+        deleting: false,
+        games: false,
+        agents: false,
+      },
+      createChat: jest.fn(),
     });
+
+    // Default Zustand store state
+    mockUseChatStore.mockReturnValue(defaultStoreState);
 
     // Default API setup
     mockApi.get.mockResolvedValue(userResponse);
@@ -147,12 +250,40 @@ describe('ChatPage - UI Interactions', () => {
   });
 
   it('shows game name in header when game is selected', async () => {
+    const { useSelectedGame } = require('@/store/chat');
+
+    // Mock selected game
+    const mockGame = {
+      id: 'game-1',
+      name: 'Chess',
+      createdAt: new Date().toISOString()
+    };
+
+    useSelectedGame.mockReturnValue(mockGame);
+
+    mockUseChatStore.mockReturnValue({
+      ...defaultStoreState,
+      selectedGameId: 'game-1',
+      games: [mockGame],
+    });
+
     mockUseChatContext.mockReturnValue({
       selectedGameId: 'game-1',
       selectedAgentId: null,
       activeChatId: null,
       messages: [],
       isStreaming: false,
+      loading: {
+        chats: false,
+        messages: false,
+        sending: false,
+        creating: false,
+        updating: false,
+        deleting: false,
+        games: false,
+        agents: false,
+      },
+      createChat: jest.fn(),
     });
 
     render(<ChatPage />, { wrapper: createWrapper() });
@@ -168,6 +299,55 @@ describe('ChatPage - UI Interactions', () => {
   });
 
   it('shows agent name in header when chat is active', async () => {
+    const { useSelectedGame, useSelectedAgent, useActiveChat } = require('@/store/chat');
+
+    const mockGame = {
+      id: 'game-1',
+      name: 'Chess',
+      createdAt: new Date().toISOString()
+    };
+
+    const mockAgent = {
+      id: 'agent-1',
+      gameId: 'game-1',
+      name: 'Chess Expert',
+      kind: 'qa',
+      createdAt: new Date().toISOString()
+    };
+
+    const mockChat = {
+      id: 'chat-1',
+      gameId: 'game-1',
+      agentId: 'agent-1',
+      title: 'Chess Rules',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    useSelectedGame.mockReturnValue(mockGame);
+    useSelectedAgent.mockReturnValue(mockAgent);
+    useActiveChat.mockReturnValue(mockChat);
+
+    mockUseChatStore.mockReturnValue({
+      ...defaultStoreState,
+      selectedGameId: 'game-1',
+      selectedAgentId: 'agent-1',
+      games: [mockGame],
+      agents: [mockAgent],
+      activeChatIds: { 'game-1': 'chat-1' },
+      chatsByGame: { 'game-1': [mockChat] },
+      messagesByChat: {
+        'chat-1': [
+          {
+            id: 'msg-1',
+            role: 'user',
+            message: 'How do I castle?',
+            createdAt: '2025-01-10T10:00:00Z',
+          },
+        ],
+      },
+    });
+
     mockUseChatContext.mockReturnValue({
       selectedGameId: 'game-1',
       selectedAgentId: 'agent-1',
@@ -181,6 +361,17 @@ describe('ChatPage - UI Interactions', () => {
         },
       ],
       isStreaming: false,
+      loading: {
+        chats: false,
+        messages: false,
+        sending: false,
+        creating: false,
+        updating: false,
+        deleting: false,
+        games: false,
+        agents: false,
+      },
+      createChat: jest.fn(),
     });
 
     render(<ChatPage />, { wrapper: createWrapper() });

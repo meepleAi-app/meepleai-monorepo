@@ -1,17 +1,22 @@
 /**
  * AgentSelector - Dropdown for selecting AI agent
  *
- * Allows users to select which AI agent to chat with for the selected game.
- * Integrates with ChatProvider for state management.
+ * Migrated to Zustand (Issue #1083):
+ * - Direct store access with granular subscriptions
+ * - Only re-renders when agents or selectedAgentId changes
  */
 
 import React from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatStoreWithSelectors } from '@/store/chat';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function AgentSelector() {
-  const { agents, selectedAgentId, selectAgent, selectedGameId, loading } = useChatContext();
+  const agents = useChatStoreWithSelectors.use.agents();
+  const selectedAgentId = useChatStoreWithSelectors.use.selectedAgentId();
+  const selectAgent = useChatStoreWithSelectors.use.selectAgent();
+  const selectedGameId = useChatStoreWithSelectors.use.selectedGameId();
+  const loading = useChatStoreWithSelectors.use.loading();
 
   if (loading.agents) {
     return (

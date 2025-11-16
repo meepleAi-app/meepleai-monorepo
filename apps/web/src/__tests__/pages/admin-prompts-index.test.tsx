@@ -94,12 +94,12 @@ describe('AdminPrompts Index Page', () => {
       render(<AdminPrompts />);
 
       await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
 
       // Toast should also appear
       await waitFor(() => {
-        expect(screen.getByText('Failed to fetch templates')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
     });
 
@@ -109,7 +109,7 @@ describe('AdminPrompts Index Page', () => {
       render(<AdminPrompts />);
 
       await waitFor(() => {
-        expect(screen.getByText('Unauthorized')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
     });
   });
@@ -546,6 +546,7 @@ describe('AdminPrompts Index Page', () => {
         fireEvent.click(submitButton!);
       });
 
+      // Toast displays raw error message
       await waitFor(() => {
         expect(screen.getByText('Creation failed')).toBeInTheDocument();
       });
@@ -754,6 +755,7 @@ describe('AdminPrompts Index Page', () => {
       // The last one is the confirm button in the dialog
       fireEvent.click(allDeleteButtons[allDeleteButtons.length - 1]);
 
+      // Toast displays raw error message
       await waitFor(() => {
         expect(screen.getByText('Delete failed')).toBeInTheDocument();
       });

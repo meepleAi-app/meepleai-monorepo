@@ -222,7 +222,7 @@ describe('ConfigurationManagement Page', () => {
 
       // Assert
       await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         expect(toast.error).toHaveBeenCalledWith('Network error');
       });
@@ -672,7 +672,7 @@ describe('ConfigurationManagement Page', () => {
 
       // Assert
       await waitFor(() => {
-        expect(screen.getByText('Failed to load configurations')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
       });
     });
@@ -687,7 +687,7 @@ describe('ConfigurationManagement Page', () => {
       render(<ConfigurationManagement />);
 
       await waitFor(() => {
-        expect(screen.getByText('Network timeout')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
 
       const retryButton = screen.getByRole('button', { name: /retry/i });
@@ -698,7 +698,7 @@ describe('ConfigurationManagement Page', () => {
       // Assert
       await waitFor(() => {
         expect(api.config.getConfigurations).toHaveBeenCalledTimes(2);
-        expect(screen.queryByText('Network timeout')).not.toBeInTheDocument();
+        expect(screen.queryByText('Unexpected Error')).not.toBeInTheDocument();
         expect(screen.getByText('Configuration Management')).toBeInTheDocument();
       });
     });

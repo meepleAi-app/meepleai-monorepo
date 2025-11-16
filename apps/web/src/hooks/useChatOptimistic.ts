@@ -17,7 +17,7 @@
 import { useCallback, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { Message } from '@/types';
-import { useChatContext } from './useChatContext';
+import { useChatStore, useActiveMessages } from '@/store/chat';
 
 export interface UseChatOptimisticResult {
   /**
@@ -42,27 +42,23 @@ export interface UseChatOptimisticResult {
  * Integrates SWR for cache management and automatic rollback
  */
 export function useChatOptimistic(): UseChatOptimisticResult {
-  const {
-    activeChatId,
-    messages: contextMessages,
-    sendMessage: contextSendMessage,
-    selectedGameId,
-    selectedAgentId,
-  } = useChatContext();
+  // Use Zustand store instead of context
+  const selectedGameId = useChatStore((state) => state.selectedGameId);
+  const selectedAgentId = useChatStore((state) => state.selectedAgentId);
+  const activeChatIds = useChatStore((state) => state.activeChatIds);
+  const sendMessage = useChatStore((state) => state.sendMessage);
+
+  const activeChatId = selectedGameId ? activeChatIds[selectedGameId] : null;
+  const contextMessages = useActiveMessages();
 
   const { mutate } = useSWRConfig();
-  // State to track optimistic update (reactive, not ref)
   const [optimisticId, setOptimisticId] = useState<string | null>(null);
 
-  // SWR key for current chat messages
   const swrKey = activeChatId ? `/api/v1/chats/${activeChatId}/messages` : null;
 
-  // Use SWR to manage messages cache
-  // We don't fetch from this endpoint (ChatProvider manages that),
-  // but we use SWR's mutate for optimistic updates
   const { data: swrMessages } = useSWR<Message[]>(
     swrKey,
-    null, // No fetcher - ChatProvider handles data loading
+    null,
     {
       fallbackData: contextMessages,
       revalidateOnFocus: false,
@@ -112,14 +108,14 @@ export function useChatOptimistic(): UseChatOptimisticResult {
       }
 
       try {
-        // 3. Send to backend (ChatProvider handles thread creation if needed)
-        await contextSendMessage(content);
+        // 3. Send to backend (Zustand store handles thread creation)
+        await sendMessage(content);
 
         // 4. Clear optimistic state (reactive)
         setOptimisticId(null);
 
         // 5. Revalidate to get real message from backend
-        // ChatProvider will reload messages, which updates our fallbackData
+        // Zustand store will reload messages, which updates our fallbackData
         // SWR will reflect this automatically
       } catch (err) {
         console.error('Failed to send message (optimistic):', err);
@@ -145,7 +141,7 @@ export function useChatOptimistic(): UseChatOptimisticResult {
       swrKey,
       messages,
       mutate,
-      contextSendMessage,
+      sendMessage,
       selectedGameId,
       selectedAgentId,
     ]

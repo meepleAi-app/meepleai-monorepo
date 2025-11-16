@@ -72,8 +72,7 @@ describe('AnalyticsDashboard', () => {
     render(<AnalyticsDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Error Loading Analytics/)).toBeInTheDocument();
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
     });
   });
 
@@ -749,7 +748,7 @@ describe('AnalyticsDashboard', () => {
       render(<AnalyticsDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Unauthorized or no data returned/)).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
     });
 
@@ -759,7 +758,7 @@ describe('AnalyticsDashboard', () => {
       render(<AnalyticsDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('Network failure')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
     });
   });

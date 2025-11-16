@@ -11,18 +11,15 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MessageInput } from '../MessageInput';
-import { useChatContext } from '../ChatProvider';
+import { renderWithChatStore, resetChatStore } from '@/__tests__/utils/zustand-test-utils';
+import { useChatStore } from '@/store/chat/store';
 import { useChatOptimistic } from '@/hooks/useChatOptimistic';
 import { toast } from 'sonner';
 
 // Mock dependencies
-jest.mock('../ChatProvider', () => ({
-  useChatContext: jest.fn(),
-}));
-
 jest.mock('@/hooks/useChatOptimistic');
 jest.mock('sonner');
 
@@ -43,60 +40,15 @@ jest.mock('@/components', () => ({
   SearchModeToggle: () => <div data-testid="search-mode-toggle">Search Mode</div>,
 }));
 
-const mockUseChatContext = useChatContext as jest.MockedFunction<typeof useChatContext>;
 const mockUseChatOptimistic = useChatOptimistic as jest.MockedFunction<typeof useChatOptimistic>;
 const mockToast = toast as jest.Mocked<typeof toast>;
 
 describe('MessageInput - Optimistic Updates (#1167)', () => {
-  const mockSetInputValue = jest.fn();
   const mockSendMessageOptimistic = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    mockUseChatContext.mockReturnValue({
-      inputValue: '',
-      setInputValue: mockSetInputValue,
-      selectedGameId: 'game-1',
-      selectedAgentId: 'agent-1',
-      loading: {
-        games: false,
-        agents: false,
-        chats: false,
-        messages: false,
-        sending: false,
-        creating: false,
-        updating: false,
-        deleting: false,
-      },
-      searchMode: 'hybrid',
-      setSearchMode: jest.fn(),
-      // Other context values
-      authUser: null,
-      games: [],
-      agents: [],
-      chats: [],
-      activeChatId: null,
-      messages: [],
-      createChat: jest.fn(),
-      deleteChat: jest.fn(),
-      selectChat: jest.fn(),
-      selectGame: jest.fn(),
-      selectAgent: jest.fn(),
-      sendMessage: jest.fn(),
-      editMessage: jest.fn(),
-      deleteMessage: jest.fn(),
-      setMessageFeedback: jest.fn(),
-      errorMessage: '',
-      sidebarCollapsed: false,
-      toggleSidebar: jest.fn(),
-      editingMessageId: null,
-      editContent: '',
-      setEditContent: jest.fn(),
-      startEditMessage: jest.fn(),
-      cancelEdit: jest.fn(),
-      saveEdit: jest.fn(),
-    });
+    resetChatStore();
 
     mockUseChatOptimistic.mockReturnValue({
       sendMessageOptimistic: mockSendMessageOptimistic,
@@ -109,14 +61,15 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
 
   describe('Optimistic sending workflow', () => {
     it('should send message optimistically on form submit', async () => {
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
-      });
-
       mockSendMessageOptimistic.mockResolvedValueOnce(undefined);
 
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
+      });
 
       const form = screen.getByRole('textbox').closest('form');
       fireEvent.submit(form!);
@@ -127,20 +80,22 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
     });
 
     it('should clear input immediately after submit', async () => {
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
-      });
-
+      const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
       mockSendMessageOptimistic.mockResolvedValueOnce(undefined);
 
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
+      });
 
       const form = screen.getByRole('textbox').closest('form');
       fireEvent.submit(form!);
 
       await waitFor(() => {
-        expect(mockSetInputValue).toHaveBeenCalledWith('');
+        expect(setInputValueSpy).toHaveBeenCalledWith('');
       });
     });
 
@@ -151,12 +106,13 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
         messages: [],
       });
 
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
       });
-
-      render(<MessageInput />);
 
       const input = screen.getByRole('textbox');
       const button = screen.getByRole('button', { name: /send message/i });
@@ -168,23 +124,25 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
 
   describe('Error handling and rollback', () => {
     it('should restore input value on error', async () => {
+      const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
       const error = new Error('Network error');
       mockSendMessageOptimistic.mockRejectedValueOnce(error);
 
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
       });
-
-      render(<MessageInput />);
 
       const form = screen.getByRole('textbox').closest('form');
       fireEvent.submit(form!);
 
       await waitFor(() => {
         // First call clears input, second call restores on error
-        expect(mockSetInputValue).toHaveBeenCalledWith('');
-        expect(mockSetInputValue).toHaveBeenCalledWith('Test message');
+        expect(setInputValueSpy).toHaveBeenCalledWith('');
+        expect(setInputValueSpy).toHaveBeenCalledWith('Test message');
       });
     });
 
@@ -192,12 +150,13 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       const error = new Error('Network error');
       mockSendMessageOptimistic.mockRejectedValueOnce(error);
 
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
       });
-
-      render(<MessageInput />);
 
       const form = screen.getByRole('textbox').closest('form');
       fireEvent.submit(form!);
@@ -212,12 +171,13 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
     it('should handle non-Error exceptions gracefully', async () => {
       mockSendMessageOptimistic.mockRejectedValueOnce('String error');
 
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
       });
-
-      render(<MessageInput />);
 
       const form = screen.getByRole('textbox').closest('form');
       fireEvent.submit(form!);
@@ -232,12 +192,13 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
 
   describe('Validation', () => {
     it('should not send empty message', async () => {
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: '   ',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: '   ',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
       });
-
-      render(<MessageInput />);
 
       const form = screen.getByRole('textbox').closest('form');
       fireEvent.submit(form!);
@@ -248,13 +209,13 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
     });
 
     it('should not send if game not selected', async () => {
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
-        selectedGameId: null,
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: null,
+          selectedAgentId: 'agent-1',
+        }
       });
-
-      render(<MessageInput />);
 
       const form = screen.getByRole('textbox').closest('form');
       fireEvent.submit(form!);
@@ -265,13 +226,13 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
     });
 
     it('should not send if agent not selected', async () => {
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
-        selectedAgentId: null,
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: null,
+        }
       });
-
-      render(<MessageInput />);
 
       const form = screen.getByRole('textbox').closest('form');
       fireEvent.submit(form!);
@@ -284,47 +245,66 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
 
   describe('Button states', () => {
     it('should show loading state during send', async () => {
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
+      const user = userEvent.setup();
+
+      // Mock to start with isOptimisticUpdate=false, then set to true during send
+      let isOptimistic = false;
+      mockUseChatOptimistic.mockImplementation(() => ({
+        sendMessageOptimistic: async (msg: string) => {
+          isOptimistic = true;
+          await new Promise(resolve => setTimeout(resolve, 50));
+          isOptimistic = false;
+        },
+        isOptimisticUpdate: isOptimistic,
+        messages: [],
+      }));
+
+      const { rerender } = renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
       });
 
-      // Delay resolution to test loading state
-      mockSendMessageOptimistic.mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 100))
-      );
+      const button = screen.getByRole('button', { name: /send message/i });
+      await user.click(button);
 
-      render(<MessageInput />);
-
-      const form = screen.getByRole('textbox').closest('form');
-      fireEvent.submit(form!);
+      // Rerender to reflect isOptimisticUpdate change
+      mockUseChatOptimistic.mockReturnValue({
+        sendMessageOptimistic: jest.fn(),
+        isOptimisticUpdate: true,
+        messages: [],
+      });
+      rerender(<MessageInput />);
 
       // Should show loading state
       await waitFor(() => {
-        const button = screen.getByRole('button', { name: /send message/i });
         expect(button).toHaveTextContent('Loading...');
       });
     });
 
     it('should disable button when input is empty', () => {
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: '',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: '',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
       });
-
-      render(<MessageInput />);
 
       const button = screen.getByRole('button', { name: /send message/i });
       expect(button).toBeDisabled();
     });
 
     it('should enable button when input has content', () => {
-      mockUseChatContext.mockReturnValue({
-        ...mockUseChatContext(),
-        inputValue: 'Test message',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+        }
       });
-
-      render(<MessageInput />);
 
       const button = screen.getByRole('button', { name: /send message/i });
       expect(button).not.toBeDisabled();

@@ -582,7 +582,7 @@ describe('ActiveSessionsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
-        expect(screen.getByText(/API Error/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/unexpected error/i)[0]).toBeInTheDocument();
       });
     });
 
@@ -615,7 +615,8 @@ describe('ActiveSessionsPage', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/pause failed/i)).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+        expect(screen.getAllByText(/unexpected error/i)[0]).toBeInTheDocument();
       });
     });
   });

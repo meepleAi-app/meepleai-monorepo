@@ -5,18 +5,15 @@
  * which AI agent to chat with for the selected game.
  *
  * Target Coverage: 90%+ (from 66.7%)
+ * Migrated to Zustand (Issue #1083)
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AgentSelector } from '../../../components/chat/AgentSelector';
-
-// Mock the ChatProvider context
-const mockUseChatContext = jest.fn();
-jest.mock('../../../components/chat/ChatProvider', () => ({
-  useChatContext: () => mockUseChatContext(),
-}));
+import { renderWithChatStore, resetChatStore, updateChatStoreState } from '@/__tests__/utils/zustand-test-utils';
+import { useChatStore } from '@/store/chat/store';
 
 // Mock SkeletonLoader component
 jest.mock('../../../components/loading/SkeletonLoader', () => ({
@@ -27,23 +24,10 @@ jest.mock('../../../components/loading/SkeletonLoader', () => ({
   ),
 }));
 
-/**
- * Helper to setup mock context with default values
- */
-const setupMockContext = (overrides?: any) => {
-  mockUseChatContext.mockReturnValue({
-    agents: [],
-    selectedAgentId: null,
-    selectAgent: jest.fn(),
-    selectedGameId: null,
-    loading: { agents: false },
-    ...overrides,
-  });
-};
-
 describe('AgentSelector Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetChatStore();
   });
 
   /**
@@ -51,31 +35,35 @@ describe('AgentSelector Component', () => {
    */
   describe('Loading State', () => {
     it('displays skeleton loader when agents are loading', () => {
-      setupMockContext({ loading: { agents: true } });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { loading: { agents: true, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false } }
+      });
 
       expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
     it('displays skeleton loader with correct variant', () => {
-      setupMockContext({ loading: { agents: true } });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { loading: { agents: true, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false } }
+      });
 
       const skeleton = screen.getByTestId('skeleton-loader');
       expect(skeleton).toHaveAttribute('data-variant', 'gameSelection');
     });
 
     it('displays label during loading', () => {
-      setupMockContext({ loading: { agents: true } });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { loading: { agents: true, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false } }
+      });
 
       expect(screen.getByText('Seleziona Agente:')).toBeInTheDocument();
     });
 
     it('does not display select element when loading', () => {
-      setupMockContext({ loading: { agents: true } });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { loading: { agents: true, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false } }
+      });
 
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     });
@@ -86,39 +74,44 @@ describe('AgentSelector Component', () => {
    */
   describe('No Game Selected State', () => {
     it('displays prompt to select game first when no game selected', () => {
-      setupMockContext({ selectedGameId: null, agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: null, agents: [] }
+      });
 
       expect(screen.getByText('Seleziona prima un gioco')).toBeInTheDocument();
     });
 
     it('disables select when no game is selected', () => {
-      setupMockContext({ selectedGameId: null, agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: null, agents: [] }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toBeDisabled();
     });
 
     it('shows tooltip when hovering disabled select', () => {
-      setupMockContext({ selectedGameId: null, agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: null, agents: [] }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toHaveAttribute('title', 'Seleziona prima un gioco');
     });
 
     it('renders disabled state when no game selected', () => {
-      setupMockContext({ selectedGameId: null, agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: null, agents: [] }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toBeDisabled();
     });
 
     it('shows disabled appearance when no game selected', () => {
-      setupMockContext({ selectedGameId: null, agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: null, agents: [] }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toBeDisabled();
@@ -130,29 +123,37 @@ describe('AgentSelector Component', () => {
    */
   describe('Empty Agents State', () => {
     it('displays "no agents" message when agents array is empty', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents: [] }
+      });
 
       expect(screen.getByText('Nessun agente disponibile')).toBeInTheDocument();
     });
 
     it('renders select element even when agents are empty', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents: [] }
+      });
 
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
     it('does not display placeholder option when agents are empty', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents: [] }
+      });
 
       expect(screen.queryByText('Seleziona un agente')).not.toBeInTheDocument();
     });
 
     it('select is not disabled when empty but game is selected', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: [], loading: { agents: false } });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          agents: [],
+          loading: { agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
+        }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).not.toBeDisabled();
@@ -166,12 +167,13 @@ describe('AgentSelector Component', () => {
     it('renders list of available agents', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', name: 'Chess Expert' },
-        { id: 'agent-2', name: 'Catan Helper' },
-        { id: 'agent-3', name: 'Risk Strategist' },
+        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-3', gameId: 'game-1', name: 'Risk Strategist', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       // Open the select dropdown
       const trigger = screen.getByRole('combobox');
@@ -186,9 +188,10 @@ describe('AgentSelector Component', () => {
     });
 
     it('includes placeholder option when agents exist', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       expect(screen.getByText('Seleziona un agente')).toBeInTheDocument();
     });
@@ -196,11 +199,12 @@ describe('AgentSelector Component', () => {
     it('renders correct number of options (agents + placeholder)', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', name: 'Chess Expert' },
-        { id: 'agent-2', name: 'Catan Helper' },
+        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       // Open dropdown and verify items are present
       const trigger = screen.getByRole('combobox');
@@ -215,12 +219,13 @@ describe('AgentSelector Component', () => {
     it('renders agents in the order provided', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', name: 'Zzz Agent' },
-        { id: 'agent-2', name: 'Aaa Agent' },
-        { id: 'agent-3', name: 'Mmm Agent' },
+        { id: 'agent-1', gameId: 'game-1', name: 'Zzz Agent', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-2', gameId: 'game-1', name: 'Aaa Agent', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-3', gameId: 'game-1', name: 'Mmm Agent', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -235,10 +240,11 @@ describe('AgentSelector Component', () => {
 
     it('uses agent.id as option value', async () => {
       const user = userEvent.setup();
-      const selectAgent = jest.fn();
-      const agents = [{ id: 'agent-123', name: 'Test Agent' }];
-      setupMockContext({ selectedGameId: 'game-1', agents, selectAgent });
-      render(<AgentSelector />);
+      const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent');
+      const agents = [{ id: 'agent-123', gameId: 'game-1', name: 'Test Agent', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -247,7 +253,7 @@ describe('AgentSelector Component', () => {
       await user.click(option);
 
       // Verify selectAgent was called with the correct agent.id
-      expect(selectAgent).toHaveBeenCalledWith('agent-123');
+      expect(selectAgentSpy).toHaveBeenCalledWith('agent-123');
     });
   });
 
@@ -257,10 +263,11 @@ describe('AgentSelector Component', () => {
   describe('Agent Selection', () => {
     it('calls selectAgent when an agent is selected', async () => {
       const user = userEvent.setup();
-      const selectAgent = jest.fn();
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents, selectAgent });
-      render(<AgentSelector />);
+      const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent');
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -268,34 +275,31 @@ describe('AgentSelector Component', () => {
       const option = await screen.findByRole('option', { name: 'Chess Expert' });
       await user.click(option);
 
-      expect(selectAgent).toHaveBeenCalledWith('agent-1');
+      expect(selectAgentSpy).toHaveBeenCalledWith('agent-1');
     });
 
     it('does not call selectAgent when empty option is selected', () => {
-      const selectAgent = jest.fn();
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({
-        selectedGameId: 'game-1',
-        agents,
-        selectAgent,
-        selectedAgentId: 'agent-1',
+      const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent');
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents, selectedAgentId: 'agent-1' }
       });
-      render(<AgentSelector />);
 
       // Radix Select doesn't allow selecting empty value after a value is set
       // This test validates the onValueChange logic only calls selectAgent for non-empty values
-      expect(selectAgent).not.toHaveBeenCalled();
+      expect(selectAgentSpy).not.toHaveBeenCalled();
     });
 
     it('handles multiple agent selections sequentially', async () => {
       const user = userEvent.setup();
-      const selectAgent = jest.fn();
+      const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent');
       const agents = [
-        { id: 'agent-1', name: 'Chess Expert' },
-        { id: 'agent-2', name: 'Catan Helper' },
+        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ selectedGameId: 'game-1', agents, selectAgent });
-      const { rerender } = render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       // First selection
       let trigger = screen.getByRole('combobox');
@@ -303,9 +307,8 @@ describe('AgentSelector Component', () => {
       const option1 = await screen.findByRole('option', { name: 'Chess Expert' });
       await user.click(option1);
 
-      // Update context to reflect selection
-      setupMockContext({ selectedGameId: 'game-1', agents, selectAgent, selectedAgentId: 'agent-1' });
-      rerender(<AgentSelector />);
+      // Update store to reflect selection
+      updateChatStoreState({ selectedAgentId: 'agent-1' });
 
       // Second selection
       trigger = screen.getByRole('combobox');
@@ -313,24 +316,25 @@ describe('AgentSelector Component', () => {
       const option2 = await screen.findByRole('option', { name: 'Catan Helper' });
       await user.click(option2);
 
-      expect(selectAgent).toHaveBeenCalledTimes(2);
-      expect(selectAgent).toHaveBeenNthCalledWith(1, 'agent-1');
-      expect(selectAgent).toHaveBeenNthCalledWith(2, 'agent-2');
+      expect(selectAgentSpy).toHaveBeenCalledTimes(2);
+      expect(selectAgentSpy).toHaveBeenNthCalledWith(1, 'agent-1');
+      expect(selectAgentSpy).toHaveBeenNthCalledWith(2, 'agent-2');
     });
 
     it('uses void operator for async selectAgent call', async () => {
       const user = userEvent.setup();
-      const selectAgent = jest.fn().mockResolvedValue(undefined);
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents, selectAgent });
-      render(<AgentSelector />);
+      const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent').mockImplementation(() => Promise.resolve());
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
       const option = await screen.findByRole('option', { name: 'Chess Expert' });
       await user.click(option);
 
-      expect(selectAgent).toHaveBeenCalled();
+      expect(selectAgentSpy).toHaveBeenCalled();
     });
   });
 
@@ -340,47 +344,52 @@ describe('AgentSelector Component', () => {
   describe('Selected Agent State', () => {
     it('displays currently selected agent', () => {
       const agents = [
-        { id: 'agent-1', name: 'Chess Expert' },
-        { id: 'agent-2', name: 'Catan Helper' },
+        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ selectedGameId: 'game-1', agents, selectedAgentId: 'agent-2' });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents, selectedAgentId: 'agent-2' }
+      });
 
       // Radix Select shows selected value in trigger
       expect(screen.getByRole('combobox')).toHaveTextContent('Catan Helper');
     });
 
     it('displays empty value when no agent is selected', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents, selectedAgentId: null });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents, selectedAgentId: null }
+      });
 
       expect(screen.getByText('Seleziona un agente')).toBeInTheDocument();
     });
 
     it('handles undefined selectedAgentId', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents, selectedAgentId: undefined });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents, selectedAgentId: undefined }
+      });
 
       expect(screen.getByText('Seleziona un agente')).toBeInTheDocument();
     });
 
-    it('updates value when selectedAgentId changes', () => {
+    it('updates value when selectedAgentId changes', async () => {
       const agents = [
-        { id: 'agent-1', name: 'Chess Expert' },
-        { id: 'agent-2', name: 'Catan Helper' },
+        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ selectedGameId: 'game-1', agents, selectedAgentId: 'agent-1' });
-      const { rerender } = render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents, selectedAgentId: 'agent-1' }
+      });
 
       expect(screen.getByRole('combobox')).toHaveTextContent('Chess Expert');
 
       // Update selected agent
-      setupMockContext({ selectedGameId: 'game-1', agents, selectedAgentId: 'agent-2' });
-      rerender(<AgentSelector />);
+      updateChatStoreState({ selectedAgentId: 'agent-2' });
 
-      expect(screen.getByRole('combobox')).toHaveTextContent('Catan Helper');
+      await waitFor(() => {
+        expect(screen.getByRole('combobox')).toHaveTextContent('Catan Helper');
+      });
     });
   });
 
@@ -388,47 +397,66 @@ describe('AgentSelector Component', () => {
    * Test Group: Disabled State
    */
   describe('Disabled State', () => {
-    it('disables select when agents are loading', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: [], loading: { agents: true } });
-      const { rerender } = render(<AgentSelector />);
-
-      // Rerender with loaded state (select is hidden during loading, check after)
-      setupMockContext({
-        selectedGameId: 'game-1',
-        agents: [{ id: 'agent-1', name: 'Chess Expert' }],
-        loading: { agents: false },
+    it('disables select when agents are loading', async () => {
+      renderWithChatStore(<AgentSelector />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          agents: [],
+          loading: { agents: true, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
+        }
       });
-      rerender(<AgentSelector />);
 
+      // During loading, skeleton is shown instead of select
+      expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+
+      // Update to loaded state
+      updateChatStoreState({
+        agents: [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }],
+        loading: { agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false },
+      });
+
+      // Now select should be visible and not disabled
+      await waitFor(() => {
+        expect(screen.queryByTestId('skeleton-loader')).not.toBeInTheDocument();
+      });
       const select = screen.getByRole('combobox');
       expect(select).not.toBeDisabled();
     });
 
     it('disables select when no game is selected', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: null, agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: null, agents }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toBeDisabled();
     });
 
     it('sets aria-busy when loading', () => {
-      setupMockContext({
-        selectedGameId: 'game-1',
-        agents: [{ id: 'agent-1', name: 'Chess Expert' }],
-        loading: { agents: false },
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          agents,
+          loading: { agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
+        }
       });
-      render(<AgentSelector />);
 
       const select = screen.getByRole('combobox');
       expect(select).toHaveAttribute('aria-busy', 'false');
     });
 
     it('changes cursor when disabled', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents, loading: { agents: false } });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          agents,
+          loading: { agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
+        }
+      });
 
       const select = screen.getByRole('combobox');
       // Radix Select uses Tailwind classes, not inline cursor styles
@@ -436,8 +464,9 @@ describe('AgentSelector Component', () => {
     });
 
     it('has not-allowed cursor when no game selected', () => {
-      setupMockContext({ selectedGameId: null, agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: null, agents: [] }
+      });
 
       const select = screen.getByRole('combobox');
       // When disabled, Radix Select may apply disabled styles, but not inline cursor
@@ -450,9 +479,10 @@ describe('AgentSelector Component', () => {
    */
   describe('Accessibility', () => {
     it('has proper label association', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       // Radix Select has proper ARIA labeling but doesn't use traditional id/htmlFor
       const label = screen.getByText('Seleziona Agente:');
@@ -463,42 +493,51 @@ describe('AgentSelector Component', () => {
     });
 
     it('has correct aria-busy attribute', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents, loading: { agents: false } });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          agents,
+          loading: { agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
+        }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toHaveAttribute('aria-busy', 'false');
     });
 
     it('has title attribute when no game selected', () => {
-      setupMockContext({ selectedGameId: null, agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: null, agents: [] }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toHaveAttribute('title', 'Seleziona prima un gioco');
     });
 
     it('does not have title attribute when game is selected', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).not.toHaveAttribute('title');
     });
 
     it('uses semantic select element', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
     it('has visible label text', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: [] });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents: [] }
+      });
 
       expect(screen.getByText('Seleziona Agente:')).toBeVisible();
     });
@@ -511,11 +550,12 @@ describe('AgentSelector Component', () => {
     it('handles agents with special characters in names', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', name: "Chess Expert: Beginner's Guide" },
-        { id: 'agent-2', name: 'Catan Helper (Advanced)' },
+        { id: 'agent-1', gameId: 'game-1', name: "Chess Expert: Beginner's Guide", kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper (Advanced)', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -529,9 +569,10 @@ describe('AgentSelector Component', () => {
     it('handles very long agent names', async () => {
       const user = userEvent.setup();
       const longName = 'A'.repeat(100);
-      const agents = [{ id: 'agent-1', name: longName }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: longName, kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -541,34 +582,45 @@ describe('AgentSelector Component', () => {
       });
     });
 
-    it('handles transition from loading to loaded with agents', () => {
-      setupMockContext({ selectedGameId: 'game-1', agents: [], loading: { agents: true } });
-      const { rerender } = render(<AgentSelector />);
+    it('handles transition from loading to loaded with agents', async () => {
+      renderWithChatStore(<AgentSelector />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          agents: [],
+          loading: { agents: true, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
+        }
+      });
 
       expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
 
       // Load agents
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents, loading: { agents: false } });
-      rerender(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      updateChatStoreState({
+        agents,
+        loading: { agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
+      });
 
-      expect(screen.queryByTestId('skeleton-loader')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByTestId('skeleton-loader')).not.toBeInTheDocument();
+      });
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
     it('handles transition from no game to game selected', async () => {
       const user = userEvent.setup();
-      setupMockContext({ selectedGameId: null, agents: [] });
-      const { rerender } = render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: null, agents: [] }
+      });
 
       expect(screen.getByText('Seleziona prima un gioco')).toBeInTheDocument();
 
       // Select game
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      rerender(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      updateChatStoreState({ selectedGameId: 'game-1', agents });
 
-      expect(screen.queryByText('Seleziona prima un gioco')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText('Seleziona prima un gioco')).not.toBeInTheDocument();
+      });
 
       // Open dropdown to verify agent is available
       const trigger = screen.getByRole('combobox');
@@ -582,11 +634,12 @@ describe('AgentSelector Component', () => {
     it('handles agents with duplicate names (different IDs)', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', name: 'Chess Expert' },
-        { id: 'agent-2', name: 'Chess Expert' },
+        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'agent-2', gameId: 'game-1', name: 'Chess Expert', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -599,9 +652,10 @@ describe('AgentSelector Component', () => {
 
     it('handles single agent in list', async () => {
       const user = userEvent.setup();
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -616,10 +670,14 @@ describe('AgentSelector Component', () => {
       const user = userEvent.setup();
       const agents = Array.from({ length: 100 }, (_, i) => ({
         id: `agent-${i}`,
+        gameId: 'game-1',
         name: `Agent ${i}`,
+        kind: 'qa',
+        createdAt: '2024-01-01T00:00:00Z',
       }));
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -630,16 +688,18 @@ describe('AgentSelector Component', () => {
       });
     });
 
-    it('handles game selection change clearing agents', () => {
-      const agents1 = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents: agents1, selectedAgentId: 'agent-1' });
-      const { rerender } = render(<AgentSelector />);
+    it('handles game selection change clearing agents', async () => {
+      const agents1 = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents: agents1, selectedAgentId: 'agent-1' }
+      });
 
       // Change game (agents cleared)
-      setupMockContext({ selectedGameId: 'game-2', agents: [], selectedAgentId: null });
-      rerender(<AgentSelector />);
+      updateChatStoreState({ selectedGameId: 'game-2', agents: [], selectedAgentId: null });
 
-      expect(screen.getByText('Nessun agente disponibile')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Nessun agente disponibile')).toBeInTheDocument();
+      });
     });
   });
 
@@ -648,9 +708,10 @@ describe('AgentSelector Component', () => {
    */
   describe('Styling', () => {
     it('applies correct container margin', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      const { container } = render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const { container } = renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const wrapper = container.firstChild as HTMLElement;
       // Tailwind class mb-3 = 0.75rem = 12px
@@ -658,9 +719,10 @@ describe('AgentSelector Component', () => {
     });
 
     it('applies correct label styling', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const label = screen.getByText('Seleziona Agente:');
       // Tailwind classes: block mb-1.5 font-medium text-sm
@@ -671,9 +733,10 @@ describe('AgentSelector Component', () => {
     });
 
     it('applies correct select styling', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const select = screen.getByRole('combobox');
       // Radix Select uses Tailwind classes instead of inline styles
@@ -681,26 +744,35 @@ describe('AgentSelector Component', () => {
       expect(select).toHaveClass('border');
     });
 
-    it('changes cursor style based on loading state', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents, loading: { agents: false } });
-      const { rerender } = render(<AgentSelector />);
+    it('changes cursor style based on loading state', async () => {
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          agents,
+          loading: { agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
+        }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).not.toHaveClass('cursor-not-allowed');
 
       // Change to loading
-      setupMockContext({ selectedGameId: 'game-1', agents, loading: { agents: true } });
-      rerender(<AgentSelector />);
+      updateChatStoreState({
+        loading: { agents: true, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
+      });
 
       // Select is hidden during loading, check skeleton instead
-      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      });
     });
 
     it('renders with appropriate styling when enabled', () => {
-      const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
-      setupMockContext({ selectedGameId: 'game-1', agents });
-      render(<AgentSelector />);
+      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<AgentSelector />, {
+        initialState: { selectedGameId: 'game-1', agents }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).not.toBeDisabled();

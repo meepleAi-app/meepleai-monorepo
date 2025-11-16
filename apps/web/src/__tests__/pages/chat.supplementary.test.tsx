@@ -7,7 +7,7 @@
  * - CHAT-04: Auto-Scroll (5 tests)
  * - CHAT-05: Chat Export (3 tests)
  *
- * Uses component mocking for isolated, fast testing like chat.test.tsx
+ * Migrated to Zustand (Issue #1083)
  * Total: 24 tests
  */
 
@@ -16,16 +16,56 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChatPage from '../../pages/chat';
 import { api } from '../../lib/api';
-import { createWrapper } from '../utils/test-providers';
 
-// Mock ChatProvider with context values
+// Mock the compatibility layer (Zustand-based)
 const mockUseChatContext = jest.fn();
+
+jest.mock('../../store/chat/compatibility', () => ({
+  useChatContext: () => mockUseChatContext(),
+}));
+
+// Mock AuthProvider
+const mockUseAuth = jest.fn();
+
+jest.mock('../../components/auth/AuthProvider', () => ({
+  useAuth: () => mockUseAuth(),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Mock provider components
+jest.mock('../../components/game/GameProvider', () => ({
+  GameProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="game-provider">{children}</div>
+  ),
+}));
 
 jest.mock('../../components/chat/ChatProvider', () => ({
   ChatProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="chat-provider">{children}</div>
   ),
-  useChatContext: () => mockUseChatContext(),
+}));
+
+jest.mock('../../components/ui/UIProvider', () => ({
+  UIProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="ui-provider">{children}</div>
+  ),
+}));
+
+// Mock child components that use useChatContext
+jest.mock('../../components/chat/BottomNav', () => ({
+  BottomNav: () => <div data-testid="bottom-nav">Bottom Nav</div>,
+}));
+
+jest.mock('../../components/chat/Message', () => ({
+  Message: () => <div data-testid="message">Message</div>,
+}));
+
+jest.mock('../../components/chat/MessageEditForm', () => ({
+  MessageEditForm: () => <div data-testid="message-edit-form">Edit Form</div>,
+}));
+
+jest.mock('../../components/chat/MobileSidebar', () => ({
+  MobileSidebar: () => <div data-testid="mobile-sidebar">Mobile Sidebar</div>,
 }));
 
 // Mock ChatSidebar - renders game/agent selection
@@ -37,7 +77,7 @@ const mockSidebarProps = {
 
 jest.mock('../../components/chat/ChatSidebar', () => ({
   ChatSidebar: () => {
-    const { useChatContext } = require('../../components/chat/ChatProvider');
+    const { useChatContext } = require('../../store/chat/compatibility');
     const { selectedGameId, chats = [] } = useChatContext();
 
     return (
@@ -87,13 +127,15 @@ const mockContentProps = {
 
 jest.mock('../../components/chat/ChatContent', () => ({
   ChatContent: () => {
-    const { useChatContext } = require('../../components/chat/ChatProvider');
+    const { useChatContext } = require('../../store/chat/compatibility');
     const {
       messages = [],
       selectedGameId,
       activeChatId,
-      isStreaming = false,
+      loading = {},
     } = useChatContext();
+
+    const isStreaming = loading.sending || false;
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     mockContentProps.messagesEndRef = messagesEndRef;
@@ -169,15 +211,57 @@ jest.mock('../../lib/api');
 const mockApi = api as jest.Mocked<typeof api>;
 
 describe('ChatPage - Supplementary Tests', () => {
-  const userResponse = {
-    user: {
-      id: 'user-1',
-      email: 'user@example.com',
-      displayName: 'Test User',
-      role: 'User',
-    },
-    expiresAt: new Date(Date.now() + 3600000).toISOString(),
+  const authUser = {
+    id: 'user-1',
+    email: 'user@example.com',
+    displayName: 'Test User',
+    role: 'User',
   };
+
+  // Helper to create default context with overrides
+  const createMockContext = (overrides = {}) => ({
+    authUser,
+    selectedGameId: 'game-1',
+    selectedAgentId: 'agent-1',
+    activeChatId: null,
+    messages: [],
+    chats: [],
+    games: [],
+    agents: [],
+    loading: {
+      games: false,
+      agents: false,
+      chats: false,
+      messages: false,
+      sending: false,
+      creating: false,
+      updating: false,
+      deleting: false,
+    },
+    errorMessage: '',
+    sidebarCollapsed: false,
+    editingMessageId: null,
+    editContent: '',
+    inputValue: '',
+    searchMode: 'ai',
+    selectGame: jest.fn(),
+    selectAgent: jest.fn(),
+    createChat: jest.fn(),
+    deleteChat: jest.fn(),
+    selectChat: jest.fn(),
+    sendMessage: jest.fn(),
+    setMessageFeedback: jest.fn(),
+    editMessage: jest.fn(),
+    deleteMessage: jest.fn(),
+    toggleSidebar: jest.fn(),
+    setEditContent: jest.fn(),
+    startEditMessage: jest.fn(),
+    cancelEdit: jest.fn(),
+    saveEdit: jest.fn(),
+    setInputValue: jest.fn(),
+    setSearchMode: jest.fn(),
+    ...overrides,
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -188,18 +272,20 @@ describe('ChatPage - Supplementary Tests', () => {
     mockContentProps.onExport.mockClear();
     mockExportModalOpen.value = false;
 
-    // Default mock context
-    mockUseChatContext.mockReturnValue({
-      selectedGameId: 'game-1',
-      selectedAgentId: 'agent-1',
-      activeChatId: null,
-      messages: [],
-      chats: [],
-      isStreaming: false,
+    // Default auth state
+    mockUseAuth.mockReturnValue({
+      user: authUser,
+      loading: false,
+      error: null,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+      refreshUser: jest.fn(),
+      clearError: jest.fn(),
     });
 
-    // Default API setup
-    mockApi.get.mockResolvedValue(userResponse);
+    // Default chat context (Zustand store state)
+    mockUseChatContext.mockReturnValue(createMockContext());
   });
 
   describe('CHAT-02: Follow-Up Questions', () => {
@@ -222,15 +308,14 @@ describe('ChatPage - Supplementary Tests', () => {
     ];
 
     it('should display FollowUpQuestions component for assistant messages with followUpQuestions', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
-        activeChatId: 'chat-1',
-        messages: messagesWithFollowUp,
-        isStreaming: false,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          activeChatId: 'chat-1',
+          messages: messagesWithFollowUp,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(screen.getByTestId('follow-up-questions')).toBeInTheDocument();
@@ -238,15 +323,14 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should pass questions array to FollowUpQuestions component', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
-        activeChatId: 'chat-1',
-        messages: messagesWithFollowUp,
-        isStreaming: false,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          activeChatId: 'chat-1',
+          messages: messagesWithFollowUp,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(screen.getByText('How do pawns move?')).toBeInTheDocument();
@@ -256,15 +340,14 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should fill inputValue state when follow-up question is clicked', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
-        activeChatId: 'chat-1',
-        messages: messagesWithFollowUp,
-        isStreaming: false,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          activeChatId: 'chat-1',
+          messages: messagesWithFollowUp,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       const user = userEvent.setup();
 
@@ -278,15 +361,14 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should focus input field when follow-up question is clicked', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
-        activeChatId: 'chat-1',
-        messages: messagesWithFollowUp,
-        isStreaming: false,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          activeChatId: 'chat-1',
+          messages: messagesWithFollowUp,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       const user = userEvent.setup();
 
@@ -300,15 +382,24 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should disable follow-up buttons when isStreaming is true', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
-        activeChatId: 'chat-1',
-        messages: messagesWithFollowUp,
-        isStreaming: true,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          activeChatId: 'chat-1',
+          messages: messagesWithFollowUp,
+          loading: {
+            games: false,
+            agents: false,
+            chats: false,
+            messages: false,
+            sending: true, // isStreaming
+            creating: false,
+            updating: false,
+            deleting: false,
+          },
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         const followUpButton = screen.getByTestId('follow-up-0');
@@ -330,15 +421,14 @@ describe('ChatPage - Supplementary Tests', () => {
         },
       ];
 
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
-        activeChatId: 'chat-1',
-        messages: messagesWithoutFollowUp,
-        isStreaming: false,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          activeChatId: 'chat-1',
+          messages: messagesWithoutFollowUp,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Test answer')).toBeInTheDocument();
@@ -354,31 +444,34 @@ describe('ChatPage - Supplementary Tests', () => {
         { id: 'chat-1', gameId: 'game-1', agentName: 'Chess Expert' },
       ];
 
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        chats: chatsGame1,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          chats: chatsGame1,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Chess Expert')).toBeInTheDocument();
       });
 
       // Simulate game switch
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-2',
-        chats: [],
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-2',
+          chats: [],
+        })
+      );
     });
 
     it('should create separate chat in each game without cross-contamination', async () => {
-      render(<ChatPage />, { wrapper: createWrapper() });
-      
+      render(<ChatPage />);
 
-      // Wait for authentication to complete before accessing UI
+      // Wait for sidebar to render
       await waitFor(() => {
-        expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
+        expect(screen.getByTestId('chat-sidebar')).toBeInTheDocument();
       });
 
       const user = userEvent.setup();
@@ -395,13 +488,15 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should preserve activeChat state when switching games', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages: [{ role: 'user', message: 'Chess question' }],
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages: [{ role: 'user', message: 'Chess question' }],
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Chess question')).toBeInTheDocument();
@@ -409,24 +504,28 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should isolate messages between games', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages: [{ role: 'user', message: 'Chess question' }],
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages: [{ role: 'user', message: 'Chess question' }],
+        })
+      );
 
-      const { rerender } = render(<ChatPage />, { wrapper: createWrapper() });
+      const { rerender } = render(<ChatPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Chess question')).toBeInTheDocument();
       });
 
       // Switch to game 2
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-2',
-        activeChatId: 'chat-2',
-        messages: [{ role: 'user', message: 'Catan question' }],
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-2',
+          activeChatId: 'chat-2',
+          messages: [{ role: 'user', message: 'Catan question' }],
+        })
+      );
 
       rerender(<ChatPage />);
 
@@ -440,12 +539,14 @@ describe('ChatPage - Supplementary Tests', () => {
         { id: 'chat-1', gameId: 'game-1', agentName: 'Chess Expert' },
       ];
 
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        chats: chatsGame1,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          chats: chatsGame1,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Chess Expert')).toBeInTheDocument();
@@ -453,13 +554,12 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should verify chatStatesByGame Map contains different objects for different games', async () => {
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
-      // Wait for authentication to complete before accessing UI
+      // Wait for sidebar to render
       await waitFor(() => {
-        expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
+        expect(screen.getByTestId('chat-sidebar')).toBeInTheDocument();
       });
-
 
       const gameSelect = screen.getByLabelText(/Gioco:/i);
       expect(gameSelect).toHaveValue('game-1');
@@ -468,22 +568,21 @@ describe('ChatPage - Supplementary Tests', () => {
     it('should delete chat in one game without affecting other games', async () => {
       mockApi.delete.mockResolvedValue(undefined);
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       // This test verifies isolation through mocking
       await waitFor(() => {
-        expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
+        expect(screen.getByTestId('chat-sidebar')).toBeInTheDocument();
       });
     });
 
     it('should update previousSelectedGameRef correctly during game switches', async () => {
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
-      // Wait for authentication to complete before accessing UI
+      // Wait for sidebar to render
       await waitFor(() => {
-        expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
+        expect(screen.getByTestId('chat-sidebar')).toBeInTheDocument();
       });
-
 
       const user = userEvent.setup();
       const gameSelect = screen.getByLabelText(/Gioco:/i);
@@ -494,11 +593,13 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should handle null selectedGameId gracefully', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: null,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: null,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         const agentSelect = screen.getByLabelText(/Agente:/i) as HTMLSelectElement;
@@ -507,11 +608,13 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should load chat history only for the selected game', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(screen.getByTestId('game-indicator')).toHaveTextContent('game-1');
@@ -536,13 +639,15 @@ describe('ChatPage - Supplementary Tests', () => {
     it('should call scrollIntoView when new message is added', async () => {
       const messages = [{ role: 'user', message: 'Hello' }];
 
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalled();
@@ -552,13 +657,15 @@ describe('ChatPage - Supplementary Tests', () => {
     it('should call scrollIntoView with correct parameters', async () => {
       const messages = [{ role: 'user', message: 'Test question' }];
 
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalledWith({
@@ -571,13 +678,15 @@ describe('ChatPage - Supplementary Tests', () => {
     it('should scroll after user message is sent', async () => {
       const messages = [{ role: 'user', message: 'Test message' }];
 
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalled();
@@ -590,13 +699,15 @@ describe('ChatPage - Supplementary Tests', () => {
         { role: 'assistant', message: 'Chess answer' },
       ];
 
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages,
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalled();
@@ -606,13 +717,15 @@ describe('ChatPage - Supplementary Tests', () => {
     it('should not scroll when messages array is empty', async () => {
       scrollIntoViewMock.mockClear();
 
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages: [],
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages: [],
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await new Promise((resolve) => setTimeout(resolve, 200));
 
@@ -623,21 +736,25 @@ describe('ChatPage - Supplementary Tests', () => {
   describe('CHAT-05: Chat Export', () => {
     it('should only show export button when activeChatId exists', async () => {
       // No active chat
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: null,
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: null,
+        })
+      );
 
-      const { rerender } = render(<ChatPage />, { wrapper: createWrapper() });
+      const { rerender } = render(<ChatPage />);
 
       expect(screen.queryByRole('button', { name: /Export chat/i })).not.toBeInTheDocument();
 
       // With active chat
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages: [{ role: 'user', message: 'Test' }],
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages: [{ role: 'user', message: 'Test' }],
+        })
+      );
 
       rerender(<ChatPage />);
 
@@ -647,13 +764,15 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should open export modal when export button is clicked', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages: [{ role: 'user', message: 'Test message' }],
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages: [{ role: 'user', message: 'Test message' }],
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       const user = userEvent.setup();
 
@@ -669,13 +788,15 @@ describe('ChatPage - Supplementary Tests', () => {
     });
 
     it('should pass correct chatId to ExportChatModal', async () => {
-      mockUseChatContext.mockReturnValue({
-        selectedGameId: 'game-1',
-        activeChatId: 'chat-1',
-        messages: [{ role: 'user', message: 'Test' }],
-      });
+      mockUseChatContext.mockReturnValue(
+        createMockContext({
+          selectedGameId: 'game-1',
+          activeChatId: 'chat-1',
+          messages: [{ role: 'user', message: 'Test' }],
+        })
+      );
 
-      render(<ChatPage />, { wrapper: createWrapper() });
+      render(<ChatPage />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /Export chat/i })).toBeInTheDocument();

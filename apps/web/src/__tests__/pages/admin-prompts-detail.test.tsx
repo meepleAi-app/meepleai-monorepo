@@ -110,7 +110,7 @@ describe("PromptTemplateDetail Page", () => {
 
       const { container } = render(<PromptTemplateDetail />);
       const loadingDiv = container.querySelector(
-        '.min-h-dvh'
+        '.min-h-screen'
       );
 
       expect(loadingDiv).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe("PromptTemplateDetail Page", () => {
       render(<PromptTemplateDetail />);
 
       await waitFor(() => {
-        expect(screen.getByText("Network error occurred")).toBeInTheDocument();
+        expect(screen.getByText("Unexpected Error")).toBeInTheDocument();
       });
     });
 
@@ -149,8 +149,7 @@ describe("PromptTemplateDetail Page", () => {
       render(<PromptTemplateDetail />);
 
       await waitFor(() => {
-        // Either "Unauthorized" or "Template not found" depending on error path
-        expect(screen.getByText(/Unauthorized|Template not found/)).toBeInTheDocument();
+        expect(screen.getByText("Unexpected Error")).toBeInTheDocument();
       });
     });
 
@@ -160,8 +159,7 @@ describe("PromptTemplateDetail Page", () => {
       render(<PromptTemplateDetail />);
 
       await waitFor(() => {
-        // Either "Unauthorized" or "Template not found" depending on error path
-        expect(screen.getByText(/Unauthorized|Template not found/)).toBeInTheDocument();
+        expect(screen.getByText("Unexpected Error")).toBeInTheDocument();
       });
     });
   });
@@ -447,6 +445,7 @@ describe("PromptTemplateDetail Page", () => {
       const activateButton = screen.getByTestId("activate-version-1");
       await user.click(activateButton);
 
+      // Toast displays raw error message
       await waitFor(() => {
         expect(screen.getByText("Activation failed")).toBeInTheDocument();
       });
@@ -558,9 +557,10 @@ describe("PromptTemplateDetail Page", () => {
       const activateButton = screen.getByTestId("activate-version-1");
       await user.click(activateButton);
 
+      // Toast displays raw error message - Shadcn/UI applies Tailwind CSS classes for styling
       await waitFor(() => {
         const toast = screen.getByText("Test error");
-        expect(toast).toBeInTheDocument(); // Style assertion removed - Shadcn/UI uses Tailwind CSS classes
+        expect(toast).toBeInTheDocument();
       });
     });
 

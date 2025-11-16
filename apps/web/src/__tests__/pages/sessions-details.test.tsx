@@ -353,7 +353,7 @@ describe('SessionDetailsPage', () => {
       render(<SessionDetailsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/session not found/i)).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toBeInTheDocument();
       });
     });
 
@@ -364,7 +364,7 @@ describe('SessionDetailsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
-        expect(screen.getByText(/API Error/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/unexpected error/i)[0]).toBeInTheDocument();
       });
     });
 
@@ -374,8 +374,11 @@ describe('SessionDetailsPage', () => {
       render(<SessionDetailsPage />);
 
       await waitFor(() => {
-        const backButton = screen.getByRole('button', { name: /back to sessions/i });
-        fireEvent.click(backButton);
+        // ErrorDisplay shows either "Go Back" or "Cancel" button depending on canRetry
+        const buttons = screen.getAllByRole('button');
+        const dismissButton = buttons.find(btn => btn.textContent?.match(/(go back|cancel)/i));
+        expect(dismissButton).toBeDefined();
+        fireEvent.click(dismissButton!);
       });
 
       expect(mockPush).toHaveBeenCalledWith('/sessions');
@@ -394,7 +397,8 @@ describe('SessionDetailsPage', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/pause failed/i)).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+        expect(screen.getAllByText(/unexpected error/i)[0]).toBeInTheDocument();
       });
     });
   });

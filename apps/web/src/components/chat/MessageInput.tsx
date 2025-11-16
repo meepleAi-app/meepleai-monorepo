@@ -1,14 +1,14 @@
 /**
  * MessageInput - Message input form with send button
  *
- * Handles user message input and submission.
- * Integrates with ChatProvider for state and submission.
- * AI-14: Includes SearchModeToggle for hybrid search feature.
- * Migrated to shadcn/ui components.
+ * Migrated to Zustand (Issue #1083):
+ * - Uses store for input value, search mode, loading
+ * - Optimistic updates via useChatOptimistic hook
+ * - Granular subscriptions (only needed slices)
  */
 
-import React, { FormEvent, useState, useCallback } from 'react';
-import { useChatContext } from './ChatProvider';
+import React, { FormEvent, useCallback } from 'react';
+import { useChatStoreWithSelectors } from '@/store/chat';
 import { useChatOptimistic } from '@/hooks/useChatOptimistic';
 import { LoadingButton } from '../loading/LoadingButton';
 import { SearchModeToggle, SearchMode } from '@/components';
@@ -17,19 +17,16 @@ import { toast } from 'sonner';
 import { useMessageInputShortcuts, modKey } from '@/hooks/useKeyboardShortcuts';
 
 export function MessageInput() {
-  const {
-    inputValue,
-    setInputValue,
-    selectedGameId,
-    selectedAgentId,
-    loading,
-    searchMode,
-    setSearchMode
-  } = useChatContext();
+  const inputValue = useChatStoreWithSelectors.use.inputValue();
+  const setInputValue = useChatStoreWithSelectors.use.setInputValue();
+  const selectedGameId = useChatStoreWithSelectors.use.selectedGameId();
+  const selectedAgentId = useChatStoreWithSelectors.use.selectedAgentId();
+  const loading = useChatStoreWithSelectors.use.loading();
+  const searchMode = useChatStoreWithSelectors.use.searchMode();
+  const setSearchMode = useChatStoreWithSelectors.use.setSearchMode();
 
-  // #1167: Use optimistic updates hook
+  // #1167: Use optimistic updates hook (works with both Context and Zustand)
   const { sendMessageOptimistic, isOptimisticUpdate } = useChatOptimistic();
-  const [isSending, setIsSending] = useState(false);
 
   const handleSubmit = useCallback(async (e?: FormEvent) => {
     if (e) {
@@ -40,7 +37,6 @@ export function MessageInput() {
     }
 
     // #1167: Use optimistic update
-    setIsSending(true);
     const messageContent = inputValue;
     setInputValue(''); // Clear input immediately for better UX
 
@@ -50,15 +46,13 @@ export function MessageInput() {
       // Restore input on error
       setInputValue(messageContent);
 
-      // Show error toast (categorized error handling)
+      // Show error toast
       const errorMessage = err instanceof Error ? err.message : 'Errore di comunicazione';
       toast.error(`Errore nell'invio del messaggio: ${errorMessage}`);
-    } finally {
-      setIsSending(false);
     }
   }, [inputValue, selectedGameId, selectedAgentId, sendMessageOptimistic, setInputValue]);
 
-  const isDisabled = loading.sending || isSending || isOptimisticUpdate || !selectedGameId || !selectedAgentId;
+  const isDisabled = loading.sending || isOptimisticUpdate || !selectedGameId || !selectedAgentId;
 
   // Issue #1100: Cmd+Enter to send message
   useMessageInputShortcuts(() => handleSubmit(), !isDisabled && !!inputValue.trim());
@@ -70,36 +64,46 @@ export function MessageInput() {
       <SearchModeToggle
         value={searchMode as SearchMode}
         onChange={(mode) => setSearchMode(mode)}
-        disabled={isDisabled}
       />
 
-      {/* Message Input Form */}
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <label htmlFor="message-input" className="sr-only">
-          Ask a question about the game
-        </label>
-        <Input
-          id="message-input"
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Fai una domanda sul gioco..."
-          disabled={isDisabled}
-          aria-label="Message input"
-          className="flex-1"
-        />
+      <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+        <div className="flex-1">
+          <label htmlFor="messageInput" className="sr-only">
+            Scrivi un messaggio
+          </label>
+          <Input
+            id="messageInput"
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Scrivi un messaggio..."
+            disabled={isDisabled}
+            aria-busy={isDisabled}
+            aria-invalid={!selectedGameId || !selectedAgentId}
+            aria-describedby={
+              !selectedGameId || !selectedAgentId
+                ? 'input-helper-text'
+                : undefined
+            }
+            className="w-full"
+            autoComplete="off"
+          />
+          {(!selectedGameId || !selectedAgentId) && (
+            <span id="input-helper-text" className="text-xs text-[#d93025] mt-1 block">
+              Seleziona un gioco e un agente per iniziare
+            </span>
+          )}
+        </div>
+
         <LoadingButton
           type="submit"
-          isLoading={loading.sending || isSending}
+          isLoading={loading.sending || isOptimisticUpdate}
           loadingText="Invio..."
           disabled={isSendDisabled}
-          aria-label="Send message"
-          title={`Send message (${modKey}+Enter)`}
+          aria-label={`Send message (${modKey}+Enter)`}
+          className="px-6 py-2.5 bg-[#1a73e8] text-white border-none rounded text-sm font-medium cursor-pointer hover:bg-[#1557b0] disabled:bg-[#dadce0] disabled:cursor-not-allowed transition-colors"
         >
           Invia
-          <kbd className="ml-2 hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-60">
-            {modKey}↵
-          </kbd>
         </LoadingButton>
       </form>
     </div>

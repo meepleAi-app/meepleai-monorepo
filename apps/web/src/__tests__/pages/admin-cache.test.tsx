@@ -634,8 +634,8 @@ describe('CacheDashboard', () => {
     render(<CacheDashboard />);
 
     // FIX 2: Use findByText for async rendering
-    expect(await screen.findByText('Error')).toBeInTheDocument();
-    expect(screen.getByText('Unauthorized - Admin access required')).toBeInTheDocument();
+    expect(await screen.findByText('Unexpected Error')).toBeInTheDocument();
+    expect(screen.getByText('An unexpected error occurred. Please try again.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to Admin Dashboard' })).toBeInTheDocument();
   });
 

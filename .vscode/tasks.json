@@ -99,6 +99,65 @@
       "problemMatcher": "$eslint-stylish"
     },
     
+    // Database Tasks
+    {
+      "label": "ef-migrations-add",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "ef", "migrations", "add",
+        "${input:migrationName}",
+        "--project", "src/Api"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "ef-database-update",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["ef", "database", "update", "--project", "src/Api"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "problemMatcher": "$msCompile"
+    },
+
+    // Docker Tasks
+    {
+      "label": "docker-up",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "up", "-d"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-down",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "down"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-logs",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "logs", "-f"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+
     // Compound Tasks
     {
       "label": "build-all",
@@ -117,6 +176,18 @@
         "isDefault": false
       },
       "problemMatcher": []
+    },
+    {
+      "label": "start-all-dev",
+      "dependsOn": ["docker-up", "watch-api", "dev"],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "migrationName",
+      "type": "promptString",
+      "description": "Migration name (e.g., AddUserTable)"
     }
   ]
 }

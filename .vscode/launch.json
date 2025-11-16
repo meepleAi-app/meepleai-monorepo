@@ -64,6 +64,41 @@
       }
     },
     
+    // Python Services
+    {
+      "name": "Python: Embedding Service",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--reload", "--port", "8000"],
+      "cwd": "${workspaceFolder}/apps/embedding-service",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/apps/embedding-service"
+      }
+    },
+    {
+      "name": "Python: Unstructured Service",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--reload", "--port", "8001"],
+      "cwd": "${workspaceFolder}/apps/unstructured-service",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/apps/unstructured-service"
+      }
+    },
+
+    // E2E Tests
+    {
+      "name": "Playwright: Debug E2E Tests",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/web/node_modules/.bin/playwright",
+      "args": ["test", "--debug"],
+      "cwd": "${workspaceFolder}/apps/web",
+      "console": "integratedTerminal"
+    },
+
     // Full Stack (API + Frontend)
     {
       "name": "Full Stack: API + Frontend",
@@ -73,6 +108,20 @@
         "hidden": false,
         "group": "full-stack",
         "order": 1
+      }
+    },
+    {
+      "name": "Full Stack: Complete System",
+      "type": "compound",
+      "configurations": [
+        ".NET API: Launch",
+        "Next.js: debug server-side",
+        "Python: Embedding Service"
+      ],
+      "presentation": {
+        "hidden": false,
+        "group": "full-stack",
+        "order": 2
       }
     }
   ]

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
@@ -8,8 +9,9 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// <summary>
 /// Represents an API key for programmatic access.
 /// API keys provide scoped access and can be revoked.
+/// Aggregate root for API key lifecycle management.
 /// </summary>
-public sealed class ApiKey : Entity<Guid>
+public sealed class ApiKey : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public string KeyName { get; private set; }
@@ -132,7 +134,7 @@ public sealed class ApiKey : Entity<Guid>
     /// <summary>
     /// Revokes this API key.
     /// </summary>
-    public void Revoke(Guid revokedByUserId)
+    public void Revoke(Guid revokedByUserId, string? reason = null)
     {
         if (RevokedAt != null)
             throw new DomainException("API key is already revoked");
@@ -141,7 +143,7 @@ public sealed class ApiKey : Entity<Guid>
         RevokedBy = revokedByUserId;
         IsActive = false;
 
-        // TODO: Add domain event ApiKeyRevoked
+        AddDomainEvent(new ApiKeyRevokedEvent(Id, UserId, reason));
     }
 
     /// <summary>

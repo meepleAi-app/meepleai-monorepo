@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 
@@ -6,8 +7,9 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// <summary>
 /// Represents a linked OAuth provider account.
 /// Supports Google, Discord, and GitHub OAuth 2.0.
+/// Aggregate root for OAuth account lifecycle management.
 /// </summary>
-public sealed class OAuthAccount : Entity<Guid>
+public sealed class OAuthAccount : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public string Provider { get; private set; }
@@ -65,7 +67,7 @@ public sealed class OAuthAccount : Entity<Guid>
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
 
-        // TODO: Add domain event OAuthAccountLinked
+        AddDomainEvent(new OAuthAccountLinkedEvent(userId, Provider, providerUserId));
     }
 
     /// <summary>
@@ -84,7 +86,7 @@ public sealed class OAuthAccount : Entity<Guid>
         TokenExpiresAt = newTokenExpiresAt;
         UpdatedAt = DateTime.UtcNow;
 
-        // TODO: Add domain event OAuthTokensRefreshed
+        AddDomainEvent(new OAuthTokensRefreshedEvent(Id, Provider, newTokenExpiresAt ?? DateTime.UtcNow.AddHours(1)));
     }
 
     /// <summary>

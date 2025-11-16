@@ -1,13 +1,20 @@
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Domain.Interfaces;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Infrastructure;
 
 public class MeepleAiDbContext : DbContext
 {
-    public MeepleAiDbContext(DbContextOptions<MeepleAiDbContext> options)
+    private readonly IMediator _mediator;
+
+    public MeepleAiDbContext(
+        DbContextOptions<MeepleAiDbContext> options,
+        IMediator mediator)
         : base(options)
     {
+        _mediator = mediator;
     }
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
@@ -51,12 +58,41 @@ public class MeepleAiDbContext : DbContext
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);
 
-        // Ignore domain entities - EF Core should only map persistence entities
+        // Ignore domain aggregate roots - EF Core should only map persistence entities
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.OAuthAccount>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.User>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
+    }
+
+    /// <summary>
+    /// Saves all changes made in this context to the database and dispatches domain events.
+    /// </summary>
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // Get all aggregate roots with domain events before saving
+        var aggregatesWithEvents = ChangeTracker.Entries<IAggregateRoot>()
+            .Where(e => e.Entity.DomainEvents.Any())
+            .Select(e => e.Entity)
+            .ToList();
+
+        // Save changes first
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        // Dispatch domain events after successful save
+        foreach (var aggregate in aggregatesWithEvents)
+        {
+            var events = aggregate.DomainEvents.ToList();
+            aggregate.ClearDomainEvents();
+
+            foreach (var domainEvent in events)
+            {
+                await _mediator.Publish(domainEvent, cancellationToken);
+            }
+        }
+
+        return result;
     }
 }

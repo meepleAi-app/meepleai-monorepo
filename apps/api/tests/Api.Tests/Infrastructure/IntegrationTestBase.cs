@@ -1,5 +1,7 @@
 using Api.Infrastructure;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -51,7 +53,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
-        using (var context = new MeepleAiDbContext(options))
+        var mockMediator = new Mock<IMediator>();
+        using (var context = new MeepleAiDbContext(options, mockMediator.Object))
         {
             await context.Database.MigrateAsync();
         }
@@ -88,7 +91,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             .EnableSensitiveDataLogging() // For better error messages
             .Options;
 
-        DbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        DbContext = new MeepleAiDbContext(options, mockMediator.Object);
         Repository = CreateRepository(DbContext);
     }
 
@@ -104,7 +108,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             .EnableSensitiveDataLogging()
             .Options;
 
-        return new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        return new MeepleAiDbContext(options, mockMediator.Object);
     }
 
     /// <summary>
@@ -138,7 +143,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
-        await using (var tempContext = new MeepleAiDbContext(tempOptions))
+        var mockMediator = new Mock<IMediator>();
+        await using (var tempContext = new MeepleAiDbContext(tempOptions, mockMediator.Object))
         {
             // Get all table names dynamically from the database
             var tableNames = await tempContext.Database

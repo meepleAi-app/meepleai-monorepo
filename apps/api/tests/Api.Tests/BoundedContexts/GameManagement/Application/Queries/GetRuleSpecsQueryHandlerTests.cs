@@ -2,7 +2,9 @@ using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
@@ -23,7 +25,8 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object);
         _handler = new GetRuleSpecsQueryHandler(_dbContext);
     }
 

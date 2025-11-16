@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
 using Api.Services.Rag;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -34,7 +35,8 @@ public class RagServicePerformanceTests : IDisposable
             .UseInMemoryDatabase(databaseName: $"RagPerfTestDb_{Guid.NewGuid()}")
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object);
     }
 
     public void Dispose()

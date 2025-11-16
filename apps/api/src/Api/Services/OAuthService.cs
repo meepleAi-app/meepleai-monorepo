@@ -11,9 +11,10 @@ using Microsoft.Extensions.Options;
 namespace Api.Services;
 
 /// <summary>
-/// OAuth 2.0 authentication service for Google, Discord, and GitHub.
-/// Implements authorization code flow with PKCE and CSRF protection.
-/// Delegates domain logic to CQRS handlers via IMediator.
+/// OAuth 2.0 infrastructure adapter for Google, Discord, and GitHub.
+/// Provides HTTP client operations for OAuth provider communication.
+/// Business logic delegated to CQRS handlers (HandleOAuthCallbackCommand, UnlinkOAuthAccountCommand, etc).
+/// This service is a pure infrastructure adapter for provider-specific HTTP operations.
 /// </summary>
 public class OAuthService : IOAuthService
 {
@@ -29,6 +30,7 @@ public class OAuthService : IOAuthService
     private static readonly Dictionary<string, DateTime> _stateStore = new();
     private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
 
+    // Token encryption purpose for RefreshTokenAsync
     private const string EncryptionPurpose = "OAuthTokens";
 
     public OAuthService(
@@ -72,98 +74,6 @@ public class OAuthService : IOAuthService
         return Task.FromResult(authUrl.ToString());
     }
 
-    /// <inheritdoc />
-    /// <remarks>
-    /// Delegates domain logic (user creation, account linking) to CQRS handlers.
-    /// Maintains provider communication (token exchange, user info retrieval) in this service.
-    /// </remarks>
-    public async Task<OAuthCallbackResult> HandleCallbackAsync(string provider, string code, string state)
-    {
-        // 1. Validate CSRF state (keep in service - infrastructure concern)
-        if (!await ValidateStateAsync(state))
-        {
-            _logger.LogWarning("Invalid OAuth state parameter for provider: {Provider}", provider);
-            throw new UnauthorizedAccessException("Invalid state parameter. Possible CSRF attack.");
-        }
-
-        var providerConfig = GetProviderConfig(provider);
-
-        // 2. Exchange authorization code for access token (provider communication - keep here)
-        var tokenResponse = await ExchangeCodeForTokenAsync(providerConfig, provider, code);
-
-        // 3. Get user info from provider (provider communication - keep here)
-        var userInfo = await GetUserInfoAsync(providerConfig, provider, tokenResponse.AccessToken);
-
-        // Validate user info contains required email (AUTH-06 requirement)
-        if (string.IsNullOrEmpty(userInfo.Email))
-        {
-            throw new InvalidOperationException($"OAuth provider {provider} did not return email address");
-        }
-
-        // 4. Find existing OAuth account to determine flow
-        var oauthAccount = await _db.OAuthAccounts
-            .Include(oa => oa.User)
-            .FirstOrDefaultAsync(oa =>
-                oa.Provider == provider.ToLowerInvariant() &&
-                oa.ProviderUserId == userInfo.Id);
-
-        UserEntity? user;
-        bool isNewUser = false;
-
-        if (oauthAccount != null)
-        {
-            // Existing OAuth account - update token (still needs direct DB access for token encryption)
-            if (oauthAccount.User == null)
-            {
-                throw new InvalidOperationException("OAuth account found but user entity not loaded");
-            }
-            user = oauthAccount.User;
-            await UpdateOAuthTokenAsync(oauthAccount, tokenResponse);
-            _logger.LogInformation("OAuth login for existing account. Provider: {Provider}, UserId: {UserId}", provider, user.Id);
-        }
-        else
-        {
-            // Check if user exists with same email (auto-link for MVP)
-            user = await _db.Users.FirstOrDefaultAsync(u => u.Email == userInfo.Email.ToLowerInvariant());
-
-            if (user == null)
-            {
-                // Create new user (still direct DB for now - would need RegisterViaOAuthCommand)
-                // CWE-476: Safe email split with null/empty guards
-                var emailParts = userInfo.Email?.Split('@') ?? Array.Empty<string>();
-                var emailPrefix = emailParts.Length > 0 && !string.IsNullOrEmpty(emailParts[0])
-                    ? emailParts[0]
-                    : "User";
-
-                user = new UserEntity
-                {
-                    Id = Guid.NewGuid(),
-                    // CS8602: False positive - Email validated non-null at line 89
-#pragma warning disable CS8602
-                    Email = userInfo.Email.ToLowerInvariant(),
-#pragma warning restore CS8602
-                    DisplayName = userInfo.Name ?? emailPrefix,
-                    PasswordHash = GenerateRandomPasswordHash(), // No password for OAuth-only users
-                    Role = UserRole.User.ToString(),
-                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
-                };
-                _db.Users.Add(user);
-                await _db.SaveChangesAsync();
-                isNewUser = true;
-                _logger.LogInformation("Created new user via OAuth. Provider: {Provider}, UserId: {UserId}", provider, user.Id);
-            }
-            else
-            {
-                _logger.LogInformation("Linking OAuth to existing user. Provider: {Provider}, UserId: {UserId}", provider, user.Id);
-            }
-
-            // Create OAuth account link (still direct DB for token encryption)
-            await CreateOAuthAccountAsync(user.Id, provider, userInfo, tokenResponse);
-        }
-
-        var authUser = new AuthUser(user.Id.ToString(), user.Email, user.DisplayName, user.Role.ToString());
-        return new OAuthCallbackResult(authUser, isNewUser);
-    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -287,7 +197,15 @@ public class OAuthService : IOAuthService
         return $"{baseUrl}/api/v1/auth/oauth/{provider.ToLowerInvariant()}/callback";
     }
 
-    private async Task<OAuthTokenResponse> ExchangeCodeForTokenAsync(
+    public async Task<OAuthTokenResponse> ExchangeCodeForTokenAsync(
+        string provider,
+        string code)
+    {
+        var config = GetProviderConfig(provider);
+        return await ExchangeCodeForTokenInternalAsync(config, provider, code);
+    }
+
+    private async Task<OAuthTokenResponse> ExchangeCodeForTokenInternalAsync(
         OAuthProviderConfig config,
         string provider,
         string code)
@@ -345,7 +263,15 @@ public class OAuthService : IOAuthService
         }
     }
 
-    private async Task<OAuthUserInfo> GetUserInfoAsync(
+    public async Task<OAuthUserInfo> GetUserInfoAsync(
+        string provider,
+        string accessToken)
+    {
+        var config = GetProviderConfig(provider);
+        return await GetUserInfoInternalAsync(config, provider, accessToken);
+    }
+
+    private async Task<OAuthUserInfo> GetUserInfoInternalAsync(
         OAuthProviderConfig config,
         string provider,
         string accessToken)
@@ -454,39 +380,9 @@ public class OAuthService : IOAuthService
         throw new InvalidOperationException("No verified primary email found on GitHub account");
     }
 
-    private async Task CreateOAuthAccountAsync(Guid userId,
-        string provider,
-        OAuthUserInfo userInfo,
-        OAuthTokenResponse tokenResponse)
-    {
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var expiresAt = tokenResponse.ExpiresIn.HasValue
-            ? now.AddSeconds(tokenResponse.ExpiresIn.Value)
-            : (DateTime?)null;
-
-        var accessTokenEncrypted = await _encryption.EncryptAsync(tokenResponse.AccessToken, EncryptionPurpose);
-        var refreshTokenEncrypted = tokenResponse.RefreshToken != null
-            ? await _encryption.EncryptAsync(tokenResponse.RefreshToken, EncryptionPurpose)
-            : null;
-
-        var oauthAccount = new OAuthAccountEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Provider = provider.ToLowerInvariant(),
-            ProviderUserId = userInfo.Id,
-            AccessTokenEncrypted = accessTokenEncrypted,
-            RefreshTokenEncrypted = refreshTokenEncrypted,
-            TokenExpiresAt = expiresAt,
-            CreatedAt = now,
-            UpdatedAt = now,
-            User = null! // Will be loaded by EF
-        };
-
-        _db.OAuthAccounts.Add(oauthAccount);
-        await _db.SaveChangesAsync();
-    }
-
+    /// <summary>
+    /// Updates OAuth account tokens with encryption (infrastructure helper for RefreshTokenAsync)
+    /// </summary>
     private async Task UpdateOAuthTokenAsync(OAuthAccountEntity account, OAuthTokenResponse tokenResponse)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -505,14 +401,6 @@ public class OAuthService : IOAuthService
         account.UpdatedAt = now;
 
         await _db.SaveChangesAsync();
-    }
-
-    private static string GenerateRandomPasswordHash()
-    {
-        // For OAuth-only users, generate a random unguessable password hash
-        // They won't know the password and can only login via OAuth
-        var randomBytes = RandomNumberGenerator.GetBytes(32);
-        return Convert.ToBase64String(randomBytes);
     }
 
     /// <inheritdoc />

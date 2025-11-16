@@ -4,11 +4,14 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -16,10 +19,11 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 
 /// <summary>
-/// Tests for HandleOAuthCallbackCommandHandler.
-/// Validates OAuth callback processing including CSRF validation, token exchange, and session creation.
+/// Tests for HandleOAuthCallbackCommandHandler (CQRS refactored version).
+/// Validates OAuth callback processing with full business logic in handler.
+/// Uses real InMemoryDatabase for DbContext operations.
 /// </summary>
-public class HandleOAuthCallbackCommandHandlerTests
+public class HandleOAuthCallbackCommandHandlerTests : IDisposable
 {
     private readonly Mock<IOAuthService> _oauthServiceMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
@@ -28,6 +32,8 @@ public class HandleOAuthCallbackCommandHandlerTests
     private readonly Mock<IMediator> _mediatorMock;
     private readonly Mock<ILogger<HandleOAuthCallbackCommandHandler>> _loggerMock;
     private readonly Mock<IEncryptionService> _encryptionServiceMock;
+    private readonly Mock<TimeProvider> _timeProviderMock;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly HandleOAuthCallbackCommandHandler _handler;
 
     public HandleOAuthCallbackCommandHandlerTests()
@@ -39,6 +45,16 @@ public class HandleOAuthCallbackCommandHandlerTests
         _mediatorMock = new Mock<IMediator>();
         _loggerMock = new Mock<ILogger<HandleOAuthCallbackCommandHandler>>();
         _encryptionServiceMock = new Mock<IEncryptionService>();
+        _timeProviderMock = new Mock<TimeProvider>();
+
+        // Create real InMemoryDatabase for testing DbContext operations
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        _dbContext = new MeepleAiDbContext(options);
+
+        // Setup TimeProvider default
+        _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(DateTimeOffset.UtcNow);
 
         _handler = new HandleOAuthCallbackCommandHandler(
             _oauthServiceMock.Object,
@@ -47,7 +63,14 @@ public class HandleOAuthCallbackCommandHandlerTests
             _unitOfWorkMock.Object,
             _mediatorMock.Object,
             _loggerMock.Object,
-            _encryptionServiceMock.Object);
+            _encryptionServiceMock.Object,
+            _timeProviderMock.Object,
+            _dbContext);
+    }
+
+    public void Dispose()
+    {
+        _dbContext.Dispose();
     }
 
     #region Success Cases - New User
@@ -58,16 +81,15 @@ public class HandleOAuthCallbackCommandHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         var command = CreateTestCommand("google");
-        var callbackResult = CreateCallbackResult(userId, isNewUser: true);
+        var tokenResponse = CreateTokenResponse();
+        var userInfo = CreateUserInfo();
         var sessionResponse = CreateSessionResponse(userId);
 
-        _oauthServiceMock
-            .Setup(s => s.ValidateStateAsync(command.State))
-            .ReturnsAsync(true);
+        SetupSuccessfulOAuthFlow(command, tokenResponse, userInfo);
 
-        _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
-            .ReturnsAsync(callbackResult);
+        _encryptionServiceMock
+            .Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("encrypted_token");
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
@@ -78,30 +100,47 @@ public class HandleOAuthCallbackCommandHandlerTests
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal(userId, result.UserId);
+        Assert.NotNull(result.UserId);
         Assert.True(result.IsNewUser);
         Assert.NotNull(result.SessionToken);
-        _mediatorMock.Verify(
-            m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+
+        // Verify user was created in database
+        var createdUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userInfo.Email.ToLowerInvariant());
+        Assert.NotNull(createdUser);
+        Assert.Equal(userInfo.Email.ToLowerInvariant(), createdUser.Email);
+
+        // Verify OAuth account was created
+        var createdAccount = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == createdUser.Id);
+        Assert.NotNull(createdAccount);
+        Assert.Equal(command.Provider.ToLowerInvariant(), createdAccount.Provider);
     }
 
     [Fact]
     public async Task Handle_ExistingUserByEmail_LinksOAuthAndCreatesSession()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        var existingUser = new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            DisplayName = "Existing User",
+            PasswordHash = "existing_hash",
+            Role = UserRole.User.ToString(),
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(existingUser);
+        await _dbContext.SaveChangesAsync();
+
         var command = CreateTestCommand("discord");
-        var callbackResult = CreateCallbackResult(userId, isNewUser: false);
-        var sessionResponse = CreateSessionResponse(userId);
+        var tokenResponse = CreateTokenResponse();
+        var userInfo = new OAuthUserInfo("provider_123", existingUser.Email, "Provider Name");
+        var sessionResponse = CreateSessionResponse(existingUser.Id);
 
-        _oauthServiceMock
-            .Setup(s => s.ValidateStateAsync(command.State))
-            .ReturnsAsync(true);
+        SetupSuccessfulOAuthFlow(command, tokenResponse, userInfo);
 
-        _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
-            .ReturnsAsync(callbackResult);
+        _encryptionServiceMock
+            .Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("encrypted_token");
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
@@ -112,27 +151,56 @@ public class HandleOAuthCallbackCommandHandlerTests
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal(userId, result.UserId);
-        Assert.False(result.IsNewUser);
-        Assert.NotNull(result.SessionToken);
+        Assert.Equal(existingUser.Id, result.UserId);
+        Assert.False(result.IsNewUser); // User already existed
+
+        // Verify OAuth account was linked
+        var linkedAccount = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == existingUser.Id);
+        Assert.NotNull(linkedAccount);
+        Assert.Equal(command.Provider.ToLowerInvariant(), linkedAccount.Provider);
     }
 
     [Fact]
     public async Task Handle_ExistingOAuthAccount_UpdatesTokensAndCreatesSession()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        var existingUser = new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            DisplayName = "Test User",
+            PasswordHash = "hash",
+            Role = UserRole.User.ToString(),
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(existingUser);
+
+        var existingAccount = new OAuthAccountEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = existingUser.Id,
+            Provider = "github",
+            ProviderUserId = "github_user_123",
+            AccessTokenEncrypted = "old_encrypted_token",
+            RefreshTokenEncrypted = null,
+            TokenExpiresAt = DateTime.UtcNow.AddHours(-1), // Expired
+            CreatedAt = DateTime.UtcNow.AddDays(-30),
+            UpdatedAt = DateTime.UtcNow.AddDays(-30),
+            User = existingUser
+        };
+        _dbContext.OAuthAccounts.Add(existingAccount);
+        await _dbContext.SaveChangesAsync();
+
         var command = CreateTestCommand("github");
-        var callbackResult = CreateCallbackResult(userId, isNewUser: false);
-        var sessionResponse = CreateSessionResponse(userId);
+        var tokenResponse = CreateTokenResponse();
+        var userInfo = new OAuthUserInfo("github_user_123", existingUser.Email, "GitHub User");
+        var sessionResponse = CreateSessionResponse(existingUser.Id);
 
-        _oauthServiceMock
-            .Setup(s => s.ValidateStateAsync(command.State))
-            .ReturnsAsync(true);
+        SetupSuccessfulOAuthFlow(command, tokenResponse, userInfo);
 
-        _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
-            .ReturnsAsync(callbackResult);
+        _encryptionServiceMock
+            .Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("new_encrypted_token");
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
@@ -143,88 +211,87 @@ public class HandleOAuthCallbackCommandHandlerTests
 
         // Assert
         Assert.True(result.Success);
-        Assert.NotNull(result.SessionToken);
-        Assert.Equal(sessionResponse.SessionToken, result.SessionToken);
+        Assert.Equal(existingUser.Id, result.UserId);
+        Assert.False(result.IsNewUser);
+
+        // Verify token was updated
+        var updatedAccount = await _dbContext.OAuthAccounts.FirstAsync(oa => oa.Id == existingAccount.Id);
+        Assert.Equal("new_encrypted_token", updatedAccount.AccessTokenEncrypted);
     }
 
     [Fact]
-    public async Task Handle_ValidCallback_ReturnsSessionTokenInResult()
+    public async Task Handle_ValidCallback_CallsExchangeCodeForTokenAsync()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var command = CreateTestCommand("google");
-        var callbackResult = CreateCallbackResult(userId, isNewUser: true);
-        var sessionToken = "test_session_token_12345";
-        var sessionResponse = new CreateSessionResponse(
-            User: CreateUserDto(userId),
-            SessionToken: sessionToken,
-            ExpiresAt: DateTime.UtcNow.AddHours(24)
-        );
+        var tokenResponse = CreateTokenResponse();
+        var userInfo = CreateUserInfo();
+        var sessionResponse = CreateSessionResponse(userId);
 
-        _oauthServiceMock
-            .Setup(s => s.ValidateStateAsync(command.State))
-            .ReturnsAsync(true);
+        SetupSuccessfulOAuthFlow(command, tokenResponse, userInfo);
 
-        _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
-            .ReturnsAsync(callbackResult);
+        _encryptionServiceMock
+            .Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("encrypted_token");
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sessionResponse);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(sessionToken, result.SessionToken);
+        _oauthServiceMock.Verify(
+            s => s.ExchangeCodeForTokenAsync(command.Provider, command.Code),
+            Times.Once);
     }
 
     [Fact]
-    public async Task Handle_ValidCallback_SetsIsNewUserFlagCorrectly()
+    public async Task Handle_ValidCallback_CallsGetUserInfoAsync()
     {
-        // Arrange - New user scenario
+        // Arrange
         var userId = Guid.NewGuid();
         var command = CreateTestCommand("google");
-        var callbackResult = CreateCallbackResult(userId, isNewUser: true);
+        var tokenResponse = CreateTokenResponse();
+        var userInfo = CreateUserInfo();
         var sessionResponse = CreateSessionResponse(userId);
 
-        _oauthServiceMock
-            .Setup(s => s.ValidateStateAsync(command.State))
-            .ReturnsAsync(true);
+        SetupSuccessfulOAuthFlow(command, tokenResponse, userInfo);
 
-        _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
-            .ReturnsAsync(callbackResult);
+        _encryptionServiceMock
+            .Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("encrypted_token");
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sessionResponse);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.IsNewUser);
+        _oauthServiceMock.Verify(
+            s => s.GetUserInfoAsync(command.Provider, tokenResponse.AccessToken),
+            Times.Once);
     }
 
     [Fact]
     public async Task Handle_ValidCallback_CallsCreateSessionCommandViaMediator()
     {
         // Arrange
-        var userId = Guid.NewGuid();
         var command = CreateTestCommand("google", "192.168.1.1", "Mozilla/5.0");
-        var callbackResult = CreateCallbackResult(userId, isNewUser: true);
-        var sessionResponse = CreateSessionResponse(userId);
+        var tokenResponse = CreateTokenResponse();
+        var userInfo = CreateUserInfo();
 
-        _oauthServiceMock
-            .Setup(s => s.ValidateStateAsync(command.State))
-            .ReturnsAsync(true);
+        SetupSuccessfulOAuthFlow(command, tokenResponse, userInfo);
 
-        _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
-            .ReturnsAsync(callbackResult);
+        _encryptionServiceMock
+            .Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("encrypted_token");
 
+        var sessionResponse = CreateSessionResponse(Guid.NewGuid());
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sessionResponse);
@@ -236,7 +303,6 @@ public class HandleOAuthCallbackCommandHandlerTests
         _mediatorMock.Verify(
             m => m.Send(
                 It.Is<CreateSessionCommand>(c =>
-                    c.UserId == userId &&
                     c.IpAddress == "192.168.1.1" &&
                     c.UserAgent == "Mozilla/5.0"),
                 It.IsAny<CancellationToken>()),
@@ -244,21 +310,20 @@ public class HandleOAuthCallbackCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ValidCallback_LogsAllMajorSteps()
+    public async Task Handle_ValidCallback_LogsSuccessInformation()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var command = CreateTestCommand("google");
-        var callbackResult = CreateCallbackResult(userId, isNewUser: true);
+        var tokenResponse = CreateTokenResponse();
+        var userInfo = CreateUserInfo();
         var sessionResponse = CreateSessionResponse(userId);
 
-        _oauthServiceMock
-            .Setup(s => s.ValidateStateAsync(command.State))
-            .ReturnsAsync(true);
+        SetupSuccessfulOAuthFlow(command, tokenResponse, userInfo);
 
-        _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
-            .ReturnsAsync(callbackResult);
+        _encryptionServiceMock
+            .Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("encrypted_token");
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
@@ -299,8 +364,10 @@ public class HandleOAuthCallbackCommandHandlerTests
         Assert.False(result.Success);
         Assert.Contains("Invalid state", result.ErrorMessage);
         Assert.Contains("CSRF", result.ErrorMessage);
+
+        // Should not proceed to token exchange
         _oauthServiceMock.Verify(
-            s => s.HandleCallbackAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            s => s.ExchangeCodeForTokenAsync(It.IsAny<string>(), It.IsAny<string>()),
             Times.Never);
     }
 
@@ -315,15 +382,15 @@ public class HandleOAuthCallbackCommandHandlerTests
             .ReturnsAsync(true);
 
         _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
-            .ThrowsAsync(new UnauthorizedAccessException("Token exchange failed"));
+            .Setup(s => s.ExchangeCodeForTokenAsync(command.Provider, command.Code))
+            .ThrowsAsync(new InvalidOperationException("Token exchange failed"));
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal("Token exchange failed", result.ErrorMessage);
+        Assert.Contains("OAuth token exchange failed", result.ErrorMessage);
     }
 
     [Fact]
@@ -331,13 +398,18 @@ public class HandleOAuthCallbackCommandHandlerTests
     {
         // Arrange
         var command = CreateTestCommand("google");
+        var tokenResponse = CreateTokenResponse();
 
         _oauthServiceMock
             .Setup(s => s.ValidateStateAsync(command.State))
             .ReturnsAsync(true);
 
         _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
+            .Setup(s => s.ExchangeCodeForTokenAsync(command.Provider, command.Code))
+            .ReturnsAsync(tokenResponse);
+
+        _oauthServiceMock
+            .Setup(s => s.GetUserInfoAsync(command.Provider, tokenResponse.AccessToken))
             .ThrowsAsync(new InvalidOperationException("Failed to retrieve user info"));
 
         // Act
@@ -345,7 +417,35 @@ public class HandleOAuthCallbackCommandHandlerTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal("Failed to retrieve user info", result.ErrorMessage);
+        Assert.Contains("Failed to get user information", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Handle_NoEmailFromProvider_ReturnsErrorResult()
+    {
+        // Arrange
+        var command = CreateTestCommand("google");
+        var tokenResponse = CreateTokenResponse();
+        var userInfo = new OAuthUserInfo("provider_user_123", string.Empty, "Test User"); // No email
+
+        _oauthServiceMock
+            .Setup(s => s.ValidateStateAsync(command.State))
+            .ReturnsAsync(true);
+
+        _oauthServiceMock
+            .Setup(s => s.ExchangeCodeForTokenAsync(command.Provider, command.Code))
+            .ReturnsAsync(tokenResponse);
+
+        _oauthServiceMock
+            .Setup(s => s.GetUserInfoAsync(command.Provider, tokenResponse.AccessToken))
+            .ReturnsAsync(userInfo);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("email", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -354,15 +454,14 @@ public class HandleOAuthCallbackCommandHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         var command = CreateTestCommand("google");
-        var callbackResult = CreateCallbackResult(userId, isNewUser: true);
+        var tokenResponse = CreateTokenResponse();
+        var userInfo = CreateUserInfo();
 
-        _oauthServiceMock
-            .Setup(s => s.ValidateStateAsync(command.State))
-            .ReturnsAsync(true);
+        SetupSuccessfulOAuthFlow(command, tokenResponse, userInfo);
 
-        _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
-            .ReturnsAsync(callbackResult);
+        _encryptionServiceMock
+            .Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("encrypted_token");
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
@@ -405,14 +504,14 @@ public class HandleOAuthCallbackCommandHandlerTests
     {
         // Arrange
         var command = CreateTestCommand("google");
-        var exception = new UnauthorizedAccessException("Token exchange failed");
+        var exception = new InvalidOperationException("Token exchange failed");
 
         _oauthServiceMock
             .Setup(s => s.ValidateStateAsync(command.State))
             .ReturnsAsync(true);
 
         _oauthServiceMock
-            .Setup(s => s.HandleCallbackAsync(command.Provider, command.Code, command.State))
+            .Setup(s => s.ExchangeCodeForTokenAsync(command.Provider, command.Code))
             .ThrowsAsync(exception);
 
         // Act
@@ -423,7 +522,7 @@ public class HandleOAuthCallbackCommandHandlerTests
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("OAuth callback failed")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to exchange OAuth code")),
                 It.Is<Exception>(ex => ex == exception),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -448,16 +547,22 @@ public class HandleOAuthCallbackCommandHandlerTests
         };
     }
 
-    private static OAuthCallbackResult CreateCallbackResult(Guid userId, bool isNewUser)
+    private static OAuthTokenResponse CreateTokenResponse()
     {
-        return new OAuthCallbackResult(
-            User: new AuthUser(
-                Id: userId.ToString(),
-                Email: "test@example.com",
-                DisplayName: "Test User",
-                Role: "User"
-            ),
-            IsNewUser: isNewUser
+        return new OAuthTokenResponse(
+            AccessToken: "access_token_12345",
+            RefreshToken: "refresh_token_12345",
+            ExpiresIn: 3600,
+            TokenType: "Bearer"
+        );
+    }
+
+    private static OAuthUserInfo CreateUserInfo()
+    {
+        return new OAuthUserInfo(
+            Id: "provider_user_123",
+            Email: "test@example.com",
+            Name: "Test User"
         );
     }
 
@@ -481,6 +586,24 @@ public class HandleOAuthCallbackCommandHandlerTests
             IsTwoFactorEnabled: false,
             TwoFactorEnabledAt: null
         );
+    }
+
+    private void SetupSuccessfulOAuthFlow(
+        HandleOAuthCallbackCommand command,
+        OAuthTokenResponse tokenResponse,
+        OAuthUserInfo userInfo)
+    {
+        _oauthServiceMock
+            .Setup(s => s.ValidateStateAsync(command.State))
+            .ReturnsAsync(true);
+
+        _oauthServiceMock
+            .Setup(s => s.ExchangeCodeForTokenAsync(command.Provider, command.Code))
+            .ReturnsAsync(tokenResponse);
+
+        _oauthServiceMock
+            .Setup(s => s.GetUserInfoAsync(command.Provider, tokenResponse.AccessToken))
+            .ReturnsAsync(userInfo);
     }
 
     #endregion

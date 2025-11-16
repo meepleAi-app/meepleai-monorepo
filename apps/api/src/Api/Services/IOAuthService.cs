@@ -3,7 +3,8 @@ using Api.Models;
 namespace Api.Services;
 
 /// <summary>
-/// Handles OAuth 2.0 authentication flows for Google, Discord, and GitHub.
+/// Infrastructure adapter for OAuth 2.0 provider HTTP communication (Google, Discord, GitHub).
+/// Business logic delegated to CQRS handlers.
 /// </summary>
 public interface IOAuthService
 {
@@ -14,15 +15,6 @@ public interface IOAuthService
     /// <param name="state">CSRF protection state token</param>
     /// <returns>Complete authorization URL for redirect</returns>
     Task<string> GetAuthorizationUrlAsync(string provider, string state);
-
-    /// <summary>
-    /// Handles OAuth callback after user authorizes
-    /// </summary>
-    /// <param name="provider">OAuth provider</param>
-    /// <param name="code">Authorization code from provider</param>
-    /// <param name="state">CSRF state token for validation</param>
-    /// <returns>User and whether they are newly created</returns>
-    Task<OAuthCallbackResult> HandleCallbackAsync(string provider, string code, string state);
 
     /// <summary>
     /// Unlinks an OAuth account from the user
@@ -58,4 +50,20 @@ public interface IOAuthService
     /// <param name="provider">OAuth provider (google, discord)</param>
     /// <returns>New token response, or null if refresh fails (force re-auth)</returns>
     Task<OAuthTokenResponse?> RefreshTokenAsync(Guid userId, string provider);
+
+    /// <summary>
+    /// Exchanges authorization code for access token (infrastructure adapter)
+    /// </summary>
+    /// <param name="provider">OAuth provider (google, discord, github)</param>
+    /// <param name="code">Authorization code from provider</param>
+    /// <returns>Token response from provider</returns>
+    Task<OAuthTokenResponse> ExchangeCodeForTokenAsync(string provider, string code);
+
+    /// <summary>
+    /// Gets user info from OAuth provider using access token (infrastructure adapter)
+    /// </summary>
+    /// <param name="provider">OAuth provider (google, discord, github)</param>
+    /// <param name="accessToken">Access token from provider</param>
+    /// <returns>User info from provider</returns>
+    Task<OAuthUserInfo> GetUserInfoAsync(string provider, string accessToken);
 }

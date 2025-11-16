@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -48,45 +49,38 @@ public static class RuleSpecEndpoints
 
             if (!Guid.TryParse(session!.User.Id, out var userId))
             {
-                return Results.BadRequest(new { error = "Invalid user ID" });
+                throw new BadRequestException("Invalid user ID");
             }
 
-            try
-            {
-                logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", userId, gameId);
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", userId, gameId);
 
-                // Convert Model to Command
-                var command = new UpdateRuleSpecCommand(
-                    GameId: gameId,
-                    Version: ruleSpec.version,
-                    Atoms: ruleSpec.rules.Select(r => new RuleAtomDto(r.id, r.text, r.section, r.page, r.line)).ToList(),
-                    UserId: userId
-                );
+            // Convert Model to Command
+            var command = new UpdateRuleSpecCommand(
+                GameId: gameId,
+                Version: ruleSpec.version,
+                Atoms: ruleSpec.rules.Select(r => new RuleAtomDto(r.id, r.text, r.section, r.page, r.line)).ToList(),
+                UserId: userId
+            );
 
-                var updated = await mediator.Send(command, ct);
-                logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.Version);
+            var updated = await mediator.Send(command, ct);
+            logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.Version);
 
-                // Audit trail
-                await auditService.LogAsync(
-                    session.User.Id,
-                    "UPDATE_RULESPEC",
-                    "RuleSpec",
-                    gameId.ToString(),
-                    "Success",
-                    $"Updated RuleSpec to version {updated.Version}",
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString(),
-                    ct);
+            // Audit trail
+            await auditService.LogAsync(
+                session.User.Id,
+                "UPDATE_RULESPEC",
+                "RuleSpec",
+                gameId.ToString(),
+                "Success",
+                $"Updated RuleSpec to version {updated.Version}",
+                context.Connection.RemoteIpAddress?.ToString(),
+                context.Request.Headers.UserAgent.ToString(),
+                ct);
 
-                // Convert DTO back to Model for backward compatibility
-                var modelResult = ToModel(updated);
-                return Results.Json(modelResult);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to update RuleSpec for game {GameId}: {Error}", gameId, ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            // Convert DTO back to Model for backward compatibility
+            var modelResult = ToModel(updated);
+            return Results.Json(modelResult);
         });
 
         // RULE-02: Get version history
@@ -192,22 +186,15 @@ public static class RuleSpecEndpoints
 
             if (!Guid.TryParse(session!.User.Id, out var userId))
             {
-                return Results.BadRequest(new { error = "Invalid user ID" });
+                throw new BadRequestException("Invalid user ID");
             }
 
-            try
-            {
-                logger.LogInformation("User {UserId} adding comment to RuleSpec {GameId} version {Version}", userId, gameId, version);
-                var command = new CreateSimpleRuleCommentCommand(gameId.ToString(), version, request.AtomId, request.CommentText, userId);
-                var comment = await mediator.Send(command, ct);
-                logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
-                return Results.Created($"/api/v1/games/{gameId}/rulespec/comments/{comment.Id}", comment);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to add comment: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            logger.LogInformation("User {UserId} adding comment to RuleSpec {GameId} version {Version}", userId, gameId, version);
+            var command = new CreateSimpleRuleCommentCommand(gameId.ToString(), version, request.AtomId, request.CommentText, userId);
+            var comment = await mediator.Send(command, ct);
+            logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
+            return Results.Created($"/api/v1/games/{gameId}/rulespec/comments/{comment.Id}", comment);
         });
 
         group.MapGet("/games/{gameId:guid}/rulespec/versions/{version}/comments", async (Guid gameId, string version, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
@@ -233,27 +220,15 @@ public static class RuleSpecEndpoints
 
             if (!Guid.TryParse(session!.User.Id, out var userId))
             {
-                return Results.BadRequest(new { error = "Invalid user ID" });
+                throw new BadRequestException("Invalid user ID");
             }
 
-            try
-            {
-                logger.LogInformation("User {UserId} updating comment {CommentId}", userId, commentId);
-                var command = new UpdateSimpleRuleCommentCommand(commentId, request.CommentText, userId);
-                var comment = await mediator.Send(command, ct);
-                logger.LogInformation("Comment {CommentId} updated successfully", commentId);
-                return Results.Json(comment);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to update comment {CommentId}: {Error}", commentId, ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                logger.LogWarning("User {UserId} not authorized to update comment {CommentId}: {Error}", userId, commentId, ex.Message);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            logger.LogInformation("User {UserId} updating comment {CommentId}", userId, commentId);
+            var command = new UpdateSimpleRuleCommentCommand(commentId, request.CommentText, userId);
+            var comment = await mediator.Send(command, ct);
+            logger.LogInformation("Comment {CommentId} updated successfully", commentId);
+            return Results.Json(comment);
         });
 
         group.MapDelete("/games/{gameId:guid}/rulespec/comments/{commentId:guid}", async (Guid gameId, Guid commentId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
@@ -263,30 +238,23 @@ public static class RuleSpecEndpoints
 
             if (!Guid.TryParse(session!.User.Id, out var userId))
             {
-                return Results.BadRequest(new { error = "Invalid user ID" });
+                throw new BadRequestException("Invalid user ID");
             }
 
             var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
-            try
-            {
-                logger.LogInformation("User {UserId} deleting comment {CommentId}", userId, commentId);
-                var command = new DeleteSimpleRuleCommentCommand(commentId, userId, isAdmin);
-                var deleted = await mediator.Send(command, ct);
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            logger.LogInformation("User {UserId} deleting comment {CommentId}", userId, commentId);
+            var command = new DeleteSimpleRuleCommentCommand(commentId, userId, isAdmin);
+            var deleted = await mediator.Send(command, ct);
 
-                if (!deleted)
-                {
-                    return Results.NotFound(new { error = "Comment not found" });
-                }
-
-                logger.LogInformation("Comment {CommentId} deleted successfully", commentId);
-                return Results.NoContent();
-            }
-            catch (UnauthorizedAccessException ex)
+            if (!deleted)
             {
-                logger.LogWarning("User {UserId} not authorized to delete comment {CommentId}: {Error}", userId, commentId, ex.Message);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
+                throw new NotFoundException("Comment", commentId.ToString());
             }
+
+            logger.LogInformation("Comment {CommentId} deleted successfully", commentId);
+            return Results.NoContent();
         });
 
         // EDIT-05: Enhanced Comments System endpoints
@@ -305,28 +273,15 @@ public static class RuleSpecEndpoints
 
             if (!Guid.TryParse(session!.User.Id, out var userId))
             {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+                throw new BadRequestException("Invalid user ID format");
             }
 
-            try
-            {
-                logger.LogInformation("User {UserId} creating comment on RuleSpec {GameId} version {Version}", userId, gameId, version);
-                var command = new CreateRuleCommentCommand(gameId, version, request.LineNumber, request.CommentText, userId);
-                var comment = await mediator.Send(command, ct);
-                logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
-                return Results.Created($"/api/v1/comments/{comment.Id}", comment);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 400 response
-            // All business exceptions are handled in RuleCommentService; this catches unexpected infrastructure failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
-                // Specific exception handling occurs in service layer (RuleSpecService)
-                logger.LogError(ex, "Failed to create comment on RuleSpec {GameId} version {Version}", gameId, version);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning restore CA1031
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            logger.LogInformation("User {UserId} creating comment on RuleSpec {GameId} version {Version}", userId, gameId, version);
+            var command = new CreateRuleCommentCommand(gameId, version, request.LineNumber, request.CommentText, userId);
+            var comment = await mediator.Send(command, ct);
+            logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
+            return Results.Created($"/api/v1/comments/{comment.Id}", comment);
         })
         .RequireAuthorization()
         .WithName("CreateRuleSpecComment")
@@ -350,40 +305,15 @@ public static class RuleSpecEndpoints
 
             if (!Guid.TryParse(session!.User.Id, out var userId))
             {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+                throw new BadRequestException("Invalid user ID format");
             }
 
-            try
-            {
-                logger.LogInformation("User {UserId} replying to comment {CommentId}", userId, commentId);
-                var command = new ReplyToRuleCommentCommand(commentId, request.CommentText, userId);
-                var reply = await mediator.Send(command, ct);
-                logger.LogInformation("Reply {ReplyId} created successfully", reply.Id);
-                return Results.Created($"/api/v1/comments/{reply.Id}", reply);
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Handlers throw InvalidOperationException for not found and other business logic errors
-                logger.LogWarning("Failed to create reply to comment {CommentId}: {Error}", commentId, ex.Message);
-
-                // Return 404 if the error indicates "not found", otherwise 400
-                if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                {
-                    return Results.NotFound(new { error = ex.Message });
-                }
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 400 response
-            // All business exceptions are handled in RuleCommentService; this catches unexpected infrastructure failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
-                // Specific exception handling occurs in service layer (RuleSpecService)
-                logger.LogError(ex, "Unexpected error creating reply to comment {CommentId}", commentId);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning restore CA1031
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            logger.LogInformation("User {UserId} replying to comment {CommentId}", userId, commentId);
+            var command = new ReplyToRuleCommentCommand(commentId, request.CommentText, userId);
+            var reply = await mediator.Send(command, ct);
+            logger.LogInformation("Reply {ReplyId} created successfully", reply.Id);
+            return Results.Created($"/api/v1/comments/{reply.Id}", reply);
         })
         .RequireAuthorization()
         .WithName("CreateCommentReply")
@@ -464,36 +394,18 @@ public static class RuleSpecEndpoints
 
             if (!Guid.TryParse(session!.User.Id, out var userId))
             {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+                throw new BadRequestException("Invalid user ID format");
             }
 
-            try
-            {
-                logger.LogInformation("User {UserId} resolving comment {CommentId} (resolveReplies: {ResolveReplies})",
-                    userId, commentId, resolveReplies);
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            logger.LogInformation("User {UserId} resolving comment {CommentId} (resolveReplies: {ResolveReplies})",
+                userId, commentId, resolveReplies);
 
-                var isAdmin = session!.User.Role == "admin";
-                var command = new ResolveRuleCommentCommand(commentId, userId, isAdmin, resolveReplies);
-                var comment = await mediator.Send(command, ct);
-                logger.LogInformation("Comment {CommentId} resolved successfully", commentId);
-                return Results.Ok(comment);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("Comment {CommentId} not found for resolution", commentId);
-                return Results.NotFound(new { error = ex.Message });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 400 response
-            // All business exceptions are handled in RuleCommentService; this catches unexpected infrastructure failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
-                // Specific exception handling occurs in service layer (RuleSpecService)
-                logger.LogError(ex, "Failed to resolve comment {CommentId}", commentId);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning restore CA1031
+            var isAdmin = session!.User.Role == "admin";
+            var command = new ResolveRuleCommentCommand(commentId, userId, isAdmin, resolveReplies);
+            var comment = await mediator.Send(command, ct);
+            logger.LogInformation("Comment {CommentId} resolved successfully", commentId);
+            return Results.Ok(comment);
         })
         .RequireAuthorization()
         .WithName("ResolveComment")
@@ -519,36 +431,18 @@ public static class RuleSpecEndpoints
 
             if (!Guid.TryParse(session!.User.Id, out var userId))
             {
-                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+                throw new BadRequestException("Invalid user ID format");
             }
 
-            try
-            {
-                logger.LogInformation("User {UserId} unresolving comment {CommentId} (unresolveParent: {UnresolveParent})",
-                    userId, commentId, unresolveParent);
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            logger.LogInformation("User {UserId} unresolving comment {CommentId} (unresolveParent: {UnresolveParent})",
+                userId, commentId, unresolveParent);
 
-                var isAdmin = session!.User.Role == "admin";
-                var command = new UnresolveRuleCommentCommand(commentId, userId, isAdmin, unresolveParent);
-                var comment = await mediator.Send(command, ct);
-                logger.LogInformation("Comment {CommentId} unresolved successfully", commentId);
-                return Results.Ok(comment);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("Comment {CommentId} not found for unresolve", commentId);
-                return Results.NotFound(new { error = ex.Message });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 400 response
-            // All business exceptions are handled in RuleCommentService; this catches unexpected infrastructure failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
-                // Specific exception handling occurs in service layer (RuleSpecService)
-                logger.LogError(ex, "Failed to unresolve comment {CommentId}", commentId);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning restore CA1031
+            var isAdmin = session!.User.Role == "admin";
+            var command = new UnresolveRuleCommentCommand(commentId, userId, isAdmin, unresolveParent);
+            var comment = await mediator.Send(command, ct);
+            logger.LogInformation("Comment {CommentId} unresolved successfully", commentId);
+            return Results.Ok(comment);
         })
         .RequireAuthorization()
         .WithName("UnresolveComment")
@@ -568,52 +462,30 @@ public static class RuleSpecEndpoints
 
             if (request?.RuleSpecIds == null || request.RuleSpecIds.Count == 0)
             {
-                return Results.BadRequest(new { error = "At least one rule spec ID must be provided" });
+                throw new BadRequestException("At least one rule spec ID must be provided");
             }
 
-            try
-            {
-                logger.LogInformation("User {UserId} exporting {Count} rule specs", session!.User.Id, request.RuleSpecIds.Count);
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            logger.LogInformation("User {UserId} exporting {Count} rule specs", session!.User.Id, request.RuleSpecIds.Count);
 
-                // Convert List<string> to List<Guid>
-                var gameIds = new List<Guid>();
-                foreach (var id in request.RuleSpecIds)
+            // Convert List<string> to List<Guid>
+            var gameIds = new List<Guid>();
+            foreach (var id in request.RuleSpecIds)
+            {
+                if (!Guid.TryParse(id, out var guid))
                 {
-                    if (!Guid.TryParse(id, out var guid))
-                    {
-                        return Results.BadRequest(new { error = $"Invalid rule spec ID format: {id}" });
-                    }
-                    gameIds.Add(guid);
+                    throw new BadRequestException($"Invalid rule spec ID format: {id}");
                 }
+                gameIds.Add(guid);
+            }
 
-                var command = new ExportRuleSpecsCommand(gameIds);
-                var zipBytes = await mediator.Send(command, ct);
+            var command = new ExportRuleSpecsCommand(gameIds);
+            var zipBytes = await mediator.Send(command, ct);
 
-                var fileName = $"meepleai-rulespecs-{DateTime.UtcNow:yyyy-MM-dd}.zip";
-                logger.LogInformation("Successfully created ZIP archive {FileName} with {Size} bytes", fileName, zipBytes.Length);
+            var fileName = $"meepleai-rulespecs-{DateTime.UtcNow:yyyy-MM-dd}.zip";
+            logger.LogInformation("Successfully created ZIP archive {FileName} with {Size} bytes", fileName, zipBytes.Length);
 
-                return Results.File(zipBytes, "application/zip", fileName);
-            }
-            catch (ArgumentException ex)
-            {
-                logger.LogWarning("Invalid export request: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Export operation failed: {Error}", ex.Message);
-                return Results.Problem(ex.Message, statusCode: StatusCodes.Status500InternalServerError);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in Command Handler; this catches unexpected infrastructure failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                logger.LogError(ex, "Unexpected error during rule spec export");
-                return Results.Problem("An error occurred during export", statusCode: StatusCodes.Status500InternalServerError);
-            }
-#pragma warning restore CA1031
+            return Results.File(zipBytes, "application/zip", fileName);
         });
 
         return group;

@@ -1,6 +1,7 @@
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -42,10 +43,11 @@ public static class ChatEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             var chat = await chatService.GetChatByIdAsync(chatId, session.User.Id, ct);
             if (chat == null)
             {
-                return Results.NotFound(new { error = "Chat not found" });
+                throw new NotFoundException("Chat", chatId.ToString());
             }
 
             var messages = chat.Logs.Select(l => new ChatMessageDto(
@@ -77,43 +79,36 @@ public static class ChatEndpoints
 
             if (request == null)
             {
-                return Results.BadRequest(new { error = "Request body is required" });
+                throw new BadRequestException("Request body is required");
             }
 
             if (string.IsNullOrWhiteSpace(request.GameId) || string.IsNullOrWhiteSpace(request.AgentId))
             {
-                return Results.BadRequest(new { error = "GameId and AgentId are required" });
+                throw new BadRequestException("GameId and AgentId are required");
             }
 
-            try
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            var chat = await chatService.CreateChatAsync(session.User.Id, request.GameId, request.AgentId, ct);
+
+            // Reload with navigations
+            var fullChat = await chatService.GetChatByIdAsync(chat.Id, session.User.Id, ct);
+            if (fullChat == null)
             {
-                var chat = await chatService.CreateChatAsync(session.User.Id, request.GameId, request.AgentId, ct);
-
-                // Reload with navigations
-                var fullChat = await chatService.GetChatByIdAsync(chat.Id, session.User.Id, ct);
-                if (fullChat == null)
-                {
-                    return Results.StatusCode(StatusCodes.Status500InternalServerError);
-                }
-
-                var response = new ChatDto(
-                    fullChat.Id,
-                    fullChat.GameId.ToString(),
-                    fullChat.Game.Name,
-                    fullChat.AgentId.ToString(),
-                    fullChat.Agent.Name,
-                    fullChat.StartedAt,
-                    fullChat.LastMessageAt
-                );
-
-                logger.LogInformation("User {UserId} created chat {ChatId} for game {GameId}", session.User.Id, chat.Id, request.GameId);
-                return Results.Created($"/chats/{chat.Id}", response);
+                throw new InvalidOperationException("Failed to retrieve created chat");
             }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "Invalid chat creation request");
-                return Results.BadRequest(new { error = ex.Message });
-            }
+
+            var response = new ChatDto(
+                fullChat.Id,
+                fullChat.GameId.ToString(),
+                fullChat.Game.Name,
+                fullChat.AgentId.ToString(),
+                fullChat.Agent.Name,
+                fullChat.StartedAt,
+                fullChat.LastMessageAt
+            );
+
+            logger.LogInformation("User {UserId} created chat {ChatId} for game {GameId}", session.User.Id, chat.Id, request.GameId);
+            return Results.Created($"/chats/{chat.Id}", response);
         });
 
         group.MapDelete("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, ChatService chatService, ILogger<Program> logger, CancellationToken ct) =>
@@ -121,22 +116,15 @@ public static class ChatEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            var deleted = await chatService.DeleteChatAsync(chatId, session.User.Id, ct);
+            if (!deleted)
             {
-                var deleted = await chatService.DeleteChatAsync(chatId, session.User.Id, ct);
-                if (!deleted)
-                {
-                    return Results.NotFound(new { error = "Chat not found" });
-                }
+                throw new NotFoundException("Chat", chatId.ToString());
+            }
 
-                logger.LogInformation("User {UserId} deleted chat {ChatId}", session.User.Id, chatId);
-                return Results.NoContent();
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                logger.LogWarning(ex, "Unauthorized chat deletion attempt");
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            logger.LogInformation("User {UserId} deleted chat {ChatId}", session.User.Id, chatId);
+            return Results.NoContent();
         });
 
         // CHAT-06: Message editing endpoint
@@ -164,41 +152,13 @@ public static class ChatEndpoints
                         statusCode: 403);
                 }
 
-                try
-                {
-                    logger.LogInformation("User {UserId} updating message {MessageId} in chat {ChatId}", session.User.Id, messageId, chatId);
-                    var updatedMessage = await chatService.UpdateMessageAsync(chatId, messageId, request.Content, session.User.Id, ct);
+                // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+                logger.LogInformation("User {UserId} updating message {MessageId} in chat {ChatId}", session.User.Id, messageId, chatId);
+                var updatedMessage = await chatService.UpdateMessageAsync(chatId, messageId, request.Content, session.User.Id, ct);
 
-                    var response = MapToChatMessageResponse(updatedMessage);
-                    logger.LogInformation("Message {MessageId} updated successfully by user {UserId}", messageId, session.User.Id);
-                    return Results.Ok(response);
-                }
-                catch (KeyNotFoundException ex)
-                {
-                    logger.LogWarning("Message {MessageId} not found in chat {ChatId}: {Error}", messageId, chatId, ex.Message);
-                    return Results.NotFound(new { error = "message_not_found", message = ex.Message });
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    logger.LogWarning("User {UserId} not authorized to update message {MessageId}: {Error}", session.User.Id, messageId, ex.Message);
-                    return Results.Problem(statusCode: 403, detail: ex.Message, title: "Forbidden");
-                }
-                catch (InvalidOperationException ex)
-                {
-                    logger.LogWarning("Invalid operation updating message {MessageId}: {Error}", messageId, ex.Message);
-                    return Results.BadRequest(new { error = "invalid_operation", message = ex.Message });
-                }
-#pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (ChatService)
-                catch (Exception ex)
-                {
-                    // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                    // Specific exception handling occurs in service layer (ChatService)
-                    logger.LogError(ex, "Error updating message {MessageId} in chat {ChatId}", messageId, chatId);
-                    return Results.Problem(statusCode: 500, detail: "An error occurred while updating the message", title: "Internal Server Error");
-                }
-#pragma warning restore CA1031
+                var response = MapToChatMessageResponse(updatedMessage);
+                logger.LogInformation("Message {MessageId} updated successfully by user {UserId}", messageId, session.User.Id);
+                return Results.Ok(response);
             })
             .RequireAuthorization()
             .WithName("UpdateChatMessage")
@@ -231,41 +191,18 @@ public static class ChatEndpoints
 
                 var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
-                try
-                {
-                    logger.LogInformation("User {UserId} deleting message {MessageId} in chat {ChatId} (admin: {IsAdmin})", session.User.Id, messageId, chatId, isAdmin);
-                    var deleted = await chatService.DeleteMessageAsync(chatId, messageId, session.User.Id, isAdmin, ct);
+                // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+                logger.LogInformation("User {UserId} deleting message {MessageId} in chat {ChatId} (admin: {IsAdmin})", session.User.Id, messageId, chatId, isAdmin);
+                var deleted = await chatService.DeleteMessageAsync(chatId, messageId, session.User.Id, isAdmin, ct);
 
-                    if (!deleted)
-                    {
-                        logger.LogInformation("Message {MessageId} already deleted", messageId);
-                        return Results.Ok(new { message = "Message already deleted" });
-                    }
+                if (!deleted)
+                {
+                    logger.LogInformation("Message {MessageId} already deleted", messageId);
+                    return Results.Ok(new { message = "Message already deleted" });
+                }
 
-                    logger.LogInformation("Message {MessageId} deleted successfully by user {UserId}", messageId, session.User.Id);
-                    return Results.NoContent();
-                }
-                catch (KeyNotFoundException ex)
-                {
-                    logger.LogWarning("Message {MessageId} not found in chat {ChatId}: {Error}", messageId, chatId, ex.Message);
-                    return Results.NotFound(new { error = "message_not_found", message = ex.Message });
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    logger.LogWarning("User {UserId} not authorized to delete message {MessageId}: {Error}", session.User.Id, messageId, ex.Message);
-                    return Results.Problem(statusCode: 403, detail: ex.Message, title: "Forbidden");
-                }
-#pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (ChatService)
-                catch (Exception ex)
-                {
-                    // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                    // Specific exception handling occurs in service layer (ChatService)
-                    logger.LogError(ex, "Error deleting message {MessageId} in chat {ChatId}", messageId, chatId);
-                    return Results.Problem(statusCode: 500, detail: "An error occurred while deleting the message", title: "Internal Server Error");
-                }
-#pragma warning restore CA1031
+                logger.LogInformation("Message {MessageId} deleted successfully by user {UserId}", messageId, session.User.Id);
+                return Results.NoContent();
             })
             .RequireAuthorization()
             .WithName("DeleteChatMessage")

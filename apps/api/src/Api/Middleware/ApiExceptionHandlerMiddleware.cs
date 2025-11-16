@@ -1,5 +1,7 @@
 using System;
+using Api.Middleware.Exceptions;
 using Api.Observability;
+using Api.SharedKernel.Domain.Exceptions;
 
 namespace Api.Middleware;
 
@@ -123,6 +125,31 @@ public class ApiExceptionHandlerMiddleware
     {
         return ex switch
         {
+            // Custom HTTP exceptions (from Middleware/Exceptions)
+            HttpException httpEx => (
+                httpEx.StatusCode,
+                httpEx.ErrorCode,
+                httpEx.Message
+            ),
+            NotFoundException notFoundEx => (
+                StatusCodes.Status404NotFound,
+                "not_found",
+                notFoundEx.Message
+            ),
+
+            // Domain exceptions (from SharedKernel)
+            ValidationException validationEx => (
+                StatusCodes.Status400BadRequest,
+                "validation_error",
+                validationEx.Message
+            ),
+            DomainException domainEx => (
+                StatusCodes.Status400BadRequest,
+                "domain_error",
+                domainEx.Message
+            ),
+
+            // System exceptions with specific mappings
             ArgumentException or ArgumentNullException => (
                 StatusCodes.Status400BadRequest,
                 "bad_request",
@@ -133,7 +160,12 @@ public class ApiExceptionHandlerMiddleware
                 "forbidden",
                 "Access denied"
             ),
-            InvalidOperationException when ex.Message.Contains("not found") => (
+            KeyNotFoundException => (
+                StatusCodes.Status404NotFound,
+                "not_found",
+                "Resource not found"
+            ),
+            InvalidOperationException when ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase) => (
                 StatusCodes.Status404NotFound,
                 "not_found",
                 "Resource not found"
@@ -143,6 +175,8 @@ public class ApiExceptionHandlerMiddleware
                 "timeout",
                 "Request timed out"
             ),
+
+            // Default fallback for unknown exceptions
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "internal_server_error",

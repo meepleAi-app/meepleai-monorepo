@@ -148,6 +148,9 @@ builder.Services.AddInfrastructureServices(builder.Configuration, builder.Enviro
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
+// ISSUE-1194: HttpContextAccessor for pipeline behaviors
+builder.Services.AddHttpContextAccessor();
+
 // DDD-PHASE1: MediatR for CQRS (Commands, Queries, Handlers)
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 

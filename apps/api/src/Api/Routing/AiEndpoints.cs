@@ -59,210 +59,157 @@ public static class AiEndpoints
             logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query} (bypassCache: {BypassCache}, generateFollowUps: {GenerateFollowUps})",
                 session.User.Id, req.gameId, req.query, bypassCache, generateFollowUps);
 
-            try
+            // ISSUE-1194: Error handling now centralized in middleware + pipeline behavior
+            // Persist user query to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue)
             {
-                // Persist user query to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
-                {
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "user",
-                        req.query,
-                        new { endpoint = "qa", gameId = req.gameId, bypassCache, generateFollowUps },
-                        ct);
-                }
-
-                // AI-14: Use hybrid search with configurable search mode (default: Hybrid)
-                // PERF-03: Support cache bypass via query parameter
-                // AI-09: Language parameter defaults to null (uses "en")
-                var resp = await rag.AskWithHybridSearchAsync(
-                    req.gameId,
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.Id,
+                    "user",
                     req.query,
-                    searchMode: req.searchMode,
-                    language: null,
-                    bypassCache,
+                    new { endpoint = "qa", gameId = req.gameId, bypassCache, generateFollowUps },
                     ct);
-                var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-                // CHAT-02: Generate follow-up questions if enabled
-                IReadOnlyList<string>? followUpQuestions = null;
-                // CHAT-02: Generate follow-up questions using CQRS query (Issue #1188)
-                if (generateFollowUps)
-                {
-                    var gameGuid = Guid.Parse(req.gameId);
-                    var game = await dbContext.Games
-                        .Where(g => g.Id == gameGuid)
-                        .AsNoTracking()
-                        .Select(g => g.Name)
-                        .FirstOrDefaultAsync(ct);
-
-                    if (!string.IsNullOrEmpty(game))
-                    {
-                        followUpQuestions = await mediator.Send(new GenerateFollowUpQuestionsQuery
-                        {
-                            OriginalQuestion = req.query,
-                            GeneratedAnswer = resp.answer,
-                            RagContext = resp.snippets,
-                            GameName = game,
-                            MaxQuestions = 5
-                        }, ct);
-
-                        logger.LogInformation("Generated {Count} follow-up questions for game {GameId}",
-                            followUpQuestions.Count, req.gameId);
-                    }
-                }
-
-                // Create response with follow-up questions
-                var finalResponse = new QaResponse(
-                    resp.answer,
-                    resp.snippets,
-                    resp.promptTokens,
-                    resp.completionTokens,
-                    resp.totalTokens,
-                    resp.confidence,
-                    resp.metadata,
-                    followUpQuestions); // CHAT-02
-
-                logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
-
-                // AI-11: Calculate quality scores from response data using actual RAG scores
-                var ragSearchResults = resp.snippets.Select(s => new RagSearchResult { Score = s.score }).ToList();
-                var citations = resp.snippets.Select(s => new Citation
-                {
-                    DocumentId = Guid.NewGuid(), // Placeholder - snippets don't have document IDs
-                    PageNumber = s.page,
-                    SnippetText = s.text
-                }).ToList();
-                var qualityScores = qualityService.CalculateQualityScores(
-                    ragSearchResults,
-                    citations,
-                    resp.answer,
-                    null); // Let service calculate LLM confidence from response text (resp.confidence is RAG max, not LLM confidence)
-
-                // AI-11: Debug logging for quality scores
-                logger.LogInformation(
-                    "Quality scores calculated - RAG: {RagConf:F3}, LLM: {LlmConf:F3}, Citation: {CitConf:F3}, Overall: {OverallConf:F3}, IsLowQuality: {IsLowQuality}, SnippetScores: [{Scores}]",
-                    qualityScores.RagConfidence,
-                    qualityScores.LlmConfidence,
-                    qualityScores.CitationQuality,
-                    qualityScores.OverallConfidence,
-                    qualityScores.IsLowQuality,
-                    string.Join(", ", ragSearchResults.Select(r => r.Score.ToString("F3"))));
-
-                string? model = null;
-                string? finishReason = null;
-                if (resp.metadata != null)
-                {
-                    if (resp.metadata.TryGetValue("model", out var metadataModel))
-                    {
-                        model = metadataModel;
-                    }
-
-                    if (resp.metadata.TryGetValue("finish_reason", out var metadataFinish))
-                    {
-                        finishReason = metadataFinish;
-                    }
-                }
-
-                // Persist agent response to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
-                {
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "assistant",
-                        resp.answer,
-                        new
-                        {
-                            endpoint = "qa",
-                            gameId = req.gameId,
-                            promptTokens = resp.promptTokens,
-                            completionTokens = resp.completionTokens,
-                            totalTokens = resp.totalTokens,
-                            confidence = resp.confidence,
-                            model,
-                            finishReason,
-                            snippetCount = resp.snippets.Count,
-                            followUpQuestionsCount = followUpQuestions?.Count ?? 0 // CHAT-02
-                        },
-                        ct);
-                }
-
-                // ADM-01: Log AI request with AI-11 quality scores
-                await aiLog.LogRequestAsync(
-                    session.User.Id,
-                    req.gameId,
-                    "qa",
-                    req.query,
-                    resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
-                    latencyMs,
-                    resp.totalTokens,
-                    resp.confidence,
-                    "Success",
-                    null,
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString(),
-                    promptTokens: resp.promptTokens,
-                    completionTokens: resp.completionTokens,
-                    model: model,
-                    finishReason: finishReason,
-                    qualityScores: qualityScores, // AI-11: Include quality scores
-                    ct: ct);
-
-                return Results.Json(finalResponse); // CHAT-02: Return response with follow-up questions
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
+
+            // AI-14: Use hybrid search with configurable search mode (default: Hybrid)
+            // PERF-03: Support cache bypass via query parameter
+            // AI-09: Language parameter defaults to null (uses "en")
+            var resp = await rag.AskWithHybridSearchAsync(
+                req.gameId,
+                req.query,
+                searchMode: req.searchMode,
+                language: null,
+                bypassCache,
+                ct);
+            var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+            // CHAT-02: Generate follow-up questions if enabled
+            IReadOnlyList<string>? followUpQuestions = null;
+            // CHAT-02: Generate follow-up questions using CQRS query (Issue #1188)
+            if (generateFollowUps)
             {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (RagService, LlmService, etc.)
-                var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+                var gameGuid = Guid.Parse(req.gameId);
+                var game = await dbContext.Games
+                    .Where(g => g.Id == gameGuid)
+                    .AsNoTracking()
+                    .Select(g => g.Name)
+                    .FirstOrDefaultAsync(ct);
 
-                // Persist error to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
+                if (!string.IsNullOrEmpty(game))
                 {
-                    try
+                    followUpQuestions = await mediator.Send(new GenerateFollowUpQuestionsQuery
                     {
-                        await chatService.AddMessageAsync(
-                            req.chatId.Value,
-                            session.User.Id,
-                            "error",
-                            $"Failed to process QA request: {ex.Message}",
-                            new { endpoint = "qa", gameId = req.gameId, error = ex.GetType().Name },
-                            ct);
-                    }
-#pragma warning disable CA1031 // Do not catch general exception types
-                    // Justification: Cleanup operation - must not throw during error handling
-                    // Chat logging is non-critical; failure should be logged but not propagate
-                    catch (Exception chatEx)
-                    {
-                        // Resilience pattern: Chat logging failure shouldn't break error response flow
-                        // Fail-open to ensure client receives error message even if chat persistence fails
-                        logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
-                    }
-#pragma warning restore CA1031
+                        OriginalQuestion = req.query,
+                        GeneratedAnswer = resp.answer,
+                        RagContext = resp.snippets,
+                        GameName = game,
+                        MaxQuestions = 5
+                    }, ct);
+
+                    logger.LogInformation("Generated {Count} follow-up questions for game {GameId}",
+                        followUpQuestions.Count, req.gameId);
+                }
+            }
+
+            // Create response with follow-up questions
+            var finalResponse = new QaResponse(
+                resp.answer,
+                resp.snippets,
+                resp.promptTokens,
+                resp.completionTokens,
+                resp.totalTokens,
+                resp.confidence,
+                resp.metadata,
+                followUpQuestions); // CHAT-02
+
+            logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
+
+            // AI-11: Calculate quality scores from response data using actual RAG scores
+            var ragSearchResults = resp.snippets.Select(s => new RagSearchResult { Score = s.score }).ToList();
+            var citations = resp.snippets.Select(s => new Citation
+            {
+                DocumentId = Guid.NewGuid(), // Placeholder - snippets don't have document IDs
+                PageNumber = s.page,
+                SnippetText = s.text
+            }).ToList();
+            var qualityScores = qualityService.CalculateQualityScores(
+                ragSearchResults,
+                citations,
+                resp.answer,
+                null); // Let service calculate LLM confidence from response text (resp.confidence is RAG max, not LLM confidence)
+
+            // AI-11: Debug logging for quality scores
+            logger.LogInformation(
+                "Quality scores calculated - RAG: {RagConf:F3}, LLM: {LlmConf:F3}, Citation: {CitConf:F3}, Overall: {OverallConf:F3}, IsLowQuality: {IsLowQuality}, SnippetScores: [{Scores}]",
+                qualityScores.RagConfidence,
+                qualityScores.LlmConfidence,
+                qualityScores.CitationQuality,
+                qualityScores.OverallConfidence,
+                qualityScores.IsLowQuality,
+                string.Join(", ", ragSearchResults.Select(r => r.Score.ToString("F3"))));
+
+            string? model = null;
+            string? finishReason = null;
+            if (resp.metadata != null)
+            {
+                if (resp.metadata.TryGetValue("model", out var metadataModel))
+                {
+                    model = metadataModel;
                 }
 
-                // ADM-01: Log failed AI request
-                await aiLog.LogRequestAsync(
-                    session.User.Id,
-                    req.gameId,
-                    "qa",
-                    req.query,
-                    null,
-                    latencyMs,
-                    status: "Error",
-                    errorMessage: ex.Message,
-                    ipAddress: context.Connection.RemoteIpAddress?.ToString(),
-                    userAgent: context.Request.Headers.UserAgent.ToString(),
-                    ct: ct);
-
-                throw;
+                if (resp.metadata.TryGetValue("finish_reason", out var metadataFinish))
+                {
+                    finishReason = metadataFinish;
+                }
             }
-#pragma warning restore CA1031
+
+            // Persist agent response to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue)
+            {
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.Id,
+                    "assistant",
+                    resp.answer,
+                    new
+                    {
+                        endpoint = "qa",
+                        gameId = req.gameId,
+                        promptTokens = resp.promptTokens,
+                        completionTokens = resp.completionTokens,
+                        totalTokens = resp.totalTokens,
+                        confidence = resp.confidence,
+                        model,
+                        finishReason,
+                        snippetCount = resp.snippets.Count,
+                        followUpQuestionsCount = followUpQuestions?.Count ?? 0 // CHAT-02
+                    },
+                    ct);
+            }
+
+            // ADM-01: Log AI request with AI-11 quality scores
+            await aiLog.LogRequestAsync(
+                session.User.Id,
+                req.gameId,
+                "qa",
+                req.query,
+                resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
+                latencyMs,
+                resp.totalTokens,
+                resp.confidence,
+                "Success",
+                null,
+                context.Connection.RemoteIpAddress?.ToString(),
+                context.Request.Headers.UserAgent.ToString(),
+                promptTokens: resp.promptTokens,
+                completionTokens: resp.completionTokens,
+                model: model,
+                finishReason: finishReason,
+                qualityScores: qualityScores, // AI-11: Include quality scores
+                ct: ct);
+
+            return Results.Json(finalResponse); // CHAT-02: Return response with follow-up questions
         })
         .WithName("QaAgent")
         .WithDescription("Ask a question about game rules using RAG (Retrieval-Augmented Generation)")
@@ -286,124 +233,71 @@ public static class AiEndpoints
             logger.LogInformation("Explain request from user {UserId} for game {GameId}: {Topic}",
                 session.User.Id, req.gameId, req.topic);
 
-            try
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            // Persist user query to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue)
             {
-                // Persist user query to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
-                {
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "user",
-                        $"Explain: {req.topic}",
-                        new { endpoint = "explain", gameId = req.gameId, topic = req.topic },
-                        ct);
-                }
-
-                // AI-09: Language parameter defaults to null (uses "en")
-                var resp = await rag.ExplainAsync(req.gameId, req.topic, language: null, ct);
-                var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-                logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
-                    req.gameId, resp.estimatedReadingTimeMinutes);
-
-                // Persist agent response to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
-                {
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "assistant",
-                        resp.script,
-                        new
-                        {
-                            endpoint = "explain",
-                            gameId = req.gameId,
-                            topic = req.topic,
-                            promptTokens = resp.promptTokens,
-                            completionTokens = resp.completionTokens,
-                            totalTokens = resp.totalTokens,
-                            confidence = resp.confidence,
-                            estimatedReadingTimeMinutes = resp.estimatedReadingTimeMinutes,
-                            outline = resp.outline,
-                            citationCount = resp.citations.Count
-                        },
-                        ct);
-                }
-
-                // ADM-01: Log AI request
-                await aiLog.LogRequestAsync(
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
                     session.User.Id,
-                    req.gameId,
-                    "explain",
-                    req.topic,
-                    resp.script?.Length > 500 ? resp.script.Substring(0, 500) : resp.script,
-                    latencyMs,
-                    resp.totalTokens,
-                    resp.confidence,
-                    "Success",
-                    null,
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString(),
-                    promptTokens: resp.promptTokens,
-                    completionTokens: resp.completionTokens,
-                    model: null,
-                    finishReason: null,
-                    ct: ct);
-
-                return Results.Json(resp);
+                    "user",
+                    $"Explain: {req.topic}",
+                    new { endpoint = "explain", gameId = req.gameId, topic = req.topic },
+                    ct);
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
+
+            // AI-09: Language parameter defaults to null (uses "en")
+            var resp = await rag.ExplainAsync(req.gameId, req.topic, language: null, ct);
+            var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+            logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
+                req.gameId, resp.estimatedReadingTimeMinutes);
+
+            // Persist agent response to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue)
             {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (RagService, LlmService, etc.)
-                var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-                // Persist error to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
-                {
-                    try
-                    {
-                        await chatService.AddMessageAsync(
-                            req.chatId.Value,
-                            session.User.Id,
-                            "error",
-                            $"Failed to process Explain request: {ex.Message}",
-                            new { endpoint = "explain", gameId = req.gameId, topic = req.topic, error = ex.GetType().Name },
-                            ct);
-                    }
-#pragma warning disable CA1031 // Do not catch general exception types
-                    // Justification: Cleanup operation - must not throw during error handling
-                    // Chat logging is non-critical; failure should be logged but not propagate
-                    catch (Exception chatEx)
-                    {
-                        // Resilience pattern: Chat logging failure shouldn't break error response flow
-                        // Fail-open to ensure client receives error message even if chat persistence fails
-                        logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
-                    }
-#pragma warning restore CA1031
-                }
-
-                // ADM-01: Log failed AI request
-                await aiLog.LogRequestAsync(
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
                     session.User.Id,
-                    req.gameId,
-                    "explain",
-                    req.topic,
-                    null,
-                    latencyMs,
-                    status: "Error",
-                    errorMessage: ex.Message,
-                    ipAddress: context.Connection.RemoteIpAddress?.ToString(),
-                    userAgent: context.Request.Headers.UserAgent.ToString(),
-                    ct: ct);
-
-                throw;
+                    "assistant",
+                    resp.script,
+                    new
+                    {
+                        endpoint = "explain",
+                        gameId = req.gameId,
+                        topic = req.topic,
+                        promptTokens = resp.promptTokens,
+                        completionTokens = resp.completionTokens,
+                        totalTokens = resp.totalTokens,
+                        confidence = resp.confidence,
+                        estimatedReadingTimeMinutes = resp.estimatedReadingTimeMinutes,
+                        outline = resp.outline,
+                        citationCount = resp.citations.Count
+                    },
+                    ct);
             }
-#pragma warning restore CA1031
+
+            // ADM-01: Log AI request
+            await aiLog.LogRequestAsync(
+                session.User.Id,
+                req.gameId,
+                "explain",
+                req.topic,
+                resp.script?.Length > 500 ? resp.script.Substring(0, 500) : resp.script,
+                latencyMs,
+                resp.totalTokens,
+                resp.confidence,
+                "Success",
+                null,
+                context.Connection.RemoteIpAddress?.ToString(),
+                context.Request.Headers.UserAgent.ToString(),
+                promptTokens: resp.promptTokens,
+                completionTokens: resp.completionTokens,
+                model: null,
+                finishReason: null,
+                ct: ct);
+
+            return Results.Json(resp);
         });
 
         // API-02: Streaming RAG Explain endpoint (SSE)
@@ -421,60 +315,24 @@ public static class AiEndpoints
             logger.LogInformation("Streaming explain request from user {UserId} for game {GameId}: {Topic}",
                 session.User.Id, req.gameId, req.topic);
 
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             // Set SSE headers
             context.Response.Headers["Content-Type"] = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
 
-            try
+            var query = new StreamExplainQuery(req.gameId, req.topic);
+            await foreach (var evt in mediator.CreateStream(query, ct))
             {
-                var query = new StreamExplainQuery(req.gameId, req.topic);
-                await foreach (var evt in mediator.CreateStream(query, ct))
-                {
-                    // Serialize event as JSON
-                    var json = System.Text.Json.JsonSerializer.Serialize(evt);
+                // Serialize event as JSON
+                var json = System.Text.Json.JsonSerializer.Serialize(evt);
 
-                    // Write SSE format: "data: {json}\n\n"
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
-                }
+                // Write SSE format: "data: {json}\n\n"
+                await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                await context.Response.Body.FlushAsync(ct);
+            }
 
-                logger.LogInformation("Streaming explain completed for game {GameId}, topic: {Topic}", req.gameId, req.topic);
-            }
-            catch (OperationCanceledException)
-            {
-                logger.LogInformation("Streaming explain cancelled by client for game {GameId}, topic: {Topic}", req.gameId, req.topic);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
-            // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
-                // Sends error event to client stream, specific exception handling in service layer
-                logger.LogError(ex, "Error during streaming explain for game {GameId}, topic: {Topic}", req.gameId, req.topic);
-
-                // Send error event if possible
-                try
-                {
-                    var errorEvent = new RagStreamingEvent(
-                        StreamingEventType.Error,
-                        new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
-                        DateTime.UtcNow);
-                    var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
-                }
-#pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: Cleanup operation - must not throw during disposal/cleanup
-                // Error event sending failure is logged but suppressed to ensure graceful stream termination
-                catch
-                {
-                    // If we can't send error event, client connection is likely broken
-                }
-#pragma warning restore CA1031
-            }
-#pragma warning restore CA1031
+            logger.LogInformation("Streaming explain completed for game {GameId}, topic: {Topic}", req.gameId, req.topic);
 
             return Results.Empty;
         });
@@ -526,255 +384,152 @@ public static class AiEndpoints
             logger.LogInformation("Streaming QA request from user {UserId} for game {GameId}: {Query}",
                 session.User.Id, req.gameId, req.query);
 
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             // Set SSE headers
             context.Response.Headers["Content-Type"] = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
 
-            try
+            // Persist user query to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue)
             {
-                // Persist user query to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.Id,
+                    "user",
+                    req.query,
+                    new { endpoint = "qa-stream", gameId = req.gameId },
+                    ct);
+            }
+
+            var answerBuilder = new System.Text.StringBuilder();
+            var totalTokens = 0;
+            double? confidence = null;
+            var snippets = new List<Snippet>();
+
+            // CHAT-02: Follow-up question generation (fire-and-forget after Complete event)
+            Task<IReadOnlyList<string>>? followUpTask = null;
+            IReadOnlyList<string>? followUpQuestions = null;
+            string? gameName = null;
+
+            var query = new StreamQaQuery(req.gameId, req.query, req.chatId);
+            await foreach (var evt in mediator.CreateStream(query, ct))
+            {
+                // Serialize event as JSON
+                var json = System.Text.Json.JsonSerializer.Serialize(evt);
+
+                // Write SSE format: "data: {json}\n\n"
+                await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                await context.Response.Body.FlushAsync(ct);
+
+                // Track response data for logging and chat persistence
+                // Issue #1186: Handlers now emit strongly-typed objects, not JsonElements
+                if (evt.Type == StreamingEventType.Token && evt.Data is StreamingToken tokenData)
                 {
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "user",
-                        req.query,
-                        new { endpoint = "qa-stream", gameId = req.gameId },
-                        ct);
+                    answerBuilder.Append(tokenData.token);
                 }
-
-                var answerBuilder = new System.Text.StringBuilder();
-                var totalTokens = 0;
-                double? confidence = null;
-                var snippets = new List<Snippet>();
-
-                // CHAT-02: Follow-up question generation (fire-and-forget after Complete event)
-                Task<IReadOnlyList<string>>? followUpTask = null;
-                IReadOnlyList<string>? followUpQuestions = null;
-                string? gameName = null;
-
-                var query = new StreamQaQuery(req.gameId, req.query, req.chatId);
-                await foreach (var evt in mediator.CreateStream(query, ct))
+                else if (evt.Type == StreamingEventType.Citations && evt.Data is StreamingCitations citationsData)
                 {
-                    // Serialize event as JSON
-                    var json = System.Text.Json.JsonSerializer.Serialize(evt);
+                    snippets = citationsData.citations.ToList();
+                }
+                else if (evt.Type == StreamingEventType.Complete && evt.Data is StreamingComplete completeData)
+                {
+                    totalTokens = completeData.totalTokens;
+                    confidence = completeData.confidence;
 
-                    // Write SSE format: "data: {json}\n\n"
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
-
-                    // Track response data for logging and chat persistence
-                    // Issue #1186: Handlers now emit strongly-typed objects, not JsonElements
-                    if (evt.Type == StreamingEventType.Token && evt.Data is StreamingToken tokenData)
+                    // CHAT-02: Start follow-up generation in parallel (fire-and-forget)
+                    if (generateFollowUps && followUpTask == null)
                     {
-                        answerBuilder.Append(tokenData.token);
-                    }
-                    else if (evt.Type == StreamingEventType.Citations && evt.Data is StreamingCitations citationsData)
-                    {
-                        snippets = citationsData.citations.ToList();
-                    }
-                    else if (evt.Type == StreamingEventType.Complete && evt.Data is StreamingComplete completeData)
-                    {
-                        totalTokens = completeData.totalTokens;
-                        confidence = completeData.confidence;
-
-                        // CHAT-02: Start follow-up generation in parallel (fire-and-forget)
-                        if (generateFollowUps && followUpTask == null)
+                        followUpTask = Task.Run(async () =>
                         {
-                            followUpTask = Task.Run(async () =>
+                            // Fetch game name
+                            gameName = await dbContext.Games
+                                .Where(g => g.Id.ToString() == req.gameId)
+                                .AsNoTracking()
+                                .Select(g => g.Name)
+                                .FirstOrDefaultAsync(ct);
+
+                            if (gameName == null)
                             {
-                                try
-                                {
-                                    // Fetch game name
-                                    gameName = await dbContext.Games
-                                        .Where(g => g.Id.ToString() == req.gameId)
-                                        .AsNoTracking()
-                                        .Select(g => g.Name)
-                                        .FirstOrDefaultAsync(ct);
+                                logger.LogWarning("Game {GameId} not found for follow-up generation", req.gameId);
+                                return new List<string>().AsReadOnly();
+                            }
 
-                                    if (gameName == null)
-                                    {
-                                        logger.LogWarning("Game {GameId} not found for follow-up generation", req.gameId);
-                                        return new List<string>().AsReadOnly();
-                                    }
-
-                                    var answer = answerBuilder.ToString();
-                                    // CHAT-02: Use CQRS query for follow-up generation (Issue #1188)
-                                    return await mediator.Send(new GenerateFollowUpQuestionsQuery
-                                    {
-                                        OriginalQuestion = req.query,
-                                        GeneratedAnswer = answer,
-                                        RagContext = snippets,
-                                        GameName = gameName,
-                                        MaxQuestions = 5
-                                    }, ct);
-                                }
-#pragma warning disable CA1031 // Do not catch general exception types
-                                // Justification: Background service boundary - must handle all errors without crashing
-                                // Follow-up generation is non-critical; failure returns empty list to main flow
-                                catch (Exception ex)
-                                {
-                                    // Resilience pattern: Follow-up question generation failure shouldn't break main QA response
-                                    // Fail-open to ensure user gets answer even if follow-up suggestions unavailable
-                                    logger.LogWarning(ex, "Failed to generate follow-up questions for game {GameId}", req.gameId);
-                                    return new List<string>().AsReadOnly();
-                                }
-#pragma warning restore CA1031
-                            });
-                        }
+                            var answer = answerBuilder.ToString();
+                            // CHAT-02: Use CQRS query for follow-up generation (Issue #1188)
+                            return await mediator.Send(new GenerateFollowUpQuestionsQuery
+                            {
+                                OriginalQuestion = req.query,
+                                GeneratedAnswer = answer,
+                                RagContext = snippets,
+                                GameName = gameName,
+                                MaxQuestions = 5
+                            }, ct);
+                        });
                     }
                 }
-
-                var answer = answerBuilder.ToString();
-                var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-                // CHAT-02: Wait for follow-up questions and send event
-                if (followUpTask != null)
-                {
-                    try
-                    {
-                        followUpQuestions = await followUpTask;
-                        if (followUpQuestions != null && followUpQuestions.Count > 0)
-                        {
-                            var followUpEvent = new RagStreamingEvent(
-                                StreamingEventType.FollowUpQuestions,
-                                new StreamingFollowUpQuestions(followUpQuestions),
-                                DateTime.UtcNow);
-                            var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent);
-                            await context.Response.WriteAsync($"data: {followUpJson}\n\n", ct);
-                            await context.Response.Body.FlushAsync(ct);
-
-                            logger.LogInformation("Sent {Count} follow-up questions for game {GameId}",
-                                followUpQuestions.Count, req.gameId);
-                        }
-                    }
-#pragma warning disable CA1031 // Do not catch general exception types
-                    // Justification: Cleanup operation - must not throw during error handling
-                    // SSE event sending is non-critical; failure should be logged but not propagate
-                    catch (Exception ex)
-                    {
-                        // Resilience pattern: SSE event sending failure for follow-up questions shouldn't break response
-                        // Fail-open to ensure client receives main answer even if follow-up streaming fails
-                        logger.LogWarning(ex, "Failed to send follow-up questions event for game {GameId}", req.gameId);
-                    }
-#pragma warning restore CA1031
-                }
-
-                logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
-
-                // Persist agent response to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue && !string.IsNullOrWhiteSpace(answer))
-                {
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "assistant",
-                        answer,
-                        new
-                        {
-                            endpoint = "qa-stream",
-                            gameId = req.gameId,
-                            totalTokens,
-                            confidence,
-                            snippetCount = snippets.Count,
-                            followUpQuestionsCount = followUpQuestions?.Count ?? 0 // CHAT-02
-                        },
-                        ct);
-                }
-
-                // Log AI request
-                await aiLog.LogRequestAsync(
-                    session.User.Id,
-                    req.gameId,
-                    "qa-stream",
-                    req.query,
-                    answer?.Length > 500 ? answer.Substring(0, 500) : answer,
-                    latencyMs,
-                    totalTokens,
-                    confidence,
-                    "Success",
-                    null,
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString(),
-                    completionTokens: totalTokens,
-                    ct: ct);
             }
-            catch (OperationCanceledException)
+
+            var answer = answerBuilder.ToString();
+            var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+            // CHAT-02: Wait for follow-up questions and send event
+            if (followUpTask != null)
             {
-                logger.LogInformation("Streaming QA cancelled by client for game {GameId}, query: {Query}", req.gameId, req.query);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
-            // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
-                // Sends error event to client stream, specific exception handling in service layer
-                var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-                logger.LogError(ex, "Error during streaming QA for game {GameId}, query: {Query}", req.gameId, req.query);
-
-                // Persist error to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
+                followUpQuestions = await followUpTask;
+                if (followUpQuestions != null && followUpQuestions.Count > 0)
                 {
-                    try
-                    {
-                        await chatService.AddMessageAsync(
-                            req.chatId.Value,
-                            session.User.Id,
-                            "error",
-                            $"Failed to process streaming QA request: {ex.Message}",
-                            new { endpoint = "qa-stream", gameId = req.gameId, error = ex.GetType().Name },
-                            ct);
-                    }
-#pragma warning disable CA1031 // Do not catch general exception types
-                    // Justification: Cleanup operation - must not throw during error handling
-                    // Chat logging is non-critical; failure should be logged but not propagate
-                    catch (Exception chatEx)
-                    {
-                        // Resilience pattern: Chat logging failure shouldn't break error response flow
-                        // Fail-open to ensure client receives error message even if chat persistence fails
-                        logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
-                    }
-#pragma warning restore CA1031
-                }
-
-                // Log failed AI request
-                await aiLog.LogRequestAsync(
-                    session.User.Id,
-                    req.gameId,
-                    "qa-stream",
-                    req.query,
-                    null,
-                    latencyMs,
-                    status: "Error",
-                    errorMessage: ex.Message,
-                    ipAddress: context.Connection.RemoteIpAddress?.ToString(),
-                    userAgent: context.Request.Headers.UserAgent.ToString(),
-                    ct: ct);
-
-                // Send error event if possible
-                try
-                {
-                    var errorEvent = new RagStreamingEvent(
-                        StreamingEventType.Error,
-                        new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
+                    var followUpEvent = new RagStreamingEvent(
+                        StreamingEventType.FollowUpQuestions,
+                        new StreamingFollowUpQuestions(followUpQuestions),
                         DateTime.UtcNow);
-                    var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                    var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent);
+                    await context.Response.WriteAsync($"data: {followUpJson}\n\n", ct);
                     await context.Response.Body.FlushAsync(ct);
+
+                    logger.LogInformation("Sent {Count} follow-up questions for game {GameId}",
+                        followUpQuestions.Count, req.gameId);
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: Cleanup operation - must not throw during disposal/cleanup
-                // Error event sending failure is logged but suppressed to ensure graceful stream termination
-                catch
-                {
-                    // If we can't send error event, client connection is likely broken
-                }
-#pragma warning restore CA1031
             }
-#pragma warning restore CA1031
+
+            logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
+
+            // Persist agent response to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue && !string.IsNullOrWhiteSpace(answer))
+            {
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.Id,
+                    "assistant",
+                    answer,
+                    new
+                    {
+                        endpoint = "qa-stream",
+                        gameId = req.gameId,
+                        totalTokens,
+                        confidence,
+                        snippetCount = snippets.Count,
+                        followUpQuestionsCount = followUpQuestions?.Count ?? 0 // CHAT-02
+                    },
+                    ct);
+            }
+
+            // Log AI request
+            await aiLog.LogRequestAsync(
+                session.User.Id,
+                req.gameId,
+                "qa-stream",
+                req.query,
+                answer?.Length > 500 ? answer.Substring(0, 500) : answer,
+                latencyMs,
+                totalTokens,
+                confidence,
+                "Success",
+                null,
+                context.Connection.RemoteIpAddress?.ToString(),
+                context.Request.Headers.UserAgent.ToString(),
+                completionTokens: totalTokens,
+                ct: ct);
 
             return Results.Empty;
         });
@@ -803,155 +558,119 @@ public static class AiEndpoints
             logger.LogInformation("Setup guide streaming request from user {UserId} for game {GameId}",
                 session.User.Id, req.gameId);
 
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             // Set SSE headers for streaming
             context.Response.Headers["Content-Type"] = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
 
-            try
+            // Persist user query to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue)
             {
-                // Persist user query to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
-                {
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "user",
-                        "Generate setup guide",
-                        new { endpoint = "setup-stream", gameId = req.gameId },
-                        ct);
-                }
-
-                var steps = new List<SetupGuideStep>();
-                string? gameTitle = null;
-                int totalTokens = 0;
-                double? confidence = null;
-                int estimatedTime = 0;
-
-                var query = new StreamSetupGuideQuery(req.gameId);
-                await foreach (var evt in mediator.CreateStream(query, ct))
-                {
-                    // Serialize event as JSON
-                    var json = System.Text.Json.JsonSerializer.Serialize(evt);
-
-                    // Write SSE format: "data: {json}\n\n"
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
-
-                    // Track data for chat persistence and logging
-                    if (evt.Type == StreamingEventType.SetupStep && evt.Data is System.Text.Json.JsonElement stepElement)
-                    {
-                        var stepData = System.Text.Json.JsonSerializer.Deserialize<StreamingSetupStep>(stepElement.GetRawText());
-                        if (stepData?.step != null)
-                        {
-                            steps.Add(stepData.step);
-                        }
-                    }
-                    else if (evt.Type == StreamingEventType.Complete && evt.Data is System.Text.Json.JsonElement completeElement)
-                    {
-                        var completeData = System.Text.Json.JsonSerializer.Deserialize<StreamingComplete>(completeElement.GetRawText());
-                        if (completeData != null)
-                        {
-                            estimatedTime = completeData.estimatedReadingTimeMinutes;
-                            totalTokens = completeData.totalTokens;
-                            confidence = completeData.confidence;
-                        }
-                    }
-                }
-
-                var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-                logger.LogInformation("Setup guide streaming completed for game {GameId}, {StepCount} steps, estimated {Minutes} min",
-                    req.gameId, steps.Count, estimatedTime);
-
-                // Persist agent response to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
-                {
-                    var setupSummary = steps.Count > 0
-                        ? string.Join("; ", steps.Take(3).Select(s => $"{s.stepNumber}. {s.title}")) + (steps.Count > 3 ? "..." : "")
-                        : "No steps generated";
-
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "assistant",
-                        $"Setup guide for {gameTitle}: {setupSummary}",
-                        new
-                        {
-                            endpoint = "setup-stream",
-                            gameId = req.gameId,
-                            gameTitle,
-                            totalTokens,
-                            confidence,
-                            estimatedSetupTimeMinutes = estimatedTime,
-                            stepCount = steps.Count,
-                            steps
-                        },
-                        ct);
-                }
-
-                // ADM-01: Log AI request
-                var responseSnippet = steps.Count > 0
-                    ? string.Join("; ", steps.Take(3).Select(s => s.instruction))
-                    : "No steps generated";
-                if (responseSnippet.Length > 500)
-                {
-                    responseSnippet = responseSnippet.Substring(0, 500);
-                }
-
-                await aiLog.LogRequestAsync(
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
                     session.User.Id,
-                    req.gameId,
-                    "setup-stream",
-                    "setup_guide",
-                    responseSnippet,
-                    latencyMs,
-                    totalTokens,
-                    confidence,
-                    "Success",
-                    null,
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString(),
-                    promptTokens: 0, // Not tracked in streaming
-                    completionTokens: totalTokens,
-                    model: null,
-                    finishReason: null,
-                    ct: ct);
+                    "user",
+                    "Generate setup guide",
+                    new { endpoint = "setup-stream", gameId = req.gameId },
+                    ct);
             }
-            catch (OperationCanceledException)
-            {
-                logger.LogInformation("Setup guide streaming cancelled by client for game {GameId}", req.gameId);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
-            // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
-                // Sends error event to client stream, specific exception handling in handler layer
-                logger.LogError(ex, "Error during setup guide streaming for game {GameId}", req.gameId);
 
-                // Send error event if possible
-                try
+            var steps = new List<SetupGuideStep>();
+            string? gameTitle = null;
+            int totalTokens = 0;
+            double? confidence = null;
+            int estimatedTime = 0;
+
+            var query = new StreamSetupGuideQuery(req.gameId);
+            await foreach (var evt in mediator.CreateStream(query, ct))
+            {
+                // Serialize event as JSON
+                var json = System.Text.Json.JsonSerializer.Serialize(evt);
+
+                // Write SSE format: "data: {json}\n\n"
+                await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                await context.Response.Body.FlushAsync(ct);
+
+                // Track data for chat persistence and logging
+                if (evt.Type == StreamingEventType.SetupStep && evt.Data is System.Text.Json.JsonElement stepElement)
                 {
-                    var errorEvent = new RagStreamingEvent(
-                        StreamingEventType.Error,
-                        new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
-                        DateTime.UtcNow);
-                    var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
+                    var stepData = System.Text.Json.JsonSerializer.Deserialize<StreamingSetupStep>(stepElement.GetRawText());
+                    if (stepData?.step != null)
+                    {
+                        steps.Add(stepData.step);
+                    }
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: Cleanup operation - must not throw during disposal/cleanup
-                // Error event sending failure is logged but suppressed to ensure graceful stream termination
-                catch
+                else if (evt.Type == StreamingEventType.Complete && evt.Data is System.Text.Json.JsonElement completeElement)
                 {
-                    // If we can't send error event, client connection is likely broken
+                    var completeData = System.Text.Json.JsonSerializer.Deserialize<StreamingComplete>(completeElement.GetRawText());
+                    if (completeData != null)
+                    {
+                        estimatedTime = completeData.estimatedReadingTimeMinutes;
+                        totalTokens = completeData.totalTokens;
+                        confidence = completeData.confidence;
+                    }
                 }
-#pragma warning restore CA1031
             }
-#pragma warning restore CA1031
+
+            var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+            logger.LogInformation("Setup guide streaming completed for game {GameId}, {StepCount} steps, estimated {Minutes} min",
+                req.gameId, steps.Count, estimatedTime);
+
+            // Persist agent response to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue)
+            {
+                var setupSummary = steps.Count > 0
+                    ? string.Join("; ", steps.Take(3).Select(s => $"{s.stepNumber}. {s.title}")) + (steps.Count > 3 ? "..." : "")
+                    : "No steps generated";
+
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.Id,
+                    "assistant",
+                    $"Setup guide for {gameTitle}: {setupSummary}",
+                    new
+                    {
+                        endpoint = "setup-stream",
+                        gameId = req.gameId,
+                        gameTitle,
+                        totalTokens,
+                        confidence,
+                        estimatedSetupTimeMinutes = estimatedTime,
+                        stepCount = steps.Count,
+                        steps
+                    },
+                    ct);
+            }
+
+            // ADM-01: Log AI request
+            var responseSnippet = steps.Count > 0
+                ? string.Join("; ", steps.Take(3).Select(s => s.instruction))
+                : "No steps generated";
+            if (responseSnippet.Length > 500)
+            {
+                responseSnippet = responseSnippet.Substring(0, 500);
+            }
+
+            await aiLog.LogRequestAsync(
+                session.User.Id,
+                req.gameId,
+                "setup-stream",
+                "setup_guide",
+                responseSnippet,
+                latencyMs,
+                totalTokens,
+                confidence,
+                "Success",
+                null,
+                context.Connection.RemoteIpAddress?.ToString(),
+                context.Request.Headers.UserAgent.ToString(),
+                promptTokens: 0, // Not tracked in streaming
+                completionTokens: totalTokens,
+                model: null,
+                finishReason: null,
+                ct: ct);
 
             return Results.Empty;
         });
@@ -972,36 +691,24 @@ public static class AiEndpoints
                 return Results.BadRequest(new { error = "messageId and endpoint are required" });
             }
 
-            try
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            await mediator.Send(new ProvideAgentFeedbackCommand
             {
-                await mediator.Send(new ProvideAgentFeedbackCommand
-                {
-                    MessageId = req.messageId,
-                    Endpoint = req.endpoint,
-                    UserId = session.User.Id,
-                    Outcome = string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
-                    GameId = req.gameId
-                }, ct);
+                MessageId = req.messageId,
+                Endpoint = req.endpoint,
+                UserId = session.User.Id,
+                Outcome = string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
+                GameId = req.gameId
+            }, ct);
 
-                logger.LogInformation(
-                    "Recorded feedback {Outcome} for message {MessageId} on endpoint {Endpoint} by user {UserId}",
-                    req.outcome ?? "cleared",
-                    req.messageId,
-                    req.endpoint,
-                    session.User.Id);
+            logger.LogInformation(
+                "Recorded feedback {Outcome} for message {MessageId} on endpoint {Endpoint} by user {UserId}",
+                req.outcome ?? "cleared",
+                req.messageId,
+                req.endpoint,
+                session.User.Id);
 
-                return Results.Json(new { ok = true });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                logger.LogError(ex, "Failed to record feedback for message {MessageId}", req.messageId);
-                return Results.Problem(detail: "Unable to record feedback", statusCode: 500);
-            }
-#pragma warning restore CA1031
+            return Results.Json(new { ok = true });
         });
 
         // CHESS-04: Chess conversational agent endpoint
@@ -1020,149 +727,96 @@ public static class AiEndpoints
             logger.LogInformation("Chess agent request from user {UserId}: {Question}, FEN: {FEN}",
                 session.User.Id, req.question, req.fenPosition ?? "none");
 
-            try
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            // Persist user query to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue)
             {
-                // Persist user query to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
-                {
-                    var queryText = !string.IsNullOrWhiteSpace(req.fenPosition)
-                        ? $"{req.question} [Position: {req.fenPosition}]"
-                        : req.question;
+                var queryText = !string.IsNullOrWhiteSpace(req.fenPosition)
+                    ? $"{req.question} [Position: {req.fenPosition}]"
+                    : req.question;
 
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "user",
-                        queryText,
-                        new { endpoint = "chess", question = req.question, fenPosition = req.fenPosition },
-                        ct);
-                }
-
-                var resp = await mediator.Send(new InvokeChessAgentCommand
-                {
-                    Question = req.question,
-                    FenPosition = req.fenPosition,
-                    ChatId = req.chatId
-                }, ct);
-                var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-                logger.LogInformation("Chess agent response delivered: {MoveCount} moves suggested",
-                    resp.suggestedMoves.Count);
-
-                string? model = null;
-                string? finishReason = null;
-                if (resp.metadata != null)
-                {
-                    if (resp.metadata.TryGetValue("model", out var metadataModel))
-                    {
-                        model = metadataModel;
-                    }
-
-                    if (resp.metadata.TryGetValue("finish_reason", out var metadataFinish))
-                    {
-                        finishReason = metadataFinish;
-                    }
-                }
-
-                // Persist agent response to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
-                {
-                    await chatService.AddMessageAsync(
-                        req.chatId.Value,
-                        session.User.Id,
-                        "assistant",
-                        resp.answer,
-                        new
-                        {
-                            endpoint = "chess",
-                            question = req.question,
-                            fenPosition = req.fenPosition,
-                            promptTokens = resp.promptTokens,
-                            completionTokens = resp.completionTokens,
-                            totalTokens = resp.totalTokens,
-                            confidence = resp.confidence,
-                            model,
-                            finishReason,
-                            sourceCount = resp.sources.Count,
-                            suggestedMoves = resp.suggestedMoves,
-                            analysis = resp.analysis
-                        },
-                        ct);
-                }
-
-                // ADM-01: Log AI request
-                await aiLog.LogRequestAsync(
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
                     session.User.Id,
-                    "chess",
-                    "chess",
-                    req.question,
-                    resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
-                    latencyMs,
-                    resp.totalTokens,
-                    resp.confidence,
-                    "Success",
-                    null,
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString(),
-                    promptTokens: resp.promptTokens,
-                    completionTokens: resp.completionTokens,
-                    model: model,
-                    finishReason: finishReason,
-                    ct: ct);
-
-                return Results.Json(resp);
+                    "user",
+                    queryText,
+                    new { endpoint = "chess", question = req.question, fenPosition = req.fenPosition },
+                    ct);
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
+
+            var resp = await mediator.Send(new InvokeChessAgentCommand
             {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (RagService, LlmService, etc.)
-                var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+                Question = req.question,
+                FenPosition = req.fenPosition,
+                ChatId = req.chatId
+            }, ct);
+            var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
-                // Persist error to chat if chatId provided
-                if (req.chatId != null && req.chatId.HasValue)
+            logger.LogInformation("Chess agent response delivered: {MoveCount} moves suggested",
+                resp.suggestedMoves.Count);
+
+            string? model = null;
+            string? finishReason = null;
+            if (resp.metadata != null)
+            {
+                if (resp.metadata.TryGetValue("model", out var metadataModel))
                 {
-                    try
-                    {
-                        await chatService.AddMessageAsync(
-                            req.chatId.Value,
-                            session.User.Id,
-                            "error",
-                            $"Failed to process chess question: {ex.Message}",
-                            new { endpoint = "chess", question = req.question, fenPosition = req.fenPosition, error = ex.GetType().Name },
-                            ct);
-                    }
-#pragma warning disable CA1031 // Do not catch general exception types
-                    // Justification: Cleanup operation - must not throw during error handling
-                    // Chat logging is non-critical; failure should be logged but not propagate
-                    catch (Exception chatEx)
-                    {
-                        // Resilience pattern: Chat logging failure shouldn't break error response flow
-                        // Fail-open to ensure client receives error message even if chat persistence fails
-                        logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
-                    }
-#pragma warning restore CA1031
+                    model = metadataModel;
                 }
 
-                // ADM-01: Log failed AI request
-                await aiLog.LogRequestAsync(
-                    session.User.Id,
-                    "chess",
-                    "chess",
-                    req.question,
-                    null,
-                    latencyMs,
-                    status: "Error",
-                    errorMessage: ex.Message,
-                    ipAddress: context.Connection.RemoteIpAddress?.ToString(),
-                    userAgent: context.Request.Headers.UserAgent.ToString(),
-                    ct: ct);
-
-                throw;
+                if (resp.metadata.TryGetValue("finish_reason", out var metadataFinish))
+                {
+                    finishReason = metadataFinish;
+                }
             }
-#pragma warning restore CA1031
+
+            // Persist agent response to chat if chatId provided
+            if (req.chatId != null && req.chatId.HasValue)
+            {
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.Id,
+                    "assistant",
+                    resp.answer,
+                    new
+                    {
+                        endpoint = "chess",
+                        question = req.question,
+                        fenPosition = req.fenPosition,
+                        promptTokens = resp.promptTokens,
+                        completionTokens = resp.completionTokens,
+                        totalTokens = resp.totalTokens,
+                        confidence = resp.confidence,
+                        model,
+                        finishReason,
+                        sourceCount = resp.sources.Count,
+                        suggestedMoves = resp.suggestedMoves,
+                        analysis = resp.analysis
+                    },
+                    ct);
+            }
+
+            // ADM-01: Log AI request
+            await aiLog.LogRequestAsync(
+                session.User.Id,
+                "chess",
+                "chess",
+                req.question,
+                resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
+                latencyMs,
+                resp.totalTokens,
+                resp.confidence,
+                "Success",
+                null,
+                context.Connection.RemoteIpAddress?.ToString(),
+                context.Request.Headers.UserAgent.ToString(),
+                promptTokens: resp.promptTokens,
+                completionTokens: resp.completionTokens,
+                model: model,
+                finishReason: finishReason,
+                ct: ct);
+
+            return Results.Json(resp);
         });
 
         group.MapGet("/bgg/search", async (
@@ -1183,35 +837,10 @@ public static class AiEndpoints
                 return Results.BadRequest(new { error = "Query parameter 'q' is required" });
             }
 
-            try
-            {
-                var results = await bggService.SearchGamesAsync(q, exact, ct);
-                logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
-                return Results.Json(new { results });
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogError(ex, "BGG API unavailable for search query: {Query}", q);
-                return Results.Json(new
-                {
-                    error = "BoardGameGeek API is currently unavailable. Please try again later.",
-                    details = ex.Message
-                }, statusCode: StatusCodes.Status503ServiceUnavailable);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (BggApiService)
-                logger.LogError(ex, "Unexpected error during BGG search: {Query}", q);
-                return Results.Json(new
-                {
-                    error = "An unexpected error occurred while searching BoardGameGeek."
-                }, statusCode: StatusCodes.Status500InternalServerError);
-            }
-#pragma warning restore CA1031
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            var results = await bggService.SearchGamesAsync(q, exact, ct);
+            logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
+            return Results.Json(new { results });
         });
 
         group.MapGet("/bgg/games/{bggId:int}", async (
@@ -1231,42 +860,17 @@ public static class AiEndpoints
                 return Results.BadRequest(new { error = "Invalid BGG ID. Must be a positive integer." });
             }
 
-            try
-            {
-                var details = await bggService.GetGameDetailsAsync(bggId, ct);
+            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+            var details = await bggService.GetGameDetailsAsync(bggId, ct);
 
-                if (details == null)
-                {
-                    logger.LogWarning("BGG game not found: {BggId}", bggId);
-                    return Results.NotFound(new { error = $"Game with BGG ID {bggId} not found" });
-                }
+            if (details == null)
+            {
+                logger.LogWarning("BGG game not found: {BggId}", bggId);
+                return Results.NotFound(new { error = $"Game with BGG ID {bggId} not found" });
+            }
 
-                logger.LogInformation("BGG game details retrieved: {BggId}, {Name}", bggId, details.Name);
-                return Results.Json(details);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogError(ex, "BGG API unavailable for game ID: {BggId}", bggId);
-                return Results.Json(new
-                {
-                    error = "BoardGameGeek API is currently unavailable. Please try again later.",
-                    details = ex.Message
-                }, statusCode: StatusCodes.Status503ServiceUnavailable);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (BggApiService)
-                logger.LogError(ex, "Unexpected error retrieving BGG game details: {BggId}", bggId);
-                return Results.Json(new
-                {
-                    error = "An unexpected error occurred while retrieving game details."
-                }, statusCode: StatusCodes.Status500InternalServerError);
-            }
-#pragma warning restore CA1031
+            logger.LogInformation("BGG game details retrieved: {BggId}, {Name}", bggId, details.Name);
+            return Results.Json(details);
         });
 
 

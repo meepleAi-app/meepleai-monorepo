@@ -96,6 +96,8 @@ jobs:
       #   run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
+      - name: Build Storybook
+        run: pnpm build-storybook --quiet
       - name: Test with Coverage
         env:
           NODE_ENV: test

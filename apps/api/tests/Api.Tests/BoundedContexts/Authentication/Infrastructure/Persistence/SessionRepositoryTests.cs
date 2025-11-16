@@ -17,7 +17,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     protected override string DatabaseName => "meepleai_session_test";
 
     protected override SessionRepository CreateRepository(MeepleAiDbContext dbContext)
-        => new SessionRepository(dbContext, TimeProvider);
+        => new SessionRepository(dbContext, MockEventCollector.Object, TimeProvider);
 
     #region GetByTokenHashAsync Tests
 

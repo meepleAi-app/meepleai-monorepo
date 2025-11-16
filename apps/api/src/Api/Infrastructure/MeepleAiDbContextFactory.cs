@@ -1,4 +1,6 @@
 using System;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -32,9 +34,10 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
 
         optionsBuilder.UseNpgsql(connectionString);
 
-        // Create a no-op mediator for design-time operations (migrations)
+        // Create no-op dependencies for design-time operations (migrations)
         var mediator = new NoOpMediator();
-        return new MeepleAiDbContext(optionsBuilder.Options, mediator);
+        var eventCollector = new NoOpEventCollector();
+        return new MeepleAiDbContext(optionsBuilder.Options, mediator, eventCollector);
     }
 
     /// <summary>
@@ -78,6 +81,23 @@ public class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDbCo
         public Task<object?> Send(object request, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException("Send not supported in design-time context");
+        }
+    }
+
+    /// <summary>
+    /// No-op event collector for design-time DbContext creation.
+    /// Domain events are not collected during migrations.
+    /// </summary>
+    private class NoOpEventCollector : IDomainEventCollector
+    {
+        public void CollectEventsFrom(IAggregateRoot aggregate)
+        {
+            // No-op: don't collect events during migrations
+        }
+
+        public IReadOnlyList<IDomainEvent> GetAndClearEvents()
+        {
+            return Array.Empty<IDomainEvent>();
         }
     }
 }

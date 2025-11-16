@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using MediatR;
@@ -31,7 +32,8 @@ public class CitationValidationServiceTests : IDisposable
             .Options;
 
         var mockMediator = new Mock<IMediator>();
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object);
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
 
         var mockLogger = new Mock<ILogger<CitationValidationService>>();
         _service = new CitationValidationService(_dbContext, mockLogger.Object);

@@ -1,4 +1,5 @@
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -8,13 +9,16 @@ namespace Api.Infrastructure;
 public class MeepleAiDbContext : DbContext
 {
     private readonly IMediator _mediator;
+    private readonly IDomainEventCollector _eventCollector;
 
     public MeepleAiDbContext(
         DbContextOptions<MeepleAiDbContext> options,
-        IMediator mediator)
+        IMediator mediator,
+        IDomainEventCollector eventCollector)
         : base(options)
     {
         _mediator = mediator;
+        _eventCollector = eventCollector;
     }
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
@@ -69,28 +73,21 @@ public class MeepleAiDbContext : DbContext
 
     /// <summary>
     /// Saves all changes made in this context to the database and dispatches domain events.
+    /// Domain events are collected by repositories via IDomainEventCollector before SaveChangesAsync.
+    /// After successful save, collected events are dispatched via MediatR.
     /// </summary>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Get all aggregate roots with domain events before saving
-        var aggregatesWithEvents = ChangeTracker.Entries<IAggregateRoot>()
-            .Where(e => e.Entity.DomainEvents.Any())
-            .Select(e => e.Entity)
-            .ToList();
-
         // Save changes first
         var result = await base.SaveChangesAsync(cancellationToken);
 
-        // Dispatch domain events after successful save
-        foreach (var aggregate in aggregatesWithEvents)
-        {
-            var events = aggregate.DomainEvents.ToList();
-            aggregate.ClearDomainEvents();
+        // Get collected domain events from repositories
+        var events = _eventCollector.GetAndClearEvents();
 
-            foreach (var domainEvent in events)
-            {
-                await _mediator.Publish(domainEvent, cancellationToken);
-            }
+        // Dispatch domain events after successful save
+        foreach (var domainEvent in events)
+        {
+            await _mediator.Publish(domainEvent, cancellationToken);
         }
 
         return result;

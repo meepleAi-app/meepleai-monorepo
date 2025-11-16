@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Tests.Infrastructure;
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -18,7 +19,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     protected override string DatabaseName => "meepleai_oauth_test";
 
     protected override OAuthAccountRepository CreateRepository(MeepleAiDbContext dbContext)
-        => new OAuthAccountRepository(dbContext, NullLogger<OAuthAccountRepository>.Instance);
+        => new OAuthAccountRepository(dbContext, MockEventCollector.Object, NullLogger<OAuthAccountRepository>.Instance);
 
     #region GetByUserIdAndProviderAsync Tests
 

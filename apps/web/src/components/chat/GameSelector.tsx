@@ -1,12 +1,13 @@
 /**
  * GameSelector - Dropdown for selecting game context
  *
- * Allows users to select which board game they want to chat about.
- * Integrates with ChatProvider for state management.
+ * Migrated to Zustand (Issue #1083):
+ * - Direct store access with granular subscriptions
+ * - Only re-renders when games or selectedGameId changes
  */
 
 import React from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatStoreWithSelectors } from '@/store/chat';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 import {
   Select,
@@ -17,7 +18,10 @@ import {
 } from '@/components/ui/select';
 
 export function GameSelector() {
-  const { games, selectedGameId, selectGame, loading } = useChatContext();
+  const games = useChatStoreWithSelectors.use.games();
+  const selectedGameId = useChatStoreWithSelectors.use.selectedGameId();
+  const selectGame = useChatStoreWithSelectors.use.selectGame();
+  const loading = useChatStoreWithSelectors.use.loading();
 
   if (loading.games) {
     return (
@@ -46,7 +50,7 @@ export function GameSelector() {
         value={selectedGameId ?? ''}
         onValueChange={(value) => {
           if (value) {
-            void selectGame(value);
+            selectGame(value);
           }
         }}
         disabled={loading.games}

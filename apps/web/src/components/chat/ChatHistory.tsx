@@ -1,18 +1,24 @@
 /**
- * ChatHistory - List of chat threads (Issue #858)
+ * ChatHistory - List of chat threads
  *
- * Displays all chat threads for the selected game.
- * Shows loading skeletons, empty state, and manages thread selection/deletion.
- * Updated to use ThreadListItem for thread display.
+ * Migrated to Zustand (Issue #1083):
+ * - Granular subscriptions (only chats, activeChatId, loading)
+ * - Direct store access eliminates context nesting
  */
 
 import React from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatStoreWithSelectors, useCurrentChats, useActiveChat } from '@/store/chat';
 import { ThreadListItem } from './ThreadListItem';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 
 export function ChatHistory() {
-  const { chats, activeChatId, selectChat, deleteChat, loading } = useChatContext();
+  const chats = useCurrentChats();
+  const activeChat = useActiveChat();
+  const selectChat = useChatStoreWithSelectors.use.selectChat();
+  const deleteChat = useChatStoreWithSelectors.use.deleteChat();
+  const loading = useChatStoreWithSelectors.use.loading();
+
+  const activeChatId = activeChat?.id ?? null;
 
   const handleSelectChat = (chatId: string) => {
     void selectChat(chatId);
@@ -43,7 +49,7 @@ export function ChatHistory() {
     );
   }
 
-  // Separate active and archived threads (Issue #858)
+  // Separate active and archived threads
   const activeThreads = chats.filter(thread => thread.status !== 'Closed');
   const archivedThreads = chats.filter(thread => thread.status === 'Closed');
 
@@ -73,7 +79,7 @@ export function ChatHistory() {
       {archivedThreads.length > 0 && (
         <div>
           <h3 className="px-3 py-1 text-[11px] font-semibold text-[#5f6368] uppercase tracking-wide">
-            Archived
+            Archived Threads
           </h3>
           <ul role="list" className="list-none m-0 p-0">
             {archivedThreads.map((thread) => (

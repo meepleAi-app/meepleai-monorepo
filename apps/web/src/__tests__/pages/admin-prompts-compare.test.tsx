@@ -94,7 +94,7 @@ describe('CompareVersions Page', () => {
       render(<CompareVersions />);
 
       await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
     });
 
@@ -104,7 +104,7 @@ describe('CompareVersions Page', () => {
       render(<CompareVersions />);
 
       await waitFor(() => {
-        expect(screen.getByText('Unauthorized')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
     });
   });

@@ -5,18 +5,17 @@
  * which board game they want to chat about.
  *
  * Target Coverage: 90%+ (from 60%)
+ *
+ * Migrated to Zustand (Issue #1083)
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GameSelector } from '../../../components/chat/GameSelector';
-
-// Mock the ChatProvider context
-const mockUseChatContext = jest.fn();
-jest.mock('../../../components/chat/ChatProvider', () => ({
-  useChatContext: () => mockUseChatContext(),
-}));
+import { renderWithChatStore, resetChatStore } from '@/__tests__/utils/zustand-test-utils';
+import { useChatStore } from '@/store/chat/store';
+import { act } from 'react';
 
 // Mock SkeletonLoader component
 jest.mock('../../../components/loading/SkeletonLoader', () => ({
@@ -27,22 +26,10 @@ jest.mock('../../../components/loading/SkeletonLoader', () => ({
   ),
 }));
 
-/**
- * Helper to setup mock context with default values
- */
-const setupMockContext = (overrides?: any) => {
-  mockUseChatContext.mockReturnValue({
-    games: [],
-    selectedGameId: null,
-    selectGame: jest.fn(),
-    loading: { games: false },
-    ...overrides,
-  });
-};
-
 describe('GameSelector Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetChatStore();
   });
 
   /**
@@ -50,31 +37,35 @@ describe('GameSelector Component', () => {
    */
   describe('Loading State', () => {
     it('displays skeleton loader when games are loading', () => {
-      setupMockContext({ loading: { games: true } });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { loading: { games: true, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } }
+      });
 
       expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
     it('displays skeleton loader with correct variant', () => {
-      setupMockContext({ loading: { games: true } });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { loading: { games: true, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } }
+      });
 
       const skeleton = screen.getByTestId('skeleton-loader');
       expect(skeleton).toHaveAttribute('data-variant', 'gameSelection');
     });
 
     it('displays label during loading', () => {
-      setupMockContext({ loading: { games: true } });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { loading: { games: true, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } }
+      });
 
       expect(screen.getByText('Cambia Gioco:')).toBeInTheDocument();
     });
 
     it('does not display select element when loading', () => {
-      setupMockContext({ loading: { games: true } });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { loading: { games: true, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } }
+      });
 
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     });
@@ -85,29 +76,33 @@ describe('GameSelector Component', () => {
    */
   describe('Empty State', () => {
     it('displays "no games" message when games array is empty', () => {
-      setupMockContext({ games: [] });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games: [] }
+      });
 
       expect(screen.getByText('Nessun gioco disponibile')).toBeInTheDocument();
     });
 
     it('renders select element even when games are empty', () => {
-      setupMockContext({ games: [] });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games: [] }
+      });
 
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
     it('does not display placeholder option when games are empty', () => {
-      setupMockContext({ games: [] });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games: [] }
+      });
 
       expect(screen.queryByText('Seleziona un gioco')).not.toBeInTheDocument();
     });
 
     it('select is not disabled when empty but not loading', () => {
-      setupMockContext({ games: [], loading: { games: false } });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games: [], loading: { games: false, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).not.toBeDisabled();
@@ -121,12 +116,13 @@ describe('GameSelector Component', () => {
     it('renders list of available games', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: 'Chess' },
-        { id: 'game-2', name: 'Catan' },
-        { id: 'game-3', name: 'Risk' },
+        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-3', name: 'Risk', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       // Open the select dropdown
       const trigger = screen.getByRole('combobox');
@@ -141,9 +137,10 @@ describe('GameSelector Component', () => {
     });
 
     it('includes placeholder option when games exist', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       expect(screen.getByText('Seleziona un gioco')).toBeInTheDocument();
     });
@@ -151,11 +148,12 @@ describe('GameSelector Component', () => {
     it('renders correct number of options (games + placeholder)', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: 'Chess' },
-        { id: 'game-2', name: 'Catan' },
+        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       // Open dropdown and verify items are present
       const trigger = screen.getByRole('combobox');
@@ -170,12 +168,13 @@ describe('GameSelector Component', () => {
     it('renders games in the order provided', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: 'Zzz Game' },
-        { id: 'game-2', name: 'Aaa Game' },
-        { id: 'game-3', name: 'Mmm Game' },
+        { id: 'game-1', name: 'Zzz Game', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-2', name: 'Aaa Game', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-3', name: 'Mmm Game', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -190,10 +189,12 @@ describe('GameSelector Component', () => {
 
     it('uses game.id as option value', async () => {
       const user = userEvent.setup();
-      const selectGame = jest.fn();
-      const games = [{ id: 'game-123', name: 'Test Game' }];
-      setupMockContext({ games, selectGame });
-      render(<GameSelector />);
+      const selectGameSpy = jest.spyOn(useChatStore.getState(), 'selectGame');
+      const games = [{ id: 'game-123', name: 'Test Game', createdAt: '2024-01-01T00:00:00Z' }];
+
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -202,7 +203,7 @@ describe('GameSelector Component', () => {
       await user.click(option);
 
       // Verify selectGame was called with the correct game.id
-      expect(selectGame).toHaveBeenCalledWith('game-123');
+      expect(selectGameSpy).toHaveBeenCalledWith('game-123');
     });
   });
 
@@ -212,10 +213,13 @@ describe('GameSelector Component', () => {
   describe('Game Selection', () => {
     it('calls selectGame when a game is selected', async () => {
       const user = userEvent.setup();
-      const selectGame = jest.fn();
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectGame });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
+
+      const selectGameSpy = jest.spyOn(useChatStore.getState(), 'selectGame');
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -223,29 +227,34 @@ describe('GameSelector Component', () => {
       const option = await screen.findByRole('option', { name: 'Chess' });
       await user.click(option);
 
-      expect(selectGame).toHaveBeenCalledWith('game-1');
+      expect(selectGameSpy).toHaveBeenCalledWith('game-1');
     });
 
     it('does not call selectGame when empty option is selected', () => {
-      const selectGame = jest.fn();
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectGame, selectedGameId: 'game-1' });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games, selectedGameId: 'game-1' }
+      });
+
+      const selectGameSpy = jest.spyOn(useChatStore.getState(), 'selectGame');
 
       // Radix Select doesn't allow selecting empty value after a value is set
       // This test validates the onValueChange logic only calls selectGame for non-empty values
-      expect(selectGame).not.toHaveBeenCalled();
+      expect(selectGameSpy).not.toHaveBeenCalled();
     });
 
     it('handles multiple game selections sequentially', async () => {
       const user = userEvent.setup();
-      const selectGame = jest.fn();
       const games = [
-        { id: 'game-1', name: 'Chess' },
-        { id: 'game-2', name: 'Catan' },
+        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ games, selectGame });
-      const { rerender } = render(<GameSelector />);
+      
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
+
+      const selectGameSpy = jest.spyOn(useChatStore.getState(), 'selectGame');
 
       // First selection
       let trigger = screen.getByRole('combobox');
@@ -253,34 +262,33 @@ describe('GameSelector Component', () => {
       const option1 = await screen.findByRole('option', { name: 'Chess' });
       await user.click(option1);
 
-      // Update context to reflect selection
-      setupMockContext({ games, selectGame, selectedGameId: 'game-1' });
-      rerender(<GameSelector />);
-
       // Second selection
       trigger = screen.getByRole('combobox');
       await user.click(trigger);
       const option2 = await screen.findByRole('option', { name: 'Catan' });
       await user.click(option2);
 
-      expect(selectGame).toHaveBeenCalledTimes(2);
-      expect(selectGame).toHaveBeenNthCalledWith(1, 'game-1');
-      expect(selectGame).toHaveBeenNthCalledWith(2, 'game-2');
+      expect(selectGameSpy).toHaveBeenCalledTimes(2);
+      expect(selectGameSpy).toHaveBeenNthCalledWith(1, 'game-1');
+      expect(selectGameSpy).toHaveBeenNthCalledWith(2, 'game-2');
     });
 
     it('uses void operator for async selectGame call', async () => {
       const user = userEvent.setup();
-      const selectGame = jest.fn().mockResolvedValue(undefined);
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectGame });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
+
+      const selectGameSpy = jest.spyOn(useChatStore.getState(), 'selectGame');
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
       const option = await screen.findByRole('option', { name: 'Chess' });
       await user.click(option);
 
-      expect(selectGame).toHaveBeenCalled();
+      expect(selectGameSpy).toHaveBeenCalled();
     });
   });
 
@@ -290,47 +298,55 @@ describe('GameSelector Component', () => {
   describe('Selected Game State', () => {
     it('displays currently selected game', () => {
       const games = [
-        { id: 'game-1', name: 'Chess' },
-        { id: 'game-2', name: 'Catan' },
+        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ games, selectedGameId: 'game-2' });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games, selectedGameId: 'game-2' }
+      });
 
       // Radix Select shows selected value in trigger
       expect(screen.getByRole('combobox')).toHaveTextContent('Catan');
     });
 
     it('displays empty value when no game is selected', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectedGameId: null });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games, selectedGameId: null }
+      });
 
       expect(screen.getByText('Seleziona un gioco')).toBeInTheDocument();
     });
 
     it('handles undefined selectedGameId', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectedGameId: undefined });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games, selectedGameId: undefined }
+      });
 
       expect(screen.getByText('Seleziona un gioco')).toBeInTheDocument();
     });
 
-    it('updates value when selectedGameId changes', () => {
+    it('updates value when selectedGameId changes', async () => {
       const games = [
-        { id: 'game-1', name: 'Chess' },
-        { id: 'game-2', name: 'Catan' },
+        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ games, selectedGameId: 'game-1' });
-      const { rerender } = render(<GameSelector />);
+      
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games, selectedGameId: 'game-1' }
+      });
 
       expect(screen.getByRole('combobox')).toHaveTextContent('Chess');
 
-      // Update selected game
-      setupMockContext({ games, selectedGameId: 'game-2' });
-      rerender(<GameSelector />);
+      // Update state directly via store wrapped in act()
+      await act(async () => {
+        useChatStore.setState({ selectedGameId: 'game-2' });
+      });
 
-      expect(screen.getByRole('combobox')).toHaveTextContent('Catan');
+      await waitFor(() => {
+        expect(screen.getByRole('combobox')).toHaveTextContent('Catan');
+      });
     });
   });
 
@@ -339,28 +355,42 @@ describe('GameSelector Component', () => {
    */
   describe('Disabled State', () => {
     it('disables select when games are loading', () => {
-      setupMockContext({ games: [], loading: { games: true } });
-      const { rerender } = render(<GameSelector />);
-
-      // Rerender with loaded state (select is hidden during loading, check after)
-      setupMockContext({ games: [{ id: 'game-1', name: 'Chess' }], loading: { games: false } });
-      rerender(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      
+      renderWithChatStore(<GameSelector />, {
+        initialState: { 
+          games, 
+          loading: { games: false, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } 
+        }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).not.toBeDisabled();
     });
 
     it('sets aria-busy when loading', () => {
-      setupMockContext({ games: [{ id: 'game-1', name: 'Chess' }], loading: { games: false } });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      
+      renderWithChatStore(<GameSelector />, {
+        initialState: { 
+          games, 
+          loading: { games: false, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } 
+        }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toHaveAttribute('aria-busy', 'false');
     });
 
     it('changes cursor when disabled', () => {
-      setupMockContext({ games: [{ id: 'game-1', name: 'Chess' }], loading: { games: false } });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      
+      renderWithChatStore(<GameSelector />, {
+        initialState: { 
+          games, 
+          loading: { games: false, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } 
+        }
+      });
 
       const select = screen.getByRole('combobox');
       // Radix Select uses Tailwind classes, not inline cursor styles
@@ -373,9 +403,10 @@ describe('GameSelector Component', () => {
    */
   describe('Accessibility', () => {
     it('has proper label association', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toHaveAttribute('id', 'gameSelect');
@@ -385,25 +416,32 @@ describe('GameSelector Component', () => {
     });
 
     it('has correct aria-busy attribute', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, loading: { games: false } });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      
+      renderWithChatStore(<GameSelector />, {
+        initialState: { 
+          games, 
+          loading: { games: false, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } 
+        }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).toHaveAttribute('aria-busy', 'false');
     });
 
     it('uses semantic select element', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
     it('has visible label text', () => {
-      setupMockContext({ games: [] });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games: [] }
+      });
 
       expect(screen.getByText('Cambia Gioco:')).toBeVisible();
     });
@@ -416,11 +454,12 @@ describe('GameSelector Component', () => {
     it('handles games with special characters in names', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: "Catan: Trader's & Barbarians" },
-        { id: 'game-2', name: 'Risk (2nd Edition)' },
+        { id: 'game-1', name: "Catan: Trader's & Barbarians", createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-2', name: 'Risk (2nd Edition)', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -434,9 +473,10 @@ describe('GameSelector Component', () => {
     it('handles very long game names', async () => {
       const user = userEvent.setup();
       const longName = 'A'.repeat(100);
-      const games = [{ id: 'game-1', name: longName }];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: longName, createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -446,29 +486,40 @@ describe('GameSelector Component', () => {
       });
     });
 
-    it('handles transition from loading to loaded with games', () => {
-      setupMockContext({ games: [], loading: { games: true } });
-      const { rerender } = render(<GameSelector />);
+    it('handles transition from loading to loaded with games', async () => {
+      renderWithChatStore(<GameSelector />, {
+        initialState: { 
+          games: [], 
+          loading: { games: true, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } 
+        }
+      });
 
       expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
 
-      // Load games
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, loading: { games: false } });
-      rerender(<GameSelector />);
+      // Load games via store wrapped in act()
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      await act(async () => {
+        useChatStore.setState({ 
+          games, 
+          loading: { games: false, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } 
+        });
+      });
 
-      expect(screen.queryByTestId('skeleton-loader')).not.toBeInTheDocument();
-      expect(screen.getByRole('combobox')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByTestId('skeleton-loader')).not.toBeInTheDocument();
+        expect(screen.getByRole('combobox')).toBeInTheDocument();
+      });
     });
 
     it('handles games with duplicate names (different IDs)', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: 'Chess' },
-        { id: 'game-2', name: 'Chess' },
+        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: 'game-2', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
       ];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -481,9 +532,10 @@ describe('GameSelector Component', () => {
 
     it('handles single game in list', async () => {
       const user = userEvent.setup();
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -499,9 +551,11 @@ describe('GameSelector Component', () => {
       const games = Array.from({ length: 100 }, (_, i) => ({
         id: `game-${i}`,
         name: `Game ${i}`,
+        createdAt: '2024-01-01T00:00:00Z',
       }));
-      setupMockContext({ games });
-      render(<GameSelector />);
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
@@ -518,27 +572,30 @@ describe('GameSelector Component', () => {
    */
   describe('Styling', () => {
     it('applies correct container margin', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games });
-      const { container } = render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const { container } = renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toBeInTheDocument(); // Style assertion removed - Shadcn/UI uses Tailwind CSS classes
     });
 
     it('applies correct label styling', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const label = screen.getByText('Cambia Gioco:');
       expect(label).toBeInTheDocument(); // Style assertion removed - Shadcn/UI uses Tailwind CSS classes
     });
 
     it('applies correct select styling', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games });
-      render(<GameSelector />);
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      renderWithChatStore(<GameSelector />, {
+        initialState: { games }
+      });
 
       const select = screen.getByRole('combobox');
       // Radix Select uses Tailwind classes instead of inline styles
@@ -546,20 +603,31 @@ describe('GameSelector Component', () => {
       expect(select).toHaveClass('border');
     });
 
-    it('changes cursor style based on loading state', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, loading: { games: false } });
-      const { rerender } = render(<GameSelector />);
+    it('changes cursor style based on loading state', async () => {
+      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      
+      renderWithChatStore(<GameSelector />, {
+        initialState: { 
+          games, 
+          loading: { games: false, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } 
+        }
+      });
 
       const select = screen.getByRole('combobox');
       expect(select).not.toHaveClass('cursor-not-allowed');
 
-      // Change to loading
-      setupMockContext({ games, loading: { games: true } });
-      rerender(<GameSelector />);
+      // Change to loading wrapped in act()
+      await act(async () => {
+        useChatStore.setState({ 
+          loading: { games: true, agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false } 
+        });
+      });
 
       // Select is hidden during loading, check skeleton instead
-      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+        expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
+      });
     });
   });
 });

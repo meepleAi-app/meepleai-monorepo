@@ -1,9 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { GameProvider } from "@/components/game/GameProvider";
-import { ChatProvider } from "@/components/chat/ChatProvider";
-import { UIProvider } from "@/components/ui/UIProvider";
+import { ChatStoreProvider } from "@/store/chat/ChatStoreProvider";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatContent } from "@/components/chat/ChatContent";
 import { BottomNav } from "@/components/chat/BottomNav";
@@ -45,27 +43,21 @@ export default function ChatPage() {
     );
   }
 
-  // Main chat interface with new provider hierarchy
+  // Main chat interface with Zustand store (Issue #1083)
   return (
-    <GameProvider>
-      <ChatProvider>
-        <UIProvider>
-          <main id="main-content" className="flex h-dvh font-sans overflow-hidden">
-            <ChatSidebar />
-            <ChatContent />
-            <BottomNav />
+    <ChatStoreProvider>
+      <main id="main-content" className="flex h-dvh font-sans overflow-hidden">
+        <ChatSidebar />
+        <ChatContent />
+        <BottomNav />
 
-            {/* Export Chat Modal - will be integrated into ChatContent in future */}
-            <ExportChatModal
-              isOpen={showExportModal}
-              onClose={() => setShowExportModal(false)}
-              chatId={"temp-placeholder"}
-              gameName={"placeholder"}
-            />
-          </main>
-        </UIProvider>
-      </ChatProvider>
-    </GameProvider>
+        <ExportChatModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          chatId={"temp-placeholder"}
+          gameName={"placeholder"}
+        />
+      </main>
+    </ChatStoreProvider>
   );
 }
-

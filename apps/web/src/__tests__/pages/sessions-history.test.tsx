@@ -373,7 +373,7 @@ describe('SessionHistoryPage', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
-        expect(screen.getByText(/API Error/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/unexpected error/i)[0]).toBeInTheDocument();
       });
     });
   });

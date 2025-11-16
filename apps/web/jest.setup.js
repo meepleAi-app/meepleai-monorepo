@@ -362,10 +362,23 @@ beforeAll(() => {
       return;
     }
     // Suppress act() warnings for provider initialization effects
-    if (typeof args[0] === 'string' && args[0].includes('An update to ChatProvider inside a test was not wrapped in act(')) {
+    if (typeof args[0] === 'string' && args[0].includes('An update to ChatProvider inside a test was not wrapped in act')) {
       return;
     }
-    if (typeof args[0] === 'string' && args[0].includes('An update to AnalyticsDashboard inside a test was not wrapped in act(')) {
+    if (typeof args[0] === 'string' && args[0].includes('An update to AnalyticsDashboard inside a test was not wrapped in act')) {
+      return;
+    }
+    if (typeof args[0] === 'string' && args[0].includes('An update to GameProvider inside a test was not wrapped in act')) {
+      return;
+    }
+    if (typeof args[0] === 'string' && args[0].includes('An update to AuthProvider inside a test was not wrapped in act')) {
+      return;
+    }
+    if (typeof args[0] === 'string' && args[0].includes('An update to CacheDashboard inside a test was not wrapped in act')) {
+      return;
+    }
+    // Suppress all other component act() warnings (provider mount/unmount effects)
+    if (typeof args[0] === 'string' && args[0].includes('inside a test was not wrapped in act')) {
       return;
     }
     // Suppress JSDOM navigation warnings (known limitation)

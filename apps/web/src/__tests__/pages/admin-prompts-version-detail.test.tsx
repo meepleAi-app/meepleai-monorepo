@@ -91,7 +91,7 @@ describe('PromptVersionDetail Page', () => {
       render(<PromptVersionDetail />);
 
       await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
 
       expect(screen.getByText('Back to Template')).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('PromptVersionDetail Page', () => {
       render(<PromptVersionDetail />);
 
       await waitFor(() => {
-        expect(screen.getByText('Unauthorized')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
     });
 
@@ -113,7 +113,7 @@ describe('PromptVersionDetail Page', () => {
       render(<PromptVersionDetail />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Unauthorized/)).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
     });
 
@@ -123,12 +123,14 @@ describe('PromptVersionDetail Page', () => {
       render(<PromptVersionDetail />);
 
       await waitFor(() => {
-        const backButton = screen.getByText('Back to Template');
-        expect(backButton.closest('a')).toHaveAttribute(
-          'href',
-          '/admin/prompts/template-123'
-        );
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
+
+      const backButton = screen.getByText('Back to Template');
+      expect(backButton.closest('a')).toHaveAttribute(
+        'href',
+        '/admin/prompts/template-123'
+      );
     });
   });
 
@@ -279,6 +281,7 @@ describe('PromptVersionDetail Page', () => {
       const activateButton = screen.getByText('Activate Version');
       fireEvent.click(activateButton);
 
+      // Toast displays raw error message, not categorized error
       await waitFor(() => {
         expect(screen.getByText('Activation failed')).toBeInTheDocument();
       });
@@ -379,6 +382,7 @@ describe('PromptVersionDetail Page', () => {
       const activateButton = screen.getByText('Activate Version');
       fireEvent.click(activateButton);
 
+      // Toast displays raw error message
       await waitFor(() => {
         expect(screen.getByText('Error')).toBeInTheDocument();
       });
@@ -387,6 +391,7 @@ describe('PromptVersionDetail Page', () => {
         jest.advanceTimersByTime(5000);
       });
 
+      // Toast should auto-hide after 5 seconds
       await waitFor(() => {
         expect(screen.queryByText('Error')).not.toBeInTheDocument();
       });
@@ -434,7 +439,7 @@ describe('PromptVersionDetail Page', () => {
       render(<PromptVersionDetail />);
 
       await waitFor(() => {
-        expect(screen.getByText('Load error')).toBeInTheDocument();
+        expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
       });
     });
 

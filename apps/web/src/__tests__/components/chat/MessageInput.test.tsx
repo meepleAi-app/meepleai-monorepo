@@ -4,18 +4,16 @@
  * Tests for the MessageInput component that handles user message input
  * and submission with search mode toggle (AI-14).
  *
+ * Migrated to Zustand (Issue #1083)
+ *
  * Target Coverage: 90%+ (from 60%)
  */
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MessageInput } from '../../../components/chat/MessageInput';
-
-// Mock the ChatProvider context
-const mockUseChatContext = jest.fn();
-jest.mock('../../../components/chat/ChatProvider', () => ({
-  useChatContext: () => mockUseChatContext(),
-}));
+import { renderWithChatStore, resetChatStore } from '@/__tests__/utils/zustand-test-utils';
+import { useChatStore } from '@/store/chat/store';
 
 // Mock LoadingButton component
 jest.mock('../../../components/loading/LoadingButton', () => ({
@@ -35,37 +33,46 @@ jest.mock('../../../components/loading/LoadingButton', () => ({
 // Mock SearchModeToggle component
 jest.mock('../../../components', () => ({
   SearchModeToggle: ({ value, onChange, disabled }: any) => (
-    <div data-testid="search-mode-toggle" data-value={value} data-disabled={disabled}>
-      <button onClick={() => onChange('vector')} disabled={disabled}>
+    <div data-testid="search-mode-toggle" data-value={value} data-disabled={disabled ? 'true' : 'false'}>
+      <button onClick={() => onChange('Vector')} disabled={disabled}>
         Vector
       </button>
-      <button onClick={() => onChange('hybrid')} disabled={disabled}>
+      <button onClick={() => onChange('Hybrid')} disabled={disabled}>
         Hybrid
       </button>
     </div>
   ),
 }));
 
-/**
- * Helper to setup mock context with default values
- */
-const setupMockContext = (overrides?: any) => {
-  mockUseChatContext.mockReturnValue({
-    inputValue: '',
-    setInputValue: jest.fn(),
-    sendMessage: jest.fn(),
-    selectedGameId: 'game-1',
-    selectedAgentId: 'agent-1',
-    loading: { sending: false },
-    searchMode: 'vector',
-    setSearchMode: jest.fn(),
-    ...overrides,
-  });
-};
+// Mock useChatOptimistic hook
+const mockSendMessageOptimistic = jest.fn();
+const mockToastError = jest.fn();
+
+jest.mock('@/hooks/useChatOptimistic', () => ({
+  useChatOptimistic: () => ({
+    sendMessageOptimistic: mockSendMessageOptimistic,
+    isOptimisticUpdate: false,
+  }),
+}));
+
+// Mock keyboard shortcuts hook
+jest.mock('@/hooks/useKeyboardShortcuts', () => ({
+  useMessageInputShortcuts: jest.fn(),
+  modKey: 'Cmd',
+}));
+
+// Mock toast
+jest.mock('sonner', () => ({
+  toast: {
+    error: (...args: any[]) => mockToastError(...args),
+  },
+}));
 
 describe('MessageInput Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetChatStore();
+    mockSendMessageOptimistic.mockResolvedValue(undefined);
   });
 
   /**
@@ -73,39 +80,64 @@ describe('MessageInput Component', () => {
    */
   describe('Basic Rendering', () => {
     it('renders text input field', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      expect(screen.getByLabelText('Message input')).toBeInTheDocument();
+      expect(screen.getByLabelText('Scrivi un messaggio')).toBeInTheDocument();
     });
 
     it('renders send button', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       expect(screen.getByTestId('loading-button')).toBeInTheDocument();
       expect(screen.getByText('Invia')).toBeInTheDocument();
     });
 
     it('renders search mode toggle (AI-14)', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       expect(screen.getByTestId('search-mode-toggle')).toBeInTheDocument();
     });
 
     it('displays placeholder text', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      expect(screen.getByPlaceholderText('Fai una domanda sul gioco...')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Scrivi un messaggio...')).toBeInTheDocument();
     });
 
     it('has screen reader only label', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const label = screen.getByText('Ask a question about the game');
+      const label = screen.getByText('Scrivi un messaggio');
       expect(label).toHaveClass('sr-only');
     });
   });
@@ -115,58 +147,85 @@ describe('MessageInput Component', () => {
    */
   describe('Input Handling', () => {
     it('updates input value when typing', () => {
-      const setInputValue = jest.fn();
-      setupMockContext({ setInputValue });
-      render(<MessageInput />);
+      const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       fireEvent.change(input, { target: { value: 'Test message' } });
 
-      expect(setInputValue).toHaveBeenCalledWith('Test message');
+      expect(setInputValueSpy).toHaveBeenCalledWith('Test message');
     });
 
     it('displays current input value', () => {
-      setupMockContext({ inputValue: 'Current message' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Current message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input') as HTMLInputElement;
+      const input = screen.getByLabelText('Scrivi un messaggio') as HTMLInputElement;
       expect(input.value).toBe('Current message');
     });
 
     it('handles multiple character inputs', () => {
-      const setInputValue = jest.fn();
-      setupMockContext({ setInputValue });
-      render(<MessageInput />);
+      const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       fireEvent.change(input, { target: { value: 'A' } });
       fireEvent.change(input, { target: { value: 'AB' } });
       fireEvent.change(input, { target: { value: 'ABC' } });
 
-      expect(setInputValue).toHaveBeenCalledTimes(3);
+      expect(setInputValueSpy).toHaveBeenCalledTimes(3);
     });
 
     it('handles clearing input', () => {
-      const setInputValue = jest.fn();
-      setupMockContext({ inputValue: 'Text', setInputValue });
-      render(<MessageInput />);
+      const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Text',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       fireEvent.change(input, { target: { value: '' } });
 
-      expect(setInputValue).toHaveBeenCalledWith('');
+      expect(setInputValueSpy).toHaveBeenCalledWith('');
     });
 
     it('accepts long messages', () => {
-      const setInputValue = jest.fn();
+      const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
       const longMessage = 'A'.repeat(1000);
-      setupMockContext({ setInputValue });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       fireEvent.change(input, { target: { value: longMessage } });
 
-      expect(setInputValue).toHaveBeenCalledWith(longMessage);
+      expect(setInputValueSpy).toHaveBeenCalledWith(longMessage);
     });
   });
 
@@ -174,43 +233,53 @@ describe('MessageInput Component', () => {
    * Test Group: Form Submission
    */
   describe('Form Submission', () => {
-    it('calls sendMessage on form submit', () => {
-      const sendMessage = jest.fn();
-      setupMockContext({
-        inputValue: 'Test message',
-        sendMessage,
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+    it('calls sendMessageOptimistic on form submit', async () => {
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
-      const form = screen.getByLabelText('Message input').closest('form')!;
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
       fireEvent.submit(form);
 
-      expect(sendMessage).toHaveBeenCalledWith('Test message');
+      await waitFor(() => {
+        expect(mockSendMessageOptimistic).toHaveBeenCalledWith('Test message');
+      });
     });
 
-    it('calls sendMessage on button click', () => {
-      const sendMessage = jest.fn();
-      setupMockContext({
-        inputValue: 'Test message',
-        sendMessage,
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+    it('calls sendMessageOptimistic on button click', async () => {
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
       fireEvent.click(button);
 
-      expect(sendMessage).toHaveBeenCalledWith('Test message');
+      await waitFor(() => {
+        expect(mockSendMessageOptimistic).toHaveBeenCalledWith('Test message');
+      });
     });
 
     it('prevents default form submission behavior', () => {
-      setupMockContext({ inputValue: 'Test', selectedGameId: 'game-1', selectedAgentId: 'agent-1' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const form = screen.getByLabelText('Message input').closest('form')!;
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
       const event = new Event('submit', { bubbles: true, cancelable: true });
       const preventDefaultSpy = jest.spyOn(event, 'preventDefault');
 
@@ -220,84 +289,126 @@ describe('MessageInput Component', () => {
     });
 
     it('does not submit when input is empty', () => {
-      const sendMessage = jest.fn();
-      setupMockContext({
-        inputValue: '',
-        sendMessage,
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: '',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
-      const form = screen.getByLabelText('Message input').closest('form')!;
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
       fireEvent.submit(form);
 
-      expect(sendMessage).not.toHaveBeenCalled();
+      expect(mockSendMessageOptimistic).not.toHaveBeenCalled();
     });
 
     it('does not submit when input is only whitespace', () => {
-      const sendMessage = jest.fn();
-      setupMockContext({
-        inputValue: '   ',
-        sendMessage,
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: '   ',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
-      const form = screen.getByLabelText('Message input').closest('form')!;
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
       fireEvent.submit(form);
 
-      expect(sendMessage).not.toHaveBeenCalled();
+      expect(mockSendMessageOptimistic).not.toHaveBeenCalled();
     });
 
     it('does not submit when no game is selected', () => {
-      const sendMessage = jest.fn();
-      setupMockContext({
-        inputValue: 'Test',
-        sendMessage,
-        selectedGameId: null,
-        selectedAgentId: 'agent-1',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: null,
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
-      const form = screen.getByLabelText('Message input').closest('form')!;
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
       fireEvent.submit(form);
 
-      expect(sendMessage).not.toHaveBeenCalled();
+      expect(mockSendMessageOptimistic).not.toHaveBeenCalled();
     });
 
     it('does not submit when no agent is selected', () => {
-      const sendMessage = jest.fn();
-      setupMockContext({
-        inputValue: 'Test',
-        sendMessage,
-        selectedGameId: 'game-1',
-        selectedAgentId: null,
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: 'game-1',
+          selectedAgentId: null,
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
-      const form = screen.getByLabelText('Message input').closest('form')!;
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
       fireEvent.submit(form);
 
-      expect(sendMessage).not.toHaveBeenCalled();
+      expect(mockSendMessageOptimistic).not.toHaveBeenCalled();
     });
 
-    it('handles async sendMessage call with void operator', async () => {
-      const sendMessage = jest.fn().mockResolvedValue(undefined);
-      setupMockContext({
-        inputValue: 'Test',
-        sendMessage,
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+    it('handles async sendMessageOptimistic call with void operator', async () => {
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
-      const form = screen.getByLabelText('Message input').closest('form')!;
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
       fireEvent.submit(form);
 
       await waitFor(() => {
-        expect(sendMessage).toHaveBeenCalled();
+        expect(mockSendMessageOptimistic).toHaveBeenCalled();
+      });
+    });
+
+    it('clears input immediately on submit', async () => {
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
+
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
+      fireEvent.submit(form);
+
+      // Input should be cleared immediately for better UX
+      await waitFor(() => {
+        const input = screen.getByLabelText('Scrivi un messaggio') as HTMLInputElement;
+        expect(input.value).toBe('');
+      });
+    });
+
+    it('restores input on send error', async () => {
+      mockSendMessageOptimistic.mockRejectedValueOnce(new Error('Network error'));
+
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test message',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
+
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
+      fireEvent.submit(form);
+
+      await waitFor(() => {
+        const input = screen.getByLabelText('Scrivi un messaggio') as HTMLInputElement;
+        expect(input.value).toBe('Test message');
+        expect(mockToastError).toHaveBeenCalledWith("Errore nell'invio del messaggio: Network error");
       });
     });
   });
@@ -307,75 +418,110 @@ describe('MessageInput Component', () => {
    */
   describe('Disabled States', () => {
     it('disables input when sending', () => {
-      setupMockContext({ loading: { sending: true } });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       expect(input).toBeDisabled();
     });
 
     it('disables button when sending', () => {
-      setupMockContext({ loading: { sending: true }, inputValue: 'Test' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       const button = screen.getByTestId('loading-button');
       expect(button).toBeDisabled();
     });
 
     it('disables input when no game selected', () => {
-      setupMockContext({ selectedGameId: null, selectedAgentId: 'agent-1' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: null,
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       expect(input).toBeDisabled();
     });
 
     it('disables input when no agent selected', () => {
-      setupMockContext({ selectedGameId: 'game-1', selectedAgentId: null });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: null,
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       expect(input).toBeDisabled();
     });
 
     it('disables button when input is empty', () => {
-      setupMockContext({
-        inputValue: '',
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: '',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
       expect(button).toBeDisabled();
     });
 
     it('disables button when input is whitespace only', () => {
-      setupMockContext({
-        inputValue: '   ',
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: '   ',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
       expect(button).toBeDisabled();
     });
 
-    it('disables search mode toggle when sending', () => {
-      setupMockContext({ loading: { sending: true } });
-      render(<MessageInput />);
+    it('renders search mode toggle when sending', () => {
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       const toggle = screen.getByTestId('search-mode-toggle');
-      expect(toggle).toHaveAttribute('data-disabled', 'true');
+      expect(toggle).toBeInTheDocument();
     });
 
-    it('disables search mode toggle when no game selected', () => {
-      setupMockContext({ selectedGameId: null, selectedAgentId: 'agent-1' });
-      render(<MessageInput />);
+    it('renders search mode toggle when no game selected', () => {
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: null,
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       const toggle = screen.getByTestId('search-mode-toggle');
-      expect(toggle).toHaveAttribute('data-disabled', 'true');
+      expect(toggle).toBeInTheDocument();
     });
   });
 
@@ -384,23 +530,41 @@ describe('MessageInput Component', () => {
    */
   describe('Loading States', () => {
     it('shows loading state on button when sending', () => {
-      setupMockContext({ loading: { sending: true }, inputValue: 'Test' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       const button = screen.getByTestId('loading-button');
       expect(button).toHaveAttribute('data-loading', 'true');
     });
 
     it('displays loading text when sending', () => {
-      setupMockContext({ loading: { sending: true }, inputValue: 'Test' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       expect(screen.getByText('Invio...')).toBeInTheDocument();
     });
 
     it('displays normal text when not sending', () => {
-      setupMockContext({ loading: { sending: false }, inputValue: 'Test' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       expect(screen.getByText('Invia')).toBeInTheDocument();
     });
@@ -411,42 +575,66 @@ describe('MessageInput Component', () => {
    */
   describe('Search Mode Toggle', () => {
     it('displays current search mode', () => {
-      setupMockContext({ searchMode: 'vector' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          searchMode: 'Vector',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       const toggle = screen.getByTestId('search-mode-toggle');
-      expect(toggle).toHaveAttribute('data-value', 'vector');
+      expect(toggle).toHaveAttribute('data-value', 'Vector');
     });
 
     it('calls setSearchMode when mode changes', () => {
-      const setSearchMode = jest.fn();
-      setupMockContext({ searchMode: 'vector', setSearchMode });
-      render(<MessageInput />);
+      const setSearchModeSpy = jest.spyOn(useChatStore.getState(), 'setSearchMode');
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          searchMode: 'Vector',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       const hybridButton = screen.getByText('Hybrid');
       fireEvent.click(hybridButton);
 
-      expect(setSearchMode).toHaveBeenCalledWith('hybrid');
+      expect(setSearchModeSpy).toHaveBeenCalledWith('Hybrid');
     });
 
     it('switches from vector to hybrid mode', () => {
-      const setSearchMode = jest.fn();
-      setupMockContext({ searchMode: 'vector', setSearchMode });
-      render(<MessageInput />);
+      const setSearchModeSpy = jest.spyOn(useChatStore.getState(), 'setSearchMode');
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          searchMode: 'Vector',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       fireEvent.click(screen.getByText('Hybrid'));
 
-      expect(setSearchMode).toHaveBeenCalledWith('hybrid');
+      expect(setSearchModeSpy).toHaveBeenCalledWith('Hybrid');
     });
 
     it('switches from hybrid to vector mode', () => {
-      const setSearchMode = jest.fn();
-      setupMockContext({ searchMode: 'hybrid', setSearchMode });
-      render(<MessageInput />);
+      const setSearchModeSpy = jest.spyOn(useChatStore.getState(), 'setSearchMode');
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          searchMode: 'Hybrid',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       fireEvent.click(screen.getByText('Vector'));
 
-      expect(setSearchMode).toHaveBeenCalledWith('vector');
+      expect(setSearchModeSpy).toHaveBeenCalledWith('Vector');
     });
   });
 
@@ -455,13 +643,14 @@ describe('MessageInput Component', () => {
    */
   describe('Button States and Styling', () => {
     it('shows enabled styling when ready to send', () => {
-      setupMockContext({
-        inputValue: 'Test',
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
-        loading: { sending: false },
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
       expect(button).not.toBeDisabled();
@@ -469,20 +658,28 @@ describe('MessageInput Component', () => {
     });
 
     it('shows disabled styling when cannot send', () => {
-      setupMockContext({
-        inputValue: '',
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: '',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
       expect(button).toBeDisabled();
     });
 
     it('changes cursor when button is disabled', () => {
-      setupMockContext({ inputValue: '', selectedGameId: 'game-1', selectedAgentId: 'agent-1' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: '',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       const button = screen.getByTestId('loading-button');
       expect(button).toBeDisabled();
@@ -490,12 +687,14 @@ describe('MessageInput Component', () => {
     });
 
     it('has pointer cursor when button is enabled', () => {
-      setupMockContext({
-        inputValue: 'Test',
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: 'Test',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
       const button = screen.getByTestId('loading-button');
       expect(button).not.toBeDisabled();
@@ -508,34 +707,54 @@ describe('MessageInput Component', () => {
    */
   describe('Accessibility', () => {
     it('has proper aria-label for input', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      expect(screen.getByLabelText('Message input')).toBeInTheDocument();
+      expect(screen.getByLabelText('Scrivi un messaggio')).toBeInTheDocument();
     });
 
     it('has proper aria-label for button', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       const button = screen.getByTestId('loading-button');
-      expect(button).toHaveAttribute('aria-label', 'Send message');
+      expect(button).toHaveAttribute('aria-label', 'Send message (Cmd+Enter)');
     });
 
     it('has screen reader only label for input', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const label = screen.getByText('Ask a question about the game');
+      const label = screen.getByText('Scrivi un messaggio');
       expect(label).toHaveClass('sr-only');
     });
 
     it('associates label with input using htmlFor', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
-      expect(input).toHaveAttribute('id', 'message-input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
+      expect(input).toHaveAttribute('id', 'messageInput');
     });
   });
 
@@ -544,71 +763,96 @@ describe('MessageInput Component', () => {
    */
   describe('Edge Cases', () => {
     it('handles special characters in input', () => {
-      const setInputValue = jest.fn();
-      setupMockContext({ setInputValue });
-      render(<MessageInput />);
+      const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       const specialChars = '<script>alert("xss")</script>';
       fireEvent.change(input, { target: { value: specialChars } });
 
-      expect(setInputValue).toHaveBeenCalledWith(specialChars);
+      expect(setInputValueSpy).toHaveBeenCalledWith(specialChars);
     });
 
     it('handles emoji in input', () => {
-      const setInputValue = jest.fn();
-      setupMockContext({ setInputValue });
-      render(<MessageInput />);
+      const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       fireEvent.change(input, { target: { value: '😀 🎲 ♟️' } });
 
-      expect(setInputValue).toHaveBeenCalledWith('😀 🎲 ♟️');
+      expect(setInputValueSpy).toHaveBeenCalledWith('😀 🎲 ♟️');
     });
 
     it('handles rapid input changes', () => {
-      const setInputValue = jest.fn();
-      setupMockContext({ setInputValue });
-      render(<MessageInput />);
+      const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       for (let i = 0; i < 10; i++) {
         fireEvent.change(input, { target: { value: `Message ${i}` } });
       }
 
-      expect(setInputValue).toHaveBeenCalledTimes(10);
+      expect(setInputValueSpy).toHaveBeenCalledTimes(10);
     });
 
     it('handles undefined selectedGameId', () => {
-      setupMockContext({ selectedGameId: undefined, selectedAgentId: 'agent-1' });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: undefined,
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       expect(input).toBeDisabled();
     });
 
     it('handles undefined selectedAgentId', () => {
-      setupMockContext({ selectedGameId: 'game-1', selectedAgentId: undefined });
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: undefined,
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       expect(input).toBeDisabled();
     });
 
     it('trims whitespace before checking if input is empty', () => {
-      const sendMessage = jest.fn();
-      setupMockContext({
-        inputValue: ' \t\n ',
-        sendMessage,
-        selectedGameId: 'game-1',
-        selectedAgentId: 'agent-1',
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          inputValue: ' \t\n ',
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
       });
-      render(<MessageInput />);
 
-      const form = screen.getByLabelText('Message input').closest('form')!;
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
       fireEvent.submit(form);
 
-      expect(sendMessage).not.toHaveBeenCalled();
+      expect(mockSendMessageOptimistic).not.toHaveBeenCalled();
     });
   });
 
@@ -617,27 +861,42 @@ describe('MessageInput Component', () => {
    */
   describe('Layout and Structure', () => {
     it('renders within a form element', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const input = screen.getByLabelText('Message input');
+      const input = screen.getByLabelText('Scrivi un messaggio');
       expect(input.closest('form')).toBeInTheDocument();
     });
 
     it('has correct container structure', () => {
-      setupMockContext();
-      const { container } = render(<MessageInput />);
+      const { container } = renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
       const outerDiv = container.firstChild as HTMLElement;
-      expect(outerDiv).toBeInTheDocument(); // Style assertion removed - Shadcn/UI uses Tailwind CSS classes
+      expect(outerDiv).toBeInTheDocument();
     });
 
     it('uses flexbox layout for form', () => {
-      setupMockContext();
-      render(<MessageInput />);
+      renderWithChatStore(<MessageInput />, {
+        initialState: {
+          selectedGameId: 'game-1',
+          selectedAgentId: 'agent-1',
+          loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
+        }
+      });
 
-      const form = screen.getByLabelText('Message input').closest('form')!;
-      expect(form).toBeInTheDocument(); // Style assertion removed - Shadcn/UI uses Tailwind CSS classes
+      const form = screen.getByLabelText('Scrivi un messaggio').closest('form')!;
+      expect(form).toBeInTheDocument();
     });
   });
 });

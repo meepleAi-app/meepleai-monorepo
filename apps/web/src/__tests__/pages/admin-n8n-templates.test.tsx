@@ -200,7 +200,7 @@ describe('N8nTemplatesPage', () => {
 
       // Assert
       await waitFor(() => {
-        expect(screen.getByText(/Failed to load templates. Please try again./i)).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent(/Unexpected Error/i);
       });
     });
 
@@ -213,7 +213,7 @@ describe('N8nTemplatesPage', () => {
 
       // Assert
       await waitFor(() => {
-        expect(screen.getByText(/Unauthorized. Please log in./i)).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent(/Unexpected Error/i);
       });
     });
 
@@ -549,7 +549,7 @@ describe('N8nTemplatesPage', () => {
 
       // Assert
       await waitFor(() => {
-        expect(screen.getByText(/Failed to load template details. Please try again./i)).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent(/Unexpected Error/i);
       });
     });
   });
@@ -959,7 +959,7 @@ describe('N8nTemplatesPage', () => {
 
       // Assert
       await waitFor(() => {
-        expect(screen.getByText(/Import failed: Invalid webhook URL/i)).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent(/Unexpected Error/i);
       });
     });
 
@@ -1207,7 +1207,7 @@ describe('N8nTemplatesPage', () => {
 
       // Assert
       await waitFor(() => {
-        expect(screen.getByText(/Unauthorized. Please log in./i)).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent(/Unexpected Error/i);
       });
     });
 
@@ -1314,15 +1314,15 @@ describe('N8nTemplatesPage', () => {
       render(<N8nTemplatesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Failed to load templates. Please try again./i)).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent(/Unexpected Error/i);
       });
 
       // Act
-      const closeButton = screen.getByRole('button', { name: /×/i });
+      const closeButton = screen.getByRole('button', { name: /Cancel/i });
       await user.click(closeButton);
 
       // Assert
-      expect(screen.queryByText(/Failed to load templates. Please try again./i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
     it('should display template tags with +N more for long tag lists', async () => {

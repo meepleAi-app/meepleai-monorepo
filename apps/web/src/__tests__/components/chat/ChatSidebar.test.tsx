@@ -11,10 +11,41 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ChatSidebar } from '../../../components/chat/ChatSidebar';
 
-// Mock the ChatProvider context
-const mockUseChatContext = jest.fn();
-jest.mock('../../../components/chat/ChatProvider', () => ({
-  useChatContext: () => mockUseChatContext(),
+// Mock the Zustand store module with stable references
+const mockCreateChat = jest.fn();
+const mockToggleSidebar = jest.fn();
+
+let mockStoreState = {
+  selectedGameId: null as string | null,
+  selectedAgentId: null as string | null,
+  sidebarCollapsed: false,
+  games: [] as Array<{ id: string; name: string }>,
+  agents: [] as Array<{ id: string; name: string }>,
+  loading: { chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false, agents: false },
+  chatsByGame: {} as Record<string, Array<{ id: string; status: string }>>,
+};
+
+jest.mock('@/store/chat', () => ({
+  useChatStoreWithSelectors: {
+    use: {
+      selectedGameId: () => mockStoreState.selectedGameId,
+      selectedAgentId: () => mockStoreState.selectedAgentId,
+      sidebarCollapsed: () => mockStoreState.sidebarCollapsed,
+      games: () => mockStoreState.games,
+      createChat: () => mockCreateChat,
+    },
+  },
+  useCurrentChats: () => {
+    const gameId = mockStoreState.selectedGameId;
+    if (!gameId) return [];
+    return mockStoreState.chatsByGame[gameId] ?? [];
+  },
+  useSelectedGame: () => {
+    const gameId = mockStoreState.selectedGameId;
+    if (!gameId) return undefined;
+    return mockStoreState.games.find((g) => g.id === gameId);
+  },
+  useIsCreating: () => mockStoreState.loading.creating,
 }));
 
 // Mock child components
@@ -45,18 +76,24 @@ jest.mock('../../../components/loading/LoadingButton', () => ({
 }));
 
 /**
- * Helper to setup mock context with default values
+ * Helper to setup mock store state with default values
  */
-const setupMockContext = (overrides?: any) => {
-  mockUseChatContext.mockReturnValue({
-    games: [],
+const setupMockContext = (overrides?: Partial<typeof mockStoreState>) => {
+  // Reset to defaults
+  mockStoreState = {
     selectedGameId: null,
     selectedAgentId: null,
     sidebarCollapsed: false,
-    loading: { creating: false },
-    createChat: jest.fn(),
+    games: [],
+    agents: [],
+    loading: { chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false, agents: false },
+    chatsByGame: {},
     ...overrides,
-  });
+  };
+
+  // Reset mock function calls
+  mockCreateChat.mockClear();
+  mockToggleSidebar.mockClear();
 };
 
 describe('ChatSidebar Component', () => {
@@ -74,7 +111,7 @@ describe('ChatSidebar Component', () => {
 
       expect(
         screen.getByRole('complementary', {
-          name: 'Chat sidebar with game selection and chat history',
+          name: 'Chat sidebar with game selection and thread history',
         })
       ).toBeInTheDocument();
     });
@@ -105,7 +142,7 @@ describe('ChatSidebar Component', () => {
       render(<ChatSidebar />);
 
       expect(screen.getByTestId('new-chat-button')).toBeInTheDocument();
-      expect(screen.getByText('+ Nuova Chat')).toBeInTheDocument();
+      expect(screen.getByText('+ Nuovo Thread')).toBeInTheDocument();
     });
 
     it('renders ChatHistory component', () => {
@@ -175,12 +212,13 @@ describe('ChatSidebar Component', () => {
       expect(screen.getByText('Catan')).toBeInTheDocument();
     });
 
-    it('shows placeholder when game not found in list', () => {
+    it('does not show badge when selected game not found in list', () => {
       const games = [{ id: 'game-1', name: 'Chess' }];
       setupMockContext({ games, selectedGameId: 'game-999' });
       render(<ChatSidebar />);
 
-      expect(screen.getByText('...')).toBeInTheDocument();
+      // Badge should not render if game not found
+      expect(screen.queryByLabelText(/Active game context/)).not.toBeInTheDocument();
     });
 
     it('applies correct badge styling', () => {
@@ -198,18 +236,16 @@ describe('ChatSidebar Component', () => {
    */
   describe('New Chat Button', () => {
     it('calls createChat when button is clicked', () => {
-      const createChat = jest.fn();
       setupMockContext({
         selectedGameId: 'game-1',
         selectedAgentId: 'agent-1',
-        createChat,
       });
       render(<ChatSidebar />);
 
       const button = screen.getByTestId('new-chat-button');
       fireEvent.click(button);
 
-      expect(createChat).toHaveBeenCalled();
+      expect(mockCreateChat).toHaveBeenCalled();
     });
 
     it('is disabled when no game is selected', () => {
@@ -243,7 +279,7 @@ describe('ChatSidebar Component', () => {
       setupMockContext({
         selectedGameId: 'game-1',
         selectedAgentId: 'agent-1',
-        loading: { creating: true },
+        loading: { chats: false, creating: true, games: false, agents: false, sending: false, messages: false, updating: false, deleting: false },
       });
       render(<ChatSidebar />);
 
@@ -256,7 +292,7 @@ describe('ChatSidebar Component', () => {
       setupMockContext({
         selectedGameId: 'game-1',
         selectedAgentId: 'agent-1',
-        loading: { creating: true },
+        loading: { chats: false, creating: true, games: false, agents: false, sending: false, messages: false, updating: false, deleting: false },
       });
       render(<ChatSidebar />);
 
@@ -269,14 +305,14 @@ describe('ChatSidebar Component', () => {
       render(<ChatSidebar />);
 
       const button = screen.getByTestId('new-chat-button');
-      expect(button).toHaveAttribute('aria-label', 'Create new chat');
+      expect(button).toHaveAttribute('aria-label', 'Create new thread');
     });
 
     it('shows enabled styling when ready', () => {
       setupMockContext({
         selectedGameId: 'game-1',
         selectedAgentId: 'agent-1',
-        loading: { creating: false },
+        loading: { chats: false, creating: false, games: false, agents: false, sending: false, messages: false, updating: false, deleting: false },
       });
       render(<ChatSidebar />);
 
@@ -293,18 +329,17 @@ describe('ChatSidebar Component', () => {
     });
 
     it('handles async createChat call with void operator', () => {
-      const createChat = jest.fn().mockResolvedValue(undefined);
+      mockCreateChat.mockResolvedValue(undefined);
       setupMockContext({
         selectedGameId: 'game-1',
         selectedAgentId: 'agent-1',
-        createChat,
       });
       render(<ChatSidebar />);
 
       const button = screen.getByTestId('new-chat-button');
       fireEvent.click(button);
 
-      expect(createChat).toHaveBeenCalled();
+      expect(mockCreateChat).toHaveBeenCalled();
     });
   });
 
@@ -403,6 +438,69 @@ describe('ChatSidebar Component', () => {
   });
 
   /**
+   * Test Group: Thread Limits
+   */
+  describe('Thread Limits', () => {
+    it('shows thread count when game is selected', () => {
+      setupMockContext({
+        selectedGameId: 'game-1',
+        chatsByGame: {
+          'game-1': [
+            { id: 'chat-1', status: 'Active' },
+            { id: 'chat-2', status: 'Active' },
+          ],
+        },
+      });
+      render(<ChatSidebar />);
+
+      expect(screen.getByText(/2 \/ 5 thread attivi/)).toBeInTheDocument();
+    });
+
+    it('shows warning when at thread limit', () => {
+      setupMockContext({
+        selectedGameId: 'game-1',
+        chatsByGame: {
+          'game-1': [
+            { id: 'chat-1', status: 'Active' },
+            { id: 'chat-2', status: 'Active' },
+            { id: 'chat-3', status: 'Active' },
+            { id: 'chat-4', status: 'Active' },
+            { id: 'chat-5', status: 'Active' },
+          ],
+        },
+      });
+      render(<ChatSidebar />);
+
+      expect(screen.getByText(/5 \/ 5 thread attivi/)).toBeInTheDocument();
+      expect(screen.getByText(/thread più vecchio sarà archiviato/)).toBeInTheDocument();
+    });
+
+    it('does not count closed threads toward limit', () => {
+      setupMockContext({
+        selectedGameId: 'game-1',
+        chatsByGame: {
+          'game-1': [
+            { id: 'chat-1', status: 'Active' },
+            { id: 'chat-2', status: 'Active' },
+            { id: 'chat-3', status: 'Closed' },
+            { id: 'chat-4', status: 'Closed' },
+          ],
+        },
+      });
+      render(<ChatSidebar />);
+
+      expect(screen.getByText(/2 \/ 5 thread attivi/)).toBeInTheDocument();
+    });
+
+    it('does not show thread count when no game selected', () => {
+      setupMockContext({ selectedGameId: null });
+      render(<ChatSidebar />);
+
+      expect(screen.queryByText(/thread attivi/)).not.toBeInTheDocument();
+    });
+  });
+
+  /**
    * Test Group: Edge Cases
    */
   describe('Edge Cases', () => {
@@ -455,7 +553,7 @@ describe('ChatSidebar Component', () => {
       setupMockContext({
         selectedGameId: 'game-1',
         selectedAgentId: 'agent-1',
-        loading: { creating: true, games: true, agents: true },
+        loading: { chats: false, creating: true, games: true, agents: true, sending: false, messages: false, updating: false, deleting: false },
       });
       render(<ChatSidebar />);
 
@@ -481,7 +579,7 @@ describe('ChatSidebar Component', () => {
 
       expect(
         screen.getByRole('complementary', {
-          name: 'Chat sidebar with game selection and chat history',
+          name: 'Chat sidebar with game selection and thread history',
         })
       ).toBeInTheDocument();
     });

@@ -618,8 +618,9 @@ Rate limited to 10 requests per minute per IP address.
                     return Results.Redirect($"{frontendUrl}/auth/callback?error=oauth_failed");
                 }
 
-                // Set session cookie
-                var expiresAt = DateTime.UtcNow.AddDays(30); // Session expiration from result
+                // Set session cookie - get expiration from configuration
+                var sessionExpirationDays = await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30) ?? 30;
+                var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
                 writeSessionCookie(context, result.SessionToken ?? string.Empty, expiresAt);
 
                 // Redirect to frontend with success

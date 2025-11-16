@@ -24,12 +24,13 @@ public class PromptEvaluationService : IPromptEvaluationService
     private readonly ILogger<PromptEvaluationService> _logger;
     private readonly string _allowedDatasetsDirectory;
     private readonly TimeProvider _timeProvider;
-
+    private readonly IConfigurationService _configService;
     public PromptEvaluationService(
         IRagService ragService,
         IPromptTemplateService promptTemplateService,
         MeepleAiDbContext dbContext,
         ILogger<PromptEvaluationService> logger,
+        IConfigurationService configService,
         string? allowedDatasetsDirectory = null,
         TimeProvider? timeProvider = null)
     {
@@ -40,6 +41,7 @@ public class PromptEvaluationService : IPromptEvaluationService
         _allowedDatasetsDirectory = allowedDatasetsDirectory
             ?? Path.Combine(Directory.GetCurrentDirectory(), "datasets");
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _configService = configService;
     }
 
     /// <summary>
@@ -76,10 +78,11 @@ public class PromptEvaluationService : IPromptEvaluationService
 
             // SECURITY: Check file size to prevent resource exhaustion
             var fileInfo = new FileInfo(fullPath);
-            const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
-            if (fileInfo.Length > MaxFileSizeBytes)
+            var maxFileSizeMB = await _configService.GetValueAsync<int?>("Evaluation:MaxDatasetFileSizeMB", 10) ?? 10;
+            var maxFileSizeBytes = maxFileSizeMB * 1024L * 1024L;
+            if (fileInfo.Length > maxFileSizeBytes)
             {
-                throw new ArgumentException($"Dataset file exceeds maximum size of 10 MB (actual: {fileInfo.Length / 1024 / 1024} MB)");
+                throw new ArgumentException($"Dataset file exceeds maximum size of {maxFileSizeMB} MB (actual: {fileInfo.Length / 1024 / 1024} MB)");
             }
 
             // Read and deserialize JSON

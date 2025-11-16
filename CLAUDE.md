@@ -25,7 +25,7 @@ apps/api/src/Api/BoundedContexts/
 
 **Pattern**: Domain (pure logic) → Application (CQRS) → Infrastructure (adapters) → HTTP (MediatR)
 
-**Eliminated**: 3,010 lines legacy services (GameService 181, AuthService 346, PDF services 1,300, UserManagementService 243, Streaming services 940)
+**Eliminated**: 3,710 lines legacy services (GameService 181, AuthService 346, PDF services 1,300, UserManagementService 243, Streaming services 940, RuleSpec Comment/Diff services 700)
 **Retained**: ConfigurationService, AdminStatsService, AlertingService, RagService (orchestration/infrastructure)
 
 ---
@@ -208,14 +208,15 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 
 ## DDD Migration Status
 
-**100% Complete** (2025-11-15):
+**100% Complete** (2025-11-16):
 - ✅ 7/7 contexts migrated to CQRS (ALL at 100%)
-- ✅ 83+ CQRS handlers operational (including 3 streaming handlers + 8 agent handlers)
-- ✅ 4,334 lines legacy code removed (+1,324 from Issue #1188)
-- ✅ 71+ endpoints migrated to MediatR (+8 agent endpoints)
+- ✅ 96+ CQRS handlers operational (including 3 streaming handlers + 8 agent handlers + 13 RuleSpec comment/diff handlers)
+- ✅ 5,034 lines legacy code removed (+700 from Issue #1189: RuleSpec Comment/Diff services)
+- ✅ 82+ endpoints migrated to MediatR (+11 RuleSpec comment/diff endpoints)
 - ✅ Zero build errors
 - ✅ Streaming RAG/QA/Setup migrated to IAsyncEnumerable pattern
 - ✅ Agent services (Chess, Feedback, FollowUp) migrated to CQRS (#1188)
+- ✅ RuleSpec Comment/Diff services migrated to CQRS (#1189)
 
 **Contexts**: All 7 contexts at 100% - Authentication, GameManagement, KnowledgeBase, DocumentProcessing, WorkflowIntegration, SystemConfiguration, Administration
 

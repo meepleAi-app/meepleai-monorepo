@@ -20,7 +20,7 @@
 
 **Approach**: Add Board Game AI **quality innovations** as new features:
 1. ✅ Multi-model LLM validation (OpenRouter: GPT-4 + Claude consensus)
-2. ✅ Enhanced PDF processing (LLMWhisperer + SmolDocling pipeline)
+2. ✅ Enhanced PDF processing (Unstructured + SmolDocling + Docnet pipeline)
 3. ✅ Italian-first localization (multilingual embeddings + terminology)
 4. ✅ 5-metric quality framework (Accuracy, Hallucination, Confidence, Citation, Latency)
 5. ✅ Publisher partnership features (white-label, B2B analytics)
@@ -57,40 +57,40 @@
 
 ## PDF Processing Pipeline (HYBRID APPROACH)
 
-### Architecture Decision: LLMWhisperer + SmolDocling + Docnet.Core
+### Architecture Decision: Unstructured + SmolDocling + Docnet.Core
 
-**Stage 1: LLMWhisperer** (PRIMARY - Cloud API)
+**Note**: Originally planned with LLMWhisperer, replaced with Unstructured (Apache 2.0) to eliminate API costs. See [ADR-003b](../adr/adr-003b-unstructured-pdf.md).
+
+**Stage 1: Unstructured** (PRIMARY - Self-hosted)
 ```csharp
-// Infrastructure/Adapters/LlmWhispererAdapter.cs
-public class LlmWhispererPdfExtractor : IPdfTextExtractor
+// Infrastructure/Adapters/UnstructuredPdfTextExtractor.cs
+public class UnstructuredPdfTextExtractor : IPdfTextExtractor
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _config;
+    private readonly ILogger<UnstructuredPdfTextExtractor> _logger;
 
     public async Task<PdfExtractionResult> ExtractTextAsync(Stream pdfStream)
     {
-        var apiKey = _config["LlmWhisperer:ApiKey"];
+        var serviceUrl = _config["PdfProcessing:Unstructured:ServiceUrl"] ?? "http://unstructured:8001";
 
         using var content = new MultipartFormDataContent();
-        content.Add(new StreamContent(pdfStream), "file", "document.pdf");
+        content.Add(new StreamContent(pdfStream), "files", "document.pdf");
+        content.Add(new StringContent("hi_res"), "strategy");
+        content.Add(new StringContent("true"), "extract_tables");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://api.llmwhisperer.com/v1/extract")
-        {
-            Headers = { { "Authorization", $"Bearer {apiKey}" } },
-            Content = content
-        };
-
-        using var response = await _httpClient.SendAsync(request);
+        var response = await _httpClient.PostAsync($"{serviceUrl}/general/v0/general", content);
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<LlmWhispererResponse>();
+        var elements = await response.Content.ReadFromJsonAsync<List<UnstructuredElement>>();
+        var extractedText = string.Join("\n\n", elements.Select(e => e.Text));
 
         return new PdfExtractionResult
         {
-            Text = result.Text,
-            QualityScore = result.QualityScore,
-            PageCount = result.PageCount,
-            Method = "LlmWhisperer"
+            Text = extractedText,
+            QualityScore = CalculateQualityScore(extractedText, elements),
+            PageCount = elements.Max(e => e.Metadata?.PageNumber ?? 1),
+            Method = "Unstructured"
         };
     }
 }
@@ -99,11 +99,15 @@ public class LlmWhispererPdfExtractor : IPdfTextExtractor
 **Configuration** (appsettings.json):
 ```json
 {
-  "LlmWhisperer": {
-    "ApiKey": "${LLMWHISPERER_API_KEY}",
-    "Enabled": true,
-    "TimeoutSeconds": 120,
-    "QualityThreshold": 0.80
+  "PdfProcessing": {
+    "Unstructured": {
+      "ServiceUrl": "http://unstructured:8001",
+      "Strategy": "hi_res",
+      "ExtractTables": true
+    },
+    "Quality": {
+      "MinimumThreshold": 0.80
+    }
   }
 }
 ```

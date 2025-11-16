@@ -13,7 +13,7 @@
 2. **Priority**: Board Game AI is #1 priority, FASE 1-4 deferred to Aug 2026+
 3. **Technology Stack**:
    - Backend: ASP.NET Core 9.0 (existing, enhanced)
-   - PDF: LLMWhisperer + SmolDocling + Docnet.Core (3-stage)
+   - PDF: Unstructured + SmolDocling + Docnet.Core (3-stage)
    - LLM: OpenRouter (GPT-4 + Claude) + Ollama fallback (free)
    - Vector DB: Qdrant (existing)
    - Frontend: Next.js 16 + React 19 (existing)
@@ -180,8 +180,8 @@ gh issue view 890  # Check for deferral comment
 # Add to infra/env/.env.dev
 
 # PDF Processing
-LLMWHISPERER_API_KEY=llmw_...  # From https://llmwhisperer.com/dashboard
-SMOLDOCLING_SERVICE_URL=http://pdf-processor:8001
+# Note: Using Unstructured (self-hosted), no API key needed
+SMOLDOCLING_SERVICE_URL=http://pdf-processor:8002
 
 # LLM APIs
 OPENROUTER_API_KEY=sk-or-v1-...  # From https://openrouter.ai/keys

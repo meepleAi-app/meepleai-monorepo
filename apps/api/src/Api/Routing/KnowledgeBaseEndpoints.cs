@@ -44,41 +44,30 @@ public static class KnowledgeBaseEndpoints
                 "KnowledgeBase search request from user {UserId} for game {GameId}: {Query}",
                 session.User.Id, gameId, req.query);
 
-            try
+            // Create query
+            var query = new SearchQuery(
+                GameId: gameId,
+                Query: req.query,
+                TopK: req.topK ?? 5,
+                MinScore: req.minScore ?? 0.7,
+                SearchMode: req.searchMode ?? "hybrid",
+                Language: req.language ?? "en"
+            );
+
+            // Execute via MediatR
+            var results = await mediator.Send(query, ct);
+
+            logger.LogInformation(
+                "KnowledgeBase search completed: {ResultCount} results found",
+                results.Count);
+
+            return Results.Ok(new
             {
-                // Create query
-                var query = new SearchQuery(
-                    GameId: gameId,
-                    Query: req.query,
-                    TopK: req.topK ?? 5,
-                    MinScore: req.minScore ?? 0.7,
-                    SearchMode: req.searchMode ?? "hybrid",
-                    Language: req.language ?? "en"
-                );
-
-                // Execute via MediatR
-                var results = await mediator.Send(query, ct);
-
-                logger.LogInformation(
-                    "KnowledgeBase search completed: {ResultCount} results found",
-                    results.Count);
-
-                return Results.Ok(new
-                {
-                    success = true,
-                    results = results,
-                    count = results.Count,
-                    searchMode = query.SearchMode
-                });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "KnowledgeBase search failed for game {GameId}", gameId);
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: 500,
-                    title: "Search failed");
-            }
+                success = true,
+                results = results,
+                count = results.Count,
+                searchMode = query.SearchMode
+            });
         })
         .WithName("KnowledgeBaseSearch")
         .WithTags("KnowledgeBase");
@@ -109,43 +98,32 @@ public static class KnowledgeBaseEndpoints
                 "KnowledgeBase Q&A request from user {UserId} for game {GameId}: {Query}",
                 session.User.Id, gameId, req.query);
 
-            try
+            // Create query
+            var query = new AskQuestionQuery(
+                GameId: gameId,
+                Question: req.query,
+                Language: req.language ?? "en",
+                BypassCache: req.bypassCache ?? false
+            );
+
+            // Execute via MediatR
+            var response = await mediator.Send(query, ct);
+
+            logger.LogInformation(
+                "KnowledgeBase Q&A completed: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
+                response.OverallConfidence, response.IsLowQuality);
+
+            return Results.Ok(new
             {
-                // Create query
-                var query = new AskQuestionQuery(
-                    GameId: gameId,
-                    Question: req.query,
-                    Language: req.language ?? "en",
-                    BypassCache: req.bypassCache ?? false
-                );
-
-                // Execute via MediatR
-                var response = await mediator.Send(query, ct);
-
-                logger.LogInformation(
-                    "KnowledgeBase Q&A completed: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
-                    response.OverallConfidence, response.IsLowQuality);
-
-                return Results.Ok(new
-                {
-                    success = true,
-                    answer = response.Answer,
-                    sources = response.Sources,
-                    searchConfidence = response.SearchConfidence,
-                    llmConfidence = response.LlmConfidence,
-                    overallConfidence = response.OverallConfidence,
-                    isLowQuality = response.IsLowQuality,
-                    citations = response.Citations
-                });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "KnowledgeBase Q&A failed for game {GameId}", gameId);
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: 500,
-                    title: "Q&A failed");
-            }
+                success = true,
+                answer = response.Answer,
+                sources = response.Sources,
+                searchConfidence = response.SearchConfidence,
+                llmConfidence = response.LlmConfidence,
+                overallConfidence = response.OverallConfidence,
+                isLowQuality = response.IsLowQuality,
+                citations = response.Citations
+            });
         })
         .WithName("KnowledgeBaseAsk")
         .WithTags("KnowledgeBase");
@@ -168,23 +146,15 @@ public static class KnowledgeBaseEndpoints
 
             logger.LogInformation("Creating chat thread for user {UserId}, game {GameId}", userId, req.GameId);
 
-            try
-            {
-                var command = new CreateChatThreadCommand(
-                    UserId: userId,
-                    GameId: req.GameId,
-                    Title: req.Title,
-                    InitialMessage: req.InitialMessage
-                );
+            var command = new CreateChatThreadCommand(
+                UserId: userId,
+                GameId: req.GameId,
+                Title: req.Title,
+                InitialMessage: req.InitialMessage
+            );
 
-                var result = await mediator.Send(command, ct);
-                return Results.Created($"/api/v1/chat-threads/{result.Id}", result);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to create chat thread");
-                return Results.Problem(ex.Message, statusCode: 500);
-            }
+            var result = await mediator.Send(command, ct);
+            return Results.Created($"/api/v1/chat-threads/{result.Id}", result);
         })
         .WithName("CreateChatThread")
         .WithTags("ChatThreads");
@@ -200,35 +170,27 @@ public static class KnowledgeBaseEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
+            var query = new GetChatThreadByIdQuery(threadId);
+            var result = await mediator.Send(query, ct);
+
+            if (result == null)
             {
-                var query = new GetChatThreadByIdQuery(threadId);
-                var result = await mediator.Send(query, ct);
-
-                if (result == null)
-                {
-                    return Results.NotFound(new { error = "Thread not found" });
-                }
-
-                // Authorization: User can only access their own threads unless admin
-                if (!Guid.TryParse(session.User.Id, out var userId))
-                {
-                    return Results.BadRequest(new { error = "Invalid user ID" });
-                }
-
-                if (result.UserId != userId &&
-                    !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-                {
-                    return Results.Forbid();
-                }
-
-                return Results.Ok(result);
+                return Results.NotFound(new { error = "Thread not found" });
             }
-            catch (Exception ex)
+
+            // Authorization: User can only access their own threads unless admin
+            if (!Guid.TryParse(session.User.Id, out var userId))
             {
-                logger.LogError(ex, "Failed to get chat thread {ThreadId}", threadId);
-                return Results.Problem(ex.Message, statusCode: 500);
+                return Results.BadRequest(new { error = "Invalid user ID" });
             }
+
+            if (result.UserId != userId &&
+                !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Forbid();
+            }
+
+            return Results.Ok(result);
         })
         .WithName("GetChatThreadById")
         .WithTags("ChatThreads");
@@ -244,29 +206,21 @@ public static class KnowledgeBaseEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
+            if (gameId.HasValue)
             {
-                if (gameId.HasValue)
+                if (!Guid.TryParse(session.User.Id, out var userId))
                 {
-                    if (!Guid.TryParse(session.User.Id, out var userId))
-                    {
-                        return Results.BadRequest(new { error = "Invalid user ID" });
-                    }
-
-                    var query = new GetChatThreadsByGameQuery(gameId.Value, userId);
-                    var results = await mediator.Send(query, ct);
-
-                    return Results.Ok(new { threads = results, count = results.Count });
+                    return Results.BadRequest(new { error = "Invalid user ID" });
                 }
-                else
-                {
-                    return Results.BadRequest(new { error = "gameId query parameter required" });
-                }
+
+                var query = new GetChatThreadsByGameQuery(gameId.Value, userId);
+                var results = await mediator.Send(query, ct);
+
+                return Results.Ok(new { threads = results, count = results.Count });
             }
-            catch (Exception ex)
+            else
             {
-                logger.LogError(ex, "Failed to get chat threads for game {GameId}", gameId);
-                return Results.Problem(ex.Message, statusCode: 500);
+                return Results.BadRequest(new { error = "gameId query parameter required" });
             }
         })
         .WithName("GetChatThreadsByGame")
@@ -312,27 +266,14 @@ public static class KnowledgeBaseEndpoints
                 return Results.Forbid();
             }
 
-            try
-            {
-                var command = new AddMessageCommand(
-                    ThreadId: threadId,
-                    Content: req.Content,
-                    Role: req.Role
-                );
+            var command = new AddMessageCommand(
+                ThreadId: threadId,
+                Content: req.Content,
+                Role: req.Role
+            );
 
-                var result = await mediator.Send(command, ct);
-                return Results.Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "Failed to add message to thread {ThreadId}", threadId);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unexpected error adding message to thread {ThreadId}", threadId);
-                return Results.Problem(ex.Message, statusCode: 500);
-            }
+            var result = await mediator.Send(command, ct);
+            return Results.Ok(result);
         })
         .WithName("AddMessageToThread")
         .WithTags("ChatThreads");
@@ -371,22 +312,9 @@ public static class KnowledgeBaseEndpoints
                 return Results.Forbid();
             }
 
-            try
-            {
-                var command = new CloseThreadCommand(threadId);
-                var result = await mediator.Send(command, ct);
-                return Results.Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "Failed to close thread {ThreadId}", threadId);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unexpected error closing thread {ThreadId}", threadId);
-                return Results.Problem(ex.Message, statusCode: 500);
-            }
+            var command = new CloseThreadCommand(threadId);
+            var result = await mediator.Send(command, ct);
+            return Results.Ok(result);
         })
         .WithName("CloseThread")
         .WithTags("ChatThreads");
@@ -425,22 +353,9 @@ public static class KnowledgeBaseEndpoints
                 return Results.Forbid();
             }
 
-            try
-            {
-                var command = new ReopenThreadCommand(threadId);
-                var result = await mediator.Send(command, ct);
-                return Results.Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "Failed to reopen thread {ThreadId}", threadId);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unexpected error reopening thread {ThreadId}", threadId);
-                return Results.Problem(ex.Message, statusCode: 500);
-            }
+            var command = new ReopenThreadCommand(threadId);
+            var result = await mediator.Send(command, ct);
+            return Results.Ok(result);
         })
         .WithName("ReopenThread")
         .WithTags("ChatThreads");
@@ -480,39 +395,26 @@ public static class KnowledgeBaseEndpoints
                 return Results.Forbid();
             }
 
-            try
-            {
-                // Default to JSON if no format specified
-                var exportFormat = format?.ToLowerInvariant() ?? "json";
+            // Default to JSON if no format specified
+            var exportFormat = format?.ToLowerInvariant() ?? "json";
 
-                var command = new ExportChatCommand(threadId, exportFormat);
-                var result = await mediator.Send(command, ct);
+            var command = new ExportChatCommand(threadId, exportFormat);
+            var result = await mediator.Send(command, ct);
 
-                // Generate filename
-                var threadTitle = existingThread.Title?.Replace(" ", "_") ?? "chat";
-                var sanitizedTitle = new string(threadTitle.Where(c => char.IsLetterOrDigit(c) || c == '_' || c == '-').ToArray());
-                var filename = $"{sanitizedTitle}_{threadId.ToString()[..8]}.{result.FileExtension}";
+            // Generate filename
+            var threadTitle = existingThread.Title?.Replace(" ", "_") ?? "chat";
+            var sanitizedTitle = new string(threadTitle.Where(c => char.IsLetterOrDigit(c) || c == '_' || c == '-').ToArray());
+            var filename = $"{sanitizedTitle}_{threadId.ToString()[..8]}.{result.FileExtension}";
 
-                logger.LogInformation("User {UserId} exported thread {ThreadId} in {Format} format",
-                    userId, threadId, result.Format);
+            logger.LogInformation("User {UserId} exported thread {ThreadId} in {Format} format",
+                userId, threadId, result.Format);
 
-                // Return file with appropriate content type
-                return Results.Content(
-                    result.Content,
-                    result.ContentType,
-                    null,
-                    statusCode: 200);
-            }
-            catch (ArgumentException ex)
-            {
-                logger.LogWarning(ex, "Invalid export format requested for thread {ThreadId}", threadId);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unexpected error exporting thread {ThreadId}", threadId);
-                return Results.Problem(ex.Message, statusCode: 500);
-            }
+            // Return file with appropriate content type
+            return Results.Content(
+                result.Content,
+                result.ContentType,
+                null,
+                statusCode: 200);
         })
         .WithName("ExportChatThread")
         .WithTags("ChatThreads")
@@ -545,36 +447,13 @@ public static class KnowledgeBaseEndpoints
                 return Results.BadRequest(new { error = "Content is required" });
             }
 
-            try
-            {
-                var command = new UpdateMessageCommand(threadId, messageId, req.Content, userId);
-                var result = await mediator.Send(command, ct);
+            var command = new UpdateMessageCommand(threadId, messageId, req.Content, userId);
+            var result = await mediator.Send(command, ct);
 
-                logger.LogInformation("User {UserId} updated message {MessageId} in thread {ThreadId}",
-                    userId, messageId, threadId);
+            logger.LogInformation("User {UserId} updated message {MessageId} in thread {ThreadId}",
+                userId, messageId, threadId);
 
-                return Results.Ok(result);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                logger.LogWarning(ex, "Message or thread not found: {Message}", ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                logger.LogWarning(ex, "Unauthorized message update attempt");
-                return Results.Forbid();
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "Invalid message update operation");
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unexpected error updating message {MessageId}", messageId);
-                return Results.Problem(ex.Message, statusCode: 500);
-            }
+            return Results.Ok(result);
         })
         .WithName("UpdateChatMessage")
         .WithTags("ChatThreads");
@@ -598,31 +477,13 @@ public static class KnowledgeBaseEndpoints
 
             var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
-            try
-            {
-                var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
-                var result = await mediator.Send(command, ct);
+            var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
+            var result = await mediator.Send(command, ct);
 
-                logger.LogInformation("User {UserId} deleted message {MessageId} from thread {ThreadId} (admin: {IsAdmin})",
-                    userId, messageId, threadId, isAdmin);
+            logger.LogInformation("User {UserId} deleted message {MessageId} from thread {ThreadId} (admin: {IsAdmin})",
+                userId, messageId, threadId, isAdmin);
 
-                return Results.Ok(result);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                logger.LogWarning(ex, "Message or thread not found: {Message}", ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                logger.LogWarning(ex, "Unauthorized message deletion attempt");
-                return Results.Forbid();
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unexpected error deleting message {MessageId}", messageId);
-                return Results.Problem(ex.Message, statusCode: 500);
-            }
+            return Results.Ok(result);
         })
         .WithName("DeleteChatMessage")
         .WithTags("ChatThreads");
@@ -643,30 +504,12 @@ public static class KnowledgeBaseEndpoints
                 return Results.BadRequest(new { error = "Invalid user ID" });
             }
 
-            try
-            {
-                var command = new DeleteChatThreadCommand(threadId, userId);
-                await mediator.Send(command, ct);
+            var command = new DeleteChatThreadCommand(threadId, userId);
+            await mediator.Send(command, ct);
 
-                logger.LogInformation("User {UserId} deleted thread {ThreadId}", userId, threadId);
+            logger.LogInformation("User {UserId} deleted thread {ThreadId}", userId, threadId);
 
-                return Results.NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                logger.LogWarning(ex, "Thread not found: {Message}", ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                logger.LogWarning(ex, "Unauthorized thread deletion attempt");
-                return Results.Forbid();
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unexpected error deleting thread {ThreadId}", threadId);
-                return Results.Problem(ex.Message, statusCode: 500);
-            }
+            return Results.NoContent();
         })
         .WithName("DeleteChatThread")
         .WithTags("ChatThreads");

@@ -35,37 +35,21 @@ public static class AgentEndpoints
                 return Results.Forbid();
             }
 
-            try
-            {
-                var command = new CreateAgentCommand(
-                    Name: req.Name,
-                    AgentType: req.Type,
-                    StrategyName: req.StrategyName,
-                    StrategyParameters: req.StrategyParameters ?? new Dictionary<string, object>(),
-                    IsActive: req.IsActive ?? true
-                );
+            var command = new CreateAgentCommand(
+                Name: req.Name,
+                AgentType: req.Type,
+                StrategyName: req.StrategyName,
+                StrategyParameters: req.StrategyParameters ?? new Dictionary<string, object>(),
+                IsActive: req.IsActive ?? true
+            );
 
-                var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct);
 
-                logger.LogInformation(
-                    "Created agent {AgentId} by user {UserId}",
-                    result.Id, session.User.Id);
+            logger.LogInformation(
+                "Created agent {AgentId} by user {UserId}",
+                result.Id, session.User.Id);
 
-                return Results.Created($"/api/v1/agents/{result.Id}", result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "Agent creation failed: {Message}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Agent creation failed");
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: 500,
-                    title: "Agent creation failed");
-            }
+            return Results.Created($"/api/v1/agents/{result.Id}", result);
         })
         .WithName("CreateAgent")
         .Produces(201)
@@ -83,26 +67,15 @@ public static class AgentEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
-            {
-                var query = new GetAgentByIdQuery(id);
-                var result = await mediator.Send(query, ct);
+            var query = new GetAgentByIdQuery(id);
+            var result = await mediator.Send(query, ct);
 
-                if (result == null)
-                {
-                    return Results.NotFound(new { error = $"Agent {id} not found" });
-                }
-
-                return Results.Ok(result);
-            }
-            catch (Exception ex)
+            if (result == null)
             {
-                logger.LogError(ex, "Failed to retrieve agent {AgentId}", id);
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: 500,
-                    title: "Agent retrieval failed");
+                return Results.NotFound(new { error = $"Agent {id} not found" });
             }
+
+            return Results.Ok(result);
         })
         .WithName("GetAgentById")
         .Produces(200)
@@ -121,30 +94,19 @@ public static class AgentEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
-            {
-                var query = new GetAllAgentsQuery(activeOnly, type);
-                var results = await mediator.Send(query, ct);
+            var query = new GetAllAgentsQuery(activeOnly, type);
+            var results = await mediator.Send(query, ct);
 
-                logger.LogInformation(
-                    "Retrieved {Count} agents for user {UserId}",
-                    results.Count, session.User.Id);
+            logger.LogInformation(
+                "Retrieved {Count} agents for user {UserId}",
+                results.Count, session.User.Id);
 
-                return Results.Ok(new
-                {
-                    success = true,
-                    agents = results,
-                    count = results.Count
-                });
-            }
-            catch (Exception ex)
+            return Results.Ok(new
             {
-                logger.LogError(ex, "Failed to retrieve agents");
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: 500,
-                    title: "Agent retrieval failed");
-            }
+                success = true,
+                agents = results,
+                count = results.Count
+            });
         })
         .WithName("GetAllAgents")
         .Produces(200)
@@ -170,43 +132,32 @@ public static class AgentEndpoints
                 return Results.Forbid();
             }
 
-            try
+            var command = new ConfigureAgentCommand(
+                AgentId: id,
+                StrategyName: req.StrategyName,
+                StrategyParameters: req.StrategyParameters ?? new Dictionary<string, object>()
+            );
+
+            var result = await mediator.Send(command, ct);
+
+            if (!result.Success)
             {
-                var command = new ConfigureAgentCommand(
-                    AgentId: id,
-                    StrategyName: req.StrategyName,
-                    StrategyParameters: req.StrategyParameters ?? new Dictionary<string, object>()
-                );
-
-                var result = await mediator.Send(command, ct);
-
-                if (!result.Success)
+                return result.ErrorCode switch
                 {
-                    return result.ErrorCode switch
-                    {
-                        "AGENT_NOT_FOUND" => Results.NotFound(new { error = result.Message }),
-                        "INVALID_CONFIGURATION" => Results.BadRequest(new { error = result.Message }),
-                        _ => Results.Problem(
-                            detail: result.Message,
-                            statusCode: 500,
-                            title: "Configuration failed")
-                    };
-                }
-
-                logger.LogInformation(
-                    "Configured agent {AgentId} by user {UserId}",
-                    id, session.User.Id);
-
-                return Results.Ok(result);
+                    "AGENT_NOT_FOUND" => Results.NotFound(new { error = result.Message }),
+                    "INVALID_CONFIGURATION" => Results.BadRequest(new { error = result.Message }),
+                    _ => Results.Problem(
+                        detail: result.Message,
+                        statusCode: 500,
+                        title: "Configuration failed")
+                };
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to configure agent {AgentId}", id);
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: 500,
-                    title: "Configuration failed");
-            }
+
+            logger.LogInformation(
+                "Configured agent {AgentId} by user {UserId}",
+                id, session.User.Id);
+
+            return Results.Ok(result);
         })
         .WithName("ConfigureAgent")
         .Produces(200)
@@ -226,37 +177,21 @@ public static class AgentEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
-            {
-                var command = new InvokeAgentCommand(
-                    AgentId: id,
-                    Query: req.Query,
-                    GameId: req.GameId,
-                    ChatThreadId: req.ChatThreadId,
-                    UserId: Guid.Parse(session.User.Id)
-                );
+            var command = new InvokeAgentCommand(
+                AgentId: id,
+                Query: req.Query,
+                GameId: req.GameId,
+                ChatThreadId: req.ChatThreadId,
+                UserId: Guid.Parse(session.User.Id)
+            );
 
-                var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct);
 
-                logger.LogInformation(
-                    "Agent {AgentId} invoked by user {UserId}: InvocationId={InvocationId}, Confidence={Confidence:F3}, Results={ResultCount}",
-                    id, session.User.Id, result.InvocationId, result.Confidence, result.ResultCount);
+            logger.LogInformation(
+                "Agent {AgentId} invoked by user {UserId}: InvocationId={InvocationId}, Confidence={Confidence:F3}, Results={ResultCount}",
+                id, session.User.Id, result.InvocationId, result.Confidence, result.ResultCount);
 
-                return Results.Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "Agent invocation failed: {Message}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to invoke agent {AgentId}", id);
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: 500,
-                    title: "Agent invocation failed");
-            }
+            return Results.Ok(result);
         })
         .WithName("InvokeAgent")
         .Produces(200)

@@ -27,27 +27,16 @@ public static class UserProfileEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
-            {
-                var query = new DddGetUserProfileQuery { UserId = Guid.Parse(session.User.Id) };
-                var profile = await mediator.Send(query, ct);
+            var query = new DddGetUserProfileQuery { UserId = Guid.Parse(session.User.Id) };
+            var profile = await mediator.Send(query, ct);
 
-                if (profile == null)
-                {
-                    logger.LogWarning("Profile not found for user {UserId}", session.User.Id);
-                    return Results.NotFound(new { error = "Profile not found" });
-                }
-
-                return Results.Json(profile);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            catch (Exception ex)
+            if (profile == null)
             {
-                logger.LogError(ex, "Get profile error for user {UserId}", session.User.Id);
-                return Results.Problem(detail: "An error occurred retrieving your profile", statusCode: 500);
+                logger.LogWarning("Profile not found for user {UserId}", session.User.Id);
+                return Results.NotFound(new { error = "Profile not found" });
             }
-#pragma warning restore CA1031
+
+            return Results.Json(profile);
         })
         .RequireAuthorization()
         .WithName("GetUserProfile")
@@ -73,38 +62,17 @@ public static class UserProfileEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
+            var command = new DddUpdateUserProfileCommand
             {
-                var command = new DddUpdateUserProfileCommand
-                {
-                    UserId = Guid.Parse(session.User.Id),
-                    DisplayName = payload.DisplayName,
-                    Email = payload.Email
-                };
+                UserId = Guid.Parse(session.User.Id),
+                DisplayName = payload.DisplayName,
+                Email = payload.Email
+            };
 
-                await mediator.Send(command, ct);
-                logger.LogInformation("Profile updated for user {UserId}", session.User.Id);
+            await mediator.Send(command, ct);
+            logger.LogInformation("Profile updated for user {UserId}", session.User.Id);
 
-                return Results.Json(new { ok = true, message = "Profile updated successfully" });
-            }
-            catch (Api.SharedKernel.Domain.Exceptions.ValidationException ex)
-            {
-                logger.LogWarning(ex, "Profile update validation failed for user {UserId}", session.User.Id);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
-            {
-                logger.LogWarning(ex, "Profile update domain validation failed for user {UserId}", session.User.Id);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Update profile error for user {UserId}", session.User.Id);
-                return Results.Problem(detail: "An error occurred updating your profile", statusCode: 500);
-            }
-#pragma warning restore CA1031
+            return Results.Json(new { ok = true, message = "Profile updated successfully" });
         })
         .RequireAuthorization()
         .WithName("UpdateUserProfile")
@@ -137,38 +105,17 @@ public static class UserProfileEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
+            var command = new DddChangePasswordCommand
             {
-                var command = new DddChangePasswordCommand
-                {
-                    UserId = Guid.Parse(session.User.Id),
-                    CurrentPassword = payload.CurrentPassword,
-                    NewPassword = payload.NewPassword
-                };
+                UserId = Guid.Parse(session.User.Id),
+                CurrentPassword = payload.CurrentPassword,
+                NewPassword = payload.NewPassword
+            };
 
-                await mediator.Send(command, ct);
-                logger.LogInformation("Password changed for user {UserId}", session.User.Id);
+            await mediator.Send(command, ct);
+            logger.LogInformation("Password changed for user {UserId}", session.User.Id);
 
-                return Results.Json(new { ok = true, message = "Password changed successfully" });
-            }
-            catch (Api.SharedKernel.Domain.Exceptions.ValidationException ex)
-            {
-                logger.LogWarning(ex, "Password change validation failed for user {UserId}", session.User.Id);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
-            {
-                logger.LogWarning(ex, "Password change domain validation failed for user {UserId}", session.User.Id);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Change password error for user {UserId}", session.User.Id);
-                return Results.Problem(detail: "An error occurred changing your password", statusCode: 500);
-            }
-#pragma warning restore CA1031
+            return Results.Json(new { ok = true, message = "Password changed successfully" });
         })
         .RequireAuthorization()
         .WithName("ChangePassword")

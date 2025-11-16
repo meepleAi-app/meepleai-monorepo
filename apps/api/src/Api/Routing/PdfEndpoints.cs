@@ -115,35 +115,9 @@ public static class PdfEndpoints
                 return Results.BadRequest(new { error = "Query parameter 'q' is required" });
             }
 
-            try
-            {
-                var results = await bggService.SearchGamesAsync(q, exact, ct);
-                logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
-                return Results.Json(new { results });
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogError(ex, "BGG API unavailable for search query: {Query}", q);
-                return Results.Json(new
-                {
-                    error = "BoardGameGeek API is currently unavailable. Please try again later.",
-                    details = ex.Message
-                }, statusCode: StatusCodes.Status503ServiceUnavailable);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
-            // Specific exception handling occurs in service layer (BggApiService)
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (BggApiService)
-                logger.LogError(ex, "Unexpected error during BGG search: {Query}", q);
-                return Results.Json(new
-                {
-                    error = "An unexpected error occurred while searching BoardGameGeek."
-                }, statusCode: StatusCodes.Status500InternalServerError);
-            }
-#pragma warning restore CA1031
+            var results = await bggService.SearchGamesAsync(q, exact, ct);
+            logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
+            return Results.Json(new { results });
         });
 
         group.MapGet("/bgg/games/{bggId:int}", async (
@@ -163,42 +137,16 @@ public static class PdfEndpoints
                 return Results.BadRequest(new { error = "Invalid BGG ID. Must be a positive integer." });
             }
 
-            try
-            {
-                var details = await bggService.GetGameDetailsAsync(bggId, ct);
+            var details = await bggService.GetGameDetailsAsync(bggId, ct);
 
-                if (details == null)
-                {
-                    logger.LogWarning("BGG game not found: {BggId}", bggId);
-                    return Results.NotFound(new { error = $"Game with BGG ID {bggId} not found" });
-                }
+            if (details == null)
+            {
+                logger.LogWarning("BGG game not found: {BggId}", bggId);
+                return Results.NotFound(new { error = $"Game with BGG ID {bggId} not found" });
+            }
 
-                logger.LogInformation("BGG game details retrieved: {BggId}, {Name}", bggId, details.Name);
-                return Results.Json(details);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogError(ex, "BGG API unavailable for game ID: {BggId}", bggId);
-                return Results.Json(new
-                {
-                    error = "BoardGameGeek API is currently unavailable. Please try again later.",
-                    details = ex.Message
-                }, statusCode: StatusCodes.Status503ServiceUnavailable);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
-            // Specific exception handling occurs in service layer (BggApiService)
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (BggApiService)
-                logger.LogError(ex, "Unexpected error retrieving BGG game details: {BggId}", bggId);
-                return Results.Json(new
-                {
-                    error = "An unexpected error occurred while retrieving game details."
-                }, statusCode: StatusCodes.Status500InternalServerError);
-            }
-#pragma warning restore CA1031
+            logger.LogInformation("BGG game details retrieved: {BggId}, {Name}", bggId, details.Name);
+            return Results.Json(details);
         });
 
         group.MapGet("/games/{gameId:guid}/pdfs", async (Guid gameId, HttpContext context, PdfStorageService pdfStorage, CancellationToken ct) =>
@@ -435,23 +383,15 @@ public static class PdfEndpoints
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
             }
 
-            try
-            {
-                logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.Id, pdfId);
-                var command = new GenerateRuleSpecFromPdfCommand(pdfId);
-                var ruleSpecDto = await mediator.Send(command, ct);
+            logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.Id, pdfId);
+            var command = new GenerateRuleSpecFromPdfCommand(pdfId);
+            var ruleSpecDto = await mediator.Send(command, ct);
 
-                // Convert DTO to Model for backward compatibility
-                var atoms = ruleSpecDto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
-                var ruleSpec = new RuleSpec(ruleSpecDto.GameId.ToString(), ruleSpecDto.Version, ruleSpecDto.CreatedAt, atoms);
+            // Convert DTO to Model for backward compatibility
+            var atoms = ruleSpecDto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
+            var ruleSpec = new RuleSpec(ruleSpecDto.GameId.ToString(), ruleSpecDto.Version, ruleSpecDto.CreatedAt, atoms);
 
-                return Results.Json(ruleSpec);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "Unable to generate RuleSpec for PDF {PdfId}", pdfId);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            return Results.Json(ruleSpec);
         });
 
         // AI-01: Index PDF for semantic search

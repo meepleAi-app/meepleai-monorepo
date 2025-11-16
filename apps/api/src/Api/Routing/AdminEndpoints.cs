@@ -300,34 +300,21 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                // Encrypt API key before storing (AUTH-06 pattern)
-                var apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey");
+            // Encrypt API key before storing (AUTH-06 pattern)
+            var apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey");
 
-                var command = new CreateN8nConfigCommand(
-                    Name: request.Name,
-                    BaseUrl: request.BaseUrl,
-                    ApiKeyEncrypted: apiKeyEncrypted,
-                    CreatedByUserId: Guid.Parse(session.User.Id),
-                    WebhookUrl: request.WebhookUrl
-                );
+            var command = new CreateN8nConfigCommand(
+                Name: request.Name,
+                BaseUrl: request.BaseUrl,
+                ApiKeyEncrypted: apiKeyEncrypted,
+                CreatedByUserId: Guid.Parse(session.User.Id),
+                WebhookUrl: request.WebhookUrl
+            );
 
-                logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.Id, request.Name);
-                var config = await mediator.Send(command, ct);
-                logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
-                return Results.Json(config);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to create n8n config: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
-            {
-                logger.LogWarning("Domain validation failed: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.Id, request.Name);
+            var config = await mediator.Send(command, ct);
+            logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
+            return Results.Json(config);
         });
 
         group.MapPut("/admin/n8n/{configId}", async (Guid configId, UpdateN8nConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
@@ -335,34 +322,26 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
+            // Encrypt API key if provided (AUTH-06 pattern)
+            string? apiKeyEncrypted = null;
+            if (!string.IsNullOrWhiteSpace(request.ApiKey))
             {
-                // Encrypt API key if provided (AUTH-06 pattern)
-                string? apiKeyEncrypted = null;
-                if (!string.IsNullOrWhiteSpace(request.ApiKey))
-                {
-                    apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey");
-                }
-
-                var command = new UpdateN8nConfigCommand(
-                    ConfigId: configId,
-                    Name: request.Name,
-                    BaseUrl: request.BaseUrl,
-                    WebhookUrl: request.WebhookUrl,
-                    ApiKeyEncrypted: apiKeyEncrypted,
-                    IsActive: request.IsActive
-                );
-
-                logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session.User.Id, configId);
-                var config = await mediator.Send(command, ct);
-                logger.LogInformation("n8n config {ConfigId} updated successfully", config.Id);
-                return Results.Json(config);
+                apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey");
             }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to update n8n config: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+
+            var command = new UpdateN8nConfigCommand(
+                ConfigId: configId,
+                Name: request.Name,
+                BaseUrl: request.BaseUrl,
+                WebhookUrl: request.WebhookUrl,
+                ApiKeyEncrypted: apiKeyEncrypted,
+                IsActive: request.IsActive
+            );
+
+            logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session.User.Id, configId);
+            var config = await mediator.Send(command, ct);
+            logger.LogInformation("n8n config {ConfigId} updated successfully", config.Id);
+            return Results.Json(config);
         });
 
         group.MapDelete("/admin/n8n/{configId}", async (Guid configId, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
@@ -389,18 +368,10 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session.User.Id, configId);
-                var result = await n8nService.TestConnectionAsync(configId.ToString(), ct);
-                logger.LogInformation("n8n config {ConfigId} test result: {Success}", configId, result.Success);
-                return Results.Json(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to test n8n config: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session.User.Id, configId);
+            var result = await n8nService.TestConnectionAsync(configId.ToString(), ct);
+            logger.LogInformation("n8n config {ConfigId} test result: {Success}", configId, result.Success);
+            return Results.Json(result);
         });
 
         // N8N-04: Workflow template endpoints
@@ -447,29 +418,10 @@ public static class AdminEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            try
-            {
-                logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session.User.Id, id);
-                var result = await templateService.ImportTemplateAsync(id, request.Parameters, session.User.Id, ct);
-                logger.LogInformation("Template {TemplateId} imported successfully as workflow {WorkflowId}", id, result.WorkflowId);
-                return Results.Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to import template {TemplateId}: {Error}", id, ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (N8nTemplateService)
-                logger.LogError(ex, "Unexpected error importing template {TemplateId}", id);
-                return Results.Problem("An unexpected error occurred while importing the template");
-            }
-#pragma warning restore CA1031
+            logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session.User.Id, id);
+            var result = await templateService.ImportTemplateAsync(id, request.Parameters, session.User.Id, ct);
+            logger.LogInformation("Template {TemplateId} imported successfully as workflow {WorkflowId}", id, result.WorkflowId);
+            return Results.Ok(result);
         })
         .RequireAuthorization()
         .WithName("ImportN8nTemplate")
@@ -568,27 +520,20 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
+            var command = new ExportStatsCommand(request.Format, request.FromDate, request.ToDate, request.GameId);
+            var data = await mediator.Send(command, ct);
+            var contentType = request.Format.ToLowerInvariant() switch
             {
-                var command = new ExportStatsCommand(request.Format, request.FromDate, request.ToDate, request.GameId);
-                var data = await mediator.Send(command, ct);
-                var contentType = request.Format.ToLowerInvariant() switch
-                {
-                    "csv" => "text/csv",
-                    "json" => "application/json",
-                    _ => "text/plain"
-                };
-                var filename = $"analytics-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.{request.Format.ToLowerInvariant()}";
+                "csv" => "text/csv",
+                "json" => "application/json",
+                _ => "text/plain"
+            };
+            var filename = $"analytics-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.{request.Format.ToLowerInvariant()}";
 
-                return Results.File(
-                    System.Text.Encoding.UTF8.GetBytes(data),
-                    contentType,
-                    filename);
-            }
-            catch (ArgumentException ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            return Results.File(
+                System.Text.Encoding.UTF8.GetBytes(data),
+                contentType,
+                filename);
         })
         .WithName("ExportAnalytics")
         .WithTags("Admin")
@@ -683,42 +628,28 @@ public static class AdminEndpoints
 
             foreach (var alert in webhook.Alerts)
             {
-                try
+                if (alert.Status == "firing")
                 {
-                    if (alert.Status == "firing")
+                    var metadata = new Dictionary<string, object>
                     {
-                        var metadata = new Dictionary<string, object>
-                        {
-                            ["labels"] = alert.Labels,
-                            ["annotations"] = alert.Annotations,
-                            ["starts_at"] = alert.StartsAt,
-                            ["group_key"] = webhook.GroupKey
-                        };
+                        ["labels"] = alert.Labels,
+                        ["annotations"] = alert.Annotations,
+                        ["starts_at"] = alert.StartsAt,
+                        ["group_key"] = webhook.GroupKey
+                    };
 
-                        await alertingService.SendAlertAsync(
-                            alertType: alert.Labels.GetValueOrDefault("alertname", "Unknown"),
-                            severity: alert.Labels.GetValueOrDefault("severity", "warning"),
-                            message: alert.Annotations.GetValueOrDefault("summary", "Alert triggered"),
-                            metadata: metadata,
-                            cancellationToken: ct);
-                    }
-                    else if (alert.Status == "resolved")
-                    {
-                        var alertType = alert.Labels.GetValueOrDefault("alertname", "Unknown");
-                        await alertingService.ResolveAlertAsync(alertType, ct);
-                    }
+                    await alertingService.SendAlertAsync(
+                        alertType: alert.Labels.GetValueOrDefault("alertname", "Unknown"),
+                        severity: alert.Labels.GetValueOrDefault("severity", "warning"),
+                        message: alert.Annotations.GetValueOrDefault("summary", "Alert triggered"),
+                        metadata: metadata,
+                        cancellationToken: ct);
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: Service boundary - must return error response instead of throwing
-                // Individual alert processing failure shouldn't break other alerts in the batch
-                catch (Exception ex)
+                else if (alert.Status == "resolved")
                 {
-                    // Resilience pattern: Individual alert processing failure shouldn't break other alerts
-                    // Fail-open to ensure one malformed alert doesn't prevent processing remaining alerts
-                    logger.LogError(ex, "Error processing Prometheus alert: {AlertName}",
-                        alert.Labels.GetValueOrDefault("alertname", "Unknown"));
+                    var alertType = alert.Labels.GetValueOrDefault("alertname", "Unknown");
+                    await alertingService.ResolveAlertAsync(alertType, ct);
                 }
-#pragma warning restore CA1031
             }
 
             return Results.Ok(new { message = "Webhook processed successfully" });
@@ -818,28 +749,17 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                var result = await mediator.Send(
-                    new CreatePromptTemplateCommand(
-                        request.Name,
-                        request.Description,
-                        request.Category,
-                        Guid.Parse(session.User.Id)),
-                    ct);
+            var result = await mediator.Send(
+                new CreatePromptTemplateCommand(
+                    request.Name,
+                    request.Description,
+                    request.Category,
+                    Guid.Parse(session.User.Id)),
+                ct);
 
-                return Results.Created(
-                    $"/api/v1/admin/prompts/{result.Id}",
-                    result);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("already exists"))
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-            {
-                return Results.Unauthorized();
-            }
+            return Results.Created(
+                $"/api/v1/admin/prompts/{result.Id}",
+                result);
         })
         .WithName("CreatePromptTemplate")
         .WithTags("Admin", "PromptManagement")
@@ -859,23 +779,16 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                var result = await mediator.Send(
-                    new GetPromptTemplateByIdQuery(id),
-                    ct);
+            var result = await mediator.Send(
+                new GetPromptTemplateByIdQuery(id),
+                ct);
 
-                if (result == null)
-                {
-                    return Results.NotFound(new { error = "Template not found" });
-                }
-
-                return Results.Ok(result);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("creator information"))
+            if (result == null)
             {
-                return Results.Problem(ex.Message, statusCode: 500);
+                return Results.NotFound(new { error = "Template not found" });
             }
+
+            return Results.Ok(result);
         })
         .WithName("GetPromptTemplate")
         .WithTags("Admin", "PromptManagement")
@@ -896,28 +809,17 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                var result = await mediator.Send(
-                    new CreatePromptVersionCommand(
-                        id,
-                        request.Content,
-                        request.Metadata,
-                        Guid.Parse(session.User.Id)),
-                    ct);
+            var result = await mediator.Send(
+                new CreatePromptVersionCommand(
+                    id,
+                    request.Content,
+                    request.Metadata,
+                    Guid.Parse(session.User.Id)),
+                ct);
 
-                return Results.Created(
-                    $"/api/v1/admin/prompts/{id}/versions/{result.Id}",
-                    result);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-            {
-                if (ex.Message.Contains("Template"))
-                {
-                    return Results.NotFound(new { error = "Template not found" });
-                }
-                return Results.Unauthorized();
-            }
+            return Results.Created(
+                $"/api/v1/admin/prompts/{id}/versions/{result.Id}",
+                result);
         })
         .WithName("CreatePromptVersion")
         .WithTags("Admin", "PromptManagement")
@@ -937,18 +839,11 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                var result = await mediator.Send(
-                    new GetPromptVersionsQuery(id),
-                    ct);
+            var result = await mediator.Send(
+                new GetPromptVersionsQuery(id),
+                ct);
 
-                return Results.Ok(result);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-            {
-                return Results.NotFound(new { error = "Template not found" });
-            }
+            return Results.Ok(result);
         })
         .WithName("GetPromptVersionHistory")
         .WithTags("Admin", "PromptManagement")
@@ -969,30 +864,14 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                var activated = await promptService.ActivateVersionAsync(id, versionId, Guid.Parse(session.User.Id), ct);
+            var activated = await promptService.ActivateVersionAsync(id, versionId, Guid.Parse(session.User.Id), ct);
 
-                if (!activated)
-                {
-                    return Results.NotFound(new { error = "Version not found" });
-                }
-
-                return Results.Ok(new { message = "Version activated successfully" });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
+            if (!activated)
             {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (PromptManagementService)
-                return Results.Problem(
-                    statusCode: 500,
-                    title: "Activation Failed",
-                    detail: ex.Message);
+                return Results.NotFound(new { error = "Version not found" });
             }
-#pragma warning restore CA1031
+
+            return Results.Ok(new { message = "Version activated successfully" });
         })
         .WithName("ActivatePromptVersion")
         .WithTags("Admin", "PromptManagement")
@@ -1018,42 +897,23 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} evaluating prompt template {TemplateId}, version {VersionId}",
-                    session.User.Id, templateId, versionId);
+            logger.LogInformation("Admin {AdminId} evaluating prompt template {TemplateId}, version {VersionId}",
+                session.User.Id, templateId, versionId);
 
-                var result = await evaluationService.EvaluateAsync(
-                    templateId,
-                    versionId,
-                    request.DatasetPath,
-                    progressCallback: null,
-                    ct);
+            var result = await evaluationService.EvaluateAsync(
+                templateId,
+                versionId,
+                request.DatasetPath,
+                progressCallback: null,
+                ct);
 
-                if (request.StoreResults)
-                {
-                    await evaluationService.StoreResultsAsync(result, ct);
-                    logger.LogInformation("Evaluation result {EvaluationId} stored to database", result.EvaluationId);
-                }
+            if (request.StoreResults)
+            {
+                await evaluationService.StoreResultsAsync(result, ct);
+                logger.LogInformation("Evaluation result {EvaluationId} stored to database", result.EvaluationId);
+            }
 
-                return Results.Ok(result);
-            }
-            catch (FileNotFoundException ex)
-            {
-                logger.LogWarning("Dataset not found: {Error}", ex.Message);
-                return Results.NotFound(new { error = $"Dataset not found: {ex.Message}" });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (PromptEvaluationService)
-                logger.LogError(ex, "Evaluation failed for template {TemplateId}, version {VersionId}", templateId, versionId);
-                return Results.Problem($"Evaluation failed: {ex.Message}");
-            }
-#pragma warning restore CA1031
+            return Results.Ok(result);
         })
         .WithName("EvaluatePromptVersion")
         .WithTags("Admin", "PromptManagement", "Testing")
@@ -1075,34 +935,20 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation(
-                    "Admin {AdminId} comparing prompt versions: Baseline {BaselineId} vs Candidate {CandidateId}",
-                    session.User.Id, request.BaselineVersionId, request.CandidateVersionId);
+            logger.LogInformation(
+                "Admin {AdminId} comparing prompt versions: Baseline {BaselineId} vs Candidate {CandidateId}",
+                session.User.Id, request.BaselineVersionId, request.CandidateVersionId);
 
-                var comparison = await evaluationService.CompareVersionsAsync(
-                    templateId,
-                    request.BaselineVersionId,
-                    request.CandidateVersionId,
-                    request.DatasetPath,
-                    ct);
+            var comparison = await evaluationService.CompareVersionsAsync(
+                templateId,
+                request.BaselineVersionId,
+                request.CandidateVersionId,
+                request.DatasetPath,
+                ct);
 
-                logger.LogInformation("Comparison completed - Recommendation: {Recommendation}", comparison.Recommendation);
+            logger.LogInformation("Comparison completed - Recommendation: {Recommendation}", comparison.Recommendation);
 
-                return Results.Ok(comparison);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (PromptEvaluationService)
-                logger.LogError(ex, "Comparison failed for template {TemplateId}", templateId);
-                return Results.Problem($"Comparison failed: {ex.Message}");
-            }
-#pragma warning restore CA1031
+            return Results.Ok(comparison);
         })
         .WithName("ComparePromptVersions")
         .WithTags("Admin", "PromptManagement", "Testing")
@@ -1143,40 +989,26 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
+            // Get all historical results and find the specific evaluation
+            var allResults = await evaluationService.GetHistoricalResultsAsync("", 1000, ct);
+            var result = allResults.FirstOrDefault(r => r.EvaluationId == evaluationId);
+
+            if (result == null)
             {
-                // Get all historical results and find the specific evaluation
-                var allResults = await evaluationService.GetHistoricalResultsAsync("", 1000, ct);
-                var result = allResults.FirstOrDefault(r => r.EvaluationId == evaluationId);
-
-                if (result == null)
-                {
-                    return Results.NotFound(new { error = "Evaluation not found" });
-                }
-
-                var reportFormat = format?.ToLowerInvariant() == "json"
-                    ? ReportFormat.Json
-                    : ReportFormat.Markdown;
-
-                var report = evaluationService.GenerateReport(result, reportFormat);
-
-                var contentType = reportFormat == ReportFormat.Json
-                    ? "application/json"
-                    : "text/markdown";
-
-                return Results.Content(report, contentType);
+                return Results.NotFound(new { error = "Evaluation not found" });
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (PromptEvaluationService)
-                logger.LogError(ex, "Failed to generate report for evaluation {EvaluationId}", evaluationId);
-                return Results.Problem($"Report generation failed: {ex.Message}");
-            }
-#pragma warning restore CA1031
+
+            var reportFormat = format?.ToLowerInvariant() == "json"
+                ? ReportFormat.Json
+                : ReportFormat.Markdown;
+
+            var report = evaluationService.GenerateReport(result, reportFormat);
+
+            var contentType = reportFormat == ReportFormat.Json
+                ? "application/json"
+                : "text/markdown";
+
+            return Results.Content(report, contentType);
         })
         .WithName("GetEvaluationReport")
         .WithTags("Admin", "PromptManagement", "Testing")
@@ -1217,19 +1049,11 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session.User.Id, request.Email);
-                var command = new CreateUserCommand(request.Email, request.Password, request.DisplayName, request.Role ?? "user");
-                var user = await mediator.Send(command, ct);
-                logger.LogInformation("User {UserId} created successfully", user.Id);
-                return Results.Created($"/api/v1/admin/users/{user.Id}", user);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("already exists"))
-            {
-                logger.LogWarning("Failed to create user: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session.User.Id, request.Email);
+            var command = new CreateUserCommand(request.Email, request.Password, request.DisplayName, request.Role ?? "user");
+            var user = await mediator.Send(command, ct);
+            logger.LogInformation("User {UserId} created successfully", user.Id);
+            return Results.Created($"/api/v1/admin/users/{user.Id}", user);
         })
         .WithName("CreateUser")
         .WithTags("Admin");
@@ -1245,24 +1069,11 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} updating user {UserId}", session.User.Id, id);
-                var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role);
-                var user = await mediator.Send(command, ct);
-                logger.LogInformation("User {UserId} updated successfully", id);
-                return Results.Ok(user);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                logger.LogWarning("User {UserId} not found: {Error}", id, ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to update user {UserId}: {Error}", id, ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Admin {AdminId} updating user {UserId}", session.User.Id, id);
+            var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role);
+            var user = await mediator.Send(command, ct);
+            logger.LogInformation("User {UserId} updated successfully", id);
+            return Results.Ok(user);
         })
         .WithName("UpdateUser")
         .WithTags("Admin");
@@ -1277,24 +1088,11 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} deleting user {UserId}", session.User.Id, id);
-                var command = new DeleteUserCommand(id, session.User.Id);
-                await mediator.Send(command, ct);
-                logger.LogInformation("User {UserId} deleted successfully", id);
-                return Results.NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                logger.LogWarning("User {UserId} not found: {Error}", id, ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to delete user {UserId}: {Error}", id, ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Admin {AdminId} deleting user {UserId}", session.User.Id, id);
+            var command = new DeleteUserCommand(id, session.User.Id);
+            await mediator.Send(command, ct);
+            logger.LogInformation("User {UserId} deleted successfully", id);
+            return Results.NoContent();
         })
         .WithName("DeleteUser")
         .WithTags("Admin");
@@ -1391,28 +1189,20 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} creating configuration {Key}", session.User.Id, request.Key);
-                var command = new CreateConfigurationCommand(
-                    Key: request.Key,
-                    Value: request.Value,
-                    ValueType: request.ValueType,
-                    CreatedByUserId: Guid.Parse(session.User.Id),
-                    Description: request.Description,
-                    Category: request.Category,
-                    Environment: request.Environment,
-                    RequiresRestart: request.RequiresRestart
-                );
-                var config = await mediator.Send(command, ct);
-                logger.LogInformation("Configuration {Key} created with ID {Id}", request.Key, config.Id);
-                return Results.Created($"/api/v1/admin/configurations/{config.Id}", config);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to create configuration {Key}: {Error}", request.Key, ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Admin {AdminId} creating configuration {Key}", session.User.Id, request.Key);
+            var command = new CreateConfigurationCommand(
+                Key: request.Key,
+                Value: request.Value,
+                ValueType: request.ValueType,
+                CreatedByUserId: Guid.Parse(session.User.Id),
+                Description: request.Description,
+                Category: request.Category,
+                Environment: request.Environment,
+                RequiresRestart: request.RequiresRestart
+            );
+            var config = await mediator.Send(command, ct);
+            logger.LogInformation("Configuration {Key} created with ID {Id}", request.Key, config.Id);
+            return Results.Created($"/api/v1/admin/configurations/{config.Id}", config);
         })
         .WithName("CreateConfiguration")
         .WithTags("Admin", "Configuration")
@@ -1430,37 +1220,29 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
+            logger.LogInformation("Admin {AdminId} updating configuration {Id}", session.User.Id, id);
+
+            // For simplicity, we only support value updates via this endpoint
+            if (request.Value == null)
             {
-                logger.LogInformation("Admin {AdminId} updating configuration {Id}", session.User.Id, id);
-
-                // For simplicity, we only support value updates via this endpoint
-                if (request.Value == null)
-                {
-                    return Results.BadRequest(new { error = "Value is required for update" });
-                }
-
-                var command = new UpdateConfigValueCommand(
-                    ConfigId: id,
-                    NewValue: request.Value,
-                    UpdatedByUserId: Guid.Parse(session.User.Id)
-                );
-                var config = await mediator.Send(command, ct);
-
-                if (config == null)
-                {
-                    logger.LogWarning("Configuration {Id} not found for update", id);
-                    return Results.NotFound(new { error = "Configuration not found" });
-                }
-
-                logger.LogInformation("Configuration {Id} updated to version {Version}", id, config.Version);
-                return Results.Json(config);
+                return Results.BadRequest(new { error = "Value is required for update" });
             }
-            catch (InvalidOperationException ex)
+
+            var command = new UpdateConfigValueCommand(
+                ConfigId: id,
+                NewValue: request.Value,
+                UpdatedByUserId: Guid.Parse(session.User.Id)
+            );
+            var config = await mediator.Send(command, ct);
+
+            if (config == null)
             {
-                logger.LogWarning("Failed to update configuration {Id}: {Error}", id, ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
+                logger.LogWarning("Configuration {Id} not found for update", id);
+                return Results.NotFound(new { error = "Configuration not found" });
             }
+
+            logger.LogInformation("Configuration {Id} updated to version {Version}", id, config.Version);
+            return Results.Json(config);
         })
         .WithName("UpdateConfiguration")
         .WithTags("Admin", "Configuration")
@@ -1537,27 +1319,19 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} performing bulk update on {Count} configurations",
-                    session.User.Id, request.Updates.Count);
+            logger.LogInformation("Admin {AdminId} performing bulk update on {Count} configurations",
+                session.User.Id, request.Updates.Count);
 
-                var updates = request.Updates.Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
-                    Id: Guid.Parse(u.Id),
-                    Value: u.Value
-                )).ToList();
+            var updates = request.Updates.Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
+                Id: Guid.Parse(u.Id),
+                Value: u.Value
+            )).ToList();
 
-                var command = new BulkUpdateConfigsCommand(updates, Guid.Parse(session.User.Id));
-                var configs = await mediator.Send(command, ct);
+            var command = new BulkUpdateConfigsCommand(updates, Guid.Parse(session.User.Id));
+            var configs = await mediator.Send(command, ct);
 
-                logger.LogInformation("Bulk update completed successfully for {Count} configurations", configs.Count);
-                return Results.Json(configs);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Bulk update failed: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Bulk update completed successfully for {Count} configurations", configs.Count);
+            return Results.Json(configs);
         })
         .WithName("BulkUpdateConfigurations")
         .WithTags("Admin", "Configuration")
@@ -1611,39 +1385,25 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} importing {Count} configurations",
-                    session.User.Id, request.Configurations.Count);
+            logger.LogInformation("Admin {AdminId} importing {Count} configurations",
+                session.User.Id, request.Configurations.Count);
 
-                var items = request.Configurations.Select(c => new ConfigurationImportItem(
-                    Key: c.Key,
-                    Value: c.Value,
-                    ValueType: c.ValueType,
-                    Description: c.Description,
-                    Category: c.Category,
-                    IsActive: c.IsActive,
-                    RequiresRestart: c.RequiresRestart,
-                    Environment: c.Environment
-                )).ToList();
+            var items = request.Configurations.Select(c => new ConfigurationImportItem(
+                Key: c.Key,
+                Value: c.Value,
+                ValueType: c.ValueType,
+                Description: c.Description,
+                Category: c.Category,
+                IsActive: c.IsActive,
+                RequiresRestart: c.RequiresRestart,
+                Environment: c.Environment
+            )).ToList();
 
-                var command = new ImportConfigsCommand(items, request.OverwriteExisting, Guid.Parse(session.User.Id));
-                var importedCount = await mediator.Send(command, ct);
+            var command = new ImportConfigsCommand(items, request.OverwriteExisting, Guid.Parse(session.User.Id));
+            var importedCount = await mediator.Send(command, ct);
 
-                logger.LogInformation("Successfully imported {Count} configurations", importedCount);
-                return Results.Json(new { importedCount });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 400 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
-                // Specific exception handling occurs in command handlers
-                logger.LogError(ex, "Failed to import configurations");
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning restore CA1031
+            logger.LogInformation("Successfully imported {Count} configurations", importedCount);
+            return Results.Json(new { importedCount });
         })
         .WithName("ImportConfigurations")
         .WithTags("Admin", "Configuration")
@@ -1679,28 +1439,20 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
+            logger.LogInformation("Admin {AdminId} rolling back configuration {Id} to version {Version}",
+                session.User.Id, id, version);
+
+            var command = new RollbackConfigCommand(id, version, Guid.Parse(session.User.Id));
+            var config = await mediator.Send(command, ct);
+
+            if (config == null)
             {
-                logger.LogInformation("Admin {AdminId} rolling back configuration {Id} to version {Version}",
-                    session.User.Id, id, version);
-
-                var command = new RollbackConfigCommand(id, version, Guid.Parse(session.User.Id));
-                var config = await mediator.Send(command, ct);
-
-                if (config == null)
-                {
-                    logger.LogWarning("Configuration {Id} not found for rollback", id);
-                    return Results.NotFound(new { error = "Configuration not found" });
-                }
-
-                logger.LogInformation("Configuration {Id} rolled back successfully", id);
-                return Results.Json(config);
+                logger.LogWarning("Configuration {Id} not found for rollback", id);
+                return Results.NotFound(new { error = "Configuration not found" });
             }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Rollback failed for configuration {Id}: {Error}", id, ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+
+            logger.LogInformation("Configuration {Id} rolled back successfully", id);
+            return Results.Json(config);
         })
         .WithName("RollbackConfiguration")
         .WithTags("Admin", "Configuration")
@@ -1757,21 +1509,8 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                var stats = await cacheService.GetCacheStatsAsync(gameId, ct);
-                return Results.Json(stats);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (HybridCacheService)
-                return Results.Problem(detail: $"Failed to retrieve cache stats: {ex.Message}", statusCode: 500);
-            }
-#pragma warning restore CA1031
+            var stats = await cacheService.GetCacheStatsAsync(gameId, ct);
+            return Results.Json(stats);
         })
         .WithName("GetCacheStats")
         .WithDescription("Get cache statistics with optional game filter (Admin only)")
@@ -1793,24 +1532,10 @@ public static class AdminEndpoints
                 logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session.User.Id, gameId);
             }
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session.User.Id, gameId);
-                await cacheService.InvalidateGameAsync(gameId.ToString(), ct);
-                logger.LogInformation("Successfully invalidated cache for game {GameId}", gameId);
-                return Results.Json(new { ok = true, message = $"Cache invalidated for game '{gameId}'" });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (HybridCacheService)
-                logger.LogError(ex, "Failed to invalidate cache for game {GameId}", gameId);
-                return Results.Problem(detail: $"Failed to invalidate cache: {ex.Message}", statusCode: 500);
-            }
-#pragma warning restore CA1031
+            logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session.User.Id, gameId);
+            await cacheService.InvalidateGameAsync(gameId.ToString(), ct);
+            logger.LogInformation("Successfully invalidated cache for game {GameId}", gameId);
+            return Results.Json(new { ok = true, message = $"Cache invalidated for game '{gameId}'" });
         })
         .WithName("InvalidateGameCache")
         .WithDescription("Invalidate all cached responses for a specific game (Admin only)")
@@ -1832,24 +1557,10 @@ public static class AdminEndpoints
                 return Results.BadRequest(new { error = "tag is required" });
             }
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session.User.Id, tag);
-                await cacheService.InvalidateByCacheTagAsync(tag, ct);
-                logger.LogInformation("Successfully invalidated cache by tag {Tag}", tag);
-                return Results.Json(new { ok = true, message = $"Cache invalidated for tag '{tag}'" });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must return HTTP error response instead of throwing
-            // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (HybridCacheService)
-                logger.LogError(ex, "Failed to invalidate cache by tag {Tag}", tag);
-                return Results.Problem(detail: $"Failed to invalidate cache: {ex.Message}", statusCode: 500);
-            }
-#pragma warning restore CA1031
+            logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session.User.Id, tag);
+            await cacheService.InvalidateByCacheTagAsync(tag, ct);
+            logger.LogInformation("Successfully invalidated cache by tag {Tag}", tag);
+            return Results.Json(new { ok = true, message = $"Cache invalidated for tag '{tag}'" });
         })
         .WithName("InvalidateCacheByTag")
         .WithDescription("Invalidate cache entries by tag (e.g., game:chess, pdf:abc123) (Admin only)")
@@ -1868,23 +1579,10 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} creating prompt template '{TemplateName}'", session.User.Id, request.Name);
-                var response = await promptManagement.CreatePromptTemplateAsync(request, Guid.Parse(session.User.Id), ct);
-                logger.LogInformation("Prompt template {TemplateId} created successfully", response.Template.Id);
-                return Results.Created($"/api/v1/prompts/{response.Template.Id}", response);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to create prompt template: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                logger.LogWarning("Invalid prompt template request: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Admin {AdminId} creating prompt template '{TemplateName}'", session.User.Id, request.Name);
+            var response = await promptManagement.CreatePromptTemplateAsync(request, Guid.Parse(session.User.Id), ct);
+            logger.LogInformation("Prompt template {TemplateId} created successfully", response.Template.Id);
+            return Results.Created($"/api/v1/prompts/{response.Template.Id}", response);
         });
 
         // Create new version of prompt template (Admin only)
@@ -1893,23 +1591,10 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} creating new version for prompt template {TemplateId}", session.User.Id, templateId);
-                var version = await promptManagement.CreatePromptVersionAsync(templateId.ToString(), request, Guid.Parse(session.User.Id), ct);
-                logger.LogInformation("Prompt version {VersionId} (v{VersionNumber}) created successfully", version.Id, version.VersionNumber);
-                return Results.Created($"/api/v1/prompts/{templateId}/versions/{version.VersionNumber}", version);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to create prompt version: {Error}", ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                logger.LogWarning("Invalid prompt version request: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Admin {AdminId} creating new version for prompt template {TemplateId}", session.User.Id, templateId);
+            var version = await promptManagement.CreatePromptVersionAsync(templateId.ToString(), request, Guid.Parse(session.User.Id), ct);
+            logger.LogInformation("Prompt version {VersionId} (v{VersionNumber}) created successfully", version.Id, version.VersionNumber);
+            return Results.Created($"/api/v1/prompts/{templateId}/versions/{version.VersionNumber}", version);
         });
 
         // Get version history for prompt template (Admin only)
@@ -1918,16 +1603,8 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                var history = await promptManagement.GetVersionHistoryAsync(templateId.ToString(), ct);
-                return Results.Json(history);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to get version history: {Error}", ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
+            var history = await promptManagement.GetVersionHistoryAsync(templateId.ToString(), ct);
+            return Results.Json(history);
         });
 
         // Get active version of prompt template (Authenticated users)
@@ -1958,23 +1635,10 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
-                var activatedVersion = await promptManagement.ActivateVersionAsync(templateId.ToString(), versionId.ToString(), Guid.Parse(session.User.Id), request.Reason, ct);
-                logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
-                return Results.Json(activatedVersion);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to activate prompt version: {Error}", ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                logger.LogWarning("Invalid activation request: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
+            var activatedVersion = await promptManagement.ActivateVersionAsync(templateId.ToString(), versionId.ToString(), Guid.Parse(session.User.Id), request.Reason, ct);
+            logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
+            return Results.Json(activatedVersion);
         });
 
         // Get audit log for prompt template (Admin only)
@@ -1983,21 +1647,8 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            try
-            {
-                var auditLog = await promptManagement.GetAuditLogAsync(templateId.ToString(), limit, ct);
-                return Results.Json(auditLog);
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Failed to get audit log: {Error}", ex.Message);
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                logger.LogWarning("Invalid audit log request: {Error}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            var auditLog = await promptManagement.GetAuditLogAsync(templateId.ToString(), limit, ct);
+            return Results.Json(auditLog);
         });
 
         // List all prompt templates (Admin only)
@@ -2038,22 +1689,14 @@ public static class AdminEndpoints
 
             logger.LogInformation("User {UserId} creating API key '{KeyName}'", session.User.Id, request.KeyName);
 
-            try
-            {
-                var result = await apiKeyManagement.CreateApiKeyAsync(
-                    session.User.Id,
-                    request,
-                    ct);
+            var result = await apiKeyManagement.CreateApiKeyAsync(
+                session.User.Id,
+                request,
+                ct);
 
-                logger.LogInformation("API key '{KeyId}' created for user {UserId}", result.ApiKey.Id, session.User.Id);
+            logger.LogInformation("API key '{KeyId}' created for user {UserId}", result.ApiKey.Id, session.User.Id);
 
-                return Results.Created($"/api/v1/api-keys/{result.ApiKey.Id}", result);
-            }
-            catch (ArgumentException ex)
-            {
-                logger.LogWarning("Invalid API key creation request from user {UserId}: {Error}", session.User.Id, ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            return Results.Created($"/api/v1/api-keys/{result.ApiKey.Id}", result);
         });
 
         group.MapGet("/api-keys", async (HttpContext context, ApiKeyManagementService apiKeyManagement, bool includeRevoked = false, int page = 1, int pageSize = 20, CancellationToken ct = default) =>

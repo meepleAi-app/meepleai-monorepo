@@ -34,50 +34,30 @@ public static class AuthEndpoints
         // User registration (DDD/CQRS)
         group.MapPost("/auth/register", async (RegisterPayload payload, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
-            try
-            {
-                var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
-                    ? payload.Email.Split('@')[0]
-                    : payload.DisplayName.Trim();
+            var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
+                ? payload.Email.Split('@')[0]
+                : payload.DisplayName.Trim();
 
-                var command = new DddRegisterCommand(
-                    Email: payload.Email,
-                    Password: payload.Password,
-                    DisplayName: displayName,
-                    Role: payload.Role,
-                    IpAddress: context.Connection.RemoteIpAddress?.ToString(),
-                    UserAgent: context.Request.Headers.UserAgent.ToString());
+            var command = new DddRegisterCommand(
+                Email: payload.Email,
+                Password: payload.Password,
+                DisplayName: displayName,
+                Role: payload.Role,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString());
 
-                logger.LogInformation("User registration attempt for {Email}", payload.Email);
-                var result = await mediator.Send(command, ct);
-                writeSessionCookie(context, result.SessionToken, result.ExpiresAt);
-                logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
+            logger.LogInformation("User registration attempt for {Email}", payload.Email);
+            var result = await mediator.Send(command, ct);
+            writeSessionCookie(context, result.SessionToken, result.ExpiresAt);
+            logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
 
-                // Map to legacy AuthResponse for backward compatibility
-                var legacyUser = new AuthUser(
-                    Id: result.User.Id.ToString(),
-                    Email: result.User.Email,
-                    DisplayName: result.User.DisplayName,
-                    Role: result.User.Role);
-                return Results.Json(new AuthResponse(legacyUser, result.ExpiresAt));
-            }
-            catch (ArgumentException ex)
-            {
-                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
-                logger.LogWarning(ex, "Registration validation failed for {Email}", payload.Email);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
-                logger.LogWarning(ex, "Registration conflict for {Email}", payload.Email);
-                return Results.Conflict(new { error = ex.Message });
-            }
-            catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
-            {
-                logger.LogWarning(ex, "Registration domain validation failed");
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            // Map to legacy AuthResponse for backward compatibility
+            var legacyUser = new AuthUser(
+                Id: result.User.Id.ToString(),
+                Email: result.User.Email,
+                DisplayName: result.User.DisplayName,
+                Role: result.User.Role);
+            return Results.Json(new AuthResponse(legacyUser, result.ExpiresAt));
         });
 
         // User login with 2FA support (AUTH-07) - DDD CQRS
@@ -85,22 +65,13 @@ public static class AuthEndpoints
         {
             // Manual deserialization to support both camelCase and PascalCase JSON
             // ASP.NET Core 9.0 Minimal API auto-deserialization ignores ConfigureHttpJsonOptions
-            LoginPayload? payload;
-            try
+            var jsonOptions = new System.Text.Json.JsonSerializerOptions
             {
-                var jsonOptions = new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    AllowTrailingCommas = true,
-                    PropertyNamingPolicy = null
-                };
-                payload = await context.Request.ReadFromJsonAsync<LoginPayload>(jsonOptions, ct);
-            }
-            catch (System.Text.Json.JsonException ex)
-            {
-                logger.LogWarning(ex, "Login failed: invalid JSON payload");
-                return Results.BadRequest(new { error = "Invalid JSON format" });
-            }
+                PropertyNameCaseInsensitive = true,
+                AllowTrailingCommas = true,
+                PropertyNamingPolicy = null
+            };
+            var payload = await context.Request.ReadFromJsonAsync<LoginPayload>(jsonOptions, ct);
 
             if (payload == null)
             {
@@ -115,69 +86,49 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "Email and password are required" });
             }
 
-            try
+            var command = new DddLoginCommand(
+                Email: payload.Email,
+                Password: payload.Password,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString());
+
+            logger.LogInformation("Login attempt for {Email}", payload.Email);
+            var result = await mediator.Send(command, ct);
+
+            // AUTH-07: 2FA flow
+            if (result.RequiresTwoFactor)
             {
-                var command = new DddLoginCommand(
-                    Email: payload.Email,
-                    Password: payload.Password,
-                    IpAddress: context.Connection.RemoteIpAddress?.ToString(),
-                    UserAgent: context.Request.Headers.UserAgent.ToString());
-
-                logger.LogInformation("Login attempt for {Email}", payload.Email);
-                var result = await mediator.Send(command, ct);
-
-                // AUTH-07: 2FA flow
-                if (result.RequiresTwoFactor)
+                logger.LogInformation("User requires 2FA, temp session created");
+                return Results.Json(new
                 {
-                    logger.LogInformation("User requires 2FA, temp session created");
-                    return Results.Json(new
-                    {
-                        requiresTwoFactor = true,
-                        sessionToken = result.TempSessionToken, // Secure temp token (5-min TTL, single-use)
-                        message = "Two-factor authentication required"
-                    });
-                }
-
-                // Normal login (no 2FA)
-                if (result.User == null || result.SessionToken == null)
-                {
-                    logger.LogWarning("Login failed for {Email}: missing user or session token", payload.Email);
-                    removeSessionCookie(context);
-                    return Results.Unauthorized();
-                }
-
-                // Calculate session expiration from configuration (default: 30 days)
-                var sessionExpirationDays = await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30) ?? 30;
-                var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
-                writeSessionCookie(context, result.SessionToken, expiresAt);
-                logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
-
-                // Map to legacy AuthResponse for backward compatibility
-                var legacyUser = new AuthUser(
-                    Id: result.User.Id.ToString(),
-                    Email: result.User.Email,
-                    DisplayName: result.User.DisplayName,
-                    Role: result.User.Role);
-
-                return Results.Json(new AuthResponse(legacyUser, expiresAt));
+                    requiresTwoFactor = true,
+                    sessionToken = result.TempSessionToken, // Secure temp token (5-min TTL, single-use)
+                    message = "Two-factor authentication required"
+                });
             }
-            catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
+
+            // Normal login (no 2FA)
+            if (result.User == null || result.SessionToken == null)
             {
-                logger.LogWarning(ex, "Login domain validation failed for {Email}", payload.Email);
+                logger.LogWarning("Login failed for {Email}: missing user or session token", payload.Email);
                 removeSessionCookie(context);
-                return Results.Unauthorized(); // Don't leak information about which part failed
+                return Results.Unauthorized();
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in LoginCommandHandler; this catches unexpected infrastructure failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in command handler (LoginCommandHandler)
-                logger.LogError(ex, "Login endpoint error");
-                return Results.Problem(detail: ex.Message, statusCode: 500);
-            }
-#pragma warning restore CA1031
+
+            // Calculate session expiration from configuration (default: 30 days)
+            var sessionExpirationDays = await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30) ?? 30;
+            var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
+            writeSessionCookie(context, result.SessionToken, expiresAt);
+            logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
+
+            // Map to legacy AuthResponse for backward compatibility
+            var legacyUser = new AuthUser(
+                Id: result.User.Id.ToString(),
+                Email: result.User.Email,
+                DisplayName: result.User.DisplayName,
+                Role: result.User.Role);
+
+            return Results.Json(new AuthResponse(legacyUser, expiresAt));
         });
 
         // User logout - DDD CQRS
@@ -188,17 +139,9 @@ public static class AuthEndpoints
             if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) &&
                 !string.IsNullOrWhiteSpace(token))
             {
-                try
-                {
-                    var command = new DddLogoutCommand(SessionToken: token);
-                    await mediator.Send(command, ct);
-                    logger.LogInformation("User logged out successfully");
-                }
-                catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
-                {
-                    // Invalid session token - log but don't fail (allow cookie cleanup)
-                    logger.LogWarning(ex, "Logout: Invalid session token");
-                }
+                var command = new DddLogoutCommand(SessionToken: token);
+                await mediator.Send(command, ct);
+                logger.LogInformation("User logged out successfully");
             }
 
             removeSessionCookie(context);
@@ -268,23 +211,9 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
-            try
-            {
-                var setup = await totpService.GenerateSetupAsync(userId, userEmail);
-                logger.LogInformation("2FA setup generated for user {UserId}", userId);
-                return Results.Ok(setup);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in TotpService; this catches unexpected infrastructure failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (TotpService)
-                logger.LogError(ex, "2FA setup failed for user {UserId}", userId);
-                return Results.Problem(detail: ex.Message, statusCode: 500);
-            }
-#pragma warning restore CA1031
+            var setup = await totpService.GenerateSetupAsync(userId, userEmail);
+            logger.LogInformation("2FA setup generated for user {UserId}", userId);
+            return Results.Ok(setup);
         })
         .RequireAuthorization()
         .WithName("Setup2FA")
@@ -303,40 +232,26 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
-            try
+            // DDD CQRS: Use Enable2FACommand
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.Enable2FACommand(
+                UserId: userId,
+                TotpCode: request.Code
+            );
+
+            var result = await mediator.Send(command, ct);
+
+            if (!result.Success)
             {
-                // DDD CQRS: Use Enable2FACommand
-                var command = new Api.BoundedContexts.Authentication.Application.Commands.Enable2FACommand(
-                    UserId: userId,
-                    TotpCode: request.Code
-                );
-
-                var result = await mediator.Send(command, ct);
-
-                if (!result.Success)
-                {
-                    logger.LogWarning("2FA enable failed for user {UserId}: {ErrorMessage}", userId, result.ErrorMessage);
-                    return Results.BadRequest(new { error = result.ErrorMessage ?? "Invalid verification code" });
-                }
-
-                logger.LogInformation("2FA enabled for user {UserId}", userId);
-                return Results.Ok(new
-                {
-                    message = "Two-factor authentication enabled successfully",
-                    backupCodes = result.BackupCodes // Return backup codes for user to save
-                });
+                logger.LogWarning("2FA enable failed for user {UserId}: {ErrorMessage}", userId, result.ErrorMessage);
+                return Results.BadRequest(new { error = result.ErrorMessage ?? "Invalid verification code" });
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in Enable2FACommandHandler; this catches unexpected infrastructure failures
-            catch (Exception ex)
+
+            logger.LogInformation("2FA enabled for user {UserId}", userId);
+            return Results.Ok(new
             {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in command handler (Enable2FACommandHandler)
-                logger.LogError(ex, "2FA enable error for user {UserId}", userId);
-                return Results.Problem(detail: ex.Message, statusCode: 500);
-            }
-#pragma warning restore CA1031
+                message = "Two-factor authentication enabled successfully",
+                backupCodes = result.BackupCodes // Return backup codes for user to save
+            });
         })
         .RequireAuthorization()
         .WithName("Enable2FA")
@@ -354,62 +269,48 @@ public static class AuthEndpoints
                 return Results.StatusCode(429);
             }
 
-            try
+            // Validate and consume temp session (5-min TTL, single-use)
+            var userIdNullable = await tempSessionService.ValidateAndConsumeTempSessionAsync(request.SessionToken);
+            if (userIdNullable == null)
             {
-                // Validate and consume temp session (5-min TTL, single-use)
-                var userIdNullable = await tempSessionService.ValidateAndConsumeTempSessionAsync(request.SessionToken);
-                if (userIdNullable == null)
-                {
-                    logger.LogWarning("2FA verify failed: Invalid temp session");
-                    return Results.Unauthorized();
-                }
-
-                var userId = userIdNullable.Value;
-
-                // Verify TOTP or backup code
-                var isValid = await totpService.VerifyCodeAsync(userId, request.Code);
-                if (!isValid)
-                {
-                    isValid = await totpService.VerifyBackupCodeAsync(userId, request.Code);
-                }
-
-                if (!isValid)
-                {
-                    logger.LogWarning("2FA verify failed for user {UserId}", userId);
-                    return Results.Unauthorized();
-                }
-
-                // Create actual session after 2FA verification - DDD CQRS
-                var command = new DddCreateSessionCommand(
-                    UserId: userId,
-                    IpAddress: context.Connection.RemoteIpAddress?.ToString(),
-                    UserAgent: context.Request.Headers.UserAgent.ToString());
-
-                var sessionResult = await mediator.Send(command, ct);
-
-                CookieHelpers.WriteSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
-                logger.LogInformation("2FA verified, session created for user {UserId}", userId);
-
-                // Map to legacy format for backward compatibility
-                var legacyUser = new AuthUser(
-                    Id: sessionResult.User.Id.ToString(),
-                    Email: sessionResult.User.Email,
-                    DisplayName: sessionResult.User.DisplayName,
-                    Role: sessionResult.User.Role);
-
-                return Results.Ok(new { message = "2FA verification successful", user = legacyUser });
+                logger.LogWarning("2FA verify failed: Invalid temp session");
+                return Results.Unauthorized();
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in TotpService/TempSessionService/CreateSessionCommandHandler; this catches unexpected failures
-            catch (Exception ex)
+
+            var userId = userIdNullable.Value;
+
+            // Verify TOTP or backup code
+            var isValid = await totpService.VerifyCodeAsync(userId, request.Code);
+            if (!isValid)
             {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (TotpService, TempSessionService) and command handler (CreateSessionCommandHandler)
-                logger.LogError(ex, "2FA verify error");
-                return Results.Problem(detail: ex.Message, statusCode: 500);
+                isValid = await totpService.VerifyBackupCodeAsync(userId, request.Code);
             }
-#pragma warning restore CA1031
+
+            if (!isValid)
+            {
+                logger.LogWarning("2FA verify failed for user {UserId}", userId);
+                return Results.Unauthorized();
+            }
+
+            // Create actual session after 2FA verification - DDD CQRS
+            var command = new DddCreateSessionCommand(
+                UserId: userId,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString());
+
+            var sessionResult = await mediator.Send(command, ct);
+
+            CookieHelpers.WriteSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
+            logger.LogInformation("2FA verified, session created for user {UserId}", userId);
+
+            // Map to legacy format for backward compatibility
+            var legacyUser = new AuthUser(
+                Id: sessionResult.User.Id.ToString(),
+                Email: sessionResult.User.Email,
+                DisplayName: sessionResult.User.DisplayName,
+                Role: sessionResult.User.Role);
+
+            return Results.Ok(new { message = "2FA verification successful", user = legacyUser });
         })
         .WithName("Verify2FA")
         .WithTags("Authentication");
@@ -427,41 +328,27 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
-            try
+            // DDD CQRS: Use Disable2FACommand
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.Disable2FACommand(
+                UserId: userId,
+                CurrentPassword: request.Password,
+                TotpOrBackupCode: request.Code
+            );
+
+            var result = await mediator.Send(command, ct);
+
+            if (!result.Success)
             {
-                // DDD CQRS: Use Disable2FACommand
-                var command = new Api.BoundedContexts.Authentication.Application.Commands.Disable2FACommand(
-                    UserId: userId,
-                    CurrentPassword: request.Password,
-                    TotpOrBackupCode: request.Code
-                );
-
-                var result = await mediator.Send(command, ct);
-
-                if (!result.Success)
+                logger.LogWarning("2FA disable failed for user {UserId}: {ErrorMessage}", userId, result.ErrorMessage);
+                if (result.ErrorMessage?.Contains("password", StringComparison.OrdinalIgnoreCase) == true)
                 {
-                    logger.LogWarning("2FA disable failed for user {UserId}: {ErrorMessage}", userId, result.ErrorMessage);
-                    if (result.ErrorMessage?.Contains("password", StringComparison.OrdinalIgnoreCase) == true)
-                    {
-                        return Results.Unauthorized();
-                    }
-                    return Results.BadRequest(new { error = result.ErrorMessage ?? "Failed to disable two-factor authentication" });
+                    return Results.Unauthorized();
                 }
+                return Results.BadRequest(new { error = result.ErrorMessage ?? "Failed to disable two-factor authentication" });
+            }
 
-                logger.LogInformation("2FA disabled for user {UserId}", userId);
-                return Results.Ok(new { message = "Two-factor authentication disabled successfully" });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in Disable2FACommandHandler; this catches unexpected infrastructure failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in command handler (Disable2FACommandHandler)
-                logger.LogError(ex, "2FA disable error for user {UserId}", userId);
-                return Results.Problem(detail: ex.Message, statusCode: 500);
-            }
-#pragma warning restore CA1031
+            logger.LogInformation("2FA disabled for user {UserId}", userId);
+            return Results.Ok(new { message = "Two-factor authentication disabled successfully" });
         })
         .RequireAuthorization()
         .WithName("Disable2FA")
@@ -480,34 +367,20 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
-            try
+            // DDD CQRS: Use Get2FAStatusQuery
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.Get2FAStatusQuery(
+                UserId: userId
+            );
+
+            var status = await mediator.Send(query, ct);
+
+            if (status == null)
             {
-                // DDD CQRS: Use Get2FAStatusQuery
-                var query = new Api.BoundedContexts.Authentication.Application.Queries.Get2FAStatusQuery(
-                    UserId: userId
-                );
-
-                var status = await mediator.Send(query, ct);
-
-                if (status == null)
-                {
-                    logger.LogWarning("User {UserId} not found for 2FA status query", userId);
-                    return Results.NotFound(new { error = "User not found" });
-                }
-
-                return Results.Ok(status);
+                logger.LogWarning("User {UserId} not found for 2FA status query", userId);
+                return Results.NotFound(new { error = "User not found" });
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in Get2FAStatusQueryHandler; this catches unexpected infrastructure failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in query handler (Get2FAStatusQueryHandler)
-                logger.LogError(ex, "Get 2FA status error for user {UserId}", userId);
-                return Results.Problem(detail: ex.Message, statusCode: 500);
-            }
-#pragma warning restore CA1031
+
+            return Results.Ok(status);
         })
         .RequireAuthorization()
         .WithName("Get2FAStatus")
@@ -591,57 +464,40 @@ Rate limited to 10 requests per minute per IP address.
                 return Results.Redirect($"{frontendUrl}/auth/callback?error=rate_limit");
             }
 
-            try
+            // Execute OAuth callback via CQRS handler
+            var sessionIpAddress = context.Connection.RemoteIpAddress?.ToString();
+            var userAgent = context.Request.Headers.UserAgent.ToString();
+
+            var command = new HandleOAuthCallbackCommand
             {
-                // Execute OAuth callback via CQRS handler
-                var sessionIpAddress = context.Connection.RemoteIpAddress?.ToString();
-                var userAgent = context.Request.Headers.UserAgent.ToString();
+                Provider = provider,
+                Code = code,
+                State = state,
+                IpAddress = sessionIpAddress,
+                UserAgent = userAgent
+            };
 
-                var command = new HandleOAuthCallbackCommand
-                {
-                    Provider = provider,
-                    Code = code,
-                    State = state,
-                    IpAddress = sessionIpAddress,
-                    UserAgent = userAgent
-                };
+            var result = await mediator.Send(command, ct);
 
-                var result = await mediator.Send(command, ct);
-
-                if (!result.Success)
-                {
-                    // Handler returned business logic error
-                    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogWarning("OAuth callback failed: {ErrorMessage}", result.ErrorMessage);
-
-                    var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
-                    return Results.Redirect($"{frontendUrl}/auth/callback?error=oauth_failed");
-                }
-
-                // Set session cookie - get expiration from configuration
-                var sessionExpirationDays = await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30) ?? 30;
-                var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
-                writeSessionCookie(context, result.SessionToken ?? string.Empty, expiresAt);
-
-                // Redirect to frontend with success
-                var successFrontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
-                var redirectUrl = $"{successFrontendUrl}/auth/callback?success=true&new={result.IsNewUser}";
-                return Results.Redirect(redirectUrl);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to redirect user with error message
-            // All business exceptions are handled in HandleOAuthCallbackCommandHandler
-            catch (Exception ex)
+            if (!result.Success)
             {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP redirect with error
+                // Handler returned business logic error
                 var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "Unexpected OAuth callback error for provider: {Provider}", provider);
+                logger.LogWarning("OAuth callback failed: {ErrorMessage}", result.ErrorMessage);
 
                 var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
-                var redirectUrl = $"{frontendUrl}/auth/callback?error=oauth_failed";
-                return Results.Redirect(redirectUrl);
+                return Results.Redirect($"{frontendUrl}/auth/callback?error=oauth_failed");
             }
-#pragma warning restore CA1031
+
+            // Set session cookie - get expiration from configuration
+            var sessionExpirationDays = await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30) ?? 30;
+            var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
+            writeSessionCookie(context, result.SessionToken ?? string.Empty, expiresAt);
+
+            // Redirect to frontend with success
+            var successFrontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+            var redirectUrl = $"{successFrontendUrl}/auth/callback?success=true&new={result.IsNewUser}";
+            return Results.Redirect(redirectUrl);
         })
         .WithName("HandleOAuthCallback")
         .WithTags("Authentication", "OAuth")
@@ -889,36 +745,15 @@ User must have at least one authentication method remaining (password or another
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            try
+            if (string.IsNullOrWhiteSpace(payload.Email))
             {
-                if (string.IsNullOrWhiteSpace(payload.Email))
-                {
-                    return Results.BadRequest(new { error = "Email is required" });
-                }
+                return Results.BadRequest(new { error = "Email is required" });
+            }
 
-                await passwordResetService.RequestPasswordResetAsync(payload.Email, ct);
+            await passwordResetService.RequestPasswordResetAsync(payload.Email, ct);
 
-                // Always return success to prevent email enumeration
-                return Results.Json(new { ok = true, message = "If the email exists, a password reset link has been sent" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Rate limit or validation errors
-                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
-                logger.LogWarning(ex, "Password reset request error");
-                return Results.BadRequest(new { error = ex.Message });
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in PasswordResetService; this catches unexpected failures
-            catch (Exception ex)
-            {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (PasswordResetService)
-                logger.LogError(ex, "Password reset request endpoint error");
-                return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
-            }
-#pragma warning restore CA1031
+            // Always return success to prevent email enumeration
+            return Results.Json(new { ok = true, message = "If the email exists, a password reset link has been sent" });
         });
 
         group.MapGet("/auth/password-reset/verify", async (
@@ -927,33 +762,19 @@ User must have at least one authentication method remaining (password or another
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            try
+            if (string.IsNullOrWhiteSpace(token))
             {
-                if (string.IsNullOrWhiteSpace(token))
-                {
-                    return Results.BadRequest(new { error = "Token is required" });
-                }
-
-                var isValid = await passwordResetService.ValidateResetTokenAsync(token, ct);
-
-                if (!isValid)
-                {
-                    return Results.BadRequest(new { error = "Invalid or expired token" });
-                }
-
-                return Results.Json(new { ok = true, message = "Token is valid" });
+                return Results.BadRequest(new { error = "Token is required" });
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in PasswordResetService; this catches unexpected failures
-            catch (Exception ex)
+
+            var isValid = await passwordResetService.ValidateResetTokenAsync(token, ct);
+
+            if (!isValid)
             {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (PasswordResetService)
-                logger.LogError(ex, "Password reset verify endpoint error");
-                return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
+                return Results.BadRequest(new { error = "Invalid or expired token" });
             }
-#pragma warning restore CA1031
+
+            return Results.Json(new { ok = true, message = "Token is valid" });
         });
 
         group.MapPut("/auth/password-reset/confirm", async (
@@ -964,61 +785,40 @@ User must have at least one authentication method remaining (password or another
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            try
+            if (string.IsNullOrWhiteSpace(payload.Token))
             {
-                if (string.IsNullOrWhiteSpace(payload.Token))
-                {
-                    return Results.BadRequest(new { error = "Token is required" });
-                }
-
-                if (string.IsNullOrWhiteSpace(payload.NewPassword))
-                {
-                    return Results.BadRequest(new { error = "New password is required" });
-                }
-
-                // Tuple destructuring for userId
-                var (success, userIdNullable) = await passwordResetService.ResetPasswordAsync(
-                    payload.Token,
-                    payload.NewPassword,
-                    ct);
-
-                if (!success || userIdNullable == null)
-                {
-                    return Results.NotFound(new { error = "Invalid or expired token" });
-                }
-
-                var userId = userIdNullable.Value;
-
-                // Create new session for auto-login - DDD CQRS
-                var command = new DddCreateSessionCommand(
-                    UserId: userId,
-                    IpAddress: context.Connection.RemoteIpAddress?.ToString(),
-                    UserAgent: context.Request.Headers.UserAgent.ToString());
-
-                var sessionResult = await mediator.Send(command, ct);
-
-                writeSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
-
-                return Results.Json(new { ok = true, message = "Password has been reset successfully" });
+                return Results.BadRequest(new { error = "Token is required" });
             }
-            catch (ArgumentException ex)
+
+            if (string.IsNullOrWhiteSpace(payload.NewPassword))
             {
-                // Validation errors (password complexity, etc.)
-                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
-                logger.LogWarning(ex, "Password reset confirm validation error");
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new { error = "New password is required" });
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in PasswordResetService; this catches unexpected failures
-            catch (Exception ex)
+
+            // Tuple destructuring for userId
+            var (success, userIdNullable) = await passwordResetService.ResetPasswordAsync(
+                payload.Token,
+                payload.NewPassword,
+                ct);
+
+            if (!success || userIdNullable == null)
             {
-                // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (PasswordResetService)
-                logger.LogError(ex, "Password reset confirm endpoint error");
-                return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
+                return Results.NotFound(new { error = "Invalid or expired token" });
             }
-#pragma warning restore CA1031
+
+            var userId = userIdNullable.Value;
+
+            // Create new session for auto-login - DDD CQRS
+            var command = new DddCreateSessionCommand(
+                UserId: userId,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString());
+
+            var sessionResult = await mediator.Send(command, ct);
+
+            writeSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
+
+            return Results.Json(new { ok = true, message = "Password has been reset successfully" });
         });
     }
 }

@@ -1,8 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Infrastructure.Entities;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using System.Text.Json;
 using Xunit;
 
@@ -23,9 +26,11 @@ public class ChatThreadRepository_LegacyMigrationTests : IAsyncLifetime
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         await _dbContext.Database.EnsureCreatedAsync();
-        _repository = new ChatThreadRepository(_dbContext);
+        _repository = new ChatThreadRepository(_dbContext, new Mock<IDomainEventCollector>().Object);
     }
 
     public async ValueTask DisposeAsync()

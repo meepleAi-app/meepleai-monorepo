@@ -1,13 +1,24 @@
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Infrastructure;
 
 public class MeepleAiDbContext : DbContext
 {
-    public MeepleAiDbContext(DbContextOptions<MeepleAiDbContext> options)
+    private readonly IMediator _mediator;
+    private readonly IDomainEventCollector _eventCollector;
+
+    public MeepleAiDbContext(
+        DbContextOptions<MeepleAiDbContext> options,
+        IMediator mediator,
+        IDomainEventCollector eventCollector)
         : base(options)
     {
+        _mediator = mediator;
+        _eventCollector = eventCollector;
     }
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
@@ -51,12 +62,34 @@ public class MeepleAiDbContext : DbContext
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);
 
-        // Ignore domain entities - EF Core should only map persistence entities
+        // Ignore domain aggregate roots - EF Core should only map persistence entities
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.OAuthAccount>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.User>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
+    }
+
+    /// <summary>
+    /// Saves all changes made in this context to the database and dispatches domain events.
+    /// Domain events are collected by repositories via IDomainEventCollector before SaveChangesAsync.
+    /// After successful save, collected events are dispatched via MediatR.
+    /// </summary>
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // Save changes first
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        // Get collected domain events from repositories
+        var events = _eventCollector.GetAndClearEvents();
+
+        // Dispatch domain events after successful save
+        foreach (var domainEvent in events)
+        {
+            await _mediator.Publish(domainEvent, cancellationToken);
+        }
+
+        return result;
     }
 }

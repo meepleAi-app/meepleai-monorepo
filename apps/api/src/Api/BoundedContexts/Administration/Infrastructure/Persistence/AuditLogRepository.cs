@@ -1,22 +1,22 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 
-public class AuditLogRepository : IAuditLogRepository
+public class AuditLogRepository : RepositoryBase, IAuditLogRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public AuditLogRepository(MeepleAiDbContext dbContext)
+    public AuditLogRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<AuditLog?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.AuditLogs
+        var entity = await DbContext.AuditLogs
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
@@ -25,7 +25,7 @@ public class AuditLogRepository : IAuditLogRepository
 
     public async Task<List<AuditLog>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.AuditLogs
+        var entities = await DbContext.AuditLogs
             .AsNoTracking()
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -35,7 +35,7 @@ public class AuditLogRepository : IAuditLogRepository
 
     public async Task<IReadOnlyList<AuditLog>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.AuditLogs
+        var entities = await DbContext.AuditLogs
             .AsNoTracking()
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.CreatedAt)
@@ -46,7 +46,7 @@ public class AuditLogRepository : IAuditLogRepository
 
     public async Task<IReadOnlyList<AuditLog>> GetByResourceAsync(string resource, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.AuditLogs
+        var entities = await DbContext.AuditLogs
             .AsNoTracking()
             .Where(a => a.Resource == resource)
             .OrderByDescending(a => a.CreatedAt)
@@ -57,8 +57,9 @@ public class AuditLogRepository : IAuditLogRepository
 
     public async Task AddAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(auditLog);
         var entity = MapToPersistence(auditLog);
-        await _dbContext.AuditLogs.AddAsync(entity, cancellationToken);
+        await DbContext.AuditLogs.AddAsync(entity, cancellationToken);
     }
 
     public Task UpdateAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
@@ -73,7 +74,7 @@ public class AuditLogRepository : IAuditLogRepository
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.AuditLogs.AnyAsync(a => a.Id == id, cancellationToken);
+        return await DbContext.AuditLogs.AnyAsync(a => a.Id == id, cancellationToken);
     }
 
     private static AuditLog MapToDomain(Api.Infrastructure.Entities.AuditLogEntity entity)

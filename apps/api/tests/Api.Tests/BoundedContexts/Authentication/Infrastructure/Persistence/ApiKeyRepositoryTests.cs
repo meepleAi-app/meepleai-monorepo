@@ -16,7 +16,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     protected override string DatabaseName => "meepleai_apikey_test";
     
     protected override ApiKeyRepository CreateRepository(MeepleAiDbContext dbContext) 
-        => new ApiKeyRepository(dbContext);
+        => new ApiKeyRepository(dbContext, MockEventCollector.Object);
 
     private async Task<Guid> CreateTestUserAsync(string email = "test@example.com")
     {

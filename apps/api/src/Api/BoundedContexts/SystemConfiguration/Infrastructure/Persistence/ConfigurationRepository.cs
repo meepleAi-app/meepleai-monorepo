@@ -1,23 +1,23 @@
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using SystemConfigurationAggregate = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 
 namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 
-public class ConfigurationRepository : IConfigurationRepository
+public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public ConfigurationRepository(MeepleAiDbContext dbContext)
+    public ConfigurationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<SystemConfigurationAggregate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
@@ -26,7 +26,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<List<SystemConfigurationAggregate>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .OrderBy(c => c.Key)
             .ToListAsync(cancellationToken);
@@ -36,7 +36,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<SystemConfigurationAggregate?> GetByKeyAsync(string key, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Key == key, cancellationToken);
 
@@ -45,7 +45,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<IReadOnlyList<SystemConfigurationAggregate>> GetByCategoryAsync(string category, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .Where(c => c.Category == category)
             .OrderBy(c => c.Key)
@@ -56,7 +56,7 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task<IReadOnlyList<SystemConfigurationAggregate>> GetActiveConfigurationsAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .Where(c => c.IsActive)
             .OrderBy(c => c.Key)
@@ -67,27 +67,29 @@ public class ConfigurationRepository : IConfigurationRepository
 
     public async Task AddAsync(SystemConfigurationAggregate config, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().AddAsync(entity, cancellationToken);
     }
 
     public Task UpdateAsync(SystemConfigurationAggregate config, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Update(entity);
+        DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Update(entity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(SystemConfigurationAggregate config, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(config);
-        _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Remove(entity);
+        DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Remove(entity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        return await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AnyAsync(c => c.Id == id, cancellationToken);
     }
 

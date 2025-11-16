@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -9,20 +11,19 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of Session repository.
 /// Maps between domain Session entity and UserSessionEntity persistence model.
 /// </summary>
-public class SessionRepository : ISessionRepository
+public class SessionRepository : RepositoryBase, ISessionRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
 
-    public SessionRepository(MeepleAiDbContext dbContext, TimeProvider timeProvider)
+    public SessionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector, TimeProvider timeProvider)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
         _timeProvider = timeProvider;
     }
 
     public async Task<Session?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
-        var sessionEntity = await _dbContext.UserSessions
+        var sessionEntity = await DbContext.UserSessions
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, cancellationToken);
 
@@ -31,7 +32,7 @@ public class SessionRepository : ISessionRepository
 
     public async Task<List<Session>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var sessionEntities = await _dbContext.UserSessions
+        var sessionEntities = await DbContext.UserSessions
             .AsNoTracking()
             .Where(s => s.UserId == userId)
             .OrderByDescending(s => s.CreatedAt)
@@ -44,7 +45,7 @@ public class SessionRepository : ISessionRepository
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var sessionEntities = await _dbContext.UserSessions
+        var sessionEntities = await DbContext.UserSessions
             .AsNoTracking()
             .Where(s => s.UserId == userId && s.ExpiresAt > now && s.RevokedAt == null)
             .OrderByDescending(s => s.CreatedAt)
@@ -55,14 +56,20 @@ public class SessionRepository : ISessionRepository
 
     public async Task AddAsync(Session session, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE mapping to persistence entity
+        CollectDomainEvents(session);
+
         var sessionEntity = MapToPersistence(session);
-        await _dbContext.UserSessions.AddAsync(sessionEntity, cancellationToken);
+        await DbContext.UserSessions.AddAsync(sessionEntity, cancellationToken);
     }
 
     public async Task UpdateAsync(Session session, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE updating persistence entity
+        CollectDomainEvents(session);
+
         var sessionEntity = MapToPersistence(session);
-        _dbContext.UserSessions.Update(sessionEntity);
+        DbContext.UserSessions.Update(sessionEntity);
         await Task.CompletedTask;
     }
 
@@ -70,7 +77,7 @@ public class SessionRepository : ISessionRepository
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        await _dbContext.UserSessions
+        await DbContext.UserSessions
             .Where(s => s.UserId == userId && s.RevokedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), cancellationToken);
     }

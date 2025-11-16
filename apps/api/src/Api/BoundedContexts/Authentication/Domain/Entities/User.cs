@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
@@ -78,7 +79,7 @@ public sealed class User : AggregateRoot<Guid>
             throw new DomainException("Current password is incorrect");
 
         PasswordHash = newPasswordHash;
-        // TODO: Add domain event PasswordChanged
+        AddDomainEvent(new PasswordChangedEvent(Id));
     }
 
     /// <summary>
@@ -88,7 +89,7 @@ public sealed class User : AggregateRoot<Guid>
     public void UpdatePassword(PasswordHash newPasswordHash)
     {
         PasswordHash = newPasswordHash;
-        // TODO: Add domain event PasswordReset
+        AddDomainEvent(new PasswordResetEvent(Id));
     }
 
     /// <summary>
@@ -99,8 +100,9 @@ public sealed class User : AggregateRoot<Guid>
         if (Email == newEmail)
             return; // No change
 
+        var oldEmail = Email;
         Email = newEmail;
-        // TODO: Add domain event EmailChanged
+        AddDomainEvent(new EmailChangedEvent(Id, oldEmail, newEmail));
     }
 
     /// <summary>
@@ -130,8 +132,9 @@ public sealed class User : AggregateRoot<Guid>
         if (newRole.IsAdmin() && Role.IsAdmin())
             throw new DomainException("Cannot modify admin role through self-service");
 
+        var oldRole = Role;
         Role = newRole;
-        // TODO: Add domain event RoleChanged
+        AddDomainEvent(new RoleChangedEvent(Id, oldRole, newRole));
     }
 
     /// <summary>
@@ -143,8 +146,9 @@ public sealed class User : AggregateRoot<Guid>
         if (Role == newRole)
             return; // No change
 
+        var oldRole = Role;
         Role = newRole;
-        // TODO: Add domain event RoleChanged
+        AddDomainEvent(new RoleChangedEvent(Id, oldRole, newRole));
     }
 
     /// <summary>
@@ -178,7 +182,7 @@ public sealed class User : AggregateRoot<Guid>
             _backupCodes.AddRange(backupCodes);
         }
 
-        // TODO: Add domain event TwoFactorEnabled
+        AddDomainEvent(new TwoFactorEnabledEvent(Id, _backupCodes.Count));
     }
 
     /// <summary>
@@ -196,7 +200,7 @@ public sealed class User : AggregateRoot<Guid>
         TwoFactorEnabledAt = null;
         _backupCodes.Clear();
 
-        // TODO: Add domain event TwoFactorDisabled
+        AddDomainEvent(new TwoFactorDisabledEvent(Id));
     }
 
     /// <summary>
@@ -256,7 +260,7 @@ public sealed class User : AggregateRoot<Guid>
             throw new DomainException($"OAuth provider '{account.Provider}' is already linked to this user");
 
         _oauthAccounts.Add(account);
-        // TODO: Add domain event OAuthAccountLinked
+        AddDomainEvent(new OAuthAccountLinkedEvent(Id, account.Provider, account.ProviderUserId));
     }
 
     /// <summary>
@@ -281,7 +285,7 @@ public sealed class User : AggregateRoot<Guid>
             throw new DomainException("Cannot unlink OAuth account: User must have at least one authentication method (password or OAuth)");
 
         _oauthAccounts.Remove(account);
-        // TODO: Add domain event OAuthAccountUnlinked
+        AddDomainEvent(new OAuthAccountUnlinkedEvent(Id, provider));
     }
 
     /// <summary>

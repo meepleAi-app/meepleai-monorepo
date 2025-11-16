@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -46,7 +47,7 @@ public sealed class Game : AggregateRoot<Guid>
         PlayTime = playTime;
         CreatedAt = DateTime.UtcNow;
 
-        // TODO: Add domain event GameCreated
+        AddDomainEvent(new GameCreatedEvent(id, title.Value, null));
     }
 
     /// <summary>
@@ -65,7 +66,7 @@ public sealed class Game : AggregateRoot<Guid>
         if (playerCount != null) PlayerCount = playerCount;
         if (playTime != null) PlayTime = playTime;
 
-        // TODO: Add domain event GameUpdated
+        AddDomainEvent(new GameUpdatedEvent(Id, Title.Value));
     }
 
     /// <summary>
@@ -79,7 +80,7 @@ public sealed class Game : AggregateRoot<Guid>
         BggId = bggId;
         BggMetadata = metadata;
 
-        // TODO: Add domain event GameLinkedToBgg
+        AddDomainEvent(new GameLinkedToBggEvent(Id, bggId));
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
@@ -7,8 +8,9 @@ namespace Api.BoundedContexts.Authentication.Domain.Entities;
 /// <summary>
 /// Represents an authenticated user session.
 /// Sessions have a limited lifetime and can be revoked.
+/// Aggregate root for session lifecycle management.
 /// </summary>
-public sealed class Session : Entity<Guid>
+public sealed class Session : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
     public string TokenHash { get; private set; }
@@ -77,13 +79,13 @@ public sealed class Session : Entity<Guid>
     /// <summary>
     /// Revokes this session.
     /// </summary>
-    public void Revoke()
+    public void Revoke(string? reason = null)
     {
         if (RevokedAt != null)
             throw new DomainException("Session is already revoked");
 
         RevokedAt = DateTime.UtcNow;
-        // TODO: Add domain event SessionRevoked
+        AddDomainEvent(new SessionRevokedEvent(Id, UserId, reason));
     }
 
     /// <summary>

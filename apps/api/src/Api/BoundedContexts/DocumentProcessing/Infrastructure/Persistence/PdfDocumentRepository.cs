@@ -2,22 +2,22 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 
-public class PdfDocumentRepository : IPdfDocumentRepository
+public class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public PdfDocumentRepository(MeepleAiDbContext dbContext)
+    public PdfDocumentRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<PdfDocument?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.PdfDocuments
+        var entity = await DbContext.PdfDocuments
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
@@ -26,7 +26,7 @@ public class PdfDocumentRepository : IPdfDocumentRepository
 
     public async Task<List<PdfDocument>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.PdfDocuments
+        var entities = await DbContext.PdfDocuments
             .AsNoTracking()
             .OrderByDescending(p => p.UploadedAt)
             .ToListAsync(cancellationToken);
@@ -36,7 +36,7 @@ public class PdfDocumentRepository : IPdfDocumentRepository
 
     public async Task<IReadOnlyList<PdfDocument>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.PdfDocuments
+        var entities = await DbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.GameId == gameId)
             .OrderByDescending(p => p.UploadedAt)
@@ -47,7 +47,7 @@ public class PdfDocumentRepository : IPdfDocumentRepository
 
     public async Task<IReadOnlyList<PdfDocument>> FindByStatusAsync(string status, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.PdfDocuments
+        var entities = await DbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.ProcessingStatus == status)
             .OrderByDescending(p => p.UploadedAt)
@@ -58,35 +58,37 @@ public class PdfDocumentRepository : IPdfDocumentRepository
 
     public async Task AddAsync(PdfDocument document, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(document);
         var entity = MapToPersistence(document);
-        await _dbContext.PdfDocuments.AddAsync(entity, cancellationToken);
+        await DbContext.PdfDocuments.AddAsync(entity, cancellationToken);
     }
 
     public Task UpdateAsync(PdfDocument document, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(document);
         var entity = MapToPersistence(document);
 
         // Detach existing tracked entity to avoid conflicts (SPRINT-5 Issue #1142)
-        var tracked = _dbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.PdfDocumentEntity>()
+        var tracked = DbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.PdfDocumentEntity>()
             .FirstOrDefault(e => e.Entity.Id == entity.Id);
 
         if (tracked != null)
             tracked.State = EntityState.Detached;
 
-        _dbContext.PdfDocuments.Update(entity);
+        DbContext.PdfDocuments.Update(entity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(PdfDocument document, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(document);
-        _dbContext.PdfDocuments.Remove(entity);
+        DbContext.PdfDocuments.Remove(entity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.PdfDocuments.AnyAsync(p => p.Id == id, cancellationToken);
+        return await DbContext.PdfDocuments.AnyAsync(p => p.Id == id, cancellationToken);
     }
 
     private static PdfDocument MapToDomain(Api.Infrastructure.Entities.PdfDocumentEntity entity)

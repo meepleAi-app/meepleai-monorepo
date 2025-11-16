@@ -2,7 +2,10 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -33,10 +36,12 @@ public class AgentRepositoryTests : IAsyncLifetime
             .UseNpgsql(_postgresContainer.GetConnectionString())
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         await _dbContext.Database.MigrateAsync();
 
-        _repository = new AgentRepository(_dbContext);
+        _repository = new AgentRepository(_dbContext, new Mock<IDomainEventCollector>().Object);
     }
 
     public async ValueTask DisposeAsync()

@@ -123,9 +123,18 @@ jobs:
           cat vulnerability-report.txt >> $GITHUB_STEP_SUMMARY
 
           # Check if there are HIGH or CRITICAL vulnerabilities
-          if grep -E "(High|Critical)" vulnerability-report.txt; then
+          # Use grep with proper exit code handling
+          set +e  # Don't exit on error
+          grep -iE "(High|Critical)" vulnerability-report.txt > /dev/null 2>&1
+          GREP_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+
+          if [ $GREP_EXIT_CODE -eq 0 ]; then
             echo "HIGH_SEVERITY_FOUND=true" >> $GITHUB_OUTPUT
             echo "❌ **HIGH/CRITICAL vulnerabilities found in .NET dependencies!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### High/Critical Severity Issues:" >> $GITHUB_STEP_SUMMARY
+            grep -iE "(High|Critical)" vulnerability-report.txt >> $GITHUB_STEP_SUMMARY || true
           else
             echo "HIGH_SEVERITY_FOUND=false" >> $GITHUB_OUTPUT
             echo "✅ No HIGH/CRITICAL vulnerabilities in .NET dependencies" >> $GITHUB_STEP_SUMMARY
@@ -161,8 +170,8 @@ jobs:
         run: |
           echo "## Frontend Dependency Vulnerabilities" >> $GITHUB_STEP_SUMMARY
 
-          # Run pnpm audit and capture output
-          pnpm audit --audit-level=moderate --json > audit-report.json 2>&1 || true
+          # Run pnpm audit and capture output (allow non-zero exit for vulnerabilities)
+          pnpm audit --audit-level=moderate --json > audit-report.json 2>/dev/null || true
 
           # Generate human-readable report
           pnpm audit --audit-level=moderate > audit-report.txt 2>&1 || true
@@ -170,12 +179,22 @@ jobs:
           cat audit-report.txt >> $GITHUB_STEP_SUMMARY
 
           # Check for HIGH or CRITICAL vulnerabilities
-          if pnpm audit --audit-level=high --json > high-severity.json 2>&1; then
+          # pnpm audit returns exit code 0 if no vulnerabilities, non-zero if found
+          set +e  # Don't exit on error
+          pnpm audit --audit-level=high > /dev/null 2>&1
+          AUDIT_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+
+          if [ $AUDIT_EXIT_CODE -eq 0 ]; then
             echo "HIGH_SEVERITY_FOUND=false" >> $GITHUB_OUTPUT
             echo "✅ No HIGH/CRITICAL vulnerabilities in frontend dependencies" >> $GITHUB_STEP_SUMMARY
           else
             echo "HIGH_SEVERITY_FOUND=true" >> $GITHUB_OUTPUT
             echo "❌ **HIGH/CRITICAL vulnerabilities found in frontend dependencies!**" >> $GITHUB_STEP_SUMMARY
+            # Show the high severity vulnerabilities
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### High/Critical Severity Issues:" >> $GITHUB_STEP_SUMMARY
+            pnpm audit --audit-level=high >> $GITHUB_STEP_SUMMARY 2>&1 || true
           fi
 
       - name: Upload Frontend Vulnerability Report

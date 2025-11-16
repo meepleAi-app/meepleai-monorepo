@@ -22,7 +22,7 @@
     "**/obj": true,
     "**/__pycache__": true
   },
-  "terminal.integrated.cwd": "${workspaceFolder}/apps/web",
+  "terminal.integrated.cwd": "${workspaceFolder}",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",

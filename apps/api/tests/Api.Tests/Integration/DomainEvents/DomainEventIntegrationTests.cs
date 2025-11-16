@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.EventHandlers;
 using FluentAssertions;
@@ -36,7 +37,8 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         var services = new ServiceCollection();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<PasswordChangedEventHandler>());
         services.AddSingleton(options);
-        services.AddScoped<MeepleAiDbContext>(sp => new MeepleAiDbContext(options, sp.GetRequiredService<IMediator>()));
+        services.AddScoped<MeepleAiDbContext>(sp => new MeepleAiDbContext(options, sp.GetRequiredService<IMediator>(), sp.GetRequiredService<IDomainEventCollector>()));
+        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
         services.AddLogging();
 
         var serviceProvider = services.BuildServiceProvider();

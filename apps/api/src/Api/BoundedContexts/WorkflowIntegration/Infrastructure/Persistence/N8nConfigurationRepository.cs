@@ -2,22 +2,22 @@ using Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Infrastructure.Persistence;
 
-public class N8nConfigurationRepository : IN8nConfigurationRepository
+public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public N8nConfigurationRepository(MeepleAiDbContext dbContext)
+    public N8nConfigurationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<N8nConfiguration?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
@@ -26,7 +26,7 @@ public class N8nConfigurationRepository : IN8nConfigurationRepository
 
     public async Task<List<N8nConfiguration>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AsNoTracking()
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -36,7 +36,7 @@ public class N8nConfigurationRepository : IN8nConfigurationRepository
 
     public async Task<N8nConfiguration?> GetActiveConfigurationAsync(CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.IsActive, cancellationToken);
 
@@ -45,7 +45,7 @@ public class N8nConfigurationRepository : IN8nConfigurationRepository
 
     public async Task<N8nConfiguration?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Name == name, cancellationToken);
 
@@ -54,27 +54,29 @@ public class N8nConfigurationRepository : IN8nConfigurationRepository
 
     public async Task AddAsync(N8nConfiguration config, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        await _dbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().AddAsync(entity, cancellationToken);
     }
 
     public Task UpdateAsync(N8nConfiguration config, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        _dbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().Update(entity);
+        DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().Update(entity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(N8nConfiguration config, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(config);
-        _dbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().Remove(entity);
+        DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().Remove(entity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
+        return await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>()
             .AnyAsync(c => c.Id == id, cancellationToken);
     }
 

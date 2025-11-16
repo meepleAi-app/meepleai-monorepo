@@ -1,22 +1,22 @@
 using Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Infrastructure.Persistence;
 
-public class WorkflowErrorLogRepository : IWorkflowErrorLogRepository
+public class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public WorkflowErrorLogRepository(MeepleAiDbContext dbContext)
+    public WorkflowErrorLogRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<WorkflowErrorLog?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
@@ -25,7 +25,7 @@ public class WorkflowErrorLogRepository : IWorkflowErrorLogRepository
 
     public async Task<List<WorkflowErrorLog>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
             .AsNoTracking()
             .OrderByDescending(e => e.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -35,7 +35,7 @@ public class WorkflowErrorLogRepository : IWorkflowErrorLogRepository
 
     public async Task<IReadOnlyList<WorkflowErrorLog>> FindByWorkflowIdAsync(string workflowId, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
             .AsNoTracking()
             .Where(e => e.WorkflowId == workflowId)
             .OrderByDescending(e => e.CreatedAt)
@@ -46,7 +46,7 @@ public class WorkflowErrorLogRepository : IWorkflowErrorLogRepository
 
     public async Task<WorkflowErrorLog?> FindByExecutionIdAsync(string executionId, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.ExecutionId == executionId, cancellationToken);
 
@@ -55,27 +55,29 @@ public class WorkflowErrorLogRepository : IWorkflowErrorLogRepository
 
     public async Task AddAsync(WorkflowErrorLog errorLog, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(errorLog);
         var entity = MapToPersistence(errorLog);
-        await _dbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>().AddAsync(entity, cancellationToken);
     }
 
     public Task UpdateAsync(WorkflowErrorLog errorLog, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(errorLog);
         var entity = MapToPersistence(errorLog);
-        _dbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>().Update(entity);
+        DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>().Update(entity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(WorkflowErrorLog errorLog, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(errorLog);
-        _dbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>().Remove(entity);
+        DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>().Remove(entity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
+        return await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>()
             .AnyAsync(e => e.Id == id, cancellationToken);
     }
 

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,20 +12,19 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of OAuth account repository.
 /// Maps between domain OAuthAccount entity and OAuthAccountEntity persistence model.
 /// </summary>
-public class OAuthAccountRepository : IOAuthAccountRepository
+public class OAuthAccountRepository : RepositoryBase, IOAuthAccountRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<OAuthAccountRepository> _logger;
 
-    public OAuthAccountRepository(MeepleAiDbContext dbContext, ILogger<OAuthAccountRepository> logger)
+    public OAuthAccountRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector, ILogger<OAuthAccountRepository> logger)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
         _logger = logger;
     }
 
     public async Task<OAuthAccount?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.OAuthAccounts
+        var entity = await DbContext.OAuthAccounts
             .AsNoTracking()
             .Include(o => o.User)
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
@@ -34,7 +35,7 @@ public class OAuthAccountRepository : IOAuthAccountRepository
     public async Task<OAuthAccount?> GetByUserIdAndProviderAsync(Guid userId, string provider, CancellationToken cancellationToken = default)
     {
         var normalizedProvider = provider.ToLowerInvariant();
-        var entity = await _dbContext.OAuthAccounts
+        var entity = await DbContext.OAuthAccounts
             .AsNoTracking()
             .Include(o => o.User)
             .FirstOrDefaultAsync(o => o.UserId == userId && o.Provider == normalizedProvider, cancellationToken);
@@ -44,7 +45,7 @@ public class OAuthAccountRepository : IOAuthAccountRepository
 
     public async Task<IReadOnlyList<OAuthAccount>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.OAuthAccounts
+        var entities = await DbContext.OAuthAccounts
             .AsNoTracking()
             .Include(o => o.User)
             .Where(o => o.UserId == userId)
@@ -57,7 +58,7 @@ public class OAuthAccountRepository : IOAuthAccountRepository
     public async Task<OAuthAccount?> GetByProviderUserIdAsync(string provider, string providerUserId, CancellationToken cancellationToken = default)
     {
         var normalizedProvider = provider.ToLowerInvariant();
-        var entity = await _dbContext.OAuthAccounts
+        var entity = await DbContext.OAuthAccounts
             .AsNoTracking()
             .Include(o => o.User)
             .FirstOrDefaultAsync(o => o.Provider == normalizedProvider && o.ProviderUserId == providerUserId, cancellationToken);
@@ -67,7 +68,7 @@ public class OAuthAccountRepository : IOAuthAccountRepository
 
     public async Task<List<OAuthAccount>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.OAuthAccounts
+        var entities = await DbContext.OAuthAccounts
             .AsNoTracking()
             .Include(o => o.User)
             .ToListAsync(cancellationToken);
@@ -77,23 +78,29 @@ public class OAuthAccountRepository : IOAuthAccountRepository
 
     public async Task AddAsync(OAuthAccount entity, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE mapping to persistence entity
+        CollectDomainEvents(entity);
+
         var oauthEntity = MapToPersistence(entity);
-        await _dbContext.OAuthAccounts.AddAsync(oauthEntity, cancellationToken);
+        await DbContext.OAuthAccounts.AddAsync(oauthEntity, cancellationToken);
     }
 
     public async Task UpdateAsync(OAuthAccount entity, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE updating persistence entity
+        CollectDomainEvents(entity);
+
         var oauthEntity = MapToPersistence(entity);
-        _dbContext.OAuthAccounts.Update(oauthEntity);
+        DbContext.OAuthAccounts.Update(oauthEntity);
         await Task.CompletedTask;
     }
 
     public async Task DeleteAsync(OAuthAccount entity, CancellationToken cancellationToken = default)
     {
-        var oauthEntity = await _dbContext.OAuthAccounts.FindAsync(new object[] { entity.Id }, cancellationToken);
+        var oauthEntity = await DbContext.OAuthAccounts.FindAsync(new object[] { entity.Id }, cancellationToken);
         if (oauthEntity != null)
         {
-            _dbContext.OAuthAccounts.Remove(oauthEntity);
+            DbContext.OAuthAccounts.Remove(oauthEntity);
         }
         else
         {
@@ -103,7 +110,7 @@ public class OAuthAccountRepository : IOAuthAccountRepository
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.OAuthAccounts
+        return await DbContext.OAuthAccounts
             .AsNoTracking()
             .AnyAsync(o => o.Id == id, cancellationToken);
     }
@@ -111,7 +118,7 @@ public class OAuthAccountRepository : IOAuthAccountRepository
     public async Task<bool> ExistsByUserIdAndProviderAsync(Guid userId, string provider, CancellationToken cancellationToken = default)
     {
         var normalizedProvider = provider.ToLowerInvariant();
-        return await _dbContext.OAuthAccounts
+        return await DbContext.OAuthAccounts
             .AsNoTracking()
             .AnyAsync(o => o.UserId == userId && o.Provider == normalizedProvider, cancellationToken);
     }

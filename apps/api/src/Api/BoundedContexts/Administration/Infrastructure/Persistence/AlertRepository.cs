@@ -2,22 +2,22 @@ using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 
-public class AlertRepository : IAlertRepository
+public class AlertRepository : RepositoryBase, IAlertRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public AlertRepository(MeepleAiDbContext dbContext)
+    public AlertRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<Alert?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
@@ -26,7 +26,7 @@ public class AlertRepository : IAlertRepository
 
     public async Task<List<Alert>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
             .AsNoTracking()
             .OrderByDescending(a => a.TriggeredAt)
             .ToListAsync(cancellationToken);
@@ -36,7 +36,7 @@ public class AlertRepository : IAlertRepository
 
     public async Task<IReadOnlyList<Alert>> GetActiveAlertsAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
             .AsNoTracking()
             .Where(a => a.IsActive)
             .OrderByDescending(a => a.TriggeredAt)
@@ -47,7 +47,7 @@ public class AlertRepository : IAlertRepository
 
     public async Task<IReadOnlyList<Alert>> GetAlertsByTypeAsync(string alertType, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
             .AsNoTracking()
             .Where(a => a.AlertType == alertType)
             .OrderByDescending(a => a.TriggeredAt)
@@ -58,27 +58,29 @@ public class AlertRepository : IAlertRepository
 
     public async Task AddAsync(Alert alert, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(alert);
         var entity = MapToPersistence(alert);
-        await _dbContext.Set<Api.Infrastructure.Entities.AlertEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>().AddAsync(entity, cancellationToken);
     }
 
     public Task UpdateAsync(Alert alert, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(alert);
         var entity = MapToPersistence(alert);
-        _dbContext.Set<Api.Infrastructure.Entities.AlertEntity>().Update(entity);
+        DbContext.Set<Api.Infrastructure.Entities.AlertEntity>().Update(entity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(Alert alert, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(alert);
-        _dbContext.Set<Api.Infrastructure.Entities.AlertEntity>().Remove(entity);
+        DbContext.Set<Api.Infrastructure.Entities.AlertEntity>().Remove(entity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
+        return await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>()
             .AnyAsync(a => a.Id == id, cancellationToken);
     }
 

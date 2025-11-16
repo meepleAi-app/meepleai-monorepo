@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Models;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -46,7 +47,8 @@ public class RagServiceIntegrationTests : IDisposable
             .Options;
 
         var mockMediator = new Mock<IMediator>();
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object);
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
 
         // Initialize all mocks
         _mockEmbeddingService = new Mock<IEmbeddingService>();

@@ -3,6 +3,8 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -12,18 +14,16 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// EF Core implementation of GameSession repository.
 /// Maps between domain GameSession entity and GameSessionEntity persistence model.
 /// </summary>
-public class GameSessionRepository : IGameSessionRepository
+public class GameSessionRepository : RepositoryBase, IGameSessionRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public GameSessionRepository(MeepleAiDbContext dbContext)
+    public GameSessionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<GameSession?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var sessionEntity = await _dbContext.GameSessions
+        var sessionEntity = await DbContext.GameSessions
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
@@ -32,7 +32,7 @@ public class GameSessionRepository : IGameSessionRepository
 
     public async Task<List<GameSession>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var sessionEntities = await _dbContext.GameSessions
+        var sessionEntities = await DbContext.GameSessions
             .AsNoTracking()
             .OrderByDescending(s => s.StartedAt)
             .ToListAsync(cancellationToken);
@@ -42,7 +42,7 @@ public class GameSessionRepository : IGameSessionRepository
 
     public async Task<IReadOnlyList<GameSession>> FindActiveByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
-        var sessionEntities = await _dbContext.GameSessions
+        var sessionEntities = await DbContext.GameSessions
             .AsNoTracking()
             .Where(s => s.GameId == gameId &&
                        (s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused"))
@@ -54,7 +54,7 @@ public class GameSessionRepository : IGameSessionRepository
 
     public async Task<IReadOnlyList<GameSession>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
-        var sessionEntities = await _dbContext.GameSessions
+        var sessionEntities = await DbContext.GameSessions
             .AsNoTracking()
             .Where(s => s.GameId == gameId)
             .OrderByDescending(s => s.StartedAt)
@@ -67,7 +67,7 @@ public class GameSessionRepository : IGameSessionRepository
     {
         var normalized = playerName.Trim().ToLowerInvariant();
 
-        var sessionEntities = await _dbContext.GameSessions
+        var sessionEntities = await DbContext.GameSessions
             .AsNoTracking()
             .Where(s => EF.Functions.ILike(s.PlayersJson, $"%{normalized}%"))
             .OrderByDescending(s => s.StartedAt)
@@ -84,7 +84,7 @@ public class GameSessionRepository : IGameSessionRepository
 
     public async Task<IReadOnlyList<GameSession>> FindActiveAsync(int? limit = null, int? offset = null, CancellationToken cancellationToken = default)
     {
-        IQueryable<Api.Infrastructure.Entities.GameSessionEntity> query = _dbContext.GameSessions
+        IQueryable<Api.Infrastructure.Entities.GameSessionEntity> query = DbContext.GameSessions
             .AsNoTracking()
             .Where(s => s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused")
             .OrderByDescending(s => s.StartedAt);
@@ -107,7 +107,7 @@ public class GameSessionRepository : IGameSessionRepository
         int? offset = null,
         CancellationToken cancellationToken = default)
     {
-        IQueryable<Api.Infrastructure.Entities.GameSessionEntity> query = _dbContext.GameSessions
+        IQueryable<Api.Infrastructure.Entities.GameSessionEntity> query = DbContext.GameSessions
             .AsNoTracking()
             .Where(s => s.Status == "Completed" || s.Status == "Abandoned");
 
@@ -134,35 +134,41 @@ public class GameSessionRepository : IGameSessionRepository
 
     public async Task AddAsync(GameSession session, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE mapping to persistence entity
+        CollectDomainEvents(session);
+
         var sessionEntity = MapToPersistence(session);
-        await _dbContext.GameSessions.AddAsync(sessionEntity, cancellationToken);
+        await DbContext.GameSessions.AddAsync(sessionEntity, cancellationToken);
     }
 
     public Task UpdateAsync(GameSession session, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE updating persistence entity
+        CollectDomainEvents(session);
+
         var sessionEntity = MapToPersistence(session);
 
         // Detach existing tracked entity to avoid conflicts (SPRINT-5 Issue #1142)
-        var tracked = _dbContext.ChangeTracker.Entries<GameSessionEntity>()
+        var tracked = DbContext.ChangeTracker.Entries<GameSessionEntity>()
             .FirstOrDefault(e => e.Entity.Id == sessionEntity.Id);
 
         if (tracked != null)
             tracked.State = EntityState.Detached;
 
-        _dbContext.GameSessions.Update(sessionEntity);
+        DbContext.GameSessions.Update(sessionEntity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(GameSession session, CancellationToken cancellationToken = default)
     {
         var sessionEntity = MapToPersistence(session);
-        _dbContext.GameSessions.Remove(sessionEntity);
+        DbContext.GameSessions.Remove(sessionEntity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.GameSessions.AnyAsync(s => s.Id == id, cancellationToken);
+        return await DbContext.GameSessions.AnyAsync(s => s.Id == id, cancellationToken);
     }
 
     /// <summary>

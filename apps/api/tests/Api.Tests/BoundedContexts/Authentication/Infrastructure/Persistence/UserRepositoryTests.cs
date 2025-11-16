@@ -17,7 +17,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     protected override string DatabaseName => "meepleai_user_test";
 
     protected override UserRepository CreateRepository(MeepleAiDbContext dbContext)
-        => new UserRepository(dbContext);
+        => new UserRepository(dbContext, MockEventCollector.Object);
 
     #region GetByIdAsync Tests
 

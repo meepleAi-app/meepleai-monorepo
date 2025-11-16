@@ -16,19 +16,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { UploadQueue } from '../../components/UploadQueue';
 import type { UploadQueueItem as UploadQueueItemType, UploadQueueStats } from '../../hooks/useUploadQueue';
 
-// Helper to create test items
-function createTestItem(overrides: Partial<UploadQueueItemType> = {}): UploadQueueItemType {
-  return {
-    id: `item-${Math.random()}`,
-    file: new File(['content'], 'test.pdf', { type: 'application/pdf' }),
-    gameId: 'game-123',
-    language: 'en',
-    status: 'pending',
-    progress: 0,
-    retryCount: 0,
-    ...overrides
-  };
-}
+import { createMockUploadQueueItem as createTestItem } from '../helpers/uploadQueueMocks';
 
 describe('UploadQueue Component', () => {
   const mockOnCancel = jest.fn();

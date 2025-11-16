@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Chrono } from 'react-chrono';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 interface VersionNode {
   id: string;

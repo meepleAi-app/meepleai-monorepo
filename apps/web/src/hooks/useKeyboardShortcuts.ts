@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation'; // App Router
 
 /**
  * Keyboard shortcut definition

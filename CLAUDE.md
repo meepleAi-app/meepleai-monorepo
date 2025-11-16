@@ -25,7 +25,9 @@ apps/api/src/Api/BoundedContexts/
 
 **Pattern**: Domain (pure logic) → Application (CQRS) → Infrastructure (adapters) → HTTP (MediatR)
 
-**Eliminated**: 3,710 lines legacy services (GameService 181, AuthService 346, PDF services 1,300, UserManagementService 243, Streaming services 940, RuleSpec Comment/Diff services 700)
+**Eliminated**: 5,387 lines legacy code (Services: 3,710 lines | Error handling: 1,677 lines from Issue #1194)
+**Services Removed**: GameService 181, AuthService 346, PDF services 1,300, UserManagementService 243, Streaming services 940, RuleSpec Comment/Diff services 700
+**Error Handling Centralized**: 53 try-catch blocks removed from endpoints (AiEndpoints 315L, ChatEndpoints 77L, RuleSpecEndpoints 129L)
 **Retained**: ConfigurationService, AdminStatsService, AlertingService, RagService (orchestration/infrastructure)
 
 ---

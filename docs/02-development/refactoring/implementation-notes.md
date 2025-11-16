@@ -27,7 +27,7 @@ When reading Board Game AI docs, apply these translations:
 | **Vector DB: ChromaDB → Weaviate** | **Qdrant (existing)** | Already deployed, hybrid search support v1.7+ |
 | **LLM: Direct OpenAI + Anthropic APIs** | **OpenRouter API (unified)** | Single API for multiple models, automatic fallback |
 | **LLM Fallback: None** | **Ollama (mistral + llama3)** | Free self-hosted option, cost control |
-| **PDF: LLMWhisperer + SmolDocling** | **LLMWhisperer + SmolDocling + Docnet.Core** | Keep existing Docnet as final fallback |
+| **PDF: LLMWhisperer + SmolDocling** | **Unstructured + SmolDocling + Docnet.Core** | Apache 2.0 open source, zero API costs (see ADR-003b) |
 | **Embeddings: multilingual-e5-large (local)** | **OpenRouter API + Ollama fallback** | Feature-flagged: API (accuracy) vs local (free) |
 | **Frontend: Next.js 14 + React 18** | **Next.js 16 + React 19** | Use latest versions (existing system already updated) |
 | **Deployment: New Docker Compose** | **Existing Docker Compose (extend)** | Reuse infra, add pdf-processor service |
@@ -511,7 +511,7 @@ BoundedContexts/KnowledgeBase/
 
 ```bash
 # .env.dev - ADD to existing
-LLMWHISPERER_API_KEY=<get from https://llmwhisperer.com>
+# Note: LLMWhisperer replaced with Unstructured (self-hosted, no API key needed)
 OPENROUTER_API_KEY=<get from https://openrouter.ai>
 
 # Ollama (if running locally for free fallback)

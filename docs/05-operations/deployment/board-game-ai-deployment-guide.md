@@ -46,8 +46,7 @@ vim infra/env/.env.dev
 **`.env.dev` Content**:
 ```bash
 # API Keys
-OPENAI_API_KEY=sk-proj-...
-CLAUDE_API_KEY=sk-ant-...  # Phase 2
+OPENROUTER_API_KEY=sk-or-v1-...
 
 # Database
 POSTGRES_URL=postgresql://meepleai:secret@postgres:5432/meepleai
@@ -66,9 +65,6 @@ API_BASE_URL=http://localhost:8000
 FRONTEND_BASE_URL=http://localhost:3000
 LOG_LEVEL=INFO
 ENVIRONMENT=development
-
-# PDF Processing
-LLMWHISPERER_API_KEY=<optional, free tier>
 
 # Monitoring (Phase 2)
 SEQ_URL=http://seq:5341
@@ -145,10 +141,10 @@ services:
     health_check:
       http_path: /health
     envs:
-      - key: OPENAI_API_KEY
+      - key: OPENROUTER_API_KEY
         scope: RUN_TIME
         type: SECRET
-        value: ${OPENAI_API_KEY}
+        value: ${OPENROUTER_API_KEY}
       - key: POSTGRES_URL
         scope: RUN_TIME
         value: ${db.DATABASE_URL}  # Auto-injected from DB component
@@ -382,11 +378,11 @@ spec:
             secretKeyRef:
               name: meepleai-secrets
               key: postgres-url
-        - name: OPENAI_API_KEY
+        - name: OPENROUTER_API_KEY
           valueFrom:
             secretKeyRef:
               name: meepleai-secrets
-              key: openai-api-key
+              key: openrouter-api-key
         - name: REDIS_URL
           value: "redis://meepleai-redis-cluster:6379"
         - name: WEAVIATE_URL

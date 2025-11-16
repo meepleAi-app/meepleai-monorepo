@@ -102,28 +102,76 @@ finally
 }
 ```
 
+## Performance Optimization
+
+### Current Performance Issues
+
+1. **Container per test class**: Each test class creates new PostgreSQL container (~2-3s)
+2. **Manual database reset**: TRUNCATE-based cleanup is slow (~50-100ms per test)
+3. **No shared fixtures**: No resource sharing across test classes
+4. **EF Core tracking conflicts**: 5/15 cross-context tests fail due to tracking issues
+
+**Current Performance**: ~58 seconds for 15 test classes, 162 tests
+
+### Recommended Optimizations (See: `docs/02-development/testing/integration-tests-performance-guide.md`)
+
+**Priority 1: Shared Database Fixture** (HIGH IMPACT)
+- Use xUnit `ICollectionFixture<T>` to share containers across test classes
+- **Impact**: 50-70% faster test suite
+- **Effort**: 2-3 hours
+
+**Priority 2: Respawn Integration** (HIGH IMPACT)
+- Replace manual TRUNCATE with Respawn.Postgres library
+- **Impact**: 3-13x faster database reset
+- **Effort**: 1-2 hours
+
+**Priority 3: AsNoTracking Pattern** (MEDIUM IMPACT)
+- Apply `AsNoTracking()` to read-only repository queries
+- Fix `UpdateAsync()` tracking conflicts
+- **Impact**: 30% faster queries, resolves 5/15 failing tests
+- **Effort**: 2-4 hours
+
+**Priority 4: Container Reuse** (LOCAL DEV ONLY)
+- Enable `.WithReuse(true)` for local development
+- **Impact**: 50x faster iterations (10s → 200ms)
+- **Effort**: 30 minutes
+
+**Expected Results**:
+- CI/CD: 58s → 13s (4.5x faster)
+- Local Dev: 58s → 3-4s with reuse (15-20x faster)
+- Test Success Rate: 67% → 100% (fix tracking conflicts)
+
+For detailed implementation patterns, see **Integration Tests Performance Guide**.
+
 ## Recommendations
 
-### Short Term
+### Short Term (Completed ✅)
 1. ✅ **DONE**: Fix Docnet.Core thread safety issue
 2. ✅ **DONE**: Document test architecture and limitations
-3. Skip E2E tests in CI until proper infrastructure is available
+3. ✅ **DONE**: Create comprehensive performance optimization guide
+4. Skip E2E tests in CI until proper infrastructure is available
 
-### Medium Term
-1. Create separate test projects:
+### Medium Term (Recommended)
+1. **Performance Optimizations** (2-4 weeks):
+   - Implement shared database fixture with xUnit collections
+   - Integrate Respawn.Postgres for fast database reset
+   - Apply AsNoTracking pattern to repository queries
+   - Enable container reuse for local development
+2. Create separate test projects:
    - `Api.UnitTests` - Pure unit tests
    - `Api.IntegrationTests` - Tests with mocks
    - `Api.E2ETests` - Tests requiring real services
-2. Implement proper mock strategies for:
+3. Implement proper mock strategies for:
    - Qdrant search results (return configurable test data)
    - LLM responses (return configurable test responses)
-3. Add category attributes to tests for selective execution
+4. Add category attributes to tests for selective execution
 
 ### Long Term
 1. Set up test Qdrant instance in CI
 2. Use OpenRouter test API key in CI (if available)
 3. Implement contract testing for external dependencies
 4. Add performance benchmarks
+5. Parallel test execution with multiple collections (2-4x faster)
 
 ## CI/CD Strategy
 
@@ -174,6 +222,8 @@ Tests that create data track created entities in `IntegrationTestBase` and clean
 
 ## References
 
+- **Integration Tests Performance Guide**: `docs/02-development/testing/integration-tests-performance-guide.md` ⭐ NEW
+- **Testing Guide**: `docs/02-development/testing/testing-guide.md`
+- **Known Issues**: `docs/07-project-management/tracking/integration-tests-known-issues.md`
 - Main documentation: `CLAUDE.md`
-- Security scanning: `docs/security-scanning.md`
-- Code coverage: `docs/code-coverage.md`
+- Security scanning: `docs/06-security/code-scanning-remediation-summary.md`

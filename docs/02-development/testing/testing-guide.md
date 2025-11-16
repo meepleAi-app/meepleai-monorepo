@@ -41,8 +41,10 @@ Test individual functions, components, or services in isolation.
 Test how multiple units work together (e.g., service + database).
 
 **When to use**: Testing service interactions, database operations, API endpoints
-**Speed**: Medium (100ms-1s per test)
+**Speed**: Medium (100ms-1s per test, optimized: <50ms)
 **Dependencies**: Real (Testcontainers) or partially mocked
+
+> **Performance Tip**: See [Integration Tests Performance Guide](integration-tests-performance-guide.md) for optimizations that can improve test suite speed by 4-11x
 
 ### E2E Tests
 Test complete user workflows through the UI.
@@ -483,16 +485,102 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
 ### Testcontainers Integration Testing
 
-```csharp
-// apps/api/tests/Api.Tests/Integration/GameControllerTests.cs
-using Xunit;
-using Testcontainers.PostgreSql;
-using Microsoft.AspNetCore.Mvc.Testing;
+**⚠️ Performance Warning**: Creating a container per test class is slow (~2-3s startup). For better performance, use shared fixtures with xUnit collections. See [Integration Tests Performance Guide](integration-tests-performance-guide.md).
 
+**RECOMMENDED: Shared Database Fixture Pattern**
+
+```csharp
+// apps/api/tests/Api.Tests/Infrastructure/DatabaseFixture.cs
+public class DatabaseFixture : IAsyncLifetime
+{
+    private readonly PostgreSqlContainer _container;
+    private Respawner _respawner = null!;
+
+    public string ConnectionString { get; private set; } = null!;
+
+    public DatabaseFixture()
+    {
+        _container = new PostgreSqlBuilder()
+            .WithImage("postgres:16-alpine")
+            .WithPortBinding(5432, true) // Random port
+            .Build();
+    }
+
+    public async ValueTask InitializeAsync()
+    {
+        await _container.StartAsync();
+        ConnectionString = _container.GetConnectionString();
+
+        // Apply migrations
+        await using var context = CreateDbContext();
+        await context.Database.MigrateAsync();
+
+        // Initialize Respawn (fast database reset)
+        await using var connection = new NpgsqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+        {
+            DbAdapter = DbAdapter.Postgres,
+            TablesToIgnore = new[] { new Table("__EFMigrationsHistory") }
+        });
+    }
+
+    public async Task ResetDatabaseAsync()
+    {
+        await using var connection = new NpgsqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await _respawner.ResetAsync(connection); // ✅ 3-13x faster than TRUNCATE
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _container.DisposeAsync();
+    }
+}
+
+// Collection definition
+[CollectionDefinition(nameof(DatabaseCollection))]
+public class DatabaseCollection : ICollectionFixture<DatabaseFixture> { }
+
+// Usage in test class
+[Collection(nameof(DatabaseCollection))] // ✅ Share container across test classes
+public class GameRepositoryTests
+{
+    private readonly DatabaseFixture _fixture;
+
+    public GameRepositoryTests(DatabaseFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
+    [Fact]
+    public async Task AddAsync_WithValidGame_SavesSuccessfully()
+    {
+        // Arrange
+        await _fixture.ResetDatabaseAsync(); // ✅ Fast reset (~10-20ms)
+        await using var context = _fixture.CreateDbContext();
+        var repository = new GameRepository(context);
+
+        // Act & Assert
+        // ... test code
+    }
+}
+```
+
+**Key patterns**:
+- ✅ Use `ICollectionFixture<T>` to share containers across test classes (50-70% faster)
+- ✅ Use `Respawn` for database reset (3-13x faster than manual TRUNCATE)
+- ✅ Use random ports with `.WithPortBinding(port, true)` to avoid conflicts
+- ✅ Pin specific image versions (e.g., `postgres:16-alpine`)
+- ✅ Reset database before each test for isolation
+
+**LEGACY: Per-Class Container Pattern (Slow)**
+
+```csharp
+// ❌ Creates new container per test class (~2-3s startup)
 public class GameControllerTests : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgresContainer;
-    private WebApplicationFactory<Program> _factory;
 
     public GameControllerTests()
     {
@@ -503,49 +591,30 @@ public class GameControllerTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await _postgresContainer.StartAsync();
-
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureAppConfiguration((context, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string>
-                    {
-                        ["ConnectionStrings:Postgres"] = _postgresContainer.GetConnectionString()
-                    });
-                });
-            });
-    }
-
-    [Fact]
-    public async Task GetGame_ReturnsGameDetails()
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-        var gameId = Guid.NewGuid();
-
-        // Act
-        var response = await client.GetAsync($"/api/v1/games/{gameId}");
-
-        // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        await _postgresContainer.StartAsync(); // ❌ Slow startup
     }
 
     public async Task DisposeAsync()
     {
         await _postgresContainer.DisposeAsync();
-        await _factory.DisposeAsync();
     }
 }
 ```
 
-**Key patterns**:
-- Use `IAsyncLifetime` for async setup/teardown
-- Start Testcontainers in `InitializeAsync()`
-- Override connection string in test configuration
-- Use `WebApplicationFactory<Program>` for integration tests
-- Clean up containers in `DisposeAsync()`
+**When to use per-class containers**:
+- Tests modify global state that can't be easily reset
+- Full isolation is required for debugging
+- Acceptable in small test suites (<5 test classes)
+
+**Performance Comparison**:
+
+| Pattern | Startup Time | Total Time (15 classes) |
+|---------|--------------|-------------------------|
+| Per-class container (legacy) | 2.5s per class | ~58s |
+| Shared fixture (recommended) | 2.5s total | ~13s (4.5x faster) |
+| Shared fixture + Respawn | 2.5s total | ~10s (5.8x faster) |
+
+For complete optimization guide, see [Integration Tests Performance Guide](integration-tests-performance-guide.md).
 
 ---
 
@@ -1128,7 +1197,7 @@ jest.mock('next/router');
 | Test Type | Target Time | Strategy |
 |-----------|-------------|----------|
 | Unit | <10ms | Use mocks, avoid I/O |
-| Integration | <1s | Use in-memory DB or Testcontainers |
+| Integration | <50ms | Use shared fixtures, Respawn, AsNoTracking |
 | E2E | <30s | Mock API, test critical paths only |
 
 ```typescript
@@ -1138,6 +1207,12 @@ jest.spyOn(api, 'getData').mockResolvedValue(mockData);
 // ❌ Slow: Real API call
 const data = await api.getData(); // Network latency
 ```
+
+**Backend Integration Tests**: For optimizing database integration tests, see [Integration Tests Performance Guide](integration-tests-performance-guide.md) for strategies that can improve performance by 4-11x:
+- Shared database fixtures (50-70% faster)
+- Respawn library for database reset (3-13x faster)
+- AsNoTracking pattern for read queries (30% faster)
+- Container reuse for local development (50x faster iterations)
 
 ### 6. Avoid Test Interdependencies
 
@@ -1217,8 +1292,9 @@ describe('Pagination', () => {
 
 ### MeepleAI-Specific Resources
 
-- **Test Execution Guide**: `docs/testing/test-execution-guide.md`
-- **Test Pattern Analysis**: `docs/testing/test-pattern-analysis.md`
+- **Integration Tests Performance Guide**: `docs/02-development/testing/integration-tests-performance-guide.md` ⭐ NEW
+- **Test Architecture**: `apps/api/tests/Api.Tests/TEST_ARCHITECTURE.md`
+- **Known Issues**: `docs/07-project-management/tracking/integration-tests-known-issues.md`
 - **Coverage Reports**: Run `pwsh tools/measure-coverage.ps1 -GenerateHtml`
 
 ### Quick Reference Commands

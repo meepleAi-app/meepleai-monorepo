@@ -86,9 +86,11 @@
   - [RAG Service Migration](./02-development/implementation/bgai-023-ragservice-migration.md)
   - [Cost Tracking Verification](./02-development/implementation/bgai-026-cost-tracking.md)
 
-- **[testing/](./02-development/testing/)** - Testing documentation (6 files)
+- **[testing/](./02-development/testing/)** - Testing documentation (8 files)
   - [Testing Guide](./02-development/testing/testing-guide.md) ⭐ - Comprehensive test writing guide (60+ pages)
   - [Testing Strategy](./02-development/testing/testing-strategy.md) ⭐ - Test pyramid, quality gates (30 pages)
+  - [Integration Tests Performance Guide](./02-development/testing/integration-tests-performance-guide.md) ⭐ NEW - Optimize integration tests for 4-11x speedup (80+ pages)
+  - [Integration Tests Quick Reference](./02-development/testing/integration-tests-quick-reference.md) - Quick cheat sheet for performant integration tests
   - [Testing Specialized](./02-development/testing/testing-specialized.md) - Manual, accessibility, concurrency, API testing
   - [Testing Quick Reference](./02-development/testing/testing-quick-reference.md) - Pattern lookup
   - [Testing React 19 Patterns](./02-development/testing/testing-react-19-patterns.md) - React 19 specific patterns

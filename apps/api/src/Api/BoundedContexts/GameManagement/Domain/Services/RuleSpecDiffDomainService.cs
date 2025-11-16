@@ -1,11 +1,12 @@
 using Api.Models;
 
-namespace Api.Services;
+namespace Api.BoundedContexts.GameManagement.Domain.Services;
 
 /// <summary>
-/// Service for computing differences between RuleSpec versions
+/// Domain service for computing differences between RuleSpec versions.
+/// Pure domain logic with no infrastructure dependencies.
 /// </summary>
-public class RuleSpecDiffService
+public class RuleSpecDiffDomainService
 {
     /// <summary>
     /// Computes the difference between two RuleSpec versions
@@ -102,36 +103,6 @@ public class RuleSpecDiffService
     }
 
     /// <summary>
-    /// Compares two rule atoms and returns a list of field changes
-    /// </summary>
-    private List<FieldChange> CompareAtoms(RuleAtom from, RuleAtom to)
-    {
-        var changes = new List<FieldChange>();
-
-        if (from.text != to.text)
-        {
-            changes.Add(new FieldChange("text", from.text, to.text));
-        }
-
-        if (from.section != to.section)
-        {
-            changes.Add(new FieldChange("section", from.section, to.section));
-        }
-
-        if (from.page != to.page)
-        {
-            changes.Add(new FieldChange("page", from.page, to.page));
-        }
-
-        if (from.line != to.line)
-        {
-            changes.Add(new FieldChange("line", from.line, to.line));
-        }
-
-        return changes;
-    }
-
-    /// <summary>
     /// Generates a human-readable summary of the diff
     /// </summary>
     public string GenerateDiffSummary(RuleSpecDiff diff)
@@ -176,7 +147,6 @@ public class RuleSpecDiffService
                         lines.Add($"  ~ Modified: {change.OldAtom}");
                         if (change.FieldChanges != null)
                         {
-                            // CODE-04: Use LINQ with AddRange for better functional style
                             lines.AddRange(change.FieldChanges.SelectMany(fc => new[]
                             {
                                 $"    {fc.FieldName}:",
@@ -190,5 +160,35 @@ public class RuleSpecDiffService
         }
 
         return string.Join("\n", lines);
+    }
+
+    /// <summary>
+    /// Compares two rule atoms and returns a list of field changes
+    /// </summary>
+    private List<FieldChange> CompareAtoms(RuleAtom from, RuleAtom to)
+    {
+        var changes = new List<FieldChange>();
+
+        if (from.text != to.text)
+        {
+            changes.Add(new FieldChange("text", from.text, to.text));
+        }
+
+        if (from.section != to.section)
+        {
+            changes.Add(new FieldChange("section", from.section, to.section));
+        }
+
+        if (from.page != to.page)
+        {
+            changes.Add(new FieldChange("page", from.page, to.page));
+        }
+
+        if (from.line != to.line)
+        {
+            changes.Add(new FieldChange("line", from.line, to.line));
+        }
+
+        return changes;
     }
 }

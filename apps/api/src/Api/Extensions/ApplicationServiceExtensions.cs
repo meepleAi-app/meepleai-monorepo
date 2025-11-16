@@ -77,9 +77,8 @@ public static class ApplicationServiceExtensions
     {
         // Game and RuleSpec services
         // Issue #1185: RuleSpecService migrated to CQRS pattern in GameManagement bounded context
-        services.AddScoped<RuleSpecDiffService>();
-        services.AddScoped<RuleCommentService>(); // EDIT-05: Comment service with threading and mentions
-        services.AddScoped<RuleSpecCommentService>(); // EDIT-02: Legacy comment service
+        // Issue #1189: RuleSpec Comment/Diff services migrated to CQRS pattern
+        services.AddScoped<Api.BoundedContexts.GameManagement.Domain.Services.RuleSpecDiffDomainService>();
 
         // CONFIG-01: Dynamic configuration service (still used by legacy services/helpers)
         services.AddScoped<IConfigurationService, ConfigurationService>();

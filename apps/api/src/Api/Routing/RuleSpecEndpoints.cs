@@ -156,7 +156,7 @@ public static class RuleSpecEndpoints
         });
 
         // RULE-02: Compare two versions (diff)
-        group.MapGet("/games/{gameId:guid}/rulespec/diff", async (Guid gameId, string? from, string? to, HttpContext context, IMediator mediator, RuleSpecDiffService diffService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec/diff", async (Guid gameId, string? from, string? to, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
@@ -168,24 +168,19 @@ public static class RuleSpecEndpoints
 
             logger.LogInformation("Computing diff between versions {FromVersion} and {ToVersion} for game {GameId}", from, to, gameId);
 
-            var fromSpecDto = await mediator.Send(new GetRuleSpecVersionQuery(gameId, from), ct);
-            var toSpecDto = await mediator.Send(new GetRuleSpecVersionQuery(gameId, to), ct);
+            var query = new ComputeRuleSpecDiffQuery(gameId, from, to);
+            var diff = await mediator.Send(query, ct);
 
-            if (fromSpecDto == null || toSpecDto == null)
+            if (diff == null)
             {
                 return Results.NotFound(new { error = "One or both RuleSpec versions not found" });
             }
 
-            // Convert DTOs to Models for RuleSpecDiffService (legacy service)
-            var fromSpec = ToModel(fromSpecDto);
-            var toSpec = ToModel(toSpecDto);
-
-            var diff = diffService.ComputeDiff(fromSpec, toSpec);
             return Results.Json(diff);
         });
 
         // EDIT-02: RuleSpec comment endpoints
-        group.MapPost("/games/{gameId:guid}/rulespec/versions/{version}/comments", async (Guid gameId, string version, CreateRuleSpecCommentRequest request, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/games/{gameId:guid}/rulespec/versions/{version}/comments", async (Guid gameId, string version, CreateRuleSpecCommentRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
@@ -195,10 +190,16 @@ public static class RuleSpecEndpoints
                 return Results.BadRequest(new { error = "CommentText is required" });
             }
 
+            if (!Guid.TryParse(session!.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
             try
             {
-                logger.LogInformation("User {UserId} adding comment to RuleSpec {GameId} version {Version}", session!.User.Id, gameId, version);
-                var comment = await commentService.AddCommentAsync(gameId.ToString(), version, request.AtomId, session.User.Id, request.CommentText, ct);
+                logger.LogInformation("User {UserId} adding comment to RuleSpec {GameId} version {Version}", userId, gameId, version);
+                var command = new CreateSimpleRuleCommentCommand(gameId.ToString(), version, request.AtomId, request.CommentText, userId);
+                var comment = await mediator.Send(command, ct);
                 logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
                 return Results.Created($"/api/v1/games/{gameId}/rulespec/comments/{comment.Id}", comment);
             }
@@ -209,17 +210,18 @@ public static class RuleSpecEndpoints
             }
         });
 
-        group.MapGet("/games/{gameId:guid}/rulespec/versions/{version}/comments", async (Guid gameId, string version, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec/versions/{version}/comments", async (Guid gameId, string version, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
             logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version}", session!.User.Id, gameId, version);
-            var response = await commentService.GetCommentsForVersionAsync(gameId.ToString(), version, ct);
+            var query = new GetSimpleRuleCommentsQuery(gameId.ToString(), version);
+            var response = await mediator.Send(query, ct);
             return Results.Json(response);
         });
 
-        group.MapPut("/games/{gameId:guid}/rulespec/comments/{commentId:guid}", async (Guid gameId, Guid commentId, UpdateRuleSpecCommentRequest request, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPut("/games/{gameId:guid}/rulespec/comments/{commentId:guid}", async (Guid gameId, Guid commentId, UpdateRuleSpecCommentRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -229,10 +231,16 @@ public static class RuleSpecEndpoints
                 return Results.BadRequest(new { error = "CommentText is required" });
             }
 
+            if (!Guid.TryParse(session!.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
             try
             {
-                logger.LogInformation("User {UserId} updating comment {CommentId}", session!.User.Id, commentId);
-                var comment = await commentService.UpdateCommentAsync(commentId, session.User.Id, request.CommentText, ct);
+                logger.LogInformation("User {UserId} updating comment {CommentId}", userId, commentId);
+                var command = new UpdateSimpleRuleCommentCommand(commentId, request.CommentText, userId);
+                var comment = await mediator.Send(command, ct);
                 logger.LogInformation("Comment {CommentId} updated successfully", commentId);
                 return Results.Json(comment);
             }
@@ -243,22 +251,28 @@ public static class RuleSpecEndpoints
             }
             catch (UnauthorizedAccessException ex)
             {
-                logger.LogWarning("User {UserId} not authorized to update comment {CommentId}: {Error}", session.User.Id, commentId, ex.Message);
+                logger.LogWarning("User {UserId} not authorized to update comment {CommentId}: {Error}", userId, commentId, ex.Message);
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
             }
         });
 
-        group.MapDelete("/games/{gameId:guid}/rulespec/comments/{commentId:guid}", async (Guid gameId, Guid commentId, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/games/{gameId:guid}/rulespec/comments/{commentId:guid}", async (Guid gameId, Guid commentId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var isAdmin = string.Equals(session!.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+            if (!Guid.TryParse(session!.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "Invalid user ID" });
+            }
+
+            var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
             try
             {
-                logger.LogInformation("User {UserId} deleting comment {CommentId}", session.User.Id, commentId);
-                var deleted = await commentService.DeleteCommentAsync(commentId, session.User.Id, isAdmin, ct);
+                logger.LogInformation("User {UserId} deleting comment {CommentId}", userId, commentId);
+                var command = new DeleteSimpleRuleCommentCommand(commentId, userId, isAdmin);
+                var deleted = await mediator.Send(command, ct);
 
                 if (!deleted)
                 {
@@ -270,7 +284,7 @@ public static class RuleSpecEndpoints
             }
             catch (UnauthorizedAccessException ex)
             {
-                logger.LogWarning("User {UserId} not authorized to delete comment {CommentId}: {Error}", session.User.Id, commentId, ex.Message);
+                logger.LogWarning("User {UserId} not authorized to delete comment {CommentId}: {Error}", userId, commentId, ex.Message);
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
             }
         });
@@ -282,6 +296,7 @@ public static class RuleSpecEndpoints
             string version,
             CreateCommentRequest request,
             HttpContext context,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -293,18 +308,11 @@ public static class RuleSpecEndpoints
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
-            // Manually resolve service from DI container
-            var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
-
             try
             {
                 logger.LogInformation("User {UserId} creating comment on RuleSpec {GameId} version {Version}", userId, gameId, version);
-                var comment = await commentService.CreateCommentAsync(
-                    gameId.ToString(),
-                    version,
-                    request.LineNumber,
-                    request.CommentText,
-                    userId);
+                var command = new CreateRuleCommentCommand(gameId, version, request.LineNumber, request.CommentText, userId);
+                var comment = await mediator.Send(command, ct);
                 logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
                 return Results.Created($"/api/v1/comments/{comment.Id}", comment);
             }
@@ -333,6 +341,7 @@ public static class RuleSpecEndpoints
             Guid commentId,
             CreateReplyRequest request,
             HttpContext context,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -344,27 +353,24 @@ public static class RuleSpecEndpoints
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
-            // Manually resolve service from DI container
-            var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
-
             try
             {
                 logger.LogInformation("User {UserId} replying to comment {CommentId}", userId, commentId);
-                var reply = await commentService.ReplyToCommentAsync(
-                    commentId,
-                    request.CommentText,
-                    userId);
+                var command = new ReplyToRuleCommentCommand(commentId, request.CommentText, userId);
+                var reply = await mediator.Send(command, ct);
                 logger.LogInformation("Reply {ReplyId} created successfully", reply.Id);
                 return Results.Created($"/api/v1/comments/{reply.Id}", reply);
             }
-            catch (NotFoundException ex)
-            {
-                logger.LogWarning("Comment {CommentId} not found for reply", commentId);
-                return Results.NotFound(new { error = ex.Message });
-            }
             catch (InvalidOperationException ex)
             {
+                // Handlers throw InvalidOperationException for not found and other business logic errors
                 logger.LogWarning("Failed to create reply to comment {CommentId}: {Error}", commentId, ex.Message);
+
+                // Return 404 if the error indicates "not found", otherwise 400
+                if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.NotFound(new { error = ex.Message });
+                }
                 return Results.BadRequest(new { error = ex.Message });
             }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -394,6 +400,7 @@ public static class RuleSpecEndpoints
             string version,
             bool includeResolved,
             HttpContext context,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -401,13 +408,11 @@ public static class RuleSpecEndpoints
             if (!authenticated) return error!;
             var userId = session!.User.Id;
 
-            // Manually resolve service from DI container
-            var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
-
             logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} (includeResolved: {IncludeResolved})",
                 userId, gameId, version, includeResolved);
 
-            var comments = await commentService.GetCommentsForRuleSpecAsync(gameId, version, includeResolved);
+            var query = new GetRuleCommentsQuery(gameId, version, includeResolved);
+            var comments = await mediator.Send(query, ct);
             return Results.Ok(comments);
         })
         .RequireAuthorization()
@@ -423,6 +428,7 @@ public static class RuleSpecEndpoints
             string version,
             int lineNumber,
             HttpContext context,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -430,13 +436,11 @@ public static class RuleSpecEndpoints
             if (!authenticated) return error!;
             var userId = session!.User.Id;
 
-            // Manually resolve service from DI container
-            var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
-
             logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} line {LineNumber}",
                 userId, gameId, version, lineNumber);
 
-            var comments = await commentService.GetCommentsForLineAsync(gameId, version, lineNumber);
+            var query = new GetCommentsForLineQuery(gameId, version, lineNumber);
+            var comments = await mediator.Send(query, ct);
             return Results.Ok(comments);
         })
         .RequireAuthorization()
@@ -451,6 +455,7 @@ public static class RuleSpecEndpoints
             Guid commentId,
             bool resolveReplies,
             HttpContext context,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -462,19 +467,18 @@ public static class RuleSpecEndpoints
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
-            // Manually resolve service from DI container
-            var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
-
             try
             {
                 logger.LogInformation("User {UserId} resolving comment {CommentId} (resolveReplies: {ResolveReplies})",
                     userId, commentId, resolveReplies);
 
-                var comment = await commentService.ResolveCommentAsync(commentId, userId, resolveReplies);
+                var isAdmin = session!.User.Role == "admin";
+                var command = new ResolveRuleCommentCommand(commentId, userId, isAdmin, resolveReplies);
+                var comment = await mediator.Send(command, ct);
                 logger.LogInformation("Comment {CommentId} resolved successfully", commentId);
                 return Results.Ok(comment);
             }
-            catch (KeyNotFoundException ex)
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogWarning("Comment {CommentId} not found for resolution", commentId);
                 return Results.NotFound(new { error = ex.Message });
@@ -506,27 +510,30 @@ public static class RuleSpecEndpoints
             Guid commentId,
             bool unresolveParent,
             HttpContext context,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
 
-            var userId = session!.User.Id;
-
-            // Manually resolve service from DI container
-            var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
+            if (!Guid.TryParse(session!.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+            }
 
             try
             {
                 logger.LogInformation("User {UserId} unresolving comment {CommentId} (unresolveParent: {UnresolveParent})",
                     userId, commentId, unresolveParent);
 
-                var comment = await commentService.UnresolveCommentAsync(commentId, unresolveParent);
+                var isAdmin = session!.User.Role == "admin";
+                var command = new UnresolveRuleCommentCommand(commentId, userId, isAdmin, unresolveParent);
+                var comment = await mediator.Send(command, ct);
                 logger.LogInformation("Comment {CommentId} unresolved successfully", commentId);
                 return Results.Ok(comment);
             }
-            catch (KeyNotFoundException ex)
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogWarning("Comment {CommentId} not found for unresolve", commentId);
                 return Results.NotFound(new { error = ex.Message });

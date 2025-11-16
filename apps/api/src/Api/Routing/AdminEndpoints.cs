@@ -786,7 +786,7 @@ public static class AdminEndpoints
         // List all prompt templates with pagination
         group.MapGet("/admin/prompts", async (
             HttpContext context,
-            MeepleAiDbContext db,
+            IMediator mediator,
             int page = 1,
             int limit = 50,
             string? category = null,
@@ -795,37 +795,11 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var query = db.Set<PromptTemplateEntity>()
-                .AsNoTracking()
-                .Include(t => t.CreatedBy)
-                .Include(t => t.Versions)
-                .AsQueryable();
+            var result = await mediator.Send(
+                new GetPromptTemplatesQuery(page, limit, category),
+                ct);
 
-            if (!string.IsNullOrWhiteSpace(category))
-            {
-                query = query.Where(t => t.Category == category);
-            }
-
-            var total = await query.CountAsync(ct);
-            var templates = await query
-                .OrderByDescending(t => t.CreatedAt)
-                .Skip((page - 1) * limit)
-                .Take(limit)
-                .Select(t => new PromptTemplateDto
-                {
-                    Id = t.Id.ToString(),
-                    Name = t.Name,
-                    Description = t.Description,
-                    Category = t.Category,
-                    CreatedByUserId = t.CreatedByUserId.ToString(),
-                    CreatedByEmail = t.CreatedBy.Email,
-                    CreatedAt = t.CreatedAt,
-                    VersionCount = t.Versions.Count,
-                    ActiveVersionNumber = t.Versions.Where(v => v.IsActive).Select(v => (int?)v.VersionNumber).FirstOrDefault()
-                })
-                .ToListAsync(ct);
-
-            return Results.Ok(new PagedResult<PromptTemplateDto>(templates, total, page, limit));
+            return Results.Ok(new PagedResult<PromptTemplateDto>(result.Templates, result.TotalCount, page, limit));
         })
         .WithName("ListPromptTemplates")
         .WithTags("Admin", "PromptManagement")
@@ -838,54 +812,34 @@ public static class AdminEndpoints
         group.MapPost("/admin/prompts", async (
             CreatePromptTemplateRequest request,
             HttpContext context,
-            MeepleAiDbContext db,
+            IMediator mediator,
             CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var exists = await db.Set<PromptTemplateEntity>()
-                .AnyAsync(t => t.Name == request.Name, ct);
-
-            if (exists)
+            try
             {
-                return Results.BadRequest(new { error = $"Template with name '{request.Name}' already exists" });
-            }
+                var result = await mediator.Send(
+                    new CreatePromptTemplateCommand(
+                        request.Name,
+                        request.Description,
+                        request.Category,
+                        Guid.Parse(session.User.Id)),
+                    ct);
 
-            var user = await db.Set<UserEntity>().FindAsync([session.User.Id], ct);
-            if (user == null)
+                return Results.Created(
+                    $"/api/v1/admin/prompts/{result.Id}",
+                    result);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("already exists"))
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
             {
                 return Results.Unauthorized();
             }
-
-            var template = new PromptTemplateEntity
-            {
-                Id = Guid.NewGuid(),
-                Name = request.Name,
-                Description = request.Description,
-                Category = request.Category,
-                CreatedByUserId = Guid.Parse(session.User.Id),
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = user
-            };
-
-            db.Set<PromptTemplateEntity>().Add(template);
-            await db.SaveChangesAsync(ct);
-
-            return Results.Created(
-                $"/api/v1/admin/prompts/{template.Id}",
-                new PromptTemplateDto
-                {
-                    Id = template.Id.ToString(),
-                    Name = template.Name,
-                    Description = template.Description,
-                    Category = template.Category,
-                    CreatedByUserId = template.CreatedByUserId.ToString(),
-                    CreatedByEmail = user.Email,
-                    CreatedAt = template.CreatedAt,
-                    VersionCount = 0,
-                    ActiveVersionNumber = null
-                });
         })
         .WithName("CreatePromptTemplate")
         .WithTags("Admin", "PromptManagement")
@@ -899,39 +853,29 @@ public static class AdminEndpoints
         group.MapGet("/admin/prompts/{id:guid}", async (
             Guid id,
             HttpContext context,
-            MeepleAiDbContext db,
+            IMediator mediator,
             CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var template = await db.Set<PromptTemplateEntity>()
-                .Include(t => t.Versions)
-                .Include(t => t.CreatedBy)
-                .FirstOrDefaultAsync(t => t.Id == id, ct);
-
-            if (template == null)
+            try
             {
-                return Results.NotFound(new { error = "Template not found" });
+                var result = await mediator.Send(
+                    new GetPromptTemplateByIdQuery(id),
+                    ct);
+
+                if (result == null)
+                {
+                    return Results.NotFound(new { error = "Template not found" });
+                }
+
+                return Results.Ok(result);
             }
-
-            if (template.CreatedBy == null)
+            catch (InvalidOperationException ex) when (ex.Message.Contains("creator information"))
             {
-                return Results.Problem("Template creator information is missing", statusCode: 500);
+                return Results.Problem(ex.Message, statusCode: 500);
             }
-
-            return Results.Ok(new PromptTemplateDto
-            {
-                Id = template.Id.ToString(),
-                Name = template.Name,
-                Description = template.Description,
-                Category = template.Category,
-                CreatedByUserId = template.CreatedByUserId.ToString(),
-                CreatedByEmail = template.CreatedBy.Email,
-                CreatedAt = template.CreatedAt,
-                VersionCount = template.Versions.Count,
-                ActiveVersionNumber = template.Versions.FirstOrDefault(v => v.IsActive)?.VersionNumber
-            });
         })
         .WithName("GetPromptTemplate")
         .WithTags("Admin", "PromptManagement")
@@ -946,63 +890,34 @@ public static class AdminEndpoints
             Guid id,
             CreatePromptVersionRequest request,
             HttpContext context,
-            MeepleAiDbContext db,
+            IMediator mediator,
             CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var template = await db.Set<PromptTemplateEntity>()
-                .Include(t => t.Versions)
-                .Include(t => t.CreatedBy)
-                .FirstOrDefaultAsync(t => t.Id == id, ct);
-
-            if (template == null)
+            try
             {
-                return Results.NotFound(new { error = "Template not found" });
+                var result = await mediator.Send(
+                    new CreatePromptVersionCommand(
+                        id,
+                        request.Content,
+                        request.Metadata,
+                        Guid.Parse(session.User.Id)),
+                    ct);
+
+                return Results.Created(
+                    $"/api/v1/admin/prompts/{id}/versions/{result.Id}",
+                    result);
             }
-
-            var user = await db.Set<UserEntity>().FindAsync([session.User.Id], ct);
-            if (user == null)
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
             {
+                if (ex.Message.Contains("Template"))
+                {
+                    return Results.NotFound(new { error = "Template not found" });
+                }
                 return Results.Unauthorized();
             }
-
-            var nextVersionNumber = template.Versions.Any()
-                ? template.Versions.Max(v => v.VersionNumber) + 1
-                : 1;
-
-            var version = new PromptVersionEntity
-            {
-                Id = Guid.NewGuid(),
-                TemplateId = id,
-                VersionNumber = nextVersionNumber,
-                Content = request.Content,
-                IsActive = false, // New versions are inactive by default
-                CreatedByUserId = Guid.Parse(session.User.Id),
-                CreatedAt = DateTime.UtcNow,
-                Metadata = request.Metadata,
-                Template = template,
-                CreatedBy = user
-            };
-
-            db.Set<PromptVersionEntity>().Add(version);
-            await db.SaveChangesAsync(ct);
-
-            return Results.Created(
-                $"/api/v1/admin/prompts/{id}/versions/{version.Id}",
-                new PromptVersionDto
-                {
-                    Id = version.Id.ToString(),
-                    TemplateId = version.TemplateId.ToString(),
-                    VersionNumber = version.VersionNumber,
-                    Content = version.Content,
-                    IsActive = version.IsActive,
-                    CreatedByUserId = version.CreatedByUserId.ToString(),
-                    CreatedByEmail = user.Email,
-                    CreatedAt = version.CreatedAt,
-                    Metadata = version.Metadata
-                });
         })
         .WithName("CreatePromptVersion")
         .WithTags("Admin", "PromptManagement")
@@ -1016,41 +931,24 @@ public static class AdminEndpoints
         group.MapGet("/admin/prompts/{id:guid}/versions", async (
             Guid id,
             HttpContext context,
-            MeepleAiDbContext db,
+            IMediator mediator,
             CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var template = await db.Set<PromptTemplateEntity>()
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Id == id, ct);
+            try
+            {
+                var result = await mediator.Send(
+                    new GetPromptVersionsQuery(id),
+                    ct);
 
-            if (template == null)
+                return Results.Ok(result);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
             {
                 return Results.NotFound(new { error = "Template not found" });
             }
-
-            var versions = await db.Set<PromptVersionEntity>()
-                .AsNoTracking()
-                .Include(v => v.CreatedBy)
-                .Where(v => v.TemplateId == id)
-                .OrderByDescending(v => v.VersionNumber)
-                .Select(v => new PromptVersionDto
-                {
-                    Id = v.Id.ToString(),
-                    TemplateId = v.TemplateId.ToString(),
-                    VersionNumber = v.VersionNumber,
-                    Content = v.Content,
-                    IsActive = v.IsActive,
-                    CreatedByUserId = v.CreatedByUserId.ToString(),
-                    CreatedByEmail = v.CreatedBy.Email,
-                    CreatedAt = v.CreatedAt,
-                    Metadata = v.Metadata
-                })
-                .ToListAsync(ct);
-
-            return Results.Ok(versions);
         })
         .WithName("GetPromptVersionHistory")
         .WithTags("Admin", "PromptManagement")

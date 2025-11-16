@@ -107,7 +107,6 @@ public static class AuthenticationServiceExtensions
         // OPS-07: Alerting system
         services.Configure<AlertingConfiguration>(configuration.GetSection("Alerting"));
         services.AddScoped<IAlertingService, AlertingService>();
-        services.AddScoped<AlertingService>();
         services.AddScoped<IAlertChannel, EmailAlertChannel>();
         services.AddScoped<IAlertChannel, SlackAlertChannel>();
         services.AddScoped<IAlertChannel, PagerDutyAlertChannel>();

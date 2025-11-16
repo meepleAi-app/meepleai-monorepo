@@ -25,7 +25,6 @@ public static class AiEndpoints
             QaRequest req,
             HttpContext context,
             IRagService rag,
-            ChatService chatService,
             AiRequestLogService aiLog,
             IResponseQualityService qualityService, // AI-11: Quality scoring
             IMediator mediator, // CHAT-02: for GenerateFollowUpQuestionsQuery (Issue #1188)
@@ -60,18 +59,6 @@ public static class AiEndpoints
                 session.User.Id, req.gameId, req.query, bypassCache, generateFollowUps);
 
             // ISSUE-1194: Error handling now centralized in middleware + pipeline behavior
-            // Persist user query to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue)
-            {
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "user",
-                    req.query,
-                    new { endpoint = "qa", gameId = req.gameId, bypassCache, generateFollowUps },
-                    ct);
-            }
-
             // AI-14: Use hybrid search with configurable search mode (default: Hybrid)
             // PERF-03: Support cache bypass via query parameter
             // AI-09: Language parameter defaults to null (uses "en")
@@ -164,30 +151,6 @@ public static class AiEndpoints
                 }
             }
 
-            // Persist agent response to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue)
-            {
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "assistant",
-                    resp.answer,
-                    new
-                    {
-                        endpoint = "qa",
-                        gameId = req.gameId,
-                        promptTokens = resp.promptTokens,
-                        completionTokens = resp.completionTokens,
-                        totalTokens = resp.totalTokens,
-                        confidence = resp.confidence,
-                        model,
-                        finishReason,
-                        snippetCount = resp.snippets.Count,
-                        followUpQuestionsCount = followUpQuestions?.Count ?? 0 // CHAT-02
-                    },
-                    ct);
-            }
-
             // ADM-01: Log AI request with AI-11 quality scores
             await aiLog.LogRequestAsync(
                 session.User.Id,
@@ -219,7 +182,7 @@ public static class AiEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status500InternalServerError);
 
-        group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, IRagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, IRagService rag, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -234,48 +197,12 @@ public static class AiEndpoints
                 session.User.Id, req.gameId, req.topic);
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-            // Persist user query to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue)
-            {
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "user",
-                    $"Explain: {req.topic}",
-                    new { endpoint = "explain", gameId = req.gameId, topic = req.topic },
-                    ct);
-            }
-
             // AI-09: Language parameter defaults to null (uses "en")
             var resp = await rag.ExplainAsync(req.gameId, req.topic, language: null, ct);
             var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
             logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
                 req.gameId, resp.estimatedReadingTimeMinutes);
-
-            // Persist agent response to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue)
-            {
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "assistant",
-                    resp.script,
-                    new
-                    {
-                        endpoint = "explain",
-                        gameId = req.gameId,
-                        topic = req.topic,
-                        promptTokens = resp.promptTokens,
-                        completionTokens = resp.completionTokens,
-                        totalTokens = resp.totalTokens,
-                        confidence = resp.confidence,
-                        estimatedReadingTimeMinutes = resp.estimatedReadingTimeMinutes,
-                        outline = resp.outline,
-                        citationCount = resp.citations.Count
-                    },
-                    ct);
-            }
 
             // ADM-01: Log AI request
             await aiLog.LogRequestAsync(
@@ -343,7 +270,6 @@ public static class AiEndpoints
             QaRequest req,
             HttpContext context,
             IMediator mediator,
-            ChatService chatService,
             AiRequestLogService aiLog,
             IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
             MeepleAiDbContext dbContext, // CHAT-02: for game name lookup
@@ -389,18 +315,6 @@ public static class AiEndpoints
             context.Response.Headers["Content-Type"] = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
-
-            // Persist user query to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue)
-            {
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "user",
-                    req.query,
-                    new { endpoint = "qa-stream", gameId = req.gameId },
-                    ct);
-            }
 
             var answerBuilder = new System.Text.StringBuilder();
             var totalTokens = 0;
@@ -494,26 +408,6 @@ public static class AiEndpoints
 
             logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
 
-            // Persist agent response to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue && !string.IsNullOrWhiteSpace(answer))
-            {
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "assistant",
-                    answer,
-                    new
-                    {
-                        endpoint = "qa-stream",
-                        gameId = req.gameId,
-                        totalTokens,
-                        confidence,
-                        snippetCount = snippets.Count,
-                        followUpQuestionsCount = followUpQuestions?.Count ?? 0 // CHAT-02
-                    },
-                    ct);
-            }
-
             // Log AI request
             await aiLog.LogRequestAsync(
                 session.User.Id,
@@ -536,7 +430,7 @@ public static class AiEndpoints
 
         // AI-03: RAG Setup Guide endpoint (Streaming)
         // Migrated to CQRS: Uses StreamSetupGuideQuery via MediatR with SSE streaming (Issue #1186)
-        group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, IMediator mediator, ChatService chatService, AiRequestLogService aiLog, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, IMediator mediator, AiRequestLogService aiLog, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -563,18 +457,6 @@ public static class AiEndpoints
             context.Response.Headers["Content-Type"] = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
-
-            // Persist user query to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue)
-            {
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "user",
-                    "Generate setup guide",
-                    new { endpoint = "setup-stream", gameId = req.gameId },
-                    ct);
-            }
 
             var steps = new List<SetupGuideStep>();
             string? gameTitle = null;
@@ -617,32 +499,6 @@ public static class AiEndpoints
 
             logger.LogInformation("Setup guide streaming completed for game {GameId}, {StepCount} steps, estimated {Minutes} min",
                 req.gameId, steps.Count, estimatedTime);
-
-            // Persist agent response to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue)
-            {
-                var setupSummary = steps.Count > 0
-                    ? string.Join("; ", steps.Take(3).Select(s => $"{s.stepNumber}. {s.title}")) + (steps.Count > 3 ? "..." : "")
-                    : "No steps generated";
-
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "assistant",
-                    $"Setup guide for {gameTitle}: {setupSummary}",
-                    new
-                    {
-                        endpoint = "setup-stream",
-                        gameId = req.gameId,
-                        gameTitle,
-                        totalTokens,
-                        confidence,
-                        estimatedSetupTimeMinutes = estimatedTime,
-                        stepCount = steps.Count,
-                        steps
-                    },
-                    ct);
-            }
 
             // ADM-01: Log AI request
             var responseSnippet = steps.Count > 0
@@ -713,7 +569,7 @@ public static class AiEndpoints
 
         // CHESS-04: Chess conversational agent endpoint
         // Migrated to CQRS: Uses InvokeChessAgentCommand via MediatR (Issue #1188)
-        group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IMediator mediator, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IMediator mediator, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -728,22 +584,6 @@ public static class AiEndpoints
                 session.User.Id, req.question, req.fenPosition ?? "none");
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-            // Persist user query to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue)
-            {
-                var queryText = !string.IsNullOrWhiteSpace(req.fenPosition)
-                    ? $"{req.question} [Position: {req.fenPosition}]"
-                    : req.question;
-
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "user",
-                    queryText,
-                    new { endpoint = "chess", question = req.question, fenPosition = req.fenPosition },
-                    ct);
-            }
-
             var resp = await mediator.Send(new InvokeChessAgentCommand
             {
                 Question = req.question,
@@ -768,32 +608,6 @@ public static class AiEndpoints
                 {
                     finishReason = metadataFinish;
                 }
-            }
-
-            // Persist agent response to chat if chatId provided
-            if (req.chatId != null && req.chatId.HasValue)
-            {
-                await chatService.AddMessageAsync(
-                    req.chatId.Value,
-                    session.User.Id,
-                    "assistant",
-                    resp.answer,
-                    new
-                    {
-                        endpoint = "chess",
-                        question = req.question,
-                        fenPosition = req.fenPosition,
-                        promptTokens = resp.promptTokens,
-                        completionTokens = resp.completionTokens,
-                        totalTokens = resp.totalTokens,
-                        confidence = resp.confidence,
-                        model,
-                        finishReason,
-                        sourceCount = resp.sources.Count,
-                        suggestedMoves = resp.suggestedMoves,
-                        analysis = resp.analysis
-                    },
-                    ct);
             }
 
             // ADM-01: Log AI request

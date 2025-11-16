@@ -299,7 +299,6 @@ v1Api.MapGameEndpoints();
 v1Api.MapAiEndpoints();
 v1Api.MapPdfEndpoints();
 v1Api.MapRuleSpecEndpoints();
-v1Api.MapChatEndpoints();
 v1Api.MapAdminEndpoints();
 
 // DDD-PHASE3: KnowledgeBase bounded context endpoints

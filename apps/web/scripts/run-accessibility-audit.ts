@@ -7,6 +7,8 @@
  * Usage: npx ts-node scripts/run-accessibility-audit.ts
  */
 
+/* eslint-disable no-console */
+
 import { chromium, Browser, Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import * as fs from 'fs';
@@ -134,7 +136,7 @@ async function login(page: Page): Promise<void> {
 async function auditPage(
   page: Page,
   config: PageConfig,
-  isAuthenticated: boolean
+  _isAuthenticated: boolean
 ): Promise<PageAuditResult> {
   console.log(`\n📄 Auditing: ${config.name}`);
   console.log(`   URL: ${config.url}`);

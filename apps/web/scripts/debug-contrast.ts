@@ -2,6 +2,9 @@
  * Debug script to get detailed color contrast information
  */
 
+/* eslint-disable no-console */
+ 
+
 import { chromium } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 

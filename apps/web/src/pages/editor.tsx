@@ -185,7 +185,7 @@ export default function RuleSpecEditor() {
     if (hasUnsavedChanges && isValid && debouncedContent) {
       void handleAutoSave();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [debouncedContent]);
 
   const handleAutoSave = async () => {

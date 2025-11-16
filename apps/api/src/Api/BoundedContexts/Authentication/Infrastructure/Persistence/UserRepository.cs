@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -9,18 +11,16 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of User repository.
 /// Maps between domain User entity and UserEntity persistence model.
 /// </summary>
-public class UserRepository : IUserRepository
+public class UserRepository : RepositoryBase, IUserRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public UserRepository(MeepleAiDbContext dbContext)
+    public UserRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var userEntity = await _dbContext.Users
+        var userEntity = await DbContext.Users
             .Include(u => u.BackupCodes)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
@@ -30,7 +30,7 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken = default)
     {
-        var userEntity = await _dbContext.Users
+        var userEntity = await DbContext.Users
             .Include(u => u.BackupCodes)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email == email.Value, cancellationToken);
@@ -40,21 +40,21 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> ExistsByEmailAsync(Email email, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Users
+        return await DbContext.Users
             .AsNoTracking()
             .AnyAsync(u => u.Email == email.Value, cancellationToken);
     }
 
     public async Task<bool> HasAnyUsersAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Users
+        return await DbContext.Users
             .AsNoTracking()
             .AnyAsync(cancellationToken);
     }
 
     public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var userEntities = await _dbContext.Users
+        var userEntities = await DbContext.Users
             .Include(u => u.BackupCodes)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -64,6 +64,9 @@ public class UserRepository : IUserRepository
 
     public async Task AddAsync(User entity, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE mapping to persistence entity
+        CollectDomainEvents(entity);
+
         var userEntity = new Api.Infrastructure.Entities.UserEntity
         {
             Id = entity.Id,
@@ -91,13 +94,16 @@ public class UserRepository : IUserRepository
             });
         }
 
-        await _dbContext.Users.AddAsync(userEntity, cancellationToken);
+        await DbContext.Users.AddAsync(userEntity, cancellationToken);
     }
 
     public async Task UpdateAsync(User entity, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE updating persistence entity
+        CollectDomainEvents(entity);
+
         // Load the existing user with backup codes to properly manage the child collection
-        var existingUser = await _dbContext.Users
+        var existingUser = await DbContext.Users
             .Include(u => u.BackupCodes)
             .FirstOrDefaultAsync(u => u.Id == entity.Id, cancellationToken);
 
@@ -137,23 +143,23 @@ public class UserRepository : IUserRepository
 
     public async Task DeleteAsync(User entity, CancellationToken cancellationToken = default)
     {
-        var userEntity = await _dbContext.Users.FindAsync(new object[] { entity.Id }, cancellationToken);
+        var userEntity = await DbContext.Users.FindAsync(new object[] { entity.Id }, cancellationToken);
         if (userEntity != null)
         {
-            _dbContext.Users.Remove(userEntity);
+            DbContext.Users.Remove(userEntity);
         }
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Users
+        return await DbContext.Users
             .AsNoTracking()
             .AnyAsync(u => u.Id == id, cancellationToken);
     }
 
     public async Task<List<Api.Infrastructure.Entities.UserBackupCodeEntity>> GetBackupCodesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.UserBackupCodes
+        return await DbContext.UserBackupCodes
             .AsNoTracking()
             .Where(bc => bc.UserId == userId)
             .ToListAsync(cancellationToken);
@@ -228,7 +234,7 @@ public class UserRepository : IUserRepository
     public async Task<int> CountAdminsAsync(CancellationToken cancellationToken = default)
     {
         var adminRole = Role.Admin.Value;
-        return await _dbContext.Users
+        return await DbContext.Users
             .AsNoTracking()
             .CountAsync(u => u.Role == adminRole, cancellationToken);
     }

@@ -115,7 +115,7 @@ public class AgentOrchestrationService
         var confidence = qualityTracking.CalculateSearchConfidence(searchResults);
 
         // Record invocation on agent aggregate
-        agent.RecordInvocation();
+        agent.RecordInvocation(context.Query, 0); // TODO: Track actual token usage from LLM calls
 
         // Build result
         return new AgentInvocationResult(

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -54,7 +55,7 @@ public sealed class GameSession : AggregateRoot<Guid>
         StartedAt = DateTime.UtcNow;
         _players.AddRange(playerList);
 
-        // TODO: Add domain event GameSessionCreated
+        AddDomainEvent(new GameSessionCreatedEvent(id, gameId, playerList.Count));
     }
 
     /// <summary>
@@ -67,7 +68,7 @@ public sealed class GameSession : AggregateRoot<Guid>
 
         Status = SessionStatus.InProgress;
 
-        // TODO: Add domain event GameSessionStarted
+        AddDomainEvent(new GameSessionStartedEvent(Id, GameId, DateTime.UtcNow));
     }
 
     /// <summary>
@@ -80,7 +81,7 @@ public sealed class GameSession : AggregateRoot<Guid>
 
         Status = SessionStatus.Paused;
 
-        // TODO: Add domain event GameSessionPaused
+        AddDomainEvent(new GameSessionPausedEvent(Id, DateTime.UtcNow));
     }
 
     /// <summary>
@@ -93,7 +94,7 @@ public sealed class GameSession : AggregateRoot<Guid>
 
         Status = SessionStatus.InProgress;
 
-        // TODO: Add domain event GameSessionResumed
+        AddDomainEvent(new GameSessionResumedEvent(Id, DateTime.UtcNow));
     }
 
     /// <summary>
@@ -109,7 +110,7 @@ public sealed class GameSession : AggregateRoot<Guid>
         CompletedAt = DateTime.UtcNow;
         WinnerName = winnerName?.Trim();
 
-        // TODO: Add domain event GameSessionCompleted
+        AddDomainEvent(new GameSessionCompletedEvent(Id, GameId, DateTime.UtcNow, Duration));
     }
 
     /// <summary>
@@ -128,7 +129,7 @@ public sealed class GameSession : AggregateRoot<Guid>
             Notes = Notes != null ? $"{Notes}\nAbandoned: {reason}" : $"Abandoned: {reason}";
         }
 
-        // TODO: Add domain event GameSessionAbandoned
+        AddDomainEvent(new GameSessionAbandonedEvent(Id, DateTime.UtcNow, reason));
     }
 
     /// <summary>
@@ -151,7 +152,7 @@ public sealed class GameSession : AggregateRoot<Guid>
 
         _players.Add(player);
 
-        // TODO: Add domain event PlayerAddedToSession
+        AddDomainEvent(new PlayerAddedToSessionEvent(Id, player.PlayerName, _players.Count));
     }
 
     /// <summary>

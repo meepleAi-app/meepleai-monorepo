@@ -2,6 +2,8 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
@@ -10,18 +12,16 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// EF Core implementation of Game repository.
 /// Maps between domain Game entity and GameEntity persistence model.
 /// </summary>
-public class GameRepository : IGameRepository
+public class GameRepository : RepositoryBase, IGameRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public GameRepository(MeepleAiDbContext dbContext)
+    public GameRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<Game?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var gameEntity = await _dbContext.Games
+        var gameEntity = await DbContext.Games
             .AsNoTracking()
             .FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
 
@@ -30,7 +30,7 @@ public class GameRepository : IGameRepository
 
     public async Task<List<Game>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var gameEntities = await _dbContext.Games
+        var gameEntities = await DbContext.Games
             .AsNoTracking()
             .OrderBy(g => g.Name)
             .ToListAsync(cancellationToken);
@@ -40,7 +40,7 @@ public class GameRepository : IGameRepository
 
     public async Task<IReadOnlyList<Game>> FindByTitleAsync(string titlePattern, CancellationToken cancellationToken = default)
     {
-        var gameEntities = await _dbContext.Games
+        var gameEntities = await DbContext.Games
             .AsNoTracking()
             .Where(g => EF.Functions.ILike(g.Name, $"%{titlePattern}%"))
             .OrderBy(g => g.Name)
@@ -51,27 +51,33 @@ public class GameRepository : IGameRepository
 
     public async Task AddAsync(Game game, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE mapping to persistence entity
+        CollectDomainEvents(game);
+
         var gameEntity = MapToPersistence(game);
-        await _dbContext.Games.AddAsync(gameEntity, cancellationToken);
+        await DbContext.Games.AddAsync(gameEntity, cancellationToken);
     }
 
     public Task UpdateAsync(Game game, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE updating persistence entity
+        CollectDomainEvents(game);
+
         var gameEntity = MapToPersistence(game);
-        _dbContext.Games.Update(gameEntity);
+        DbContext.Games.Update(gameEntity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(Game game, CancellationToken cancellationToken = default)
     {
         var gameEntity = MapToPersistence(game);
-        _dbContext.Games.Remove(gameEntity);
+        DbContext.Games.Remove(gameEntity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Games.AsNoTracking().AnyAsync(g => g.Id == id, cancellationToken);
+        return await DbContext.Games.AsNoTracking().AnyAsync(g => g.Id == id, cancellationToken);
     }
 
     /// <summary>

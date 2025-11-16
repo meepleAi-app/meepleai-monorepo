@@ -7,6 +7,7 @@ using Api.Infrastructure;
 using Api.Services;
 using Api.Configuration;
 using Api.Models;
+using Api.SharedKernel.Application.Services;
 using Microsoft.Extensions.Options;
 
 namespace Api.Extensions;
@@ -65,6 +66,10 @@ public static class InfrastructureServiceExtensions
                 // Query behavior
                 options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking); // PERF-06: Default to no-tracking
             });
+
+            // Register domain event collector as scoped (per-request lifecycle)
+            // This ensures events are collected and dispatched within the same HTTP request
+            services.AddScoped<IDomainEventCollector, DomainEventCollector>();
         }
 
         return services;

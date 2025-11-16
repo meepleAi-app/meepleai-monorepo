@@ -4,10 +4,12 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Models;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.Services.Rag;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -44,7 +46,9 @@ public class RagServiceIntegrationTests : IDisposable
             .UseInMemoryDatabase(databaseName: $"RagServiceTestDb_{Guid.NewGuid()}")
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
 
         // Initialize all mocks
         _mockEmbeddingService = new Mock<IEmbeddingService>();

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
@@ -8,19 +10,18 @@ namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 /// <summary>
 /// Feature flag repository - stores flags as SystemConfiguration entries with "Features:" prefix.
 /// </summary>
-public class FeatureFlagRepository : IFeatureFlagRepository
+public class FeatureFlagRepository : RepositoryBase, IFeatureFlagRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
     private const string FlagPrefix = "Features:";
 
-    public FeatureFlagRepository(MeepleAiDbContext dbContext)
+    public FeatureFlagRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<FeatureFlag?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id && c.Key.StartsWith(FlagPrefix), cancellationToken);
 
@@ -29,7 +30,7 @@ public class FeatureFlagRepository : IFeatureFlagRepository
 
     public async Task<List<FeatureFlag>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .Where(c => c.Key.StartsWith(FlagPrefix))
             .OrderBy(c => c.Key)
@@ -41,7 +42,7 @@ public class FeatureFlagRepository : IFeatureFlagRepository
     public async Task<FeatureFlag?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         var key = $"{FlagPrefix}{name}";
-        var entity = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var entity = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Key == key, cancellationToken);
 
@@ -50,7 +51,7 @@ public class FeatureFlagRepository : IFeatureFlagRepository
 
     public async Task<IReadOnlyList<FeatureFlag>> GetEnabledFlagsAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
             .Where(c => c.Key.StartsWith(FlagPrefix) && c.IsActive && c.Value == "true")
             .ToListAsync(cancellationToken);
@@ -60,27 +61,29 @@ public class FeatureFlagRepository : IFeatureFlagRepository
 
     public async Task AddAsync(FeatureFlag flag, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(flag);
         var entity = MapToPersistence(flag);
-        await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().AddAsync(entity, cancellationToken);
     }
 
     public Task UpdateAsync(FeatureFlag flag, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(flag);
         var entity = MapToPersistence(flag);
-        _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Update(entity);
+        DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Update(entity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(FeatureFlag flag, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(flag);
-        _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Remove(entity);
+        DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Remove(entity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        return await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AnyAsync(c => c.Id == id && c.Key.StartsWith(FlagPrefix), cancellationToken);
     }
 

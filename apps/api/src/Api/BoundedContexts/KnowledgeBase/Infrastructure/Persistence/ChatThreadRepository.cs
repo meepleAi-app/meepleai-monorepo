@@ -2,6 +2,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -12,18 +14,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// EF Core implementation of ChatThread repository.
 /// Maps between domain ChatThread entity and ChatThreadEntity persistence model.
 /// </summary>
-public class ChatThreadRepository : IChatThreadRepository
+public class ChatThreadRepository : RepositoryBase, IChatThreadRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public ChatThreadRepository(MeepleAiDbContext dbContext)
+    public ChatThreadRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<ChatThread?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var threadEntity = await _dbContext.ChatThreads
+        var threadEntity = await DbContext.ChatThreads
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
@@ -32,7 +32,7 @@ public class ChatThreadRepository : IChatThreadRepository
 
     public async Task<List<ChatThread>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var threadEntities = await _dbContext.ChatThreads
+        var threadEntities = await DbContext.ChatThreads
             .AsNoTracking()
             .OrderByDescending(t => t.LastMessageAt)
             .ToListAsync(cancellationToken);
@@ -42,7 +42,7 @@ public class ChatThreadRepository : IChatThreadRepository
 
     public async Task<IReadOnlyList<ChatThread>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var threadEntities = await _dbContext.ChatThreads
+        var threadEntities = await DbContext.ChatThreads
             .AsNoTracking()
             .Where(t => t.UserId == userId)
             .OrderByDescending(t => t.LastMessageAt)
@@ -53,7 +53,7 @@ public class ChatThreadRepository : IChatThreadRepository
 
     public async Task<IReadOnlyList<ChatThread>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
-        var threadEntities = await _dbContext.ChatThreads
+        var threadEntities = await DbContext.ChatThreads
             .AsNoTracking()
             .Where(t => t.GameId == gameId)
             .OrderByDescending(t => t.LastMessageAt)
@@ -64,7 +64,7 @@ public class ChatThreadRepository : IChatThreadRepository
 
     public async Task<IReadOnlyList<ChatThread>> FindByUserIdAndGameIdAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default)
     {
-        var threadEntities = await _dbContext.ChatThreads
+        var threadEntities = await DbContext.ChatThreads
             .AsNoTracking()
             .Where(t => t.UserId == userId && t.GameId == gameId)
             .OrderByDescending(t => t.LastMessageAt)
@@ -75,7 +75,7 @@ public class ChatThreadRepository : IChatThreadRepository
 
     public async Task<IReadOnlyList<ChatThread>> GetRecentAsync(int limit = 20, CancellationToken cancellationToken = default)
     {
-        var threadEntities = await _dbContext.ChatThreads
+        var threadEntities = await DbContext.ChatThreads
             .AsNoTracking()
             .OrderByDescending(t => t.LastMessageAt)
             .Take(limit)
@@ -86,35 +86,37 @@ public class ChatThreadRepository : IChatThreadRepository
 
     public async Task AddAsync(ChatThread thread, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(thread);
         var threadEntity = MapToPersistence(thread);
-        await _dbContext.ChatThreads.AddAsync(threadEntity, cancellationToken);
+        await DbContext.ChatThreads.AddAsync(threadEntity, cancellationToken);
     }
 
     public Task UpdateAsync(ChatThread thread, CancellationToken cancellationToken = default)
     {
+        CollectDomainEvents(thread);
         var threadEntity = MapToPersistence(thread);
 
         // Detach existing tracked entity to avoid conflicts (SPRINT-5 Issue #1142)
-        var tracked = _dbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.ChatThreadEntity>()
+        var tracked = DbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.ChatThreadEntity>()
             .FirstOrDefault(e => e.Entity.Id == threadEntity.Id);
 
         if (tracked != null)
             tracked.State = EntityState.Detached;
 
-        _dbContext.ChatThreads.Update(threadEntity);
+        DbContext.ChatThreads.Update(threadEntity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(ChatThread thread, CancellationToken cancellationToken = default)
     {
         var threadEntity = MapToPersistence(thread);
-        _dbContext.ChatThreads.Remove(threadEntity);
+        DbContext.ChatThreads.Remove(threadEntity);
         return Task.CompletedTask;
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.ChatThreads.AnyAsync(t => t.Id == id, cancellationToken);
+        return await DbContext.ChatThreads.AnyAsync(t => t.Id == id, cancellationToken);
     }
 
     /// <summary>

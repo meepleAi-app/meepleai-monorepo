@@ -1,7 +1,9 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -29,7 +31,9 @@ public class CitationValidationServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: $"CitationValidationTestDb_{Guid.NewGuid()}")
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
 
         var mockLogger = new Mock<ILogger<CitationValidationService>>();
         _service = new CitationValidationService(_dbContext, mockLogger.Object);

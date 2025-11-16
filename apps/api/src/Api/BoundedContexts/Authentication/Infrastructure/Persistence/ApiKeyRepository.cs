@@ -1,5 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -8,18 +10,16 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// EF Core implementation of ApiKey repository.
 /// Maps between domain ApiKey entity and ApiKeyEntity persistence model.
 /// </summary>
-public class ApiKeyRepository : IApiKeyRepository
+public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public ApiKeyRepository(MeepleAiDbContext dbContext)
+    public ApiKeyRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<ApiKey?> GetByKeyPrefixAsync(string keyPrefix, CancellationToken cancellationToken = default)
     {
-        var apiKeyEntity = await _dbContext.ApiKeys
+        var apiKeyEntity = await DbContext.ApiKeys
             .AsNoTracking()
             .FirstOrDefaultAsync(k => k.KeyPrefix == keyPrefix, cancellationToken);
 
@@ -28,7 +28,7 @@ public class ApiKeyRepository : IApiKeyRepository
 
     public async Task<List<ApiKey>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var apiKeyEntities = await _dbContext.ApiKeys
+        var apiKeyEntities = await DbContext.ApiKeys
             .AsNoTracking()
             .Where(k => k.UserId == userId)
             .OrderByDescending(k => k.CreatedAt)
@@ -41,7 +41,7 @@ public class ApiKeyRepository : IApiKeyRepository
     {
         var now = DateTime.UtcNow;
 
-        var apiKeyEntities = await _dbContext.ApiKeys
+        var apiKeyEntities = await DbContext.ApiKeys
             .AsNoTracking()
             .Where(k => k.UserId == userId &&
                        k.IsActive &&
@@ -55,14 +55,20 @@ public class ApiKeyRepository : IApiKeyRepository
 
     public async Task AddAsync(ApiKey apiKey, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE mapping to persistence entity
+        CollectDomainEvents(apiKey);
+
         var apiKeyEntity = MapToPersistence(apiKey);
-        await _dbContext.ApiKeys.AddAsync(apiKeyEntity, cancellationToken);
+        await DbContext.ApiKeys.AddAsync(apiKeyEntity, cancellationToken);
     }
 
     public async Task UpdateAsync(ApiKey apiKey, CancellationToken cancellationToken = default)
     {
+        // Collect domain events BEFORE updating persistence entity
+        CollectDomainEvents(apiKey);
+
         var apiKeyEntity = MapToPersistence(apiKey);
-        _dbContext.ApiKeys.Update(apiKeyEntity);
+        DbContext.ApiKeys.Update(apiKeyEntity);
         await Task.CompletedTask;
     }
 

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -50,7 +52,7 @@ public sealed class Agent : AggregateRoot<Guid>
         CreatedAt = DateTime.UtcNow;
         InvocationCount = 0;
 
-        // TODO: Add domain event AgentCreatedEvent
+        AddDomainEvent(new AgentCreatedEvent(id, type.Value, name));
     }
 
     /// <summary>
@@ -63,7 +65,7 @@ public sealed class Agent : AggregateRoot<Guid>
 
         Strategy = strategy;
 
-        // TODO: Add domain event AgentConfiguredEvent
+        AddDomainEvent(new AgentConfiguredEvent(Id, JsonSerializer.Serialize(strategy)));
     }
 
     /// <summary>
@@ -76,7 +78,7 @@ public sealed class Agent : AggregateRoot<Guid>
 
         IsActive = true;
 
-        // TODO: Add domain event AgentActivatedEvent
+        AddDomainEvent(new AgentActivatedEvent(Id));
     }
 
     /// <summary>
@@ -89,7 +91,7 @@ public sealed class Agent : AggregateRoot<Guid>
 
         IsActive = false;
 
-        // TODO: Add domain event AgentDeactivatedEvent
+        AddDomainEvent(new AgentDeactivatedEvent(Id));
     }
 
     /// <summary>
@@ -99,7 +101,7 @@ public sealed class Agent : AggregateRoot<Guid>
     /// This method should be called by the application layer after successful agent execution.
     /// The actual invocation logic (using VectorSearchDomainService, etc.) is handled by the command handler.
     /// </remarks>
-    public void RecordInvocation()
+    public void RecordInvocation(string input, int tokensUsed)
     {
         if (!IsActive)
             throw new InvalidOperationException($"Cannot invoke inactive agent: {Name}");
@@ -107,7 +109,7 @@ public sealed class Agent : AggregateRoot<Guid>
         LastInvokedAt = DateTime.UtcNow;
         InvocationCount++;
 
-        // TODO: Add domain event AgentInvokedEvent
+        AddDomainEvent(new AgentInvokedEvent(Id, input, tokensUsed));
     }
 
     /// <summary>

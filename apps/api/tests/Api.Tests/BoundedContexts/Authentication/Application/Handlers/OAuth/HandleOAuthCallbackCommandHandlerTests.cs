@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -51,7 +52,9 @@ public class HandleOAuthCallbackCommandHandlerTests : IDisposable
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new MeepleAiDbContext(options);
+        var mediatorMock = new Mock<IMediator>();
+        var eventCollectorMock = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
 
         // Setup TimeProvider default
         _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(DateTimeOffset.UtcNow);

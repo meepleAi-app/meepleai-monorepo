@@ -50,11 +50,13 @@ public class RagEvaluationService : IRagEvaluationService
     private readonly ILogger<RagEvaluationService> _logger;
     private readonly string _allowedDatasetsDirectory;
     private readonly TimeProvider _timeProvider;
+    private readonly IConfigurationService _configService;
 
     public RagEvaluationService(
         IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         ILogger<RagEvaluationService> logger,
+        IConfigurationService configService,
         string? allowedDatasetsDirectory = null,
         TimeProvider? timeProvider = null)
     {
@@ -64,6 +66,7 @@ public class RagEvaluationService : IRagEvaluationService
         _allowedDatasetsDirectory = allowedDatasetsDirectory
             ?? Path.Combine(Directory.GetCurrentDirectory(), "datasets", "rag");
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _configService = configService;
 
         // Ensure datasets directory exists
         if (!Directory.Exists(_allowedDatasetsDirectory))
@@ -98,10 +101,11 @@ public class RagEvaluationService : IRagEvaluationService
 
             // SECURITY: Check file size to prevent resource exhaustion
             var fileInfo = new FileInfo(fullPath);
-            const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
-            if (fileInfo.Length > MaxFileSizeBytes)
+            var maxFileSizeMB = await _configService.GetValueAsync<int?>("Evaluation:MaxDatasetFileSizeMB", 10) ?? 10;
+            var maxFileSizeBytes = maxFileSizeMB * 1024L * 1024L;
+            if (fileInfo.Length > maxFileSizeBytes)
             {
-                throw new ArgumentException($"Dataset file exceeds maximum size of 10 MB (actual: {fileInfo.Length / 1024 / 1024} MB)");
+                throw new ArgumentException($"Dataset file exceeds maximum size of {maxFileSizeMB} MB (actual: {fileInfo.Length / 1024 / 1024} MB)");
             }
 
             var jsonContent = await System.IO.File.ReadAllTextAsync(fullPath, ct);

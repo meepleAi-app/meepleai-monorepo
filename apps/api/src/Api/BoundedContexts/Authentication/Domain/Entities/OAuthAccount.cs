@@ -27,6 +27,7 @@ public sealed class OAuthAccount : AggregateRoot<Guid>
     {
         "google", "discord", "github"
     };
+    private const int DefaultOAuthTokenExpirationHours = 1; // Default OAuth token TTL when provider doesn't specify
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -86,7 +87,7 @@ public sealed class OAuthAccount : AggregateRoot<Guid>
         TokenExpiresAt = newTokenExpiresAt;
         UpdatedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new OAuthTokensRefreshedEvent(Id, Provider, newTokenExpiresAt ?? DateTime.UtcNow.AddHours(1)));
+        AddDomainEvent(new OAuthTokensRefreshedEvent(Id, Provider, newTokenExpiresAt ?? DateTime.UtcNow.AddHours(DefaultOAuthTokenExpirationHours)));
     }
 
     /// <summary>

@@ -207,7 +207,7 @@ services:
     build: ../apps/pdf-processor
     container_name: meepleai-pdf-processor
     ports:
-      - "8001:8001"
+      - "8002:8002"
     environment:
       - LOG_LEVEL=INFO
       - PYTHONUNBUFFERED=1
@@ -222,7 +222,7 @@ services:
     networks:
       - meepleai-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 30s
       timeout: 10s
       retries: 3

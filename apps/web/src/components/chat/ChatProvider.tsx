@@ -306,6 +306,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
 
       if (threadToArchive) {
         try {
+          // eslint-disable-next-line no-console
           console.log(`Auto-archiving oldest thread: ${threadToArchive.id}`);
           await api.chatThreads.close(threadToArchive.id);
 

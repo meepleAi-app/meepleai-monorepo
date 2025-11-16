@@ -88,14 +88,15 @@ export interface FileData {
 // Worker State
 // ============================================================================
 
-const STORAGE_KEY = 'meepleai-upload-queue';
+// NOTE: localStorage access moved to main thread, but keeping key for reference
+const _STORAGE_KEY = 'meepleai-upload-queue';
 const BROADCAST_CHANNEL = 'meepleai-upload-queue-sync';
 const TAB_ID = `tab-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 const API_BASE = self.location.origin.includes('localhost')
   ? 'http://localhost:8080'
   : self.location.origin;
 
-let state: UploadQueueState = {
+const state: UploadQueueState = {
   items: [],
   metrics: {
     totalUploads: 0,
@@ -106,10 +107,10 @@ let state: UploadQueueState = {
   }
 };
 
-let activeUploads = new Map<string, AbortController>();
+const activeUploads = new Map<string, AbortController>();
 let broadcastChannel: BroadcastChannel;
-let concurrencyLimit = 3;
-let maxRetries = 3;
+const concurrencyLimit = 3;
+const maxRetries = 3;
 let isProcessing = false;
 
 // ============================================================================
@@ -216,6 +217,7 @@ function markAsHandledByOtherTab(id: string): void {
   const item = state.items.find(i => i.id === id);
   if (item && item.status === 'pending') {
     // Leave it pending but don't process it
+    // eslint-disable-next-line no-console
     console.log(`[UploadWorker] Item ${id} being handled by another tab`);
   }
 }
@@ -575,6 +577,7 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
         // Restore state from main thread's localStorage
         state.items = message.payload.items;
         state.metrics = message.payload.metrics;
+        // eslint-disable-next-line no-console
         console.log(`[UploadWorker] Restored ${state.items.length} items from main thread`);
         notifyStateUpdate();
         void processQueue(); // Auto-start processing restored items
@@ -596,4 +599,5 @@ self.postMessage({
   type: 'WORKER_READY'
 } as WorkerResponse);
 
+// eslint-disable-next-line no-console
 console.log('[UploadWorker] Initialized, awaiting state restoration from main thread');

@@ -200,7 +200,7 @@ export default function SetupPage() {
     if (authUser) {
       void loadGames();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [authUser]);
 
   const loadCurrentUser = async () => {

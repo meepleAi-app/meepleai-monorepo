@@ -14,6 +14,8 @@
  * 4. Error handling: Worker crash recovery
  */
 
+/* eslint-disable no-console */
+
 console.log(`
 ╔════════════════════════════════════════════════════════════════╗
 ║  Upload Queue Smoke Test (FE-IMP-008)                        ║

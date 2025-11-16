@@ -112,7 +112,7 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [currentPage, numPages, zoomLevel, onClose]);
 
   const onDocumentLoadSuccess = useCallback(({ numPages: pages }: { numPages: number }) => {

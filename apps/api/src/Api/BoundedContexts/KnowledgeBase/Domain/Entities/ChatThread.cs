@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -48,7 +49,7 @@ public sealed class ChatThread : AggregateRoot<Guid>
         CreatedAt = DateTime.UtcNow;
         LastMessageAt = CreatedAt;
 
-        // TODO: Add domain event ChatThreadCreated
+        AddDomainEvent(new ChatThreadCreatedEvent(id, gameId ?? Guid.Empty, userId));
     }
 
     /// <summary>
@@ -65,7 +66,7 @@ public sealed class ChatThread : AggregateRoot<Guid>
         _messages.Add(message);
         LastMessageAt = message.Timestamp;
 
-        // TODO: Add domain event MessageAdded
+        AddDomainEvent(new MessageAddedEvent(Id, message.Id, message.Role, message.Content.Length));
     }
 
     /// <summary>
@@ -103,7 +104,7 @@ public sealed class ChatThread : AggregateRoot<Guid>
         // Invalidate all subsequent AI responses
         InvalidateMessagesAfter(message.SequenceNumber);
 
-        // TODO: Add domain event MessageUpdated
+        AddDomainEvent(new MessageUpdatedEvent(Id, messageId, newContent.Length));
     }
 
     /// <summary>
@@ -128,7 +129,7 @@ public sealed class ChatThread : AggregateRoot<Guid>
         // Invalidate all subsequent AI responses
         InvalidateMessagesAfter(message.SequenceNumber);
 
-        // TODO: Add domain event MessageDeleted
+        AddDomainEvent(new MessageDeletedEvent(Id, messageId));
     }
 
     /// <summary>
@@ -193,7 +194,7 @@ public sealed class ChatThread : AggregateRoot<Guid>
 
         Status = ThreadStatus.Closed;
 
-        // TODO: Add domain event ThreadClosed
+        AddDomainEvent(new ThreadClosedEvent(Id, _messages.Count));
     }
 
     /// <summary>
@@ -206,7 +207,7 @@ public sealed class ChatThread : AggregateRoot<Guid>
 
         Status = ThreadStatus.Active;
 
-        // TODO: Add domain event ThreadReopened
+        AddDomainEvent(new ThreadReopenedEvent(Id));
     }
 
     /// <summary>

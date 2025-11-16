@@ -1,3 +1,4 @@
+using Api.BoundedContexts.WorkflowIntegration.Domain.Events;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
@@ -52,7 +53,13 @@ public sealed class WorkflowErrorLog : AggregateRoot<Guid>
         RetryCount = 0;
         CreatedAt = DateTime.UtcNow;
 
-        // TODO: Add domain event WorkflowErrorLogged
+        AddDomainEvent(new WorkflowErrorLoggedEvent(
+            id,
+            WorkflowId,
+            ExecutionId,
+            ErrorMessage,
+            NodeName,
+            StackTrace));
     }
 
     /// <summary>
@@ -61,7 +68,11 @@ public sealed class WorkflowErrorLog : AggregateRoot<Guid>
     public void IncrementRetryCount()
     {
         RetryCount++;
-        // TODO: Add domain event WorkflowRetried
+        AddDomainEvent(new WorkflowRetriedEvent(
+            Id,
+            WorkflowId,
+            ExecutionId,
+            RetryCount));
     }
 
     /// <summary>

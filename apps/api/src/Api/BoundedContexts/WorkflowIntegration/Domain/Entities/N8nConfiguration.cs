@@ -1,3 +1,4 @@
+using Api.BoundedContexts.WorkflowIntegration.Domain.Events;
 using Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -54,7 +55,13 @@ public sealed class N8nConfiguration : AggregateRoot<Guid>
         UpdatedAt = CreatedAt;
         CreatedByUserId = createdByUserId;
 
-        // TODO: Add domain event N8nConfigurationCreated
+        AddDomainEvent(new N8nConfigurationCreatedEvent(
+            id,
+            Name,
+            BaseUrl,
+            WebhookUrl,
+            IsActive,
+            createdByUserId));
     }
 
     /// <summary>
@@ -73,7 +80,12 @@ public sealed class N8nConfiguration : AggregateRoot<Guid>
 
         UpdatedAt = DateTime.UtcNow;
 
-        // TODO: Add domain event N8nConfigurationUpdated
+        AddDomainEvent(new N8nConfigurationUpdatedEvent(
+            Id,
+            name,
+            baseUrl,
+            webhookUrl,
+            null));
     }
 
     /// <summary>
@@ -103,6 +115,10 @@ public sealed class N8nConfiguration : AggregateRoot<Guid>
         LastTestResult = result;
         UpdatedAt = DateTime.UtcNow;
 
-        // TODO: Add domain event N8nConfigurationTested
+        AddDomainEvent(new N8nConfigurationTestedEvent(
+            Id,
+            success,
+            result,
+            LastTestedAt.Value));
     }
 }

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -53,18 +54,18 @@ public sealed class VectorDocument : AggregateRoot<Guid>
         IndexedAt = DateTime.UtcNow;
         SearchCount = 0;
 
-        // TODO: Add domain event VectorDocumentIndexed
+        AddDomainEvent(new VectorDocumentIndexedEvent(id, gameId, totalChunks));
     }
 
     /// <summary>
     /// Records that this document was searched.
     /// </summary>
-    public void RecordSearch()
+    public void RecordSearch(string query)
     {
         LastSearchedAt = DateTime.UtcNow;
         SearchCount++;
 
-        // TODO: Add domain event VectorDocumentSearched
+        AddDomainEvent(new VectorDocumentSearchedEvent(Id, query));
     }
 
     /// <summary>
@@ -73,6 +74,6 @@ public sealed class VectorDocument : AggregateRoot<Guid>
     public void UpdateMetadata(string metadata)
     {
         Metadata = metadata;
-        // TODO: Add domain event VectorDocumentMetadataUpdated
+        AddDomainEvent(new VectorDocumentMetadataUpdatedEvent(Id, metadata));
     }
 }

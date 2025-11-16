@@ -151,7 +151,7 @@ public sealed class InvokeAgentCommandHandler
             var overallConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
 
             // 8. Record invocation on agent
-            agent.RecordInvocation();
+            agent.RecordInvocation(request.Query, 0); // TODO: Track actual token usage from LLM calls
             await _agentRepository.UpdateAsync(agent, cancellationToken);
 
             // 9. Build and return result

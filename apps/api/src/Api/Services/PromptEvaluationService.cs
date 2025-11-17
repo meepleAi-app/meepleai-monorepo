@@ -583,7 +583,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     /// <summary>
     /// BGAI-041: Generates summary message for evaluation result (5-metric framework)
     /// </summary>
-    private string GenerateSummary(EvaluationMetrics metrics, QualityThresholds thresholds, bool passed)
+    private string GenerateSummary(EvaluationMetrics metrics, Api.Models.QualityThresholds thresholds, bool passed)
     {
         var status = passed ? "✅ PASSED" : "❌ FAILED";
         var issues = new List<string>();

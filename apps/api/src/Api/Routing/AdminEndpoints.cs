@@ -459,11 +459,16 @@ public static class AdminEndpoints
 
             logger.LogInformation("Admin {AdminId} revoking session {SessionId}", session.User.Id, sessionId);
 
-            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand(sessionId);
-            var revoked = await mediator.Send(command, ct);
-            if (!revoked)
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand(
+                sessionId,
+                Guid.Parse(session.User.Id),
+                IsRequestingUserAdmin: true,
+                Reason: "Admin revocation"
+            );
+            var response = await mediator.Send(command, ct);
+            if (!response.Success)
             {
-                return Results.NotFound(new { error = "Session not found or already revoked" });
+                return Results.NotFound(new { error = response.ErrorMessage ?? "Session not found or already revoked" });
             }
 
             logger.LogInformation("Session {SessionId} revoked successfully", sessionId);
@@ -1025,100 +1030,7 @@ public static class AdminEndpoints
         .Produces<List<PromptEvaluationResult>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status403Forbidden);
 
-        // BGAI-039: Validation Accuracy Baseline Measurement endpoints
-
-        // Measure validation accuracy baseline
-        group.MapPost("/admin/validation-accuracy/measure", async (
-            MeasureValidationAccuracyRequest request,
-            IMediator mediator,
-            HttpContext context,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            var (authorized, session, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            logger.LogInformation(
-                "Admin {AdminId} measuring validation accuracy for context '{Context}', evaluation {EvaluationId}",
-                session.User.Id, request.Context, request.EvaluationId);
-
-            // BGAI-039: Use CQRS pattern for validation accuracy measurement
-            var command = new Api.BoundedContexts.KnowledgeBase.Application.Commands.ValidationAccuracy.MeasureValidationAccuracyCommand
-            {
-                Context = request.Context,
-                DatasetId = request.DatasetId,
-                EvaluationId = request.EvaluationId,
-                ExpectedValidCount = request.ExpectedValidCount,
-                StoreBaseline = request.StoreBaseline
-            };
-
-            var result = await mediator.Send(command, ct);
-
-            if (result.IsError)
-            {
-                logger.LogWarning("Validation accuracy measurement failed: {Errors}", string.Join(", ", result.Errors));
-                return Results.BadRequest(new { errors = result.Errors });
-            }
-
-            logger.LogInformation(
-                "Validation accuracy measured: {Accuracy:P2}, Level: {Level}, Meets baseline: {Meets}",
-                result.Value.Accuracy, result.Value.QualityLevel, result.Value.MeetsBaseline);
-
-            return Results.Ok(result.Value);
-        })
-        .WithName("MeasureValidationAccuracy")
-        .WithTags("Admin", "Validation", "Quality")
-        .WithDescription("Measure validation accuracy baseline from evaluation results (admin only, BGAI-039)")
-        .Produces<ValidationAccuracyBaselineDto>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status403Forbidden)
-        .Produces(StatusCodes.Status404NotFound);
-
-        // Get validation accuracy baselines
-        group.MapGet("/admin/validation-accuracy/baselines", async (
-            string? context,
-            string? datasetId,
-            bool? meetsBaselineOnly,
-            int limit,
-            IMediator mediator,
-            HttpContext httpContext,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            var (authorized, session, error) = httpContext.RequireAdminSession();
-            if (!authorized) return error!;
-
-            logger.LogInformation(
-                "Admin {AdminId} retrieving validation accuracy baselines (context={Context}, dataset={DatasetId}, limit={Limit})",
-                session.User.Id, context, datasetId, limit);
-
-            // BGAI-039: Use CQRS pattern for baseline retrieval
-            var query = new Api.BoundedContexts.KnowledgeBase.Application.Queries.ValidationAccuracy.GetValidationAccuracyBaselinesQuery
-            {
-                Context = context,
-                DatasetId = datasetId,
-                MeetsBaselineOnly = meetsBaselineOnly,
-                Limit = limit
-            };
-
-            var result = await mediator.Send(query, ct);
-
-            if (result.IsError)
-            {
-                logger.LogWarning("Failed to retrieve baselines: {Errors}", string.Join(", ", result.Errors));
-                return Results.BadRequest(new { errors = result.Errors });
-            }
-
-            logger.LogInformation("Retrieved {Count} validation accuracy baselines", result.Value.Count);
-
-            return Results.Ok(result.Value);
-        })
-        .WithName("GetValidationAccuracyBaselines")
-        .WithTags("Admin", "Validation", "Quality")
-        .WithDescription("Get historical validation accuracy baselines with optional filtering (admin only, BGAI-039)")
-        .Produces<List<ValidationAccuracyBaselineDto>>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status403Forbidden);
+        // BGAI-039: Validation Accuracy endpoints removed - CQRS commands/queries not implemented yet
 
         // Generate evaluation report
         group.MapGet("/admin/prompts/evaluations/{evaluationId}/report", async (

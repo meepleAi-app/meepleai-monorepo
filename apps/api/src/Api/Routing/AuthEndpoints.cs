@@ -5,6 +5,7 @@ using Api.Models;
 using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc; // For [FromBody] attribute
+using Microsoft.EntityFrameworkCore; // For AsNoTracking
 using Microsoft.Extensions.Options;
 
 // DDD CQRS imports (using aliases to avoid conflicts with Api.Models)
@@ -632,7 +633,7 @@ User must have at least one authentication method remaining (password or another
     // AUTH-05: Session management endpoints
     private static void MapSessionEndpoints(RouteGroupBuilder group, Func<HttpContext, string> getSessionCookieName)
     {
-        group.MapGet("/auth/session/status", async (
+        group.MapGet("/auth/session/status", (
             HttpContext context,
             IMediator mediator,
             IConfiguration config,
@@ -642,26 +643,17 @@ User must have at least one authentication method remaining (password or another
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var inactivityTimeoutDays = config.GetValue<int>("Authentication:SessionManagement:InactivityTimeoutDays", 30);
+            // Calculate remaining time
+            var now = DateTime.UtcNow;
+            var remainingTime = session.ExpiresAt - now;
+            var remainingMinutes = (int)Math.Max(0, remainingTime.TotalMinutes);
 
-            // Get session token hash from cookie
-            var sessionCookieName = getSessionCookieName(context);
-            if (!context.Request.Cookies.TryGetValue(sessionCookieName, out var token) || string.IsNullOrWhiteSpace(token))
-            {
-                return Results.Unauthorized();
-            }
-
-            var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
-            var tokenHash = Convert.ToBase64String(hash);
-
-            // Use CQRS Query to get session status
-            var query = new GetSessionStatusQuery(tokenHash, inactivityTimeoutDays);
-            var response = await mediator.Send(query, ct);
-
-            if (response == null)
-            {
-                return Results.Unauthorized();
-            }
+            // Return session status from already-authenticated session
+            var response = new SessionStatusResponse(
+                session.ExpiresAt,
+                session.LastSeenAt,
+                remainingMinutes
+            );
 
             return Results.Json(response);
         });
@@ -670,13 +662,12 @@ User must have at least one authentication method remaining (password or another
             HttpContext context,
             IMediator mediator,
             IConfiguration config,
+            Api.Infrastructure.MeepleAiDbContext db,
             CancellationToken ct) =>
         {
             // Require authentication
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
-
-            var inactivityTimeoutDays = config.GetValue<int>("Authentication:SessionManagement:InactivityTimeoutDays", 30);
 
             // Get session token hash from cookie
             var sessionCookieName = getSessionCookieName(context);
@@ -688,16 +679,30 @@ User must have at least one authentication method remaining (password or another
             var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
             var tokenHash = Convert.ToBase64String(hash);
 
-            // Use CQRS Command to extend session
-            var command = new ExtendSessionCommand(tokenHash, inactivityTimeoutDays);
-            var response = await mediator.Send(command, ct);
+            // Look up session by token hash to get session ID
+            var dbSession = await db.UserSessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct);
 
-            if (response == null)
+            if (dbSession == null)
             {
                 return Results.Unauthorized();
             }
 
-            return Results.Json(response);
+            // Use CQRS Command to extend session (default 30 days extension)
+            var command = new ExtendSessionCommand(
+                dbSession.Id,
+                Guid.Parse(session.User.Id),
+                ExtensionDuration: null  // Use default from Session.DefaultLifetime
+            );
+            var response = await mediator.Send(command, ct);
+
+            if (!response.Success)
+            {
+                return Results.BadRequest(new { error = response.ErrorMessage });
+            }
+
+            return Results.Json(new { expiresAt = response.NewExpiresAt });
         });
 
         group.MapGet("/users/me/sessions", async (HttpContext context, IMediator mediator, CancellationToken ct = default) =>

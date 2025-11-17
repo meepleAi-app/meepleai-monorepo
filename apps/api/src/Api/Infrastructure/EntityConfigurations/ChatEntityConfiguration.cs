@@ -24,9 +24,8 @@ public class ChatEntityConfiguration : IEntityTypeConfiguration<ChatEntity>
             .WithMany(g => g.Chats)
             .HasForeignKey(e => e.GameId)
             .OnDelete(DeleteBehavior.Cascade);
-        // TODO Issue #866: Agent relationship uses deprecated Chats collection for backward compat
         builder.HasOne(e => e.Agent)
-            .WithMany(a => a.Chats)  // Using deprecated collection temporarily
+            .WithMany()  // AgentEntity doesn't have Chats navigation property
             .HasForeignKey(e => e.AgentId)
             .OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(e => new { e.UserId, e.LastMessageAt });

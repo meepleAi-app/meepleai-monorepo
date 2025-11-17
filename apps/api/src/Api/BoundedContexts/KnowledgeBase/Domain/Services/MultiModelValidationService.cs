@@ -115,6 +115,27 @@ public class MultiModelValidationService : IMultiModelValidationService
             };
         }
 
+        // BGAI-038: Validate response content quality (check for empty/whitespace-only responses)
+        if (string.IsNullOrWhiteSpace(gpt4Response.ResponseText) || string.IsNullOrWhiteSpace(claudeResponse.ResponseText))
+        {
+            var emptyModel = string.IsNullOrWhiteSpace(gpt4Response.ResponseText) ? "GPT-4" : "Claude";
+            var errorMsg = $"{emptyModel} returned empty or whitespace-only response";
+            _logger.LogError("Multi-model validation failed: {Error}", errorMsg);
+
+            return new MultiModelConsensusResult
+            {
+                HasConsensus = false,
+                SimilarityScore = 0.0,
+                RequiredThreshold = MinimumConsensusThreshold,
+                Gpt4Response = gpt4Response,
+                ClaudeResponse = claudeResponse,
+                ConsensusResponse = null,
+                Message = errorMsg,
+                TotalDurationMs = stopwatch.ElapsedMilliseconds,
+                Severity = ConsensusSeverity.Error
+            };
+        }
+
         // Calculate similarity between responses
         var similarity = CalculateSimilarity(gpt4Response.ResponseText, claudeResponse.ResponseText);
         var hasConsensus = similarity >= MinimumConsensusThreshold;

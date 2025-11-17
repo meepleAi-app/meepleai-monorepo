@@ -320,4 +320,86 @@ public class ConfidenceValidationServiceTests
         Assert.False(result.IsValid);
         Assert.Equal(expectedSeverity, result.Severity);
     }
+
+    // ========== BGAI-038: Floating-Point Precision Edge Cases ==========
+
+    [Fact]
+    public void Test21_ValidateConfidence_NaN_ReturnsCritical()
+    {
+        // Arrange - BGAI-038: Test NaN handling
+        var confidence = double.NaN;
+
+        // Act
+        var result = _service.ValidateConfidence(confidence);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Equal(ValidationSeverity.Critical, result.Severity);
+        Assert.Contains("Invalid confidence value (NaN)", result.ValidationMessage);
+        Assert.True(double.IsNaN(result.ActualConfidence.Value));
+    }
+
+    [Fact]
+    public void Test22_ValidateConfidence_PositiveInfinity_ReturnsCritical()
+    {
+        // Arrange - BGAI-038: Test Positive Infinity handling
+        var confidence = double.PositiveInfinity;
+
+        // Act
+        var result = _service.ValidateConfidence(confidence);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Equal(ValidationSeverity.Critical, result.Severity);
+        Assert.Contains("Invalid confidence value (Positive Infinity)", result.ValidationMessage);
+        Assert.True(double.IsPositiveInfinity(result.ActualConfidence.Value));
+    }
+
+    [Fact]
+    public void Test23_ValidateConfidence_NegativeInfinity_ReturnsCritical()
+    {
+        // Arrange - BGAI-038: Test Negative Infinity handling
+        var confidence = double.NegativeInfinity;
+
+        // Act
+        var result = _service.ValidateConfidence(confidence);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Equal(ValidationSeverity.Critical, result.Severity);
+        Assert.Contains("Invalid confidence value (Negative Infinity)", result.ValidationMessage);
+        Assert.True(double.IsNegativeInfinity(result.ActualConfidence.Value));
+    }
+
+    [Theory]
+    [InlineData(0.6999999999999999)] // Just below 0.70 (floating-point precision)
+    [InlineData(0.7000000000000001)] // Just above 0.70 (floating-point precision)
+    public void Test24_ValidateConfidence_FloatingPointPrecisionBoundary_HandlesCorrectly(double confidence)
+    {
+        // Arrange - BGAI-038: Test epsilon tolerance at threshold boundary
+        // With epsilon 1e-10, both values should pass (treated as ~0.70)
+
+        // Act
+        var result = _service.ValidateConfidence(confidence);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(ValidationSeverity.Pass, result.Severity);
+    }
+
+    [Theory]
+    [InlineData(0.5999999999999999)] // Just below 0.60 (floating-point precision)
+    [InlineData(0.6000000000000001)] // Just above 0.60 (floating-point precision)
+    public void Test25_ValidateConfidence_FloatingPointPrecisionWarningBoundary_HandlesCorrectly(double confidence)
+    {
+        // Arrange - BGAI-038: Test epsilon tolerance at warning threshold boundary
+        // With epsilon 1e-10, both values should be in warning range (treated as ~0.60)
+
+        // Act
+        var result = _service.ValidateConfidence(confidence);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Equal(ValidationSeverity.Warning, result.Severity);
+    }
 }

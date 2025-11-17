@@ -27,6 +27,13 @@ public class PdfProcessingConfigurationValidator : IValidateOptions<PdfProcessin
                 $"Quality.WarningThreshold must be between 0.0 and 1.0, got {options.Quality.WarningThreshold}");
         }
 
+        // BGAI-038: Validate threshold relationship (MinimumThreshold should be >= WarningThreshold)
+        if (options.Quality.MinimumThreshold < options.Quality.WarningThreshold)
+        {
+            return ValidateOptionsResult.Fail(
+                $"Quality.MinimumThreshold ({options.Quality.MinimumThreshold}) must be >= Quality.WarningThreshold ({options.Quality.WarningThreshold})");
+        }
+
         if (options.Quality.MinCharsPerPage < MinCharsPerPageLowerBound)
         {
             return ValidateOptionsResult.Fail(

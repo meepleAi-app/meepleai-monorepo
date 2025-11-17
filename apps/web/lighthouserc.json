@@ -2,7 +2,7 @@
   "ci": {
     "collect": {
       "numberOfRuns": 3,
-      "startServerCommand": "pnpm start",
+      "startServerCommand": "pnpm start:standalone",
       "startServerReadyPattern": "Ready",
       "url": [
         "http://localhost:3000/",

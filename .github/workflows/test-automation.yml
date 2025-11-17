@@ -363,6 +363,9 @@ jobs:
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
 
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+
       - name: Build Next.js for E2E
         run: pnpm build
 

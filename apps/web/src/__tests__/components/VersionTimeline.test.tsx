@@ -1,12 +1,17 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { VersionTimeline } from '../../components/VersionTimeline';
 
-// Mock next/router
-jest.mock('next/router', () => ({
+// Mock next/navigation (App Router)
+jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
-    query: {},
+    back: jest.fn(),
+    forward: jest.fn(),
+    refresh: jest.fn(),
+    prefetch: jest.fn(),
   }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 // Mock fetch

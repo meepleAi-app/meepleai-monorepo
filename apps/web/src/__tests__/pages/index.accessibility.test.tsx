@@ -6,19 +6,22 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import Index from '../../pages/index';
+import Index from '@/components/pages/HomePage';
 
 // Extend Jest matchers
 expect.extend(toHaveNoViolations);
 
-// Mock Next.js router
-jest.mock('next/router', () => ({
+// Mock next/navigation (App Router)
+jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
-    pathname: '/',
-    query: {},
-    asPath: '/',
+    back: jest.fn(),
+    refresh: jest.fn(),
+    forward: jest.fn(),
+    prefetch: jest.fn(),
   }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 // Mock API client

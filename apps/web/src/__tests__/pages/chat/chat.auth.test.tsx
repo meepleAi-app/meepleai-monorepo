@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import ChatPage from '../../../pages/chat';
+import ChatPage from '../../../components/pages/ChatPage';
 import { api } from '../../../lib/api';
 import { createWrapper } from '../../utils/test-providers';
 

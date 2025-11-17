@@ -1,14 +1,25 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useRouter } from 'next/router';
-import type { NextRouter } from 'next/router';
-import Home from '../../pages/index';
-import { api } from '../../pages/../lib/api';
-import { createMockRouter } from '../fixtures/common-fixtures';
+import { useRouter } from 'next/navigation';
+import Home from '@/components/pages/HomePage';
+import { api } from '@/lib/api';
 import { waitForApiCall } from '../fixtures/test-helpers';
 
-jest.mock('next/router', () => ({
-  useRouter: jest.fn()
+// Mock next/navigation (App Router)
+const mockPush = jest.fn();
+const mockBack = jest.fn();
+const mockRefresh = jest.fn();
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    back: mockBack,
+    refresh: mockRefresh,
+    forward: jest.fn(),
+    prefetch: jest.fn(),
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 jest.mock('../../lib/api', () => ({
@@ -36,14 +47,12 @@ jest.mock('react-intersection-observer', () => ({
 }));
 
 const mockedApi = api as jest.Mocked<typeof api>;
-const useRouterMock = useRouter as jest.MockedFunction<typeof useRouter>;
-
-let routerMock = createMockRouter();
 
 describe('Home page (Landing Page)', () => {
   beforeEach(() => {
-    routerMock = createMockRouter();
-    useRouterMock.mockReturnValue(routerMock);
+    mockPush.mockReset();
+    mockBack.mockReset();
+    mockRefresh.mockReset();
 
     mockedApi.get.mockReset();
     mockedApi.post.mockReset();
@@ -53,7 +62,6 @@ describe('Home page (Landing Page)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-    useRouterMock.mockReset();
   });
 
   describe('Hero Section', () => {
@@ -254,7 +262,7 @@ describe('Home page (Landing Page)', () => {
       const goToChatButton = screen.getByText('Go to Chat');
       await user.click(goToChatButton);
 
-      expect(routerMock.push).toHaveBeenCalledWith('/chat');
+      expect(mockPush).toHaveBeenCalledWith('/chat');
     });
 
     it('clicking Start Chatting button navigates when authenticated', async () => {
@@ -278,7 +286,7 @@ describe('Home page (Landing Page)', () => {
       const startChattingButton = screen.getByText('Start Chatting');
       await user.click(startChattingButton);
 
-      expect(routerMock.push).toHaveBeenCalledWith('/chat');
+      expect(mockPush).toHaveBeenCalledWith('/chat');
     });
   });
 
@@ -416,7 +424,7 @@ describe('Home page (Landing Page)', () => {
       const ctaButton = screen.getByText('Start Chatting');
       await user.click(ctaButton);
 
-      expect(routerMock.push).toHaveBeenCalledWith('/chat');
+      expect(mockPush).toHaveBeenCalledWith('/chat');
     });
   });
 
@@ -508,7 +516,7 @@ describe('Home page (Landing Page)', () => {
         });
       });
 
-      expect(routerMock.push).toHaveBeenCalledWith('/chat');
+      expect(mockPush).toHaveBeenCalledWith('/chat');
     });
 
     it('submits register form successfully', async () => {
@@ -583,7 +591,7 @@ describe('Home page (Landing Page)', () => {
         });
       });
 
-      expect(routerMock.push).toHaveBeenCalledWith('/chat');
+      expect(mockPush).toHaveBeenCalledWith('/chat');
     });
 
     it('displays login error message', async () => {

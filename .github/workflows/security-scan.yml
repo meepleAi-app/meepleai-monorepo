@@ -105,6 +105,14 @@ jobs:
       - name: Install PDF dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj', 'apps/api/**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore .NET dependencies
         working-directory: apps/api
         run: dotnet restore
@@ -145,7 +153,7 @@ jobs:
         with:
           name: dotnet-vulnerability-report
           path: apps/api/vulnerability-report.txt
-          retention-days: 30
+          retention-days: 7
 
       # Frontend dependency scanning
       - name: Setup pnpm
@@ -204,7 +212,7 @@ jobs:
           path: |
             apps/web/audit-report.txt
             apps/web/audit-report.json
-          retention-days: 30
+          retention-days: 7
 
       # Fail the pipeline if HIGH severity vulnerabilities found
       - name: Check Severity Threshold
@@ -230,6 +238,14 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-security-${{ hashFiles('apps/api/**/*.csproj', 'apps/api/**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Install Security Code Scan Analyzer
         run: |
           # Add SecurityCodeScan.VS2019 analyzer to the project
@@ -254,7 +270,7 @@ jobs:
         with:
           name: dotnet-security-scan-report
           path: apps/api/security-scan.log
-          retention-days: 30
+          retention-days: 7
 
   # Semgrep SAST & Secrets Scanning
   semgrep-scan:

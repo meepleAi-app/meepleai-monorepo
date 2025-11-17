@@ -150,8 +150,27 @@ jobs:
           cache-dependency-path: apps/web/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install
+
+      # Cache Playwright browsers (saves ~30-60s)
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(pnpm list @playwright/test --depth=0 --json | jq -r '.[0].devDependencies["@playwright/test"].version')" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
       - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright System Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
       - name: Setup Test Environment
         run: cp .env.test.example .env.test
       - name: Build Next.js for E2E
@@ -194,8 +213,27 @@ jobs:
           cache-dependency-path: apps/web/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install
+
+      # Cache Playwright browsers (saves ~30-60s)
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(pnpm list @playwright/test --depth=0 --json | jq -r '.[0].devDependencies["@playwright/test"].version')" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
       - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright System Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
       - name: Setup Test Environment
         run: cp .env.test.example .env.test
       - name: Build Next.js for E2E
@@ -263,6 +301,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
             ${{ runner.os }}-nuget-
+
+      # Cache build outputs to speed up incremental builds (saves ~1min)
+      - name: Cache .NET Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/**/bin
+            apps/api/**/obj
+          key: ${{ runner.os }}-dotnet-build-${{ hashFiles('apps/api/**/*.cs', 'apps/api/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-dotnet-build-
+
       - name: Restore
         run: dotnet restore
       - name: Build
@@ -429,6 +479,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
             ${{ runner.os }}-nuget-
+
+      # Cache build outputs to speed up incremental builds (saves ~1min)
+      - name: Cache .NET Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/**/bin
+            apps/api/**/obj
+          key: ${{ runner.os }}-dotnet-build-${{ hashFiles('apps/api/**/*.cs', 'apps/api/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-dotnet-build-
 
       - name: Restore
         run: dotnet restore

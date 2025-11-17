@@ -204,6 +204,11 @@ public class MultiModelValidationService : IMultiModelValidationService
                 Usage = result.Usage
             };
         }
+        catch (OperationCanceledException)
+        {
+            // Propagate cancellation to allow proper request abort
+            throw;
+        }
         catch (Exception ex)
         {
             stopwatch.Stop();

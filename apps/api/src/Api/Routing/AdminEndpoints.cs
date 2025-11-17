@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
@@ -589,29 +590,39 @@ public static class AdminEndpoints
                 webhook.Status,
                 webhook.Alerts.Length);
 
+            // Process each alert independently - one failure must not block others
             foreach (var alert in webhook.Alerts)
             {
-                if (alert.Status == "firing")
+                try
                 {
-                    var metadata = new Dictionary<string, object>
+                    if (alert.Status == "firing")
                     {
-                        ["labels"] = alert.Labels,
-                        ["annotations"] = alert.Annotations,
-                        ["starts_at"] = alert.StartsAt,
-                        ["group_key"] = webhook.GroupKey
-                    };
+                        var metadata = new Dictionary<string, object>
+                        {
+                            ["labels"] = alert.Labels,
+                            ["annotations"] = alert.Annotations,
+                            ["starts_at"] = alert.StartsAt,
+                            ["group_key"] = webhook.GroupKey
+                        };
 
-                    await alertingService.SendAlertAsync(
-                        alertType: alert.Labels.GetValueOrDefault("alertname", "Unknown"),
-                        severity: alert.Labels.GetValueOrDefault("severity", "warning"),
-                        message: alert.Annotations.GetValueOrDefault("summary", "Alert triggered"),
-                        metadata: metadata,
-                        cancellationToken: ct);
+                        await alertingService.SendAlertAsync(
+                            alertType: alert.Labels.GetValueOrDefault("alertname", "Unknown"),
+                            severity: alert.Labels.GetValueOrDefault("severity", "warning"),
+                            message: alert.Annotations.GetValueOrDefault("summary", "Alert triggered"),
+                            metadata: metadata,
+                            cancellationToken: ct);
+                    }
+                    else if (alert.Status == "resolved")
+                    {
+                        var alertType = alert.Labels.GetValueOrDefault("alertname", "Unknown");
+                        await alertingService.ResolveAlertAsync(alertType, ct);
+                    }
                 }
-                else if (alert.Status == "resolved")
+                catch (Exception ex)
                 {
-                    var alertType = alert.Labels.GetValueOrDefault("alertname", "Unknown");
-                    await alertingService.ResolveAlertAsync(alertType, ct);
+                    // Log but continue processing remaining alerts
+                    logger.LogError(ex, "Failed to process Prometheus alert: {AlertName}",
+                        alert.Labels.GetValueOrDefault("alertname", "Unknown"));
                 }
             }
 
@@ -717,6 +728,8 @@ public static class AdminEndpoints
                     request.Name,
                     request.Description,
                     request.Category,
+                    request.InitialContent,
+                    request.Metadata,
                     Guid.Parse(session.User.Id)),
                 ct);
 

@@ -11,9 +11,9 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class SendAlertCommandHandler : ICommandHandler<SendAlertCommand, AlertDto>
 {
-    private readonly AlertingService _alertingService;
+    private readonly IAlertingService _alertingService;
 
-    public SendAlertCommandHandler(AlertingService alertingService)
+    public SendAlertCommandHandler(IAlertingService alertingService)
     {
         _alertingService = alertingService;
     }

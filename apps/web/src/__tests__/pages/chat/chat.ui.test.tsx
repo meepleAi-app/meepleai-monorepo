@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event';
 import ChatPage from '../../../components/pages/ChatPage';
 import { api } from '../../../lib/api';
 import { useChatStore } from '@/store/chat';
+import { AuthProvider } from '../../../components/auth/AuthProvider';
 
 // Mock BottomNav to avoid loading state issues
 jest.mock('../../../components/chat/BottomNav', () => ({
@@ -186,6 +187,15 @@ describe('ChatPage - UI Interactions', () => {
     setSearchMode: jest.fn(),
   };
 
+  // Helper to render with AuthProvider
+  function renderWithAuth(component: React.ReactElement) {
+    return render(
+      <AuthProvider>
+        {component}
+      </AuthProvider>
+    );
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockSidebarProps.isCollapsed = false;
@@ -219,10 +229,11 @@ describe('ChatPage - UI Interactions', () => {
   });
 
   it('toggles sidebar when collapse button is clicked', async () => {
-    render(<ChatPage />);
+    renderWithAuth(<ChatPage />);
 
+    // Wait for chat page to be fully rendered
     await waitFor(() => {
-      expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-sidebar')).toBeInTheDocument();
     });
 
     const user = userEvent.setup();
@@ -275,10 +286,11 @@ describe('ChatPage - UI Interactions', () => {
       createChat: jest.fn(),
     });
 
-    render(<ChatPage />);
+    renderWithAuth(<ChatPage />);
 
+    // Wait for chat page to be fully rendered
     await waitFor(() => {
-      expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-content')).toBeInTheDocument();
     });
 
     // Wait for game data to load
@@ -363,10 +375,11 @@ describe('ChatPage - UI Interactions', () => {
       createChat: jest.fn(),
     });
 
-    render(<ChatPage />);
+    renderWithAuth(<ChatPage />);
 
+    // Wait for chat page to be fully rendered
     await waitFor(() => {
-      expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-content')).toBeInTheDocument();
     });
 
     // Verify agent name in header

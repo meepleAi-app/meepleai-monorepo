@@ -2,11 +2,13 @@
  * AuthModal Component
  *
  * Unified authentication modal supporting:
- * - Login and registration tabs
+ * - Login and registration tabs using Server Actions pattern
  * - OAuth authentication buttons
  * - Demo credentials display
- * - Session expired warnings
+ * - Session expired warnings (Italian localization)
  * - Accessible modal with Shadcn UI components
+ *
+ * Issue #1078: FE-IMP-002 — Server Actions per Auth & Export
  *
  * This component consolidates authentication UI previously
  * scattered across index.tsx and login.tsx
@@ -16,11 +18,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AccessibleModal } from '@/components/accessible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LoginForm, LoginFormData } from './LoginForm';
-import { RegisterForm, RegisterFormData } from './RegisterForm';
+import { LoginForm } from './LoginForm';
+import { RegisterForm } from './RegisterForm';
 import { DemoCredentialsHint } from './DemoCredentialsHint';
 import OAuthButtons from './OAuthButtons';
-import { useAuth } from '@/hooks/useAuth';
+import type { AuthUser } from '@/types';
 
 // ============================================================================
 // Component Props
@@ -52,61 +54,38 @@ export function AuthModal({
   initialPassword = '',
 }: AuthModalProps) {
   const router = useRouter();
-  const { login, register, error, clearError, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultMode);
 
   // Reset tab when modal opens/closes or default mode changes
   useEffect(() => {
     if (isOpen) {
       setActiveTab(defaultMode);
-      clearError();
     }
-  }, [isOpen, defaultMode, clearError]);
+  }, [isOpen, defaultMode]);
 
-  // Handle login submission
-  const handleLogin = async (data: LoginFormData) => {
-    try {
-      const user = await login(data);
-      onSuccess?.(user);
-      onClose();
-      await router.push('/chat');
-    } catch (err) {
-      // Error is already set in useAuth hook
-      console.error('Login failed:', err);
-    }
-  };
-
-  // Handle registration submission
-  const handleRegister = async (data: Omit<RegisterFormData, 'confirmPassword'>) => {
-    try {
-      const user = await register(data);
-      onSuccess?.(user);
-      onClose();
-      await router.push('/chat');
-    } catch (err) {
-      // Error is already set in useAuth hook
-      console.error('Registration failed:', err);
-    }
+  // Handle successful authentication
+  const handleAuthSuccess = async (user: AuthUser) => {
+    onSuccess?.(user);
+    onClose();
+    await router.push('/chat');
   };
 
   // Handle demo credential click
   const handleDemoCredentialClick = (_credential: unknown) => {
     setActiveTab('login');
-    // Auto-fill handled by component state if needed
   };
 
   // Handle tab change
   const handleTabChange = (value: string) => {
     setActiveTab(value as 'login' | 'register');
-    clearError();
   };
 
   return (
     <AccessibleModal
       isOpen={isOpen}
       onClose={onClose}
-      title={activeTab === 'login' ? 'Sign In to MeepleAI' : 'Create Your Account'}
-      description="Access AI-powered board game rules assistance"
+      title={activeTab === 'login' ? 'Accedi a MeepleAI' : 'Crea il tuo Account'}
+      description="Accedi all'assistente AI per regolamenti dei giochi da tavolo"
       size="md"
     >
       <div className="space-y-6">
@@ -122,10 +101,10 @@ export function AuthModal({
               </span>
               <div>
                 <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                  Session Expired
+                  Sessione Scaduta
                 </p>
                 <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-                  Your session has expired. Please sign in again to continue.
+                  La tua sessione è scaduta. Effettua nuovamente l'accesso per continuare.
                 </p>
               </div>
             </div>
@@ -135,30 +114,22 @@ export function AuthModal({
         {/* Auth Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsTrigger value="login">Accedi</TabsTrigger>
+            <TabsTrigger value="register">Registrati</TabsTrigger>
           </TabsList>
 
           {/* Login Tab */}
           <TabsContent value="login" className="space-y-4 mt-4">
             <LoginForm
-              onSubmit={handleLogin}
-              loading={loading}
-              error={error}
-              onErrorDismiss={clearError}
+              onSuccess={handleAuthSuccess}
               initialEmail={initialEmail}
-              initialPassword={initialPassword}
             />
           </TabsContent>
 
           {/* Register Tab */}
           <TabsContent value="register" className="space-y-4 mt-4">
             <RegisterForm
-              onSubmit={handleRegister}
-              loading={loading}
-              error={error}
-              onErrorDismiss={clearError}
-              showRoleSelector={false}
+              onSuccess={handleAuthSuccess}
             />
           </TabsContent>
         </Tabs>
@@ -175,7 +146,7 @@ export function AuthModal({
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-white dark:bg-slate-900 px-2 text-slate-500 dark:text-slate-400">
-                  For Testing
+                  Per Test
                 </span>
               </div>
             </div>

@@ -13,13 +13,19 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import ChatPage from '../../../components/pages/ChatPage';
 import { api } from '../../../lib/api';
+import { AuthProvider } from '../../../components/auth/AuthProvider';
 
-// Mock Zustand store with minimal context
-const mockUseChatStore = jest.fn();
-
-jest.mock('@/store/chat/store', () => ({
-  useChatStore: () => mockUseChatStore(),
-}));
+// Mock Zustand store - must mock before importing ChatPage
+jest.mock('@/store/chat', () => {
+  const actual = jest.requireActual('@/store/chat');
+  return {
+    ...actual,
+    useChatStore: jest.fn(),
+    useSelectedGame: jest.fn(() => undefined),
+    useSelectedAgent: jest.fn(() => undefined),
+    useActiveChat: jest.fn(() => null),
+  };
+});
 
 // Mock BottomNav to avoid loading state issues
 jest.mock('../../../components/chat/BottomNav', () => ({
@@ -69,17 +75,41 @@ jest.mock('../../../lib/api');
 
 const mockApi = api as jest.Mocked<typeof api>;
 
+// Get the mocked function
+const { useChatStore } = require('@/store/chat');
+const mockUseChatStoreFn = useChatStore as jest.MockedFunction<typeof useChatStore>;
+
+// Helper to render with AuthProvider
+function renderWithAuth(component: React.ReactElement) {
+  return render(
+    <AuthProvider>
+      {component}
+    </AuthProvider>
+  );
+}
+
 describe('ChatPage - Authentication', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
     // Default mock context
-    mockUseChatStore.mockReturnValue({
+    mockUseChatStoreFn.mockReturnValue({
       selectedGameId: null,
       selectedAgentId: null,
       activeChatId: null,
       messages: [],
       isStreaming: false,
+      loading: {
+        chats: false,
+        messages: false,
+        sending: false,
+        creating: false,
+        updating: false,
+        deleting: false,
+        games: false,
+        agents: false,
+      },
+      createChat: jest.fn(),
     });
   });
 
@@ -87,7 +117,7 @@ describe('ChatPage - Authentication', () => {
     // Mock API to never resolve, keeping providers in loading state
     mockApi.get.mockImplementation(() => new Promise(() => {}));
 
-    render(<ChatPage />);
+    renderWithAuth(<ChatPage />);
 
     // With the full provider tree, AuthProvider starts in loading state
     // ChatPage shows "Loading..." while auth check is pending
@@ -100,7 +130,7 @@ describe('ChatPage - Authentication', () => {
     // Mock API to return no user (unauthenticated)
     mockApi.get.mockResolvedValue(null);
 
-    render(<ChatPage />);
+    renderWithAuth(<ChatPage />);
 
     // Wait for auth check to complete
     await waitFor(
@@ -128,7 +158,7 @@ describe('ChatPage - Authentication', () => {
     // Mock API to return authenticated user
     mockApi.get.mockResolvedValue(userResponse);
 
-    render(<ChatPage />);
+    renderWithAuth(<ChatPage />);
 
     // Wait for auth check to complete and authenticated UI to render
     await waitFor(
@@ -148,7 +178,7 @@ describe('ChatPage - Authentication', () => {
     // Mock API to reject auth check
     mockApi.get.mockRejectedValue(new Error('Auth check failed'));
 
-    render(<ChatPage />);
+    renderWithAuth(<ChatPage />);
 
     // Wait for auth failure to be handled (should show unauthenticated state)
     await waitFor(

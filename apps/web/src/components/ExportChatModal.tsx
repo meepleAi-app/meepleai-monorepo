@@ -8,9 +8,11 @@
  * - Format selection (PDF, TXT, Markdown)
  * - Optional date range filtering
  * - Loading state with disabled controls
- * - Error display with user-friendly messages
+ * - Error display with localized Italian messages
  * - Accessible modal with keyboard navigation
- * - Automatic download trigger
+ * - Automatic download trigger via Server Action
+ *
+ * Issue #1078: FE-IMP-002 — Server Actions per Auth & Export
  *
  * @example
  * ```tsx
@@ -25,10 +27,11 @@
  * ```
  */
 
-import { useState } from 'react';
+import { useState, useActionState, useEffect } from 'react';
 import { AccessibleModal } from './accessible/AccessibleModal';
-import { api, ExportFormat } from '@/lib/api';
+import { ExportFormat } from '@/lib/api';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { exportChatAction, type ExportChatActionState } from '@/actions/chat';
 
 export interface ExportChatModalProps {
   /**
@@ -61,57 +64,26 @@ export function ExportChatModal({
   chatId,
   gameName,
 }: ExportChatModalProps) {
-  // Form state
+  // Use React 19 useActionState for form handling
+  const [state, formAction, isPending] = useActionState<ExportChatActionState, FormData>(
+    exportChatAction,
+    { success: false }
+  );
+
+  // Local state for format selection (controlled input)
   const [format, setFormat] = useState<ExportFormat>('pdf');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
 
-  // UI state
-  const [isExporting, setIsExporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleExport = async () => {
-    setError(null);
-
-    // Validate date range
-    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
-      setError('La data iniziale deve essere precedente alla data finale.');
-      return;
-    }
-
-    setIsExporting(true);
-
-    try {
-      await api.chat.exportChat(chatId, {
-        format,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-      });
-
-      // Close modal on success
+  // Close modal and reset on success
+  useEffect(() => {
+    if (state.success) {
       onClose();
-
-      // Reset form state
-      setFormat('pdf');
-      setDateFrom('');
-      setDateTo('');
-    } catch (err) {
-      console.error('Error exporting chat:', err);
-
-      // Display user-friendly error message
-      if (err instanceof Error) {
-        setError(err.message || 'Errore durante l\'esportazione della chat.');
-      } else {
-        setError('Errore durante l\'esportazione della chat.');
-      }
-    } finally {
-      setIsExporting(false);
+      // Reset format after modal closes
+      setTimeout(() => setFormat('pdf'), 300);
     }
-  };
+  }, [state.success, onClose]);
 
   const handleCancel = () => {
-    if (!isExporting) {
-      setError(null);
+    if (!isPending) {
       onClose();
     }
   };
@@ -123,9 +95,12 @@ export function ExportChatModal({
       title="Esporta Chat"
       description={`Esporta la conversazione per ${gameName}`}
       size="md"
-      closeOnBackdropClick={!isExporting}
+      closeOnBackdropClick={!isPending}
     >
-      <div className="space-y-6">
+      <form action={formAction} className="space-y-6">
+        {/* Hidden chatId field */}
+        <input type="hidden" name="chatId" value={chatId} />
+
         {/* Format Selection */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
@@ -140,7 +115,7 @@ export function ExportChatModal({
                 value="pdf"
                 checked={format === 'pdf'}
                 onChange={(e) => setFormat(e.target.value as ExportFormat)}
-                disabled={isExporting}
+                disabled={isPending}
                 className="w-4 h-4 text-primary focus:ring-ring"
               />
               <div className="flex-1">
@@ -159,7 +134,7 @@ export function ExportChatModal({
                 value="txt"
                 checked={format === 'txt'}
                 onChange={(e) => setFormat(e.target.value as ExportFormat)}
-                disabled={isExporting}
+                disabled={isPending}
                 className="w-4 h-4 text-primary focus:ring-ring"
               />
               <div className="flex-1">
@@ -178,7 +153,7 @@ export function ExportChatModal({
                 value="md"
                 checked={format === 'md'}
                 onChange={(e) => setFormat(e.target.value as ExportFormat)}
-                disabled={isExporting}
+                disabled={isPending}
                 className="w-4 h-4 text-primary focus:ring-ring"
               />
               <div className="flex-1">
@@ -207,9 +182,8 @@ export function ExportChatModal({
               <input
                 type="date"
                 id="dateFrom"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                disabled={isExporting}
+                name="dateFrom"
+                disabled={isPending}
                 className="
                   w-full
                   px-3
@@ -239,9 +213,8 @@ export function ExportChatModal({
               <input
                 type="date"
                 id="dateTo"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                disabled={isExporting}
+                name="dateTo"
+                disabled={isPending}
                 className="
                   w-full
                   px-3
@@ -268,20 +241,21 @@ export function ExportChatModal({
         </div>
 
         {/* Error Display */}
-        {error && (
+        {state.error && (
           <div
             role="alert"
             className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
           >
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            <p className="text-sm text-red-800 dark:text-red-200">{state.error.message}</p>
           </div>
         )}
 
         {/* Action Buttons */}
         <div className="flex gap-3 justify-end">
           <LoadingButton
+            type="button"
             onClick={handleCancel}
-            isLoading={isExporting}
+            isLoading={isPending}
             variant="outline"
             className="
               px-4
@@ -302,8 +276,8 @@ export function ExportChatModal({
             Annulla
           </LoadingButton>
           <LoadingButton
-            onClick={() => void handleExport()}
-            isLoading={isExporting}
+            type="submit"
+            isLoading={isPending}
             loadingText="Esportazione..."
             className="
               px-4
@@ -315,7 +289,7 @@ export function ExportChatModal({
             Esporta
           </LoadingButton>
         </div>
-      </div>
+      </form>
     </AccessibleModal>
   );
 }

@@ -2,47 +2,35 @@
  * LoginForm Component
  *
  * Reusable login form with:
- * - React Hook Form for form state management
- * - Zod schema validation
+ * - React 19 useActionState for form state management
+ * - Server Actions pattern for auth
  * - Accessible form controls
  * - Loading states
- * - Custom error display
+ * - Localized Italian error messages
+ *
+ * Issue #1078: FE-IMP-002 — Server Actions per Auth & Export
  */
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useActionState, useEffect } from 'react';
 import { AccessibleFormInput } from '@/components/accessible';
 import { LoadingButton } from '@/components/loading/LoadingButton';
-
-// ============================================================================
-// Validation Schema
-// ============================================================================
-
-const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(100, 'Password must not exceed 100 characters'),
-});
-
-export type LoginFormData = z.infer<typeof loginSchema>;
+import { loginAction, type AuthActionState } from '@/actions/auth';
+import { validationMessages } from '@/lib/i18n/errors';
 
 // ============================================================================
 // Component Props
 // ============================================================================
 
 export interface LoginFormProps {
-  onSubmit: (data: LoginFormData) => Promise<void> | void;
-  loading?: boolean;
-  error?: string;
-  onErrorDismiss?: () => void;
+  /**
+   * Callback when login succeeds
+   */
+  onSuccess?: (user: NonNullable<AuthActionState['user']>) => void;
+
+  /**
+   * Initial email value (for pre-filling form)
+   */
   initialEmail?: string;
-  initialPassword?: string;
 }
 
 // ============================================================================
@@ -50,48 +38,36 @@ export interface LoginFormProps {
 // ============================================================================
 
 export function LoginForm({
-  onSubmit,
-  loading = false,
-  error,
-  onErrorDismiss,
+  onSuccess,
   initialEmail = '',
-  initialPassword = '',
 }: LoginFormProps) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: initialEmail,
-      password: initialPassword,
-    },
-  });
+  // Use React 19 useActionState for form handling
+  const [state, formAction, isPending] = useActionState<AuthActionState, FormData>(
+    loginAction,
+    { success: false }
+  );
 
-  const isLoading = loading || isSubmitting;
-
-  const onFormSubmit = async (data: LoginFormData) => {
-    if (onErrorDismiss) {
-      onErrorDismiss();
+  // Call onSuccess callback when login succeeds (useEffect to avoid render-time side effects)
+  useEffect(() => {
+    if (state.success && state.user && onSuccess) {
+      onSuccess(state.user);
     }
-    await onSubmit(data);
-  };
+  }, [state.success, state.user, onSuccess]);
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4" noValidate>
+    <form action={formAction} className="space-y-4" noValidate>
       {/* Email Field */}
       <div className="space-y-2">
         <AccessibleFormInput
           label="Email"
           id="login-email"
+          name="email"
           type="email"
-          placeholder="you@example.com"
+          placeholder="tuoemail@esempio.com"
           autoComplete="email"
-          error={errors.email?.message}
+          defaultValue={initialEmail}
           required
-          disabled={isLoading}
-          {...register('email')}
+          disabled={isPending}
         />
       </div>
 
@@ -100,24 +76,23 @@ export function LoginForm({
         <AccessibleFormInput
           label="Password"
           id="login-password"
+          name="password"
           type="password"
           placeholder="••••••••"
           autoComplete="current-password"
-          error={errors.password?.message}
           required
-          disabled={isLoading}
-          {...register('password')}
+          disabled={isPending}
         />
       </div>
 
       {/* Error Message */}
-      {error && (
+      {state.error && (
         <div
           className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
           role="alert"
           aria-live="polite"
         >
-          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          <p className="text-sm text-red-800 dark:text-red-200">{state.error.message}</p>
         </div>
       )}
 
@@ -125,10 +100,10 @@ export function LoginForm({
       <LoadingButton
         type="submit"
         className="w-full"
-        isLoading={isLoading}
-        loadingText="Signing in..."
+        isLoading={isPending}
+        loadingText="Accesso in corso..."
       >
-        Sign In
+        Accedi
       </LoadingButton>
     </form>
   );

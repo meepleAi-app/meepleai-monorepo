@@ -1,22 +1,28 @@
 /**
  * Unit tests for AuthProvider
  * Comprehensive coverage of authentication state management
+ *
+ * Issue #1078: FE-IMP-002 — Server Actions per Auth & Export
+ * Updated to mock Server Actions instead of direct API calls
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
-import { api } from '@/lib/api';
+import * as authActions from '@/actions/auth';
 import React, { PropsWithChildren } from 'react';
 
-// Mock api module
-jest.mock('@/lib/api', () => ({
-  api: {
-    get: jest.fn(),
-    post: jest.fn(),
-  },
+// Mock auth actions module
+jest.mock('@/actions/auth', () => ({
+  getCurrentUser: jest.fn(),
+  loginAction: jest.fn(),
+  registerAction: jest.fn(),
+  logoutAction: jest.fn(),
 }));
 
-const mockApi = api as jest.Mocked<typeof api>;
+const mockGetCurrentUser = authActions.getCurrentUser as jest.MockedFunction<typeof authActions.getCurrentUser>;
+const mockLoginAction = authActions.loginAction as jest.MockedFunction<typeof authActions.loginAction>;
+const mockRegisterAction = authActions.registerAction as jest.MockedFunction<typeof authActions.registerAction>;
+const mockLogoutAction = authActions.logoutAction as jest.MockedFunction<typeof authActions.logoutAction>;
 
 describe('AuthProvider', () => {
   const wrapper = ({ children }: PropsWithChildren) => (
@@ -36,7 +42,10 @@ describe('AuthProvider', () => {
         role: 'User',
       };
 
-      mockApi.get.mockResolvedValueOnce({ user: mockUser });
+      mockGetCurrentUser.mockResolvedValueOnce({
+        success: true,
+        user: mockUser
+      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -48,11 +57,14 @@ describe('AuthProvider', () => {
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.user).toEqual(mockUser);
-      expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
+      expect(mockGetCurrentUser).toHaveBeenCalled();
     });
 
     it('handles user not found on mount', async () => {
-      mockApi.get.mockRejectedValueOnce(new Error('Not authenticated'));
+      mockGetCurrentUser.mockResolvedValueOnce({
+        success: false,
+        user: undefined
+      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -72,8 +84,12 @@ describe('AuthProvider', () => {
         role: 'User',
       };
 
-      mockApi.get.mockResolvedValueOnce(null); // Initial load
-      mockApi.post.mockResolvedValueOnce({ user: mockUser });
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
+      mockLoginAction.mockResolvedValueOnce({
+        success: true,
+        user: mockUser,
+        message: 'Login effettuato con successo!'
+      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -87,15 +103,24 @@ describe('AuthProvider', () => {
       expect(returnedUser).toEqual(mockUser);
       expect(result.current.user).toEqual(mockUser);
       expect(result.current.error).toBeNull();
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/auth/login', {
-        email: 'test@example.com',
-        password: 'password123',
-      });
+      expect(mockLoginAction).toHaveBeenCalled();
+
+      // Verify FormData was passed correctly
+      const callArgs = mockLoginAction.mock.calls[0];
+      const formData = callArgs[1] as FormData;
+      expect(formData.get('email')).toBe('test@example.com');
+      expect(formData.get('password')).toBe('password123');
     });
 
     it('handles login failure', async () => {
-      mockApi.get.mockResolvedValueOnce(null); // Initial load
-      mockApi.post.mockRejectedValueOnce(new Error('Invalid credentials'));
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
+      mockLoginAction.mockResolvedValueOnce({
+        success: false,
+        error: {
+          type: 'auth',
+          message: 'Email o password non corretti.'
+        }
+      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -110,7 +135,7 @@ describe('AuthProvider', () => {
       });
 
       expect(result.current.user).toBeNull();
-      expect(result.current.error).toBe('Invalid credentials');
+      expect(result.current.error).toBe('Email o password non corretti.');
     });
   });
 
@@ -123,8 +148,12 @@ describe('AuthProvider', () => {
         role: 'User',
       };
 
-      mockApi.get.mockResolvedValueOnce(null); // Initial load
-      mockApi.post.mockResolvedValueOnce({ user: mockUser });
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
+      mockRegisterAction.mockResolvedValueOnce({
+        success: true,
+        user: mockUser,
+        message: 'Registrazione completata! Benvenuto su MeepleAI.'
+      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -142,11 +171,26 @@ describe('AuthProvider', () => {
       expect(returnedUser).toEqual(mockUser);
       expect(result.current.user).toEqual(mockUser);
       expect(result.current.error).toBeNull();
+      expect(mockRegisterAction).toHaveBeenCalled();
+
+      // Verify FormData was passed correctly
+      const callArgs = mockRegisterAction.mock.calls[0];
+      const formData = callArgs[1] as FormData;
+      expect(formData.get('email')).toBe('newuser@example.com');
+      expect(formData.get('password')).toBe('password123');
+      expect(formData.get('displayName')).toBe('New User');
     });
 
     it('handles registration failure', async () => {
-      mockApi.get.mockResolvedValueOnce(null); // Initial load
-      mockApi.post.mockRejectedValueOnce(new Error('Email already exists'));
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
+      mockRegisterAction.mockResolvedValueOnce({
+        success: false,
+        error: {
+          type: 'conflict',
+          message: 'Questa email è già registrata. Prova con un\'altra email o effettua il login.',
+          field: 'email'
+        }
+      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -164,7 +208,7 @@ describe('AuthProvider', () => {
       });
 
       expect(result.current.user).toBeNull();
-      expect(result.current.error).toBe('Email already exists');
+      expect(result.current.error).toContain('già registrata');
     });
   });
 
@@ -177,8 +221,11 @@ describe('AuthProvider', () => {
         role: 'User',
       };
 
-      mockApi.get.mockResolvedValueOnce({ user: mockUser }); // Initial load
-      mockApi.post.mockResolvedValueOnce({});
+      mockGetCurrentUser.mockResolvedValueOnce({ success: true, user: mockUser }); // Initial load
+      mockLogoutAction.mockResolvedValueOnce({
+        success: true,
+        message: 'Logout effettuato.'
+      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -189,7 +236,7 @@ describe('AuthProvider', () => {
       });
 
       expect(result.current.user).toBeNull();
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/auth/logout');
+      expect(mockLogoutAction).toHaveBeenCalled();
     });
 
     it('handles logout failure gracefully', async () => {
@@ -200,8 +247,8 @@ describe('AuthProvider', () => {
         role: 'User',
       };
 
-      mockApi.get.mockResolvedValueOnce({ user: mockUser }); // Initial load
-      mockApi.post.mockRejectedValueOnce(new Error('Logout failed'));
+      mockGetCurrentUser.mockResolvedValueOnce({ success: true, user: mockUser }); // Initial load
+      mockLogoutAction.mockRejectedValueOnce(new Error('Logout failed'));
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -233,13 +280,13 @@ describe('AuthProvider', () => {
         displayName: 'Updated Name',
       };
 
-      mockApi.get.mockResolvedValueOnce({ user: initialUser }); // Initial load
+      mockGetCurrentUser.mockResolvedValueOnce({ success: true, user: initialUser }); // Initial load
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
       await waitFor(() => expect(result.current.user).toEqual(initialUser));
 
-      mockApi.get.mockResolvedValueOnce({ user: updatedUser });
+      mockGetCurrentUser.mockResolvedValueOnce({ success: true, user: updatedUser });
 
       await act(async () => {
         await result.current.refreshUser();
@@ -251,8 +298,14 @@ describe('AuthProvider', () => {
 
   describe('clearError', () => {
     it('clears error message', async () => {
-      mockApi.get.mockResolvedValueOnce(null); // Initial load
-      mockApi.post.mockRejectedValueOnce(new Error('Login failed'));
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
+      mockLoginAction.mockResolvedValueOnce({
+        success: false,
+        error: {
+          type: 'auth',
+          message: 'Login fallito'
+        }
+      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -267,7 +320,7 @@ describe('AuthProvider', () => {
         }
       });
 
-      expect(result.current.error).toBe('Login failed');
+      expect(result.current.error).toBe('Login fallito');
 
       // Clear error
       act(() => {

@@ -202,10 +202,18 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 
 **Stack**:
 - Backend: xUnit + Moq + Testcontainers (Postgres, Qdrant, Unstructured, SmolDocling)
-- Frontend: Jest + React Testing Library + Playwright
+- Frontend: Jest + React Testing Library + Playwright + Lighthouse CI
 - CI: GitHub Actions (~14min, optimized)
 
 **Tests**: 4,033 frontend + 162 backend + 30 E2E = 4,225 total
+
+**Performance Testing** (Issue #842):
+- **Lighthouse CI**: Automated performance monitoring with Core Web Vitals
+- **Thresholds**: LCP <2.5s, FID <100ms, CLS <0.1, Performance ≥85%, Accessibility ≥95%
+- **Pages**: Homepage, Chat, Upload (Priority 1) + Games, Login (Priority 2)
+- **CI/CD**: Automatic runs on PRs, >10% regression fails build
+- **Commands**: `pnpm test:performance` (Playwright) | `pnpm lighthouse:ci` (audits)
+- **Reports**: HTML/JSON artifacts with 30-day retention
 
 ---
 

@@ -192,6 +192,10 @@ coverage/
 playwright-report/
 test-results/
 
+# Lighthouse CI output (#842)
+lighthouse-reports/
+.lighthouseci/
+
 # Visual Studio code coverage results
 *.coverage
 *.coveragexml

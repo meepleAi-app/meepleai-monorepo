@@ -65,7 +65,7 @@ export const createGameSlice: StateCreator<
     setError(null);
 
     try {
-      const response = await api.get<Array<{ id: string; gameId: string; name: string; kind: string; createdAt: string }>>(`/api/v1/games/${gameId}/agents`);
+      const response = await api.games.getAgents(gameId);
       set((state) => {
         state.agents = response ?? [];
       });

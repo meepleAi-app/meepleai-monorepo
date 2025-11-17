@@ -5,27 +5,19 @@ import { api } from '../../lib/api';
 
 jest.mock('../../lib/api', () => ({
   api: {
-    ruleSpecComments: {
-      getComments: jest.fn(),
-      createComment: jest.fn(),
-      updateComment: jest.fn(),
-      deleteComment: jest.fn(),
-      createReply: jest.fn(),
+    chat: {
+      getRuleSpecComments: jest.fn(),
+      createRuleSpecComment: jest.fn(),
+      updateRuleSpecComment: jest.fn(),
+      deleteRuleSpecComment: jest.fn(),
+      createCommentReply: jest.fn(),
       resolveComment: jest.fn(),
       unresolveComment: jest.fn()
     }
   }
 }));
 
-const mockedApi = api.ruleSpecComments as {
-  getComments: jest.MockedFunction<typeof api.ruleSpecComments.getComments>;
-  createComment: jest.MockedFunction<typeof api.ruleSpecComments.createComment>;
-  updateComment: jest.MockedFunction<typeof api.ruleSpecComments.updateComment>;
-  deleteComment: jest.MockedFunction<typeof api.ruleSpecComments.deleteComment>;
-  createReply: jest.MockedFunction<typeof api.ruleSpecComments.createReply>;
-  resolveComment: jest.MockedFunction<typeof api.ruleSpecComments.resolveComment>;
-  unresolveComment: jest.MockedFunction<typeof api.ruleSpecComments.unresolveComment>;
-};
+const mockedApi = api.chat as jest.Mocked<typeof api.chat>;
 
 describe('CommentThread', () => {
   const mockComments = [
@@ -60,7 +52,7 @@ describe('CommentThread', () => {
   });
 
   it('loads and displays comments', async () => {
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: mockComments,
       totalCount: 1
     } as any);
@@ -81,7 +73,7 @@ describe('CommentThread', () => {
   });
 
   it('displays message when no comments exist', async () => {
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [],
       totalCount: 0
     } as any);
@@ -103,12 +95,12 @@ describe('CommentThread', () => {
   it('allows Editor to create comment', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [],
       totalCount: 0
     } as any);
 
-    mockedApi.createComment.mockResolvedValue({
+    mockedApi.createRuleSpecComment.mockResolvedValue({
       ...mockComments[0],
       id: 'comment-new',
       commentText: 'New test comment'
@@ -132,7 +124,7 @@ describe('CommentThread', () => {
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'New test comment');
 
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [{
         ...mockComments[0],
         id: 'comment-new',
@@ -145,7 +137,7 @@ describe('CommentThread', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedApi.createComment).toHaveBeenCalledWith('chess', 'v1', {
+      expect(mockedApi.createRuleSpecComment).toHaveBeenCalledWith('chess', 'v1', {
         atomId: null,
         lineNumber: null,
         commentText: 'New test comment'
@@ -156,7 +148,7 @@ describe('CommentThread', () => {
   });
 
   it('does not show comment form for regular User', async () => {
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [],
       totalCount: 0
     } as any);
@@ -178,7 +170,7 @@ describe('CommentThread', () => {
   });
 
   it('allows Admin to create comment', async () => {
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [],
       totalCount: 0
     } as any);
@@ -200,7 +192,7 @@ describe('CommentThread', () => {
   it('displays error message when loading comments fails', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    mockedApi.getComments.mockRejectedValue(
+    mockedApi.getRuleSpecComments.mockRejectedValue(
       new Error()
     );
 
@@ -224,12 +216,12 @@ describe('CommentThread', () => {
   it('covers edit comment error handling branch', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
     } as any);
 
-    mockedApi.updateComment.mockRejectedValue(new Error('Update failed'));
+    mockedApi.updateRuleSpecComment.mockRejectedValue(new Error('Update failed'));
 
     render(
       <CommentThread
@@ -251,7 +243,7 @@ describe('CommentThread', () => {
   it('covers delete comment cancellation branch', async () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
 
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
     } as any);
@@ -277,12 +269,12 @@ describe('CommentThread', () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
 
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
     } as any);
 
-    mockedApi.deleteComment.mockRejectedValue(new Error('Delete failed'));
+    mockedApi.deleteRuleSpecComment.mockRejectedValue(new Error('Delete failed'));
 
     render(
       <CommentThread
@@ -304,12 +296,12 @@ describe('CommentThread', () => {
   it('covers reply error handling branch', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
     } as any);
 
-    mockedApi.createReply.mockRejectedValue(new Error('Reply failed'));
+    mockedApi.createCommentReply.mockRejectedValue(new Error('Reply failed'));
 
     render(
       <CommentThread
@@ -330,7 +322,7 @@ describe('CommentThread', () => {
   it('covers resolve comment error handling branch', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [mockComments[0]],
       totalCount: 1
     } as any);
@@ -364,7 +356,7 @@ describe('CommentThread', () => {
       resolvedAt: '2025-10-15T13:00:00Z'
     };
 
-    mockedApi.getComments.mockResolvedValue({
+    mockedApi.getRuleSpecComments.mockResolvedValue({
       comments: [resolvedComment],
       totalCount: 1
     } as any);

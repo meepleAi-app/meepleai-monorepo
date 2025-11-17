@@ -295,7 +295,12 @@ describe('errorUtils', () => {
         status: 500,
         headers: { 'X-Correlation-Id': 'api-error-123' }
       });
-      const apiError = new ApiError('API request failed', 500, 'api-error-123', response);
+      const apiError = new ApiError({
+        message: 'API request failed',
+        statusCode: 500,
+        correlationId: 'api-error-123',
+        response,
+      });
 
       const result = categorizeError(apiError, response, apiError.correlationId);
 

@@ -34,19 +34,19 @@ jest.mock('qrcode.react', () => ({
 // Mock API client
 jest.mock('@/lib/api', () => ({
   api: {
-    twoFactor: {
-      getStatus: jest.fn(),
-      setup: jest.fn(),
-      enable: jest.fn(),
-      verify: jest.fn(),
-      disable: jest.fn(),
+    auth: {
+      getTwoFactorStatus: jest.fn(),
+      setup2FA: jest.fn(),
+      enable2FA: jest.fn(),
+      verify2FA: jest.fn(),
+      disable2FA: jest.fn(),
     },
   },
 }));
 
 // Import the mocked api to get typed access
 import { api } from '@/lib/api';
-const mockTwoFactorApi = api.twoFactor as jest.Mocked<typeof api.twoFactor>;
+const mockAuthApi = api.auth as jest.Mocked<typeof api.auth>;
 
 const useRouterMock = useRouter as jest.MockedFunction<typeof useRouter>;
 
@@ -120,11 +120,11 @@ describe('SettingsPage', () => {
     jest.clearAllMocks();
     mockConfirm.mockClear();
     mockAlert.mockClear();
-    mockTwoFactorApi.getStatus.mockClear();
-    mockTwoFactorApi.setup.mockClear();
-    mockTwoFactorApi.enable.mockClear();
-    mockTwoFactorApi.verify.mockClear();
-    mockTwoFactorApi.disable.mockClear();
+    mockAuthApi.getTwoFactorStatus.mockClear();
+    mockAuthApi.setup2FA.mockClear();
+    mockAuthApi.enable2FA.mockClear();
+    mockAuthApi.verify2FA.mockClear();
+    mockAuthApi.disable2FA.mockClear();
     useRouterMock.mockReturnValue(createMockRouter({ pathname: '/settings' }));
 
     // Default fetch mocks for successful profile and OAuth loading
@@ -150,7 +150,7 @@ describe('SettingsPage', () => {
 
   describe('Initial Loading', () => {
     it('displays loading spinner initially', () => {
-      mockTwoFactorApi.getStatus.mockReturnValue(new Promise(() => {})); // Never resolves
+      mockAuthApi.getTwoFactorStatus.mockReturnValue(new Promise(() => {})); // Never resolves
 
       const { container } = render(<SettingsPage />);
 
@@ -160,7 +160,7 @@ describe('SettingsPage', () => {
     });
 
     it('loads profile and 2FA status on mount', async () => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
 
       render(<SettingsPage />);
 
@@ -169,12 +169,12 @@ describe('SettingsPage', () => {
           expect.stringContaining('/api/v1/auth/me'),
           expect.any(Object)
         );
-        expect(mockTwoFactorApi.getStatus).toHaveBeenCalledTimes(1);
+        expect(mockAuthApi.getTwoFactorStatus).toHaveBeenCalledTimes(1);
       });
     });
 
     it('hides loading after data loads', async () => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
 
       const { container } = render(<SettingsPage />);
 
@@ -212,7 +212,7 @@ describe('SettingsPage', () => {
 
   describe('Page Structure', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
     });
 
     it('renders page title', async () => {
@@ -271,7 +271,7 @@ describe('SettingsPage', () => {
 
   describe('Tab Navigation', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
     });
 
     it('shows Profile tab content by default', async () => {
@@ -332,7 +332,7 @@ describe('SettingsPage', () => {
 
   describe('Profile Tab', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
     });
 
     it('displays user profile information', async () => {
@@ -378,7 +378,7 @@ describe('SettingsPage', () => {
 
   describe('Preferences Tab', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
     });
 
     it('displays language selector', async () => {
@@ -460,7 +460,7 @@ describe('SettingsPage', () => {
 
   describe('Privacy Tab - 2FA Disabled State', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
     });
 
     it('displays 2FA section in Privacy tab', async () => {
@@ -512,7 +512,7 @@ describe('SettingsPage', () => {
 
     it('initiates 2FA setup when enable button clicked', async () => {
       const user = userEvent.setup();
-      mockTwoFactorApi.setup.mockResolvedValue(mockTotpSetup);
+      mockAuthApi.setup2FA.mockResolvedValue(mockTotpSetup);
 
       render(<SettingsPage />);
 
@@ -529,13 +529,13 @@ describe('SettingsPage', () => {
       await user.click(enableButton);
 
       await waitFor(() => {
-        expect(mockTwoFactorApi.setup).toHaveBeenCalledTimes(1);
+        expect(mockAuthApi.setup2FA).toHaveBeenCalledTimes(1);
       });
     });
 
     it('shows loading state during setup', async () => {
       const user = userEvent.setup();
-      mockTwoFactorApi.setup.mockImplementation(
+      mockAuthApi.setup2FA.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve(mockTotpSetup), 100))
       );
 
@@ -559,7 +559,7 @@ describe('SettingsPage', () => {
     it('handles setup error', async () => {
       const consoleError = jest.spyOn(console, 'error').mockImplementation();
       const user = userEvent.setup();
-      mockTwoFactorApi.setup.mockRejectedValue(new Error('Setup failed'));
+      mockAuthApi.setup2FA.mockRejectedValue(new Error('Setup failed'));
 
       render(<SettingsPage />);
 
@@ -585,8 +585,8 @@ describe('SettingsPage', () => {
 
   describe('Privacy Tab - 2FA Setup Flow', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
-      mockTwoFactorApi.setup.mockResolvedValue(mockTotpSetup);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.setup2FA.mockResolvedValue(mockTotpSetup);
     });
 
     it('displays QR code after setup', async () => {
@@ -823,9 +823,9 @@ describe('SettingsPage', () => {
 
     it('enables 2FA with valid code', async () => {
       const user = userEvent.setup();
-      mockTwoFactorApi.enable.mockResolvedValue({ success: true, backupCodes: null, errorMessage: null });
-      mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
-      mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusEnabled);
+      mockAuthApi.enable2FA.mockResolvedValue({ success: true, backupCodes: null, errorMessage: null });
+      mockAuthApi.getTwoFactorStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValueOnce(mock2FAStatusEnabled);
 
       render(<SettingsPage />);
 
@@ -855,7 +855,7 @@ describe('SettingsPage', () => {
       await user.click(verifyButton);
 
       await waitFor(() => {
-        expect(mockTwoFactorApi.enable).toHaveBeenCalledWith('123456');
+        expect(mockAuthApi.enable2FA).toHaveBeenCalledWith('123456');
         expect(screen.getByText('Two-factor authentication enabled successfully!')).toBeInTheDocument();
       });
     });
@@ -863,7 +863,7 @@ describe('SettingsPage', () => {
     it('shows error with invalid verification code', async () => {
       const consoleError = jest.spyOn(console, 'error').mockImplementation();
       const user = userEvent.setup();
-      mockTwoFactorApi.enable.mockRejectedValue(new Error('Invalid code'));
+      mockAuthApi.enable2FA.mockRejectedValue(new Error('Invalid code'));
 
       render(<SettingsPage />);
 
@@ -931,7 +931,7 @@ describe('SettingsPage', () => {
 
   describe('Privacy Tab - 2FA Enabled State', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusEnabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusEnabled);
     });
 
     it('displays enabled status with checkmark', async () => {
@@ -965,7 +965,7 @@ describe('SettingsPage', () => {
     });
 
     it('shows warning when backup codes are low', async () => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusLowBackupCodes);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusLowBackupCodes);
 
       const user = userEvent.setup();
       render(<SettingsPage />);
@@ -1128,15 +1128,15 @@ describe('SettingsPage', () => {
       const disableButton = screen.getByRole('button', { name: 'Disable 2FA' });
       await user.click(disableButton);
 
-      expect(mockTwoFactorApi.disable).not.toHaveBeenCalled();
+      expect(mockAuthApi.disable2FA).not.toHaveBeenCalled();
     });
 
     it('disables 2FA successfully', async () => {
       const user = userEvent.setup();
       mockConfirm.mockReturnValue(true);
-      mockTwoFactorApi.disable.mockResolvedValue({ success: true, errorMessage: null });
-      mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusEnabled);
-      mockTwoFactorApi.getStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
+      mockAuthApi.disable2FA.mockResolvedValue({ success: true, errorMessage: null });
+      mockAuthApi.getTwoFactorStatus.mockResolvedValueOnce(mock2FAStatusEnabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
 
       render(<SettingsPage />);
 
@@ -1157,7 +1157,7 @@ describe('SettingsPage', () => {
       await user.click(disableButton);
 
       await waitFor(() => {
-        expect(mockTwoFactorApi.disable).toHaveBeenCalledWith('MyPassword123!', '123456');
+        expect(mockAuthApi.disable2FA).toHaveBeenCalledWith('MyPassword123!', '123456');
         expect(screen.getByText('Two-factor authentication disabled.')).toBeInTheDocument();
       });
     });
@@ -1166,7 +1166,7 @@ describe('SettingsPage', () => {
       const consoleError = jest.spyOn(console, 'error').mockImplementation();
       const user = userEvent.setup();
       mockConfirm.mockReturnValue(true);
-      mockTwoFactorApi.disable.mockRejectedValue(new Error('Invalid credentials'));
+      mockAuthApi.disable2FA.mockRejectedValue(new Error('Invalid credentials'));
 
       render(<SettingsPage />);
 
@@ -1198,7 +1198,7 @@ describe('SettingsPage', () => {
 
   describe('Privacy Tab - OAuth Accounts', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
     });
 
     it('displays OAuth section in Privacy tab', async () => {
@@ -1289,7 +1289,7 @@ describe('SettingsPage', () => {
 
   describe('Advanced Tab', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
     });
 
     it('displays API Keys section with coming soon message', async () => {
@@ -1357,7 +1357,7 @@ describe('SettingsPage', () => {
   describe('Error Display', () => {
     it('displays error alert when present', async () => {
       const consoleError = jest.spyOn(console, 'error').mockImplementation();
-      mockTwoFactorApi.getStatus.mockRejectedValue(new Error('Network error'));
+      mockAuthApi.getTwoFactorStatus.mockRejectedValue(new Error('Network error'));
 
       render(<SettingsPage />);
 
@@ -1373,7 +1373,7 @@ describe('SettingsPage', () => {
       await user.click(privacyTab);
 
       // Try to setup 2FA which will fail
-      mockTwoFactorApi.setup.mockRejectedValue(new Error('Setup failed'));
+      mockAuthApi.setup2FA.mockRejectedValue(new Error('Setup failed'));
 
       const enableButton = screen.getByRole('button', {
         name: /Enable Two-Factor Authentication/i,
@@ -1409,7 +1409,7 @@ describe('SettingsPage', () => {
 
   describe('Accessibility', () => {
     beforeEach(() => {
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
     });
 
     it('has proper heading hierarchy', async () => {
@@ -1454,7 +1454,7 @@ describe('SettingsPage', () => {
 
     it('QR code has accessible title', async () => {
       const user = userEvent.setup();
-      mockTwoFactorApi.setup.mockResolvedValue(mockTotpSetup);
+      mockAuthApi.setup2FA.mockResolvedValue(mockTotpSetup);
 
       render(<SettingsPage />);
 
@@ -1480,8 +1480,8 @@ describe('SettingsPage', () => {
   describe('Edge Cases', () => {
     it('handles empty backup codes array', async () => {
       const user = userEvent.setup();
-      mockTwoFactorApi.getStatus.mockResolvedValue(mock2FAStatusDisabled);
-      mockTwoFactorApi.setup.mockResolvedValue({
+      mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
+      mockAuthApi.setup2FA.mockResolvedValue({
         ...mockTotpSetup,
         backupCodes: [],
       });

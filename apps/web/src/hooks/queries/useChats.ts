@@ -34,7 +34,7 @@ export function useChats(gameId: string, enabled: boolean = true): UseQueryResul
   return useQuery({
     queryKey: chatKeys.byGame(gameId),
     queryFn: async (): Promise<ChatThreadDto[]> => {
-      return api.chatThreads.getByGame(gameId);
+      return api.chat.getThreadsByGame(gameId);
     },
     enabled,
     staleTime: 2 * 60 * 1000, // Chats change more frequently (2min)
@@ -53,7 +53,7 @@ export function useChatThread(threadId: string, enabled: boolean = true): UseQue
   return useQuery({
     queryKey: chatKeys.detail(threadId),
     queryFn: async (): Promise<ChatThreadDto | null> => {
-      return api.chatThreads.getById(threadId);
+      return api.chat.getThreadById(threadId);
     },
     enabled,
     staleTime: 1 * 60 * 1000, // Active chat thread (1min stale time)
@@ -86,7 +86,7 @@ export function useCreateChat(): UseMutationResult<ChatThreadDto, Error, CreateC
 
   return useMutation({
     mutationFn: async (request: CreateChatThreadRequest): Promise<ChatThreadDto> => {
-      return api.chatThreads.create(request);
+      return api.chat.createThread(request);
     },
     onSuccess: (newChat) => {
       // Invalidate the game's chat list to refetch
@@ -115,7 +115,7 @@ export function useAddMessage(): UseMutationResult<
 
   return useMutation({
     mutationFn: async ({ threadId, request }): Promise<ChatThreadDto> => {
-      return api.chatThreads.addMessage(threadId, request);
+      return api.chat.addMessage(threadId, request);
     },
     onSuccess: (updatedThread, variables) => {
       // Invalidate the specific thread to refetch
@@ -185,7 +185,7 @@ export function useCloseChat(): UseMutationResult<ChatThreadDto, Error, string> 
 
   return useMutation({
     mutationFn: async (threadId: string): Promise<ChatThreadDto> => {
-      return api.chatThreads.close(threadId);
+      return api.chat.closeThread(threadId);
     },
     onSuccess: (closedThread, threadId) => {
       // Invalidate the specific thread
@@ -209,7 +209,7 @@ export function useReopenChat(): UseMutationResult<ChatThreadDto, Error, string>
 
   return useMutation({
     mutationFn: async (threadId: string): Promise<ChatThreadDto> => {
-      return api.chatThreads.reopen(threadId);
+      return api.chat.reopenThread(threadId);
     },
     onSuccess: (reopenedThread, threadId) => {
       // Invalidate the specific thread

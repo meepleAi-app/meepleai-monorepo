@@ -22,7 +22,6 @@ jest.mock('@/lib/api');
 const mockApi = api as jest.Mocked<typeof api>;
 
 // Explicitly cast nested mock objects for proper TypeScript support
-const mockChatThreads = mockApi.chatThreads as jest.Mocked<typeof api.chatThreads>;
 const mockChat = mockApi.chat as jest.Mocked<typeof api.chat>;
 
 // Mock window.confirm
@@ -109,7 +108,7 @@ describe('chatSlice', () => {
         createMockChatThread({ id: 'thread-2', title: 'Chat 2' }),
       ];
 
-      mockChatThreads.getByGame.mockResolvedValue(mockChats);
+      mockChat.getThreadsByGame.mockResolvedValue(mockChats);
 
       // Mock setLoading and setError
       const setLoadingSpy = jest.spyOn(useChatStore.getState(), 'setLoading');
@@ -118,7 +117,7 @@ describe('chatSlice', () => {
       await useChatStore.getState().loadChats('game-1');
 
       // Verify API called with correct game ID
-      expect(mockChatThreads.getByGame).toHaveBeenCalledWith('game-1');
+      expect(mockChat.getThreadsByGame).toHaveBeenCalledWith('game-1');
 
       // Verify state updated correctly
       const state = useChatStore.getState();
@@ -131,7 +130,7 @@ describe('chatSlice', () => {
     });
 
     it('should handle null response from API', async () => {
-      mockChatThreads.getByGame.mockResolvedValue(null as any);
+      mockChat.getThreadsByGame.mockResolvedValue(null as any);
 
       await useChatStore.getState().loadChats('game-1');
 
@@ -140,7 +139,7 @@ describe('chatSlice', () => {
     });
 
     it('should handle empty array response', async () => {
-      mockChatThreads.getByGame.mockResolvedValue([]);
+      mockChat.getThreadsByGame.mockResolvedValue([]);
 
       await useChatStore.getState().loadChats('game-1');
 
@@ -150,7 +149,7 @@ describe('chatSlice', () => {
 
     it('should handle API errors', async () => {
       const error = new Error('Network error');
-      mockChatThreads.getByGame.mockRejectedValue(error);
+      mockChat.getThreadsByGame.mockRejectedValue(error);
 
       const setErrorSpy = jest.spyOn(useChatStore.getState(), 'setError');
 
@@ -165,7 +164,7 @@ describe('chatSlice', () => {
     });
 
     it('should set loading state correctly during async operation', async () => {
-      mockChatThreads.getByGame.mockImplementation(
+      mockChat.getThreadsByGame.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve([]), 10))
       );
 
@@ -196,12 +195,12 @@ describe('chatSlice', () => {
         chatsByGame: {},
       });
 
-      mockChatThreads.create.mockResolvedValue(newThread);
+      mockChat.createThread.mockResolvedValue(newThread);
 
       await useChatStore.getState().createChat();
 
       // Verify API called with correct parameters
-      expect(mockChatThreads.create).toHaveBeenCalledWith({
+      expect(mockChat.createThread).toHaveBeenCalledWith({
         gameId: 'game-1',
         title: null,
         initialMessage: null,
@@ -224,7 +223,7 @@ describe('chatSlice', () => {
         chatsByGame: { 'game-1': [existingThread] },
       });
 
-      mockChatThreads.create.mockResolvedValue(newThread);
+      mockChat.createThread.mockResolvedValue(newThread);
 
       await useChatStore.getState().createChat();
 
@@ -243,7 +242,7 @@ describe('chatSlice', () => {
       await useChatStore.getState().createChat();
 
       expect(setErrorSpy).toHaveBeenCalledWith('Seleziona un gioco e un agente');
-      expect(mockChatThreads.create).not.toHaveBeenCalled();
+      expect(mockChat.createThread).not.toHaveBeenCalled();
     });
 
     it('should return early if agent not selected', async () => {
@@ -257,12 +256,12 @@ describe('chatSlice', () => {
       await useChatStore.getState().createChat();
 
       expect(setErrorSpy).toHaveBeenCalledWith('Seleziona un gioco e un agente');
-      expect(mockChatThreads.create).not.toHaveBeenCalled();
+      expect(mockChat.createThread).not.toHaveBeenCalled();
     });
 
     it('should handle API errors during creation', async () => {
       const error = new Error('Creation failed');
-      mockChatThreads.create.mockRejectedValue(error);
+      mockChat.createThread.mockRejectedValue(error);
 
       useChatStore.setState({
         selectedGameId: 'game-1',
@@ -304,16 +303,16 @@ describe('chatSlice', () => {
         activeChatIds: { 'game-1': 'thread-6' }, // Current active thread
       });
 
-      mockChatThreads.create.mockResolvedValue(newThread);
-      mockChatThreads.close.mockResolvedValue({} as any);
-      mockChatThreads.getByGame.mockResolvedValue([...activeThreads, newThread]);
+      mockChat.createThread.mockResolvedValue(newThread);
+      mockChat.closeThread.mockResolvedValue({} as any);
+      mockChat.getThreadsByGame.mockResolvedValue([...activeThreads, newThread]);
 
       const loadChatsSpy = jest.spyOn(useChatStore.getState(), 'loadChats');
 
       await useChatStore.getState().createChat();
 
       // Verify oldest thread was archived (not the active one)
-      expect(mockChatThreads.close).toHaveBeenCalledWith('oldest');
+      expect(mockChat.closeThread).toHaveBeenCalledWith('oldest');
       expect(loadChatsSpy).toHaveBeenCalledWith('game-1');
     });
 
@@ -344,14 +343,14 @@ describe('chatSlice', () => {
         activeChatIds: { 'game-1': 'active' }, // Oldest is active
       });
 
-      mockChatThreads.create.mockResolvedValue(newThread);
-      mockChatThreads.close.mockResolvedValue({} as any);
-      mockChatThreads.getByGame.mockResolvedValue([...activeThreads, newThread]);
+      mockChat.createThread.mockResolvedValue(newThread);
+      mockChat.closeThread.mockResolvedValue({} as any);
+      mockChat.getThreadsByGame.mockResolvedValue([...activeThreads, newThread]);
 
       await useChatStore.getState().createChat();
 
       // Should archive thread-2 (next oldest), not 'active'
-      expect(mockChatThreads.close).toHaveBeenCalledWith('thread-2');
+      expect(mockChat.closeThread).toHaveBeenCalledWith('thread-2');
     });
 
     it('should handle auto-archive errors gracefully', async () => {
@@ -373,8 +372,8 @@ describe('chatSlice', () => {
         chatsByGame: { 'game-1': activeThreads },
       });
 
-      mockChatThreads.create.mockResolvedValue(newThread);
-      mockChatThreads.close.mockRejectedValue(new Error('Archive failed'));
+      mockChat.createThread.mockResolvedValue(newThread);
+      mockChat.closeThread.mockRejectedValue(new Error('Archive failed'));
 
       await useChatStore.getState().createChat();
 
@@ -416,15 +415,15 @@ describe('chatSlice', () => {
         chatsByGame: { 'game-1': activeThreads },
       });
 
-      mockChatThreads.create.mockResolvedValue(newThread);
-      mockChatThreads.close.mockResolvedValue({} as any);
-      mockChatThreads.getByGame.mockResolvedValue([...activeThreads, newThread]);
+      mockChat.createThread.mockResolvedValue(newThread);
+      mockChat.closeThread.mockResolvedValue({} as any);
+      mockChat.getThreadsByGame.mockResolvedValue([...activeThreads, newThread]);
 
       await useChatStore.getState().createChat();
 
       // Should archive t3 (oldest by createdAt, no lastMessageAt)
       // NOT threadWithMessage (has recent lastMessageAt)
-      expect(mockChatThreads.close).toHaveBeenCalledWith('t3');
+      expect(mockChat.closeThread).toHaveBeenCalledWith('t3');
     });
 
     it('should not auto-archive closed threads', async () => {
@@ -450,13 +449,13 @@ describe('chatSlice', () => {
         chatsByGame: { 'game-1': activeThreads },
       });
 
-      mockChatThreads.create.mockResolvedValue(newThread);
-      mockChatThreads.close.mockResolvedValue({} as any);
+      mockChat.createThread.mockResolvedValue(newThread);
+      mockChat.closeThread.mockResolvedValue({} as any);
 
       await useChatStore.getState().createChat();
 
       // Should not attempt to archive (only 4 active threads + 1 new = 5)
-      expect(mockChatThreads.close).not.toHaveBeenCalled();
+      expect(mockChat.closeThread).not.toHaveBeenCalled();
     });
 
     it('should set loading states correctly', async () => {
@@ -465,7 +464,7 @@ describe('chatSlice', () => {
         selectedAgentId: 'agent-1',
       });
 
-      mockChatThreads.create.mockResolvedValue(createMockChatThread());
+      mockChat.createThread.mockResolvedValue(createMockChatThread());
 
       const setLoadingSpy = jest.spyOn(useChatStore.getState(), 'setLoading');
 
@@ -775,7 +774,7 @@ describe('chatSlice', () => {
 
       // Load existing chats
       const existingChats = [createMockChatThread({ id: 'existing' })];
-      mockChatThreads.getByGame.mockResolvedValue(existingChats);
+      mockChat.getThreadsByGame.mockResolvedValue(existingChats);
       await useChatStore.getState().loadChats('game-1');
 
       let state = useChatStore.getState();
@@ -783,7 +782,7 @@ describe('chatSlice', () => {
 
       // Create new chat
       const newChat = createMockChatThread({ id: 'new' });
-      mockChatThreads.create.mockResolvedValue(newChat);
+      mockChat.createThread.mockResolvedValue(newChat);
       await useChatStore.getState().createChat();
 
       state = useChatStore.getState();
@@ -809,10 +808,10 @@ describe('chatSlice', () => {
       const game1Chats = [createMockChatThread({ id: 'g1-thread', gameId: 'game-1' })];
       const game2Chats = [createMockChatThread({ id: 'g2-thread', gameId: 'game-2' })];
 
-      mockChatThreads.getByGame.mockResolvedValueOnce(game1Chats);
+      mockChat.getThreadsByGame.mockResolvedValueOnce(game1Chats);
       await useChatStore.getState().loadChats('game-1');
 
-      mockChatThreads.getByGame.mockResolvedValueOnce(game2Chats);
+      mockChat.getThreadsByGame.mockResolvedValueOnce(game2Chats);
       await useChatStore.getState().loadChats('game-2');
 
       const state = useChatStore.getState();
@@ -827,7 +826,7 @@ describe('chatSlice', () => {
   describe('Edge Cases', () => {
     it('should handle concurrent loadChats calls', async () => {
       const chats = [createMockChatThread()];
-      mockChatThreads.getByGame.mockResolvedValue(chats);
+      mockChat.getThreadsByGame.mockResolvedValue(chats);
 
       // Fire multiple concurrent calls
       await Promise.all([

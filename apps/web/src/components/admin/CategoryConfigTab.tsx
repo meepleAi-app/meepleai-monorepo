@@ -96,6 +96,7 @@ export default function CategoryConfigTab({
 
     try {
       await api.config.updateConfiguration(config.id, {
+        value: config.value, // Required by API (FE-IMP-005)
         isActive: !config.isActive,
       });
 

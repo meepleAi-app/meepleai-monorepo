@@ -25,7 +25,6 @@ jest.mock('@/lib/api');
 const mockApi = api as jest.Mocked<typeof api>;
 
 // Explicitly cast nested mock objects for TypeScript
-const mockChatThreads = mockApi.chatThreads as jest.Mocked<typeof api.chatThreads>;
 const mockChat = mockApi.chat as jest.Mocked<typeof api.chat>;
 
 // Mock window.confirm
@@ -199,12 +198,12 @@ describe('messagesSlice', () => {
     };
 
     it('should load messages successfully', async () => {
-      mockChatThreads.getById.mockResolvedValue(mockThread);
+      mockChat.getThreadById.mockResolvedValue(mockThread);
 
       await store.getState().loadMessages('thread-1');
 
       expect(setLoading).toHaveBeenCalledWith('messages', true);
-      expect(mockChatThreads.getById).toHaveBeenCalledWith('thread-1');
+      expect(mockChat.getThreadById).toHaveBeenCalledWith('thread-1');
       expect(setLoading).toHaveBeenCalledWith('messages', false);
 
       const state = store.getState();
@@ -228,7 +227,7 @@ describe('messagesSlice', () => {
     });
 
     it('should handle null thread (not found)', async () => {
-      mockChatThreads.getById.mockResolvedValue(null as any);
+      mockChat.getThreadById.mockResolvedValue(null as any);
 
       await store.getState().loadMessages('thread-1');
 
@@ -240,7 +239,7 @@ describe('messagesSlice', () => {
 
     it('should handle API errors', async () => {
       const error = new Error('API Error');
-      mockChatThreads.getById.mockRejectedValue(error);
+      mockChat.getThreadById.mockRejectedValue(error);
 
       await store.getState().loadMessages('thread-1');
 
@@ -252,7 +251,7 @@ describe('messagesSlice', () => {
     });
 
     it('should convert timestamps to Date objects', async () => {
-      mockChatThreads.getById.mockResolvedValue(mockThread);
+      mockChat.getThreadById.mockResolvedValue(mockThread);
 
       await store.getState().loadMessages('thread-1');
 
@@ -280,7 +279,7 @@ describe('messagesSlice', () => {
         ],
       };
 
-      mockChatThreads.getById.mockResolvedValue(minimalThread);
+      mockChat.getThreadById.mockResolvedValue(minimalThread);
 
       await store.getState().loadMessages('thread-2');
 
@@ -325,18 +324,18 @@ describe('messagesSlice', () => {
         messages: [],
       };
 
-      mockChatThreads.create.mockResolvedValue(mockNewThread);
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.createThread.mockResolvedValue(mockNewThread);
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage('What are the rules for setup?');
 
-      expect(mockChatThreads.create).toHaveBeenCalledWith({
+      expect(mockChat.createThread).toHaveBeenCalledWith({
         gameId: 'game-1',
         title: 'What are the rules for setup?',
         initialMessage: null,
       });
 
-      expect(mockChatThreads.addMessage).toHaveBeenCalledWith(
+      expect(mockChat.addMessage).toHaveBeenCalledWith(
         'thread-new',
         {
           content: 'What are the rules for setup?',
@@ -361,12 +360,12 @@ describe('messagesSlice', () => {
         messages: [],
       };
 
-      mockChatThreads.create.mockResolvedValue(mockNewThread);
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.createThread.mockResolvedValue(mockNewThread);
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage(longMessage);
 
-      expect(mockChatThreads.create).toHaveBeenCalledWith({
+      expect(mockChat.createThread).toHaveBeenCalledWith({
         gameId: 'game-1',
         title: longMessage.substring(0, 50) + '...',
         initialMessage: null,
@@ -379,12 +378,12 @@ describe('messagesSlice', () => {
         messagesByChat: { 'thread-existing': [] },
       });
 
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage('Follow-up question');
 
-      expect(mockChatThreads.create).not.toHaveBeenCalled();
-      expect(mockChatThreads.addMessage).toHaveBeenCalledWith(
+      expect(mockChat.createThread).not.toHaveBeenCalled();
+      expect(mockChat.addMessage).toHaveBeenCalledWith(
         'thread-existing',
         {
           content: 'Follow-up question',
@@ -394,7 +393,7 @@ describe('messagesSlice', () => {
     });
 
     it('should add optimistic message before API call', async () => {
-      mockChatThreads.create.mockImplementation(
+      mockChat.createThread.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({
           id: 'thread-new',
           gameId: 'game-1',
@@ -405,7 +404,7 @@ describe('messagesSlice', () => {
           messages: [],
         }), 100))
       );
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       const promise = store.getState().sendMessage('Test message');
 
@@ -421,7 +420,7 @@ describe('messagesSlice', () => {
         messagesByChat: { 'thread-1': [] },
       });
 
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage('Test message');
 
@@ -439,7 +438,7 @@ describe('messagesSlice', () => {
         messagesByChat: { 'thread-1': [] },
       });
 
-      mockChatThreads.addMessage.mockRejectedValue(new Error('API Error'));
+      mockChat.addMessage.mockRejectedValue(new Error('API Error'));
 
       await store.getState().sendMessage('Test message');
 
@@ -454,8 +453,8 @@ describe('messagesSlice', () => {
 
       await store.getState().sendMessage('Test message');
 
-      expect(mockChatThreads.create).not.toHaveBeenCalled();
-      expect(mockChatThreads.addMessage).not.toHaveBeenCalled();
+      expect(mockChat.createThread).not.toHaveBeenCalled();
+      expect(mockChat.addMessage).not.toHaveBeenCalled();
     });
 
     it('should not send if no agent selected', async () => {
@@ -463,15 +462,15 @@ describe('messagesSlice', () => {
 
       await store.getState().sendMessage('Test message');
 
-      expect(mockChatThreads.create).not.toHaveBeenCalled();
-      expect(mockChatThreads.addMessage).not.toHaveBeenCalled();
+      expect(mockChat.createThread).not.toHaveBeenCalled();
+      expect(mockChat.addMessage).not.toHaveBeenCalled();
     });
 
     it('should not send empty messages', async () => {
       await store.getState().sendMessage('   ');
 
-      expect(mockChatThreads.create).not.toHaveBeenCalled();
-      expect(mockChatThreads.addMessage).not.toHaveBeenCalled();
+      expect(mockChat.createThread).not.toHaveBeenCalled();
+      expect(mockChat.addMessage).not.toHaveBeenCalled();
     });
 
     it('should trim message content', async () => {
@@ -480,11 +479,11 @@ describe('messagesSlice', () => {
         messagesByChat: { 'thread-1': [] },
       });
 
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage('  Test message  ');
 
-      expect(mockChatThreads.addMessage).toHaveBeenCalledWith(
+      expect(mockChat.addMessage).toHaveBeenCalledWith(
         'thread-1',
         {
           content: 'Test message',
@@ -499,7 +498,7 @@ describe('messagesSlice', () => {
         messagesByChat: { 'thread-1': [] },
       });
 
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage('First message');
 
@@ -519,7 +518,7 @@ describe('messagesSlice', () => {
         messagesByChat: { 'thread-1': [existingMessage] },
       });
 
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage('Second message');
 
@@ -527,7 +526,7 @@ describe('messagesSlice', () => {
     });
 
     it('should handle thread creation failure', async () => {
-      mockChatThreads.create.mockResolvedValue(null as any);
+      mockChat.createThread.mockResolvedValue(null as any);
 
       await store.getState().sendMessage('Test message');
 
@@ -540,7 +539,7 @@ describe('messagesSlice', () => {
         messagesByChat: { 'thread-1': [] },
       });
 
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage('Test message');
 
@@ -1162,7 +1161,7 @@ describe('messagesSlice', () => {
         ],
       };
 
-      mockChatThreads.getById.mockResolvedValue(threadWithNullFeedback);
+      mockChat.getThreadById.mockResolvedValue(threadWithNullFeedback);
 
       await store.getState().loadMessages('thread-1');
 
@@ -1187,7 +1186,7 @@ describe('messagesSlice', () => {
         ],
       };
 
-      mockChatThreads.getById.mockResolvedValue(threadWithUndefinedFeedback);
+      mockChat.getThreadById.mockResolvedValue(threadWithUndefinedFeedback);
 
       await store.getState().loadMessages('thread-1');
 
@@ -1212,13 +1211,13 @@ describe('messagesSlice', () => {
         selectedAgentId: 'agent-1',
       });
 
-      mockChatThreads.create.mockResolvedValue(mockNewThread);
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.createThread.mockResolvedValue(mockNewThread);
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage(exactly50Chars);
 
       // Should NOT add ellipsis for exactly 50 chars
-      expect(mockChatThreads.create).toHaveBeenCalledWith({
+      expect(mockChat.createThread).toHaveBeenCalledWith({
         gameId: 'game-1',
         title: exactly50Chars,
         initialMessage: null,
@@ -1340,13 +1339,13 @@ describe('messagesSlice', () => {
         selectedAgentId: 'agent-1',
       });
 
-      mockChatThreads.create.mockResolvedValue(mockNewThread);
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.createThread.mockResolvedValue(mockNewThread);
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage(shortMessage);
 
       // Should NOT add ellipsis for messages under 50 chars
-      expect(mockChatThreads.create).toHaveBeenCalledWith({
+      expect(mockChat.createThread).toHaveBeenCalledWith({
         gameId: 'game-1',
         title: shortMessage,
         initialMessage: null,
@@ -1399,7 +1398,7 @@ describe('messagesSlice', () => {
         messages: [],
       };
 
-      mockChatThreads.getById.mockResolvedValue(emptyThread);
+      mockChat.getThreadById.mockResolvedValue(emptyThread);
 
       await store.getState().loadMessages('thread-1');
 
@@ -1578,7 +1577,7 @@ describe('messagesSlice', () => {
         messagesByChat: { 'thread-1': [] },
       });
 
-      mockChatThreads.addMessage.mockResolvedValue(createMockThread());
+      mockChat.addMessage.mockResolvedValue(createMockThread());
 
       // Send multiple messages concurrently
       await Promise.all([
@@ -1587,7 +1586,7 @@ describe('messagesSlice', () => {
         store.getState().sendMessage('Message 3'),
       ]);
 
-      expect(mockChatThreads.addMessage).toHaveBeenCalledTimes(3);
+      expect(mockChat.addMessage).toHaveBeenCalledTimes(3);
     });
 
     it('should handle rapid feedback changes', async () => {

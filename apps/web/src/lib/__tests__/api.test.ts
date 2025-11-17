@@ -294,7 +294,7 @@ describe("api", () => {
         };
         setFetchResponse(200, commentsData);
 
-        const result = await api.ruleSpecComments.getComments(gameId, version);
+        const result = await api.chat.getRuleSpecComments(gameId, version);
 
         expect(result).toEqual(commentsData);
         expect(fetchMock).toHaveBeenCalledWith(
@@ -309,7 +309,7 @@ describe("api", () => {
       it("returns null for unauthenticated user", async () => {
         setFetchResponse(401);
 
-        const result = await api.ruleSpecComments.getComments(gameId, version);
+        const result = await api.chat.getRuleSpecComments(gameId, version);
 
         expect(result).toBeNull();
       });
@@ -318,7 +318,7 @@ describe("api", () => {
         setFetchResponse(500);
 
         await expect(
-          api.ruleSpecComments.getComments(gameId, version)
+          api.chat.getRuleSpecComments(gameId, version)
         ).rejects.toThrow(
           `API /api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=true 500`
         );
@@ -344,7 +344,7 @@ describe("api", () => {
         };
         setFetchResponse(201, createdComment);
 
-        const result = await api.ruleSpecComments.createComment(
+        const result = await api.chat.createRuleSpecComment(
           gameId,
           version,
           request
@@ -380,7 +380,7 @@ describe("api", () => {
         };
         setFetchResponse(201, createdComment);
 
-        const result = await api.ruleSpecComments.createComment(
+        const result = await api.chat.createRuleSpecComment(
           gameId,
           version,
           request
@@ -393,7 +393,7 @@ describe("api", () => {
         setFetchResponse(401);
 
         await expect(
-          api.ruleSpecComments.createComment(gameId, version, {
+          api.chat.createRuleSpecComment(gameId, version, {
             atomId: null,
             commentText: "Test"
           })
@@ -404,7 +404,7 @@ describe("api", () => {
         setFetchResponse(400);
 
         await expect(
-          api.ruleSpecComments.createComment(gameId, version, {
+          api.chat.createRuleSpecComment(gameId, version, {
             atomId: null,
             commentText: ""
           })
@@ -432,7 +432,7 @@ describe("api", () => {
         };
         setFetchResponse(200, updatedComment);
 
-        const result = await api.ruleSpecComments.updateComment(
+        const result = await api.chat.updateRuleSpecComment(
           gameId,
           commentId,
           request
@@ -454,7 +454,7 @@ describe("api", () => {
         setFetchResponse(401);
 
         await expect(
-          api.ruleSpecComments.updateComment(gameId, commentId, {
+          api.chat.updateRuleSpecComment(gameId, commentId, {
             commentText: "Updated"
           })
         ).rejects.toThrow("Unauthorized");
@@ -464,7 +464,7 @@ describe("api", () => {
         setFetchResponse(404);
 
         await expect(
-          api.ruleSpecComments.updateComment(gameId, commentId, {
+          api.chat.updateRuleSpecComment(gameId, commentId, {
             commentText: "Updated"
           })
         ).rejects.toThrow(
@@ -477,7 +477,7 @@ describe("api", () => {
       it("deletes a comment successfully", async () => {
         setFetchResponse(204);
 
-        await api.ruleSpecComments.deleteComment(gameId, commentId);
+        await api.chat.deleteRuleSpecComment(gameId, commentId);
 
         expect(fetchMock).toHaveBeenCalledWith(
           `http://localhost:8080/api/v1/games/${gameId}/rulespec/comments/${commentId}`,
@@ -492,7 +492,7 @@ describe("api", () => {
         setFetchResponse(401);
 
         await expect(
-          api.ruleSpecComments.deleteComment(gameId, commentId)
+          api.chat.deleteRuleSpecComment(gameId, commentId)
         ).rejects.toThrow("Unauthorized");
       });
 
@@ -500,7 +500,7 @@ describe("api", () => {
         setFetchResponse(404);
 
         await expect(
-          api.ruleSpecComments.deleteComment(gameId, commentId)
+          api.chat.deleteRuleSpecComment(gameId, commentId)
         ).rejects.toThrow(
           `API /api/v1/games/${gameId}/rulespec/comments/${commentId} 404`
         );
@@ -510,7 +510,7 @@ describe("api", () => {
         setFetchResponse(403);
 
         await expect(
-          api.ruleSpecComments.deleteComment(gameId, commentId)
+          api.chat.deleteRuleSpecComment(gameId, commentId)
         ).rejects.toThrow(
           `API /api/v1/games/${gameId}/rulespec/comments/${commentId} 403`
         );

@@ -100,7 +100,7 @@ export default function BulkExport() {
     setStatusMessage("");
 
     try {
-      await api.ruleSpecs.bulkExport(Array.from(selectedGameIds));
+      await api.chat.bulkExportRuleSpecs({ ruleSpecIds: Array.from(selectedGameIds) });
       setStatusMessage(`Successfully exported ${selectedGameIds.size} rule spec(s).`);
       setSelectedGameIds(new Set()); // Clear selection
     } catch (err: any) {

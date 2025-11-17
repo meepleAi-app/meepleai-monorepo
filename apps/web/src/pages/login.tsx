@@ -3,14 +3,21 @@
  *
  * Standalone login page with session expiration handling.
  * Uses the unified AuthModal component for consistent UX.
+ *
+ * Note (FE-IMP-005): Client-side only - AuthModal uses TanStack Query
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { AuthModal } from '@/components/auth';
 
 export default function LoginPage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const router = useRouter();
   const { reason } = router.query;
   const [showAuthModal, setShowAuthModal] = useState(true);
@@ -21,6 +28,11 @@ export default function LoginPage() {
     setShowAuthModal(false);
     router.push('/');
   };
+
+  // Prevent SSR issues with TanStack Query (FE-IMP-005)
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <>

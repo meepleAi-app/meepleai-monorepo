@@ -1,7 +1,6 @@
 import { render, screen, waitFor, within, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CacheDashboard from '../../pages/admin/cache';
-import { API_BASE_FALLBACK } from '../../lib/api';
 
 type FetchMock = jest.MockedFunction<typeof fetch>;
 
@@ -16,6 +15,7 @@ describe('CacheDashboard', () => {
   const originalFetch = global.fetch;
   let fetchMock: FetchMock;
   const apiBase = 'https://api.example.com';
+  const API_BASE_FALLBACK = 'http://localhost:8080'; // Default API base for tests (FE-IMP-005)
 
   /**
    * Reloads the CacheDashboard module with fresh environment variables.

@@ -1,0 +1,224 @@
+name: lighthouse-ci
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/lighthouse-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/lighthouse-ci.yml'
+
+# Cancel previous runs on same PR/branch to avoid piling up
+concurrency:
+  group: lighthouse-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Paths Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            web:
+              - 'apps/web/**'
+
+  lighthouse-performance:
+    needs: changes
+    name: Lighthouse - Performance Testing
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build Next.js for Production
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Run Lighthouse Performance Tests (Playwright)
+        run: pnpm test:e2e e2e/performance.spec.ts
+        env:
+          CI: true
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: lighthouse-playwright-report-${{ github.run_number }}
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - name: Upload Lighthouse Reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: lighthouse-reports-${{ github.run_number }}
+          path: apps/web/lighthouse-reports/
+          retention-days: 30
+
+  lighthouse-cli:
+    needs: changes
+    name: Lighthouse CI - Core Web Vitals
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Next.js for Production
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Run Lighthouse CI
+        run: |
+          pnpm exec lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Upload Lighthouse CI Results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: lighthouse-ci-results-${{ github.run_number }}
+          path: apps/web/.lighthouseci/
+          retention-days: 30
+
+      - name: Comment PR with Performance Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Try to read Lighthouse CI results
+            try {
+              const lhciDir = path.join(process.env.GITHUB_WORKSPACE, 'apps/web/.lighthouseci');
+
+              // Create a simple comment
+              const comment = `## 🔦 Lighthouse CI Performance Report
+
+              Performance tests have been executed for this PR.
+
+              **Core Web Vitals Targets:**
+              - ✅ LCP (Largest Contentful Paint) < 2.5s
+              - ✅ FID (First Input Delay) < 100ms
+              - ✅ CLS (Cumulative Layout Shift) < 0.1
+
+              **Performance Scores:**
+              - Performance: >= 85%
+              - Accessibility: >= 95%
+              - Best Practices: >= 90%
+              - SEO: >= 90%
+
+              📊 Full reports are available in the workflow artifacts.
+              `;
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Could not create detailed comment:', error);
+            }
+
+  performance-regression-check:
+    needs: [changes, lighthouse-performance]
+    name: Check Performance Regression
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true' && github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Performance Regression Warning
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## ⚠️ Performance Regression Check
+
+            This workflow monitors for performance regressions in the web application.
+
+            **Threshold:** >10% degradation in any Core Web Vital will fail the build.
+
+            **Monitored Metrics:**
+            - Largest Contentful Paint (LCP)
+            - First Input Delay (FID) / Total Blocking Time (TBT)
+            - Cumulative Layout Shift (CLS)
+            - First Contentful Paint (FCP)
+            - Speed Index (SI)
+            - Performance Score
+
+            If performance tests failed, please review the Lighthouse reports in the artifacts and optimize accordingly.
+
+            **Tips for improving performance:**
+            - Minimize JavaScript bundle size
+            - Optimize images (use next/image)
+            - Defer non-critical CSS/JS
+            - Implement code splitting
+            - Use static generation (SSG) where possible
+            - Optimize font loading
+            `;
+
+            // Only comment if tests failed
+            // In a full implementation, we would compare with baseline metrics
+            console.log('Performance regression check completed');

@@ -152,6 +152,8 @@ jobs:
         run: pnpm install
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
       - name: Build Next.js for E2E
         run: pnpm build
 
@@ -194,6 +196,8 @@ jobs:
         run: pnpm install
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
       - name: Build Next.js for E2E
         run: pnpm build
       - name: Run Playwright Accessibility Tests

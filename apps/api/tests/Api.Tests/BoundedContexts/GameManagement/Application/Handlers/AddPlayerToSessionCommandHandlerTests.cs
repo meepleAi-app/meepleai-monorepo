@@ -369,7 +369,7 @@ public class AddPlayerToSessionCommandHandlerTests
         // Arrange - Just under the 100 player limit
         var sessionId = Guid.NewGuid();
         var players = Enumerable.Range(1, 99)
-            .Select(i => new SessionPlayer($"Player {i}"))
+            .Select(i => new SessionPlayer($"Player {i}", i))
             .ToList();
 
         var session = new GameSessionBuilder()
@@ -399,7 +399,7 @@ public class AddPlayerToSessionCommandHandlerTests
         // Arrange - At the 100 player limit
         var sessionId = Guid.NewGuid();
         var players = Enumerable.Range(1, 100)
-            .Select(i => new SessionPlayer($"Player {i}"))
+            .Select(i => new SessionPlayer($"Player {i}", i))
             .ToList();
 
         var session = new GameSessionBuilder()
@@ -455,8 +455,8 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert - All metadata should be preserved
-        Assert.Equal(sessionId.ToString(), result.Id);
-        Assert.Equal(gameId.ToString(), result.GameId);
+        Assert.Equal(sessionId.ToString(), result.Id.ToString());
+        Assert.Equal(gameId.ToString(), result.GameId.ToString());
         Assert.Equal(originalStartedAt, result.StartedAt);
         Assert.Equal(originalStatus, result.Status);
     }

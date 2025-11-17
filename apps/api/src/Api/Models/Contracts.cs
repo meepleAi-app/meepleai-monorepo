@@ -211,7 +211,7 @@ public record ValidateTemplateRequest(
 );
 
 public record ValidateTemplateResponse(
-    bool Valid,
+    bool IsValid,
     List<string>? Errors
 );
 

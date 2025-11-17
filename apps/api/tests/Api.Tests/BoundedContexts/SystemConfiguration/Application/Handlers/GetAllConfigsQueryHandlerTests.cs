@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
+using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
@@ -27,7 +28,7 @@ public class GetAllConfigsQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var configs = new List<Domain.Entities.SystemConfiguration>
+        var configs = new List<SystemConfig>
         {
             new(Guid.NewGuid(), new ConfigKey("key1"), "value1", "string", userId),
             new(Guid.NewGuid(), new ConfigKey("key2"), "value2", "int", userId),
@@ -56,7 +57,7 @@ public class GetAllConfigsQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var activeConfigs = new List<Domain.Entities.SystemConfiguration>
+        var activeConfigs = new List<SystemConfig>
         {
             new(Guid.NewGuid(), new ConfigKey("active1"), "value1", "string", userId),
             new(Guid.NewGuid(), new ConfigKey("active2"), "value2", "int", userId)
@@ -85,7 +86,7 @@ public class GetAllConfigsQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var databaseConfigs = new List<Domain.Entities.SystemConfiguration>
+        var databaseConfigs = new List<SystemConfig>
         {
             new(Guid.NewGuid(), new ConfigKey("db.host"), "localhost", "string", userId, category: "Database"),
             new(Guid.NewGuid(), new ConfigKey("db.port"), "5432", "int", userId, category: "Database")
@@ -114,7 +115,7 @@ public class GetAllConfigsQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var configs = new List<Domain.Entities.SystemConfiguration>
+        var configs = new List<SystemConfig>
         {
             new(Guid.NewGuid(), new ConfigKey("prod.key"), "value", "string", userId, environment: "Production"),
             new(Guid.NewGuid(), new ConfigKey("all.key"), "value", "string", userId, environment: "All"),
@@ -142,10 +143,10 @@ public class GetAllConfigsQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var configs = new List<Domain.Entities.SystemConfiguration>();
+        var configs = new List<SystemConfig>();
         for (int i = 1; i <= 25; i++)
         {
-            configs.Add(new Domain.Entities.SystemConfiguration(
+            configs.Add(new SystemConfig(
                 Guid.NewGuid(),
                 new ConfigKey($"key{i}"),
                 $"value{i}",
@@ -178,7 +179,7 @@ public class GetAllConfigsQueryHandlerTests
 
         _mockConfigRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Domain.Entities.SystemConfiguration>());
+            .ReturnsAsync(new List<SystemConfig>());
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -194,7 +195,7 @@ public class GetAllConfigsQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var cacheConfigs = new List<Domain.Entities.SystemConfiguration>
+        var cacheConfigs = new List<SystemConfig>
         {
             new(Guid.NewGuid(), new ConfigKey("cache.prod"), "value1", "string", userId, category: "Cache", environment: "Production"),
             new(Guid.NewGuid(), new ConfigKey("cache.all"), "value2", "string", userId, category: "Cache", environment: "All"),
@@ -230,7 +231,7 @@ public class GetAllConfigsQueryHandlerTests
 
         _mockConfigRepository
             .Setup(r => r.GetAllAsync(cancellationToken))
-            .ReturnsAsync(new List<Domain.Entities.SystemConfiguration>());
+            .ReturnsAsync(new List<SystemConfig>());
 
         // Act
         await _handler.Handle(query, cancellationToken);

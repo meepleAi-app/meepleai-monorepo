@@ -52,7 +52,7 @@ public class PauseGameSessionCommandHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Paused", result.Status);
-        Assert.Equal(sessionId.ToString(), result.Id);
+        Assert.Equal(sessionId.ToString(), result.Id.ToString());
 
         _sessionRepositoryMock.Verify(
             r => r.UpdateAsync(session, It.IsAny<CancellationToken>()),
@@ -272,8 +272,8 @@ public class PauseGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert - All metadata except status should be unchanged
-        Assert.Equal(sessionId.ToString(), result.Id);
-        Assert.Equal(gameId.ToString(), result.GameId);
+        Assert.Equal(sessionId.ToString(), result.Id.ToString());
+        Assert.Equal(gameId.ToString(), result.GameId.ToString());
         Assert.Equal(originalStartedAt, result.StartedAt);
         Assert.Equal(originalPlayerCount, result.Players.Count);
         Assert.Null(result.CompletedAt); // Still not completed

@@ -1,6 +1,6 @@
-using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Xunit;
+using SystemConfigEntity = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Domain.Entities;
 
@@ -21,7 +21,7 @@ public class SystemConfigurationTests
         var userId = Guid.NewGuid();
 
         // Act
-        var config = new SystemConfiguration(id, key, value, valueType, userId);
+        var config = new SystemConfigEntity(id, key, value, valueType, userId);
 
         // Assert
         Assert.Equal(id, config.Id);
@@ -37,7 +37,7 @@ public class SystemConfigurationTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var config = new SystemConfiguration(
+        var config = new SystemConfigEntity(
             Guid.NewGuid(),
             new ConfigKey("max.connections"),
             "100",
@@ -57,7 +57,7 @@ public class SystemConfigurationTests
     public void SystemConfiguration_UpdateValue_WithEmptyValue_ThrowsException()
     {
         // Arrange
-        var config = new SystemConfiguration(
+        var config = new SystemConfigEntity(
             Guid.NewGuid(),
             new ConfigKey("test.key"),
             "value",
@@ -65,15 +65,16 @@ public class SystemConfigurationTests
             Guid.NewGuid());
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        var exception = Assert.Throws<ArgumentException>(() =>
             config.UpdateValue("", Guid.NewGuid()));
+        Assert.NotNull(exception);
     }
 
     [Fact]
     public void SystemConfiguration_Activate_WhenInactive_SetsActiveAndRecordsTime()
     {
         // Arrange
-        var config = new SystemConfiguration(
+        var config = new SystemConfigEntity(
             Guid.NewGuid(),
             new ConfigKey("test.key"),
             "value",

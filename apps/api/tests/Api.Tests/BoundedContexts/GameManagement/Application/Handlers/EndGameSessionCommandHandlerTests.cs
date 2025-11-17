@@ -57,7 +57,7 @@ public class EndGameSessionCommandHandlerTests
         Assert.Equal(sessionId, result.Id);
         Assert.Equal("Completed", result.Status);
         Assert.Equal("Alice", result.WinnerName);
-        Assert.NotNull(result.EndedAt);
+        Assert.NotNull(result.CompletedAt);
 
         // Verify repository interactions
         _sessionRepositoryMock.Verify(
@@ -97,7 +97,7 @@ public class EndGameSessionCommandHandlerTests
         Assert.NotNull(result);
         Assert.Equal("Completed", result.Status);
         Assert.Null(result.WinnerName); // No winner specified (e.g., cooperative game)
-        Assert.NotNull(result.EndedAt);
+        Assert.NotNull(result.CompletedAt);
     }
 
     [Fact]
@@ -153,8 +153,8 @@ public class EndGameSessionCommandHandlerTests
 
         // Assert
         Assert.Equal(startedAt, result.StartedAt); // StartedAt should be preserved
-        Assert.NotNull(result.EndedAt);
-        Assert.True(result.EndedAt >= result.StartedAt); // EndedAt should be after StartedAt
+        Assert.NotNull(result.CompletedAt);
+        Assert.True(result.CompletedAt >= result.StartedAt); // EndedAt should be after StartedAt
     }
 
     #endregion

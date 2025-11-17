@@ -31,6 +31,11 @@ public class PromptVersionEntity
     required public string Content { get; set; }
 
     /// <summary>
+    /// Optional notes describing changes in this version.
+    /// </summary>
+    public string? ChangeNotes { get; set; }
+
+    /// <summary>
     /// Whether this version is currently active.
     /// Only one version per template can be active at a time.
     /// </summary>
@@ -46,6 +51,21 @@ public class PromptVersionEntity
     /// Timestamp when this version was created.
     /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Timestamp when this version was activated (null if never activated).
+    /// </summary>
+    public DateTime? ActivatedAt { get; set; }
+
+    /// <summary>
+    /// ID of the user who activated this version (null if never activated).
+    /// </summary>
+    public Guid? ActivatedByUserId { get; set; }
+
+    /// <summary>
+    /// Reason for activating this version (null if never activated).
+    /// </summary>
+    public string? ActivationReason { get; set; }
 
     /// <summary>
     /// Optional JSON metadata for this version (e.g., model parameters, tags, notes).

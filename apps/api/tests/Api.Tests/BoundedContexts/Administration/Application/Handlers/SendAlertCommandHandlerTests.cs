@@ -29,20 +29,22 @@ public class SendAlertCommandHandlerTests
         // Arrange
         var command = new SendAlertCommand(
             "DatabaseError",
-            AlertSeverity.High,
+            "Critical",
             "Database connection failed",
-            "{\"server\": \"db-01\"}"
+            new Dictionary<string, object> { ["server"] = "db-01" }
         );
 
-        var expectedAlert = new AlertDto
-        {
-            Id = Guid.NewGuid().ToString(),
-            AlertType = command.AlertType,
-            Severity = command.Severity.ToString(),
-            Message = command.Message,
-            Metadata = command.Metadata,
-            IsActive = true
-        };
+        var expectedAlert = new AlertDto(
+            Id: Guid.NewGuid(),
+            AlertType: command.AlertType,
+            Severity: command.Severity.ToString(),
+            Message: command.Message,
+            Metadata: command.Metadata,
+            TriggeredAt: DateTime.UtcNow,
+            ResolvedAt: null,
+            IsActive: true,
+            ChannelSent: null
+        );
 
         _mockAlertingService
             .Setup(s => s.SendAlertAsync(
@@ -76,18 +78,31 @@ public class SendAlertCommandHandlerTests
         // Arrange
         var command = new SendAlertCommand(
             "CriticalError",
-            AlertSeverity.Critical,
-            "System failure"
+            "Critical",
+            "System failure",
+            null
+        );
+
+        var expectedAlert = new AlertDto(
+            Id: Guid.NewGuid(),
+            AlertType: "CriticalError",
+            Severity: "Critical",
+            Message: "System failure",
+            Metadata: null,
+            TriggeredAt: DateTime.UtcNow,
+            ResolvedAt: null,
+            IsActive: true,
+            ChannelSent: null
         );
 
         _mockAlertingService
             .Setup(s => s.SendAlertAsync(
                 It.IsAny<string>(),
-                AlertSeverity.Critical,
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<Dictionary<string, object>>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AlertDto { Severity = "Critical" });
+            .ReturnsAsync(expectedAlert);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -97,7 +112,7 @@ public class SendAlertCommandHandlerTests
         _mockAlertingService.Verify(
             s => s.SendAlertAsync(
                 command.AlertType,
-                AlertSeverity.Critical,
+                command.Severity.ToString(),
                 command.Message,
                 null,
                 It.IsAny<CancellationToken>()),

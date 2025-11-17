@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Application.Abstractions;
+using Api.SharedKernel.Application.Interfaces;
 using Api.Models;
 
 namespace Api.BoundedContexts.Administration.Application.Commands.PromptEvaluation;

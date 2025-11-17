@@ -1,3 +1,5 @@
+using Moq;
+using MediatR;
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
@@ -22,7 +24,7 @@ public class GetUserByIdQueryHandlerTests : IDisposable
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        _dbContext = new MeepleAiDbContext(options, new Mock<IMediator>().Object, new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>().Object);
         _handler = new GetUserByIdQueryHandler(_dbContext);
     }
 
@@ -87,11 +89,11 @@ public class GetUserByIdQueryHandlerTests : IDisposable
             CreatedAt = DateTime.UtcNow.AddDays(-30)
         };
 
-        var session = new SessionEntity
+        var session = new UserSessionEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Token = "session_token",
+            TokenHash = "session_token", User = user,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow.AddDays(-5),
             LastSeenAt = lastSeenDate,
@@ -99,7 +101,7 @@ public class GetUserByIdQueryHandlerTests : IDisposable
         };
 
         _dbContext.Users.Add(user);
-        _dbContext.Sessions.Add(session);
+        _dbContext.UserSessions.Add(session);
         await _dbContext.SaveChangesAsync();
 
         var query = new GetUserByIdQuery(userId.ToString());
@@ -131,22 +133,22 @@ public class GetUserByIdQueryHandlerTests : IDisposable
             CreatedAt = DateTime.UtcNow.AddDays(-30)
         };
 
-        var oldSession = new SessionEntity
+        var oldSession = new UserSessionEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Token = "old_session",
+            TokenHash = "old_session", User = user,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow.AddDays(-10),
             LastSeenAt = oldLastSeen,
             RevokedAt = null
         };
 
-        var recentSession = new SessionEntity
+        var recentSession = new UserSessionEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Token = "recent_session",
+            TokenHash = "recent_session", User = user,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow.AddDays(-2),
             LastSeenAt = recentLastSeen,
@@ -154,7 +156,7 @@ public class GetUserByIdQueryHandlerTests : IDisposable
         };
 
         _dbContext.Users.Add(user);
-        _dbContext.Sessions.AddRange(oldSession, recentSession);
+        _dbContext.UserSessions.AddRange(oldSession, recentSession);
         await _dbContext.SaveChangesAsync();
 
         var query = new GetUserByIdQuery(userId.ToString());
@@ -185,11 +187,11 @@ public class GetUserByIdQueryHandlerTests : IDisposable
             CreatedAt = DateTime.UtcNow.AddDays(-30)
         };
 
-        var revokedSession = new SessionEntity
+        var revokedSession = new UserSessionEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Token = "revoked_session",
+            TokenHash = "revoked_session", User = user,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow.AddDays(-5),
             LastSeenAt = revokedLastSeen,
@@ -197,7 +199,7 @@ public class GetUserByIdQueryHandlerTests : IDisposable
         };
 
         _dbContext.Users.Add(user);
-        _dbContext.Sessions.Add(revokedSession);
+        _dbContext.UserSessions.Add(revokedSession);
         await _dbContext.SaveChangesAsync();
 
         var query = new GetUserByIdQuery(userId.ToString());

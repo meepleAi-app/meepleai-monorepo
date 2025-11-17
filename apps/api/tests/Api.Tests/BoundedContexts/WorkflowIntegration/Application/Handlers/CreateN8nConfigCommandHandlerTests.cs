@@ -1,4 +1,5 @@
 using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
+using N8nConfiguration = Api.BoundedContexts.WorkflowIntegration.Domain.Entities.N8nConfiguration;
 using Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -52,7 +53,7 @@ public class CreateN8nConfigCommandHandlerTests
 
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<Domain.Entities.N8nConfiguration>(),
+                It.IsAny<N8nConfiguration>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _mockUnitOfWork.Verify(
@@ -161,7 +162,7 @@ public class CreateN8nConfigCommandHandlerTests
         // Assert
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<Domain.Entities.N8nConfiguration>(),
+                It.IsAny<N8nConfiguration>(),
                 cancellationToken),
             Times.Once);
         _mockUnitOfWork.Verify(

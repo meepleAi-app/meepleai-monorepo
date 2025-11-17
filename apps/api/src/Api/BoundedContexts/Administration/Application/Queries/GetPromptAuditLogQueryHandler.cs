@@ -28,6 +28,7 @@ public class GetPromptAuditLogQueryHandler : IQueryHandler<GetPromptAuditLogQuer
 
         var template = await _db.PromptTemplates
             .AsNoTracking()
+            .Include(t => t.CreatedBy)
             .FirstOrDefaultAsync(t => t.Id == templateGuid, cancellationToken);
 
         if (template == null)
@@ -37,28 +38,42 @@ public class GetPromptAuditLogQueryHandler : IQueryHandler<GetPromptAuditLogQuer
 
         var auditEntries = await _db.PromptAuditLogs
             .AsNoTracking()
-            .Include(a => a.User)
+            .Include(a => a.ChangedBy)
+            .Include(a => a.Template)
             .Where(a => a.TemplateId == templateGuid)
-            .OrderByDescending(a => a.Timestamp)
+            .OrderByDescending(a => a.ChangedAt)
             .Take(request.Limit)
-            .Select(a => new PromptAuditEntryDto
+            .Select(a => new PromptAuditLogDto
             {
                 Id = a.Id.ToString(),
                 TemplateId = a.TemplateId.ToString(),
-                VersionId = a.VersionId?.ToString(),
+                TemplateName = a.Template.Name,
+                VersionId = a.VersionId.HasValue ? a.VersionId.Value.ToString() : null,
+                VersionNumber = null, // Not available in this query
                 Action = a.Action,
-                Details = a.Details,
-                Timestamp = a.Timestamp,
-                UserId = a.UserId.ToString(),
-                UserEmail = a.User.Email
+                ChangedByUserId = a.ChangedByUserId.ToString(),
+                ChangedByEmail = a.ChangedBy.Email,
+                ChangedAt = a.ChangedAt,
+                Details = a.Details
             })
             .ToListAsync(cancellationToken);
 
         return new PromptAuditLogResponse
         {
-            TemplateId = template.Id.ToString(),
-            TemplateName = template.Name,
-            AuditEntries = auditEntries
+            Template = new PromptTemplateDto
+            {
+                Id = template.Id.ToString(),
+                Name = template.Name,
+                Description = template.Description,
+                Category = template.Category,
+                CreatedByUserId = template.CreatedByUserId.ToString(),
+                CreatedByEmail = template.CreatedBy.Email,
+                CreatedAt = template.CreatedAt,
+                VersionCount = 0, // Not calculated in this query
+                ActiveVersionNumber = null
+            },
+            Logs = auditEntries,
+            TotalCount = auditEntries.Count
         };
     }
 }

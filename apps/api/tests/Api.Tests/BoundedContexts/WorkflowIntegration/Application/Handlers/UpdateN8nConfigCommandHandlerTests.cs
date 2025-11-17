@@ -47,8 +47,8 @@ public class UpdateN8nConfigCommandHandlerTests
             ConfigId: configId,
             Name: "Updated Name",
             BaseUrl: "https://new.n8n.com",
-            ApiKeyEncrypted: "new_api_key",
             WebhookUrl: "https://webhook.new.com",
+            ApiKeyEncrypted: "new_api_key",
             IsActive: null
         );
 
@@ -82,7 +82,9 @@ public class UpdateN8nConfigCommandHandlerTests
             ConfigId: configId,
             Name: "Test",
             BaseUrl: "https://test.com",
-            ApiKeyEncrypted: "key"
+            WebhookUrl: null,
+            ApiKeyEncrypted: "key",
+            IsActive: null
         );
 
         _mockRepository
@@ -122,8 +124,8 @@ public class UpdateN8nConfigCommandHandlerTests
             ConfigId: configId,
             Name: "Test Config",
             BaseUrl: null,
-            ApiKeyEncrypted: null,
             WebhookUrl: null,
+            ApiKeyEncrypted: null,
             IsActive: true
         );
 
@@ -156,8 +158,8 @@ public class UpdateN8nConfigCommandHandlerTests
             ConfigId: configId,
             Name: "Active Config",
             BaseUrl: null,
-            ApiKeyEncrypted: null,
             WebhookUrl: null,
+            ApiKeyEncrypted: null,
             IsActive: false
         );
 
@@ -191,8 +193,9 @@ public class UpdateN8nConfigCommandHandlerTests
             ConfigId: configId,
             Name: "Test Config",
             BaseUrl: null,
+            WebhookUrl: null,
             ApiKeyEncrypted: null,
-            WebhookUrl: null
+            IsActive: null
         );
 
         _mockRepository
@@ -224,7 +227,9 @@ public class UpdateN8nConfigCommandHandlerTests
             ConfigId: configId,
             Name: "Updated Name Only",
             BaseUrl: null, // Not updating base URL
-            ApiKeyEncrypted: null // Not updating API key
+            WebhookUrl: null,
+            ApiKeyEncrypted: null, // Not updating API key
+            IsActive: null
         );
 
         _mockRepository
@@ -257,7 +262,9 @@ public class UpdateN8nConfigCommandHandlerTests
             ConfigId: configId,
             Name: "Updated",
             BaseUrl: null,
-            ApiKeyEncrypted: null
+            WebhookUrl: null,
+            ApiKeyEncrypted: null,
+            IsActive: null
         );
 
         var cancellationTokenSource = new CancellationTokenSource();

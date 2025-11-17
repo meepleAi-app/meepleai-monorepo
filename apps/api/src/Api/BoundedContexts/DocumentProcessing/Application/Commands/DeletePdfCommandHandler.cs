@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Exceptions;
+using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

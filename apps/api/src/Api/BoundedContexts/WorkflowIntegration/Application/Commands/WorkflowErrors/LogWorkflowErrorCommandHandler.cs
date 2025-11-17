@@ -30,15 +30,14 @@ public sealed class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflow
             command.WorkflowId, command.ExecutionId, command.NodeName);
 
         // Create request DTO
-        var request = new Api.Models.LogWorkflowErrorRequest
-        {
-            WorkflowId = command.WorkflowId,
-            ExecutionId = command.ExecutionId,
-            ErrorMessage = command.ErrorMessage,
-            NodeName = command.NodeName,
-            RetryCount = command.RetryCount,
-            StackTrace = command.StackTrace
-        };
+        var request = new Api.Models.LogWorkflowErrorRequest(
+            WorkflowId: command.WorkflowId,
+            ExecutionId: command.ExecutionId,
+            ErrorMessage: command.ErrorMessage,
+            NodeName: command.NodeName,
+            RetryCount: command.RetryCount,
+            StackTrace: command.StackTrace
+        );
 
         // Delegate to infrastructure service for:
         // - Error message sanitization (removes sensitive data: API keys, tokens, passwords)

@@ -12,8 +12,8 @@ public class GameSessionBuilder
     private Guid _gameId = Guid.NewGuid();
     private List<SessionPlayer> _players = new()
     {
-        new SessionPlayer("Player 1"),
-        new SessionPlayer("Player 2")
+        new SessionPlayer("Player 1", 1),
+        new SessionPlayer("Player 2", 2)
     };
     private string? _notes;
     private bool _shouldStart;
@@ -34,16 +34,17 @@ public class GameSessionBuilder
 
     public GameSessionBuilder WithPlayer(string playerName)
     {
-        _players.Add(new SessionPlayer(playerName));
+        int nextOrder = _players.Count + 1;
+        _players.Add(new SessionPlayer(playerName, nextOrder));
         return this;
     }
 
     public GameSessionBuilder WithPlayers(params string[] playerNames)
     {
         _players.Clear();
-        foreach (var name in playerNames)
+        for (int i = 0; i < playerNames.Length; i++)
         {
-            _players.Add(new SessionPlayer(name));
+            _players.Add(new SessionPlayer(playerNames[i], i + 1));
         }
         return this;
     }

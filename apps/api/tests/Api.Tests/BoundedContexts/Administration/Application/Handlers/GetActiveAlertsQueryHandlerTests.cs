@@ -29,22 +29,28 @@ public class GetActiveAlertsQueryHandlerTests
         var query = new GetActiveAlertsQuery();
         var expectedAlerts = new List<AlertDto>
         {
-            new AlertDto
-            {
-                Id = Guid.NewGuid().ToString(),
-                AlertType = "DatabaseError",
-                Severity = "High",
-                Message = "DB connection failed",
-                IsActive = true
-            },
-            new AlertDto
-            {
-                Id = Guid.NewGuid().ToString(),
-                AlertType = "ApiError",
-                Severity = "Medium",
-                Message = "API timeout",
-                IsActive = true
-            }
+            new AlertDto(
+                Id: Guid.NewGuid(),
+                AlertType: "DatabaseError",
+                Severity: "High",
+                Message: "DB connection failed",
+                Metadata: null,
+                TriggeredAt: DateTime.UtcNow,
+                ResolvedAt: null,
+                IsActive: true,
+                ChannelSent: null
+            ),
+            new AlertDto(
+                Id: Guid.NewGuid(),
+                AlertType: "ApiError",
+                Severity: "Medium",
+                Message: "API timeout",
+                Metadata: null,
+                TriggeredAt: DateTime.UtcNow,
+                ResolvedAt: null,
+                IsActive: true,
+                ChannelSent: null
+            )
         };
 
         _mockAlertingService

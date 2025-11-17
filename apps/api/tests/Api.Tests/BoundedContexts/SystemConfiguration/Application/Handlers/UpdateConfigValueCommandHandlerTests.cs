@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
@@ -35,7 +36,7 @@ public class UpdateConfigValueCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new Domain.Entities.SystemConfiguration(
+        var existingConfig = new SystemConfig(
             configId,
             new ConfigKey("max.connections"),
             "100",
@@ -84,7 +85,7 @@ public class UpdateConfigValueCommandHandlerTests
 
         _mockConfigRepository
             .Setup(r => r.GetByIdAsync(configId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Domain.Entities.SystemConfiguration?)null);
+            .ReturnsAsync((SystemConfig?)null);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
@@ -93,7 +94,7 @@ public class UpdateConfigValueCommandHandlerTests
         Assert.Contains(configId.ToString(), exception.Message);
 
         _mockConfigRepository.Verify(
-            r => r.UpdateAsync(It.IsAny<Domain.Entities.SystemConfiguration>(), It.IsAny<CancellationToken>()),
+            r => r.UpdateAsync(It.IsAny<SystemConfig>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _mockUnitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
@@ -106,7 +107,7 @@ public class UpdateConfigValueCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new Domain.Entities.SystemConfiguration(
+        var existingConfig = new SystemConfig(
             configId,
             new ConfigKey("test.key"),
             "initial",
@@ -137,7 +138,7 @@ public class UpdateConfigValueCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new Domain.Entities.SystemConfiguration(
+        var existingConfig = new SystemConfig(
             configId,
             new ConfigKey("feature.flag"),
             "false",
@@ -162,7 +163,7 @@ public class UpdateConfigValueCommandHandlerTests
         // This is verified through the UpdateValue method being called
         _mockConfigRepository.Verify(
             r => r.UpdateAsync(
-                It.Is<Domain.Entities.SystemConfiguration>(c => c.Value == "true"),
+                It.Is<SystemConfig>(c => c.Value == "true"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -173,7 +174,7 @@ public class UpdateConfigValueCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new Domain.Entities.SystemConfiguration(
+        var existingConfig = new SystemConfig(
             configId,
             new ConfigKey("test.key"),
             "value",
@@ -215,7 +216,7 @@ public class UpdateConfigValueCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var existingConfig = new Domain.Entities.SystemConfiguration(
+        var existingConfig = new SystemConfig(
             configId,
             new ConfigKey("cache.ttl"),
             "300",

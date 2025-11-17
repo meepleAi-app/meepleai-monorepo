@@ -1,5 +1,6 @@
 using Api.Configuration;
 using Api.Extensions;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using MediatR;

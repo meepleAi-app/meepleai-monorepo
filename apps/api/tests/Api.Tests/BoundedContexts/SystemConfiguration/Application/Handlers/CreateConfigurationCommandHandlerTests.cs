@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
+using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
@@ -57,7 +58,7 @@ public class CreateConfigurationCommandHandlerTests
 
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<Domain.Entities.SystemConfiguration>(),
+                It.IsAny<SystemConfig>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _mockUnitOfWork.Verify(
@@ -74,6 +75,10 @@ public class CreateConfigurationCommandHandlerTests
             Key: "feature.enabled",
             Value: "true",
             ValueType: "bool",
+            Description: null,
+            Category: "Features",
+            Environment: "All",
+            RequiresRestart: false,
             CreatedByUserId: userId
         );
 
@@ -100,7 +105,9 @@ public class CreateConfigurationCommandHandlerTests
             ValueType: "string",
             CreatedByUserId: userId,
             Description: "API base URL",
-            Category: "API"
+            Category: "API",
+            Environment: "All",
+            RequiresRestart: true
         );
 
         // Act
@@ -144,6 +151,10 @@ public class CreateConfigurationCommandHandlerTests
             Key: "test.config",
             Value: "value",
             ValueType: "string",
+            Description: null,
+            Category: "Test",
+            Environment: "All",
+            RequiresRestart: false,
             CreatedByUserId: userId
         );
 
@@ -166,6 +177,10 @@ public class CreateConfigurationCommandHandlerTests
             Key: "test.key",
             Value: "test.value",
             ValueType: "string",
+            Description: null,
+            Category: "Test",
+            Environment: "All",
+            RequiresRestart: false,
             CreatedByUserId: userId
         );
         var cancellationTokenSource = new CancellationTokenSource();
@@ -177,7 +192,7 @@ public class CreateConfigurationCommandHandlerTests
         // Assert
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<Domain.Entities.SystemConfiguration>(),
+                It.IsAny<SystemConfig>(),
                 cancellationToken),
             Times.Once);
         _mockUnitOfWork.Verify(

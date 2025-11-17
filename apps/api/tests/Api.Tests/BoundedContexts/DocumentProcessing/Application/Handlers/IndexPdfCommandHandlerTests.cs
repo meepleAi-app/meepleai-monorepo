@@ -113,12 +113,11 @@ public class IndexPdfCommandHandlerTests
         var vectorCount = 42;
 
         // Act
-        var result = IndexingResultDto.CreateSuccess(chunkCount, vectorCount);
+        var result = IndexingResultDto.CreateSuccess("vector-doc-id", chunkCount, DateTime.UtcNow);
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal(chunkCount, result.ChunksCreated);
-        Assert.Equal(vectorCount, result.VectorsIndexed);
+        Assert.Equal(chunkCount, result.ChunkCount);
         Assert.Null(result.ErrorMessage);
         Assert.Null(result.ErrorCode);
     }
@@ -135,8 +134,7 @@ public class IndexPdfCommandHandlerTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal(0, result.ChunksCreated);
-        Assert.Equal(0, result.VectorsIndexed);
+        Assert.Equal(0, result.ChunkCount);
         Assert.Equal(errorMessage, result.ErrorMessage);
         Assert.Equal(errorCode, result.ErrorCode);
     }
@@ -203,7 +201,7 @@ public class IndexPdfCommandHandlerTests
     [InlineData(PdfIndexingErrorCode.ChunkingFailed)]
     [InlineData(PdfIndexingErrorCode.EmbeddingFailed)]
     [InlineData(PdfIndexingErrorCode.QdrantIndexingFailed)]
-    [InlineData(PdfIndexingErrorCode.UnknownError)]
+    [InlineData(PdfIndexingErrorCode.UnexpectedError)]
     public void PdfIndexingErrorCode_AllValuesAreValid(PdfIndexingErrorCode errorCode)
     {
         // Assert

@@ -5,12 +5,14 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
 using Api.Models;
+using Api.Observability;
 using Api.Services;
 using Api.Services.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -67,9 +69,23 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         var gameId = command.GameId;
         var userId = command.UserId;
 
+        // BGAI-043: Record upload attempt
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                MeepleAiMetrics.RecordPdfUploadAttempt("attempt", file?.Length);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to record PDF upload attempt metric");
+            }
+        });
+
         // Validate file
         if (file == null || file.Length == 0)
         {
+            RecordUploadMetricSafely("validation_failed_empty", null);
             return new PdfUploadResult(false, "No file provided. Please select a PDF file to upload.", null);
         }
 
@@ -77,11 +93,13 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         {
             var sizeMB = file.Length / 1024.0 / 1024.0;
             var maxMB = MaxFileSizeBytes / 1024 / 1024;
+            RecordUploadMetricSafely("validation_failed_size", file.Length);
             return new PdfUploadResult(false, $"File is too large ({sizeMB:F1}MB). Maximum size is {maxMB}MB. Try compressing the PDF or splitting into smaller files.", null);
         }
 
         if (!AllowedContentTypes.Contains(file.ContentType))
         {
+            RecordUploadMetricSafely("validation_failed_type", file.Length);
             return new PdfUploadResult(false, $"Invalid file type ({file.ContentType}). Only PDF files are allowed. Please ensure your file has a .pdf extension.", null);
         }
 
@@ -123,6 +141,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 
             if (!storageResult.Success)
             {
+                RecordUploadMetricSafely("storage_failed", file.Length);
                 return new PdfUploadResult(false, storageResult.ErrorMessage ?? "Failed to store file", null);
             }
 
@@ -167,6 +186,9 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 
             await InvalidateCacheSafelyAsync(gameId, cancellationToken, "PDF upload");
 
+            // BGAI-043: Record successful upload
+            RecordUploadMetricSafely("success", file.Length);
+
             return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto(
                 Id: pdfDoc.Id,
                 GameId: pdfDoc.GameId,
@@ -185,22 +207,26 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         }
         catch (IOException ex)
         {
+            RecordUploadMetricSafely("error_io", file?.Length);
             _logger.LogError(ex, "File I/O error during PDF upload for game {GameId}", gameId);
             throw new PdfStorageException("Failed to save PDF file: I/O error occurred.", ex);
         }
         catch (UnauthorizedAccessException ex)
         {
+            RecordUploadMetricSafely("error_access", file?.Length);
             _logger.LogError(ex, "Access denied during PDF upload for game {GameId}", gameId);
             throw new PdfStorageException("Failed to save PDF file: Access denied to storage location.", ex);
         }
         catch (DbUpdateException ex)
         {
+            RecordUploadMetricSafely("error_database", file?.Length);
             _logger.LogError(ex, "Database error during PDF upload for game {GameId}", gameId);
             throw new PdfStorageException("Failed to save PDF metadata: Database error occurred.", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            RecordUploadMetricSafely("error_unexpected", file?.Length);
             _logger.LogError(ex, "Unexpected error during PDF upload for game {GameId}", gameId);
             throw new PdfStorageException($"Failed to upload PDF: {ex.Message}", ex);
         }
@@ -229,11 +255,17 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             // Step 1: Extract text with page tracking (20-40%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, 0, 0, startTime, null, ct);
 
+            var extractionStopwatch = Stopwatch.StartNew();
             await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct);
+            extractionStopwatch.Stop();
+
+            // BGAI-043: Record extraction metrics
+            RecordPipelineMetricSafely("extraction", extractionStopwatch.Elapsed.TotalMilliseconds);
 
             if (!extractResult.Success)
             {
+                RecordPipelineMetricSafely("extraction_error", 0);
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, ct);
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
@@ -251,6 +283,9 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             await db.SaveChangesAsync(ct);
+
+            // BGAI-043: Record pages processed
+            RecordPipelineMetricSafely("pages_processed", extractResult.TotalPages);
 
             // Extract structured content (tables, diagrams)
             var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
@@ -282,6 +317,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 
             // Step 2: Chunk text with page tracking (40-60%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, 0, totalPages, startTime, null, ct);
+            var chunkingStopwatch = Stopwatch.StartNew();
             var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
             const int chunkSize = 512;
             const int chunkOverlap = 50;
@@ -321,11 +357,21 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
                 .Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
                 .ToList();
 
+            chunkingStopwatch.Stop();
+
+            // BGAI-043: Record chunking metrics
+            RecordPipelineMetricSafely("chunking", chunkingStopwatch.Elapsed.TotalMilliseconds, allDocumentChunks.Count);
+
             // Step 3: Generate embeddings (60-80%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, 0, totalPages, startTime, null, ct);
+            var embeddingStopwatch = Stopwatch.StartNew();
             var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
             var texts = allDocumentChunks.Select(c => c.Text).ToList();
             var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts);
+            embeddingStopwatch.Stop();
+
+            // BGAI-043: Record embedding metrics
+            RecordPipelineMetricSafely("embedding", embeddingStopwatch.Elapsed.TotalMilliseconds);
 
             if (!embeddingResult.Success)
             {
@@ -378,6 +424,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 
             // Step 4: Index in Qdrant (80-100%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, ct);
+            var indexingStopwatch = Stopwatch.StartNew();
             var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
 
             var documentChunks = new List<DocumentChunk>();
@@ -395,6 +442,10 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 
             var pdfGuid = Guid.Parse(pdfId);
             var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks);
+            indexingStopwatch.Stop();
+
+            // BGAI-043: Record indexing metrics
+            RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
 
             if (!indexResult.Success)
             {
@@ -582,6 +633,53 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         return vector == null
             || vector.Length == 0
             || Array.Exists(vector, v => float.IsNaN(v) || float.IsInfinity(v));
+    }
+
+    /// <summary>
+    /// BGAI-043: Records PDF upload metrics in fire-and-forget pattern
+    /// </summary>
+    private void RecordUploadMetricSafely(string status, long? fileSizeBytes)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                MeepleAiMetrics.RecordPdfUploadAttempt(status, fileSizeBytes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to record PDF upload metric for status {Status}", status);
+            }
+        });
+    }
+
+    /// <summary>
+    /// BGAI-043: Records PDF pipeline step metrics in fire-and-forget pattern
+    /// </summary>
+    private void RecordPipelineMetricSafely(string step, double durationMs, int? count = null)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (step == "pages_processed" && count.HasValue)
+                {
+                    MeepleAiMetrics.PdfPagesProcessed.Add(count.Value);
+                }
+                else if (step == "extraction_error")
+                {
+                    MeepleAiMetrics.PdfExtractionErrors.Add(1);
+                }
+                else
+                {
+                    MeepleAiMetrics.RecordPdfPipelineStep(step, durationMs, count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to record PDF pipeline metric for step {Step}", step);
+            }
+        });
     }
 
     #endregion

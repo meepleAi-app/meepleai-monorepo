@@ -111,7 +111,23 @@ public static class MeepleAiMetrics
         description: "Total number of PDF uploads");
 
     /// <summary>
-    /// Histogram for PDF processing duration in milliseconds
+    /// Counter for PDF upload attempts by status (success/validation_failed/storage_failed)
+    /// </summary>
+    public static readonly Counter<long> PdfUploadAttempts = Meter.CreateCounter<long>(
+        name: "meepleai.pdf.upload.attempts",
+        unit: "attempts",
+        description: "PDF upload attempts by status");
+
+    /// <summary>
+    /// Histogram for PDF file size distribution in bytes
+    /// </summary>
+    public static readonly Histogram<long> PdfFileSizeBytes = Meter.CreateHistogram<long>(
+        name: "meepleai.pdf.file.size",
+        unit: "bytes",
+        description: "PDF file size distribution");
+
+    /// <summary>
+    /// Histogram for PDF processing duration in milliseconds (full pipeline)
     /// </summary>
     public static readonly Histogram<double> PdfProcessingDuration = Meter.CreateHistogram<double>(
         name: "meepleai.pdf.processing.duration",
@@ -133,6 +149,162 @@ public static class MeepleAiMetrics
         name: "meepleai.pdf.extraction.errors",
         unit: "errors",
         description: "Total number of PDF extraction errors");
+
+    /// <summary>
+    /// Counter for 3-stage extraction attempts (unstructured/smoldocling/docnet)
+    /// </summary>
+    public static readonly Counter<long> PdfExtractionStageAttempts = Meter.CreateCounter<long>(
+        name: "meepleai.pdf.extraction.stage.attempts",
+        unit: "attempts",
+        description: "Extraction attempts by stage");
+
+    /// <summary>
+    /// Counter for successful extractions by stage
+    /// </summary>
+    public static readonly Counter<long> PdfExtractionStageSuccess = Meter.CreateCounter<long>(
+        name: "meepleai.pdf.extraction.stage.success",
+        unit: "successes",
+        description: "Successful extractions by stage");
+
+    /// <summary>
+    /// Histogram for extraction duration by stage in milliseconds
+    /// </summary>
+    public static readonly Histogram<double> PdfExtractionStageDuration = Meter.CreateHistogram<double>(
+        name: "meepleai.pdf.extraction.stage.duration",
+        unit: "ms",
+        description: "Extraction duration by stage");
+
+    /// <summary>
+    /// Histogram for PDF extraction quality scores (0.0-1.0)
+    /// </summary>
+    public static readonly Histogram<double> PdfQualityScore = Meter.CreateHistogram<double>(
+        name: "meepleai.pdf.quality.score",
+        unit: "score",
+        description: "PDF extraction quality scores");
+
+    /// <summary>
+    /// Histogram for PDF chunking duration in milliseconds
+    /// </summary>
+    public static readonly Histogram<double> PdfChunkingDuration = Meter.CreateHistogram<double>(
+        name: "meepleai.pdf.chunking.duration",
+        unit: "ms",
+        description: "Text chunking duration");
+
+    /// <summary>
+    /// Histogram for number of chunks generated per document
+    /// </summary>
+    public static readonly Histogram<int> PdfChunkCount = Meter.CreateHistogram<int>(
+        name: "meepleai.pdf.chunks.count",
+        unit: "chunks",
+        description: "Number of chunks generated per document");
+
+    /// <summary>
+    /// Histogram for embedding generation duration in milliseconds
+    /// </summary>
+    public static readonly Histogram<double> PdfEmbeddingDuration = Meter.CreateHistogram<double>(
+        name: "meepleai.pdf.embedding.duration",
+        unit: "ms",
+        description: "Embedding generation duration");
+
+    /// <summary>
+    /// Histogram for Qdrant indexing duration in milliseconds
+    /// </summary>
+    public static readonly Histogram<double> PdfIndexingDuration = Meter.CreateHistogram<double>(
+        name: "meepleai.pdf.indexing.duration",
+        unit: "ms",
+        description: "Qdrant indexing duration");
+
+    #endregion
+
+    #region Streaming Metrics
+
+    /// <summary>
+    /// Histogram for streaming operation total duration in milliseconds
+    /// </summary>
+    public static readonly Histogram<double> StreamingTotalDuration = Meter.CreateHistogram<double>(
+        name: "meepleai.streaming.total.duration",
+        unit: "ms",
+        description: "Total streaming operation duration");
+
+    /// <summary>
+    /// Histogram for token generation rate during streaming (tokens/second)
+    /// </summary>
+    public static readonly Histogram<double> StreamingTokenRate = Meter.CreateHistogram<double>(
+        name: "meepleai.streaming.token.rate",
+        unit: "tokens/sec",
+        description: "Token generation rate during streaming");
+
+    /// <summary>
+    /// Counter for streaming requests by type (qa/explain/setup)
+    /// </summary>
+    public static readonly Counter<long> StreamingRequestsTotal = Meter.CreateCounter<long>(
+        name: "meepleai.streaming.requests.total",
+        unit: "requests",
+        description: "Total streaming requests by type");
+
+    #endregion
+
+    #region Agent Metrics
+
+    /// <summary>
+    /// Counter for agent invocations by type (chess/feedback/followup/qa/explain/setup)
+    /// </summary>
+    public static readonly Counter<long> AgentInvocations = Meter.CreateCounter<long>(
+        name: "meepleai.agent.invocations.total",
+        unit: "invocations",
+        description: "Agent invocations by type");
+
+    /// <summary>
+    /// Histogram for agent execution duration by type in milliseconds
+    /// </summary>
+    public static readonly Histogram<double> AgentDuration = Meter.CreateHistogram<double>(
+        name: "meepleai.agent.duration",
+        unit: "ms",
+        description: "Agent execution duration by type");
+
+    /// <summary>
+    /// Counter for agent errors by type
+    /// </summary>
+    public static readonly Counter<long> AgentErrors = Meter.CreateCounter<long>(
+        name: "meepleai.agent.errors.total",
+        unit: "errors",
+        description: "Agent errors by type");
+
+    #endregion
+
+    #region Hybrid Search Metrics
+
+    /// <summary>
+    /// Histogram for vector search component scores in hybrid search
+    /// </summary>
+    public static readonly Histogram<double> HybridSearchVectorScore = Meter.CreateHistogram<double>(
+        name: "meepleai.search.vector.score",
+        unit: "score",
+        description: "Vector search component scores");
+
+    /// <summary>
+    /// Histogram for keyword search component scores in hybrid search
+    /// </summary>
+    public static readonly Histogram<double> HybridSearchKeywordScore = Meter.CreateHistogram<double>(
+        name: "meepleai.search.keyword.score",
+        unit: "score",
+        description: "Keyword search component scores");
+
+    /// <summary>
+    /// Histogram for RRF fusion scores in hybrid search
+    /// </summary>
+    public static readonly Histogram<double> HybridSearchRrfScore = Meter.CreateHistogram<double>(
+        name: "meepleai.search.rrf.score",
+        unit: "score",
+        description: "RRF fusion scores");
+
+    /// <summary>
+    /// Counter for hybrid search requests
+    /// </summary>
+    public static readonly Counter<long> HybridSearchTotal = Meter.CreateCounter<long>(
+        name: "meepleai.search.hybrid.total",
+        unit: "searches",
+        description: "Total hybrid search requests");
 
     #endregion
 
@@ -313,6 +485,154 @@ public static class MeepleAiMetrics
             _ when httpStatusCode >= 400 => "validation",
             _ => "unknown"
         };
+    }
+
+    /// <summary>
+    /// Records PDF upload attempt with status
+    /// </summary>
+    public static void RecordPdfUploadAttempt(string status, long? fileSizeBytes = null)
+    {
+        var tags = new TagList { { "status", status } };
+        PdfUploadAttempts.Add(1, tags);
+
+        if (fileSizeBytes.HasValue)
+        {
+            PdfFileSizeBytes.Record(fileSizeBytes.Value, tags);
+        }
+    }
+
+    /// <summary>
+    /// Records PDF extraction stage attempt and duration
+    /// </summary>
+    public static void RecordPdfExtractionStage(
+        string stageName,
+        bool success,
+        double durationMs,
+        double? qualityScore = null)
+    {
+        var tags = new TagList
+        {
+            { "stage", stageName.ToLowerInvariant() },
+            { "success", success }
+        };
+
+        PdfExtractionStageAttempts.Add(1, tags);
+        PdfExtractionStageDuration.Record(durationMs, tags);
+
+        if (success)
+        {
+            PdfExtractionStageSuccess.Add(1, tags);
+
+            if (qualityScore.HasValue)
+            {
+                var qualityTags = new TagList { { "stage", stageName.ToLowerInvariant() } };
+                PdfQualityScore.Record(qualityScore.Value, qualityTags);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Records PDF processing pipeline step duration
+    /// </summary>
+    public static void RecordPdfPipelineStep(
+        string step,
+        double durationMs,
+        int? count = null)
+    {
+        var tags = new TagList { { "step", step.ToLowerInvariant() } };
+
+        switch (step.ToLowerInvariant())
+        {
+            case "chunking":
+                PdfChunkingDuration.Record(durationMs, tags);
+                if (count.HasValue)
+                {
+                    PdfChunkCount.Record(count.Value, tags);
+                }
+                break;
+
+            case "embedding":
+                PdfEmbeddingDuration.Record(durationMs, tags);
+                break;
+
+            case "indexing":
+                PdfIndexingDuration.Record(durationMs, tags);
+                break;
+
+            case "extraction":
+                // Use PdfProcessingDuration for overall extraction
+                PdfProcessingDuration.Record(durationMs, tags);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Records streaming request with duration and token rate
+    /// </summary>
+    public static void RecordStreamingRequest(
+        string type,
+        double durationMs,
+        int? totalTokens = null)
+    {
+        var tags = new TagList { { "type", type.ToLowerInvariant() } };
+
+        StreamingRequestsTotal.Add(1, tags);
+        StreamingTotalDuration.Record(durationMs, tags);
+
+        if (totalTokens.HasValue && durationMs > 0)
+        {
+            var tokensPerSecond = totalTokens.Value / (durationMs / 1000.0);
+            StreamingTokenRate.Record(tokensPerSecond, tags);
+        }
+    }
+
+    /// <summary>
+    /// Records agent invocation with duration
+    /// </summary>
+    public static void RecordAgentInvocation(
+        string agentType,
+        double durationMs,
+        bool success = true)
+    {
+        var tags = new TagList
+        {
+            { "agent", agentType.ToLowerInvariant() },
+            { "success", success }
+        };
+
+        AgentInvocations.Add(1, tags);
+        AgentDuration.Record(durationMs, tags);
+
+        if (!success)
+        {
+            AgentErrors.Add(1, tags);
+        }
+    }
+
+    /// <summary>
+    /// Records hybrid search with component scores
+    /// </summary>
+    public static void RecordHybridSearch(
+        double? vectorScore = null,
+        double? keywordScore = null,
+        double? rrfScore = null)
+    {
+        HybridSearchTotal.Add(1);
+
+        if (vectorScore.HasValue)
+        {
+            HybridSearchVectorScore.Record(vectorScore.Value);
+        }
+
+        if (keywordScore.HasValue)
+        {
+            HybridSearchKeywordScore.Record(keywordScore.Value);
+        }
+
+        if (rrfScore.HasValue)
+        {
+            HybridSearchRrfScore.Record(rrfScore.Value);
+        }
     }
 
     #endregion

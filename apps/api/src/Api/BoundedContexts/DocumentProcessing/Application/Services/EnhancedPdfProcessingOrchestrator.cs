@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -244,6 +245,10 @@ public class EnhancedPdfProcessingOrchestrator
                 _logger.LogWarning(
                     "[{RequestId}] Stage {Stage} ({StageName}) failed: {Error}",
                     requestId, stageNumber, stageName, result.ErrorMessage);
+
+                // BGAI-043: Record failed stage extraction
+                RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, null);
+
                 return null;
             }
 
@@ -257,12 +262,18 @@ public class EnhancedPdfProcessingOrchestrator
                     requestId, stageNumber, stageName, stageStopwatch.Elapsed.TotalMilliseconds,
                     result.Quality, qualityScore, qualityThreshold);
 
+                // BGAI-043: Record successful stage extraction with quality score
+                RecordStageMetricSafely(stageName, true, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
+
                 return result;
             }
 
             _logger.LogWarning(
                 "[{RequestId}] Stage {Stage} ({StageName}) quality below threshold - Quality: {Quality} ({Score:F2} < {Threshold:F2}), falling back to next stage",
                 requestId, stageNumber, stageName, result.Quality, qualityScore, qualityThreshold);
+
+            // BGAI-043: Record failed stage extraction (quality too low)
+            RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
 
             return null;
         }
@@ -272,6 +283,10 @@ public class EnhancedPdfProcessingOrchestrator
             _logger.LogError(ex,
                 "[{RequestId}] Stage {Stage} ({StageName}) threw exception: {Message}",
                 requestId, stageNumber, stageName, ex.Message);
+
+            // BGAI-043: Record failed stage extraction (exception)
+            RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, null);
+
             return null;
         }
     }
@@ -461,6 +476,10 @@ public class EnhancedPdfProcessingOrchestrator
                 _logger.LogWarning(
                     "[{RequestId}] Paged Stage {Stage} ({StageName}) failed: {Error}",
                     requestId, stageNumber, stageName, result.ErrorMessage);
+
+                // BGAI-043: Record failed paged stage extraction
+                RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, null);
+
                 return null;
             }
 
@@ -471,6 +490,10 @@ public class EnhancedPdfProcessingOrchestrator
                 _logger.LogWarning(
                     "[{RequestId}] Paged Stage {Stage} ({StageName}) produced no content, falling back",
                     requestId, stageNumber, stageName);
+
+                // BGAI-043: Record failed paged stage extraction (no content)
+                RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, 0.0);
+
                 return null;
             }
 
@@ -482,8 +505,11 @@ public class EnhancedPdfProcessingOrchestrator
             {
                 _logger.LogInformation(
                     "[{RequestId}] Paged Stage {Stage} ({StageName}) succeeded in {DurationMs}ms - Chunks: {Count}, Quality Score: {Score:F2} (≥ {Threshold:F2})",
-                    requestId, stageNumber, stageName, stageStopwatch.Elapsed.TotalMilliseconds, 
+                    requestId, stageNumber, stageName, stageStopwatch.Elapsed.TotalMilliseconds,
                     result.PageChunks.Count, qualityScore, qualityThreshold);
+
+                // BGAI-043: Record successful paged stage extraction with quality score
+                RecordStageMetricSafely(stageName, true, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
 
                 return result;
             }
@@ -491,6 +517,9 @@ public class EnhancedPdfProcessingOrchestrator
             _logger.LogWarning(
                 "[{RequestId}] Paged Stage {Stage} ({StageName}) quality below threshold - Score: {Score:F2} < {Threshold:F2}, falling back to next stage",
                 requestId, stageNumber, stageName, qualityScore, qualityThreshold);
+
+            // BGAI-043: Record failed paged stage extraction (quality too low)
+            RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, qualityScore);
 
             return null;
         }
@@ -500,6 +529,10 @@ public class EnhancedPdfProcessingOrchestrator
             _logger.LogError(ex,
                 "[{RequestId}] Paged Stage {Stage} ({StageName}) threw exception: {Message}",
                 requestId, stageNumber, stageName, ex.Message);
+
+            // BGAI-043: Record failed paged stage extraction (exception)
+            RecordStageMetricSafely(stageName, false, stageStopwatch.Elapsed.TotalMilliseconds, null);
+
             return null;
         }
     }
@@ -568,6 +601,24 @@ public class EnhancedPdfProcessingOrchestrator
             StageName: stageName,
             TotalDurationMs: (int)totalDuration.TotalMilliseconds,
             ErrorMessage: pagedResult.ErrorMessage);
+    }
+
+    /// <summary>
+    /// BGAI-043: Records PDF extraction stage metrics in fire-and-forget pattern
+    /// </summary>
+    private void RecordStageMetricSafely(string stageName, bool success, double durationMs, double? qualityScore)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                MeepleAiMetrics.RecordPdfExtractionStage(stageName, success, durationMs, qualityScore);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to record PDF extraction stage metric for stage {Stage}", stageName);
+            }
+        });
     }
 
     #endregion

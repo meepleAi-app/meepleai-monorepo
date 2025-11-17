@@ -17,11 +17,12 @@ public class PromptEvaluationResultEntityConfiguration : IEntityTypeConfiguratio
         builder.Property(e => e.DatasetId).IsRequired().HasMaxLength(100);
         builder.Property(e => e.ExecutedAt).IsRequired();
         builder.Property(e => e.TotalQueries).IsRequired();
+        // BGAI-041: 5-metric quality evaluation framework
         builder.Property(e => e.Accuracy).IsRequired();
-        builder.Property(e => e.HallucinationRate).IsRequired();
-        builder.Property(e => e.AvgConfidence).IsRequired();
-        builder.Property(e => e.CitationCorrectness).IsRequired();
-        builder.Property(e => e.AvgLatencyMs).IsRequired();
+        builder.Property(e => e.Relevance).IsRequired();
+        builder.Property(e => e.Completeness).IsRequired();
+        builder.Property(e => e.Clarity).IsRequired();
+        builder.Property(e => e.CitationQuality).IsRequired();
         builder.Property(e => e.Passed).IsRequired();
         builder.Property(e => e.Summary).HasMaxLength(500);
         builder.Property(e => e.QueryResultsJson).HasColumnType("jsonb");

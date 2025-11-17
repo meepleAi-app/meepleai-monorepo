@@ -85,6 +85,7 @@ public class PromptTestCase
 
 /// <summary>
 /// Quality thresholds for evaluation pass/fail
+/// BGAI-041: Updated for 5-metric quality evaluation framework
 /// </summary>
 public class QualityThresholds
 {
@@ -92,21 +93,21 @@ public class QualityThresholds
     [JsonPropertyName("min_accuracy")]
     public double MinAccuracy { get; set; } = 0.80;
 
-    /// <summary>Maximum hallucination rate (0.0-1.0), default 0.10</summary>
-    [JsonPropertyName("max_hallucination_rate")]
-    public double MaxHallucinationRate { get; set; } = 0.10;
+    /// <summary>Minimum relevance (0.0-1.0), default 0.85</summary>
+    [JsonPropertyName("min_relevance")]
+    public double MinRelevance { get; set; } = 0.85;
 
-    /// <summary>Minimum average confidence (0.0-1.0), default 0.70</summary>
-    [JsonPropertyName("min_avg_confidence")]
-    public double MinAvgConfidence { get; set; } = 0.70;
+    /// <summary>Minimum completeness (0.0-1.0), default 0.75</summary>
+    [JsonPropertyName("min_completeness")]
+    public double MinCompleteness { get; set; } = 0.75;
 
-    /// <summary>Minimum citation correctness (0.0-1.0), default 0.80</summary>
-    [JsonPropertyName("min_citation_correctness")]
-    public double MinCitationCorrectness { get; set; } = 0.80;
+    /// <summary>Minimum clarity (0.0-1.0), default 0.80</summary>
+    [JsonPropertyName("min_clarity")]
+    public double MinClarity { get; set; } = 0.80;
 
-    /// <summary>Maximum average latency in milliseconds, default 3000</summary>
-    [JsonPropertyName("max_avg_latency_ms")]
-    public int MaxAvgLatencyMs { get; set; } = 3000;
+    /// <summary>Minimum citation quality (0.0-1.0), default 0.85</summary>
+    [JsonPropertyName("min_citation_quality")]
+    public double MinCitationQuality { get; set; } = 0.85;
 }
 
 /// <summary>
@@ -147,47 +148,53 @@ public class PromptEvaluationResult
 
 /// <summary>
 /// Evaluation metrics (5 core metrics)
+/// BGAI-041: Extended 5-metric quality evaluation framework
 /// </summary>
 public class EvaluationMetrics
 {
     /// <summary>
-    /// Accuracy: Percentage of responses with required keywords/expected content
+    /// Accuracy: Percentage of responses with correct information (required keywords/expected content)
     /// Formula: (correct_responses / total_queries) * 100
-    /// Target: > 80%
+    /// Target: >= 80%
     /// </summary>
     public double Accuracy { get; set; }
 
     /// <summary>
-    /// Hallucination Rate: Percentage of responses with forbidden keywords (fabricated info)
-    /// Formula: (hallucinated_responses / total_queries) * 100
-    /// Target: < 10%
+    /// Relevance: Appropriateness to context (anti-hallucination + topic coherence)
+    /// Measures how relevant responses are to the query and game context
+    /// Formula: 100 - (hallucination_penalty_percentage)
+    /// Target: >= 85%
     /// </summary>
-    public double HallucinationRate { get; set; }
+    public double Relevance { get; set; }
 
     /// <summary>
-    /// Average Confidence: Mean RAG search confidence across all queries
-    /// Formula: Sum(confidence) / total_queries
-    /// Target: > 0.70
+    /// Completeness: Thoroughness of coverage (response depth + aspect coverage)
+    /// Measures if all required aspects are addressed with sufficient detail
+    /// Formula: (complete_responses / total_queries) * 100
+    /// Target: >= 75%
     /// </summary>
-    public double AvgConfidence { get; set; }
+    public double Completeness { get; set; }
 
     /// <summary>
-    /// Citation Correctness: Percentage of responses with correct citations
-    /// Formula: (correct_citations / total_queries_with_citations) * 100
-    /// Target: > 80%
+    /// Clarity: Understandability of output (readability + structure)
+    /// Measures how clear and well-structured the response is
+    /// Formula: (clear_responses / total_queries) * 100
+    /// Target: >= 80%
     /// </summary>
-    public double CitationCorrectness { get; set; }
+    public double Clarity { get; set; }
 
     /// <summary>
-    /// Average Latency: Mean response time in milliseconds
-    /// Formula: Sum(latency_ms) / total_queries
-    /// Target: < 3000ms
+    /// Citation Quality: Reliability of source attribution (correctness + presence)
+    /// Percentage of responses with correct and properly formatted citations
+    /// Formula: (correct_citations / queries_requiring_citations) * 100
+    /// Target: >= 85%
     /// </summary>
-    public double AvgLatencyMs { get; set; }
+    public double CitationQuality { get; set; }
 }
 
 /// <summary>
 /// Result for a single query evaluation
+/// BGAI-041: Extended for 5-metric quality evaluation framework
 /// </summary>
 public class QueryEvaluationResult
 {
@@ -209,11 +216,17 @@ public class QueryEvaluationResult
     /// <summary>Whether response met accuracy criteria (keywords/content)</summary>
     public bool IsAccurate { get; set; }
 
-    /// <summary>Whether response contained forbidden keywords (hallucination)</summary>
-    public bool IsHallucinated { get; set; }
+    /// <summary>Whether response is relevant to context (no hallucination/off-topic)</summary>
+    public bool IsRelevant { get; set; }
 
-    /// <summary>Whether citations were correct</summary>
-    public bool AreCitationsCorrect { get; set; }
+    /// <summary>Whether response is complete (covers all required aspects)</summary>
+    public bool IsComplete { get; set; }
+
+    /// <summary>Whether response is clear and well-structured</summary>
+    public bool IsClear { get; set; }
+
+    /// <summary>Whether citations are of good quality (correct and properly formatted)</summary>
+    public bool HasGoodCitationQuality { get; set; }
 
     /// <summary>Detailed evaluation notes</summary>
     public string? Notes { get; set; }
@@ -248,23 +261,24 @@ public class PromptComparisonResult
 
 /// <summary>
 /// Delta metrics for A/B comparison
+/// BGAI-041: Updated for 5-metric quality evaluation framework
 /// </summary>
 public class MetricDeltas
 {
     /// <summary>Change in accuracy percentage</summary>
     public double AccuracyDelta { get; set; }
 
-    /// <summary>Change in hallucination rate percentage</summary>
-    public double HallucinationRateDelta { get; set; }
+    /// <summary>Change in relevance percentage</summary>
+    public double RelevanceDelta { get; set; }
 
-    /// <summary>Change in average confidence</summary>
-    public double AvgConfidenceDelta { get; set; }
+    /// <summary>Change in completeness percentage</summary>
+    public double CompletenessDelta { get; set; }
 
-    /// <summary>Change in citation correctness percentage</summary>
-    public double CitationCorrectnessDelta { get; set; }
+    /// <summary>Change in clarity percentage</summary>
+    public double ClarityDelta { get; set; }
 
-    /// <summary>Change in average latency (ms)</summary>
-    public double AvgLatencyMsDelta { get; set; }
+    /// <summary>Change in citation quality percentage</summary>
+    public double CitationQualityDelta { get; set; }
 }
 
 /// <summary>

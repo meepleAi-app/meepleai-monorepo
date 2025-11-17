@@ -299,9 +299,9 @@ groups:
       - record: meepleai:quality:low_quality_rate:5m
         expr: |
           (
-            rate(meepleai_quality_low_quality_responses_total[5m])
+            sum(rate(meepleai_quality_low_quality_responses_total[5m]))
             /
-            rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m])
+            sum(rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m]))
           ) * 100 OR on() vector(0)
         labels:
           service: meepleai-api
@@ -477,7 +477,7 @@ groups:
       - record: meepleai:pdf:stage_success_rate:5m
         expr: |
           (
-            rate(meepleai_pdf_extraction_stage_success[5m])
+            sum by(stage) (rate(meepleai_pdf_extraction_stage_success[5m]))
             /
             sum by(stage) (rate(meepleai_pdf_extraction_stage_attempts[5m]))
           ) OR on() vector(0)
@@ -508,9 +508,9 @@ groups:
       - record: meepleai:pdf:upload_success_rate:5m
         expr: |
           (
-            rate(meepleai_pdf_upload_attempts{status="success"}[5m])
+            sum(rate(meepleai_pdf_upload_attempts{status="success"}[5m]))
             /
-            rate(meepleai_pdf_upload_attempts[5m])
+            sum(rate(meepleai_pdf_upload_attempts[5m]))
           ) OR on() vector(0)
         labels:
           service: meepleai-api

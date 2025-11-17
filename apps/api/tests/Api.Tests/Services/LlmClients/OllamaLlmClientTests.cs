@@ -122,7 +122,8 @@ public class OllamaLlmClientTests
         Assert.Contains("timed out", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact(Skip = "Requires integration test with real Ollama endpoint")]
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task Test06_GenerateCompletion_ModelNotFound_ReturnsError()
     {
         // Arrange
@@ -154,7 +155,8 @@ public class OllamaLlmClientTests
         Assert.Contains("404", result.ErrorMessage);
     }
 
-    [Fact(Skip = "Requires integration test - streaming mock doesn't work with real StreamReader")]
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task Test07_GenerateCompletionStream_Success_YieldsChunks()
     {
         // Arrange
@@ -236,7 +238,8 @@ public class OllamaLlmClientTests
         Assert.Equal(italianResponse, result.Response);
     }
 
-    [Fact(Skip = "Requires integration test with connection pooling verification")]
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task Test09_ConcurrentRequests_HandledCorrectly()
     {
         // Arrange

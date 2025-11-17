@@ -138,27 +138,8 @@ public static class GameEndpoints
         });
 
         // CHAT-06: Get agents for a specific game
-        // TODO Issue #866: This legacy endpoint needs migration to new Agent aggregate
-        // Agents are now in KnowledgeBase context, not tied to games
-        // Use /api/v1/agents instead
-        /*
-        group.MapGet("/games/{gameId:guid}/agents", async (Guid gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            var agents = await chatService.GetAgentsForGameAsync(gameId.ToString(), ct);
-            var response = agents.Select(a => new AgentDto(
-                a.Id.ToString(),
-                a.GameId.ToString(),
-                a.Name,
-                a.Kind,
-                a.CreatedAt
-            )).ToList();
-
-            return Results.Json(response);
-        });
-        */
+        // TODO Issue #866: This legacy endpoint was removed. Agents are now in KnowledgeBase context.
+        // Use /api/v1/agents instead of /api/v1/games/{gameId}/agents
 
 
         // ========================================

@@ -21,6 +21,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// </summary>
 public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGuideQuery, RagStreamingEvent>
 {
+    #region Fields
+
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
     private readonly ILlmService _llmService;
@@ -28,6 +30,10 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
     private readonly IConfiguration _configuration;
     private readonly ILogger<StreamSetupGuideQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
+
+    #endregion
+
+    #region Constructor
 
     public StreamSetupGuideQueryHandler(
         IEmbeddingService embeddingService,
@@ -46,6 +52,10 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
+
+    #endregion
+
+    #region Public Methods
 
     public async IAsyncEnumerable<RagStreamingEvent> Handle(
         StreamSetupGuideQuery query,
@@ -101,6 +111,10 @@ public class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGu
             yield return evt;
         }
     }
+
+    #endregion
+
+    #region RAG Pipeline
 
     /// <summary>
     /// Internal method to generate setup guide with try-catch (no yield statements)
@@ -199,6 +213,10 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
 #pragma warning restore CA1031
     }
 
+    #endregion
+
+    #region Streaming Logic
+
     /// <summary>
     /// Stream individual setup steps with delays between each step
     /// </summary>
@@ -241,6 +259,10 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
                 totalTokens,
                 confidence));
     }
+
+    #endregion
+
+    #region LLM Response Parsing
 
     /// <summary>
     /// Parse LLM-generated steps response into structured SetupGuideStep objects
@@ -386,6 +408,10 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
         return text.Trim();
     }
 
+    #endregion
+
+    #region Default Steps & Fallbacks
+
     /// <summary>
     /// Create default setup steps when no RAG data available
     /// </summary>
@@ -497,6 +523,10 @@ STEP 2: <title>
 etc.";
     }
 
+    #endregion
+
+    #region Helper Methods
+
     /// <summary>
     /// Create a streaming event with timestamp
     /// </summary>
@@ -504,6 +534,10 @@ etc.";
     {
         return new RagStreamingEvent(type, data, _timeProvider.GetUtcNow().UtcDateTime);
     }
+
+    #endregion
+
+    #region Internal Types
 
     /// <summary>
     /// Result class for internal setup guide generation (no yield in try-catch)
@@ -597,4 +631,6 @@ etc.";
             };
         }
     }
+
+    #endregion
 }

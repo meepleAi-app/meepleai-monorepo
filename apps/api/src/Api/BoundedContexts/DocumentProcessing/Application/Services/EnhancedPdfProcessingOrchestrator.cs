@@ -19,6 +19,8 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 /// </remarks>
 public class EnhancedPdfProcessingOrchestrator
 {
+    #region Fields & Constants
+
     private readonly IPdfTextExtractor _unstructuredExtractor;
     private readonly IPdfTextExtractor _smolDoclingExtractor;
     private readonly IPdfTextExtractor _docnetExtractor;
@@ -29,6 +31,10 @@ public class EnhancedPdfProcessingOrchestrator
     // Quality thresholds from ADR-003
     private const double Stage1QualityThreshold = 0.80; // Unstructured acceptance threshold
     private const double Stage2QualityThreshold = 0.70; // SmolDocling acceptance threshold
+
+    #endregion
+
+    #region Constructor
 
     /// <summary>
     /// ISSUE-1174: Constructor uses keyed services to resolve stage extractors.
@@ -51,6 +57,10 @@ public class EnhancedPdfProcessingOrchestrator
         _configuration = configuration;
         _options = options.Value;
     }
+
+    #endregion
+
+    #region PDF Loading
 
     /// <summary>
     /// BGAI-087: Loads PDF data using size-based strategy (memory vs temp file)
@@ -103,6 +113,10 @@ public class EnhancedPdfProcessingOrchestrator
         await pdfStream.CopyToAsync(memoryStream, ct);
         return PdfDataHandle.FromBytes(memoryStream.ToArray());
     }
+
+    #endregion
+
+    #region Non-Paged Extraction Pipeline
 
     /// <summary>
     /// Extracts text from PDF using 3-stage fallback pipeline with quality-based routing
@@ -311,6 +325,10 @@ public class EnhancedPdfProcessingOrchestrator
             TotalDurationMs: (int)totalDuration.TotalMilliseconds,
             ErrorMessage: extractionResult.ErrorMessage);
     }
+
+    #endregion
+
+    #region Paged Extraction Pipeline
 
     /// <summary>
     /// Extracts text page-by-page using 3-stage fallback pipeline
@@ -552,6 +570,10 @@ public class EnhancedPdfProcessingOrchestrator
             ErrorMessage: pagedResult.ErrorMessage);
     }
 
+    #endregion
+
+    #region Internal Types
+
     /// <summary>
     /// BGAI-087: Handles PDF data with automatic cleanup for temp files
     /// Supports both in-memory (byte[]) and temp file storage strategies
@@ -617,6 +639,8 @@ public class EnhancedPdfProcessingOrchestrator
             _tempFilePath = null;
         }
     }
+
+    #endregion
 }
 
 /// <summary>

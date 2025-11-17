@@ -155,9 +155,7 @@ public static class AdminEndpoints
                 stats.TotalTokens,
                 stats.SuccessRate,
                 stats.EndpointCounts
-                // feedbackCounts = feedbackStats.OutcomeCounts,
-                // totalFeedback = feedbackStats.TotalFeedback,
-                // feedbackByEndpoint = feedbackStats.EndpointOutcomeCounts
+                // TODO: Add feedback stats when AgentFeedbackService is migrated to CQRS
             });
         });
 
@@ -1538,32 +1536,13 @@ public static class AdminEndpoints
         .Produces(StatusCodes.Status500InternalServerError);
 
         // AI-07: Prompt versioning and management endpoints
-
-        // Create prompt template (Admin only)
-        group.MapPost("/prompts", async (CreatePromptTemplateRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
-        {
-            var (authorized, session, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            logger.LogInformation("Admin {AdminId} creating prompt template '{TemplateName}'", session.User.Id, request.Name);
-            var command = new Api.BoundedContexts.Administration.Application.Commands.CreatePromptTemplateCommand(request, Guid.Parse(session.User.Id));
-            var response = await mediator.Send(command, ct);
-            logger.LogInformation("Prompt template {TemplateId} created successfully", response.Template.Id);
-            return Results.Created($"/api/v1/prompts/{response.Template.Id}", response);
-        });
-
-        // Create new version of prompt template (Admin only)
-        group.MapPost("/prompts/{templateId:guid}/versions", async (Guid templateId, CreatePromptVersionRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
-        {
-            var (authorized, session, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            logger.LogInformation("Admin {AdminId} creating new version for prompt template {TemplateId}", session.User.Id, templateId);
-            var command = new Api.BoundedContexts.Administration.Application.Commands.CreatePromptVersionCommand(templateId.ToString(), request, Guid.Parse(session.User.Id));
-            var version = await mediator.Send(command, ct);
-            logger.LogInformation("Prompt version {VersionId} (v{VersionNumber}) created successfully", version.Id, version.VersionNumber);
-            return Results.Created($"/api/v1/prompts/{templateId}/versions/{version.VersionNumber}", version);
-        });
+        // NOTE: Legacy duplicate endpoints removed during cleanup. Use /admin/prompts/* endpoints instead.
+        // These endpoints used incorrect handler constructors that were incompatible with CQRS command definitions.
+        // Proper endpoints are available at:
+        //   POST /admin/prompts
+        //   POST /admin/prompts/{id}/versions
+        //   PUT /admin/prompts/{id}/versions/{versionId}/activate
+        //   GET /admin/prompts, /admin/prompts/{id}, /admin/prompts/{id}/versions
 
         // Get version history for prompt template (Admin only)
         group.MapGet("/prompts/{templateId:guid}/versions", async (Guid templateId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>

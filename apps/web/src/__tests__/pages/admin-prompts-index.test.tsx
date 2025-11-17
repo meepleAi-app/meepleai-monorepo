@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {  screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import { useRouter } from 'next/router';
 import AdminPrompts from '../../pages/admin/prompts/index';
 import { api } from '../../lib/api';
@@ -63,7 +64,7 @@ describe('AdminPrompts Index Page', () => {
     it('should render loading state initially', () => {
       (api.get as jest.Mock).mockImplementation(() => new Promise(() => {}));
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
@@ -76,7 +77,7 @@ describe('AdminPrompts Index Page', () => {
         total: 2,
       });
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -91,7 +92,7 @@ describe('AdminPrompts Index Page', () => {
     it('should display error message when fetch fails', async () => {
       (api.get as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -106,7 +107,7 @@ describe('AdminPrompts Index Page', () => {
     it('should display unauthorized error when API returns null', async () => {
       (api.get as jest.Mock).mockResolvedValue(null);
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -123,7 +124,7 @@ describe('AdminPrompts Index Page', () => {
         total: 0,
       });
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('No templates found')).toBeInTheDocument();
@@ -145,7 +146,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should update search input and trigger fetch', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -164,7 +165,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should filter by category', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -181,7 +182,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should reset page to 1 when search changes', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -209,7 +210,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should sort by name ascending when name header clicked', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -226,7 +227,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should toggle sort order when same header clicked twice', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -289,7 +290,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should navigate to next page', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -306,7 +307,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should navigate to previous page', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -332,7 +333,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should disable previous button on first page', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -350,7 +351,7 @@ describe('AdminPrompts Index Page', () => {
         total: 2,
       });
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -372,7 +373,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should open create modal when Create Template button clicked', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -394,7 +395,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should close modal when Cancel button clicked', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -429,7 +430,7 @@ describe('AdminPrompts Index Page', () => {
     it('should create template successfully', async () => {
       (api.post as jest.Mock).mockResolvedValue({ id: 'new-template' });
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -500,7 +501,7 @@ describe('AdminPrompts Index Page', () => {
     it('should handle create error', async () => {
       (api.post as jest.Mock).mockRejectedValue(new Error('Creation failed'));
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -564,7 +565,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should open edit modal with pre-filled data', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -594,7 +595,7 @@ describe('AdminPrompts Index Page', () => {
     it('should update template successfully', async () => {
       (api.put as jest.Mock).mockResolvedValue({});
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -645,7 +646,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should not show Initial Content field in edit mode', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -669,7 +670,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should open delete confirmation dialog', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -685,7 +686,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should close delete dialog when Cancel clicked', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -705,7 +706,7 @@ describe('AdminPrompts Index Page', () => {
     it('should delete template successfully', async () => {
       (api.delete as jest.Mock).mockResolvedValue({});
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -736,7 +737,7 @@ describe('AdminPrompts Index Page', () => {
     it('should handle delete error', async () => {
       (api.delete as jest.Mock).mockRejectedValue(new Error('Delete failed'));
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -773,7 +774,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should navigate to template details when View button clicked', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
@@ -797,7 +798,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should display active version badge', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('✓ Active')).toBeInTheDocument();
@@ -805,7 +806,7 @@ describe('AdminPrompts Index Page', () => {
     });
 
     it('should display no active version text', async () => {
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('No active version')).toBeInTheDocument();
@@ -826,7 +827,7 @@ describe('AdminPrompts Index Page', () => {
     it('should auto-hide toast after 5 seconds', async () => {
       (api.delete as jest.Mock).mockResolvedValue({});
 
-      render(<AdminPrompts />);
+      renderWithQuery(<AdminPrompts />);
 
       await waitFor(() => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();

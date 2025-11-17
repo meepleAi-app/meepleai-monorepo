@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {  screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import { useRouter } from 'next/router';
 import AuditLog from '../../pages/admin/prompts/[id]/audit';
 import { api } from '../../lib/api';
@@ -84,7 +85,7 @@ describe('AuditLog Page', () => {
     it('should show loading indicator while fetching', () => {
       (api.get as jest.Mock).mockImplementation(() => new Promise(() => {}));
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
@@ -94,7 +95,7 @@ describe('AuditLog Page', () => {
     it('should display error message when fetch fails', async () => {
       (api.get as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -104,7 +105,7 @@ describe('AuditLog Page', () => {
     it('should display unauthorized error when API returns null', async () => {
       (api.get as jest.Mock).mockResolvedValue(null);
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -119,7 +120,7 @@ describe('AuditLog Page', () => {
         totalPages: 1,
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('No audit logs found')).toBeInTheDocument();
@@ -139,7 +140,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should display all audit logs', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const adminEmails = screen.getAllByText('admin@example.com');
@@ -149,7 +150,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should display action types', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();
@@ -160,7 +161,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should display formatted timestamps', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const timestamp = new Date(mockAuditLogs[0].timestamp).toLocaleString();
@@ -169,7 +170,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should display action icons with correct colors', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const createIcon = screen.getAllByText('+')[0];
@@ -187,7 +188,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should show view details button when details exist', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const viewDetailsButtons = screen.getAllByText('View details');
@@ -196,7 +197,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should expand details when clicked', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const detailsButtons = screen.getAllByText('View details');
@@ -213,7 +214,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should display no details message when details is null', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('No additional details')).toBeInTheDocument();
@@ -231,7 +232,7 @@ describe('AuditLog Page', () => {
         totalPages: 1,
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('No additional details')).toBeInTheDocument();
@@ -239,7 +240,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should format details as pretty JSON', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const detailsButtons = screen.getAllByText('View details');
@@ -268,7 +269,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should filter by create action', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();
@@ -285,7 +286,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should filter by update action', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('update')).toBeInTheDocument();
@@ -302,7 +303,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should filter by activate action', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('activate')).toBeInTheDocument();
@@ -319,7 +320,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should filter by delete action', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('delete')).toBeInTheDocument();
@@ -336,7 +337,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should show all actions when filter cleared', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();
@@ -361,7 +362,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should reset page to 1 when filter changes', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();
@@ -387,7 +388,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should navigate to next page', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();
@@ -409,7 +410,7 @@ describe('AuditLog Page', () => {
         totalPages: 3,
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();
@@ -434,7 +435,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should disable previous button on first page', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();
@@ -450,7 +451,7 @@ describe('AuditLog Page', () => {
         totalPages: 1,
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();
@@ -461,7 +462,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should display correct page number', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
@@ -485,7 +486,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should have back to template link', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const backButton = screen.getByText('← Back to Template');
@@ -506,7 +507,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should use green color for create actions', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const createRow = screen.getByText('create').closest('tr');
@@ -515,7 +516,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should use blue color for update/activate actions', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const updateRow = screen.getByText('update').closest('tr');
@@ -524,7 +525,7 @@ describe('AuditLog Page', () => {
     });
 
     it('should use red color for delete actions', async () => {
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         const deleteRow = screen.getByText('delete').closest('tr');
@@ -540,7 +541,7 @@ describe('AuditLog Page', () => {
         query: {},
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       expect(api.get).not.toHaveBeenCalled();
     });
@@ -556,7 +557,7 @@ describe('AuditLog Page', () => {
         totalPages: 1,
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();
@@ -581,7 +582,7 @@ describe('AuditLog Page', () => {
         totalPages: 1,
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('View details')).toBeInTheDocument();
@@ -602,7 +603,7 @@ describe('AuditLog Page', () => {
         totalPages: 1,
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         // The action text should appear (lowercase in data, but displayed as-is)
@@ -618,7 +619,7 @@ describe('AuditLog Page', () => {
         totalPages: 1,
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(api.get).toHaveBeenCalledWith(
@@ -636,7 +637,7 @@ describe('AuditLog Page', () => {
         totalPages: 1,
       });
 
-      render(<AuditLog />);
+      renderWithQuery(<AuditLog />);
 
       await waitFor(() => {
         expect(screen.getByText('create')).toBeInTheDocument();

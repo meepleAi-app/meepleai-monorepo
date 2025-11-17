@@ -1,4 +1,5 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import {  screen, waitFor, fireEvent } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/router';
 import RuleSpecEditor from '../../pages/editor';
@@ -58,7 +59,7 @@ describe('RuleSpecEditor (modern view)', () => {
     router.get('/api/v1/auth/me', () => createErrorResponse(401));
     global.fetch = router.toMockImplementation();
 
-    render(<RuleSpecEditor />);
+    renderWithQuery(<RuleSpecEditor />);
 
     await waitFor(() => {
       expect(screen.getByText(/Devi effettuare l'accesso per utilizzare l'editor/i)).toBeInTheDocument();
@@ -67,7 +68,7 @@ describe('RuleSpecEditor (modern view)', () => {
   });
 
   it('renders rule spec and allows switching to JSON view', async () => {
-    render(<RuleSpecEditor />);
+    renderWithQuery(<RuleSpecEditor />);
     await waitForEditorReady();
 
     expect(screen.getByText('Editor Visuale')).toBeInTheDocument();
@@ -77,7 +78,7 @@ describe('RuleSpecEditor (modern view)', () => {
   });
 
   it('validates JSON and shows error state when content is invalid', async () => {
-    render(<RuleSpecEditor />);
+    renderWithQuery(<RuleSpecEditor />);
     await waitForEditorReady();
 
     const textarea = getEditorTextarea();
@@ -104,7 +105,7 @@ describe('RuleSpecEditor (modern view)', () => {
     });
     global.fetch = router.toMockImplementation();
 
-    render(<RuleSpecEditor />);
+    renderWithQuery(<RuleSpecEditor />);
     await waitForEditorReady();
 
     const textarea = getEditorTextarea();

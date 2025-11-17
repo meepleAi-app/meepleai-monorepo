@@ -1,4 +1,5 @@
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import {  screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import AnalyticsDashboard from '../../pages/admin/analytics';
 import { api } from '../../lib/api';
 import { createMockDashboardStats, createMockDashboardMetrics } from '../fixtures/common-fixtures';
@@ -32,7 +33,7 @@ describe('AnalyticsDashboard', () => {
   it('renders metrics after successful fetch', async () => {
     mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-    render(<AnalyticsDashboard />);
+    renderWithQuery(<AnalyticsDashboard />);
 
     await waitFor(() => {
       expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
@@ -69,7 +70,7 @@ describe('AnalyticsDashboard', () => {
   it('displays an error state when the API fails', async () => {
     mockApi.get.mockRejectedValueOnce(new Error('Network error'));
 
-    render(<AnalyticsDashboard />);
+    renderWithQuery(<AnalyticsDashboard />);
 
     await waitFor(() => {
       expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -79,7 +80,7 @@ describe('AnalyticsDashboard', () => {
   it('allows toggling auto-refresh', async () => {
     mockApi.get.mockResolvedValue(sampleStats as any);
 
-    render(<AnalyticsDashboard />);
+    renderWithQuery(<AnalyticsDashboard />);
 
     const autoButton = await screen.findByRole('button', { name: /Auto-refresh ON/i });
     fireEvent.click(autoButton);
@@ -90,7 +91,7 @@ describe('AnalyticsDashboard', () => {
   it('runs the refresh action when the user clicks refresh', async () => {
     mockApi.get.mockResolvedValue(sampleStats as any);
 
-    render(<AnalyticsDashboard />);
+    renderWithQuery(<AnalyticsDashboard />);
 
     // Wait for initial load to complete
     await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(1));
@@ -115,7 +116,7 @@ describe('AnalyticsDashboard', () => {
     it('renders LineChart components for all trends', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('User Registrations')).toBeInTheDocument();
@@ -137,7 +138,7 @@ describe('AnalyticsDashboard', () => {
 
       mockApi.get.mockResolvedValueOnce(emptyStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
@@ -150,7 +151,7 @@ describe('AnalyticsDashboard', () => {
     it('renders charts with proper data structure', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         // Check that chart cards are rendered
@@ -162,7 +163,7 @@ describe('AnalyticsDashboard', () => {
     it('displays charts with average values when showAverage is enabled', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         // API Requests and PDF Uploads should have average values
@@ -174,7 +175,7 @@ describe('AnalyticsDashboard', () => {
     it('renders multiple chart cards in grid layout', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      const { container } = render(<AnalyticsDashboard />);
+      const { container } = renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         // Check for grid container with chart cards
@@ -222,7 +223,7 @@ describe('AnalyticsDashboard', () => {
         blob: async () => mockBlob,
       });
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Export CSV'));
 
@@ -250,7 +251,7 @@ describe('AnalyticsDashboard', () => {
         blob: async () => mockBlob,
       });
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Export CSV'));
 
@@ -270,7 +271,7 @@ describe('AnalyticsDashboard', () => {
         blob: async () => mockBlob,
       });
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Export JSON'));
 
@@ -296,7 +297,7 @@ describe('AnalyticsDashboard', () => {
         blob: async () => mockBlob,
       });
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Export JSON'));
 
@@ -316,7 +317,7 @@ describe('AnalyticsDashboard', () => {
         blob: async () => mockBlob,
       });
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Export CSV'));
 
@@ -336,7 +337,7 @@ describe('AnalyticsDashboard', () => {
         statusText: 'Internal Server Error',
       });
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Export CSV'));
 
@@ -356,7 +357,7 @@ describe('AnalyticsDashboard', () => {
     it('renders all 8 metric cards with correct titles', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Total Users')).toBeInTheDocument();
@@ -373,7 +374,7 @@ describe('AnalyticsDashboard', () => {
     it('displays metric cards with correct structure and styling', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      const { container } = render(<AnalyticsDashboard />);
+      const { container } = renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         // Check for metric cards with colored backgrounds
@@ -389,7 +390,7 @@ describe('AnalyticsDashboard', () => {
 
       mockApi.get.mockResolvedValueOnce(statsWithConfidence as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       // Wait for page to load first
       await waitFor(() => {
@@ -412,7 +413,7 @@ describe('AnalyticsDashboard', () => {
 
       mockApi.get.mockResolvedValueOnce(statsWithLargeNumbers as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         // Verify the Total Tokens Used card is rendered
@@ -423,7 +424,7 @@ describe('AnalyticsDashboard', () => {
     it('displays metric icons for each card', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      const { container } = render(<AnalyticsDashboard />);
+      const { container } = renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         // Icons are rendered as text emojis in the component
@@ -441,7 +442,7 @@ describe('AnalyticsDashboard', () => {
     it('renders date range selector with default value', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      const { container } = render(<AnalyticsDashboard />);
+      const { container } = renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         const select = container.querySelectorAll('select')[0] as HTMLSelectElement;
@@ -452,7 +453,7 @@ describe('AnalyticsDashboard', () => {
     it('filters data by selected date range', async () => {
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      const { container } = render(<AnalyticsDashboard />);
+      const { container } = renderWithQuery(<AnalyticsDashboard />);
 
       // Wait for page to load by checking for Analytics Dashboard heading
       await waitFor(() => {
@@ -474,7 +475,7 @@ describe('AnalyticsDashboard', () => {
     it('refreshes data when date range changes', async () => {
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      const { container } = render(<AnalyticsDashboard />);
+      const { container } = renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(1));
 
@@ -492,7 +493,7 @@ describe('AnalyticsDashboard', () => {
     it('includes gameId in query params when set', async () => {
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      const { container } = render(<AnalyticsDashboard />);
+      const { container } = renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => container.querySelectorAll('select')[0]);
 
@@ -509,7 +510,7 @@ describe('AnalyticsDashboard', () => {
     it('renders role filter with default "All Roles"', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      const { container } = render(<AnalyticsDashboard />);
+      const { container } = renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         const select = container.querySelectorAll('select')[1] as HTMLSelectElement;
@@ -520,7 +521,7 @@ describe('AnalyticsDashboard', () => {
     it('filters data by selected role', async () => {
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      const { container } = render(<AnalyticsDashboard />);
+      const { container } = renderWithQuery(<AnalyticsDashboard />);
 
       // Wait for page to load
       await waitFor(() => {
@@ -542,7 +543,7 @@ describe('AnalyticsDashboard', () => {
     it('does not include roleFilter param when "all" is selected', async () => {
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(mockApi.get).toHaveBeenCalledWith(
@@ -590,7 +591,7 @@ describe('AnalyticsDashboard', () => {
         blob: async () => mockBlob,
       });
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Export CSV'));
 
@@ -610,7 +611,7 @@ describe('AnalyticsDashboard', () => {
         blob: async () => mockBlob,
       });
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Export CSV'));
 
@@ -639,7 +640,7 @@ describe('AnalyticsDashboard', () => {
         blob: async () => mockBlob,
       });
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Export CSV'));
 
@@ -672,7 +673,7 @@ describe('AnalyticsDashboard', () => {
 
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(1));
 
@@ -691,7 +692,7 @@ describe('AnalyticsDashboard', () => {
 
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(1));
 
@@ -720,7 +721,7 @@ describe('AnalyticsDashboard', () => {
     it('displays retry button in error state', async () => {
       mockApi.get.mockRejectedValueOnce(new Error('API Error'));
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Retry')).toBeInTheDocument();
@@ -731,7 +732,7 @@ describe('AnalyticsDashboard', () => {
       mockApi.get.mockRejectedValueOnce(new Error('First error'));
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText('Retry'));
 
@@ -745,7 +746,7 @@ describe('AnalyticsDashboard', () => {
     it('handles unauthorized error (line 82-84)', async () => {
       mockApi.get.mockResolvedValueOnce(null as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -755,7 +756,7 @@ describe('AnalyticsDashboard', () => {
     it('displays error toast when API call fails', async () => {
       mockApi.get.mockRejectedValueOnce(new Error('Network failure'));
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -773,7 +774,7 @@ describe('AnalyticsDashboard', () => {
 
       // Component uses state for gameId, but it's not exposed in UI
       // Testing the internal logic through the fetchStats function
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(mockApi.get).toHaveBeenCalledWith(
@@ -785,7 +786,7 @@ describe('AnalyticsDashboard', () => {
     it('excludes roleFilter param when set to "all" (line 76-78)', async () => {
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         const lastCall = mockApi.get.mock.calls[mockApi.get.mock.calls.length - 1][0];
@@ -796,7 +797,7 @@ describe('AnalyticsDashboard', () => {
     it('handles empty date range gracefully', async () => {
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
@@ -816,7 +817,7 @@ describe('AnalyticsDashboard', () => {
 
       mockApi.get.mockResolvedValueOnce(customStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         // formatNumber is called for metric display
@@ -831,7 +832,7 @@ describe('AnalyticsDashboard', () => {
 
       mockApi.get.mockResolvedValueOnce(customStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         // formatConfidence is called for confidence score
@@ -842,7 +843,7 @@ describe('AnalyticsDashboard', () => {
     it('prepares chart data with formatted dates', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         // prepareChartData is called for all charts
@@ -859,7 +860,7 @@ describe('AnalyticsDashboard', () => {
     it('displays last update timestamp after successful fetch', async () => {
       mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText(/Last updated:/)).toBeInTheDocument();
@@ -869,7 +870,7 @@ describe('AnalyticsDashboard', () => {
     it('updates timestamp after manual refresh', async () => {
       mockApi.get.mockResolvedValue(sampleStats as any);
 
-      render(<AnalyticsDashboard />);
+      renderWithQuery(<AnalyticsDashboard />);
 
       await waitFor(() => screen.getByText(/Last updated:/));
 

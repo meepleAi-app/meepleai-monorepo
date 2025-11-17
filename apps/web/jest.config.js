@@ -23,8 +23,10 @@ const customJestConfig = {
     '!src/**/_app.tsx',
     '!src/**/_document.tsx',
     '!src/**/__tests__/fixtures/**',
-    '!src/**/__tests__/utils/mock-api-router.ts',
-    '!src/**/__tests__/utils/mock-api-presets.ts',
+    '!src/**/__tests__/utils/**',
+    '!src/test-utils/**',
+    '!src/**/test-utils.{ts,tsx}',
+    '!src/**/chat-test-utils.{ts,tsx}',
     '!src/**/*.worker.{js,jsx,ts,tsx}',
     '!src/workers/**',
   ],
@@ -45,10 +47,12 @@ const customJestConfig = {
     '/e2e/',
     '/.next/',
     '/__tests__/fixtures/',
-    '/__tests__/utils/mock-api-router\\.ts$',
-    '/__tests__/utils/mock-api-presets\\.ts$',
-    '/test-utils\\.tsx$', // Utility file, not a test file
-    '/chat-test-utils\\.ts$', // Chat test utility file, not a test file
+    '/__tests__/utils/(?!__tests__/)', // Exclude utility files but not their tests
+    '/test-utils\\.(ts|tsx)$', // Utility file, not a test file
+    '/chat-test-utils\\.(ts|tsx)$', // Chat test utility file, not a test file
+    '/async-test-helpers\\.(ts|tsx)$', // Async test helper utility
+    '/query-test-utils\\.(ts|tsx)$', // Query test utility
+    '/zustand-test-utils\\.(ts|tsx)$', // Zustand test utility
   ],
 }
 

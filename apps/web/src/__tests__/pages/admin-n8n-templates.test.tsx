@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within, fireEvent, act } from '@testing-library/react';
+import {  screen, waitFor, within, fireEvent, act } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import userEvent from '@testing-library/user-event';
 import { api } from '@/lib/api';
 import N8nTemplatesPage from '@/pages/admin/n8n-templates';
@@ -140,7 +141,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockImplementation(() => new Promise(() => {})); // Never resolves
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       expect(screen.getByText(/Loading templates.../i)).toBeInTheDocument();
@@ -153,7 +154,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValue(mockTemplates);
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -166,7 +167,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValue(mockTemplates);
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -182,7 +183,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValue([]);
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -196,7 +197,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockRejectedValue(new Error('Network error'));
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -209,7 +210,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValue(null);
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -222,7 +223,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates);
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -246,7 +247,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValue(mockTemplates);
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -265,7 +266,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValue(mockTemplates);
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -284,7 +285,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(integrationTemplates); // After filter
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -308,7 +309,7 @@ describe('N8nTemplatesPage', () => {
         .mockResolvedValueOnce(integrationTemplates) // Integration filter
         .mockResolvedValueOnce(mockTemplates); // All categories
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -334,7 +335,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates);
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -365,7 +366,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(integrationTemplates); // After filter
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -392,7 +393,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -418,7 +419,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -446,7 +447,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -471,7 +472,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -507,7 +508,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -535,7 +536,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockRejectedValueOnce(new Error('Failed to load')); // Template detail error
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -566,7 +567,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -594,7 +595,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -621,7 +622,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -648,7 +649,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -676,7 +677,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -704,7 +705,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -739,7 +740,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(pdfTemplate); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('PDF Processing')).toBeInTheDocument();
@@ -774,7 +775,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(pdfTemplate); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('PDF Processing')).toBeInTheDocument();
@@ -810,7 +811,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -846,7 +847,7 @@ describe('N8nTemplatesPage', () => {
       });
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -894,7 +895,7 @@ describe('N8nTemplatesPage', () => {
       });
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -936,7 +937,7 @@ describe('N8nTemplatesPage', () => {
       });
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -971,7 +972,7 @@ describe('N8nTemplatesPage', () => {
       mockPost.mockImplementation(() => new Promise(() => {})); // Never resolves
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -1009,7 +1010,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(pdfTemplate); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('PDF Processing')).toBeInTheDocument();
@@ -1036,7 +1037,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(mockTemplateDetail); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -1068,7 +1069,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(healthCheckTemplate); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Health Check Monitor')).toBeInTheDocument();
@@ -1106,7 +1107,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(noParamsTemplate); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Data Transformation')).toBeInTheDocument();
@@ -1155,7 +1156,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce([...mockTemplates, optionalParamsTemplate]) // Initial load
         .mockResolvedValueOnce(optionalParamsTemplate); // Template detail
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Optional Template')).toBeInTheDocument();
@@ -1193,7 +1194,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates) // Initial load
         .mockResolvedValueOnce(null); // Template detail - unauthorized
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -1221,7 +1222,7 @@ describe('N8nTemplatesPage', () => {
         .mockResolvedValueOnce(slackDetail) // First template
         .mockResolvedValueOnce(pdfDetail); // Second template
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -1264,7 +1265,7 @@ describe('N8nTemplatesPage', () => {
       });
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -1311,7 +1312,7 @@ describe('N8nTemplatesPage', () => {
       const user = userEvent.setup();
       mockGet.mockRejectedValue(new Error('Network error'));
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toHaveTextContent(/Unexpected Error/i);
@@ -1334,7 +1335,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValue([longTagsTemplate]);
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       // Assert
       await waitFor(() => {
@@ -1359,7 +1360,7 @@ describe('N8nTemplatesPage', () => {
       });
 
       // Act
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -1408,7 +1409,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates)
         .mockResolvedValueOnce(mockTemplateDetail);
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -1437,7 +1438,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates)
         .mockResolvedValueOnce(mockTemplateDetail);
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -1468,7 +1469,7 @@ describe('N8nTemplatesPage', () => {
         message: 'Template imported successfully'
       });
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();
@@ -1503,7 +1504,7 @@ describe('N8nTemplatesPage', () => {
       mockGet.mockResolvedValueOnce(mockTemplates)
         .mockResolvedValueOnce(mockTemplateDetail);
 
-      render(<N8nTemplatesPage />);
+      renderWithQuery(<N8nTemplatesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Slack Notification')).toBeInTheDocument();

@@ -1,9 +1,10 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/navigation';
 import Home from '@/components/pages/HomePage';
 import { api } from '@/lib/api';
 import { waitForApiCall } from '../fixtures/test-helpers';
+import { renderWithQuery } from '../utils/query-test-utils';
 
 // Mock next/navigation (App Router)
 const mockPush = jest.fn();
@@ -85,7 +86,7 @@ describe('Home page (Landing Page)', () => {
 
   describe('Hero Section', () => {
     it('renders hero section with title and description', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('Your AI-Powered', { exact: false })).toBeInTheDocument();
@@ -98,7 +99,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('shows "Get Started Free" button when user is not authenticated', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitForApiCall(mockedApi.get, '/api/v1/auth/me');
 
@@ -117,7 +118,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('Go to Chat')).toBeInTheDocument();
@@ -125,7 +126,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('shows demo credentials hint when not authenticated', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         // user@meepleai.dev appears multiple times (hero + footer)
@@ -137,7 +138,7 @@ describe('Home page (Landing Page)', () => {
 
   describe('Header Navigation', () => {
     it('shows MeepleAI logo and Get Started button when not authenticated', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         const logoElements = screen.getAllByText('MeepleAI');
@@ -160,7 +161,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       // Get the header navigation element
       const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
@@ -188,7 +189,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
@@ -205,7 +206,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByRole('link', { name: 'Chat' })).toBeInTheDocument();
@@ -218,7 +219,7 @@ describe('Home page (Landing Page)', () => {
   describe('Auth Modal', () => {
     it('opens auth modal when clicking Get Started button', async () => {
       const user = userEvent.setup();
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -235,7 +236,7 @@ describe('Home page (Landing Page)', () => {
 
     it('switches between Login and Register tabs', async () => {
       const user = userEvent.setup();
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -272,7 +273,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('Go to Chat')).toBeInTheDocument();
@@ -296,7 +297,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('Start Chatting')).toBeInTheDocument();
@@ -325,7 +326,7 @@ describe('Home page (Landing Page)', () => {
 
       mockedApi.post.mockResolvedValueOnce({});
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
@@ -359,7 +360,7 @@ describe('Home page (Landing Page)', () => {
 
       mockedApi.post.mockRejectedValueOnce(new Error('Logout failed'));
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
@@ -383,7 +384,7 @@ describe('Home page (Landing Page)', () => {
 
   describe('Features Section', () => {
     it('renders How It Works section with three steps', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('How It Works')).toBeInTheDocument();
@@ -395,7 +396,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('renders Key Features section', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('Semantic Search')).toBeInTheDocument();
@@ -411,7 +412,7 @@ describe('Home page (Landing Page)', () => {
 
   describe('CTA Section', () => {
     it('renders CTA section with call to action', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('Ready to Stop Arguing About Rules?')).toBeInTheDocument();
@@ -434,7 +435,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('Start Chatting')).toBeInTheDocument();
@@ -449,7 +450,7 @@ describe('Home page (Landing Page)', () => {
 
   describe('Footer', () => {
     it('renders footer with links', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('© 2025 MeepleAI. Open source project.')).toBeInTheDocument();
@@ -462,7 +463,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('renders demo accounts in footer', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('Demo Accounts')).toBeInTheDocument();
@@ -494,7 +495,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -555,7 +556,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -625,7 +626,7 @@ describe('Home page (Landing Page)', () => {
       // Use MockApiError for proper error handling
       mockedApi.post.mockRejectedValueOnce(new MockApiError(401, 'Invalid credentials'));
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -671,7 +672,7 @@ describe('Home page (Landing Page)', () => {
       // Use MockApiError for proper error handling
       mockedApi.post.mockRejectedValueOnce(new MockApiError(409, 'Email already exists'));
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -730,7 +731,7 @@ describe('Home page (Landing Page)', () => {
       // Use MockApiError for proper error handling
       mockedApi.post.mockRejectedValueOnce(new MockApiError(401, 'Login failed'));
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -787,7 +788,7 @@ describe('Home page (Landing Page)', () => {
       // Mock with proper ApiError instance
       mockedApi.post.mockRejectedValueOnce(new MockApiError(400, 'Test error'));
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -840,7 +841,7 @@ describe('Home page (Landing Page)', () => {
         expiresAt: '2024-12-31T00:00:00.000Z'
       });
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -895,7 +896,7 @@ describe('Home page (Landing Page)', () => {
 
   describe('Scroll Behavior', () => {
     it('renders "See How It Works" button with anchor link', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('See How It Works')).toBeInTheDocument();
@@ -912,7 +913,7 @@ describe('Home page (Landing Page)', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockedApi.get.mockRejectedValueOnce(new Error('Network failure'));
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitForApiCall(mockedApi.get, '/api/v1/auth/me');
 
@@ -933,7 +934,7 @@ describe('Home page (Landing Page)', () => {
       // Mock with regular Error (not ApiError) - will trigger generic error message
       mockedApi.post.mockRejectedValueOnce(new Error('Network error'));
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -974,7 +975,7 @@ describe('Home page (Landing Page)', () => {
       // Mock with regular Error (not ApiError) - will trigger generic error message
       mockedApi.post.mockRejectedValueOnce(new Error('Network error'));
 
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -1023,7 +1024,7 @@ describe('Home page (Landing Page)', () => {
   describe('Additional Coverage', () => {
     it('register form does not show role selector when showRoleSelector is false', async () => {
       const user = userEvent.setup();
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -1052,7 +1053,7 @@ describe('Home page (Landing Page)', () => {
 
     it('switches between login and register tabs with Login tab initially selected', async () => {
       const user = userEvent.setup();
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
@@ -1077,7 +1078,7 @@ describe('Home page (Landing Page)', () => {
 
   describe('Hero Visual Content', () => {
     it('renders hero conversation example', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText('How does en passant work in chess?')).toBeInTheDocument();
@@ -1088,7 +1089,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('renders scroll indicator', async () => {
-      const { container } = render(<Home />);
+      const { container } = renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(mockedApi.get).toHaveBeenCalled();
@@ -1102,7 +1103,7 @@ describe('Home page (Landing Page)', () => {
 
   describe('Footer Links', () => {
     it('renders GitHub link', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         const githubLink = screen.getByRole('link', { name: 'GitHub' });
@@ -1114,7 +1115,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('renders Documentation link', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         const docsLink = screen.getByRole('link', { name: 'Documentation' });
@@ -1124,7 +1125,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('renders API Logs link', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         const logsLink = screen.getByRole('link', { name: 'API Logs' });
@@ -1136,7 +1137,7 @@ describe('Home page (Landing Page)', () => {
 
   describe('Feature Descriptions', () => {
     it('renders all feature descriptions in How It Works section', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText(/Upload any PDF rulebook/i)).toBeInTheDocument();
@@ -1147,7 +1148,7 @@ describe('Home page (Landing Page)', () => {
     });
 
     it('renders all key feature descriptions', async () => {
-      render(<Home />);
+      renderWithQuery(<Home />);
 
       await waitFor(() => {
         expect(screen.getByText(/Advanced AI understands context and meaning/i)).toBeInTheDocument();

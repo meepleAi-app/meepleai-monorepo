@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within, cleanup } from '@testing-library/react';
+import {  screen, waitFor, within, cleanup } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import userEvent from '@testing-library/user-event';
 import CacheDashboard from '../../pages/admin/cache';
 
@@ -97,7 +98,7 @@ describe('CacheDashboard', () => {
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const CacheDashboard = loadCacheDashboard();
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
@@ -119,7 +120,7 @@ describe('CacheDashboard', () => {
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const CacheDashboard = loadCacheDashboard();
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // Wait for data to load
     await waitFor(() =>
@@ -189,7 +190,7 @@ describe('CacheDashboard', () => {
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText instead of waitFor(() => getByText())
     expect(await screen.findByText('80.0%')).toBeInTheDocument();
@@ -210,7 +211,7 @@ describe('CacheDashboard', () => {
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     expect(await screen.findByText('50.0%')).toBeInTheDocument();
 
@@ -230,7 +231,7 @@ describe('CacheDashboard', () => {
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     expect(await screen.findByText('30.0%')).toBeInTheDocument();
   });
@@ -272,7 +273,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -316,7 +317,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -384,7 +385,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -444,7 +445,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -481,7 +482,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -528,7 +529,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -565,7 +566,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -605,7 +606,7 @@ describe('CacheDashboard', () => {
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const CacheDashboard = loadCacheDashboard();
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -631,7 +632,7 @@ describe('CacheDashboard', () => {
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const CacheDashboard = loadCacheDashboard();
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText for async rendering
     expect(await screen.findByText('Unexpected Error')).toBeInTheDocument();
@@ -660,7 +661,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -704,7 +705,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -747,7 +748,7 @@ describe('CacheDashboard', () => {
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('512.00 KB')).toBeInTheDocument();
@@ -768,7 +769,7 @@ describe('CacheDashboard', () => {
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     expect(await screen.findByText('50.00 MB')).toBeInTheDocument();
   });
@@ -790,7 +791,7 @@ describe('CacheDashboard', () => {
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
@@ -827,7 +828,7 @@ describe('CacheDashboard', () => {
     const CacheDashboard = loadCacheDashboard();
     const user = userEvent.setup({ delay: null });
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -860,7 +861,7 @@ describe('CacheDashboard', () => {
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const CacheDashboard = loadCacheDashboard();
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();
@@ -891,7 +892,7 @@ describe('CacheDashboard', () => {
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const CacheDashboard = loadCacheDashboard();
 
-    render(<CacheDashboard />);
+    renderWithQuery(<CacheDashboard />);
 
     // FIX 2: Use findByText
     expect(await screen.findByText('Cache Management Dashboard')).toBeInTheDocument();

@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import {  screen, waitFor, within } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import userEvent from '@testing-library/user-event';
 import UserManagement from '../../pages/admin/users';
 
@@ -83,7 +84,7 @@ describe('UserManagement', () => {
 
   describe('User List Display', () => {
     test('renders user management page with table', async () => {
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       expect(screen.getByText('User Management')).toBeInTheDocument();
 
@@ -95,7 +96,7 @@ describe('UserManagement', () => {
     });
 
     test('displays user roles with color-coded badges', async () => {
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         // Get all role badges (there may be multiple "Admin" texts)
@@ -111,7 +112,7 @@ describe('UserManagement', () => {
     });
 
     test('displays last seen times correctly', async () => {
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         // Should show formatted dates for users who have been seen
@@ -131,7 +132,7 @@ describe('UserManagement', () => {
         })
       );
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getByText('No users found')).toBeInTheDocument();
@@ -142,7 +143,7 @@ describe('UserManagement', () => {
   describe('Search and Filters', () => {
     test('sends search query when typing in search box', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getByPlaceholderText('Search by email or name...')).toBeInTheDocument();
@@ -163,7 +164,7 @@ describe('UserManagement', () => {
 
     test('filters users by role', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getByRole('combobox')).toBeInTheDocument();
@@ -182,7 +183,7 @@ describe('UserManagement', () => {
 
     test('resets to page 1 when search changes', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getByText('Next')).toBeInTheDocument();
@@ -208,7 +209,7 @@ describe('UserManagement', () => {
   describe('Sorting', () => {
     test('handles sort column selection', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getByText(/Created/)).toBeInTheDocument();
@@ -240,7 +241,7 @@ describe('UserManagement', () => {
     });
 
     test('displays sort indicators on active column', async () => {
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         // Default sort is by createdAt desc
@@ -252,7 +253,7 @@ describe('UserManagement', () => {
 
   describe('Pagination', () => {
     test('displays pagination controls', async () => {
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getByText('Previous')).toBeInTheDocument();
@@ -262,7 +263,7 @@ describe('UserManagement', () => {
     });
 
     test('shows correct item range', async () => {
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getByText('Showing 1 to 3 of 3 users')).toBeInTheDocument();
@@ -270,7 +271,7 @@ describe('UserManagement', () => {
     });
 
     test('disables Previous button on first page', async () => {
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         const previousButton = screen.getByText('Previous');
@@ -289,7 +290,7 @@ describe('UserManagement', () => {
         })
       );
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getByText('Next')).toBeInTheDocument();
@@ -310,7 +311,7 @@ describe('UserManagement', () => {
   describe('User Selection', () => {
     test('allows selecting individual users', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
@@ -326,7 +327,7 @@ describe('UserManagement', () => {
 
     test('selects all users when clicking select-all checkbox', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
@@ -343,7 +344,7 @@ describe('UserManagement', () => {
 
     test('shows bulk delete button when users selected', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
@@ -361,7 +362,7 @@ describe('UserManagement', () => {
   describe('Create User Modal', () => {
     test('opens create modal when clicking Create User button', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         // Find the main "Create User" button (not in a modal)
@@ -384,7 +385,7 @@ describe('UserManagement', () => {
 
     test('validates email format in create modal', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       // Open modal
       await waitFor(() => {
@@ -428,7 +429,7 @@ describe('UserManagement', () => {
 
     test('validates password length in create modal', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       // Open modal
       await waitFor(() => {
@@ -467,7 +468,7 @@ describe('UserManagement', () => {
         .mockResolvedValueOnce(createJsonResponse(newUser)) // Create response
         .mockResolvedValueOnce(createJsonResponse(pagedResponse)); // Reload after create
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       // Open modal
       await waitFor(() => {
@@ -502,7 +503,7 @@ describe('UserManagement', () => {
   describe('Edit User Modal', () => {
     test('opens edit modal with pre-filled data', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         const editButtons = screen.getAllByText('Edit');
@@ -521,7 +522,7 @@ describe('UserManagement', () => {
 
     test('does not show password field in edit mode', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Edit').length).toBeGreaterThan(0);
@@ -542,7 +543,7 @@ describe('UserManagement', () => {
         .mockResolvedValueOnce(createJsonResponse({ ...sampleUsers[0], displayName: 'Updated Name' })) // Update response
         .mockResolvedValueOnce(createJsonResponse(pagedResponse)); // Reload
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Edit').length).toBeGreaterThan(0);
@@ -574,7 +575,7 @@ describe('UserManagement', () => {
   describe('Delete User', () => {
     test('shows confirmation dialog when deleting user', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Delete').length).toBeGreaterThan(0);
@@ -596,7 +597,7 @@ describe('UserManagement', () => {
         .mockResolvedValueOnce(createJsonResponse({})) // Delete response
         .mockResolvedValueOnce(createJsonResponse({ ...pagedResponse, items: pagedResponse.items.slice(1) })); // Reload
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Delete').length).toBeGreaterThan(0);
@@ -622,7 +623,7 @@ describe('UserManagement', () => {
 
     test('cancels deletion when clicking Cancel', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByText('Delete').length).toBeGreaterThan(0);
@@ -649,7 +650,7 @@ describe('UserManagement', () => {
   describe('Bulk Operations', () => {
     test('shows bulk delete button when users are selected', async () => {
       const user = userEvent.setup();
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
@@ -673,7 +674,7 @@ describe('UserManagement', () => {
         .mockResolvedValueOnce(createJsonResponse({})) // Delete user 2
         .mockResolvedValueOnce(createJsonResponse({ ...pagedResponse, items: [pagedResponse.items[2]] })); // Reload
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
@@ -706,7 +707,7 @@ describe('UserManagement', () => {
     test('displays error message when API fails', async () => {
       fetchMock.mockRejectedValueOnce(new Error('Network error'));
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         // Check for any error text (component may format it differently)
@@ -720,7 +721,7 @@ describe('UserManagement', () => {
         .mockResolvedValueOnce(createJsonResponse(pagedResponse)) // Initial load
         .mockResolvedValueOnce(createJsonResponse({ error: 'Email already exists' }, false)); // Create error
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       // Open modal
       await waitFor(() => {
@@ -754,7 +755,7 @@ describe('UserManagement', () => {
     test('shows unauthorized error when user lacks permissions', async () => {
       fetchMock.mockResolvedValueOnce(createJsonResponse({ error: 'Unauthorized' }, false));
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         expect(screen.getByText(/Unauthorized|Admin access required|permission/i)).toBeInTheDocument();
@@ -770,7 +771,7 @@ describe('UserManagement', () => {
         .mockResolvedValueOnce(createJsonResponse({ id: 'new', email: 'new@example.com' }))
         .mockResolvedValueOnce(createJsonResponse(pagedResponse));
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       // Open modal
       await waitFor(() => {
@@ -805,7 +806,7 @@ describe('UserManagement', () => {
         .mockResolvedValueOnce(createJsonResponse({}))
         .mockResolvedValueOnce(createJsonResponse(pagedResponse));
 
-      render(<UserManagement />);
+      renderWithQuery(<UserManagement />);
 
       await waitFor(() => {
         const deleteButtons = screen.getAllByText('Delete');

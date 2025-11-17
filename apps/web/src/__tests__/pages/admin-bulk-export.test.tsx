@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import {  screen, waitFor } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import userEvent from '@testing-library/user-event';
 
 type FetchMock = jest.MockedFunction<typeof fetch>;
@@ -86,7 +87,7 @@ describe('BulkExport Page', () => {
       .mockResolvedValueOnce(createJsonResponse(mockAuthResponse))
       .mockResolvedValueOnce(createJsonResponse(mockGamesResponse));
 
-    render(<BulkExportPage />);
+    renderWithQuery(<BulkExportPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Bulk Export Rule Specs')).toBeInTheDocument();
@@ -106,7 +107,7 @@ describe('BulkExport Page', () => {
       .mockResolvedValueOnce(createJsonResponse(mockGamesResponse));
 
     const user = userEvent.setup();
-    render(<BulkExportPage />);
+    renderWithQuery(<BulkExportPage />);
 
     // Wait for games to load
     await waitFor(() => {
@@ -140,7 +141,7 @@ describe('BulkExport Page', () => {
       .mockResolvedValueOnce(createJsonResponse(mockGamesResponse));
 
     const user = userEvent.setup();
-    render(<BulkExportPage />);
+    renderWithQuery(<BulkExportPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Chess')).toBeInTheDocument();
@@ -172,7 +173,7 @@ describe('BulkExport Page', () => {
       .mockResolvedValueOnce(createJsonResponse(mockUserAuthResponse))
       .mockResolvedValueOnce(createJsonResponse(mockGamesResponse));
 
-    render(<BulkExportPage />);
+    renderWithQuery(<BulkExportPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Access Denied')).toBeInTheDocument();
@@ -191,7 +192,7 @@ describe('BulkExport Page', () => {
       .mockResolvedValueOnce(createJsonResponse({ error: 'Export failed' }, false, 500));
 
     const user = userEvent.setup();
-    render(<BulkExportPage />);
+    renderWithQuery(<BulkExportPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Chess')).toBeInTheDocument();
@@ -219,7 +220,7 @@ describe('BulkExport Page', () => {
       .mockResolvedValueOnce(createJsonResponse(mockAuthResponse))
       .mockResolvedValueOnce(createJsonResponse(mockGamesResponse));
 
-    render(<BulkExportPage />);
+    renderWithQuery(<BulkExportPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Chess')).toBeInTheDocument();

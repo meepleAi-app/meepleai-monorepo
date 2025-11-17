@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {  screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import { useRouter } from 'next/router';
 import CompareVersions from '../../pages/admin/prompts/[id]/compare';
 import { api } from '../../lib/api';
@@ -81,7 +82,7 @@ describe('CompareVersions Page', () => {
     it('should show loading indicator while fetching', () => {
       (api.get as jest.Mock).mockImplementation(() => new Promise(() => {}));
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
@@ -91,7 +92,7 @@ describe('CompareVersions Page', () => {
     it('should display error message when fetch fails', async () => {
       (api.get as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -101,7 +102,7 @@ describe('CompareVersions Page', () => {
     it('should display unauthorized error when API returns null', async () => {
       (api.get as jest.Mock).mockResolvedValue(null);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -113,7 +114,7 @@ describe('CompareVersions Page', () => {
     it('should display message when only one version exists', async () => {
       (api.get as jest.Mock).mockResolvedValue([mockVersions[0]]);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Not enough versions to compare')).toBeInTheDocument();
@@ -126,7 +127,7 @@ describe('CompareVersions Page', () => {
     it('should display message when no versions exist', async () => {
       (api.get as jest.Mock).mockResolvedValue([]);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Not enough versions to compare')).toBeInTheDocument();
@@ -138,7 +139,7 @@ describe('CompareVersions Page', () => {
     it('should auto-select latest two versions', async () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersions);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         const selects = screen.getAllByRole('combobox');
@@ -153,7 +154,7 @@ describe('CompareVersions Page', () => {
     it('should auto-select first version if only one exists', async () => {
       (api.get as jest.Mock).mockResolvedValue([mockVersions[0]]);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         // No select elements should be rendered with less than 2 versions
@@ -169,7 +170,7 @@ describe('CompareVersions Page', () => {
 
       (api.get as jest.Mock).mockResolvedValue(mockVersions);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         const selects = screen.getAllByRole('combobox');
@@ -185,7 +186,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should update version A when selection changes', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Version A (Original)')).toBeInTheDocument();
@@ -199,7 +200,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should update version B when selection changes', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Version B (Modified)')).toBeInTheDocument();
@@ -213,7 +214,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should display all versions in both dropdowns', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Version A (Original)')).toBeInTheDocument();
@@ -234,7 +235,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should display diff editor when two different versions selected', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-editor')).toBeInTheDocument();
@@ -248,7 +249,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should display version metadata above diff', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         const version1Elements = screen.getAllByText(/Version 1/);
@@ -264,7 +265,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should display legend explaining diff colors', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText(/Legend:/)).toBeInTheDocument();
@@ -274,7 +275,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should update diff when version selection changes', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-editor')).toBeInTheDocument();
@@ -299,7 +300,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should show warning when same version selected in both dropdowns', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Version A (Original)')).toBeInTheDocument();
@@ -319,7 +320,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should hide diff editor when same version selected', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-editor')).toBeInTheDocument();
@@ -341,7 +342,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should not display diff when version A is empty', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Version A (Original)')).toBeInTheDocument();
@@ -357,7 +358,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should not display diff when version B is empty', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Version B (Modified)')).toBeInTheDocument();
@@ -379,7 +380,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should have back to template link', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         const backButton = screen.getByText('← Back to Template');
@@ -398,7 +399,7 @@ describe('CompareVersions Page', () => {
         query: {},
       });
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       expect(api.get).not.toHaveBeenCalled();
     });
@@ -409,7 +410,7 @@ describe('CompareVersions Page', () => {
         mockVersions[1],
       ]);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-editor')).toBeInTheDocument();
@@ -422,7 +423,7 @@ describe('CompareVersions Page', () => {
         mockVersions[1],
       ]);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         const original = screen.getByTestId('diff-original');
@@ -433,7 +434,7 @@ describe('CompareVersions Page', () => {
     it('should format dates in version selector options', async () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersions);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByText('Version A (Original)')).toBeInTheDocument();
@@ -448,7 +449,7 @@ describe('CompareVersions Page', () => {
     it('should include creator email in version selector options', async () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersions);
 
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         const user1Emails = screen.getAllByText(/user1@example.com/);
@@ -465,7 +466,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should render diff editor with correct props', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-editor')).toBeInTheDocument();
@@ -482,7 +483,7 @@ describe('CompareVersions Page', () => {
     });
 
     it('should display loading message before diff editor mounts', async () => {
-      render(<CompareVersions />);
+      renderWithQuery(<CompareVersions />);
 
       await waitFor(() => {
         // Diff editor should eventually render

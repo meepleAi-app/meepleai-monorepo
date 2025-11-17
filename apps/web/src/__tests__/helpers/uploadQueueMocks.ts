@@ -299,7 +299,7 @@ export class MockUploadWorker {
       item.correlationId = `mock-corr-id-${Date.now()}`;
       this.state.metrics.failedUploads++;
       this.activeUploads.delete(item.id);
-      this.fileDataCache.delete(item.id); // Clean up memory on simulated error
+      // Keep file data for potential retry (don't delete on failure)
 
       this.emit({
         type: 'UPLOAD_FAILED',
@@ -377,7 +377,7 @@ export class MockUploadWorker {
       item.correlationId = `mock-corr-id-${Date.now()}`;
       this.state.metrics.failedUploads++;
       this.activeUploads.delete(item.id);
-      this.fileDataCache.delete(item.id); // Clean up memory on error
+      // Keep file data for potential retry (don't delete on failure)
 
       this.emit({
         type: 'UPLOAD_FAILED',

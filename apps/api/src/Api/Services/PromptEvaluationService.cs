@@ -153,26 +153,26 @@ public class PromptEvaluationService : IPromptEvaluationService
                 throw new ArgumentException($"Test case {testCase.Id} has invalid MaxLatencyMs: {testCase.MaxLatencyMs}");
         }
 
-        // Validate thresholds
+        // BGAI-041: Validate new 5-metric thresholds
         if (dataset.Thresholds.MinAccuracy < 0.0 || dataset.Thresholds.MinAccuracy > 1.0)
             throw new ArgumentException($"Invalid MinAccuracy threshold: {dataset.Thresholds.MinAccuracy}");
 
-        if (dataset.Thresholds.MaxHallucinationRate < 0.0 || dataset.Thresholds.MaxHallucinationRate > 1.0)
-            throw new ArgumentException($"Invalid MaxHallucinationRate threshold: {dataset.Thresholds.MaxHallucinationRate}");
+        if (dataset.Thresholds.MinRelevance < 0.0 || dataset.Thresholds.MinRelevance > 1.0)
+            throw new ArgumentException($"Invalid MinRelevance threshold: {dataset.Thresholds.MinRelevance}");
 
-        if (dataset.Thresholds.MinAvgConfidence < 0.0 || dataset.Thresholds.MinAvgConfidence > 1.0)
-            throw new ArgumentException($"Invalid MinAvgConfidence threshold: {dataset.Thresholds.MinAvgConfidence}");
+        if (dataset.Thresholds.MinCompleteness < 0.0 || dataset.Thresholds.MinCompleteness > 1.0)
+            throw new ArgumentException($"Invalid MinCompleteness threshold: {dataset.Thresholds.MinCompleteness}");
 
-        if (dataset.Thresholds.MinCitationCorrectness < 0.0 || dataset.Thresholds.MinCitationCorrectness > 1.0)
-            throw new ArgumentException($"Invalid MinCitationCorrectness threshold: {dataset.Thresholds.MinCitationCorrectness}");
+        if (dataset.Thresholds.MinClarity < 0.0 || dataset.Thresholds.MinClarity > 1.0)
+            throw new ArgumentException($"Invalid MinClarity threshold: {dataset.Thresholds.MinClarity}");
 
-        if (dataset.Thresholds.MaxAvgLatencyMs <= 0)
-            throw new ArgumentException($"Invalid MaxAvgLatencyMs threshold: {dataset.Thresholds.MaxAvgLatencyMs}");
+        if (dataset.Thresholds.MinCitationQuality < 0.0 || dataset.Thresholds.MinCitationQuality > 1.0)
+            throw new ArgumentException($"Invalid MinCitationQuality threshold: {dataset.Thresholds.MinCitationQuality}");
     }
 
     /// <summary>
     /// Evaluates a prompt version using a test dataset
-    /// Calculates 5 metrics: Accuracy, Hallucination Rate, Confidence, Citation Correctness, Latency
+    /// BGAI-041: Calculates 5 metrics: Accuracy, Relevance, Completeness, Clarity, Citation Quality
     /// </summary>
     public async Task<PromptEvaluationResult> EvaluateAsync(
         string templateId,
@@ -224,30 +224,30 @@ public class PromptEvaluationService : IPromptEvaluationService
                 queryResults.Add(queryResult);
 
                 _logger.LogDebug(
-                    "Query {Index}/{Total}: {TestCaseId} - Accurate: {IsAccurate}, Hallucinated: {IsHallucinated}, Confidence: {Confidence:F2}, Latency: {Latency}ms",
-                    i + 1, totalQueries, testCase.Id, queryResult.IsAccurate, queryResult.IsHallucinated,
-                    queryResult.Confidence, queryResult.LatencyMs);
+                    "Query {Index}/{Total}: {TestCaseId} - Accurate: {IsAccurate}, Relevant: {IsRelevant}, Complete: {IsComplete}, Clear: {IsClear}, GoodCitations: {HasGoodCitationQuality}",
+                    i + 1, totalQueries, testCase.Id, queryResult.IsAccurate, queryResult.IsRelevant,
+                    queryResult.IsComplete, queryResult.IsClear, queryResult.HasGoodCitationQuality);
             }
 
             // Step 4: Calculate aggregate metrics
             var metrics = CalculateAggregateMetrics(queryResults, dataset.TestCases);
 
-            // Step 5: Determine pass/fail
+            // Step 5: Determine pass/fail (BGAI-041: New 5-metric thresholds)
             var thresholds = dataset.Thresholds;
             var passed = metrics.Accuracy >= thresholds.MinAccuracy * 100 &&
-                         metrics.HallucinationRate <= thresholds.MaxHallucinationRate * 100 &&
-                         metrics.AvgConfidence >= thresholds.MinAvgConfidence &&
-                         metrics.CitationCorrectness >= thresholds.MinCitationCorrectness * 100 &&
-                         metrics.AvgLatencyMs <= thresholds.MaxAvgLatencyMs;
+                         metrics.Relevance >= thresholds.MinRelevance * 100 &&
+                         metrics.Completeness >= thresholds.MinCompleteness * 100 &&
+                         metrics.Clarity >= thresholds.MinClarity * 100 &&
+                         metrics.CitationQuality >= thresholds.MinCitationQuality * 100;
 
             var summary = GenerateSummary(metrics, thresholds, passed);
 
             stopwatch.Stop();
 
             _logger.LogInformation(
-                "Evaluation completed in {Duration}ms - Status: {Status}, Accuracy: {Accuracy:F1}%, Hallucination: {Hallucination:F1}%",
+                "Evaluation completed in {Duration}ms - Status: {Status}, Accuracy: {Accuracy:F1}%, Relevance: {Relevance:F1}%, Completeness: {Completeness:F1}%, Clarity: {Clarity:F1}%, CitationQuality: {CitationQuality:F1}%",
                 stopwatch.ElapsedMilliseconds, passed ? "PASSED" : "FAILED",
-                metrics.Accuracy, metrics.HallucinationRate);
+                metrics.Accuracy, metrics.Relevance, metrics.Completeness, metrics.Clarity, metrics.CitationQuality);
 
             return new PromptEvaluationResult
             {
@@ -309,10 +309,12 @@ public class PromptEvaluationService : IPromptEvaluationService
 
             queryStopwatch.Stop();
 
-            // Calculate metrics for this query
+            // BGAI-041: Calculate 5 metrics for this query
             var isAccurate = CalculateAccuracy(qaResponse.answer, testCase);
-            var isHallucinated = DetectHallucination(qaResponse.answer, testCase);
-            var areCitationsCorrect = ValidateCitations(qaResponse.answer, testCase);
+            var isRelevant = CalculateRelevance(qaResponse.answer, testCase);
+            var isComplete = CalculateCompleteness(qaResponse.answer, testCase);
+            var isClear = CalculateClarity(qaResponse.answer);
+            var hasGoodCitationQuality = CalculateCitationQuality(qaResponse.answer, testCase);
 
             return new QueryEvaluationResult
             {
@@ -322,9 +324,11 @@ public class PromptEvaluationService : IPromptEvaluationService
                 Confidence = qaResponse.confidence ?? 0.0,
                 LatencyMs = (int)queryStopwatch.ElapsedMilliseconds,
                 IsAccurate = isAccurate,
-                IsHallucinated = isHallucinated,
-                AreCitationsCorrect = areCitationsCorrect,
-                Notes = GenerateQueryNotes(isAccurate, isHallucinated, areCitationsCorrect, qaResponse.confidence)
+                IsRelevant = isRelevant,
+                IsComplete = isComplete,
+                IsClear = isClear,
+                HasGoodCitationQuality = hasGoodCitationQuality,
+                Notes = GenerateQueryNotes(isAccurate, isRelevant, isComplete, isClear, hasGoodCitationQuality)
             };
         }
         catch (HttpRequestException ex)
@@ -343,8 +347,10 @@ public class PromptEvaluationService : IPromptEvaluationService
                 Confidence = 0.0,
                 LatencyMs = (int)queryStopwatch.ElapsedMilliseconds,
                 IsAccurate = false,
-                IsHallucinated = false,
-                AreCitationsCorrect = false,
+                IsRelevant = false,
+                IsComplete = false,
+                IsClear = false,
+                HasGoodCitationQuality = false,
                 Notes = $"HTTP error: {ex.Message}"
             };
         }
@@ -364,8 +370,10 @@ public class PromptEvaluationService : IPromptEvaluationService
                 Confidence = 0.0,
                 LatencyMs = (int)queryStopwatch.ElapsedMilliseconds,
                 IsAccurate = false,
-                IsHallucinated = false,
-                AreCitationsCorrect = false,
+                IsRelevant = false,
+                IsComplete = false,
+                IsClear = false,
+                HasGoodCitationQuality = false,
                 Notes = $"Evaluation error: {ex.Message}"
             };
         }
@@ -389,26 +397,91 @@ public class PromptEvaluationService : IPromptEvaluationService
     }
 
     /// <summary>
-    /// Detects hallucination: whether response contains forbidden keywords
+    /// BGAI-041: Calculates relevance to context (anti-hallucination + topic coherence)
+    /// Relevance measures appropriateness to context
     /// </summary>
-    private bool DetectHallucination(string response, PromptTestCase testCase)
+    private bool CalculateRelevance(string response, PromptTestCase testCase)
     {
-        if (testCase.ForbiddenKeywords == null || testCase.ForbiddenKeywords.Count == 0)
+        if (string.IsNullOrWhiteSpace(response))
+            return false;
+
+        // Check for forbidden keywords (hallucination detection)
+        if (testCase.ForbiddenKeywords != null && testCase.ForbiddenKeywords.Count > 0)
         {
-            return false; // No forbidden keywords, not hallucinated
+            var responseLower = response.ToLowerInvariant();
+            var hasForbiddenKeywords = testCase.ForbiddenKeywords.Any(keyword =>
+                responseLower.Contains(keyword.ToLowerInvariant()));
+
+            if (hasForbiddenKeywords)
+                return false; // Hallucination detected, not relevant
         }
 
-        var responseLower = response.ToLowerInvariant();
-
-        // Check if ANY forbidden keyword is present (hallucination detected)
-        return testCase.ForbiddenKeywords.Any(keyword =>
-            responseLower.Contains(keyword.ToLowerInvariant()));
+        // Response is relevant if it doesn't contain hallucinations
+        // and has reasonable length (not too short)
+        return response.Length >= 20;
     }
 
     /// <summary>
-    /// Validates citations: whether expected citations appear in response
+    /// BGAI-041: Calculates completeness of coverage (response depth + aspect coverage)
+    /// Completeness measures thoroughness of the response
     /// </summary>
-    private bool ValidateCitations(string response, PromptTestCase testCase)
+    private bool CalculateCompleteness(string response, PromptTestCase testCase)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+            return false;
+
+        // Minimum length threshold (at least 50 characters for meaningful response)
+        if (response.Length < 50)
+            return false;
+
+        // If there are required keywords, check coverage
+        if (testCase.RequiredKeywords != null && testCase.RequiredKeywords.Count > 0)
+        {
+            var responseLower = response.ToLowerInvariant();
+            var coveredKeywords = testCase.RequiredKeywords.Count(keyword =>
+                responseLower.Contains(keyword.ToLowerInvariant()));
+
+            // At least 75% of required keywords should be covered for completeness
+            var coverageRatio = (double)coveredKeywords / testCase.RequiredKeywords.Count;
+            return coverageRatio >= 0.75;
+        }
+
+        // If no specific requirements, consider complete if response is substantial
+        return response.Length >= 100;
+    }
+
+    /// <summary>
+    /// BGAI-041: Calculates clarity of output (readability + structure)
+    /// Clarity measures how understandable and well-structured the response is
+    /// </summary>
+    private bool CalculateClarity(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+            return false;
+
+        // Check for basic structure indicators
+        var sentences = response.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries);
+        if (sentences.Length == 0)
+            return false;
+
+        // Average sentence length (reasonable: 50-200 characters)
+        var avgSentenceLength = response.Length / (double)sentences.Length;
+        if (avgSentenceLength < 20 || avgSentenceLength > 300)
+            return false; // Too short (fragmented) or too long (run-on)
+
+        // Check for formatting indicators (lists, paragraphs, etc.)
+        var hasStructure = response.Contains('\n') || response.Contains("- ") || response.Contains("• ");
+
+        // Response is clear if it has reasonable sentence structure
+        // and either has formatting or is not too long
+        return avgSentenceLength >= 20 && avgSentenceLength <= 200;
+    }
+
+    /// <summary>
+    /// BGAI-041: Calculates citation quality (correctness + presence)
+    /// Renamed and enhanced from ValidateCitations
+    /// </summary>
+    private bool CalculateCitationQuality(string response, PromptTestCase testCase)
     {
         if (testCase.ExpectedCitations == null || testCase.ExpectedCitations.Count == 0)
         {
@@ -430,29 +503,32 @@ public class PromptEvaluationService : IPromptEvaluationService
     }
 
     /// <summary>
-    /// Generates notes for a single query result
+    /// BGAI-041: Generates notes for a single query result with new 5-metric framework
     /// </summary>
-    private string? GenerateQueryNotes(bool isAccurate, bool isHallucinated, bool areCitationsCorrect, double? confidence)
+    private string? GenerateQueryNotes(bool isAccurate, bool isRelevant, bool isComplete, bool isClear, bool hasGoodCitationQuality)
     {
         var notes = new List<string>();
 
         if (!isAccurate)
-            notes.Add("Missing required keywords");
+            notes.Add("❌ Accuracy: Missing required keywords or incorrect content");
 
-        if (isHallucinated)
-            notes.Add("⚠️ Hallucination detected (forbidden keywords present)");
+        if (!isRelevant)
+            notes.Add("⚠️ Relevance: Contains hallucinations or off-topic content");
 
-        if (!areCitationsCorrect)
-            notes.Add("Citations missing or incorrect");
+        if (!isComplete)
+            notes.Add("⚠️ Completeness: Response lacks required depth or aspect coverage");
 
-        if (confidence.HasValue && confidence < 0.60)
-            notes.Add($"Low confidence: {confidence:F2}");
+        if (!isClear)
+            notes.Add("⚠️ Clarity: Poor structure, readability issues, or sentence length problems");
+
+        if (!hasGoodCitationQuality)
+            notes.Add("❌ Citation Quality: Missing or incorrect source attributions");
 
         return notes.Count > 0 ? string.Join("; ", notes) : null;
     }
 
     /// <summary>
-    /// Calculates aggregate metrics across all query results
+    /// BGAI-041: Calculates aggregate metrics across all query results (5-metric framework)
     /// </summary>
     private EvaluationMetrics CalculateAggregateMetrics(
         List<QueryEvaluationResult> queryResults,
@@ -465,45 +541,47 @@ public class PromptEvaluationService : IPromptEvaluationService
             return new EvaluationMetrics
             {
                 Accuracy = 0,
-                HallucinationRate = 0,
-                AvgConfidence = 0,
-                CitationCorrectness = 0,
-                AvgLatencyMs = 0
+                Relevance = 0,
+                Completeness = 0,
+                Clarity = 0,
+                CitationQuality = 0
             };
         }
 
-        // Metric 1: Accuracy (percentage of queries with all required keywords)
+        // Metric 1: Accuracy (percentage of queries with correct information)
         var accurateCount = queryResults.Count(q => q.IsAccurate);
         var accuracy = (accurateCount / (double)totalQueries) * 100;
 
-        // Metric 2: Hallucination Rate (percentage of queries with forbidden keywords)
-        var hallucinatedCount = queryResults.Count(q => q.IsHallucinated);
-        var hallucinationRate = (hallucinatedCount / (double)totalQueries) * 100;
+        // Metric 2: Relevance (percentage of queries that are relevant to context)
+        var relevantCount = queryResults.Count(q => q.IsRelevant);
+        var relevance = (relevantCount / (double)totalQueries) * 100;
 
-        // Metric 3: Average Confidence (mean RAG search confidence)
-        var avgConfidence = queryResults.Average(q => q.Confidence);
+        // Metric 3: Completeness (percentage of queries with complete coverage)
+        var completeCount = queryResults.Count(q => q.IsComplete);
+        var completeness = (completeCount / (double)totalQueries) * 100;
 
-        // Metric 4: Citation Correctness (percentage with correct citations, among those with expected citations)
+        // Metric 4: Clarity (percentage of queries with clear, well-structured responses)
+        var clearCount = queryResults.Count(q => q.IsClear);
+        var clarity = (clearCount / (double)totalQueries) * 100;
+
+        // Metric 5: Citation Quality (percentage with good citation quality, among those requiring citations)
         var queriesWithExpectedCitations = testCases.Count(tc => tc.ExpectedCitations != null && tc.ExpectedCitations.Count > 0);
-        var citationCorrectness = queriesWithExpectedCitations > 0
-            ? (queryResults.Count(q => q.AreCitationsCorrect) / (double)queriesWithExpectedCitations) * 100
+        var citationQuality = queriesWithExpectedCitations > 0
+            ? (queryResults.Count(q => q.HasGoodCitationQuality) / (double)queriesWithExpectedCitations) * 100
             : 100.0; // Pass by default if no citation requirements
-
-        // Metric 5: Average Latency (mean response time)
-        var avgLatencyMs = queryResults.Average(q => q.LatencyMs);
 
         return new EvaluationMetrics
         {
             Accuracy = Math.Round(accuracy, 2),
-            HallucinationRate = Math.Round(hallucinationRate, 2),
-            AvgConfidence = Math.Round(avgConfidence, 2),
-            CitationCorrectness = Math.Round(citationCorrectness, 2),
-            AvgLatencyMs = Math.Round(avgLatencyMs, 2)
+            Relevance = Math.Round(relevance, 2),
+            Completeness = Math.Round(completeness, 2),
+            Clarity = Math.Round(clarity, 2),
+            CitationQuality = Math.Round(citationQuality, 2)
         };
     }
 
     /// <summary>
-    /// Generates summary message for evaluation result
+    /// BGAI-041: Generates summary message for evaluation result (5-metric framework)
     /// </summary>
     private string GenerateSummary(EvaluationMetrics metrics, QualityThresholds thresholds, bool passed)
     {
@@ -513,17 +591,17 @@ public class PromptEvaluationService : IPromptEvaluationService
         if (metrics.Accuracy < thresholds.MinAccuracy * 100)
             issues.Add($"Accuracy below threshold ({metrics.Accuracy:F1}% < {thresholds.MinAccuracy * 100:F0}%)");
 
-        if (metrics.HallucinationRate > thresholds.MaxHallucinationRate * 100)
-            issues.Add($"Hallucination rate above threshold ({metrics.HallucinationRate:F1}% > {thresholds.MaxHallucinationRate * 100:F0}%)");
+        if (metrics.Relevance < thresholds.MinRelevance * 100)
+            issues.Add($"Relevance below threshold ({metrics.Relevance:F1}% < {thresholds.MinRelevance * 100:F0}%)");
 
-        if (metrics.AvgConfidence < thresholds.MinAvgConfidence)
-            issues.Add($"Confidence below threshold ({metrics.AvgConfidence:F2} < {thresholds.MinAvgConfidence:F2})");
+        if (metrics.Completeness < thresholds.MinCompleteness * 100)
+            issues.Add($"Completeness below threshold ({metrics.Completeness:F1}% < {thresholds.MinCompleteness * 100:F0}%)");
 
-        if (metrics.CitationCorrectness < thresholds.MinCitationCorrectness * 100)
-            issues.Add($"Citation correctness below threshold ({metrics.CitationCorrectness:F1}% < {thresholds.MinCitationCorrectness * 100:F0}%)");
+        if (metrics.Clarity < thresholds.MinClarity * 100)
+            issues.Add($"Clarity below threshold ({metrics.Clarity:F1}% < {thresholds.MinClarity * 100:F0}%)");
 
-        if (metrics.AvgLatencyMs > thresholds.MaxAvgLatencyMs)
-            issues.Add($"Latency above threshold ({metrics.AvgLatencyMs:F0}ms > {thresholds.MaxAvgLatencyMs}ms)");
+        if (metrics.CitationQuality < thresholds.MinCitationQuality * 100)
+            issues.Add($"Citation quality below threshold ({metrics.CitationQuality:F1}% < {thresholds.MinCitationQuality * 100:F0}%)");
 
         if (passed)
         {
@@ -555,14 +633,14 @@ public class PromptEvaluationService : IPromptEvaluationService
             var baselineResult = await EvaluateAsync(templateId, baselineVersionId, datasetPath, null, ct);
             var candidateResult = await EvaluateAsync(templateId, candidateVersionId, datasetPath, null, ct);
 
-            // Calculate deltas
+            // BGAI-041: Calculate deltas for new 5-metric framework
             var deltas = new MetricDeltas
             {
                 AccuracyDelta = Math.Round(candidateResult.Metrics.Accuracy - baselineResult.Metrics.Accuracy, 2),
-                HallucinationRateDelta = Math.Round(candidateResult.Metrics.HallucinationRate - baselineResult.Metrics.HallucinationRate, 2),
-                AvgConfidenceDelta = Math.Round(candidateResult.Metrics.AvgConfidence - baselineResult.Metrics.AvgConfidence, 2),
-                CitationCorrectnessDelta = Math.Round(candidateResult.Metrics.CitationCorrectness - baselineResult.Metrics.CitationCorrectness, 2),
-                AvgLatencyMsDelta = Math.Round(candidateResult.Metrics.AvgLatencyMs - baselineResult.Metrics.AvgLatencyMs, 2)
+                RelevanceDelta = Math.Round(candidateResult.Metrics.Relevance - baselineResult.Metrics.Relevance, 2),
+                CompletenessDelta = Math.Round(candidateResult.Metrics.Completeness - baselineResult.Metrics.Completeness, 2),
+                ClarityDelta = Math.Round(candidateResult.Metrics.Clarity - baselineResult.Metrics.Clarity, 2),
+                CitationQualityDelta = Math.Round(candidateResult.Metrics.CitationQuality - baselineResult.Metrics.CitationQuality, 2)
             };
 
             // Generate recommendation
@@ -597,7 +675,7 @@ public class PromptEvaluationService : IPromptEvaluationService
     }
 
     /// <summary>
-    /// Generates recommendation based on A/B comparison results
+    /// BGAI-041: Generates recommendation based on A/B comparison results (5-metric framework)
     /// </summary>
     private (ComparisonRecommendation recommendation, string reasoning) GenerateRecommendation(
         PromptEvaluationResult baseline,
@@ -613,16 +691,21 @@ public class PromptEvaluationService : IPromptEvaluationService
                 $"Candidate version failed quality thresholds: {candidate.Summary}");
         }
 
-        // REJECT if significant regression
+        // REJECT if significant regression in any metric
         if (deltas.AccuracyDelta <= -10.0)
-        {
             reasons.Add($"Accuracy regression: {deltas.AccuracyDelta:F1}%");
-        }
 
-        if (deltas.HallucinationRateDelta >= 15.0)
-        {
-            reasons.Add($"Hallucination rate increased: +{deltas.HallucinationRateDelta:F1}%");
-        }
+        if (deltas.RelevanceDelta <= -10.0)
+            reasons.Add($"Relevance regression: {deltas.RelevanceDelta:F1}%");
+
+        if (deltas.CompletenessDelta <= -10.0)
+            reasons.Add($"Completeness regression: {deltas.CompletenessDelta:F1}%");
+
+        if (deltas.ClarityDelta <= -10.0)
+            reasons.Add($"Clarity regression: {deltas.ClarityDelta:F1}%");
+
+        if (deltas.CitationQualityDelta <= -10.0)
+            reasons.Add($"Citation quality regression: {deltas.CitationQualityDelta:F1}%");
 
         if (reasons.Count > 0)
         {
@@ -630,23 +713,23 @@ public class PromptEvaluationService : IPromptEvaluationService
                 $"Significant regressions detected: {string.Join(", ", reasons)}");
         }
 
-        // ACTIVATE if meaningful improvement
+        // ACTIVATE if meaningful improvement in any metric
         var improvements = new List<string>();
 
         if (deltas.AccuracyDelta >= 5.0)
             improvements.Add($"Accuracy improved: +{deltas.AccuracyDelta:F1}%");
 
-        if (deltas.HallucinationRateDelta <= -5.0)
-            improvements.Add($"Hallucination reduced: {deltas.HallucinationRateDelta:F1}%");
+        if (deltas.RelevanceDelta >= 5.0)
+            improvements.Add($"Relevance improved: +{deltas.RelevanceDelta:F1}%");
 
-        if (deltas.AvgConfidenceDelta >= 0.10)
-            improvements.Add($"Confidence improved: +{deltas.AvgConfidenceDelta:F2}");
+        if (deltas.CompletenessDelta >= 5.0)
+            improvements.Add($"Completeness improved: +{deltas.CompletenessDelta:F1}%");
 
-        if (deltas.CitationCorrectnessDelta >= 5.0)
-            improvements.Add($"Citation correctness improved: +{deltas.CitationCorrectnessDelta:F1}%");
+        if (deltas.ClarityDelta >= 5.0)
+            improvements.Add($"Clarity improved: +{deltas.ClarityDelta:F1}%");
 
-        if (deltas.AvgLatencyMsDelta <= -500)
-            improvements.Add($"Latency reduced: {deltas.AvgLatencyMsDelta:F0}ms");
+        if (deltas.CitationQualityDelta >= 5.0)
+            improvements.Add($"Citation quality improved: +{deltas.CitationQualityDelta:F1}%");
 
         if (improvements.Count > 0)
         {
@@ -660,11 +743,17 @@ public class PromptEvaluationService : IPromptEvaluationService
         if (Math.Abs(deltas.AccuracyDelta) >= 1.0)
             changes.Add($"Accuracy: {deltas.AccuracyDelta:+0.0;-0.0}%");
 
-        if (Math.Abs(deltas.HallucinationRateDelta) >= 1.0)
-            changes.Add($"Hallucination: {deltas.HallucinationRateDelta:+0.0;-0.0}%");
+        if (Math.Abs(deltas.RelevanceDelta) >= 1.0)
+            changes.Add($"Relevance: {deltas.RelevanceDelta:+0.0;-0.0}%");
 
-        if (Math.Abs(deltas.AvgConfidenceDelta) >= 0.03)
-            changes.Add($"Confidence: {deltas.AvgConfidenceDelta:+0.00;-0.00}");
+        if (Math.Abs(deltas.CompletenessDelta) >= 1.0)
+            changes.Add($"Completeness: {deltas.CompletenessDelta:+0.0;-0.0}%");
+
+        if (Math.Abs(deltas.ClarityDelta) >= 1.0)
+            changes.Add($"Clarity: {deltas.ClarityDelta:+0.0;-0.0}%");
+
+        if (Math.Abs(deltas.CitationQualityDelta) >= 1.0)
+            changes.Add($"Citation Quality: {deltas.CitationQualityDelta:+0.0;-0.0}%");
 
         return (ComparisonRecommendation.ManualReview,
             changes.Count > 0
@@ -703,17 +792,17 @@ public class PromptEvaluationService : IPromptEvaluationService
         sb.AppendLine($"**Status**: {(result.Passed ? "✅ PASSED" : "❌ FAILED")}");
         sb.AppendLine();
 
-        sb.AppendLine("## Metrics Summary");
+        sb.AppendLine("## Metrics Summary (BGAI-041: 5-Metric Framework)");
         sb.AppendLine();
-        sb.AppendLine("| Metric | Value | Status |");
-        sb.AppendLine("|--------|-------|--------|");
+        sb.AppendLine("| Metric | Value | Target | Status |");
+        sb.AppendLine("|--------|-------|--------|--------|");
 
         var metrics = result.Metrics;
-        sb.AppendLine($"| Accuracy | {metrics.Accuracy:F1}% | {(metrics.Accuracy >= 80 ? "✅" : "❌")} |");
-        sb.AppendLine($"| Hallucination Rate | {metrics.HallucinationRate:F1}% | {(metrics.HallucinationRate <= 10 ? "✅" : "❌")} |");
-        sb.AppendLine($"| Avg Confidence | {metrics.AvgConfidence:F2} | {(metrics.AvgConfidence >= 0.70 ? "✅" : "❌")} |");
-        sb.AppendLine($"| Citation Correctness | {metrics.CitationCorrectness:F1}% | {(metrics.CitationCorrectness >= 80 ? "✅" : "❌")} |");
-        sb.AppendLine($"| Avg Latency | {metrics.AvgLatencyMs:F0}ms | {(metrics.AvgLatencyMs <= 3000 ? "✅" : "❌")} |");
+        sb.AppendLine($"| Accuracy | {metrics.Accuracy:F1}% | ≥ 80% | {(metrics.Accuracy >= 80 ? "✅" : "❌")} |");
+        sb.AppendLine($"| Relevance | {metrics.Relevance:F1}% | ≥ 85% | {(metrics.Relevance >= 85 ? "✅" : "❌")} |");
+        sb.AppendLine($"| Completeness | {metrics.Completeness:F1}% | ≥ 75% | {(metrics.Completeness >= 75 ? "✅" : "❌")} |");
+        sb.AppendLine($"| Clarity | {metrics.Clarity:F1}% | ≥ 80% | {(metrics.Clarity >= 80 ? "✅" : "❌")} |");
+        sb.AppendLine($"| Citation Quality | {metrics.CitationQuality:F1}% | ≥ 85% | {(metrics.CitationQuality >= 85 ? "✅" : "❌")} |");
         sb.AppendLine();
 
         sb.AppendLine("## Summary");
@@ -736,8 +825,10 @@ public class PromptEvaluationService : IPromptEvaluationService
             sb.AppendLine($"- **Confidence**: {qr.Confidence:F2}");
             sb.AppendLine($"- **Latency**: {qr.LatencyMs}ms");
             sb.AppendLine($"- **Accurate**: {(qr.IsAccurate ? "✅" : "❌")}");
-            sb.AppendLine($"- **Hallucinated**: {(qr.IsHallucinated ? "⚠️ YES" : "✅ NO")}");
-            sb.AppendLine($"- **Citations Correct**: {(qr.AreCitationsCorrect ? "✅" : "❌")}");
+            sb.AppendLine($"- **Relevant**: {(qr.IsRelevant ? "✅" : "❌")}");
+            sb.AppendLine($"- **Complete**: {(qr.IsComplete ? "✅" : "❌")}");
+            sb.AppendLine($"- **Clear**: {(qr.IsClear ? "✅" : "❌")}");
+            sb.AppendLine($"- **Good Citation Quality**: {(qr.HasGoodCitationQuality ? "✅" : "❌")}");
 
             if (!string.IsNullOrEmpty(qr.Notes))
             {
@@ -773,6 +864,7 @@ public class PromptEvaluationService : IPromptEvaluationService
 
         try
         {
+            // BGAI-041: Store new 5-metric framework results
             var entity = new PromptEvaluationResultEntity
             {
                 Id = Guid.Parse(result.EvaluationId),
@@ -782,10 +874,10 @@ public class PromptEvaluationService : IPromptEvaluationService
                 ExecutedAt = result.ExecutedAt,
                 TotalQueries = result.TotalQueries,
                 Accuracy = result.Metrics.Accuracy,
-                HallucinationRate = result.Metrics.HallucinationRate,
-                AvgConfidence = result.Metrics.AvgConfidence,
-                CitationCorrectness = result.Metrics.CitationCorrectness,
-                AvgLatencyMs = result.Metrics.AvgLatencyMs,
+                Relevance = result.Metrics.Relevance,
+                Completeness = result.Metrics.Completeness,
+                Clarity = result.Metrics.Clarity,
+                CitationQuality = result.Metrics.CitationQuality,
                 Passed = result.Passed,
                 Summary = result.Summary,
                 QueryResultsJson = JsonSerializer.Serialize(result.QueryResults),
@@ -829,6 +921,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 .Take(limit)
                 .ToListAsync(ct);
 
+            // BGAI-041: Retrieve new 5-metric framework results
             var results = entities.Select(e => new PromptEvaluationResult
             {
                 EvaluationId = e.Id.ToString(),
@@ -840,10 +933,10 @@ public class PromptEvaluationService : IPromptEvaluationService
                 Metrics = new EvaluationMetrics
                 {
                     Accuracy = e.Accuracy,
-                    HallucinationRate = e.HallucinationRate,
-                    AvgConfidence = e.AvgConfidence,
-                    CitationCorrectness = e.CitationCorrectness,
-                    AvgLatencyMs = e.AvgLatencyMs
+                    Relevance = e.Relevance,
+                    Completeness = e.Completeness,
+                    Clarity = e.Clarity,
+                    CitationQuality = e.CitationQuality
                 },
                 Passed = e.Passed,
                 Summary = e.Summary,

@@ -45,30 +45,35 @@ public class PromptEvaluationResultEntity
     [Required]
     public int TotalQueries { get; set; }
 
-    /// <summary>Accuracy metric (0.0-1.0)</summary>
+    /// <summary>Accuracy metric: correctness of information (0.0-100.0)</summary>
+    /// BGAI-041: Extended 5-metric quality evaluation framework
     [Column("accuracy")]
     [Required]
     public double Accuracy { get; set; }
 
-    /// <summary>Hallucination rate metric (0.0-1.0)</summary>
-    [Column("hallucination_rate")]
+    /// <summary>Relevance metric: appropriateness to context (0.0-100.0)</summary>
+    /// BGAI-041: Replaces HallucinationRate
+    [Column("relevance")]
     [Required]
-    public double HallucinationRate { get; set; }
+    public double Relevance { get; set; }
 
-    /// <summary>Average confidence metric (0.0-1.0)</summary>
-    [Column("avg_confidence")]
+    /// <summary>Completeness metric: thoroughness of coverage (0.0-100.0)</summary>
+    /// BGAI-041: Replaces AvgConfidence
+    [Column("completeness")]
     [Required]
-    public double AvgConfidence { get; set; }
+    public double Completeness { get; set; }
 
-    /// <summary>Citation correctness metric (0.0-1.0)</summary>
-    [Column("citation_correctness")]
+    /// <summary>Clarity metric: understandability of output (0.0-100.0)</summary>
+    /// BGAI-041: Replaces AvgLatencyMs
+    [Column("clarity")]
     [Required]
-    public double CitationCorrectness { get; set; }
+    public double Clarity { get; set; }
 
-    /// <summary>Average latency in milliseconds</summary>
-    [Column("avg_latency_ms")]
+    /// <summary>Citation Quality metric: reliability of source attribution (0.0-100.0)</summary>
+    /// BGAI-041: Renamed from CitationCorrectness
+    [Column("citation_quality")]
     [Required]
-    public double AvgLatencyMs { get; set; }
+    public double CitationQuality { get; set; }
 
     /// <summary>Overall pass/fail status</summary>
     [Column("passed")]

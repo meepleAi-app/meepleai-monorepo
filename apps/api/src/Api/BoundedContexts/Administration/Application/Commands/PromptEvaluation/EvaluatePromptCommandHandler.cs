@@ -48,10 +48,10 @@ public sealed class EvaluatePromptCommandHandler : ICommandHandler<EvaluatePromp
         }
 
         _logger.LogInformation(
-            "Evaluation completed - Status: {Status}, Accuracy: {Accuracy:F1}%, Hallucination: {Hallucination:F1}%",
+            "Evaluation completed - Status: {Status}, Accuracy: {Accuracy:F1}%, Relevance: {Relevance:F1}%",
             result.Passed ? "PASSED" : "FAILED",
             result.Metrics.Accuracy,
-            result.Metrics.HallucinationRate);
+            result.Metrics.Relevance);
 
         return result;
     }

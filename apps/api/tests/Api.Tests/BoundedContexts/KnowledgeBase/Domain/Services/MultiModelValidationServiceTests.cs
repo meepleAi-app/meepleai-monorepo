@@ -10,6 +10,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// <summary>
 /// Unit tests for MultiModelValidationService
 /// ISSUE-974: BGAI-032 - Multi-model consensus validation (GPT-4 + Claude)
+/// ISSUE-975: BGAI-033 - Consensus similarity calculation using cosine ≥0.90
 /// </summary>
 public class MultiModelValidationServiceTests
 {
@@ -54,15 +55,15 @@ public class MultiModelValidationServiceTests
     [Fact]
     public void Test03_CalculateSimilarity_HighlySimilarTexts_ReturnsHighScore()
     {
-        // Arrange
+        // Arrange - Same topic, mostly same words (cosine similarity should be very high)
         var text1 = "The knight moves two squares vertically and one square horizontally.";
         var text2 = "The knight moves two squares horizontally and one square vertically.";
 
         // Act
         var similarity = _service.CalculateSimilarity(text1, text2);
 
-        // Assert
-        Assert.True(similarity >= 0.70, $"Expected similarity ≥0.70, got {similarity:F3}");
+        // Assert - Cosine similarity considers term frequency, should be high for nearly identical word sets
+        Assert.True(similarity >= 0.80, $"Expected cosine similarity ≥0.80 for highly similar texts, got {similarity:F3}");
     }
 
     [Fact]
@@ -138,23 +139,24 @@ public class MultiModelValidationServiceTests
         var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
 
         // Assert
-        // Even with similar meaning, word-level Jaccard may give moderate score
+        // With cosine similarity, semantically similar texts may score high
         if (result.SimilarityScore >= 0.90)
         {
             Assert.True(result.HasConsensus);
             Assert.Equal(ConsensusSeverity.High, result.Severity);
+            Assert.NotNull(result.ConsensusResponse);
         }
         else if (result.SimilarityScore >= 0.70)
         {
             Assert.False(result.HasConsensus);
             Assert.Equal(ConsensusSeverity.Moderate, result.Severity);
+            Assert.Null(result.ConsensusResponse);
         }
         else
         {
             Assert.False(result.HasConsensus);
+            Assert.Null(result.ConsensusResponse);
         }
-
-        Assert.Null(result.ConsensusResponse); // No consensus response when below threshold
     }
 
     [Fact]
@@ -311,8 +313,8 @@ public class MultiModelValidationServiceTests
         // Act
         var similarity = _service.CalculateSimilarity(text1, text2);
 
-        // Assert
-        Assert.True(similarity >= 0.90, $"Expected case-insensitive similarity ≥0.90, got {similarity:F3}");
+        // Assert - Cosine similarity with TF-IDF should be nearly identical for case variants
+        Assert.True(similarity >= 0.99, $"Expected case-insensitive cosine similarity ≥0.99, got {similarity:F3}");
     }
 
     [Fact]
@@ -325,8 +327,8 @@ public class MultiModelValidationServiceTests
         // Act
         var similarity = _service.CalculateSimilarity(text1, text2);
 
-        // Assert
-        Assert.True(similarity >= 0.90, $"Expected punctuation-agnostic similarity ≥0.90, got {similarity:F3}");
+        // Assert - Cosine similarity should handle punctuation normalization
+        Assert.True(similarity >= 0.99, $"Expected punctuation-agnostic cosine similarity ≥0.99, got {similarity:F3}");
     }
 
     /// <summary>

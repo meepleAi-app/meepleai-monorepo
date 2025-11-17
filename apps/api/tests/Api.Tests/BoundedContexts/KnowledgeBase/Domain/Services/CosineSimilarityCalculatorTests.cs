@@ -1,0 +1,320 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Xunit;
+
+namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
+
+/// <summary>
+/// Unit tests for CosineSimilarityCalculator
+/// ISSUE-975: BGAI-033 - Consensus similarity calculation using cosine ≥0.90
+/// </summary>
+public class CosineSimilarityCalculatorTests
+{
+    private readonly CosineSimilarityCalculator _calculator;
+
+    public CosineSimilarityCalculatorTests()
+    {
+        _calculator = new CosineSimilarityCalculator();
+    }
+
+    [Fact]
+    public void Test01_CalculateCosineSimilarity_IdenticalTexts_Returns100()
+    {
+        // Arrange
+        var text = "The knight moves in an L-shape: two squares in one direction and one square perpendicular.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text, text);
+
+        // Assert
+        Assert.Equal(1.0, similarity, precision: 3);
+    }
+
+    [Fact]
+    public void Test02_CalculateCosineSimilarity_HighlySimilarTexts_ReturnsHighScore()
+    {
+        // Arrange - Very similar semantic content with different wording
+        var text1 = "The knight moves in an L-shape: two squares in one direction and one square perpendicular to that direction.";
+        var text2 = "The knight moves in an L-shape pattern: two squares in one direction and one square in a perpendicular direction.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Cosine similarity should be very high for semantically similar texts
+        Assert.True(similarity >= 0.85, $"Expected similarity ≥0.85 for highly similar texts, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test03_CalculateCosineSimilarity_ModeratelySimilarTexts_ReturnsMediumScore()
+    {
+        // Arrange - Same topic, different explanations
+        var text1 = "The knight moves two squares vertically and one square horizontally, or two squares horizontally and one square vertically.";
+        var text2 = "Knights jump in an L-shaped pattern on the chessboard.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Should have moderate similarity (same topic, different detail level)
+        Assert.True(similarity >= 0.30 && similarity < 0.85,
+            $"Expected similarity between 0.30-0.85 for moderately similar texts, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test04_CalculateCosineSimilarity_DifferentTexts_ReturnsLowScore()
+    {
+        // Arrange - Completely different topics
+        var text1 = "The knight moves in an L-shape on the chessboard.";
+        var text2 = "The bishop moves diagonally across the entire board.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Should have low similarity (different chess pieces)
+        Assert.True(similarity < 0.70, $"Expected similarity <0.70 for different texts, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test05_CalculateCosineSimilarity_CompletelyDifferentTexts_ReturnsVeryLowScore()
+    {
+        // Arrange - No semantic overlap
+        var text1 = "The game of chess originated in India during the 6th century.";
+        var text2 = "Python is a popular programming language for data science.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Should have very low or zero similarity
+        Assert.True(similarity < 0.30, $"Expected similarity <0.30 for completely different texts, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test06_CalculateCosineSimilarity_EmptyFirstText_ReturnsZero()
+    {
+        // Arrange
+        var text = "Some text content";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity("", text);
+
+        // Assert
+        Assert.Equal(0.0, similarity);
+    }
+
+    [Fact]
+    public void Test07_CalculateCosineSimilarity_EmptySecondText_ReturnsZero()
+    {
+        // Arrange
+        var text = "Some text content";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text, "");
+
+        // Assert
+        Assert.Equal(0.0, similarity);
+    }
+
+    [Fact]
+    public void Test08_CalculateCosineSimilarity_BothEmpty_ReturnsZero()
+    {
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity("", "");
+
+        // Assert
+        Assert.Equal(0.0, similarity);
+    }
+
+    [Fact]
+    public void Test09_CalculateCosineSimilarity_WhitespaceOnly_ReturnsZero()
+    {
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity("   ", "\t\n");
+
+        // Assert
+        Assert.Equal(0.0, similarity);
+    }
+
+    [Fact]
+    public void Test10_CalculateCosineSimilarity_CaseInsensitive()
+    {
+        // Arrange
+        var text1 = "The KNIGHT moves in an L-SHAPE.";
+        var text2 = "The knight moves in an l-shape.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Should be identical (case-insensitive)
+        Assert.True(similarity >= 0.99, $"Expected case-insensitive similarity ≥0.99, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test11_CalculateCosineSimilarity_PunctuationHandling()
+    {
+        // Arrange
+        var text1 = "The knight moves in an L-shape!";
+        var text2 = "The knight moves in an L-shape.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Punctuation should be normalized
+        Assert.True(similarity >= 0.99, $"Expected punctuation-agnostic similarity ≥0.99, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test12_CalculateCosineSimilarity_WordOrder_AffectsSimilarity()
+    {
+        // Arrange - Same words, different order (TF-IDF cosine is bag-of-words, order doesn't matter much)
+        var text1 = "The quick brown fox jumps over the lazy dog";
+        var text2 = "The lazy dog jumps over the quick brown fox";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Should still be very high since same words are present
+        Assert.True(similarity >= 0.90,
+            $"Expected high similarity for same words in different order, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test13_CalculateCosineSimilarity_TermFrequency_Matters()
+    {
+        // Arrange - Different term frequencies
+        var text1 = "chess chess chess game board";
+        var text2 = "chess game game game board";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Should have good but not perfect similarity (different term frequencies)
+        Assert.True(similarity >= 0.60 && similarity < 1.0,
+            $"Expected moderate-high similarity with different term frequencies, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test14_CalculateCosineSimilarity_LongTexts_SimilarContent()
+    {
+        // Arrange - Longer, realistic board game rule explanations
+        var text1 = @"In chess, the knight is a piece that moves in an L-shaped pattern.
+                     It can move two squares in one direction (horizontal or vertical)
+                     and then one square perpendicular to that direction. The knight is
+                     the only piece that can jump over other pieces on the board.";
+
+        var text2 = @"The knight in chess has a unique L-shaped movement pattern.
+                     It moves two squares horizontally or vertically, followed by one
+                     square perpendicular to that movement. Unlike other pieces, the
+                     knight can jump over pieces that are in its path.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Should achieve consensus threshold for semantically equivalent explanations
+        Assert.True(similarity >= 0.80,
+            $"Expected similarity ≥0.80 for semantically similar long texts, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test15_CalculateCosineSimilarity_ConsensusThreshold_Example()
+    {
+        // Arrange - Simulate GPT-4 and Claude responses that should achieve consensus
+        var gpt4Response = @"Castling is a special move in chess involving the king and one rook.
+                            The king moves two squares toward the rook, and the rook moves to the
+                            square the king crossed over. This is the only move where two pieces
+                            move simultaneously. Castling is only permitted if neither piece has
+                            moved previously, there are no pieces between them, and the king is
+                            not in check, does not move through check, and does not end in check.";
+
+        var claudeResponse = @"Castling is a special chess move that involves moving the king and
+                              a rook at the same time. The king slides two squares toward the rook,
+                              while the rook moves to the square that the king passed over. To castle,
+                              neither piece can have moved before, no pieces can be between them, and
+                              the king cannot be in check, move through check, or end up in check.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(gpt4Response, claudeResponse);
+
+        // Assert - Very similar explanations should meet consensus threshold
+        Assert.True(similarity >= 0.85,
+            $"Expected similarity ≥0.85 for consensus-quality responses, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test16_CalculateCosineSimilarity_NonConsensus_Example()
+    {
+        // Arrange - Different enough responses that shouldn't achieve consensus
+        var response1 = "The rook can move any number of squares horizontally or vertically.";
+        var response2 = "In Catan, players collect resources like wood, brick, sheep, wheat, and ore to build settlements and roads.";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(response1, response2);
+
+        // Assert - Completely different topics should have very low similarity
+        Assert.True(similarity < 0.50,
+            $"Expected similarity <0.50 for non-consensus responses, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test17_CalculateCosineSimilarity_ShortTexts_IdenticalContent()
+    {
+        // Arrange
+        var text1 = "Yes, you can castle.";
+        var text2 = "Yes you can castle";
+
+        // Act
+        var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+        // Assert - Short identical content should have very high similarity
+        Assert.True(similarity >= 0.95,
+            $"Expected similarity ≥0.95 for short identical texts, got {similarity:F3}");
+    }
+
+    [Fact]
+    public void Test18_CalculateCosineSimilarity_SymmetricProperty()
+    {
+        // Arrange
+        var text1 = "The bishop moves diagonally across the board.";
+        var text2 = "Diagonal movement is how the bishop travels on the chessboard.";
+
+        // Act
+        var similarity1 = _calculator.CalculateCosineSimilarity(text1, text2);
+        var similarity2 = _calculator.CalculateCosineSimilarity(text2, text1);
+
+        // Assert - Cosine similarity should be symmetric
+        Assert.Equal(similarity1, similarity2, precision: 6);
+    }
+
+    [Fact]
+    public void Test19_CalculateCosineSimilarity_RangeValidation()
+    {
+        // Arrange - Various text pairs
+        var testCases = new[]
+        {
+            ("identical text", "identical text"),
+            ("different text here", "completely unrelated content"),
+            ("some overlap here", "here is some text"),
+            ("", "non-empty"),
+            ("The quick brown fox", "The lazy dog")
+        };
+
+        // Act & Assert
+        foreach (var (text1, text2) in testCases)
+        {
+            var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
+
+            Assert.True(similarity >= 0.0 && similarity <= 1.0,
+                $"Similarity must be in [0,1] range, got {similarity:F3} for texts: '{text1}' vs '{text2}'");
+        }
+    }
+
+    [Fact]
+    public void Test20_CalculateCosineSimilarity_NullText_ReturnsZero()
+    {
+        // Act & Assert
+        var similarity1 = _calculator.CalculateCosineSimilarity(null!, "text");
+        var similarity2 = _calculator.CalculateCosineSimilarity("text", null!);
+        var similarity3 = _calculator.CalculateCosineSimilarity(null!, null!);
+
+        Assert.Equal(0.0, similarity1);
+        Assert.Equal(0.0, similarity2);
+        Assert.Equal(0.0, similarity3);
+    }
+}

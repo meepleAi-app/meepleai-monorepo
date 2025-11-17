@@ -1,21 +1,31 @@
 /**
- * LoginForm Component
+ * LoginForm Component (Migrated to RHF + Zod)
  *
  * Reusable login form with:
- * - React 19 useActionState for form state management
+ * - React Hook Form for state management (NO useState)
+ * - Zod for schema validation
  * - Server Actions pattern for auth
  * - Accessible form controls
  * - Loading states
  * - Localized Italian error messages
  *
- * Issue #1078: FE-IMP-002 — Server Actions per Auth & Export
+ * Issue #1082: FE-IMP-006 — Form System (RHF + Zod)
  */
 
-import { useActionState, useEffect } from 'react';
-import { AccessibleFormInput } from '@/components/accessible';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormError,
+} from '@/components/forms';
+import { Input } from '@/components/ui/input';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { loginFormSchema, type LoginFormData } from '@/lib/schemas/forms';
 import { loginAction, type AuthActionState } from '@/actions/auth';
-import { validationMessages } from '@/lib/i18n/errors';
 
 // ============================================================================
 // Component Props
@@ -41,58 +51,98 @@ export function LoginForm({
   onSuccess,
   initialEmail = '',
 }: LoginFormProps) {
-  // Use React 19 useActionState for form handling
-  const [state, formAction, isPending] = useActionState<AuthActionState, FormData>(
-    loginAction,
-    { success: false }
-  );
+  // React Hook Form with Zod validation (NO useState)
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: {
+      email: initialEmail,
+      password: '',
+    },
+  });
 
-  // Call onSuccess callback when login succeeds (useEffect to avoid render-time side effects)
-  useEffect(() => {
-    if (state.success && state.user && onSuccess) {
-      onSuccess(state.user);
+  // Submit handler (Server Action)
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      const formData = new FormData();
+      formData.append('email', data.email);
+      formData.append('password', data.password);
+
+      const result = await loginAction({} as AuthActionState, formData);
+
+      if (result.success && result.user && onSuccess) {
+        onSuccess(result.user);
+      } else if (result.error) {
+        // Set form error from server
+        form.setError('root', {
+          message: result.error.message,
+        });
+      }
+    } catch (error) {
+      form.setError('root', {
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Errore durante il login',
+      });
     }
-  }, [state.success, state.user, onSuccess]);
+  };
+
+  const isSubmitting = form.formState.isSubmitting;
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <Form form={form} onSubmit={onSubmit} className="space-y-4">
       {/* Email Field */}
-      <div className="space-y-2">
-        <AccessibleFormInput
-          label="Email"
-          id="login-email"
-          name="email"
-          type="email"
-          placeholder="tuoemail@esempio.com"
-          autoComplete="email"
-          defaultValue={initialEmail}
-          required
-          disabled={isPending}
-        />
-      </div>
+      <FormField
+        control={form.control}
+        name="email"
+        render={({ field }) => (
+          <FormItem className="space-y-2">
+            <FormLabel>Email</FormLabel>
+            <FormControl>
+              <Input
+                {...field}
+                type="email"
+                placeholder="tuoemail@esempio.com"
+                autoComplete="email"
+                disabled={isSubmitting}
+              />
+            </FormControl>
+            <FormError />
+          </FormItem>
+        )}
+      />
 
       {/* Password Field */}
-      <div className="space-y-2">
-        <AccessibleFormInput
-          label="Password"
-          id="login-password"
-          name="password"
-          type="password"
-          placeholder="••••••••"
-          autoComplete="current-password"
-          required
-          disabled={isPending}
-        />
-      </div>
+      <FormField
+        control={form.control}
+        name="password"
+        render={({ field }) => (
+          <FormItem className="space-y-2">
+            <FormLabel>Password</FormLabel>
+            <FormControl>
+              <Input
+                {...field}
+                type="password"
+                placeholder="••••••••"
+                autoComplete="current-password"
+                disabled={isSubmitting}
+              />
+            </FormControl>
+            <FormError />
+          </FormItem>
+        )}
+      />
 
-      {/* Error Message */}
-      {state.error && (
+      {/* Root Error Message */}
+      {form.formState.errors.root && (
         <div
           className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
           role="alert"
           aria-live="polite"
         >
-          <p className="text-sm text-red-800 dark:text-red-200">{state.error.message}</p>
+          <p className="text-sm text-red-800 dark:text-red-200">
+            {form.formState.errors.root.message}
+          </p>
         </div>
       )}
 
@@ -100,11 +150,11 @@ export function LoginForm({
       <LoadingButton
         type="submit"
         className="w-full"
-        isLoading={isPending}
+        isLoading={isSubmitting}
         loadingText="Accesso in corso..."
       >
         Accedi
       </LoadingButton>
-    </form>
+    </Form>
   );
 }

@@ -7,6 +7,13 @@
  * - Worker lifecycle management with error recovery
  * - File ArrayBuffer transfer to worker
  * - SSR-safe with getServerSnapshot
+ * - Lazy Worker initialization for test mocking (Issue #1301)
+ *
+ * Architecture (Issue #1301):
+ * - Worker is NOT created at module import time
+ * - Worker is created on first method invocation (subscribe, addFiles, etc.)
+ * - This enables test frameworks to mock Worker before instantiation
+ * - All public methods call ensureWorkerInitialized() before Worker interaction
  */
 
 import type {
@@ -79,10 +86,9 @@ class UploadQueueStore {
   private idleTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    // Defer worker creation to avoid SSR issues
+    // LAZY INITIALIZATION: Worker created on first method call (Issue #1301)
+    // This enables test frameworks to inject mocks before Worker instantiation
     if (typeof window !== 'undefined') {
-      this.initializeWorker();
-
       // Auto-cleanup on page unload (prevents memory leak in SPA navigation)
       window.addEventListener('beforeunload', () => {
         this.destroy();
@@ -90,6 +96,20 @@ class UploadQueueStore {
 
       // Cleanup on visibility change (tab hidden for >5 min with empty queue)
       this.setupIdleCleanup();
+    }
+  }
+
+  /**
+   * Lazy initialization - creates Worker on first method invocation
+   * This allows test frameworks to mock Worker before instantiation (Issue #1301)
+   */
+  private ensureWorkerInitialized(): void {
+    if (typeof window === 'undefined') {
+      return; // SSR-safe
+    }
+
+    if (!this.worker && !this.isInitializing && !this.workerError) {
+      this.initializeWorker();
     }
   }
 
@@ -265,6 +285,9 @@ class UploadQueueStore {
   // ============================================================================
 
   subscribe = (callback: () => void): (() => void) => {
+    // Lazy initialization on first subscription (Issue #1301)
+    this.ensureWorkerInitialized();
+
     this.listeners.add(callback);
     return () => this.listeners.delete(callback);
   };
@@ -388,6 +411,9 @@ class UploadQueueStore {
   }
 
   async addFiles(files: File[], gameId: string, language: string): Promise<void> {
+    // Lazy initialization on first addFiles call (Issue #1301)
+    this.ensureWorkerInitialized();
+
     if (!this.isReady || !this.worker) {
       console.warn('[UploadQueueStore] Worker not ready, buffering files until worker initializes');
 
@@ -423,29 +449,35 @@ class UploadQueueStore {
   }
 
   cancelUpload(id: string): void {
+    this.ensureWorkerInitialized();
     this.postMessage({ type: 'CANCEL_UPLOAD', payload: { id } });
   }
 
   retryUpload(id: string): void {
+    this.ensureWorkerInitialized();
     this.postMessage({ type: 'RETRY_UPLOAD', payload: { id } });
   }
 
   removeFile(id: string): void {
+    this.ensureWorkerInitialized();
     this.postMessage({ type: 'REMOVE_ITEM', payload: { id } });
   }
 
   clearCompleted(): void {
+    this.ensureWorkerInitialized();
     this.postMessage({ type: 'CLEAR_COMPLETED' });
     this.lastCompletedIds.clear();
   }
 
   clearAll(): void {
+    this.ensureWorkerInitialized();
     this.postMessage({ type: 'CLEAR_ALL' });
     this.lastCompletedIds.clear();
     this.clearLocalStorage(); // Clear persisted state
   }
 
   startProcessing(): void {
+    this.ensureWorkerInitialized();
     this.postMessage({ type: 'START_PROCESSING' });
   }
 
@@ -527,12 +559,8 @@ class UploadQueueStore {
           this.idleTimeout = null;
         }
 
-        // Reinitialize worker if it was destroyed
-        if (!this.worker && !this.workerError) {
-          // eslint-disable-next-line no-console
-          console.log('[UploadQueueStore] Reinitializing worker after idle cleanup');
-          this.initializeWorker();
-        }
+        // Worker will be lazily reinitialized on next method call (Issue #1301)
+        // No need to eagerly reinitialize here
       }
     });
   }

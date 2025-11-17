@@ -582,7 +582,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(\n  rate(meepleai_quality_low_quality_responses_total[5m]) \n  / \n  rate(meepleai_quality_score_count{dimension=\"overall_confidence\"}[5m])\n) / 100 OR on() vector(0)",
+          "expr": "(\n  rate(meepleai_quality_low_quality_responses_total[5m]) \n  / \n  rate(meepleai_quality_score_count{dimension=\"overall_confidence\"}[5m])\n) OR on() vector(0)",
           "format": "table",
           "instant": true,
           "legendFormat": "Low-Quality Rate",

@@ -1,6 +1,9 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 

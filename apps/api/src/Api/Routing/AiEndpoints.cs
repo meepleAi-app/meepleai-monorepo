@@ -1,8 +1,10 @@
+using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Configuration;
 using Api.Extensions;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -144,26 +146,27 @@ public static class AiEndpoints
                 }
             }
 
-            // ADM-01: Log AI request with AI-11 quality scores
-            await aiLog.LogRequestAsync(
-                session.User.Id,
-                req.gameId,
-                "qa",
-                req.query,
-                resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
-                latencyMs,
-                resp.totalTokens,
-                resp.confidence,
-                "Success",
-                null,
-                context.Connection.RemoteIpAddress?.ToString(),
-                context.Request.Headers.UserAgent.ToString(),
-                promptTokens: resp.promptTokens,
-                completionTokens: resp.completionTokens,
-                model: model,
-                finishReason: finishReason,
-                qualityScores: qualityScores, // AI-11: Include quality scores
-                ct: ct);
+            // ADM-01: Log AI request with AI-11 quality scores (using CQRS)
+            var logCommand = new LogAiRequestCommand(
+                UserId: session.User.Id,
+                GameId: req.gameId,
+                Endpoint: "qa",
+                Query: req.query,
+                ResponseSnippet: resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
+                LatencyMs: latencyMs,
+                TokenCount: resp.totalTokens,
+                Confidence: resp.confidence,
+                Status: "Success",
+                ErrorMessage: null,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString(),
+                PromptTokens: resp.promptTokens,
+                CompletionTokens: resp.completionTokens,
+                Model: model,
+                FinishReason: finishReason,
+                QualityScores: qualityScores
+            );
+            await mediator.Send(logCommand, ct);
 
             return Results.Json(finalResponse); // CHAT-02: Return response with follow-up questions
         })

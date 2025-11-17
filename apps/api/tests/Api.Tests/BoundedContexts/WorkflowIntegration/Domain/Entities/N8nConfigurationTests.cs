@@ -1,4 +1,5 @@
 using Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
+using Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Domain.Entities;
@@ -15,17 +16,18 @@ public class N8nConfigurationTests
         // Arrange
         var id = Guid.NewGuid();
         var name = "Production N8n";
-        var baseUrl = "https://n8n.example.com";
+        var baseUrl = new WorkflowUrl("https://n8n.example.com");
         var apiKey = "test_api_key_123";
+        var createdBy = Guid.NewGuid();
 
         // Act
-        var config = new N8nConfiguration(id, name, baseUrl, apiKey);
+        var config = new N8nConfiguration(id, name, baseUrl, apiKey, createdBy);
 
         // Assert
         Assert.Equal(id, config.Id);
         Assert.Equal(name, config.Name);
-        Assert.Equal(baseUrl, config.BaseUrl);
-        Assert.Equal(apiKey, config.ApiKey);
+        Assert.Equal(baseUrl.Value, config.BaseUrl.Value);
+        Assert.Equal(apiKey, config.ApiKeyEncrypted);
         Assert.True(config.IsActive);
     }
 
@@ -36,8 +38,9 @@ public class N8nConfigurationTests
         var config = new N8nConfiguration(
             Guid.NewGuid(),
             "Test N8n",
-            "https://test.n8n.com",
-            "key123");
+            new WorkflowUrl("https://test.n8n.com"),
+            "key123",
+            Guid.NewGuid());
 
         config.Deactivate();
 
@@ -55,8 +58,9 @@ public class N8nConfigurationTests
         var config = new N8nConfiguration(
             Guid.NewGuid(),
             "Test N8n",
-            "https://test.n8n.com",
-            "key123");
+            new WorkflowUrl("https://test.n8n.com"),
+            "key123",
+            Guid.NewGuid());
 
         // Act
         config.Deactivate();

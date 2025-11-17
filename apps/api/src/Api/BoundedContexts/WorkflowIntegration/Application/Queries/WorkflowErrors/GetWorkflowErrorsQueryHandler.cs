@@ -44,9 +44,10 @@ public sealed class GetWorkflowErrorsQueryHandler : IQueryHandler<GetWorkflowErr
         // - HybridCache (5-min expiration)
         var errors = await _errorLoggingService.GetErrorsAsync(queryParams, cancellationToken);
 
+        var totalPages = (int)Math.Ceiling((double)errors.Total / errors.PageSize);
         _logger.LogInformation(
             "Retrieved {Count} workflow errors (Total: {Total}, Page: {Page}/{TotalPages})",
-            errors.Items.Count, errors.TotalCount, errors.Page, errors.TotalPages);
+            errors.Items.Count, errors.Total, errors.Page, totalPages);
 
         return errors;
     }

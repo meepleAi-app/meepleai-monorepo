@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Application.Abstractions;
+using Api.SharedKernel.Application.Interfaces;
 using Api.Services;
 
 namespace Api.BoundedContexts.Administration.Application.Queries.PromptEvaluation;

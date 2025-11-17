@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Models;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 

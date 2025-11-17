@@ -10,7 +10,7 @@ public class AlertBuilder
 {
     private Guid _id = Guid.NewGuid();
     private string _alertType = "SystemError";
-    private AlertSeverity _severity = AlertSeverity.Medium;
+    private AlertSeverity _severity = AlertSeverity.Warning;
     private string _message = "Test alert message";
     private string? _metadata;
     private bool _shouldResolve;

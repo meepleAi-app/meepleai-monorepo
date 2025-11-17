@@ -1,4 +1,5 @@
 using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
+using WorkflowErrorLogEntity = Api.BoundedContexts.WorkflowIntegration.Domain.Entities.WorkflowErrorLog;
 using Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -52,7 +53,7 @@ public class LogWorkflowErrorCommandHandlerTests
 
         _mockErrorLogRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<Domain.Entities.WorkflowErrorLog>(),
+                It.IsAny<WorkflowErrorLogEntity>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _mockUnitOfWork.Verify(
@@ -184,7 +185,7 @@ public class LogWorkflowErrorCommandHandlerTests
         // Assert
         _mockErrorLogRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<Domain.Entities.WorkflowErrorLog>(),
+                It.IsAny<WorkflowErrorLogEntity>(),
                 cancellationToken),
             Times.Once);
         _mockUnitOfWork.Verify(

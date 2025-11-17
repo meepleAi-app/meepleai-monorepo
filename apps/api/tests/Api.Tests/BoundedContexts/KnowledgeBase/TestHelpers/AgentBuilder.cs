@@ -9,15 +9,9 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.TestHelpers;
 public class AgentBuilder
 {
     private Guid _id = Guid.NewGuid();
-    private string _name = "TestAgent";
-    private AgentType _type = AgentType.QA;
-    private AgentStrategy _strategy = new AgentStrategy
-    {
-        SystemPrompt = "You are a helpful assistant",
-        Temperature = 0.7,
-        TopK = 5,
-        MinConfidence = 0.7
-    };
+    private AgentType _agentType = AgentType.RagAgent;  // Changed from QA
+    private string _name = "Test Agent";
+    private AgentStrategy _strategy = AgentStrategy.HybridSearch(topK: 10, minScore: 0.70);  // Changed from object initializer
     private bool _isActive = true;
     private bool _shouldRecordInvocations;
     private int _invocationCount;
@@ -34,30 +28,9 @@ public class AgentBuilder
         return this;
     }
 
-    public AgentBuilder WithType(AgentType type)
+    public AgentBuilder WithType(AgentType agentType)
     {
-        _type = type;
-        return this;
-    }
-
-    public AgentBuilder AsQA()
-    {
-        _type = AgentType.QA;
-        _name = "QA Agent";
-        return this;
-    }
-
-    public AgentBuilder AsExplain()
-    {
-        _type = AgentType.Explain;
-        _name = "Explain Agent";
-        return this;
-    }
-
-    public AgentBuilder AsSetup()
-    {
-        _type = AgentType.Setup;
-        _name = "Setup Agent";
+        _agentType = agentType;
         return this;
     }
 
@@ -67,19 +40,30 @@ public class AgentBuilder
         return this;
     }
 
-    public AgentBuilder WithStrategy(
-        string systemPrompt,
-        double temperature = 0.7,
-        int topK = 5,
-        double minConfidence = 0.7)
+    public AgentBuilder AsQA()
     {
-        _strategy = new AgentStrategy
-        {
-            SystemPrompt = systemPrompt,
-            Temperature = temperature,
-            TopK = topK,
-            MinConfidence = minConfidence
-        };
+        _agentType = AgentType.RagAgent;  // Changed from QA
+        _name = "QA Agent";
+        return this;
+    }
+
+    public AgentBuilder AsExplain()
+    {
+        _agentType = AgentType.ConversationAgent;  // Changed from Explain
+        _name = "Explain Agent";
+        return this;
+    }
+
+    public AgentBuilder AsSetup()
+    {
+        _agentType = AgentType.RulesInterpreter;  // Changed from Setup
+        _name = "Setup Agent";
+        return this;
+    }
+
+    public AgentBuilder WithCustomStrategy(double minScore, int topK = 10)
+    {
+        _strategy = AgentStrategy.HybridSearch(topK: topK, minScore: minScore);  // Changed from object initializer
         return this;
     }
 
@@ -107,26 +91,7 @@ public class AgentBuilder
     /// </summary>
     public Agent Build()
     {
-        var agent = new Agent(_id, _name, _type, _strategy, _isActive);
-
-        if (_shouldRecordInvocations)
-        {
-            for (int i = 0; i < _invocationCount; i++)
-            {
-                if (!agent.IsActive)
-                {
-                    agent.Activate();
-                }
-                agent.RecordInvocation($"Test query {i + 1}", tokensUsed: 100);
-            }
-
-            if (!_isActive)
-            {
-                agent.Deactivate();
-            }
-        }
-
-        return agent;
+        return new Agent(_id, _name, _agentType, _strategy, _isActive);
     }
 
     /// <summary>

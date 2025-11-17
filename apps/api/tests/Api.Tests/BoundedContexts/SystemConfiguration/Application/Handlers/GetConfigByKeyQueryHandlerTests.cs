@@ -2,6 +2,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
+using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 using Moq;
 using Xunit;
 
@@ -27,7 +28,7 @@ public class GetConfigByKeyQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var config = new Domain.Entities.SystemConfiguration(
+        var config = new SystemConfig(
             Guid.NewGuid(),
             new ConfigKey("max.connections"),
             "100",
@@ -63,7 +64,7 @@ public class GetConfigByKeyQueryHandlerTests
 
         _mockConfigRepository
             .Setup(r => r.GetByKeyAsync("non.existent.key", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Domain.Entities.SystemConfiguration?)null);
+            .ReturnsAsync((SystemConfig?)null);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -80,7 +81,7 @@ public class GetConfigByKeyQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var config = new Domain.Entities.SystemConfiguration(
+        var config = new SystemConfig(
             Guid.NewGuid(),
             new ConfigKey("feature.enabled"),
             "true",
@@ -109,7 +110,7 @@ public class GetConfigByKeyQueryHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         var createdAt = DateTime.UtcNow.AddDays(-7);
-        var config = new Domain.Entities.SystemConfiguration(
+        var config = new SystemConfig(
             Guid.NewGuid(),
             new ConfigKey("test.key"),
             "value",
@@ -143,7 +144,7 @@ public class GetConfigByKeyQueryHandlerTests
 
         _mockConfigRepository
             .Setup(r => r.GetByKeyAsync("test.key", cancellationToken))
-            .ReturnsAsync((Domain.Entities.SystemConfiguration?)null);
+            .ReturnsAsync((SystemConfig?)null);
 
         // Act
         await _handler.Handle(query, cancellationToken);
@@ -159,7 +160,7 @@ public class GetConfigByKeyQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var config = new Domain.Entities.SystemConfiguration(
+        var config = new SystemConfig(
             Guid.NewGuid(),
             new ConfigKey("cache.ttl"),
             "300",

@@ -67,6 +67,11 @@ public class PromptVersionDto
     required public string TemplateId { get; init; }
 
     /// <summary>
+    /// Name of the parent template.
+    /// </summary>
+    public string? TemplateName { get; init; }
+
+    /// <summary>
     /// Sequential version number.
     /// </summary>
     public int VersionNumber { get; init; }
@@ -75,6 +80,11 @@ public class PromptVersionDto
     /// The actual prompt content.
     /// </summary>
     required public string Content { get; init; }
+
+    /// <summary>
+    /// Optional notes describing changes in this version.
+    /// </summary>
+    public string? ChangeNotes { get; init; }
 
     /// <summary>
     /// Whether this version is currently active.
@@ -95,6 +105,21 @@ public class PromptVersionDto
     /// Timestamp when this version was created.
     /// </summary>
     public DateTime CreatedAt { get; init; }
+
+    /// <summary>
+    /// Timestamp when this version was activated (null if never activated).
+    /// </summary>
+    public DateTime? ActivatedAt { get; init; }
+
+    /// <summary>
+    /// ID of the user who activated this version (null if never activated).
+    /// </summary>
+    public string? ActivatedByUserId { get; init; }
+
+    /// <summary>
+    /// Reason for activating this version (null if never activated).
+    /// </summary>
+    public string? ActivationReason { get; init; }
 
     /// <summary>
     /// Optional metadata for this version.

@@ -30,17 +30,24 @@ public class GetAdminStatsQueryHandlerTests
         var toDate = new DateTime(2025, 1, 31, 23, 59, 59, DateTimeKind.Utc);
         var query = new GetAdminStatsQuery(fromDate, toDate);
 
-        var expectedStats = new DashboardStatsDto
-        {
-            TotalUsers = 150,
-            TotalGames = 75,
-            TotalSessions = 320,
-            TotalQuestions = 1250,
-            ActiveUsers = 42,
-            QuestionsLast24h = 89,
-            AverageResponseTime = 1.2,
-            SystemHealth = "Healthy"
-        };
+        var expectedStats = new DashboardStatsDto(
+            Metrics: new DashboardMetrics(
+                TotalUsers: 150,
+                ActiveSessions: 42,
+                ApiRequestsToday: 0,
+                TotalPdfDocuments: 75,
+                TotalChatMessages: 1250,
+                AverageConfidenceScore: 0.95,
+                TotalRagRequests: 320,
+                TotalTokensUsed: 0
+            ),
+            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
+            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
+            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            GeneratedAt: DateTime.UtcNow
+        );
 
         _mockAdminStatsService
             .Setup(s => s.GetDashboardStatsAsync(
@@ -55,10 +62,10 @@ public class GetAdminStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(150, result.TotalUsers);
-        Assert.Equal(75, result.TotalGames);
-        Assert.Equal(320, result.TotalSessions);
-        Assert.Equal(1250, result.TotalQuestions);
+        Assert.Equal(150, result.Metrics.TotalUsers);
+        Assert.Equal(75, result.Metrics.TotalPdfDocuments);
+        Assert.Equal(320, result.Metrics.TotalRagRequests);
+        Assert.Equal(1250, result.Metrics.TotalChatMessages);
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.IsAny<AnalyticsQueryParams>(),
@@ -71,11 +78,24 @@ public class GetAdminStatsQueryHandlerTests
     {
         // Arrange
         var query = new GetAdminStatsQuery(Days: 30);
-        var expectedStats = new DashboardStatsDto
-        {
-            TotalUsers = 100,
-            TotalGames = 50
-        };
+        var expectedStats = new DashboardStatsDto(
+            Metrics: new DashboardMetrics(
+                TotalUsers: 100,
+                ActiveSessions: 0,
+                ApiRequestsToday: 0,
+                TotalPdfDocuments: 50,
+                TotalChatMessages: 0,
+                AverageConfidenceScore: 0.0,
+                TotalRagRequests: 0,
+                TotalTokensUsed: 0
+            ),
+            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
+            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
+            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            GeneratedAt: DateTime.UtcNow
+        );
 
         _mockAdminStatsService
             .Setup(s => s.GetDashboardStatsAsync(
@@ -101,11 +121,24 @@ public class GetAdminStatsQueryHandlerTests
         // Arrange
         var gameId = "catan-123";
         var query = new GetAdminStatsQuery(GameId: gameId);
-        var expectedStats = new DashboardStatsDto
-        {
-            TotalSessions = 45,
-            TotalQuestions = 280
-        };
+        var expectedStats = new DashboardStatsDto(
+            Metrics: new DashboardMetrics(
+                TotalUsers: 0,
+                ActiveSessions: 0,
+                ApiRequestsToday: 0,
+                TotalPdfDocuments: 0,
+                TotalChatMessages: 280,
+                AverageConfidenceScore: 0.0,
+                TotalRagRequests: 45,
+                TotalTokensUsed: 0
+            ),
+            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
+            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
+            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            GeneratedAt: DateTime.UtcNow
+        );
 
         _mockAdminStatsService
             .Setup(s => s.GetDashboardStatsAsync(
@@ -118,7 +151,7 @@ public class GetAdminStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(45, result.TotalSessions);
+        Assert.Equal(45, result.Metrics.TotalRagRequests);
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.Is<AnalyticsQueryParams>(p => p.GameId == gameId),
@@ -132,11 +165,24 @@ public class GetAdminStatsQueryHandlerTests
         // Arrange
         var roleFilter = "Admin";
         var query = new GetAdminStatsQuery(RoleFilter: roleFilter);
-        var expectedStats = new DashboardStatsDto
-        {
-            TotalUsers = 5,
-            ActiveUsers = 3
-        };
+        var expectedStats = new DashboardStatsDto(
+            Metrics: new DashboardMetrics(
+                TotalUsers: 5,
+                ActiveSessions: 3,
+                ApiRequestsToday: 0,
+                TotalPdfDocuments: 0,
+                TotalChatMessages: 0,
+                AverageConfidenceScore: 0.0,
+                TotalRagRequests: 0,
+                TotalTokensUsed: 0
+            ),
+            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
+            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
+            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            GeneratedAt: DateTime.UtcNow
+        );
 
         _mockAdminStatsService
             .Setup(s => s.GetDashboardStatsAsync(
@@ -149,7 +195,7 @@ public class GetAdminStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(5, result.TotalUsers);
+        Assert.Equal(5, result.Metrics.TotalUsers);
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.Is<AnalyticsQueryParams>(p => p.RoleFilter == roleFilter),
@@ -165,14 +211,26 @@ public class GetAdminStatsQueryHandlerTests
         var toDate = new DateTime(2025, 1, 31, 23, 59, 59, DateTimeKind.Utc);
         var gameId = "wingspan-456";
         var roleFilter = "User";
-        var query = new GetAdminStatsQuery(fromDate, toDate, null, gameId, roleFilter);
+        var query = new GetAdminStatsQuery(fromDate, toDate, 30, gameId, roleFilter);
 
-        var expectedStats = new DashboardStatsDto
-        {
-            TotalUsers = 125,
-            TotalGames = 1,
-            TotalSessions = 230
-        };
+        var expectedStats = new DashboardStatsDto(
+            Metrics: new DashboardMetrics(
+                TotalUsers: 125,
+                ActiveSessions: 0,
+                ApiRequestsToday: 0,
+                TotalPdfDocuments: 1,
+                TotalChatMessages: 0,
+                AverageConfidenceScore: 0.0,
+                TotalRagRequests: 230,
+                TotalTokensUsed: 0
+            ),
+            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
+            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
+            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            GeneratedAt: DateTime.UtcNow
+        );
 
         _mockAdminStatsService
             .Setup(s => s.GetDashboardStatsAsync(
@@ -189,7 +247,7 @@ public class GetAdminStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(125, result.TotalUsers);
+        Assert.Equal(125, result.Metrics.TotalUsers);
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.Is<AnalyticsQueryParams>(p =>
@@ -209,10 +267,24 @@ public class GetAdminStatsQueryHandlerTests
         var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
-        var expectedStats = new DashboardStatsDto
-        {
-            TotalUsers = 50
-        };
+        var expectedStats = new DashboardStatsDto(
+            Metrics: new DashboardMetrics(
+                TotalUsers: 50,
+                ActiveSessions: 0,
+                ApiRequestsToday: 0,
+                TotalPdfDocuments: 0,
+                TotalChatMessages: 0,
+                AverageConfidenceScore: 0.0,
+                TotalRagRequests: 0,
+                TotalTokensUsed: 0
+            ),
+            UserTrend: Array.Empty<TimeSeriesDataPoint>(),
+            SessionTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ApiRequestTrend: Array.Empty<TimeSeriesDataPoint>(),
+            PdfUploadTrend: Array.Empty<TimeSeriesDataPoint>(),
+            ChatMessageTrend: Array.Empty<TimeSeriesDataPoint>(),
+            GeneratedAt: DateTime.UtcNow
+        );
 
         _mockAdminStatsService
             .Setup(s => s.GetDashboardStatsAsync(

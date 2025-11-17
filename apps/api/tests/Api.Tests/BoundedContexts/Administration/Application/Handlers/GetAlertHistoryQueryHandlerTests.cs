@@ -32,24 +32,28 @@ public class GetAlertHistoryQueryHandlerTests
 
         var expectedAlerts = new List<AlertDto>
         {
-            new AlertDto
-            {
-                Id = Guid.NewGuid().ToString(),
-                AlertType = "DatabaseError",
-                Severity = "High",
-                Message = "DB connection failed",
-                IsActive = false,
-                ResolvedAt = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc)
-            },
-            new AlertDto
-            {
-                Id = Guid.NewGuid().ToString(),
-                AlertType = "ApiError",
-                Severity = "Medium",
-                Message = "API timeout",
-                IsActive = false,
-                ResolvedAt = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc)
-            }
+            new AlertDto(
+                Id: Guid.NewGuid(),
+                AlertType: "DatabaseError",
+                Severity: "High",
+                Message: "DB connection failed",
+                Metadata: null,
+                TriggeredAt: new DateTime(2025, 1, 14, 0, 0, 0, DateTimeKind.Utc),
+                ResolvedAt: new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc),
+                IsActive: false,
+                ChannelSent: null
+            ),
+            new AlertDto(
+                Id: Guid.NewGuid(),
+                AlertType: "ApiError",
+                Severity: "Medium",
+                Message: "API timeout",
+                Metadata: null,
+                TriggeredAt: new DateTime(2025, 1, 19, 0, 0, 0, DateTimeKind.Utc),
+                ResolvedAt: new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc),
+                IsActive: false,
+                ChannelSent: null
+            )
         };
 
         _mockAlertingService
@@ -98,15 +102,17 @@ public class GetAlertHistoryQueryHandlerTests
 
         var expectedAlerts = new List<AlertDto>
         {
-            new AlertDto
-            {
-                Id = Guid.NewGuid().ToString(),
-                AlertType = "CriticalError",
-                Severity = "Critical",
-                Message = "System failure",
-                IsActive = false,
-                ResolvedAt = singleDay.AddHours(12)
-            }
+            new AlertDto(
+                Id: Guid.NewGuid(),
+                AlertType: "CriticalError",
+                Severity: "Critical",
+                Message: "System failure",
+                Metadata: null,
+                TriggeredAt: singleDay,
+                ResolvedAt: singleDay.AddHours(12),
+                IsActive: false,
+                ChannelSent: null
+            )
         };
 
         _mockAlertingService

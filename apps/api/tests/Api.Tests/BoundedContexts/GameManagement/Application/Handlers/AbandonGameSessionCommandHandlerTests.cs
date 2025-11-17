@@ -54,7 +54,7 @@ public class AbandonGameSessionCommandHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Abandoned", result.Status);
-        Assert.Equal(sessionId.ToString(), result.Id);
+        Assert.Equal(sessionId.ToString(), result.Id.ToString());
         Assert.NotNull(result.CompletedAt);
 
         _sessionRepositoryMock.Verify(
@@ -365,8 +365,8 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert - All metadata should be preserved
-        Assert.Equal(sessionId.ToString(), result.Id);
-        Assert.Equal(gameId.ToString(), result.GameId);
+        Assert.Equal(sessionId.ToString(), result.Id.ToString());
+        Assert.Equal(gameId.ToString(), result.GameId.ToString());
         Assert.Equal(originalStartedAt, result.StartedAt);
         Assert.Equal(originalPlayerCount, result.Players.Count);
         Assert.NotNull(result.CompletedAt); // Now completed

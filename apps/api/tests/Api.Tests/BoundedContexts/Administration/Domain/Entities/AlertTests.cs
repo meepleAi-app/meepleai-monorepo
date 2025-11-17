@@ -17,7 +17,7 @@ public class AlertTests
         // Arrange
         var id = Guid.NewGuid();
         var alertType = "DatabaseError";
-        var severity = AlertSeverity.High;
+        var severity = AlertSeverity.Critical;
         var message = "Database connection failed";
 
         // Act

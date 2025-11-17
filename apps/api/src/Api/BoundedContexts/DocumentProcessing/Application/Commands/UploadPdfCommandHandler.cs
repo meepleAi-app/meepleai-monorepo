@@ -167,14 +167,17 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 
             await InvalidateCacheSafelyAsync(gameId, cancellationToken, "PDF upload");
 
-            return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto
-            {
-                Id = pdfDoc.Id.ToString(),
-                FileName = pdfDoc.FileName,
-                FileSizeBytes = pdfDoc.FileSizeBytes,
-                UploadedAt = pdfDoc.UploadedAt,
-                UploadedByUserId = pdfDoc.UploadedByUserId.ToString()
-            });
+            return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto(
+                Id: pdfDoc.Id,
+                GameId: pdfDoc.GameId,
+                FileName: pdfDoc.FileName,
+                FilePath: pdfDoc.FilePath,
+                FileSizeBytes: pdfDoc.FileSizeBytes,
+                ProcessingStatus: pdfDoc.ProcessingStatus,
+                UploadedAt: pdfDoc.UploadedAt,
+                ProcessedAt: pdfDoc.ProcessedAt,
+                PageCount: pdfDoc.PageCount
+            ));
         }
         catch (OperationCanceledException)
         {

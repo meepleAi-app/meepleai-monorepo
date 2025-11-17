@@ -205,9 +205,7 @@ describe('UploadQueueStore - Lazy Initialization (Issue #1301)', () => {
     it('should allow Worker mock to be set up before first method call', async () => {
       // Custom mock Worker with specific behavior
       const customMockWorker = {
-        postMessage: jest.fn((msg) => {
-          console.log('[Custom Mock] Received message:', msg.type);
-        }),
+        postMessage: jest.fn(),
         terminate: jest.fn(),
         addEventListener: jest.fn(),
         removeEventListener: jest.fn(),

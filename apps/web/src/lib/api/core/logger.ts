@@ -5,6 +5,8 @@
  * Sends structured logs with correlationId for distributed tracing.
  */
 
+/* eslint-disable no-console */
+
 import type { ApiError } from './errors';
 
 export interface LogContext {

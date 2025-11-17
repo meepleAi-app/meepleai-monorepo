@@ -26,7 +26,6 @@ describe('UploadQueueStore - Worker Behaviors', () => {
     mockWorker = setupWorkerMock({ uploadDelay: 10, autoUpload: false });
 
     // Mock BroadcastChannel
-    // @ts-expect-error - Mocking global BroadcastChannel for tests
     global.BroadcastChannel = MockBroadcastChannel;
 
     // Mock localStorage

@@ -9,7 +9,7 @@
  * @see https://nextjs.org/docs/app/building-your-application/routing/layouts-and-pages
  */
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { AppProviders } from './providers';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
@@ -20,10 +20,11 @@ export const metadata: Metadata = {
   description: 'Never argue about rules again. Get instant, accurate answers from any game\'s rulebook with AI-powered semantic search.',
   keywords: ['board games', 'rules', 'AI', 'assistant', 'semantic search'],
   authors: [{ name: 'MeepleAI Team' }],
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: 'white' },
     { media: '(prefers-color-scheme: dark)', color: 'black' },

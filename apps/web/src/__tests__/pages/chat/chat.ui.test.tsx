@@ -14,6 +14,7 @@ import ChatPage from '../../../components/pages/ChatPage';
 import { api } from '../../../lib/api';
 import { useChatStore } from '@/store/chat';
 import { AuthProvider } from '../../../components/auth/AuthProvider';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock BottomNav to avoid loading state issues
 jest.mock('../../../components/chat/BottomNav', () => ({
@@ -187,12 +188,28 @@ describe('ChatPage - UI Interactions', () => {
     setSearchMode: jest.fn(),
   };
 
-  // Helper to render with AuthProvider
+  // Helper to render with QueryClientProvider and AuthProvider
   function renderWithAuth(component: React.ReactElement) {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+          staleTime: 0,
+        },
+      },
+      logger: {
+        log: () => {},
+        warn: () => {},
+        error: () => {},
+      },
+    });
+
     return render(
-      <AuthProvider>
-        {component}
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          {component}
+        </AuthProvider>
+      </QueryClientProvider>
     );
   }
 

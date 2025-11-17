@@ -10,6 +10,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
 import * as authActions from '@/actions/auth';
 import React, { PropsWithChildren } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock auth actions module
 jest.mock('@/actions/auth', () => ({
@@ -25,13 +26,31 @@ const mockRegisterAction = authActions.registerAction as jest.MockedFunction<typ
 const mockLogoutAction = authActions.logoutAction as jest.MockedFunction<typeof authActions.logoutAction>;
 
 describe('AuthProvider', () => {
-  const wrapper = ({ children }: PropsWithChildren) => (
-    <AuthProvider>{children}</AuthProvider>
-  );
+  let queryClient: QueryClient;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, staleTime: 0 },
+      },
+      logger: {
+        log: () => {},
+        warn: () => {},
+        error: () => {},
+      },
+    });
   });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  const wrapper = ({ children }: PropsWithChildren) => (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  );
 
   describe('Initialization', () => {
     it('loads user on mount', async () => {

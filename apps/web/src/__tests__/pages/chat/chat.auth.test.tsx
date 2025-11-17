@@ -14,6 +14,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import ChatPage from '../../../components/pages/ChatPage';
 import { api } from '../../../lib/api';
 import { AuthProvider } from '../../../components/auth/AuthProvider';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock Zustand store - must mock before importing ChatPage
 jest.mock('@/store/chat', () => {
@@ -79,12 +80,28 @@ const mockApi = api as jest.Mocked<typeof api>;
 const { useChatStore } = require('@/store/chat');
 const mockUseChatStoreFn = useChatStore as jest.MockedFunction<typeof useChatStore>;
 
-// Helper to render with AuthProvider
+// Helper to render with QueryClientProvider and AuthProvider
 function renderWithAuth(component: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        staleTime: 0,
+      },
+    },
+    logger: {
+      log: () => {},
+      warn: () => {},
+      error: () => {},
+    },
+  });
+
   return render(
-    <AuthProvider>
-      {component}
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        {component}
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

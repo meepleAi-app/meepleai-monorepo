@@ -356,14 +356,24 @@ public static class PdfEndpoints
             }
 
             logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.Id, pdfId);
-            var command = new GenerateRuleSpecFromPdfCommand(pdfId);
-            var ruleSpecDto = await mediator.Send(command, ct);
 
-            // Convert DTO to Model for backward compatibility
-            var atoms = ruleSpecDto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
-            var ruleSpec = new RuleSpec(ruleSpecDto.GameId.ToString(), ruleSpecDto.Version, ruleSpecDto.CreatedAt, atoms);
+            try
+            {
+                var command = new GenerateRuleSpecFromPdfCommand(pdfId);
+                var ruleSpecDto = await mediator.Send(command, ct);
 
-            return Results.Json(ruleSpec);
+                // Convert DTO to Model for backward compatibility
+                var atoms = ruleSpecDto.Atoms.Select(a => new RuleAtom(a.Id, a.Text, a.Section, a.Page, a.Line)).ToList();
+                var ruleSpec = new RuleSpec(ruleSpecDto.GameId.ToString(), ruleSpecDto.Version, ruleSpecDto.CreatedAt, atoms);
+
+                return Results.Json(ruleSpec);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // PDF exists but contains no parsable rules - client error
+                logger.LogWarning(ex, "Failed to generate RuleSpec from PDF {PdfId}: {Message}", pdfId, ex.Message);
+                return Results.BadRequest(new { error = ex.Message });
+            }
         });
 
         // AI-01: Index PDF for semantic search

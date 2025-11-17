@@ -10,9 +10,9 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class ResolveAlertCommandHandler : ICommandHandler<ResolveAlertCommand, bool>
 {
-    private readonly AlertingService _alertingService;
+    private readonly IAlertingService _alertingService;
 
-    public ResolveAlertCommandHandler(AlertingService alertingService)
+    public ResolveAlertCommandHandler(IAlertingService alertingService)
     {
         _alertingService = alertingService;
     }

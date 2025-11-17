@@ -44,9 +44,10 @@ public class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTe
         }
 
         // Create template
+        var templateId = Guid.NewGuid();
         var template = new PromptTemplateEntity
         {
-            Id = Guid.NewGuid(),
+            Id = templateId,
             Name = command.Name,
             Description = command.Description,
             Category = command.Category,
@@ -55,7 +56,23 @@ public class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTe
             CreatedBy = user
         };
 
+        // Create initial version (version 1)
+        var initialVersion = new PromptVersionEntity
+        {
+            Id = Guid.NewGuid(),
+            TemplateId = templateId,
+            VersionNumber = 1,
+            Content = command.InitialContent,
+            IsActive = true, // First version is automatically active
+            CreatedByUserId = command.CreatedByUserId,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+            Metadata = command.Metadata,
+            Template = template,
+            CreatedBy = user
+        };
+
         _dbContext.Set<PromptTemplateEntity>().Add(template);
+        _dbContext.Set<PromptVersionEntity>().Add(initialVersion);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new PromptTemplateDto
@@ -67,8 +84,8 @@ public class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTe
             CreatedByUserId = template.CreatedByUserId.ToString(),
             CreatedByEmail = user.Email,
             CreatedAt = template.CreatedAt,
-            VersionCount = 0,
-            ActiveVersionNumber = null
+            VersionCount = 1,
+            ActiveVersionNumber = 1
         };
     }
 }

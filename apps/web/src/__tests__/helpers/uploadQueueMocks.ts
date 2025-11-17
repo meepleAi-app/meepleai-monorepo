@@ -53,9 +53,21 @@ export function createMockUploadQueueItems(
   );
 }
 
+import type {
+  WorkerRequest,
+  WorkerResponse,
+  UploadQueueState,
+  FileData
+} from '../../workers/uploadQueue.worker';
+
 /**
- * Mock worker for testing
- * Provides a simple mock that doesn't actually create a Web Worker
+ * Enhanced Mock Worker for testing with full protocol simulation
+ * Simulates the Upload Queue Web Worker behavior including:
+ * - WORKER_READY signal on initialization
+ * - State management and updates
+ * - Upload simulation with configurable behavior
+ * - Error simulation and retry logic
+ * - Persistence requests
  */
 export class MockUploadWorker {
   onmessage: ((event: MessageEvent) => void) | null = null;
@@ -63,18 +75,53 @@ export class MockUploadWorker {
   onmessageerror: ((event: MessageEvent) => void) | null = null;
 
   private messageHandlers: Array<(event: MessageEvent) => void> = [];
+  private state: UploadQueueState = {
+    items: [],
+    metrics: {
+      totalUploads: 0,
+      successfulUploads: 0,
+      failedUploads: 0,
+      cancelledUploads: 0,
+      totalBytesUploaded: 0
+    }
+  };
+  private activeUploads = new Map<string, boolean>();
+  private fileDataCache = new Map<string, ArrayBuffer>();
 
-  postMessage(message: any, transfer?: Transferable[]): void {
-    // Simulate async worker response
+  // Configuration for mock behavior
+  private config: {
+    autoUpload: boolean;
+    uploadDelay: number;
+    simulateErrors: Record<string, string>; // Map of item ID to error message
+    apiBase: string;
+  };
+
+  constructor(config?: Partial<MockUploadWorker['config']>) {
+    this.config = {
+      autoUpload: true,
+      uploadDelay: 10,
+      simulateErrors: {},
+      apiBase: 'http://localhost:8080',
+      ...config
+    };
+
+    // Send WORKER_READY immediately after construction
     setTimeout(() => {
-      if (this.onmessage) {
-        this.onmessage(new MessageEvent('message', { data: message }));
-      }
+      this.emit({ type: 'WORKER_READY' });
+    }, 0);
+  }
+
+  postMessage(message: WorkerRequest, transfer?: Transferable[]): void {
+    // Handle worker requests asynchronously
+    setTimeout(() => {
+      this.handleMessage(message);
     }, 0);
   }
 
   terminate(): void {
-    // No-op for mock
+    // Clear all active uploads and state
+    this.activeUploads.clear();
+    this.fileDataCache.clear();
   }
 
   addEventListener(type: string, listener: EventListenerOrEventListenerObject): void {
@@ -95,6 +142,338 @@ export class MockUploadWorker {
   dispatchEvent(event: Event): boolean {
     return true;
   }
+
+  // ============================================================================
+  // Mock Worker Implementation
+  // ============================================================================
+
+  private handleMessage(message: WorkerRequest): void {
+    switch (message.type) {
+      case 'ADD_FILES':
+        this.handleAddFiles(message.payload.files, message.payload.gameId, message.payload.language);
+        break;
+      case 'CANCEL_UPLOAD':
+        this.handleCancelUpload(message.payload.id);
+        break;
+      case 'RETRY_UPLOAD':
+        this.handleRetryUpload(message.payload.id);
+        break;
+      case 'REMOVE_ITEM':
+        this.handleRemoveItem(message.payload.id);
+        break;
+      case 'CLEAR_COMPLETED':
+        this.handleClearCompleted();
+        break;
+      case 'CLEAR_ALL':
+        this.handleClearAll();
+        break;
+      case 'START_PROCESSING':
+        this.handleStartProcessing();
+        break;
+      case 'GET_STATE':
+        this.emitStateUpdate();
+        break;
+      case 'RESTORE_STATE':
+        this.handleRestoreState(message.payload.items, message.payload.metrics);
+        break;
+    }
+  }
+
+  private handleAddFiles(files: FileData[], gameId: string, language: string): void {
+    files.forEach((fileData) => {
+      const id = `upload-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+      const item: UploadQueueItem = {
+        id,
+        file: {
+          name: fileData.name,
+          size: fileData.size,
+          type: fileData.type,
+          lastModified: fileData.lastModified
+        },
+        gameId,
+        language,
+        status: 'pending',
+        progress: 0,
+        retryCount: 0,
+        createdAt: Date.now()
+      };
+
+      this.state.items.push(item);
+      this.fileDataCache.set(id, fileData.arrayBuffer);
+    });
+
+    this.state.metrics.totalUploads += files.length;
+    this.emitStateUpdate();
+    this.emitPersistRequest();
+
+    if (this.config.autoUpload) {
+      this.handleStartProcessing();
+    }
+  }
+
+  private handleCancelUpload(id: string): void {
+    const item = this.state.items.find(i => i.id === id);
+    if (!item) return;
+
+    if (item.status === 'uploading' || item.status === 'processing') {
+      this.activeUploads.delete(id);
+      item.status = 'cancelled';
+      item.progress = 0;
+      this.state.metrics.cancelledUploads++;
+      this.emitStateUpdate();
+      this.emitPersistRequest();
+    }
+  }
+
+  private handleRetryUpload(id: string): void {
+    const item = this.state.items.find(i => i.id === id);
+    if (!item || item.status !== 'failed') return;
+
+    item.status = 'pending';
+    item.progress = 0;
+    item.error = undefined;
+    item.correlationId = undefined;
+    item.retryCount++;
+
+    this.emitStateUpdate();
+
+    if (this.config.autoUpload) {
+      this.simulateUpload(item);
+    }
+  }
+
+  private handleRemoveItem(id: string): void {
+    const index = this.state.items.findIndex(i => i.id === id);
+    if (index > -1) {
+      this.state.items.splice(index, 1);
+      this.fileDataCache.delete(id);
+      this.emitStateUpdate();
+      this.emitPersistRequest();
+    }
+  }
+
+  private handleClearCompleted(): void {
+    this.state.items = this.state.items.filter(
+      item => item.status !== 'success' && item.status !== 'cancelled'
+    );
+    this.emitStateUpdate();
+    this.emitPersistRequest();
+  }
+
+  private handleClearAll(): void {
+    this.state.items = [];
+    this.fileDataCache.clear();
+    this.activeUploads.clear();
+    this.emitStateUpdate();
+    this.emitPersistRequest();
+  }
+
+  private handleStartProcessing(): void {
+    const pendingItems = this.state.items.filter(item => item.status === 'pending');
+    pendingItems.forEach(item => this.simulateUpload(item));
+  }
+
+  private handleRestoreState(items: UploadQueueItem[], metrics: UploadQueueState['metrics']): void {
+    this.state.items = items;
+    this.state.metrics = metrics;
+    this.emitStateUpdate();
+  }
+
+  private async simulateUpload(item: UploadQueueItem): Promise<void> {
+    if (this.activeUploads.has(item.id)) return;
+
+    this.activeUploads.set(item.id, true);
+    item.status = 'uploading';
+    item.progress = 0;
+    this.emitStateUpdate();
+
+    // Simulate upload delay
+    await new Promise(resolve => setTimeout(resolve, this.config.uploadDelay));
+
+    // Check for simulated errors
+    if (this.config.simulateErrors[item.id]) {
+      const error = this.config.simulateErrors[item.id];
+      item.status = 'failed';
+      item.error = error;
+      item.correlationId = `mock-corr-id-${Date.now()}`;
+      this.state.metrics.failedUploads++;
+      this.activeUploads.delete(item.id);
+      this.fileDataCache.delete(item.id); // Clean up memory on simulated error
+
+      this.emit({
+        type: 'UPLOAD_FAILED',
+        payload: {
+          id: item.id,
+          error,
+          correlationId: item.correlationId
+        }
+      });
+
+      this.emitStateUpdate();
+      this.emitPersistRequest();
+      return;
+    }
+
+    // Simulate progress updates
+    for (let progress = 20; progress <= 100; progress += 20) {
+      item.progress = progress;
+      this.emit({
+        type: 'UPLOAD_PROGRESS',
+        payload: { id: item.id, progress }
+      });
+
+      if (progress < 100) {
+        await new Promise(resolve => setTimeout(resolve, this.config.uploadDelay / 5));
+      }
+    }
+
+    // Simulate API call using global fetch (which should be mocked in tests)
+    try {
+      const fileData = this.fileDataCache.get(item.id);
+      if (!fileData) {
+        throw new Error(`File data not found for upload ${item.id}`);
+      }
+
+      const formData = new FormData();
+      const blob = new Blob([fileData], { type: item.file.type });
+      formData.append('file', blob, item.file.name);
+      formData.append('gameId', item.gameId);
+      formData.append('language', item.language);
+
+      const response = await fetch(`${this.config.apiBase}/api/v1/ingest/pdf`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      const pdfId = data.documentId || `pdf-${Date.now()}`;
+
+      item.status = 'success';
+      item.progress = 100;
+      item.pdfId = pdfId;
+      this.state.metrics.successfulUploads++;
+      this.state.metrics.totalBytesUploaded += item.file.size;
+      this.activeUploads.delete(item.id);
+      this.fileDataCache.delete(item.id); // Clean up memory
+
+      this.emit({
+        type: 'UPLOAD_SUCCESS',
+        payload: { id: item.id, pdfId }
+      });
+
+      this.emitStateUpdate();
+      this.emitPersistRequest();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      item.status = 'failed';
+      item.error = errorMessage;
+      item.correlationId = `mock-corr-id-${Date.now()}`;
+      this.state.metrics.failedUploads++;
+      this.activeUploads.delete(item.id);
+      this.fileDataCache.delete(item.id); // Clean up memory on error
+
+      this.emit({
+        type: 'UPLOAD_FAILED',
+        payload: {
+          id: item.id,
+          error: errorMessage,
+          correlationId: item.correlationId
+        }
+      });
+
+      this.emitStateUpdate();
+      this.emitPersistRequest();
+    }
+  }
+
+  private emit(response: WorkerResponse): void {
+    const event = new MessageEvent('message', { data: response });
+
+    if (this.onmessage) {
+      this.onmessage(event);
+    }
+
+    this.messageHandlers.forEach(handler => handler(event));
+  }
+
+  private emitStateUpdate(): void {
+    this.emit({
+      type: 'STATE_UPDATED',
+      payload: this.state
+    });
+  }
+
+  private emitPersistRequest(): void {
+    this.emit({
+      type: 'PERSIST_REQUEST',
+      payload: {
+        items: this.state.items,
+        metrics: this.state.metrics
+      }
+    });
+  }
+
+  // ============================================================================
+  // Test Helpers
+  // ============================================================================
+
+  /**
+   * Configure error simulation for specific uploads
+   */
+  public setUploadError(itemId: string, error: string): void {
+    this.config.simulateErrors[itemId] = error;
+  }
+
+  /**
+   * Get current state for assertions
+   */
+  public getState(): UploadQueueState {
+    return this.state;
+  }
+
+  /**
+   * Set upload delay for tests
+   */
+  public setUploadDelay(delay: number): void {
+    this.config.uploadDelay = delay;
+  }
+
+  /**
+   * Enable/disable auto upload
+   */
+  public setAutoUpload(enabled: boolean): void {
+    this.config.autoUpload = enabled;
+  }
+}
+
+/**
+ * Setup helper to mock the Web Worker in UploadQueueStore
+ * Returns the mock worker instance for test control
+ *
+ * Usage in tests:
+ * ```typescript
+ * const mockWorker = setupWorkerMock();
+ * // mockWorker is now used by UploadQueueStore instead of real Worker
+ * // You can control its behavior:
+ * mockWorker.setUploadDelay(0); // Fast tests
+ * mockWorker.setUploadError('item-id', 'Test error');
+ * ```
+ */
+export function setupWorkerMock(config?: Partial<MockUploadWorker['config']>): MockUploadWorker {
+  const mockWorker = new MockUploadWorker(config);
+
+  // Mock the Worker constructor globally
+  // @ts-expect-error - Mocking global Worker for tests
+  global.Worker = jest.fn(() => mockWorker);
+
+  return mockWorker;
 }
 
 /**

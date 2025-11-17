@@ -18,19 +18,40 @@ import {
   createRuleSpecMock
 } from '../../pages/../__tests__/fixtures/upload-mocks';
 import userEvent from '@testing-library/user-event';
+import { setupWorkerMock, MockBroadcastChannel } from '../helpers/uploadQueueMocks';
 
 describe('UploadPage - PDF Upload', () => {
   const originalFetch = global.fetch;
+  const originalWorker = global.Worker;
+  const originalBroadcastChannel = global.BroadcastChannel;
 
   beforeEach(() => {
     jest.clearAllMocks();
-  });
 
-  afterAll(() => {
-    global.fetch = originalFetch;
+    // Setup worker mock for all tests
+    setupWorkerMock({ uploadDelay: 0, autoUpload: true });
+
+    // Mock BroadcastChannel
+    // @ts-expect-error - Mocking global BroadcastChannel for tests
+    global.BroadcastChannel = MockBroadcastChannel;
+
+    // Mock localStorage
+    const localStorageMock: Storage = {
+      getItem: jest.fn(),
+      setItem: jest.fn(),
+      removeItem: jest.fn(),
+      clear: jest.fn(),
+      key: jest.fn(),
+      length: 0
+    };
+    Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true });
   });
 
   afterEach(() => {
+    // Restore globals after each test to prevent pollution
+    global.fetch = originalFetch;
+    global.Worker = originalWorker;
+    global.BroadcastChannel = originalBroadcastChannel;
     jest.useRealTimers();
   });
 
@@ -66,11 +87,8 @@ describe('UploadPage - PDF Upload', () => {
 
   describe('Given user uploads PDF successfully', () => {
     describe('When PDF processing completes', () => {
-      it.skip('Then auto advances to review step', async () => {
-        jest.useFakeTimers();
-
-        try {
-          const mockFetch = setupUploadMocks({
+      it('Then auto advances to review step', async () => {
+        const mockFetch = setupUploadMocks({
             auth: createAuthMock({ userId: 'user-3', role: 'Admin' }),
             games: [createGameMock({ id: 'game-1', name: 'Terraforming Mars' })],
             pdfs: { pdfs: [] },
@@ -143,12 +161,9 @@ describe('UploadPage - PDF Upload', () => {
             expect(screen.getByText(/Processing status/i)).toHaveTextContent('Processing')
           );
 
-          await act(async () => {
-            jest.advanceTimersByTime(2000);
-          });
-
           await waitFor(() =>
-            expect(screen.getByRole('heading', { name: /Step 3: Review & Edit Rules/i })).toBeInTheDocument()
+            expect(screen.getByRole('heading', { name: /Step 3: Review & Edit Rules/i })).toBeInTheDocument(),
+            { timeout: 5000 }
           );
 
           await waitFor(() =>
@@ -159,18 +174,12 @@ describe('UploadPage - PDF Upload', () => {
           );
 
           await waitFor(() => expect(screen.getByText(/Auto generated rule/i)).toBeInTheDocument());
-        } finally {
-          jest.useRealTimers();
-        }
       });
     });
 
     describe('When PDF status polling encounters network error', () => {
-      it.skip('Then shows error but continues polling until success', async () => {
-        jest.useFakeTimers();
-
-        try {
-          let statusCallCount = 0;
+      it('Then shows error but continues polling until success', async () => {
+        let statusCallCount = 0;
 
           const mockFetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
             const url = typeof input === 'string' ? input : input.toString();
@@ -267,28 +276,19 @@ describe('UploadPage - PDF Upload', () => {
             expect(screen.getByText(/Status refresh failed: Network down/i)).toBeInTheDocument()
           );
 
-          await act(async () => {
-            jest.advanceTimersByTime(4000);
-          });
-          await act(async () => {
-            jest.advanceTimersByTime(2000);
-          });
-
           await waitFor(() =>
             expect(
               screen.getByRole('heading', { name: /Step 3: Review & Edit Rules/i })
-            ).toBeInTheDocument()
+            ).toBeInTheDocument(),
+            { timeout: 10000 }
           );
-        } finally {
-          jest.useRealTimers();
-        }
       });
     });
   });
 
   describe('Given user attempts to upload PDF', () => {
     describe('When upload request fails', () => {
-      it.skip('Then error message is displayed', async () => {
+      it('Then error message is displayed', async () => {
         // Session 9: Using observability hooks for reliable error state tracking
         const uploadEvents: string[] = [];
         const UploadPageWithHooks = () => (
@@ -359,7 +359,7 @@ describe('UploadPage - PDF Upload', () => {
     });
 
     describe('When upload request throws exception', () => {
-      it.skip('Then error message with exception details is displayed', async () => {
+      it('Then error message with exception details is displayed', async () => {
         // Session 9: Using observability hooks for reliable error state tracking
         const uploadEvents: string[] = [];
         const UploadPageWithHooks = () => (
@@ -431,7 +431,7 @@ describe('UploadPage - PDF Upload', () => {
 
   describe('Given game has uploaded PDFs', () => {
     describe('When loading PDFs fails', () => {
-      it.skip('Then error message is displayed', async () => {
+      it('Then error message is displayed', async () => {
         const mockFetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
           const url = typeof input === 'string' ? input : input.toString();
           const method = init?.method ?? 'GET';
@@ -481,7 +481,7 @@ describe('UploadPage - PDF Upload', () => {
     });
 
     describe('When loading PDFs throws exception', () => {
-      it.skip('Then error message is displayed', async () => {
+      it('Then error message is displayed', async () => {
         const mockFetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
           const url = typeof input === 'string' ? input : input.toString();
           const method = init?.method ?? 'GET';
@@ -526,7 +526,7 @@ describe('UploadPage - PDF Upload', () => {
     });
 
     describe('When PDFs are displayed with various file sizes', () => {
-      it.skip('Then file sizes are formatted correctly', async () => {
+      it('Then file sizes are formatted correctly', async () => {
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-1', role: 'Admin' }),
           games: [createGameMock({ id: 'game-1', name: 'Test' })],
@@ -572,7 +572,7 @@ describe('UploadPage - PDF Upload', () => {
     });
 
     describe('When PDF has log URL', () => {
-      it.skip('Then log can be opened in new window', async () => {
+      it('Then log can be opened in new window', async () => {
         const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
 
         const mockFetch = setupUploadMocks({
@@ -622,11 +622,8 @@ describe('UploadPage - PDF Upload', () => {
     });
 
     describe('When PDF failed and retry is requested', () => {
-      it.skip('Then retry endpoint is called and success message shown', async () => {
-        jest.useFakeTimers();
-
-        try {
-          const failedPdf = createPdfMock({
+      it('Then retry endpoint is called and success message shown', async () => {
+        const failedPdf = createPdfMock({
             id: 'pdf-failed',
             fileName: 'failed.pdf',
             fileSizeBytes: 1024,
@@ -680,14 +677,11 @@ describe('UploadPage - PDF Upload', () => {
           await waitFor(() =>
             expect(screen.getByText(/✅ Parse re-triggered for failed.pdf/i)).toBeInTheDocument()
           );
-        } finally {
-          jest.useRealTimers();
-        }
       });
     });
 
     describe('When retry parsing fails', () => {
-      it.skip('Then error message is displayed', async () => {
+      it('Then error message is displayed', async () => {
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-1', role: 'Admin' }),
           games: [createGameMock({ id: 'game-1', name: 'Test' })],
@@ -737,7 +731,7 @@ describe('UploadPage - PDF Upload', () => {
 
   describe('Given PDF status polling', () => {
     describe('When JSON parsing fails in polling', () => {
-      it.skip('Then error is shown but polling continues', async () => {
+      it('Then error is shown but polling continues', async () => {
         let pollCount = 0;
 
         const mockFetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -838,7 +832,7 @@ describe('UploadPage - PDF Upload', () => {
 
   describe('Given game ID is not confirmed', () => {
     describe('When PDFs would be loaded', () => {
-      it.skip('Then skips loading PDFs', async () => {
+      it('Then skips loading PDFs', async () => {
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-1', role: 'Admin' }),
           games: []

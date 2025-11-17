@@ -33,6 +33,12 @@ public class ConfidenceValidationService : IConfidenceValidationService
     /// </summary>
     private const double WarningThreshold = 0.60;
 
+    /// <summary>
+    /// BGAI-038: Epsilon tolerance for floating-point comparisons
+    /// Handles IEEE 754 floating-point precision issues (e.g., 0.7000000000000001 ~= 0.70)
+    /// </summary>
+    private const double FloatingPointEpsilon = 1e-10;
+
     public ConfidenceValidationService(ILogger<ConfidenceValidationService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -61,8 +67,39 @@ public class ConfidenceValidationService : IConfidenceValidationService
 
         var actualConfidence = confidence.Value;
 
-        // Case 2: Confidence meets threshold (≥0.70)
-        if (actualConfidence >= MinimumConfidenceThreshold)
+        // BGAI-038: Handle special floating-point values
+        if (double.IsNaN(actualConfidence))
+        {
+            _logger.LogError("Confidence validation: Invalid confidence value (NaN)");
+
+            return new ConfidenceValidationResult
+            {
+                IsValid = false,
+                ActualConfidence = actualConfidence,
+                RequiredThreshold = MinimumConfidenceThreshold,
+                ValidationMessage = "Invalid confidence value (NaN)",
+                Severity = ValidationSeverity.Critical
+            };
+        }
+
+        if (double.IsInfinity(actualConfidence))
+        {
+            _logger.LogError(
+                "Confidence validation: Invalid confidence value (Infinity: {Value})",
+                actualConfidence);
+
+            return new ConfidenceValidationResult
+            {
+                IsValid = false,
+                ActualConfidence = actualConfidence,
+                RequiredThreshold = MinimumConfidenceThreshold,
+                ValidationMessage = $"Invalid confidence value ({(double.IsPositiveInfinity(actualConfidence) ? "Positive" : "Negative")} Infinity)",
+                Severity = ValidationSeverity.Critical
+            };
+        }
+
+        // Case 2: Confidence meets threshold (≥0.70 with epsilon tolerance)
+        if (actualConfidence >= MinimumConfidenceThreshold - FloatingPointEpsilon)
         {
             _logger.LogDebug(
                 "Confidence validation: PASS (confidence={Confidence:F3} ≥ threshold={Threshold:F2})",
@@ -78,8 +115,8 @@ public class ConfidenceValidationService : IConfidenceValidationService
             };
         }
 
-        // Case 3: Confidence below threshold but above warning (0.60-0.70)
-        if (actualConfidence >= WarningThreshold)
+        // Case 3: Confidence below threshold but above warning (0.60-0.70 with epsilon tolerance)
+        if (actualConfidence >= WarningThreshold - FloatingPointEpsilon)
         {
             _logger.LogWarning(
                 "Confidence validation: WARNING (confidence={Confidence:F3} < threshold={Threshold:F2}, but ≥{WarningThreshold:F2})",

@@ -487,6 +487,127 @@ public class MultiModelValidationServiceTests
         }
     }
 
+    // ========== BGAI-038: Empty/Whitespace Response Validation ==========
+
+    [Fact]
+    public async Task Test19_ValidateWithConsensusAsync_Gpt4EmptyResponse_ReturnsError()
+    {
+        // Arrange - BGAI-038: Test empty GPT-4 response handling
+        SetupMockSuccessWithEmptyResponse("", "Valid Claude response");
+
+        // Act
+        var result = await _service.ValidateWithConsensusAsync(
+            "System prompt",
+            "What are the chess piece movements?");
+
+        // Assert
+        Assert.False(result.HasConsensus);
+        Assert.Equal(ConsensusSeverity.Error, result.Severity);
+        Assert.Contains("GPT-4", result.Message);
+        Assert.Contains("empty or whitespace-only response", result.Message);
+    }
+
+    [Fact]
+    public async Task Test20_ValidateWithConsensusAsync_ClaudeEmptyResponse_ReturnsError()
+    {
+        // Arrange - BGAI-038: Test empty Claude response handling
+        SetupMockSuccessWithEmptyResponse("Valid GPT-4 response", "");
+
+        // Act
+        var result = await _service.ValidateWithConsensusAsync(
+            "System prompt",
+            "What are the chess piece movements?");
+
+        // Assert
+        Assert.False(result.HasConsensus);
+        Assert.Equal(ConsensusSeverity.Error, result.Severity);
+        Assert.Contains("Claude", result.Message);
+        Assert.Contains("empty or whitespace-only response", result.Message);
+    }
+
+    [Fact]
+    public async Task Test21_ValidateWithConsensusAsync_Gpt4WhitespaceOnlyResponse_ReturnsError()
+    {
+        // Arrange - BGAI-038: Test whitespace-only GPT-4 response handling
+        SetupMockSuccessWithEmptyResponse("   \n\t  ", "Valid Claude response");
+
+        // Act
+        var result = await _service.ValidateWithConsensusAsync(
+            "System prompt",
+            "What are the chess piece movements?");
+
+        // Assert
+        Assert.False(result.HasConsensus);
+        Assert.Equal(ConsensusSeverity.Error, result.Severity);
+        Assert.Contains("GPT-4", result.Message);
+        Assert.Contains("empty or whitespace-only response", result.Message);
+    }
+
+    [Fact]
+    public async Task Test22_ValidateWithConsensusAsync_ClaudeWhitespaceOnlyResponse_ReturnsError()
+    {
+        // Arrange - BGAI-038: Test whitespace-only Claude response handling
+        SetupMockSuccessWithEmptyResponse("Valid GPT-4 response", "   \n\t  ");
+
+        // Act
+        var result = await _service.ValidateWithConsensusAsync(
+            "System prompt",
+            "What are the chess piece movements?");
+
+        // Assert
+        Assert.False(result.HasConsensus);
+        Assert.Equal(ConsensusSeverity.Error, result.Severity);
+        Assert.Contains("Claude", result.Message);
+        Assert.Contains("empty or whitespace-only response", result.Message);
+    }
+
+    [Fact]
+    public async Task Test23_ValidateWithConsensusAsync_BothEmptyResponses_ReturnsError()
+    {
+        // Arrange - BGAI-038: Test both models returning empty responses
+        SetupMockSuccessWithEmptyResponse("", "");
+
+        // Act
+        var result = await _service.ValidateWithConsensusAsync(
+            "System prompt",
+            "What are the chess piece movements?");
+
+        // Assert
+        Assert.False(result.HasConsensus);
+        Assert.Equal(ConsensusSeverity.Error, result.Severity);
+        Assert.Contains("empty or whitespace-only response", result.Message);
+    }
+
+    /// <summary>
+    /// Helper method to setup mock responses for both models with empty/whitespace content
+    /// </summary>
+    private void SetupMockSuccessWithEmptyResponse(string gpt4Response, string claudeResponse)
+    {
+        _mockOpenRouterClient
+            .Setup(c => c.GenerateCompletionAsync(
+                "openai/gpt-4o",
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                gpt4Response,
+                new LlmUsage(100, 50, 150)));
+
+        _mockOpenRouterClient
+            .Setup(c => c.GenerateCompletionAsync(
+                "anthropic/claude-3.5-sonnet",
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                claudeResponse,
+                new LlmUsage(100, 50, 150)));
+    }
+
     /// <summary>
     /// Helper method to setup mock responses for both models
     /// </summary>

@@ -134,6 +134,42 @@ public class PdfProcessingConfigurationValidatorTests
         Assert.True(result.Succeeded);
     }
 
+    [Fact]
+    public void Validate_MinimumThresholdLessThanWarningThreshold_ReturnsFail()
+    {
+        // Arrange - BGAI-038: Test threshold relationship validation
+        var options = CreateValidOptions();
+        options.Quality.MinimumThreshold = 0.60; // Less than WarningThreshold
+        options.Quality.WarningThreshold = 0.70;
+
+        // Act
+        var result = _validator.Validate(null, options);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains("Quality.MinimumThreshold", result.FailureMessage);
+        Assert.Contains("must be >= Quality.WarningThreshold", result.FailureMessage);
+    }
+
+    [Theory]
+    [InlineData(0.70, 0.70)] // Equal thresholds (valid)
+    [InlineData(0.80, 0.70)] // MinimumThreshold > WarningThreshold (valid)
+    [InlineData(0.90, 0.80)] // MinimumThreshold > WarningThreshold (valid)
+    public void Validate_MinimumThresholdGreaterOrEqualToWarningThreshold_ReturnsSuccess(
+        double minimumThreshold, double warningThreshold)
+    {
+        // Arrange - BGAI-038: Test valid threshold relationships
+        var options = CreateValidOptions();
+        options.Quality.MinimumThreshold = minimumThreshold;
+        options.Quality.WarningThreshold = warningThreshold;
+
+        // Act
+        var result = _validator.Validate(null, options);
+
+        // Assert
+        Assert.True(result.Succeeded);
+    }
+
     #endregion
 
     #region File Size Validation Tests

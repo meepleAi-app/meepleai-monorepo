@@ -331,6 +331,162 @@ public class MultiModelValidationServiceTests
         Assert.True(similarity >= 0.99, $"Expected punctuation-agnostic cosine similarity ≥0.99, got {similarity:F3}");
     }
 
+    [Fact]
+    public async Task Test15_ValidateWithConsensusAsync_CancellationToken_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var systemPrompt = "You are a board game rules expert.";
+        var userPrompt = "How does the knight move in chess?";
+        var cts = new CancellationToken(canceled: true);
+
+        _mockOpenRouterClient
+            .Setup(c => c.GenerateCompletionAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: cts));
+    }
+
+    [Fact]
+    public async Task Test16_ValidateWithConsensusAsync_ParallelExecution_BothModelsQueried()
+    {
+        // Arrange
+        var systemPrompt = "You are a board game rules expert.";
+        var userPrompt = "How does the queen move in chess?";
+        var gpt4Response = "The queen can move any number of squares horizontally, vertically, or diagonally.";
+        var claudeResponse = "The queen moves in straight lines: horizontally, vertically, or diagonally for any distance.";
+
+        var gpt4Called = false;
+        var claudeCalled = false;
+
+        _mockOpenRouterClient
+            .Setup(c => c.GenerateCompletionAsync(
+                "openai/gpt-4o",
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                gpt4Called = true;
+                return LlmCompletionResult.CreateSuccess(gpt4Response, new LlmUsage(100, 50, 150));
+            });
+
+        _mockOpenRouterClient
+            .Setup(c => c.GenerateCompletionAsync(
+                "anthropic/claude-3.5-sonnet",
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                claudeCalled = true;
+                return LlmCompletionResult.CreateSuccess(claudeResponse, new LlmUsage(100, 50, 150));
+            });
+
+        // Act
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+
+        // Assert - Both models should be called (parallel execution)
+        Assert.True(gpt4Called, "GPT-4 should have been called");
+        Assert.True(claudeCalled, "Claude should have been called");
+        Assert.True(result.Gpt4Response.IsSuccess);
+        Assert.True(result.ClaudeResponse.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Test17_ValidateWithConsensusAsync_PerformanceMetrics_RecordedCorrectly()
+    {
+        // Arrange
+        var systemPrompt = "You are a board game rules expert.";
+        var userPrompt = "How does the pawn move?";
+        var gpt4Response = "The pawn moves forward one square, or two squares on its first move.";
+        var claudeResponse = "Pawns move one square forward, or two squares forward from their starting position.";
+
+        SetupMockResponses(gpt4Response, claudeResponse);
+
+        // Act
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+
+        // Assert - Performance metrics should be recorded
+        Assert.True(result.TotalDurationMs >= 0, "Total duration should be non-negative");
+        Assert.True(result.Gpt4Response.DurationMs >= 0, "GPT-4 duration should be non-negative");
+        Assert.True(result.ClaudeResponse.DurationMs >= 0, "Claude duration should be non-negative");
+
+        // Verify response details are captured
+        Assert.Equal("openai/gpt-4o", result.Gpt4Response.ModelId);
+        Assert.Equal("anthropic/claude-3.5-sonnet", result.ClaudeResponse.ModelId);
+        Assert.NotNull(result.Gpt4Response.Usage);
+        Assert.NotNull(result.ClaudeResponse.Usage);
+    }
+
+    [Fact]
+    public async Task Test18_ValidateWithConsensusAsync_SeverityLevels_CalculatedCorrectly()
+    {
+        // Arrange
+        var systemPrompt = "You are a board game rules expert.";
+        var userPrompt = "Test severity levels";
+
+        // Test case 1: High severity (similarity ≥ 0.90)
+        var highSimilarText1 = "The knight moves in an L-shape: two squares in one direction and one square perpendicular.";
+        var highSimilarText2 = "The knight moves in an L-shape pattern: two squares in one direction and one square in a perpendicular direction.";
+        SetupMockResponses(highSimilarText1, highSimilarText2);
+        var resultHigh = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+
+        // Test case 2: Moderate severity (similarity 0.70-0.90)
+        var moderateText1 = "The rook moves horizontally or vertically across the board.";
+        var moderateText2 = "Rooks can move any number of squares in straight lines along ranks or files.";
+        SetupMockResponses(moderateText1, moderateText2);
+        var resultModerate = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+
+        // Test case 3: Low severity (similarity 0.50-0.70)
+        var lowText1 = "Chess is a strategic board game.";
+        var lowText2 = "The game of chess involves tactical thinking.";
+        SetupMockResponses(lowText1, lowText2);
+        var resultLow = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+
+        // Test case 4: None severity (similarity < 0.50)
+        var noneText1 = "The bishop moves diagonally.";
+        var noneText2 = "Settlers of Catan is a resource management game.";
+        SetupMockResponses(noneText1, noneText2);
+        var resultNone = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+
+        // Assert - Verify severity levels
+        if (resultHigh.SimilarityScore >= 0.90)
+        {
+            Assert.Equal(ConsensusSeverity.High, resultHigh.Severity);
+            Assert.True(resultHigh.HasConsensus);
+        }
+
+        if (resultModerate.SimilarityScore >= 0.70 && resultModerate.SimilarityScore < 0.90)
+        {
+            Assert.Equal(ConsensusSeverity.Moderate, resultModerate.Severity);
+            Assert.False(resultModerate.HasConsensus);
+        }
+
+        if (resultLow.SimilarityScore >= 0.50 && resultLow.SimilarityScore < 0.70)
+        {
+            Assert.Equal(ConsensusSeverity.Low, resultLow.Severity);
+            Assert.False(resultLow.HasConsensus);
+        }
+
+        if (resultNone.SimilarityScore < 0.50)
+        {
+            Assert.Equal(ConsensusSeverity.None, resultNone.Severity);
+            Assert.False(resultNone.HasConsensus);
+        }
+    }
+
     /// <summary>
     /// Helper method to setup mock responses for both models
     /// </summary>

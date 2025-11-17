@@ -157,7 +157,13 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         await service.StartAsync(_cts.Token);
-        await Task.Delay(200); // Wait for initial delay + execution
+
+        // Advance fake clock past initial delay (0.001 minutes)
+        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+
+        // Wait for execution to complete in real time
+        await Task.Delay(200);
+
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -203,7 +209,13 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         await service.StartAsync(_cts.Token);
+
+        // Advance fake clock past initial delay (0.001 minutes)
+        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+
+        // Wait for execution to complete in real time
         await Task.Delay(200);
+
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -245,7 +257,13 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         await service.StartAsync(_cts.Token);
+
+        // Advance fake clock past initial delay (0.001 minutes)
+        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+
+        // Wait for execution to complete in real time
         await Task.Delay(200);
+
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -288,7 +306,12 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         await service.StartAsync(_cts.Token);
-        await Task.Delay(200); // Wait for first execution (which throws)
+
+        // Advance fake clock past initial delay (0.001 minutes)
+        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+
+        // Wait for first execution (which throws) to complete in real time
+        await Task.Delay(200);
 
         // Service should continue running despite exception
         // We can verify by checking that it didn't crash
@@ -372,7 +395,13 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         await service.StartAsync(_cts.Token);
+
+        // Advance fake clock past initial delay (0.001 minutes)
+        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+
+        // Wait for execution to complete in real time
         await Task.Delay(200);
+
         await service.StopAsync(_cts.Token);
 
         // Assert - verify summary was logged

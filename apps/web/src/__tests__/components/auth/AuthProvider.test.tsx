@@ -3,13 +3,15 @@
  * Comprehensive coverage of authentication state management
  *
  * Issue #1078: FE-IMP-002 — Server Actions per Auth & Export
- * Updated to mock Server Actions instead of direct API calls
+ * Issue #1079: FE-IMP-003 — TanStack Query Data Layer
+ * Updated to use TanStack Query for data fetching
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
 import * as authActions from '@/actions/auth';
 import React, { PropsWithChildren } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock auth actions module
 jest.mock('@/actions/auth', () => ({
@@ -25,13 +27,26 @@ const mockRegisterAction = authActions.registerAction as jest.MockedFunction<typ
 const mockLogoutAction = authActions.logoutAction as jest.MockedFunction<typeof authActions.logoutAction>;
 
 describe('AuthProvider', () => {
-  const wrapper = ({ children }: PropsWithChildren) => (
-    <AuthProvider>{children}</AuthProvider>
-  );
+  let queryClient: QueryClient;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, staleTime: 0 },
+      },
+    });
   });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  const wrapper = ({ children }: PropsWithChildren) => (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  );
 
   describe('Initialization', () => {
     it('loads user on mount', async () => {
@@ -84,12 +99,13 @@ describe('AuthProvider', () => {
         role: 'User',
       };
 
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load (not authenticated)
       mockLoginAction.mockResolvedValueOnce({
         success: true,
         user: mockUser,
         message: 'Login effettuato con successo!'
       });
+      mockGetCurrentUser.mockResolvedValueOnce({ success: true, user: mockUser }); // Refetch after login
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -100,8 +116,10 @@ describe('AuthProvider', () => {
         returnedUser = await result.current.login('test@example.com', 'password123');
       });
 
+      // Wait for cache invalidation and refetch
+      await waitFor(() => expect(result.current.user).toEqual(mockUser));
+
       expect(returnedUser).toEqual(mockUser);
-      expect(result.current.user).toEqual(mockUser);
       expect(result.current.error).toBeNull();
       expect(mockLoginAction).toHaveBeenCalled();
 
@@ -113,7 +131,7 @@ describe('AuthProvider', () => {
     });
 
     it('handles login failure', async () => {
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load
       mockLoginAction.mockResolvedValueOnce({
         success: false,
         error: {
@@ -126,16 +144,21 @@ describe('AuthProvider', () => {
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
+      let thrownError: unknown;
       await act(async () => {
         try {
           await result.current.login('test@example.com', 'wrongpassword');
         } catch (err) {
-          // Expected to throw
+          thrownError = err;
         }
       });
 
       expect(result.current.user).toBeNull();
-      expect(result.current.error).toBe('Email o password non corretti.');
+      expect(thrownError).toBeTruthy();
+      expect(thrownError).toBeInstanceOf(Error);
+      expect((thrownError as Error).message).toBe('Email o password non corretti.');
+      // Issue #1079: Errors from login/register are thrown, not stored in state
+      // The error state comes from TanStack Query's error, which is cleared on next successful query
     });
   });
 
@@ -148,12 +171,13 @@ describe('AuthProvider', () => {
         role: 'User',
       };
 
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load (not authenticated)
       mockRegisterAction.mockResolvedValueOnce({
         success: true,
         user: mockUser,
         message: 'Registrazione completata! Benvenuto su MeepleAI.'
       });
+      mockGetCurrentUser.mockResolvedValueOnce({ success: true, user: mockUser }); // Refetch after register
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -168,8 +192,10 @@ describe('AuthProvider', () => {
         });
       });
 
+      // Wait for cache invalidation and refetch
+      await waitFor(() => expect(result.current.user).toEqual(mockUser));
+
       expect(returnedUser).toEqual(mockUser);
-      expect(result.current.user).toEqual(mockUser);
       expect(result.current.error).toBeNull();
       expect(mockRegisterAction).toHaveBeenCalled();
 
@@ -182,7 +208,7 @@ describe('AuthProvider', () => {
     });
 
     it('handles registration failure', async () => {
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load
       mockRegisterAction.mockResolvedValueOnce({
         success: false,
         error: {
@@ -196,6 +222,7 @@ describe('AuthProvider', () => {
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
+      let thrownError: unknown;
       await act(async () => {
         try {
           await result.current.register({
@@ -203,12 +230,15 @@ describe('AuthProvider', () => {
             password: 'password123',
           });
         } catch (err) {
-          // Expected to throw
+          thrownError = err;
         }
       });
 
       expect(result.current.user).toBeNull();
-      expect(result.current.error).toContain('già registrata');
+      expect(thrownError).toBeTruthy();
+      expect(thrownError).toBeInstanceOf(Error);
+      expect((thrownError as Error).message).toContain('già registrata');
+      // Issue #1079: Errors from login/register are thrown, not stored in state
     });
   });
 
@@ -235,7 +265,8 @@ describe('AuthProvider', () => {
         await result.current.logout();
       });
 
-      expect(result.current.user).toBeNull();
+      // Issue #1079: Wait for query cache update to propagate
+      await waitFor(() => expect(result.current.user).toBeNull());
       expect(mockLogoutAction).toHaveBeenCalled();
     });
 
@@ -258,11 +289,12 @@ describe('AuthProvider', () => {
         try {
           await result.current.logout();
         } catch (err) {
-          // Expected to throw
+          // Expected to throw (but user still cleared)
         }
       });
 
-      expect(result.current.user).toBeNull(); // User still cleared even if API call fails
+      // Issue #1079: Wait for query cache update to propagate
+      await waitFor(() => expect(result.current.user).toBeNull()); // User still cleared even if API call fails
     });
   });
 
@@ -292,42 +324,30 @@ describe('AuthProvider', () => {
         await result.current.refreshUser();
       });
 
-      expect(result.current.user).toEqual(updatedUser);
+      // Issue #1079: Wait for TanStack Query refetch to complete
+      await waitFor(() => expect(result.current.user).toEqual(updatedUser));
     });
   });
 
   describe('clearError', () => {
-    it('clears error message', async () => {
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false }); // Initial load
-      mockLoginAction.mockResolvedValueOnce({
-        success: false,
-        error: {
-          type: 'auth',
-          message: 'Login fallito'
-        }
-      });
+    it('clearError is a no-op with TanStack Query (backward compatibility)', async () => {
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      // Trigger error
-      await act(async () => {
-        try {
-          await result.current.login('test@example.com', 'wrong');
-        } catch (err) {
-          // Expected
-        }
-      });
-
-      expect(result.current.error).toBe('Login fallito');
-
-      // Clear error
+      // Issue #1079: clearError is kept for backward compatibility but does nothing
+      // Errors are managed by TanStack Query state, not AuthProvider state
       act(() => {
         result.current.clearError();
       });
 
+      // No error to clear since query succeeded
       expect(result.current.error).toBeNull();
+
+      // clearError doesn't throw, maintaining backward compatibility
+      expect(() => result.current.clearError()).not.toThrow();
     });
   });
 

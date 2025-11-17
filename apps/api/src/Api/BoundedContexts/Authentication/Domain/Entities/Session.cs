@@ -100,4 +100,24 @@ public sealed class Session : AggregateRoot<Guid>
     /// Checks if this session was revoked.
     /// </summary>
     public bool IsRevoked() => RevokedAt != null;
+
+    /// <summary>
+    /// Extends the session lifetime by the specified duration.
+    /// </summary>
+    /// <param name="extension">Duration to extend the session by</param>
+    /// <param name="timeProvider">Time provider for validation</param>
+    public void Extend(TimeSpan extension, TimeProvider timeProvider)
+    {
+        if (IsRevoked())
+            throw new DomainException("Cannot extend a revoked session");
+
+        if (IsExpired(timeProvider))
+            throw new DomainException("Cannot extend an expired session");
+
+        if (extension <= TimeSpan.Zero)
+            throw new DomainException("Extension duration must be positive");
+
+        ExpiresAt = ExpiresAt.Add(extension);
+        AddDomainEvent(new SessionExtendedEvent(Id, UserId, extension, ExpiresAt));
+    }
 }

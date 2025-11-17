@@ -350,6 +350,84 @@ public class SessionEntityTests
 
     #endregion
 
+    #region Extend Tests
+
+    [Fact]
+    public void Extend_WithValidSession_ExtendsSuccessfully()
+    {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var session = new SessionBuilder().Build();
+        var originalExpiresAt = session.ExpiresAt;
+        var extension = TimeSpan.FromDays(7);
+
+        // Act
+        session.Extend(extension, timeProvider);
+
+        // Assert
+        Assert.Equal(originalExpiresAt.Add(extension), session.ExpiresAt);
+        Assert.True(session.ExpiresAt > originalExpiresAt);
+    }
+
+    [Fact]
+    public void Extend_RevokedSession_ThrowsDomainException()
+    {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var session = new SessionBuilder()
+            .Revoked()
+            .Build();
+
+        // Act & Assert
+        var exception = Assert.Throws<DomainException>(() =>
+            session.Extend(TimeSpan.FromDays(7), timeProvider));
+        Assert.Contains("revoked", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Extend_ExpiredSession_ThrowsDomainException()
+    {
+        // Arrange
+        var session = new SessionBuilder()
+            .Expired()
+            .Build();
+
+        var timeProvider = new FakeTimeProvider(DateTime.UtcNow.AddDays(1));
+
+        // Act & Assert
+        var exception = Assert.Throws<DomainException>(() =>
+            session.Extend(TimeSpan.FromDays(7), timeProvider));
+        Assert.Contains("expired", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Extend_WithZeroDuration_ThrowsDomainException()
+    {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var session = new SessionBuilder().Build();
+
+        // Act & Assert
+        var exception = Assert.Throws<DomainException>(() =>
+            session.Extend(TimeSpan.Zero, timeProvider));
+        Assert.Contains("positive", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Extend_WithNegativeDuration_ThrowsDomainException()
+    {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var session = new SessionBuilder().Build();
+
+        // Act & Assert
+        var exception = Assert.Throws<DomainException>(() =>
+            session.Extend(TimeSpan.FromDays(-1), timeProvider));
+        Assert.Contains("positive", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
+
     #region Builder Integration Tests
 
     [Fact]

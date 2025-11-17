@@ -20,6 +20,7 @@ using GenerateTotpSetupCommand = Api.BoundedContexts.Authentication.Application.
 using Verify2FACommand = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.Verify2FACommand;
 using GetSessionStatusQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionStatusQuery;
 using ExtendSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.ExtendSessionCommand;
+using RevokeSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand;
 using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
 
 namespace Api.Routing;
@@ -802,5 +803,114 @@ User must have at least one authentication method remaining (password or another
 
             return Results.Json(new { ok = true, message = "Password has been reset successfully" });
         });
+
+        // Session Management Endpoints (Issue #1193)
+        group.MapGet("/auth/sessions/{sessionId:guid}/status", async (
+            Guid sessionId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Require authentication
+            if (!context.User.Identity?.IsAuthenticated ?? true)
+            {
+                return Results.Unauthorized();
+            }
+
+            // Extract user ID and role from claims
+            var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var role = context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
+            var isAdmin = role.Equals("admin", StringComparison.OrdinalIgnoreCase);
+
+            // Execute query via CQRS
+            var query = new GetSessionStatusQuery(sessionId, userId, isAdmin);
+            var result = await mediator.Send(query, ct);
+
+            if (result == null)
+            {
+                return Results.NotFound(new { error = "Session not found or access denied" });
+            }
+
+            return Results.Json(result);
+        }).RequireAuthorization();
+
+        group.MapPost("/auth/sessions/{sessionId:guid}/extend", async (
+            Guid sessionId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Require authentication
+            if (!context.User.Identity?.IsAuthenticated ?? true)
+            {
+                return Results.Unauthorized();
+            }
+
+            // Extract user ID from claims
+            var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Execute command via CQRS (with rate limiting)
+            var command = new ExtendSessionCommand(sessionId, userId);
+            var result = await mediator.Send(command, ct);
+
+            if (!result.Success)
+            {
+                // Check if it's a rate limit error
+                if (result.ErrorMessage?.Contains("Rate limit exceeded") == true)
+                {
+                    return Results.Json(new { error = result.ErrorMessage }, statusCode: 429);
+                }
+
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            return Results.Json(new { ok = true, expiresAt = result.NewExpiresAt });
+        }).RequireAuthorization();
+
+        group.MapPost("/auth/sessions/{sessionId:guid}/revoke", async (
+            Guid sessionId,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Require authentication
+            if (!context.User.Identity?.IsAuthenticated ?? true)
+            {
+                return Results.Unauthorized();
+            }
+
+            // Extract user ID and role from claims
+            var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var role = context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
+            var isAdmin = role.Equals("admin", StringComparison.OrdinalIgnoreCase);
+
+            // Execute command via CQRS
+            var command = new RevokeSessionCommand(sessionId, userId, isAdmin);
+            var result = await mediator.Send(command, ct);
+
+            if (!result.Success)
+            {
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            return Results.Json(new { ok = true, message = "Session revoked successfully" });
+        }).RequireAuthorization();
     }
 }

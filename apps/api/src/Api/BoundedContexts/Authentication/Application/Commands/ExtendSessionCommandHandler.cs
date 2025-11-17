@@ -1,5 +1,5 @@
+using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
-using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -7,78 +7,94 @@ using Api.SharedKernel.Infrastructure.Persistence;
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
 /// <summary>
-/// Handler for ExtendSessionCommand.
-/// DDD: Uses ISessionRepository and Session domain entity to extend session.
-/// AUTH-05: Session management
+/// Handler for ExtendSessionCommand with rate limiting.
+/// Rate limit: Max 10 extensions per hour per user.
 /// </summary>
-public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand, SessionStatusResponse?>
+public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand, ExtendSessionResponse>
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ISessionCacheService? _sessionCache;
+    private readonly IRateLimitService _rateLimitService;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ExtendSessionCommandHandler> _logger;
+
+    // Rate limiting configuration for session extensions
+    private const int MaxExtensionsPerHour = 10;
+    private const double RefillRatePerSecond = MaxExtensionsPerHour / 3600.0; // ~0.00278 tokens/second
 
     public ExtendSessionCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
-        ISessionCacheService? sessionCache,
+        IRateLimitService rateLimitService,
         TimeProvider timeProvider,
         ILogger<ExtendSessionCommandHandler> logger)
     {
-        _sessionRepository = sessionRepository;
-        _unitOfWork = unitOfWork;
-        _sessionCache = sessionCache;
-        _timeProvider = timeProvider;
-        _logger = logger;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _rateLimitService = rateLimitService ?? throw new ArgumentNullException(nameof(rateLimitService));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<SessionStatusResponse?> Handle(ExtendSessionCommand command, CancellationToken cancellationToken)
+    public async Task<ExtendSessionResponse> Handle(ExtendSessionCommand command, CancellationToken cancellationToken)
     {
+        // Rate limiting check - per user
+        var rateLimitKey = $"session_extend:{command.RequestingUserId}";
+        var rateLimitResult = await _rateLimitService.CheckRateLimitAsync(
+            rateLimitKey,
+            MaxExtensionsPerHour,
+            RefillRatePerSecond,
+            cancellationToken);
+
+        if (!rateLimitResult.Allowed)
+        {
+            _logger.LogWarning(
+                "Rate limit exceeded for user {UserId} extending session. Retry after {RetryAfter}s",
+                command.RequestingUserId, rateLimitResult.RetryAfterSeconds);
+            return new ExtendSessionResponse(
+                false,
+                null,
+                $"Rate limit exceeded. Maximum {MaxExtensionsPerHour} extensions per hour. Please try again in {rateLimitResult.RetryAfterSeconds} seconds.");
+        }
+
+        // Retrieve session
+        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken);
+
+        if (session == null)
+        {
+            _logger.LogWarning("Session {SessionId} not found", command.SessionId);
+            return new ExtendSessionResponse(false, null, "Session not found");
+        }
+
+        // Authorization check: User must own the session
+        if (session.UserId != command.RequestingUserId)
+        {
+            _logger.LogWarning(
+                "User {UserId} attempted to extend session {SessionId} owned by {OwnerId}",
+                command.RequestingUserId, command.SessionId, session.UserId);
+            return new ExtendSessionResponse(false, null, "Unauthorized to extend this session");
+        }
+
+        // Extend session using domain logic
         try
         {
-            var session = await _sessionRepository.GetByTokenHashAsync(command.TokenHash, cancellationToken);
-
-            if (session == null)
-            {
-                _logger.LogWarning("Session not found for token hash");
-                return null;
-            }
-
-            if (session.IsRevoked())
-            {
-                _logger.LogWarning("Session {SessionId} is revoked", session.Id);
-                return null;
-            }
-
-            // Update LastSeenAt using domain method
-            session.UpdateLastSeen();
+            var extensionDuration = command.ExtensionDuration ?? Session.DefaultLifetime;
+            session.Extend(extensionDuration, _timeProvider);
 
             // Persist changes
             await _sessionRepository.UpdateAsync(session, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // Invalidate cache to force refresh on next request
-            if (_sessionCache != null)
-            {
-                await _sessionCache.InvalidateAsync(command.TokenHash, cancellationToken);
-            }
+            _logger.LogInformation(
+                "Session {SessionId} extended by {Duration}. New expiration: {ExpiresAt}",
+                command.SessionId, extensionDuration, session.ExpiresAt);
 
-            // Calculate new remaining minutes
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
-            var expiryTime = now.AddDays(command.InactivityTimeoutDays);
-            var remainingMinutes = (int)Math.Max(0, (expiryTime - now).TotalMinutes);
-
-            return new SessionStatusResponse(
-                ExpiresAt: session.ExpiresAt,
-                LastSeenAt: now,
-                RemainingMinutes: remainingMinutes
-            );
+            return new ExtendSessionResponse(true, session.ExpiresAt, null);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error extending session for token hash");
-            return null;
+            _logger.LogError(ex, "Failed to extend session {SessionId}", command.SessionId);
+            return new ExtendSessionResponse(false, null, ex.Message);
         }
     }
 }

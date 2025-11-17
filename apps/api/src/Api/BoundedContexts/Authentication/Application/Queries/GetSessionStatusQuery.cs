@@ -4,11 +4,11 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.Authentication.Application.Queries;
 
 /// <summary>
-/// Query to get the current session status including expiry and last seen time.
-/// DDD CQRS: Query for read-only operation.
-/// AUTH-05: Session management
+/// Query to get the status of a specific session.
+/// User must own the session OR have Admin role.
 /// </summary>
-public sealed record GetSessionStatusQuery(
-    string TokenHash,
-    int InactivityTimeoutDays
-) : IQuery<SessionStatusResponse?>;
+public record GetSessionStatusQuery(
+    Guid SessionId,
+    Guid RequestingUserId,
+    bool IsRequestingUserAdmin
+) : IQuery<SessionInfo?>;

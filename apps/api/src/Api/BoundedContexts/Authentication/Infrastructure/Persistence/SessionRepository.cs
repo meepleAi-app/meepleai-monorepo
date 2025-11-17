@@ -21,6 +21,15 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         _timeProvider = timeProvider;
     }
 
+    public async Task<Session?> GetByIdAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        var sessionEntity = await DbContext.UserSessions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
+
+        return sessionEntity != null ? MapToDomain(sessionEntity) : null;
+    }
+
     public async Task<Session?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
         var sessionEntity = await DbContext.UserSessions

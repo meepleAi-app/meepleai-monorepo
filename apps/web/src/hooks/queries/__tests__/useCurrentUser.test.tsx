@@ -29,11 +29,6 @@ describe('useCurrentUser', () => {
           staleTime: 0,
         },
       },
-      logger: {
-        log: () => {},
-        warn: () => {},
-        error: () => {},
-      },
     });
 
     jest.clearAllMocks();
@@ -58,7 +53,7 @@ describe('useCurrentUser', () => {
     mockGetCurrentUser.mockResolvedValue({
       success: true,
       user: mockUser,
-      error: null,
+      error: undefined,
     });
 
     const { result } = renderHook(() => useCurrentUser(), { wrapper });
@@ -78,8 +73,8 @@ describe('useCurrentUser', () => {
   it('should handle user not authenticated (null)', async () => {
     mockGetCurrentUser.mockResolvedValue({
       success: true,
-      user: null,
-      error: null,
+      user: undefined,
+      error: undefined,
     });
 
     const { result } = renderHook(() => useCurrentUser(), { wrapper });
@@ -116,7 +111,7 @@ describe('useCurrentUser', () => {
     mockGetCurrentUser.mockResolvedValue({
       success: true,
       user: mockUser,
-      error: null,
+      error: undefined,
     });
 
     // First render

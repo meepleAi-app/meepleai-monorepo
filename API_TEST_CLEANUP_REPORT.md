@@ -116,8 +116,8 @@ Line 185: `[Fact(Skip = "Requires integration test with connection pooling")]`
 
 **File 3:** `/home/user/meepleai-monorepo/apps/api/tests/Api.Tests/Services/LlmClients/OpenRouterLlmClientTests.cs`
 
-Line XXX: `[Fact(Skip = "Requires integration test - mock handler setup issue")]`  
-→ Multiple streaming tests  
+Multiple tests marked with: `[Fact(Skip = "Requires integration test - mock handler setup issue")]`
+→ Multiple streaming tests
 → **Reason:** Complex SSE mock setup
 
 **Recommendation:**

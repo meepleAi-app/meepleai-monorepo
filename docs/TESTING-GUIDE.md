@@ -896,12 +896,12 @@ PASS: ☐ Grafana dashboards funzionanti
 ## Critical Issues Found
 
 1. **[CRITICAL]** PDF upload fails for files >50MB
-   - Issue: #XXXX
+   - Issue: Track in issue tracker
    - Workaround: None
    - Blocker: YES
 
 2. **[MINOR]** Dark mode flickering on theme toggle
-   - Issue: #XXXX
+   - Issue: Track in issue tracker
    - Blocker: NO
 
 ## Decision
@@ -1603,7 +1603,7 @@ Usa questo template per documentare ogni checkpoint:
 
 1. **[CRITICAL]** Upload worker crashes con file >50MB
    - Repro: Upload large PDF
-   - Fix: Issue #XXXX created
+   - Fix: Track in issue tracker
    - Status: Blocking checkpoint
 
 2. **[MINOR]** Tooltip flickering in dark mode

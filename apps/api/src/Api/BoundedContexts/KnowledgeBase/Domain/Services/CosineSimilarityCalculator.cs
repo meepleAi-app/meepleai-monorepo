@@ -104,12 +104,14 @@ public class CosineSimilarityCalculator
             var tf = currentDoc.GetValueOrDefault(term, 0) / (double)totalTerms;
 
             // Calculate IDF (Inverse Document Frequency)
-            // For 2-document corpus: log(2 / (1 + number of docs containing term))
+            // For 2-document similarity comparison, use smoothed IDF to ensure shared terms contribute
+            // Shared terms (both docs): log(1 + 2/2) = log(2) ≈ 0.693 (positive weight for similarity)
+            // Unique terms (one doc): log(1 + 2/1) = log(3) ≈ 1.099 (higher weight for distinction)
             var docsContainingTerm = 0;
             if (currentDoc.ContainsKey(term)) docsContainingTerm++;
             if (otherDoc.ContainsKey(term)) docsContainingTerm++;
 
-            var idf = Math.Log(2.0 / (docsContainingTerm + 1e-10)); // Add small epsilon to avoid division by zero
+            var idf = Math.Log(1.0 + 2.0 / (docsContainingTerm + 1e-10)); // Smoothed IDF prevents zero weight for shared vocabulary
 
             // TF-IDF = TF * IDF
             vector[term] = tf * idf;

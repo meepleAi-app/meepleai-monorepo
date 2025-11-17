@@ -68,7 +68,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         throw new Error(errorMessage);
       }
 
-      // Issue #1079: Invalidate user query to refetch
+      // Issue #1079: Set query data immediately so UI updates synchronously,
+      // then invalidate to refetch in background (ensures cache is populated even if refetch fails)
+      queryClient.setQueryData(['user', 'current'], result.user);
       await queryClient.invalidateQueries({ queryKey: ['user', 'current'] });
 
       return result.user;
@@ -94,7 +96,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         throw new Error(errorMessage);
       }
 
-      // Issue #1079: Invalidate user query to refetch
+      // Issue #1079: Set query data immediately so UI updates synchronously,
+      // then invalidate to refetch in background (ensures cache is populated even if refetch fails)
+      queryClient.setQueryData(['user', 'current'], result.user);
       await queryClient.invalidateQueries({ queryKey: ['user', 'current'] });
 
       return result.user;

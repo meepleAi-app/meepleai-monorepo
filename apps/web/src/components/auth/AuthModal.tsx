@@ -22,6 +22,7 @@ import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 import { DemoCredentialsHint } from './DemoCredentialsHint';
 import OAuthButtons from './OAuthButtons';
+import { useQueryClient } from '@/hooks/queries';
 import type { AuthUser } from '@/types';
 
 // ============================================================================
@@ -54,6 +55,7 @@ export function AuthModal({
   initialPassword = '',
 }: AuthModalProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultMode);
 
   // Reset tab when modal opens/closes or default mode changes
@@ -65,6 +67,9 @@ export function AuthModal({
 
   // Handle successful authentication
   const handleAuthSuccess = async (user: AuthUser) => {
+    // Issue #1079: Update AuthProvider cache immediately so useAuth() reflects the authenticated state
+    queryClient.setQueryData(['user', 'current'], user);
+
     onSuccess?.(user);
     onClose();
     await router.push('/chat');

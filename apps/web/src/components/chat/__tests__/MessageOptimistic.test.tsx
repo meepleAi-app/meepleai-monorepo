@@ -13,11 +13,11 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Message } from '../Message';
 import { Message as MessageType } from '@/types';
-import { useChatContext } from '../ChatProvider';
+import { useChatStore } from '@/store/chat/store';
 
 // Mock dependencies
-jest.mock('../ChatProvider', () => ({
-  useChatContext: jest.fn(),
+jest.mock('@/store/chat/store', () => ({
+  useChatStore: jest.fn(),
 }));
 
 jest.mock('../MessageActions', () => ({
@@ -32,11 +32,11 @@ jest.mock('../../FollowUpQuestions', () => ({
   FollowUpQuestions: () => <div data-testid="follow-up-questions">Questions</div>,
 }));
 
-const mockUseChatContext = useChatContext as jest.MockedFunction<typeof useChatContext>;
+const mockUseChatStore = useChatStore as jest.MockedFunction<typeof useChatStore>;
 
 describe('Message - Optimistic Updates (#1167)', () => {
   beforeEach(() => {
-    mockUseChatContext.mockReturnValue({
+    mockUseChatStore.mockReturnValue({
       editingMessageId: null,
       startEditMessage: jest.fn(),
       deleteMessage: jest.fn(),

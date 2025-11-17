@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useChatContext } from './ChatProvider';
+import { useChatStore } from '@/store/chat/store';
 import { GameSelector } from './GameSelector';
 import { AgentSelector } from './AgentSelector';
 import { ChatHistory } from './ChatHistory';
@@ -37,7 +37,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
     selectedAgentId,
     loading,
     createChat
-  } = useChatContext();
+  } = useChatStore();
 
   const handleCreateChat = async () => {
     await createChat();

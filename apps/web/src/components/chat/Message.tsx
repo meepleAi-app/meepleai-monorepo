@@ -12,7 +12,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Message as MessageType } from '@/types';
-import { useChatContext } from './ChatProvider';
+import { useChatStore } from '@/store/chat/store';
 import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
 import { FollowUpQuestions } from '../FollowUpQuestions';
@@ -26,12 +26,12 @@ interface MessageProps {
 export const Message = React.memo(function Message({ message, isUser }: MessageProps) {
   const {
     editingMessageId,
-    startEditMessage,
+    startEdit: startEditMessage,
     deleteMessage,
     setMessageFeedback,
     loading,
     setInputValue
-  } = useChatContext();
+  } = useChatStore();
 
   const isEditing = editingMessageId === message.id;
   const isDeleted = message.isDeleted;

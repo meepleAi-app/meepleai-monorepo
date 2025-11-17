@@ -13,16 +13,12 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import ChatPage from '../../../components/pages/ChatPage';
 import { api } from '../../../lib/api';
-import { createWrapper } from '../../utils/test-providers';
 
-// Mock ChatProvider with minimal context
-const mockUseChatContext = jest.fn();
+// Mock Zustand store with minimal context
+const mockUseChatStore = jest.fn();
 
-jest.mock('../../../components/chat/ChatProvider', () => ({
-  ChatProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="chat-provider">{children}</div>
-  ),
-  useChatContext: () => mockUseChatContext(),
+jest.mock('@/store/chat/store', () => ({
+  useChatStore: () => mockUseChatStore(),
 }));
 
 // Mock BottomNav to avoid loading state issues
@@ -78,7 +74,7 @@ describe('ChatPage - Authentication', () => {
     jest.clearAllMocks();
 
     // Default mock context
-    mockUseChatContext.mockReturnValue({
+    mockUseChatStore.mockReturnValue({
       selectedGameId: null,
       selectedAgentId: null,
       activeChatId: null,
@@ -91,7 +87,7 @@ describe('ChatPage - Authentication', () => {
     // Mock API to never resolve, keeping providers in loading state
     mockApi.get.mockImplementation(() => new Promise(() => {}));
 
-    render(<ChatPage />, { wrapper: createWrapper() });
+    render(<ChatPage />);
 
     // With the full provider tree, AuthProvider starts in loading state
     // ChatPage shows "Loading..." while auth check is pending
@@ -104,7 +100,7 @@ describe('ChatPage - Authentication', () => {
     // Mock API to return no user (unauthenticated)
     mockApi.get.mockResolvedValue(null);
 
-    render(<ChatPage />, { wrapper: createWrapper() });
+    render(<ChatPage />);
 
     // Wait for auth check to complete
     await waitFor(
@@ -132,7 +128,7 @@ describe('ChatPage - Authentication', () => {
     // Mock API to return authenticated user
     mockApi.get.mockResolvedValue(userResponse);
 
-    render(<ChatPage />, { wrapper: createWrapper() });
+    render(<ChatPage />);
 
     // Wait for auth check to complete and authenticated UI to render
     await waitFor(
@@ -152,7 +148,7 @@ describe('ChatPage - Authentication', () => {
     // Mock API to reject auth check
     mockApi.get.mockRejectedValue(new Error('Auth check failed'));
 
-    render(<ChatPage />, { wrapper: createWrapper() });
+    render(<ChatPage />);
 
     // Wait for auth failure to be handled (should show unauthenticated state)
     await waitFor(

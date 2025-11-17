@@ -9,18 +9,18 @@ import { render, screen } from '@testing-library/react';
 import { Message } from '@/components/chat/Message';
 import { Message as MessageType, Citation } from '@/types';
 
-// Mock ChatProvider
-const mockChatContext = {
+// Mock Zustand store
+const mockChatStore = {
   editingMessageId: null,
-  startEditMessage: jest.fn(),
+  startEdit: jest.fn(),
   deleteMessage: jest.fn(),
   setMessageFeedback: jest.fn(),
-  loading: { updating: false, deleting: false, sending: false, messages: false },
+  loading: { updating: false, deleting: false, sending: false, messages: false, creating: false, chats: false, games: false, agents: false },
   setInputValue: jest.fn(),
 };
 
-jest.mock('@/components/chat/ChatProvider', () => ({
-  useChatContext: () => mockChatContext,
+jest.mock('@/store/chat/store', () => ({
+  useChatStore: () => mockChatStore,
 }));
 
 describe('Message - Citations Feature (#859)', () => {

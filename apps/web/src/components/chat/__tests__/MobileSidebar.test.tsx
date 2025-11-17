@@ -2,12 +2,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MobileSidebar } from '../MobileSidebar';
 
-// Mock useChatContext hook
-jest.mock('../ChatProvider', () => ({
-  useChatContext: jest.fn()
+// Mock useChatStore hook
+jest.mock('@/store/chat/store', () => ({
+  useChatStore: jest.fn()
 }));
 
-import { useChatContext } from '../ChatProvider';
+import { useChatStore } from '@/store/chat/store';
 
 // Mock child components
 jest.mock('../GameSelector', () => ({
@@ -48,7 +48,7 @@ jest.mock('@/components/ui/sheet', () => ({
 describe('MobileSidebar', () => {
   const mockOnOpenChange = jest.fn();
   const mockCreateChat = jest.fn();
-  const mockUseChatContext = useChatContext as jest.MockedFunction<typeof useChatContext>;
+  const mockUseChatStore = useChatStore as jest.MockedFunction<typeof useChatStore>;
 
   const defaultContextValue = {
     games: [
@@ -76,7 +76,7 @@ describe('MobileSidebar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCreateChat.mockResolvedValue(undefined);
-    mockUseChatContext.mockReturnValue(defaultContextValue);
+    mockUseChatStore.mockReturnValue(defaultContextValue);
   });
 
   describe('Basic Rendering', () => {
@@ -135,7 +135,7 @@ describe('MobileSidebar', () => {
     });
 
     it('should not display badge when no game is selected', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         selectedGameId: null
       });
@@ -144,7 +144,7 @@ describe('MobileSidebar', () => {
     });
 
     it('should display "..." when selected game is not found', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         selectedGameId: 'non-existent-game'
       });
@@ -179,7 +179,7 @@ describe('MobileSidebar', () => {
 
   describe('Button State Management', () => {
     it('should disable button when neither game nor agent selected', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         selectedGameId: null,
         selectedAgentId: null
@@ -198,7 +198,7 @@ describe('MobileSidebar', () => {
     });
 
     it('should display loading text during chat creation', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         loading: { creating: true, messages: false, sending: false }
       });

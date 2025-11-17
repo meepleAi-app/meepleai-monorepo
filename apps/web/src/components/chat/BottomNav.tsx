@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useChatContext } from './ChatProvider';
+import { useChatStore } from '@/store/chat/store';
 import { LoadingButton } from '../loading/LoadingButton';
 
 export function BottomNav() {
@@ -22,7 +22,7 @@ export function BottomNav() {
     selectedAgentId,
     loading,
     createChat
-  } = useChatContext();
+  } = useChatStore();
 
   const handleCreateChat = () => {
     void createChat();

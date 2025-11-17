@@ -12,18 +12,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChatPage from '../../../components/pages/ChatPage';
 import { api } from '../../../lib/api';
-import { createWrapper } from '../../utils/test-providers';
 import { useChatStore } from '@/store/chat';
-
-// Mock ChatProvider with context values
-const mockUseChatContext = jest.fn();
-
-jest.mock('../../../components/chat/ChatProvider', () => ({
-  ChatProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="chat-provider">{children}</div>
-  ),
-  useChatContext: () => mockUseChatContext(),
-}));
 
 // Mock BottomNav to avoid loading state issues
 jest.mock('../../../components/chat/BottomNav', () => ({
@@ -203,7 +192,7 @@ describe('ChatPage - UI Interactions', () => {
     mockSidebarProps.onToggleCollapse.mockClear();
 
     // Default mock context with loading state
-    mockUseChatContext.mockReturnValue({
+    mockUseChatStore.mockReturnValue({
       selectedGameId: null,
       selectedAgentId: null,
       activeChatId: null,
@@ -230,7 +219,7 @@ describe('ChatPage - UI Interactions', () => {
   });
 
   it('toggles sidebar when collapse button is clicked', async () => {
-    render(<ChatPage />, { wrapper: createWrapper() });
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -267,7 +256,7 @@ describe('ChatPage - UI Interactions', () => {
       games: [mockGame],
     });
 
-    mockUseChatContext.mockReturnValue({
+    mockUseChatStore.mockReturnValue({
       selectedGameId: 'game-1',
       selectedAgentId: null,
       activeChatId: null,
@@ -286,7 +275,7 @@ describe('ChatPage - UI Interactions', () => {
       createChat: jest.fn(),
     });
 
-    render(<ChatPage />, { wrapper: createWrapper() });
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();
@@ -348,7 +337,7 @@ describe('ChatPage - UI Interactions', () => {
       },
     });
 
-    mockUseChatContext.mockReturnValue({
+    mockUseChatStore.mockReturnValue({
       selectedGameId: 'game-1',
       selectedAgentId: 'agent-1',
       activeChatId: 'chat-1',
@@ -374,7 +363,7 @@ describe('ChatPage - UI Interactions', () => {
       createChat: jest.fn(),
     });
 
-    render(<ChatPage />, { wrapper: createWrapper() });
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('chat-provider')).toBeInTheDocument();

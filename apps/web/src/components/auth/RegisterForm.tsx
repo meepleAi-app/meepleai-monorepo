@@ -2,65 +2,31 @@
  * RegisterForm Component
  *
  * Reusable registration form with:
- * - React Hook Form for form state management
- * - Zod schema validation with password confirmation
+ * - React 19 useActionState for form state management
+ * - Client-side password confirmation validation
+ * - Server Actions pattern for auth
  * - Accessible form controls
  * - Loading states
- * - Custom error display
+ * - Localized Italian error messages
+ *
+ * Issue #1078: FE-IMP-002 — Server Actions per Auth & Export
  */
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useActionState, useState, useEffect } from 'react';
 import { AccessibleFormInput } from '@/components/accessible';
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-// ============================================================================
-// Validation Schema
-// ============================================================================
-
-const registerSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(100, 'Password must not exceed 100 characters')
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-    ),
-  confirmPassword: z
-    .string()
-    .min(1, 'Please confirm your password'),
-  displayName: z
-    .string()
-    .min(2, 'Display name must be at least 2 characters')
-    .max(50, 'Display name must not exceed 50 characters')
-    .optional()
-    .or(z.literal('')),
-  role: z
-    .enum(['User', 'Editor', 'Admin']),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
-
-export type RegisterFormData = z.infer<typeof registerSchema>;
+import { registerAction, type AuthActionState } from '@/actions/auth';
+import { validationMessages } from '@/lib/i18n/errors';
 
 // ============================================================================
 // Component Props
 // ============================================================================
 
 export interface RegisterFormProps {
-  onSubmit: (data: Omit<RegisterFormData, 'confirmPassword'>) => Promise<void> | void;
-  loading?: boolean;
-  error?: string;
-  onErrorDismiss?: () => void;
-  showRoleSelector?: boolean;
+  /**
+   * Callback when registration succeeds
+   */
+  onSuccess?: (user: NonNullable<AuthActionState['user']>) => void;
 }
 
 // ============================================================================
@@ -68,70 +34,63 @@ export interface RegisterFormProps {
 // ============================================================================
 
 export function RegisterForm({
-  onSubmit,
-  loading = false,
-  error,
-  onErrorDismiss,
-  showRoleSelector = false
+  onSuccess
 }: RegisterFormProps) {
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-      confirmPassword: '',
-      displayName: '',
-      role: 'User',
-    },
-  });
+  // Use React 19 useActionState for form handling
+  const [state, formAction, isPending] = useActionState<AuthActionState, FormData>(
+    registerAction,
+    { success: false }
+  );
 
-  const isLoading = loading || isSubmitting;
-  const selectedRole = watch('role');
+  // Local validation state for password confirmation
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  const onFormSubmit = async (data: RegisterFormData) => {
-    if (onErrorDismiss) {
-      onErrorDismiss();
+  // Call onSuccess callback when registration succeeds (useEffect to avoid render-time side effects)
+  useEffect(() => {
+    if (state.success && state.user && onSuccess) {
+      onSuccess(state.user);
     }
+  }, [state.success, state.user, onSuccess]);
 
-    // Remove confirmPassword before sending to API
-    const { confirmPassword, ...registerData } = data;
-    await onSubmit(registerData);
+  // Client-side password confirmation validation
+  const handlePasswordChange = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
+
+    if (confirmPassword && password !== confirmPassword) {
+      setPasswordError(validationMessages.passwordsDoNotMatch);
+    } else {
+      setPasswordError(null);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4" noValidate>
+    <form action={formAction} onChange={handlePasswordChange} className="space-y-4" noValidate>
       {/* Email Field */}
       <div className="space-y-2">
         <AccessibleFormInput
           label="Email"
           id="register-email"
+          name="email"
           type="email"
-          placeholder="you@example.com"
+          placeholder="tuoemail@esempio.com"
           autoComplete="email"
-          error={errors.email?.message}
           required
-          disabled={isLoading}
-          {...register('email')}
+          disabled={isPending}
         />
       </div>
 
       {/* Display Name Field (Optional) */}
       <div className="space-y-2">
         <AccessibleFormInput
-          label="Display Name (Optional)"
+          label="Nome visualizzato (Opzionale)"
           id="register-displayName"
+          name="displayName"
           type="text"
-          placeholder="John Doe"
+          placeholder="Mario Rossi"
           autoComplete="name"
-          error={errors.displayName?.message}
-          disabled={isLoading}
-          {...register('displayName')}
+          disabled={isPending}
         />
       </div>
 
@@ -140,65 +99,41 @@ export function RegisterForm({
         <AccessibleFormInput
           label="Password"
           id="register-password"
+          name="password"
           type="password"
           placeholder="••••••••"
           autoComplete="new-password"
-          error={errors.password?.message}
           required
-          disabled={isLoading}
-          {...register('password')}
+          disabled={isPending}
         />
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Must contain uppercase, lowercase, and number (min 8 characters)
+          Deve contenere maiuscole, minuscole e numeri (minimo 8 caratteri)
         </p>
       </div>
 
       {/* Confirm Password Field */}
       <div className="space-y-2">
         <AccessibleFormInput
-          label="Confirm Password"
+          label="Conferma Password"
           id="register-confirmPassword"
+          name="confirmPassword"
           type="password"
           placeholder="••••••••"
           autoComplete="new-password"
-          error={errors.confirmPassword?.message}
+          error={passwordError || undefined}
           required
-          disabled={isLoading}
-          {...register('confirmPassword')}
+          disabled={isPending}
         />
       </div>
 
-      {/* Role Selector (Conditional) */}
-      {showRoleSelector && (
-        <div className="space-y-2">
-          <label htmlFor="register-role" className="block text-sm font-medium text-slate-900 dark:text-slate-100">
-            Role
-          </label>
-          <Select
-            value={selectedRole}
-            onValueChange={(value) => setValue('role', value as 'User' | 'Editor' | 'Admin')}
-            disabled={isLoading}
-          >
-            <SelectTrigger id="register-role">
-              <SelectValue placeholder="Select a role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="User">User</SelectItem>
-              <SelectItem value="Editor">Editor</SelectItem>
-              <SelectItem value="Admin">Admin</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       {/* Error Message */}
-      {error && (
+      {state.error && (
         <div
           className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
           role="alert"
           aria-live="polite"
         >
-          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          <p className="text-sm text-red-800 dark:text-red-200">{state.error.message}</p>
         </div>
       )}
 
@@ -206,10 +141,11 @@ export function RegisterForm({
       <LoadingButton
         type="submit"
         className="w-full"
-        isLoading={isLoading}
-        loadingText="Creating account..."
+        isLoading={isPending}
+        loadingText="Creazione account..."
+        disabled={!!passwordError}
       >
-        Create Account
+        Crea Account
       </LoadingButton>
     </form>
   );

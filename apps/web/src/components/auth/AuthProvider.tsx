@@ -3,29 +3,26 @@
  *
  * Manages:
  * - User authentication state
- * - Login/logout/register operations
+ * - Login/logout/register operations using Server Actions
  * - Session management
+ *
+ * Issue #1078: FE-IMP-002 — Server Actions per Auth & Export
  *
  * Designed to wrap the entire app in _app.tsx for global auth availability
  */
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, PropsWithChildren } from 'react';
 import { AuthUser } from '@/types';
-import { api } from '@/lib/api';
+import { loginAction, registerAction, logoutAction, getCurrentUser } from '@/actions/auth';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-interface AuthResponse {
-  user: AuthUser;
-}
-
 export interface RegisterData {
   email: string;
   password: string;
   displayName?: string;
-  role?: string;
 }
 
 export interface AuthContextValue {
@@ -63,8 +60,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<AuthResponse>('/api/v1/auth/me');
-      setUser(res?.user ?? null);
+      const result = await getCurrentUser();
+      setUser(result.user ?? null);
     } catch (err) {
       console.error('Failed to load current user:', err);
       setUser(null);
@@ -77,14 +74,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.post<AuthResponse>('/api/v1/auth/login', { email, password });
-      const authUser = res?.user ?? null;
-      setUser(authUser);
-      if (!authUser) throw new Error('Login response missing user data');
-      return authUser;
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+
+      const result = await loginAction({ success: false }, formData);
+
+      if (!result.success || !result.user) {
+        const errorMessage = result.error?.message || 'Login fallito';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      setUser(result.user);
+      return result.user;
     } catch (err) {
       console.error('Login failed:', err);
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const errorMessage = err instanceof Error ? err.message : 'Login fallito';
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -95,14 +102,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.post<AuthResponse>('/api/v1/auth/register', data);
-      const authUser = res?.user ?? null;
-      setUser(authUser);
-      if (!authUser) throw new Error('Registration response missing user data');
-      return authUser;
+      const formData = new FormData();
+      formData.append('email', data.email);
+      formData.append('password', data.password);
+      if (data.displayName) {
+        formData.append('displayName', data.displayName);
+      }
+
+      const result = await registerAction({ success: false }, formData);
+
+      if (!result.success || !result.user) {
+        const errorMessage = result.error?.message || 'Registrazione fallita';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      setUser(result.user);
+      return result.user;
     } catch (err) {
       console.error('Registration failed:', err);
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      const errorMessage = err instanceof Error ? err.message : 'Registrazione fallita';
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -113,10 +133,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(null);
     try {
-      await api.post('/api/v1/auth/logout');
+      await logoutAction();
     } catch (err) {
       console.error('Logout failed:', err);
-      setError(err instanceof Error ? err.message : 'Logout failed');
+      setError(err instanceof Error ? err.message : 'Logout fallito');
     } finally {
       // Always clear user, even if API call fails
       setUser(null);

@@ -32,24 +32,8 @@ jest.mock('../../components/auth/AuthProvider', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-// Mock provider components
-jest.mock('../../components/game/GameProvider', () => ({
-  GameProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="game-provider">{children}</div>
-  ),
-}));
-
-jest.mock('../../components/chat/ChatProvider', () => ({
-  ChatProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="chat-provider">{children}</div>
-  ),
-}));
-
-jest.mock('../../components/ui/UIProvider', () => ({
-  UIProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="ui-provider">{children}</div>
-  ),
-}));
+// Mock provider components (ChatProvider and UIProvider no longer exist - removed during Zustand migration)
+// GameProvider was also removed as part of context consolidation
 
 // Mock child components that use useChatContext
 jest.mock('../../components/chat/BottomNav', () => ({

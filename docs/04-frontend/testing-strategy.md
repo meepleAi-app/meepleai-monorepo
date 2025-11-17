@@ -238,5 +238,112 @@ Examples:
 
 ---
 
+## TanStack Query Testing Patterns
+
+**Issue #1079**: FE-IMP-003 — TanStack Query Data Layer
+
+### Test Utilities
+
+Custom utilities in `src/__tests__/utils/query-test-utils.tsx`:
+
+```tsx
+import { renderWithQuery, createTestQueryClient } from '@/__tests__/utils/query-test-utils';
+
+// Basic usage
+const { result } = renderWithQuery(<MyComponent />);
+
+// With custom QueryClient
+const queryClient = createTestQueryClient();
+const { result } = renderWithQuery(<MyComponent />, { queryClient });
+```
+
+### Testing Query Hooks
+
+```tsx
+import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { useCurrentUser } from '@/hooks/queries';
+
+describe('useCurrentUser', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 0 } },
+      logger: { log: () => {}, warn: () => {}, error: () => {} },
+    });
+  });
+
+  afterEach(() => queryClient.clear());
+
+  const wrapper = ({ children }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+
+  it('should fetch user successfully', async () => {
+    mockGetCurrentUser.mockResolvedValue({ success: true, user: mockUser });
+    const { result } = renderHook(() => useCurrentUser(), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(mockUser);
+  });
+});
+```
+
+### Testing Mutations with Cache Invalidation
+
+```tsx
+it('should create chat and invalidate queries', async () => {
+  const queryClient = createTestQueryClient();
+  const { result } = renderHook(() => useCreateChat(), { wrapper });
+
+  await result.current.mutateAsync({ gameId: 'game-1', title: 'Test' });
+
+  // Verify cache invalidation
+  const queryState = queryClient.getQueryState(chatKeys.byGame('game-1'));
+  expect(queryState?.isInvalidated).toBe(true);
+});
+```
+
+### Best Practices
+
+1. **Disable retries**: `retry: false` for faster tests
+2. **Silent logger**: Suppress console noise
+3. **Fresh client per test**: Avoid cache contamination
+4. **Use waitFor**: Always wait for async query completion
+5. **Test all states**: Loading, success, error
+
+### Migration from Manual State
+
+**Before** (Manual useEffect + useState):
+```tsx
+function UserProfile() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const data = await getCurrentUser();
+        setUser(data.user);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+}
+```
+
+**After** (TanStack Query):
+```tsx
+function UserProfile() {
+  const { data: user, isLoading: loading } = useCurrentUser();
+  // 70% less code!
+}
+```
+
+---
+
 **Maintained by**: Frontend Team
 **Review Frequency**: Monthly

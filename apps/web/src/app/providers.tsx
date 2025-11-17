@@ -17,6 +17,7 @@ import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { SessionWarningModal } from '@/components/SessionWarningModal';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import { QueryProvider } from '@/app/QueryProvider';
 import { api } from '@/lib/api';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -101,6 +102,7 @@ function AppContent({ children }: { children: ReactNode }) {
  *
  * Provides all necessary context providers for the application:
  * - ThemeProvider (dark/light mode)
+ * - QueryProvider (TanStack Query data layer - Issue #1079)
  * - AuthProvider (authentication state)
  * - ErrorBoundary (error handling)
  * - Session management
@@ -110,16 +112,18 @@ function AppContent({ children }: { children: ReactNode }) {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <AuthProvider>
-        <ErrorBoundary
-          componentName="App"
-          showDetails={process.env.NODE_ENV === 'development'}
-        >
-          <RouteErrorBoundary routeName="AppContent">
-            <AppContent>{children}</AppContent>
-          </RouteErrorBoundary>
-        </ErrorBoundary>
-      </AuthProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <ErrorBoundary
+            componentName="App"
+            showDetails={process.env.NODE_ENV === 'development'}
+          >
+            <RouteErrorBoundary routeName="AppContent">
+              <AppContent>{children}</AppContent>
+            </RouteErrorBoundary>
+          </ErrorBoundary>
+        </AuthProvider>
+      </QueryProvider>
     </ThemeProvider>
   );
 }

@@ -1,65 +1,60 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Infrastructure;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Application.Queries;
 
 /// <summary>
-/// Handler for GetSessionStatusQuery.
-/// DDD: Uses ISessionRepository to fetch session status.
-/// AUTH-05: Session management
+/// Handler for GetSessionStatusQuery with authorization.
+/// Verifies that requesting user owns the session OR has Admin role.
 /// </summary>
-public class GetSessionStatusQueryHandler : IQueryHandler<GetSessionStatusQuery, SessionStatusResponse?>
+public class GetSessionStatusQueryHandler : IQueryHandler<GetSessionStatusQuery, SessionInfo?>
 {
-    private readonly ISessionRepository _sessionRepository;
-    private readonly TimeProvider _timeProvider;
+    private readonly MeepleAiDbContext _db;
     private readonly ILogger<GetSessionStatusQueryHandler> _logger;
 
     public GetSessionStatusQueryHandler(
-        ISessionRepository sessionRepository,
-        TimeProvider timeProvider,
+        MeepleAiDbContext db,
         ILogger<GetSessionStatusQueryHandler> logger)
     {
-        _sessionRepository = sessionRepository;
-        _timeProvider = timeProvider;
-        _logger = logger;
+        _db = db ?? throw new ArgumentNullException(nameof(db));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<SessionStatusResponse?> Handle(GetSessionStatusQuery query, CancellationToken cancellationToken)
+    public async Task<SessionInfo?> Handle(GetSessionStatusQuery request, CancellationToken cancellationToken)
     {
-        try
+        var session = await _db.UserSessions
+            .AsNoTracking()
+            .Include(s => s.User)
+            .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
+
+        if (session == null)
         {
-            var session = await _sessionRepository.GetByTokenHashAsync(query.TokenHash, cancellationToken);
-
-            if (session == null)
-            {
-                _logger.LogWarning("Session not found for token hash");
-                return null;
-            }
-
-            if (session.IsRevoked())
-            {
-                _logger.LogWarning("Session {SessionId} is revoked", session.Id);
-                return null;
-            }
-
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
-
-            // Calculate remaining minutes until session expires from inactivity
-            var lastActivity = session.LastSeenAt ?? session.CreatedAt;
-            var expiryTime = lastActivity.AddDays(query.InactivityTimeoutDays);
-            var remainingMinutes = (int)Math.Max(0, (expiryTime - now).TotalMinutes);
-
-            return new SessionStatusResponse(
-                ExpiresAt: session.ExpiresAt,
-                LastSeenAt: session.LastSeenAt,
-                RemainingMinutes: remainingMinutes
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting session status for token hash");
+            _logger.LogWarning("Session {SessionId} not found", request.SessionId);
             return null;
         }
+
+        // Authorization check: User must own the session OR be an admin
+        if (session.UserId != request.RequestingUserId && !request.IsRequestingUserAdmin)
+        {
+            _logger.LogWarning(
+                "User {UserId} attempted to access session {SessionId} owned by {OwnerId} without admin privileges",
+                request.RequestingUserId, request.SessionId, session.UserId);
+            return null;
+        }
+
+        return new SessionInfo(
+            session.Id.ToString(),
+            session.UserId.ToString(),
+            session.User.Email,
+            session.CreatedAt,
+            session.ExpiresAt,
+            session.LastSeenAt,
+            session.RevokedAt,
+            session.IpAddress,
+            session.UserAgent
+        );
     }
 }

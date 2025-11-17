@@ -10,6 +10,11 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 public interface ISessionRepository
 {
     /// <summary>
+    /// Finds a session by its ID.
+    /// </summary>
+    Task<Session?> GetByIdAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds a session by its token hash.
     /// </summary>
     Task<Session?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default);

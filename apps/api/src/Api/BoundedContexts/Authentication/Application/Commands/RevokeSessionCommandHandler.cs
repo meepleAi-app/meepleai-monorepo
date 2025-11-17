@@ -1,67 +1,73 @@
-using Api.Infrastructure;
-using Api.Services;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
-using Microsoft.EntityFrameworkCore;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
-public class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand, bool>
+/// <summary>
+/// Handler for RevokeSessionCommand with authorization and audit tracking.
+/// Verifies that requesting user owns the session OR has Admin role.
+/// </summary>
+public class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand, RevokeSessionResponse>
 {
-    private readonly MeepleAiDbContext _db;
-    private readonly TimeProvider _timeProvider;
-    private readonly ISessionCacheService? _sessionCache;
+    private readonly ISessionRepository _sessionRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<RevokeSessionCommandHandler> _logger;
 
     public RevokeSessionCommandHandler(
-        MeepleAiDbContext db,
-        ILogger<RevokeSessionCommandHandler> logger,
-        ISessionCacheService? sessionCache = null,
-        TimeProvider? timeProvider = null)
+        ISessionRepository sessionRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<RevokeSessionCommandHandler> logger)
     {
-        _db = db ?? throw new ArgumentNullException(nameof(db));
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _sessionCache = sessionCache;
-        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async Task<bool> Handle(RevokeSessionCommand request, CancellationToken cancellationToken)
+    public async Task<RevokeSessionResponse> Handle(RevokeSessionCommand command, CancellationToken cancellationToken)
     {
-        var session = await _db.UserSessions.FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
+        // Retrieve session
+        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken);
+
         if (session == null)
         {
-            _logger.LogWarning("Attempted to revoke non-existent session {SessionId}", request.SessionId);
-            return false;
+            _logger.LogWarning("Session {SessionId} not found", command.SessionId);
+            return new RevokeSessionResponse(false, "Session not found");
         }
 
-        if (session.RevokedAt != null)
+        // Authorization check: User must own the session OR be an admin
+        if (session.UserId != command.RequestingUserId && !command.IsRequestingUserAdmin)
         {
-            _logger.LogInformation("Session {SessionId} was already revoked at {RevokedAt}", request.SessionId, session.RevokedAt);
-            return false;
+            _logger.LogWarning(
+                "User {UserId} attempted to revoke session {SessionId} owned by {OwnerId} without admin privileges",
+                command.RequestingUserId, command.SessionId, session.UserId);
+            return new RevokeSessionResponse(false, "Unauthorized to revoke this session");
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        session.RevokedAt = now;
-        await _db.SaveChangesAsync(cancellationToken);
-
-        // Invalidate cache if present (resilient to cache failures)
-        if (_sessionCache != null)
+        // Revoke session using domain logic
+        try
         {
-            try
-            {
-                await _sessionCache.InvalidateAsync(session.TokenHash, cancellationToken);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Service boundary - cache failure resilience for session operations
-            // RESILIENCE: Cache failures should not prevent session revocation
-            // Database revocation already succeeded, so log warning and continue
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to invalidate cache for session {SessionId}, but database revocation succeeded", request.SessionId);
-            }
-#pragma warning restore CA1031
-        }
+            var reason = command.Reason ?? 
+                (command.IsRequestingUserAdmin && session.UserId != command.RequestingUserId
+                    ? $"Revoked by admin {command.RequestingUserId}"
+                    : "Revoked by user");
 
-        _logger.LogInformation("Session {SessionId} for user {UserId} revoked successfully", request.SessionId, session.UserId);
-        return true;
+            session.Revoke(reason);
+
+            // Persist changes (domain events will be collected automatically)
+            await _sessionRepository.UpdateAsync(session, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Session {SessionId} revoked by user {RequestingUserId}. Reason: {Reason}",
+                command.SessionId, command.RequestingUserId, reason);
+
+            return new RevokeSessionResponse(true, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to revoke session {SessionId}", command.SessionId);
+            return new RevokeSessionResponse(false, ex.Message);
+        }
     }
 }

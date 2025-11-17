@@ -18,7 +18,7 @@ public interface IPromptEvaluationService
 
     /// <summary>
     /// Evaluates a prompt version using a test dataset
-    /// Calculates 5 metrics: Accuracy, Hallucination Rate, Confidence, Citation Correctness, Latency
+    /// BGAI-041: Calculates 5 metrics: Accuracy, Relevance, Completeness, Clarity, Citation Quality
     /// </summary>
     /// <param name="templateId">Template ID containing the prompt</param>
     /// <param name="versionId">Specific version ID to evaluate</param>

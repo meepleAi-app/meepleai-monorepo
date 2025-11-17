@@ -3,6 +3,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// <summary>
 /// Domain service for multi-model consensus validation (GPT-4 + Claude)
 /// ISSUE-974: BGAI-032 - Multi-model validation with consensus threshold ≥0.90
+/// ISSUE-975: BGAI-033 - Consensus similarity calculation using cosine ≥0.90
 /// </summary>
 /// <remarks>
 /// Validates AI responses by querying multiple LLM models and comparing their outputs.
@@ -10,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 ///
 /// Architecture:
 /// - Queries both GPT-4 and Claude models independently
-/// - Calculates text similarity using normalized word-level Jaccard similarity
+/// - Calculates text similarity using TF-IDF cosine similarity
 /// - Returns consensus result with similarity score and combined response
 ///
 /// Use cases:

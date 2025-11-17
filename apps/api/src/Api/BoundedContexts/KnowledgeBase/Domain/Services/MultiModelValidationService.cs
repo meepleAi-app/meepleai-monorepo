@@ -7,24 +7,26 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// <summary>
 /// Domain service for multi-model consensus validation (GPT-4 + Claude)
 /// ISSUE-974: BGAI-032 - Multi-model validation with consensus threshold ≥0.90
+/// ISSUE-975: BGAI-033 - Consensus similarity calculation using cosine ≥0.90
 /// </summary>
 /// <remarks>
 /// Implements consensus validation by querying multiple LLM models and comparing responses.
-/// Uses normalized word-level Jaccard similarity for text comparison.
+/// Uses TF-IDF cosine similarity for semantic text comparison.
 ///
 /// Models used:
 /// - GPT-4: openai/gpt-4o (high quality, widely used)
 /// - Claude: anthropic/claude-3.5-sonnet (alternative perspective)
 ///
 /// Similarity algorithm:
-/// - Tokenizes both responses into normalized words
-/// - Calculates Jaccard similarity: intersection / union
+/// - Tokenizes and builds TF-IDF vectors for both responses
+/// - Calculates cosine similarity: (A · B) / (||A|| * ||B||)
 /// - Threshold: ≥0.90 for consensus (>95% accuracy target)
 /// </remarks>
 public class MultiModelValidationService : IMultiModelValidationService
 {
     private readonly ILlmClient _openRouterClient;
     private readonly ILogger<MultiModelValidationService> _logger;
+    private readonly CosineSimilarityCalculator _similarityCalculator;
 
     /// <summary>
     /// Minimum consensus threshold for validation (≥0.90)
@@ -52,7 +54,11 @@ public class MultiModelValidationService : IMultiModelValidationService
         _openRouterClient = llmClients.FirstOrDefault(c => c.ProviderName == "OpenRouter")
             ?? throw new InvalidOperationException("OpenRouter client not found in DI container");
 
-        _logger.LogInformation("MultiModelValidationService initialized with consensus threshold {Threshold:F2}",
+        // Initialize cosine similarity calculator
+        _similarityCalculator = new CosineSimilarityCalculator();
+
+        _logger.LogInformation(
+            "MultiModelValidationService initialized with cosine similarity and consensus threshold {Threshold:F2}",
             MinimumConsensusThreshold);
     }
 
@@ -142,25 +148,8 @@ public class MultiModelValidationService : IMultiModelValidationService
     /// <inheritdoc/>
     public double CalculateSimilarity(string text1, string text2)
     {
-        if (string.IsNullOrWhiteSpace(text1) || string.IsNullOrWhiteSpace(text2))
-        {
-            return 0.0;
-        }
-
-        // Normalize and tokenize both texts
-        var tokens1 = NormalizeAndTokenize(text1);
-        var tokens2 = NormalizeAndTokenize(text2);
-
-        if (tokens1.Count == 0 || tokens2.Count == 0)
-        {
-            return 0.0;
-        }
-
-        // Calculate Jaccard similarity: intersection / union
-        var intersection = tokens1.Intersect(tokens2).Count();
-        var union = tokens1.Union(tokens2).Count();
-
-        return union > 0 ? (double)intersection / union : 0.0;
+        // Delegate to cosine similarity calculator (TF-IDF based)
+        return _similarityCalculator.CalculateCosineSimilarity(text1, text2);
     }
 
     /// <summary>
@@ -231,21 +220,6 @@ public class MultiModelValidationService : IMultiModelValidationService
                 Usage = null
             };
         }
-    }
-
-    /// <summary>
-    /// Normalize text and tokenize into words
-    /// </summary>
-    private HashSet<string> NormalizeAndTokenize(string text)
-    {
-        // Convert to lowercase, split on whitespace and punctuation, remove empty strings
-        var tokens = text.ToLowerInvariant()
-            .Split(new[] { ' ', '\t', '\n', '\r', '.', ',', '!', '?', ';', ':', '(', ')', '[', ']', '{', '}', '"', '\'', '-', '—' },
-                StringSplitOptions.RemoveEmptyEntries)
-            .Where(t => t.Length > 2) // Filter out very short tokens (noise)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        return tokens;
     }
 
     /// <summary>

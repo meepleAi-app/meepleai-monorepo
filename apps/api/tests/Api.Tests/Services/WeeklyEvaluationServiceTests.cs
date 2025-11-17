@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 
@@ -22,7 +23,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
     private readonly Mock<IMediator> _mediatorMock;
     private readonly Mock<ILogger<WeeklyEvaluationService>> _loggerMock;
     private readonly WeeklyEvaluationConfiguration _config;
-    private readonly Mock<TimeProvider> _timeProviderMock;
+    private readonly FakeTimeProvider _timeProvider;
     private readonly CancellationTokenSource _cts;
 
     public WeeklyEvaluationServiceTests()
@@ -32,7 +33,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _serviceProviderMock = new Mock<IServiceProvider>();
         _mediatorMock = new Mock<IMediator>();
         _loggerMock = new Mock<ILogger<WeeklyEvaluationService>>();
-        _timeProviderMock = new Mock<TimeProvider>();
+        _timeProvider = new FakeTimeProvider(new DateTimeOffset(2025, 1, 15, 12, 0, 0, TimeSpan.Zero));
         _cts = new CancellationTokenSource();
 
         // Default configuration
@@ -49,9 +50,6 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _scopeFactoryMock.Setup(x => x.CreateScope()).Returns(_scopeMock.Object);
         _scopeMock.Setup(x => x.ServiceProvider).Returns(_serviceProviderMock.Object);
         _serviceProviderMock.Setup(x => x.GetService(typeof(IMediator))).Returns(_mediatorMock.Object);
-
-        // Setup time provider
-        _timeProviderMock.Setup(x => x.GetUtcNow()).Returns(new DateTimeOffset(2025, 1, 15, 12, 0, 0, TimeSpan.Zero));
     }
 
     public void Dispose()
@@ -70,7 +68,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
             _scopeFactoryMock.Object,
             _loggerMock.Object,
             options,
-            _timeProviderMock.Object);
+            _timeProvider);
 
         // Act
         var executeTask = service.StartAsync(_cts.Token);
@@ -93,7 +91,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
             _scopeFactoryMock.Object,
             _loggerMock.Object,
             options,
-            _timeProviderMock.Object);
+            _timeProvider);
 
         // Act
         await service.StartAsync(_cts.Token);
@@ -116,7 +114,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
             _scopeFactoryMock.Object,
             _loggerMock.Object,
             options,
-            _timeProviderMock.Object);
+            _timeProvider);
 
         // Act
         await service.StartAsync(_cts.Token);
@@ -155,7 +153,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
             _scopeFactoryMock.Object,
             _loggerMock.Object,
             options,
-            _timeProviderMock.Object);
+            _timeProvider);
 
         // Act
         await service.StartAsync(_cts.Token);
@@ -179,7 +177,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         // Arrange
         var options = Options.Create(_config);
         var currentTime = new DateTimeOffset(2025, 2, 20, 15, 30, 0, TimeSpan.Zero);
-        _timeProviderMock.Setup(x => x.GetUtcNow()).Returns(currentTime);
+        _timeProvider.SetUtcNow(currentTime);
 
         var capturedQuery = (GenerateQualityReportQuery?)null;
         _mediatorMock
@@ -201,7 +199,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
             _scopeFactoryMock.Object,
             _loggerMock.Object,
             options,
-            _timeProviderMock.Object);
+            _timeProvider);
 
         // Act
         await service.StartAsync(_cts.Token);
@@ -243,7 +241,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
             _scopeFactoryMock.Object,
             _loggerMock.Object,
             options,
-            _timeProviderMock.Object);
+            _timeProvider);
 
         // Act
         await service.StartAsync(_cts.Token);
@@ -286,7 +284,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
             _scopeFactoryMock.Object,
             _loggerMock.Object,
             options,
-            _timeProviderMock.Object);
+            _timeProvider);
 
         // Act
         await service.StartAsync(_cts.Token);
@@ -317,7 +315,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
                 null!,
                 _loggerMock.Object,
                 Options.Create(_config),
-                _timeProviderMock.Object));
+                _timeProvider));
     }
 
     [Fact]
@@ -329,7 +327,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
                 _scopeFactoryMock.Object,
                 null!,
                 Options.Create(_config),
-                _timeProviderMock.Object));
+                _timeProvider));
     }
 
     [Fact]
@@ -341,7 +339,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
                 _scopeFactoryMock.Object,
                 _loggerMock.Object,
                 null!,
-                _timeProviderMock.Object));
+                _timeProvider));
     }
 
     [Fact]
@@ -370,7 +368,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
             _scopeFactoryMock.Object,
             _loggerMock.Object,
             options,
-            _timeProviderMock.Object);
+            _timeProvider);
 
         // Act
         await service.StartAsync(_cts.Token);

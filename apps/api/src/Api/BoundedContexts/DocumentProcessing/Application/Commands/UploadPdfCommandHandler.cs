@@ -69,19 +69,6 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         var gameId = command.GameId;
         var userId = command.UserId;
 
-        // BGAI-043: Record upload attempt
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                MeepleAiMetrics.RecordPdfUploadAttempt("attempt", file?.Length);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to record PDF upload attempt metric");
-            }
-        });
-
         // Validate file
         if (file == null || file.Length == 0)
         {

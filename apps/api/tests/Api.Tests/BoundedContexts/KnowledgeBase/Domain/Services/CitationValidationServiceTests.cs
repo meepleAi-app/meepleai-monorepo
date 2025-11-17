@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Linq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -309,5 +310,251 @@ public class CitationValidationServiceTests : IDisposable
         Assert.Single(result.Errors);
         Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
         Assert.Contains("Invalid game ID", result.Errors[0].ErrorMessage);
+    }
+
+    // ========== Additional Comprehensive Tests (BGAI-031) ==========
+
+    [Fact]
+    public async Task Test13_ValidateCitations_NegativePageNumber_ReturnsInvalid()
+    {
+        // Arrange - Negative page number
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text", $"PDF:{_pdf1Id}", page: -5, line: 0, score: 0.9f)
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+        Assert.Equal(CitationErrorType.InvalidPageNumber, result.Errors[0].ErrorType);
+    }
+
+    [Fact]
+    public async Task Test14_ValidateCitations_LargeCollection_ValidatesAll()
+    {
+        // Arrange - Large collection of valid citations
+        var snippets = new List<Snippet>();
+        for (int i = 1; i <= 100; i++)
+        {
+            var page = (i % 10) + 1; // Pages 1-10 for pdf1
+            snippets.Add(new Snippet($"text{i}", $"PDF:{_pdf1Id}", page: page, line: 0, score: 0.9f));
+        }
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(100, result.TotalCitations);
+        Assert.Equal(100, result.ValidCitations);
+        Assert.Equal(1.0, result.ValidationAccuracy);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public async Task Test15_ValidateCitations_ValidationAccuracy_CalculatesCorrectly()
+    {
+        // Arrange - 7 valid, 3 invalid = 70% accuracy
+        var validPdfId = _pdf1Id;
+        var invalidPdfId = Guid.NewGuid();
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text1", $"PDF:{validPdfId}", page: 1, line: 0, score: 0.9f),
+            new Snippet("text2", $"PDF:{validPdfId}", page: 2, line: 0, score: 0.9f),
+            new Snippet("text3", $"PDF:{validPdfId}", page: 3, line: 0, score: 0.9f),
+            new Snippet("text4", $"PDF:{invalidPdfId}", page: 1, line: 0, score: 0.9f), // Invalid
+            new Snippet("text5", $"PDF:{validPdfId}", page: 4, line: 0, score: 0.9f),
+            new Snippet("text6", $"PDF:{invalidPdfId}", page: 1, line: 0, score: 0.9f), // Invalid
+            new Snippet("text7", $"PDF:{validPdfId}", page: 5, line: 0, score: 0.9f),
+            new Snippet("text8", $"PDF:{invalidPdfId}", page: 1, line: 0, score: 0.9f), // Invalid
+            new Snippet("text9", $"PDF:{validPdfId}", page: 6, line: 0, score: 0.9f),
+            new Snippet("text10", $"PDF:{validPdfId}", page: 7, line: 0, score: 0.9f)
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Equal(10, result.TotalCitations);
+        Assert.Equal(7, result.ValidCitations);
+        Assert.Equal(3, result.InvalidCitations);
+        Assert.Equal(0.7, result.ValidationAccuracy);
+    }
+
+    [Fact]
+    public async Task Test16_ValidateCitations_DuplicateCitations_ValidatesEach()
+    {
+        // Arrange - Same citation repeated
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.9f),
+            new Snippet("text", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.9f),
+            new Snippet("text", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.9f)
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(3, result.TotalCitations);
+        Assert.Equal(3, result.ValidCitations);
+    }
+
+    [Fact]
+    public async Task Test17_ValidateCitations_WhitespaceSource_ReturnsInvalid()
+    {
+        // Arrange - Whitespace-only source
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text", "   ", page: 1, line: 0, score: 0.9f)
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+    }
+
+    [Fact]
+    public async Task Test18_ValidateCitations_EmptyStringSource_ReturnsInvalid()
+    {
+        // Arrange - Empty string source
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text", "", page: 1, line: 0, score: 0.9f)
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+    }
+
+    [Fact]
+    public async Task Test19_ValidateCitations_InvalidGuidInSource_ReturnsInvalid()
+    {
+        // Arrange - Invalid GUID format
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text", "PDF:not-a-valid-guid", page: 1, line: 0, score: 0.9f)
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+        Assert.Equal(CitationErrorType.DocumentNotFound, result.Errors[0].ErrorType);
+    }
+
+    [Fact]
+    public async Task Test20_ValidateCitations_MultiplePdfDocuments_ValidatesCrossDocument()
+    {
+        // Arrange - Citations from both PDFs
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text1", $"PDF:{_pdf1Id}", page: 1, line: 0, score: 0.9f),
+            new Snippet("text2", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.8f),
+            new Snippet("text3", $"PDF:{_pdf2Id}", page: 1, line: 0, score: 0.7f),
+            new Snippet("text4", $"PDF:{_pdf2Id}", page: 3, line: 0, score: 0.6f),
+            new Snippet("text5", $"PDF:{_pdf1Id}", page: 10, line: 0, score: 0.5f)
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(5, result.TotalCitations);
+        Assert.Equal(5, result.ValidCitations);
+    }
+
+    [Fact]
+    public async Task Test21_ValidateCitations_SourceWithoutColon_ReturnsInvalid()
+    {
+        // Arrange - Source missing colon separator
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text", "PDF123456", page: 1, line: 0, score: 0.9f)
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+    }
+
+    [Fact]
+    public async Task Test22_ValidateCitations_SourceWithWrongPrefix_ReturnsInvalid()
+    {
+        // Arrange - Wrong prefix (not "PDF:")
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text", $"DOC:{_pdf1Id}", page: 1, line: 0, score: 0.9f)
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+    }
+
+    [Fact]
+    public async Task Test23_ValidateSingleCitation_NegativePage_ReturnsFalse()
+    {
+        // Arrange
+        var snippet = new Snippet("text", $"PDF:{_pdf1Id}", page: -1, line: 0, score: 0.9f);
+
+        // Act
+        var result = await _service.ValidateSingleCitationAsync(snippet, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task Test24_ValidateCitations_AllErrorTypes_ReturnsMultipleErrors()
+    {
+        // Arrange - Create one of each error type
+        var nonExistentPdfId = Guid.NewGuid();
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text1", $"PDF:{nonExistentPdfId}", page: 1, line: 0, score: 0.9f), // DocumentNotFound
+            new Snippet("text2", $"PDF:{_pdf1Id}", page: 100, line: 0, score: 0.8f),        // InvalidPageNumber
+            new Snippet("text3", "INVALID", page: 1, line: 0, score: 0.7f)                 // MalformedSource
+        };
+
+        // Act
+        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Equal(3, result.TotalCitations);
+        Assert.Equal(0, result.ValidCitations);
+        Assert.Equal(3, result.Errors.Count);
+
+        // Verify we have different error types
+        var errorTypes = result.Errors.Select(e => e.ErrorType).ToHashSet();
+        Assert.Contains(CitationErrorType.DocumentNotFound, errorTypes);
+        Assert.Contains(CitationErrorType.InvalidPageNumber, errorTypes);
+        Assert.Contains(CitationErrorType.MalformedSource, errorTypes);
     }
 }

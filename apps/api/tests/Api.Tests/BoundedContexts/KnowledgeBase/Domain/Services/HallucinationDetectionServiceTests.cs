@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Linq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -204,5 +205,267 @@ public class HallucinationDetectionServiceTests
 
         Assert.True(enCount >= 10);
         Assert.True(itCount >= 10);
+    }
+
+    // ========== Additional Comprehensive Tests (BGAI-031) ==========
+
+    [Fact]
+    public async Task Test18_Portuguese_UnsupportedLanguage_FallbacksToEnglish()
+    {
+        // Arrange - Portuguese is not supported, should fallback to English
+        var result = await _service.DetectHallucinationsAsync(
+            "I don't know the rules.", "pt", TestCancellationToken);
+
+        // Assert - Falls back to English
+        Assert.Equal("en", result.Language);
+        Assert.False(result.IsValid);
+        Assert.Contains("I don't know", result.DetectedKeywords);
+    }
+
+    [Fact]
+    public async Task Test19_Severity_ExactlyOneKeyword_ReturnsLow()
+    {
+        // Arrange - Exactly 1 keyword
+        var result = await _service.DetectHallucinationsAsync(
+            "The setup is unclear.", "en", TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Single(result.DetectedKeywords);
+        Assert.Equal(HallucinationSeverity.Low, result.Severity);
+    }
+
+    [Fact]
+    public async Task Test20_Severity_ExactlyThreeKeywords_ReturnsMedium()
+    {
+        // Arrange - Exactly 3 keywords
+        var text = "I'm not sure, unclear, and ambiguous about the rules.";
+        var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Equal(3, result.DetectedKeywords.Count);
+        Assert.Equal(HallucinationSeverity.Medium, result.Severity);
+    }
+
+    [Fact]
+    public async Task Test21_Severity_ExactlyFiveKeywords_ReturnsHigh()
+    {
+        // Arrange - Exactly 5 keywords
+        var text = "I'm not sure, unclear, ambiguous, possibly incorrect, and perhaps wrong.";
+        var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Equal(5, result.DetectedKeywords.Count);
+        Assert.Equal(HallucinationSeverity.High, result.Severity);
+    }
+
+    [Fact]
+    public async Task Test22_PartialMatch_DoesNotTrigger()
+    {
+        // Arrange - "known" contains "know" but should not trigger "I don't know"
+        var text = "The well-known rules are clear.";
+        var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Empty(result.DetectedKeywords);
+    }
+
+    [Fact]
+    public async Task Test23_AllSupportedLanguages_GetKeywordCount()
+    {
+        // Arrange & Act
+        var languages = new[] { "en", "it", "de", "fr", "es" };
+        var counts = languages.Select(lang => _service.GetForbiddenKeywordCount(lang)).ToList();
+
+        // Assert - All languages have keywords defined
+        Assert.All(counts, count => Assert.True(count > 0));
+    }
+
+    [Fact]
+    public async Task Test24_VeryLongText_DetectsKeywords()
+    {
+        // Arrange - Long text with keyword buried inside
+        var longText = string.Join(" ", Enumerable.Repeat("Valid game rule text.", 100))
+            + " I don't know the answer. "
+            + string.Join(" ", Enumerable.Repeat("More valid text.", 100));
+
+        // Act
+        var result = await _service.DetectHallucinationsAsync(longText, "en", TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains("I don't know", result.DetectedKeywords);
+    }
+
+    [Fact]
+    public async Task Test25_Italian_MultipleKeywords_DetectsAll()
+    {
+        // Arrange - Multiple Italian keywords
+        var text = "Non lo so e non sono sicuro della regola. È poco chiaro.";
+        var result = await _service.DetectHallucinationsAsync(text, "it", TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Equal(3, result.DetectedKeywords.Count);
+        Assert.Contains("non lo so", result.DetectedKeywords);
+        Assert.Contains("non sono sicuro", result.DetectedKeywords);
+        Assert.Contains("poco chiaro", result.DetectedKeywords);
+    }
+
+    [Fact]
+    public async Task Test26_German_CaseSensitivity_DetectsUpperAndLower()
+    {
+        // Arrange - Test case insensitivity for German
+        var text1 = "ich weiß nicht wie viele."; // lowercase
+        var text2 = "ICH WEISS NICHT WIE VIELE."; // uppercase (ß -> ss in uppercase)
+
+        // Act
+        var result1 = await _service.DetectHallucinationsAsync(text1, "de", TestCancellationToken);
+        var result2 = await _service.DetectHallucinationsAsync(text2, "de", TestCancellationToken);
+
+        // Assert - Both should detect
+        Assert.False(result1.IsValid);
+        Assert.False(result2.IsValid);
+    }
+
+    [Fact]
+    public async Task Test27_French_GenderVariations_DetectsBoth()
+    {
+        // Arrange - French has gendered "sûr/sûre"
+        var text1 = "Je ne suis pas sûr.";
+        var text2 = "Je ne suis pas sûre.";
+
+        // Act
+        var result1 = await _service.DetectHallucinationsAsync(text1, "fr", TestCancellationToken);
+        var result2 = await _service.DetectHallucinationsAsync(text2, "fr", TestCancellationToken);
+
+        // Assert - Both variations should be detected
+        Assert.False(result1.IsValid);
+        Assert.False(result2.IsValid);
+    }
+
+    [Fact]
+    public async Task Test28_Spanish_AccentVariations_Detects()
+    {
+        // Arrange
+        var text = "No lo sé cuántos jugadores.";
+        var result = await _service.DetectHallucinationsAsync(text, "es", TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains("No lo sé", result.DetectedKeywords);
+    }
+
+    [Fact]
+    public async Task Test29_MessageFormat_ReflectsKeywordCount()
+    {
+        // Arrange - Test message formatting
+        var text = "I'm not sure and unclear.";
+        var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
+
+        // Assert
+        Assert.Contains("2 hallucination indicator(s) detected", result.Message);
+        Assert.Contains("en", result.Message);
+    }
+
+    [Fact]
+    public async Task Test30_TotalKeywordsChecked_ReflectsLanguage()
+    {
+        // Arrange & Act
+        var resultEn = await _service.DetectHallucinationsAsync("Valid text.", "en", TestCancellationToken);
+        var resultIt = await _service.DetectHallucinationsAsync("Testo valido.", "it", TestCancellationToken);
+
+        // Assert - Different languages may have different keyword counts
+        Assert.True(resultEn.TotalKeywordsChecked > 0);
+        Assert.True(resultIt.TotalKeywordsChecked > 0);
+    }
+
+    [Fact]
+    public async Task Test31_CriticalPhrases_AlwaysReturnHigh()
+    {
+        // Arrange - Test critical phrases that force High severity
+        var criticalTexts = new[]
+        {
+            "I don't know the answer.",
+            "I cannot find the information.",
+            "Non lo so quanti giocatori.",
+            "Je ne sais pas combien.",
+            "Ich weiß nicht wie viele."
+        };
+
+        foreach (var text in criticalTexts)
+        {
+            // Act
+            var result = await _service.DetectHallucinationsAsync(text, language: null, TestCancellationToken);
+
+            // Assert
+            Assert.False(result.IsValid);
+            Assert.Equal(HallucinationSeverity.High, result.Severity);
+        }
+    }
+
+    [Fact]
+    public async Task Test32_NullText_ThrowsOrReturnsValid()
+    {
+        // Arrange & Act
+        var result = await _service.DetectHallucinationsAsync(null!, "en", TestCancellationToken);
+
+        // Assert - Null treated as empty (implementation detail)
+        Assert.True(result.IsValid);
+        Assert.Empty(result.DetectedKeywords);
+    }
+
+    [Fact]
+    public async Task Test33_WhitespaceOnlyText_ReturnsValid()
+    {
+        // Arrange
+        var result = await _service.DetectHallucinationsAsync("   \t\n   ", "en", TestCancellationToken);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Empty(result.DetectedKeywords);
+    }
+
+    [Fact]
+    public async Task Test34_MultipleInvocations_ReturnsConsistentResults()
+    {
+        // Arrange
+        var text = "I'm not sure about this.";
+
+        // Act - Call multiple times
+        var result1 = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
+        var result2 = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
+        var result3 = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
+
+        // Assert - All results identical
+        Assert.False(result1.IsValid);
+        Assert.False(result2.IsValid);
+        Assert.False(result3.IsValid);
+        Assert.Equal(result1.DetectedKeywords.Count, result2.DetectedKeywords.Count);
+        Assert.Equal(result2.DetectedKeywords.Count, result3.DetectedKeywords.Count);
+        Assert.Equal(result1.Severity, result2.Severity);
+    }
+
+    [Theory]
+    [InlineData("en", "I don't know")]
+    [InlineData("it", "non lo so")]
+    [InlineData("de", "Ich weiß nicht")]
+    [InlineData("fr", "Je ne sais pas")]
+    [InlineData("es", "No lo sé")]
+    public async Task Test35_PrimaryKeywords_AllLanguages_Detected(string language, string keyword)
+    {
+        // Arrange
+        var text = $"The rule says: {keyword} how many players.";
+
+        // Act
+        var result = await _service.DetectHallucinationsAsync(text, language, TestCancellationToken);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(keyword, result.DetectedKeywords, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(HallucinationSeverity.High, result.Severity);
     }
 }

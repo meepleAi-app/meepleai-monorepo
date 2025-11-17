@@ -12,10 +12,10 @@ import { render, screen } from '@testing-library/react';
 import { Message } from '../../../components/chat/Message';
 import { Message as MessageType } from '../../../types';
 
-// Mock the ChatProvider context
-const mockUseChatContext = jest.fn();
-jest.mock('../../../components/chat/ChatProvider', () => ({
-  useChatContext: () => mockUseChatContext(),
+// Mock the Zustand store
+const mockUseChatStore = jest.fn();
+jest.mock('@/store/chat/store', () => ({
+  useChatStore: () => mockUseChatStore(),
 }));
 
 // Mock MessageActions component
@@ -61,7 +61,7 @@ const createMessage = (overrides?: Partial<MessageType>): MessageType => ({
  * Helper to setup mock context
  */
 const setupMockContext = (overrides?: any) => {
-  mockUseChatContext.mockReturnValue({
+  mockUseChatStore.mockReturnValue({
     editingMessageId: null,
     startEditMessage: jest.fn(),
     deleteMessage: jest.fn(),

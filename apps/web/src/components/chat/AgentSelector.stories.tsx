@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { AgentSelector } from './AgentSelector';
-import { ChatContext } from './ChatProvider';
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useChatStore } from '@/store/chat/store';
 
 /**
  * AgentSelector - Dropdown for selecting AI agent.
  * Allows users to select which AI agent to chat with for the selected game.
- * Integrates with ChatProvider for state management.
+ * Migrated to Zustand (Issue #1240)
  */
 const meta = {
   title: 'Chat/AgentSelector',
@@ -20,61 +20,40 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Mock ChatProvider for stories
-const MockChatProvider: React.FC<{
+// Zustand Store Initializer for Storybook
+function StoreInitializer({
+  agents = [],
+  selectedAgentId = null,
+  selectedGameId = null,
+  loadingAgents = false,
+  children
+}: {
+  agents?: Array<{ id: string; gameId: string; name: string; kind: string; createdAt: string }>;
+  selectedAgentId?: string | null;
+  selectedGameId?: string | null;
+  loadingAgents?: boolean;
   children: React.ReactNode;
-  mockAgents?: Array<{ id: string; name: string }>;
-  mockSelectedAgentId?: string | null;
-  mockSelectedGameId?: string | null;
-  mockLoadingAgents?: boolean;
-}> = ({
-  children,
-  mockAgents = [],
-  mockSelectedAgentId = null,
-  mockSelectedGameId = null,
-  mockLoadingAgents = false
-}) => {
-  const [selectedAgentId, setSelectedAgentId] = React.useState(mockSelectedAgentId);
+}) {
+  useEffect(() => {
+    useChatStore.setState({
+      agents: agents,
+      selectedAgentId: selectedAgentId,
+      selectedGameId: selectedGameId,
+      loading: {
+        games: false,
+        agents: loadingAgents,
+        chats: false,
+        messages: false,
+        sending: false,
+        creating: false,
+        updating: false,
+        deleting: false,
+      },
+    });
+  }, [agents, selectedAgentId, selectedGameId, loadingAgents]);
 
-  const mockContextValue = {
-    agents: mockAgents,
-    selectedAgentId,
-    selectAgent: (id: string | null) => setSelectedAgentId(id),
-    selectedGameId: mockSelectedGameId,
-    loading: {
-      agents: mockLoadingAgents,
-      games: false,
-      sending: false,
-      updating: false,
-      deleting: false,
-    },
-    // Add other required context properties with dummy values
-    games: [],
-    selectedGame: null,
-    selectGame: async () => {},
-    threads: [],
-    selectedThreadId: null,
-    messages: [],
-    inputValue: '',
-    setInputValue: () => {},
-    editingMessageId: null,
-    startEditMessage: () => {},
-    sendMessage: async () => {},
-    deleteMessage: async () => {},
-    setMessageFeedback: async () => {},
-    createNewChat: async () => {},
-    selectThread: async () => {},
-    deleteThread: async () => {},
-    searchMode: 'hybrid',
-    setSearchMode: () => {},
-  };
-
-  return (
-    <ChatContext.Provider value={mockContextValue as any}>
-      {children}
-    </ChatContext.Provider>
-  );
-};
+  return <>{children}</>;
+}
 
 /**
  * Default state with agents available and game selected
@@ -82,17 +61,17 @@ const MockChatProvider: React.FC<{
 export const Default: Story = {
   decorators: [
     (Story) => (
-      <MockChatProvider
-        mockAgents={[
-          { id: 'agent-1', name: 'Rules Expert' },
-          { id: 'agent-2', name: 'Strategy Guide' },
-          { id: 'agent-3', name: 'General Assistant' },
+      <StoreInitializer
+        agents={[
+          { id: 'agent-1', gameId: 'game-1', name: 'Rules Expert', kind: 'qa', createdAt: new Date().toISOString() },
+          { id: 'agent-2', gameId: 'game-1', name: 'Strategy Guide', kind: 'qa', createdAt: new Date().toISOString() },
+          { id: 'agent-3', gameId: 'game-1', name: 'General Assistant', kind: 'qa', createdAt: new Date().toISOString() },
         ]}
-        mockSelectedGameId="game-1"
-        mockSelectedAgentId="agent-1"
+        selectedGameId="game-1"
+        selectedAgentId="agent-1"
       >
         <Story />
-      </MockChatProvider>
+      </StoreInitializer>
     ),
   ],
 };
@@ -103,12 +82,12 @@ export const Default: Story = {
 export const Loading: Story = {
   decorators: [
     (Story) => (
-      <MockChatProvider
-        mockSelectedGameId="game-1"
-        mockLoadingAgents={true}
+      <StoreInitializer
+        selectedGameId="game-1"
+        loadingAgents={true}
       >
         <Story />
-      </MockChatProvider>
+      </StoreInitializer>
     ),
   ],
 };
@@ -119,15 +98,15 @@ export const Loading: Story = {
 export const NoGameSelected: Story = {
   decorators: [
     (Story) => (
-      <MockChatProvider
-        mockAgents={[
-          { id: 'agent-1', name: 'Rules Expert' },
-          { id: 'agent-2', name: 'Strategy Guide' },
+      <StoreInitializer
+        agents={[
+          { id: 'agent-1', gameId: 'game-1', name: 'Rules Expert', kind: 'qa', createdAt: new Date().toISOString() },
+          { id: 'agent-2', gameId: 'game-1', name: 'Strategy Guide', kind: 'qa', createdAt: new Date().toISOString() },
         ]}
-        mockSelectedGameId={null}
+        selectedGameId={null}
       >
         <Story />
-      </MockChatProvider>
+      </StoreInitializer>
     ),
   ],
 };
@@ -138,12 +117,12 @@ export const NoGameSelected: Story = {
 export const NoAgents: Story = {
   decorators: [
     (Story) => (
-      <MockChatProvider
-        mockAgents={[]}
-        mockSelectedGameId="game-1"
+      <StoreInitializer
+        agents={[]}
+        selectedGameId="game-1"
       >
         <Story />
-      </MockChatProvider>
+      </StoreInitializer>
     ),
   ],
 };
@@ -154,19 +133,19 @@ export const NoAgents: Story = {
 export const MultipleAgents: Story = {
   decorators: [
     (Story) => (
-      <MockChatProvider
-        mockAgents={[
-          { id: 'agent-1', name: 'Gloomhaven Expert' },
-          { id: 'agent-2', name: 'Wingspan Specialist' },
-          { id: 'agent-3', name: 'Terraforming Mars Guide' },
-          { id: 'agent-4', name: 'Spirit Island Helper' },
-          { id: 'agent-5', name: 'General Board Game Assistant' },
+      <StoreInitializer
+        agents={[
+          { id: 'agent-1', gameId: 'game-1', name: 'Gloomhaven Expert', kind: 'qa', createdAt: new Date().toISOString() },
+          { id: 'agent-2', gameId: 'game-1', name: 'Wingspan Specialist', kind: 'qa', createdAt: new Date().toISOString() },
+          { id: 'agent-3', gameId: 'game-1', name: 'Terraforming Mars Guide', kind: 'qa', createdAt: new Date().toISOString() },
+          { id: 'agent-4', gameId: 'game-1', name: 'Spirit Island Helper', kind: 'qa', createdAt: new Date().toISOString() },
+          { id: 'agent-5', gameId: 'game-1', name: 'General Board Game Assistant', kind: 'qa', createdAt: new Date().toISOString() },
         ]}
-        mockSelectedGameId="game-1"
-        mockSelectedAgentId="agent-2"
+        selectedGameId="game-1"
+        selectedAgentId="agent-2"
       >
         <Story />
-      </MockChatProvider>
+      </StoreInitializer>
     ),
   ],
 };
@@ -175,28 +154,27 @@ export const MultipleAgents: Story = {
  * Interactive agent selection demo
  */
 const InteractiveAgentSelectorComponent = () => {
-  const [selectedGameId, setSelectedGameId] = React.useState('game-1');
   const [agents, setAgents] = React.useState([
-    { id: 'agent-1', name: 'Rules Expert' },
-    { id: 'agent-2', name: 'Strategy Guide' },
-    { id: 'agent-3', name: 'General Assistant' },
+    { id: 'agent-1', gameId: 'game-1', name: 'Rules Expert', kind: 'qa', createdAt: new Date().toISOString() },
+    { id: 'agent-2', gameId: 'game-1', name: 'Strategy Guide', kind: 'qa', createdAt: new Date().toISOString() },
+    { id: 'agent-3', gameId: 'game-1', name: 'General Assistant', kind: 'qa', createdAt: new Date().toISOString() },
   ]);
 
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
         <button
-          onClick={() => setSelectedGameId('game-1')}
+          onClick={() => useChatStore.setState({ selectedGameId: 'game-1' })}
           className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
         >
           Game 1 (3 agents)
         </button>
         <button
           onClick={() => {
-            setSelectedGameId('game-2');
+            useChatStore.setState({ selectedGameId: 'game-2' });
             setAgents([
-              { id: 'agent-4', name: 'Expert Helper' },
-              { id: 'agent-5', name: 'Quick Guide' },
+              { id: 'agent-4', gameId: 'game-2', name: 'Expert Helper', kind: 'qa', createdAt: new Date().toISOString() },
+              { id: 'agent-5', gameId: 'game-2', name: 'Quick Guide', kind: 'qa', createdAt: new Date().toISOString() },
             ]);
           }}
           className="px-3 py-1 bg-green-500 text-white rounded text-sm"
@@ -204,21 +182,19 @@ const InteractiveAgentSelectorComponent = () => {
           Game 2 (2 agents)
         </button>
         <button
-          onClick={() => {
-            setSelectedGameId(null as any);
-          }}
+          onClick={() => useChatStore.setState({ selectedGameId: null })}
           className="px-3 py-1 bg-gray-500 text-white rounded text-sm"
         >
           No Game
         </button>
       </div>
 
-      <MockChatProvider
-        mockAgents={agents}
-        mockSelectedGameId={selectedGameId}
+      <StoreInitializer
+        agents={agents}
+        selectedGameId="game-1"
       >
         <AgentSelector />
-      </MockChatProvider>
+      </StoreInitializer>
     </div>
   );
 };
@@ -237,17 +213,17 @@ export const DarkMode: Story = {
   decorators: [
     (Story) => (
       <div className="dark">
-        <MockChatProvider
-          mockAgents={[
-            { id: 'agent-1', name: 'Rules Expert' },
-            { id: 'agent-2', name: 'Strategy Guide' },
-            { id: 'agent-3', name: 'General Assistant' },
+        <StoreInitializer
+          agents={[
+            { id: 'agent-1', gameId: 'game-1', name: 'Rules Expert', kind: 'qa', createdAt: new Date().toISOString() },
+            { id: 'agent-2', gameId: 'game-1', name: 'Strategy Guide', kind: 'qa', createdAt: new Date().toISOString() },
+            { id: 'agent-3', gameId: 'game-1', name: 'General Assistant', kind: 'qa', createdAt: new Date().toISOString() },
           ]}
-          mockSelectedGameId="game-1"
-          mockSelectedAgentId="agent-1"
+          selectedGameId="game-1"
+          selectedAgentId="agent-1"
         >
           <Story />
-        </MockChatProvider>
+        </StoreInitializer>
       </div>
     ),
   ],

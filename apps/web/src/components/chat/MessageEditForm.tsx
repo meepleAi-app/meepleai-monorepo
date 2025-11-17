@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatStore } from '@/store/chat/store';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -21,9 +21,10 @@ export function MessageEditForm() {
     editContent,
     setEditContent,
     saveEdit,
+    editMessage,
     cancelEdit,
     loading
-  } = useChatContext();
+  } = useChatStore();
 
   if (!editingMessageId) {
     return null;
@@ -44,7 +45,7 @@ export function MessageEditForm() {
       />
       <div className="flex gap-2 mt-2">
         <Button
-          onClick={() => void saveEdit()}
+          onClick={() => void saveEdit(editMessage)}
           disabled={!canSave}
           size="sm"
           aria-label="Save edited message"

@@ -6,23 +6,26 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MessageEditForm } from '@/components/chat/MessageEditForm';
-import { ChatContextValue } from '@/hooks/useChatContext';
+import { ChatStore } from '@/store/chat/types';
 import React from 'react';
 
-// Mock ChatProvider context
-jest.mock('@/components/chat/ChatProvider', () => ({
-  useChatContext: jest.fn()
+// Mock Zustand store
+jest.mock('@/store/chat/store', () => ({
+  useChatStore: jest.fn()
 }));
 
-import { useChatContext } from '@/components/chat/ChatProvider';
-const mockUseChatContext = useChatContext as jest.MockedFunction<typeof useChatContext>;
+import { useChatStore } from '@/store/chat/store';
+const mockUseChatStore = useChatStore as jest.MockedFunction<typeof useChatStore>;
 
 describe('MessageEditForm', () => {
-  const defaultContextValue: Partial<ChatContextValue> = {
+  const mockEditMessage = jest.fn(async () => {});
+
+  const defaultStoreValue: Partial<ChatStore> = {
     editingMessageId: 'msg-1',
     editContent: 'Test content',
     setEditContent: jest.fn(),
     saveEdit: jest.fn(async () => {}),
+    editMessage: mockEditMessage,
     cancelEdit: jest.fn(),
     loading: {
       games: false,
@@ -38,7 +41,7 @@ describe('MessageEditForm', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseChatContext.mockReturnValue(defaultContextValue as ChatContextValue);
+    mockUseChatStore.mockReturnValue(defaultStoreValue as ChatStore);
   });
 
   describe('Rendering', () => {
@@ -54,20 +57,20 @@ describe('MessageEditForm', () => {
     });
 
     it('returns null when editingMessageId is null', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         editingMessageId: null
-      } as ChatContextValue);
+      } as ChatStore);
 
       const { container } = render(<MessageEditForm />);
       expect(container.firstChild).toBeNull();
     });
 
     it('displays current edit content in textarea', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         editContent: 'My edited message'
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const textarea = screen.getByLabelText('Edit message content') as HTMLTextAreaElement;
@@ -80,13 +83,13 @@ describe('MessageEditForm', () => {
     });
 
     it('shows "Salvataggio..." text on save button when updating', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         loading: {
-          ...defaultContextValue.loading!,
+          ...defaultStoreValue.loading!,
           updating: true
         }
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       expect(screen.getByText('Salvataggio...')).toBeInTheDocument();
@@ -103,11 +106,11 @@ describe('MessageEditForm', () => {
     it('calls setEditContent when textarea value changes', async () => {
       const user = userEvent.setup();
       const setEditContent = jest.fn();
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         setEditContent,
         editContent: ''
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const textarea = screen.getByLabelText('Edit message content');
@@ -120,10 +123,10 @@ describe('MessageEditForm', () => {
     it('updates textarea value when editContent changes', () => {
       const { rerender } = render(<MessageEditForm />);
 
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         editContent: 'Updated content'
-      } as ChatContextValue);
+      } as ChatStore);
 
       rerender(<MessageEditForm />);
 
@@ -134,11 +137,11 @@ describe('MessageEditForm', () => {
     it('allows multiline text input', async () => {
       const user = userEvent.setup();
       const setEditContent = jest.fn();
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         setEditContent,
         editContent: ''
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const textarea = screen.getByLabelText('Edit message content');
@@ -149,13 +152,13 @@ describe('MessageEditForm', () => {
     });
 
     it('disables textarea when updating', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         loading: {
-          ...defaultContextValue.loading!,
+          ...defaultStoreValue.loading!,
           updating: true
         }
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const textarea = screen.getByLabelText('Edit message content');
@@ -167,10 +170,10 @@ describe('MessageEditForm', () => {
     it('calls saveEdit when save button is clicked', async () => {
       const user = userEvent.setup();
       const saveEdit = jest.fn(async () => {});
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         saveEdit
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const saveButton = screen.getByLabelText('Save edited message');
@@ -182,10 +185,10 @@ describe('MessageEditForm', () => {
     });
 
     it('disables save button when content is empty', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         editContent: ''
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const saveButton = screen.getByLabelText('Save edited message');
@@ -193,10 +196,10 @@ describe('MessageEditForm', () => {
     });
 
     it('disables save button when content is only whitespace', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         editContent: '   \n   '
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const saveButton = screen.getByLabelText('Save edited message');
@@ -204,10 +207,10 @@ describe('MessageEditForm', () => {
     });
 
     it('enables save button when content has non-whitespace characters', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         editContent: '  a  '
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const saveButton = screen.getByLabelText('Save edited message');
@@ -215,13 +218,13 @@ describe('MessageEditForm', () => {
     });
 
     it('disables save button when updating', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         loading: {
-          ...defaultContextValue.loading!,
+          ...defaultStoreValue.loading!,
           updating: true
         }
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const saveButton = screen.getByLabelText('Save edited message');
@@ -236,10 +239,10 @@ describe('MessageEditForm', () => {
     it('calls cancelEdit when cancel button is clicked', async () => {
       const user = userEvent.setup();
       const cancelEdit = jest.fn();
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         cancelEdit
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const cancelButton = screen.getByLabelText('Cancel editing');
@@ -249,13 +252,13 @@ describe('MessageEditForm', () => {
     });
 
     it('disables cancel button when updating', () => {
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         loading: {
-          ...defaultContextValue.loading!,
+          ...defaultStoreValue.loading!,
           updating: true
         }
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const cancelButton = screen.getByLabelText('Cancel editing');
@@ -317,11 +320,11 @@ describe('MessageEditForm', () => {
       const user = userEvent.setup();
       const longText = 'a'.repeat(5000);
       const setEditContent = jest.fn();
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         editContent: '',
         setEditContent
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const textarea = screen.getByLabelText('Edit message content');
@@ -333,10 +336,10 @@ describe('MessageEditForm', () => {
 
     it('handles special characters in content', async () => {
       const specialChars = '<script>alert("test")</script>';
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         editContent: specialChars
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const textarea = screen.getByLabelText('Edit message content') as HTMLTextAreaElement;
@@ -346,10 +349,10 @@ describe('MessageEditForm', () => {
     it('handles rapid save button clicks', async () => {
       const user = userEvent.setup();
       const saveEdit = jest.fn(async () => {});
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         saveEdit
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const saveButton = screen.getByLabelText('Save edited message');
@@ -365,10 +368,10 @@ describe('MessageEditForm', () => {
     it('handles rapid cancel button clicks', async () => {
       const user = userEvent.setup();
       const cancelEdit = jest.fn();
-      mockUseChatContext.mockReturnValue({
-        ...defaultContextValue,
+      mockUseChatStore.mockReturnValue({
+        ...defaultStoreValue,
         cancelEdit
-      } as ChatContextValue);
+      } as ChatStore);
 
       render(<MessageEditForm />);
       const cancelButton = screen.getByLabelText('Cancel editing');

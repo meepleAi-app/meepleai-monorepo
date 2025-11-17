@@ -2,12 +2,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BottomNav } from '../BottomNav';
 
-// Mock useChatContext hook
-jest.mock('../ChatProvider', () => ({
-  useChatContext: jest.fn()
+// Mock Zustand store
+jest.mock('@/store/chat/store', () => ({
+  useChatStore: jest.fn()
 }));
 
-import { useChatContext } from '../ChatProvider';
+import { useChatStore } from '@/store/chat/store';
 
 // Mock LoadingButton
 jest.mock('@/components/loading/LoadingButton', () => ({
@@ -26,7 +26,7 @@ jest.mock('@/components/loading/LoadingButton', () => ({
 
 describe('BottomNav', () => {
   const mockCreateChat = jest.fn();
-  const mockUseChatContext = useChatContext as jest.MockedFunction<typeof useChatContext>;
+  const mockUseChatStore = useChatStore as jest.MockedFunction<typeof useChatStore>;
 
   const defaultContextValue = {
     games: [
@@ -53,7 +53,7 @@ describe('BottomNav', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseChatContext.mockReturnValue(defaultContextValue);
+    mockUseChatStore.mockReturnValue(defaultContextValue);
   });
 
   describe('Basic Rendering', () => {
@@ -86,7 +86,7 @@ describe('BottomNav', () => {
     });
 
     it('should disable button when no game is selected', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         selectedGameId: null
       });
@@ -98,7 +98,7 @@ describe('BottomNav', () => {
     });
 
     it('should disable button when no agent is selected', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         selectedAgentId: null
       });
@@ -110,7 +110,7 @@ describe('BottomNav', () => {
     });
 
     it('should disable button when loading', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         loading: { creating: true, messages: false, sending: false }
       });
@@ -136,7 +136,7 @@ describe('BottomNav', () => {
 
     it('should not call createChat when button is disabled', async () => {
       const user = userEvent.setup();
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         selectedGameId: null
       });
@@ -152,7 +152,7 @@ describe('BottomNav', () => {
 
   describe('Loading State', () => {
     it('should display loading text when creating chat', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         loading: { creating: true, messages: false, sending: false }
       });
@@ -163,7 +163,7 @@ describe('BottomNav', () => {
     });
 
     it('should set aria-busy when loading', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         loading: { creating: true, messages: false, sending: false }
       });
@@ -198,7 +198,7 @@ describe('BottomNav', () => {
     });
 
     it('should apply disabled styling when button is disabled', () => {
-      mockUseChatContext.mockReturnValue({
+      mockUseChatStore.mockReturnValue({
         ...defaultContextValue,
         selectedGameId: null
       });

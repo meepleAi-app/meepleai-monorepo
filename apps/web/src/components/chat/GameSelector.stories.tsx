@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { GameSelector } from './GameSelector';
-import { ChatContext } from './ChatProvider';
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useChatStore } from '@/store/chat/store';
 
 /**
  * GameSelector - Dropdown for selecting game context.
  * Allows users to select which board game they want to chat about.
- * Integrates with ChatProvider for state management.
+ * Migrated to Zustand (Issue #1240)
  */
 const meta = {
   title: 'Chat/GameSelector',
@@ -20,58 +20,37 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Mock ChatProvider
-const MockChatProvider: React.FC<{
+// Zustand Store Initializer for Storybook
+function StoreInitializer({
+  games = [],
+  selectedGameId = null,
+  loadingGames = false,
+  children
+}: {
+  games?: Array<{ id: string; name: string; createdAt: string }>;
+  selectedGameId?: string | null;
+  loadingGames?: boolean;
   children: React.ReactNode;
-  mockGames?: Array<{ id: string; name: string }>;
-  mockSelectedGameId?: string | null;
-  mockLoadingGames?: boolean;
-}> = ({
-  children,
-  mockGames = [],
-  mockSelectedGameId = null,
-  mockLoadingGames = false
-}) => {
-  const [selectedGameId, setSelectedGameId] = React.useState(mockSelectedGameId);
+}) {
+  useEffect(() => {
+    useChatStore.setState({
+      games: games,
+      selectedGameId: selectedGameId,
+      loading: {
+        games: loadingGames,
+        agents: false,
+        chats: false,
+        messages: false,
+        sending: false,
+        creating: false,
+        updating: false,
+        deleting: false,
+      },
+    });
+  }, [games, selectedGameId, loadingGames]);
 
-  const mockContextValue = {
-    games: mockGames,
-    selectedGameId,
-    selectGame: async (id: string) => { setSelectedGameId(id); },
-    loading: {
-      games: mockLoadingGames,
-      agents: false,
-      sending: false,
-      updating: false,
-      deleting: false,
-    },
-    agents: [],
-    selectedAgentId: null,
-    selectedGame: null,
-    selectAgent: () => {},
-    threads: [],
-    selectedThreadId: null,
-    messages: [],
-    inputValue: '',
-    setInputValue: () => {},
-    editingMessageId: null,
-    startEditMessage: () => {},
-    sendMessage: async () => {},
-    deleteMessage: async () => {},
-    setMessageFeedback: async () => {},
-    createNewChat: async () => {},
-    selectThread: async () => {},
-    deleteThread: async () => {},
-    searchMode: 'hybrid',
-    setSearchMode: () => {},
-  };
-
-  return (
-    <ChatContext.Provider value={mockContextValue as any}>
-      {children}
-    </ChatContext.Provider>
-  );
-};
+  return <>{children}</>;
+}
 
 /**
  * Default state with games available
@@ -79,31 +58,29 @@ const MockChatProvider: React.FC<{
 export const Default: Story = {
   decorators: [
     (Story) => (
-      <MockChatProvider
-        mockGames={[
-          { id: 'game-1', name: 'Gloomhaven' },
-          { id: 'game-2', name: 'Wingspan' },
-          { id: 'game-3', name: 'Terraforming Mars' },
+      <StoreInitializer
+        games={[
+          { id: 'game-1', name: 'Chess', createdAt: new Date().toISOString() },
+          { id: 'game-2', name: 'Wingspan', createdAt: new Date().toISOString() },
+          { id: 'game-3', name: 'Gloomhaven', createdAt: new Date().toISOString() },
         ]}
-        mockSelectedGameId="game-1"
+        selectedGameId="game-1"
       >
         <Story />
-      </MockChatProvider>
+      </StoreInitializer>
     ),
   ],
 };
 
 /**
- * Loading state
+ * Loading state while fetching games
  */
 export const Loading: Story = {
   decorators: [
     (Story) => (
-      <MockChatProvider
-        mockLoadingGames={true}
-      >
+      <StoreInitializer loadingGames={true}>
         <Story />
-      </MockChatProvider>
+      </StoreInitializer>
     ),
   ],
 };
@@ -114,61 +91,85 @@ export const Loading: Story = {
 export const NoGames: Story = {
   decorators: [
     (Story) => (
-      <MockChatProvider
-        mockGames={[]}
-      >
+      <StoreInitializer games={[]}>
         <Story />
-      </MockChatProvider>
+      </StoreInitializer>
     ),
   ],
 };
 
 /**
- * Many games available
+ * No game selected
+ */
+export const NoSelection: Story = {
+  decorators: [
+    (Story) => (
+      <StoreInitializer
+        games={[
+          { id: 'game-1', name: 'Chess', createdAt: new Date().toISOString() },
+          { id: 'game-2', name: 'Wingspan', createdAt: new Date().toISOString() },
+        ]}
+        selectedGameId={null}
+      >
+        <Story />
+      </StoreInitializer>
+    ),
+  ],
+};
+
+/**
+ * Many games (scrollable)
  */
 export const ManyGames: Story = {
   decorators: [
     (Story) => (
-      <MockChatProvider
-        mockGames={[
-          { id: 'game-1', name: 'Gloomhaven' },
-          { id: 'game-2', name: 'Wingspan' },
-          { id: 'game-3', name: 'Terraforming Mars' },
-          { id: 'game-4', name: 'Spirit Island' },
-          { id: 'game-5', name: 'Scythe' },
-          { id: 'game-6', name: 'Pandemic Legacy' },
-          { id: 'game-7', name: 'Catan' },
-          { id: 'game-8', name: 'Ticket to Ride' },
+      <StoreInitializer
+        games={[
+          { id: 'game-1', name: 'Chess', createdAt: new Date().toISOString() },
+          { id: 'game-2', name: 'Wingspan', createdAt: new Date().toISOString() },
+          { id: 'game-3', name: 'Gloomhaven', createdAt: new Date().toISOString() },
+          { id: 'game-4', name: 'Terraforming Mars', createdAt: new Date().toISOString() },
+          { id: 'game-5', name: 'Spirit Island', createdAt: new Date().toISOString() },
+          { id: 'game-6', name: 'Azul', createdAt: new Date().toISOString() },
+          { id: 'game-7', name: 'Catan', createdAt: new Date().toISOString() },
+          { id: 'game-8', name: 'Ticket to Ride', createdAt: new Date().toISOString() },
         ]}
-        mockSelectedGameId="game-3"
+        selectedGameId="game-3"
       >
         <Story />
-      </MockChatProvider>
+      </StoreInitializer>
     ),
   ],
 };
 
 /**
- * Interactive game selection
+ * Interactive game selection demo
  */
-export const Interactive: Story = {
-  render: () => {
-    const games = [
-      { id: 'game-1', name: 'Gloomhaven' },
-      { id: 'game-2', name: 'Wingspan' },
-      { id: 'game-3', name: 'Terraforming Mars' },
-    ];
-
-    return (
-      <MockChatProvider mockGames={games}>
+const InteractiveGameSelectorComponent = () => {
+  return (
+    <StoreInitializer
+      games={[
+        { id: 'game-1', name: 'Chess', createdAt: new Date().toISOString() },
+        { id: 'game-2', name: 'Wingspan', createdAt: new Date().toISOString() },
+        { id: 'game-3', name: 'Gloomhaven', createdAt: new Date().toISOString() },
+      ]}
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Try selecting different games from the dropdown
+        </p>
         <GameSelector />
-      </MockChatProvider>
-    );
-  },
+      </div>
+    </StoreInitializer>
+  );
+};
+
+export const Interactive: Story = {
+  render: () => <InteractiveGameSelectorComponent />,
 };
 
 /**
- * Dark mode
+ * Dark mode example
  */
 export const DarkMode: Story = {
   parameters: {
@@ -177,16 +178,16 @@ export const DarkMode: Story = {
   decorators: [
     (Story) => (
       <div className="dark">
-        <MockChatProvider
-          mockGames={[
-            { id: 'game-1', name: 'Gloomhaven' },
-            { id: 'game-2', name: 'Wingspan' },
-            { id: 'game-3', name: 'Terraforming Mars' },
+        <StoreInitializer
+          games={[
+            { id: 'game-1', name: 'Chess', createdAt: new Date().toISOString() },
+            { id: 'game-2', name: 'Wingspan', createdAt: new Date().toISOString() },
+            { id: 'game-3', name: 'Gloomhaven', createdAt: new Date().toISOString() },
           ]}
-          mockSelectedGameId="game-1"
+          selectedGameId="game-1"
         >
           <Story />
-        </MockChatProvider>
+        </StoreInitializer>
       </div>
     ),
   ],

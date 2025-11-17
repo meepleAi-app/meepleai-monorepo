@@ -1,4 +1,5 @@
 using System.Security;
+using System.Text.RegularExpressions;
 
 namespace Api.Infrastructure.Security;
 
@@ -6,7 +7,7 @@ namespace Api.Infrastructure.Security;
 /// Path security utility for preventing path traversal and injection attacks
 /// Implements defense-in-depth validation for file system operations
 /// </summary>
-public static class PathSecurity
+public static partial class PathSecurity
 {
     /// <summary>
     /// Validates that resolved path is within allowed directory (prevents directory traversal)
@@ -195,6 +196,12 @@ public static class PathSecurity
     }
 
     /// <summary>
+    /// Regex pattern for validating identifiers (alphanumeric, hyphens, underscores only)
+    /// </summary>
+    [GeneratedRegex("^[a-zA-Z0-9_-]+$", RegexOptions.Compiled)]
+    private static partial Regex IdentifierPattern();
+
+    /// <summary>
     /// Validates that a given identifier (e.g., gameId, templateId) is safe to use in file paths
     /// Ensures it contains only alphanumeric characters, hyphens, and underscores
     /// </summary>
@@ -208,9 +215,7 @@ public static class PathSecurity
 
         // Allow only alphanumeric, hyphens, and underscores
         // This prevents path traversal sequences like ".." or "/"
-        var allowedPattern = new System.Text.RegularExpressions.Regex("^[a-zA-Z0-9_-]+$");
-
-        if (!allowedPattern.IsMatch(identifier))
+        if (!IdentifierPattern().IsMatch(identifier))
         {
             throw new ArgumentException(
                 $"Identifier contains invalid characters. Only alphanumeric, hyphens, and underscores are allowed.",

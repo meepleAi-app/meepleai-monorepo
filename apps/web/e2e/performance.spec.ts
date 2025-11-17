@@ -23,6 +23,14 @@
 import { test, expect } from '@playwright/test';
 import { playAudit } from 'playwright-lighthouse';
 
+/**
+ * Get a unique remote debugging port for each worker to avoid EADDRINUSE collisions.
+ * Base port 9222 + worker index ensures each parallel worker gets its own port.
+ */
+function getRemoteDebuggingPort(workerIndex: number): number {
+  return 9222 + workerIndex;
+}
+
 // Lighthouse configuration matching lighthouserc.json
 const lighthouseOptions = {
   thresholds: {
@@ -57,32 +65,39 @@ const coreWebVitalsThresholds = {
   si: 3000,  // Speed Index < 3s
 };
 
-// CRITICAL FIX: Use serial execution to avoid port conflicts when running in parallel
-// Each Chromium instance needs a unique debugging port for Lighthouse
-test.describe.serial('Performance Testing - Critical Pages', () => {
-  test.use({
-    launchOptions: {
-      args: [
-        '--remote-debugging-port=9222', // Required for playwright-lighthouse to connect
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-      ],
-    },
-  });
+// CRITICAL FIX: Each worker gets a unique debugging port to avoid EADDRINUSE collisions
+// when tests run in parallel across multiple workers (fullyParallel: true, workers: 2-4)
+test.describe('Performance Testing - Critical Pages', () => {
+  test('Homepage (/) - Performance Metrics', async ({ page, context }, testInfo) => {
+    const port = getRemoteDebuggingPort(testInfo.workerIndex);
 
-  test('Homepage (/) - Performance Metrics', async ({ page, context }) => {
-    await page.goto('/');
+    // Launch browser with worker-specific debugging port
+    await context.close();
+    const browser = await testInfo.project.use.browserName === 'chromium'
+      ? (await import('@playwright/test')).chromium.launch({
+          args: [
+            `--remote-debugging-port=${port}`,
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+          ],
+        })
+      : null;
 
-    // Wait for page to be fully loaded
-    await page.waitForLoadState('networkidle');
+    if (!browser) throw new Error('Browser launch failed');
 
-    // Run Lighthouse audit with explicit port (required for playwright-lighthouse)
+    const newContext = await browser.newContext();
+    const newPage = await newContext.newPage();
+
+    await newPage.goto('/');
+    await newPage.waitForLoadState('networkidle');
+
+    // Run Lighthouse audit with worker-specific port
     await playAudit({
-      page,
-      port: 9222,
+      page: newPage,
+      port,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
       reports: {
@@ -91,21 +106,39 @@ test.describe.serial('Performance Testing - Critical Pages', () => {
       },
     });
 
-    // Additional checks for page functionality
-    await expect(page).toHaveTitle(/MeepleAI/i);
+    await expect(newPage).toHaveTitle(/MeepleAI/i);
+
+    await browser.close();
   });
 
-  test('Chat Page (/chat) - Performance Metrics', async ({ page, context }) => {
-    // Note: May require authentication in production
-    await page.goto('/chat');
+  test('Chat Page (/chat) - Performance Metrics', async ({ page, context }, testInfo) => {
+    const port = getRemoteDebuggingPort(testInfo.workerIndex);
 
-    // Wait for page to be fully loaded
-    await page.waitForLoadState('networkidle');
+    await context.close();
+    const browser = await testInfo.project.use.browserName === 'chromium'
+      ? (await import('@playwright/test')).chromium.launch({
+          args: [
+            `--remote-debugging-port=${port}`,
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+          ],
+        })
+      : null;
 
-    // Run Lighthouse audit with explicit port (required for playwright-lighthouse)
+    if (!browser) throw new Error('Browser launch failed');
+
+    const newContext = await browser.newContext();
+    const newPage = await newContext.newPage();
+
+    await newPage.goto('/chat');
+    await newPage.waitForLoadState('networkidle');
+
     await playAudit({
-      page,
-      port: 9222,
+      page: newPage,
+      port,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
       reports: {
@@ -114,22 +147,40 @@ test.describe.serial('Performance Testing - Critical Pages', () => {
       },
     });
 
-    // Verify chat interface is present
-    const chatContainer = page.locator('[data-testid="chat-container"], .chat-container, main');
+    const chatContainer = newPage.locator('[data-testid="chat-container"], .chat-container, main');
     await expect(chatContainer).toBeVisible({ timeout: 5000 });
+
+    await browser.close();
   });
 
-  test('Upload Page (/upload) - Performance Metrics', async ({ page, context }) => {
-    // Note: May require authentication in production
-    await page.goto('/upload');
+  test('Upload Page (/upload) - Performance Metrics', async ({ page, context }, testInfo) => {
+    const port = getRemoteDebuggingPort(testInfo.workerIndex);
 
-    // Wait for page to be fully loaded
-    await page.waitForLoadState('networkidle');
+    await context.close();
+    const browser = await testInfo.project.use.browserName === 'chromium'
+      ? (await import('@playwright/test')).chromium.launch({
+          args: [
+            `--remote-debugging-port=${port}`,
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+          ],
+        })
+      : null;
 
-    // Run Lighthouse audit with explicit port (required for playwright-lighthouse)
+    if (!browser) throw new Error('Browser launch failed');
+
+    const newContext = await browser.newContext();
+    const newPage = await newContext.newPage();
+
+    await newPage.goto('/upload');
+    await newPage.waitForLoadState('networkidle');
+
     await playAudit({
-      page,
-      port: 9222,
+      page: newPage,
+      port,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
       reports: {
@@ -138,34 +189,42 @@ test.describe.serial('Performance Testing - Critical Pages', () => {
       },
     });
 
-    // Verify upload interface is present
-    const uploadContainer = page.locator('[data-testid="upload-container"], .upload-container, main');
+    const uploadContainer = newPage.locator('[data-testid="upload-container"], .upload-container, main');
     await expect(uploadContainer).toBeVisible({ timeout: 5000 });
+
+    await browser.close();
   });
 });
 
-// CRITICAL FIX: Use serial execution to avoid port conflicts
-test.describe.serial('Performance Testing - Additional Pages', () => {
-  test.use({
-    launchOptions: {
-      args: [
-        '--remote-debugging-port=9222', // Required for playwright-lighthouse to connect
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-      ],
-    },
-  });
+test.describe('Performance Testing - Additional Pages', () => {
+  test('Games Page (/games) - Performance Metrics', async ({ page, context }, testInfo) => {
+    const port = getRemoteDebuggingPort(testInfo.workerIndex);
 
-  test('Games Page (/games) - Performance Metrics', async ({ page }) => {
-    await page.goto('/games');
-    await page.waitForLoadState('networkidle');
+    await context.close();
+    const browser = await testInfo.project.use.browserName === 'chromium'
+      ? (await import('@playwright/test')).chromium.launch({
+          args: [
+            `--remote-debugging-port=${port}`,
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+          ],
+        })
+      : null;
+
+    if (!browser) throw new Error('Browser launch failed');
+
+    const newContext = await browser.newContext();
+    const newPage = await newContext.newPage();
+
+    await newPage.goto('/games');
+    await newPage.waitForLoadState('networkidle');
 
     await playAudit({
-      page,
-      port: 9222,
+      page: newPage,
+      port,
       thresholds: {
         performance: 80, // Slightly lower for content-heavy pages
         accessibility: 95,
@@ -178,15 +237,38 @@ test.describe.serial('Performance Testing - Additional Pages', () => {
         name: 'lighthouse-games',
       },
     });
+
+    await browser.close();
   });
 
-  test('Login Page (/login) - Performance Metrics', async ({ page }) => {
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+  test('Login Page (/login) - Performance Metrics', async ({ page, context }, testInfo) => {
+    const port = getRemoteDebuggingPort(testInfo.workerIndex);
+
+    await context.close();
+    const browser = await testInfo.project.use.browserName === 'chromium'
+      ? (await import('@playwright/test')).chromium.launch({
+          args: [
+            `--remote-debugging-port=${port}`,
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+          ],
+        })
+      : null;
+
+    if (!browser) throw new Error('Browser launch failed');
+
+    const newContext = await browser.newContext();
+    const newPage = await newContext.newPage();
+
+    await newPage.goto('/login');
+    await newPage.waitForLoadState('networkidle');
 
     await playAudit({
-      page,
-      port: 9222,
+      page: newPage,
+      port,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
       reports: {
@@ -194,6 +276,8 @@ test.describe.serial('Performance Testing - Additional Pages', () => {
         name: 'lighthouse-login',
       },
     });
+
+    await browser.close();
   });
 });
 

@@ -25,6 +25,8 @@ const customJestConfig = {
     '!src/**/__tests__/fixtures/**',
     '!src/**/__tests__/utils/mock-api-router.ts',
     '!src/**/__tests__/utils/mock-api-presets.ts',
+    '!src/**/*.worker.{js,jsx,ts,tsx}',
+    '!src/workers/**',
   ],
   coverageThreshold: {
     global: {

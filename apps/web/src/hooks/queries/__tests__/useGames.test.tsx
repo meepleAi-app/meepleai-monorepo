@@ -1,0 +1,265 @@
+/**
+ * Tests for useGames hooks
+ *
+ * Issue #1255: FE-QUALITY — Restore 90% test coverage
+ *
+ * Tests TanStack Query hooks for games data management
+ */
+
+import { renderHook, waitFor } from '@testing-library/react';
+import {
+  useGames,
+  useGame,
+  useGameSessions,
+  useGameDocuments,
+  gamesKeys,
+} from '../useGames';
+import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
+import { api } from '@/lib/api';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactNode } from 'react';
+
+// Mock API module
+jest.mock('@/lib/api', () => ({
+  api: {
+    games: {
+      getAll: jest.fn(),
+      getById: jest.fn(),
+      getSessions: jest.fn(),
+      getDocuments: jest.fn(),
+    },
+  },
+}));
+
+describe('useGames hooks', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = createTestQueryClient();
+    jest.clearAllMocks();
+  });
+
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+
+  describe('gamesKeys', () => {
+    it('generates correct query keys', () => {
+      expect(gamesKeys.all).toEqual(['games']);
+      expect(gamesKeys.lists()).toEqual(['games', 'list']);
+      expect(gamesKeys.list()).toEqual(['games', 'list', {}]);
+      expect(gamesKeys.list({ search: 'Catan' })).toEqual([
+        'games',
+        'list',
+        { filters: { search: 'Catan' } },
+      ]);
+      expect(gamesKeys.detail('game-1')).toEqual(['games', 'detail', 'game-1']);
+      expect(gamesKeys.sessions('game-1')).toEqual(['games', 'sessions', 'game-1']);
+      expect(gamesKeys.documents('game-1')).toEqual(['games', 'documents', 'game-1']);
+    });
+
+    it('generates unique keys for different filters', () => {
+      const key1 = gamesKeys.list({ search: 'Catan' });
+      const key2 = gamesKeys.list({ search: 'Ticket' });
+      const key3 = gamesKeys.list({ minPlayers: 2 });
+
+      expect(key1).not.toEqual(key2);
+      expect(key1).not.toEqual(key3);
+      expect(key2).not.toEqual(key3);
+    });
+
+    it('generates unique keys for different pages', () => {
+      const key1 = gamesKeys.list(undefined, undefined, 1, 20);
+      const key2 = gamesKeys.list(undefined, undefined, 2, 20);
+
+      expect(key1).not.toEqual(key2);
+    });
+  });
+
+  describe('useGames', () => {
+    it('fetches paginated games list', async () => {
+      const mockResponse = {
+        games: [
+          { id: 'game-1', title: 'Catan', players: '3-4' },
+          { id: 'game-2', title: 'Ticket to Ride', players: '2-5' },
+        ],
+        total: 2,
+        page: 1,
+        pageSize: 20,
+      };
+      (api.games.getAll as jest.Mock).mockResolvedValue(mockResponse);
+
+      const { result } = renderHook(() => useGames(), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(api.games.getAll).toHaveBeenCalledWith(undefined, undefined, 1, 20);
+      expect(result.current.data).toEqual(mockResponse);
+    });
+
+    it('fetches games with filters', async () => {
+      const filters = { search: 'Catan', minPlayers: 2 };
+      const mockResponse = {
+        games: [{ id: 'game-1', title: 'Catan', players: '3-4' }],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      };
+      (api.games.getAll as jest.Mock).mockResolvedValue(mockResponse);
+
+      const { result } = renderHook(() => useGames(filters), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(api.games.getAll).toHaveBeenCalledWith(filters, undefined, 1, 20);
+      expect(result.current.data).toEqual(mockResponse);
+    });
+
+    it('fetches games with sorting', async () => {
+      const sort = { field: 'title', order: 'asc' as const };
+      const mockResponse = {
+        games: [{ id: 'game-1', title: 'Catan' }],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      };
+      (api.games.getAll as jest.Mock).mockResolvedValue(mockResponse);
+
+      const { result } = renderHook(() => useGames(undefined, sort), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(api.games.getAll).toHaveBeenCalledWith(undefined, sort, 1, 20);
+    });
+
+    it('fetches games with custom pagination', async () => {
+      const mockResponse = {
+        games: [],
+        total: 0,
+        page: 3,
+        pageSize: 10,
+      };
+      (api.games.getAll as jest.Mock).mockResolvedValue(mockResponse);
+
+      const { result } = renderHook(() => useGames(undefined, undefined, 3, 10), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(api.games.getAll).toHaveBeenCalledWith(undefined, undefined, 3, 10);
+    });
+
+    it('handles fetch errors', async () => {
+      const error = new Error('Failed to fetch games');
+      (api.games.getAll as jest.Mock).mockRejectedValue(error);
+
+      const { result } = renderHook(() => useGames(), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      expect(result.current.error).toEqual(error);
+    });
+  });
+
+  describe('useGame', () => {
+    it('fetches a single game by ID', async () => {
+      const mockGame = { id: 'game-1', title: 'Catan', players: '3-4' };
+      (api.games.getById as jest.Mock).mockResolvedValue(mockGame);
+
+      const { result } = renderHook(() => useGame('game-1'), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(api.games.getById).toHaveBeenCalledWith('game-1');
+      expect(result.current.data).toEqual(mockGame);
+    });
+
+    it('does not fetch when disabled', () => {
+      const { result } = renderHook(() => useGame('game-1', false), { wrapper });
+
+      expect(result.current.isFetching).toBe(false);
+      expect(api.games.getById).not.toHaveBeenCalled();
+    });
+
+    it('throws error when game not found', async () => {
+      (api.games.getById as jest.Mock).mockResolvedValue(null);
+
+      const { result } = renderHook(() => useGame('nonexistent'), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      expect(result.current.error).toEqual(new Error('Game nonexistent not found'));
+    });
+
+    it('handles API errors', async () => {
+      const error = new Error('Network error');
+      (api.games.getById as jest.Mock).mockRejectedValue(error);
+
+      const { result } = renderHook(() => useGame('game-1'), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      expect(result.current.error).toEqual(error);
+    });
+  });
+
+  describe('useGameSessions', () => {
+    it('is not implemented yet', async () => {
+      const { result } = renderHook(() => useGameSessions('game-1'), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      expect(result.current.error).toEqual(new Error('Not implemented'));
+    });
+
+    it('does not fetch when disabled', () => {
+      const { result } = renderHook(() => useGameSessions('game-1', false), { wrapper });
+
+      expect(result.current.isFetching).toBe(false);
+    });
+  });
+
+  describe('useGameDocuments', () => {
+    it('fetches documents for a game', async () => {
+      const mockDocuments = [
+        { id: 'doc-1', title: 'Rulebook.pdf', gameId: 'game-1' },
+        { id: 'doc-2', title: 'Reference.pdf', gameId: 'game-1' },
+      ];
+      (api.games.getDocuments as jest.Mock).mockResolvedValue(mockDocuments);
+
+      const { result } = renderHook(() => useGameDocuments('game-1'), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(api.games.getDocuments).toHaveBeenCalledWith('game-1');
+      expect(result.current.data).toEqual(mockDocuments);
+    });
+
+    it('does not fetch when disabled', () => {
+      const { result } = renderHook(() => useGameDocuments('game-1', false), { wrapper });
+
+      expect(result.current.isFetching).toBe(false);
+      expect(api.games.getDocuments).not.toHaveBeenCalled();
+    });
+
+    it('handles fetch errors', async () => {
+      const error = new Error('Failed to fetch documents');
+      (api.games.getDocuments as jest.Mock).mockRejectedValue(error);
+
+      const { result } = renderHook(() => useGameDocuments('game-1'), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      expect(result.current.error).toEqual(error);
+    });
+
+    it('returns empty array for game with no documents', async () => {
+      (api.games.getDocuments as jest.Mock).mockResolvedValue([]);
+
+      const { result } = renderHook(() => useGameDocuments('game-1'), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(result.current.data).toEqual([]);
+    });
+  });
+});

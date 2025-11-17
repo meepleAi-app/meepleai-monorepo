@@ -271,6 +271,22 @@ if (typeof global.Response === 'undefined') {
   };
 }
 
+// Mock global fetch for API testing
+// jsdom doesn't provide fetch, so we need to mock it for components that use API client
+if (typeof global.fetch === 'undefined') {
+  global.fetch = jest.fn((url, options) => {
+    // Default mock implementation returns successful empty response
+    // Individual tests should override this with jest.fn() or test-specific implementations
+    return Promise.resolve(
+      new global.Response(JSON.stringify({}), {
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+  });
+}
+
 // Mock FileReader for PDF validation tests
 // jsdom's FileReader doesn't properly support readAsArrayBuffer, so we mock it
 if (typeof global.FileReader === 'undefined' || !global.FileReader.prototype.readAsArrayBuffer) {
@@ -413,6 +429,11 @@ if (typeof Element.prototype.setPointerCapture === 'undefined') {
 if (typeof Element.prototype.releasePointerCapture === 'undefined') {
   Element.prototype.releasePointerCapture = jest.fn();
 }
+
+  // Reset fetch mock before each test to prevent cross-test pollution
+  if (global.fetch && global.fetch.mockClear) {
+    global.fetch.mockClear();
+  }
 
   const state = typeof expect !== 'undefined' ? expect.getState?.() : undefined;
   if (state?.testPath?.includes('src/pages/__tests__/admin.test.tsx')) {

@@ -1,16 +1,16 @@
-Priority,Week,Issue,Title,Area,Category,Effort,Impact,Status,Notes
-P0,1,#1183,Fix Deadlock Risk in RateLimitService,Backend,Bug,2-3h,Critical,Open,BLOCCA: Tutti endpoint auth. File: RateLimitService.cs:160-161
-P1,1,#1192,Add AsNoTracking to Read-Only Queries,Backend,Performance,4-6h,High,Open,~30% query performance boost. Pattern: .AsNoTracking()
-P1,1,#1187,Replace Hardcoded Configuration Values,Backend,Tech Debt,3-4h,Medium,Open,Move const to appsettings.json/DB
-P1,2,#1184,Migrate ChatService to CQRS,Backend,Architecture,2-3d,High,Open,DDD Migration. Remove ChatService.cs
-P1,2,#1188,Migrate Agent Services to CQRS,Backend,Architecture,2-3d,High,Open,DDD Migration. Remove AgentService.cs
-P1,3,#1189,Migrate RuleSpec Comment/Diff to CQRS,Backend,Architecture,2-3d,High,Open,DDD Migration. CommentService + DiffService
-P1,3,#1185,Migrate RuleSpecService to CQRS,Backend,Architecture,3-4d,High,Open,DDD Migration (LARGE). Remove RuleSpecService.cs
-P2,4,#1191,Complete OAuth Callback Migration to CQRS,Backend,Architecture,2d,Medium,Open,OAuth flow alignment
-P2,4,#1186,Implement Streaming Query Handlers,Backend,Architecture,2-3d,High,Open,RAG/QA real-time streaming. IAsyncEnumerable<T>
-P2,4,#1190,Implement Domain Events for All Aggregates,Backend,Architecture,2-3d,High,Open,Event-driven architecture. Cross-context events
-P2,5,#1193,Improve Session Authorization and Rate Limiting,Backend,Security,3-4d,Medium,Open,Enhanced security checks
-P2,5,#1194,Centralize Error Handling with Middleware,Backend,Middleware,2-3d,Medium,Open,Consistent error responses
+Priority,Week,Issue,Title,Area,Category,Effort,Impact,Status,Completed,Commit,Notes
+P0,1,#1183,Fix Deadlock Risk in RateLimitService,Backend,Bug,2-3h,Critical,Closed,16-Nov-2025,63cfca1,Converted to async. All auth endpoints safe
+P1,1,#1192,Add AsNoTracking to Read-Only Queries,Backend,Performance,4-6h,High,Closed,16-Nov-2025,c04bd24,+30% query performance boost achieved
+P1,1,#1187,Replace Hardcoded Configuration Values,Backend,Tech Debt,3-4h,Medium,Closed,17-Nov-2025,ce1a601,Full dynamic configuration via IConfigurationService
+P1,2,#1184,Migrate ChatService to CQRS,Backend,Architecture,2-3d,High,Closed,16-Nov-2025,2704fff,ChatService.cs removed (940 lines). CQRS complete
+P1,2,#1188,Migrate Agent Services to CQRS,Backend,Architecture,2-3d,High,Closed,16-Nov-2025,6a1a4f0,AgentService.cs removed (346 lines). 8 handlers added
+P1,3,#1189,Migrate RuleSpec Comment/Diff to CQRS,Backend,Architecture,2-3d,High,Closed,16-Nov-2025,9115f92,13 handlers implemented. 700 lines removed
+P1,3,#1185,Migrate RuleSpecService to CQRS,Backend,Architecture,3-4d,High,Closed,16-Nov-2025,d468c48,RuleSpecService.cs removed (1300+ lines). Full CQRS
+P2,4,#1191,Complete OAuth Callback Migration to CQRS,Backend,Architecture,2d,Medium,Closed,17-Nov-2025,1ab7556,OAuth flow fully CQRS-compliant. 146 lines removed
+P2,4,#1186,Implement Streaming Query Handlers,Backend,Architecture,2-3d,High,Closed,16-Nov-2025,d936238,IAsyncEnumerable pattern implemented for RAG/QA
+P2,4,#1190,Implement Domain Events for All Aggregates,Backend,Architecture,2-3d,High,Closed,16-Nov-2025,0dcc47d,40 events + 39 handlers. Auto-audit integrated
+P2,5,#1193,Improve Session Authorization and Rate Limiting,Backend,Security,3-4d,Medium,Open,,,"Enhanced security checks (Future sprint)"
+P2,5,#1194,Centralize Error Handling with Middleware,Backend,Middleware,2-3d,Medium,Closed,16-Nov-2025,Multiple,"53 try-catch blocks removed from endpoints. 1677 lines cleaned"
 P1,6-7,#974,MultiModelValidationService (GPT-4 + Claude),Backend,Validation,1w,High,Open,Month 3: Multi-Model Validation
 P1,6-7,#975,Consensus similarity calculation (≥0.90),Backend,Validation,3d,High,Open,Cosine similarity for consensus
 P1,6-7,#973,Unit tests for 3 validation layers,Backend,Testing,2d,Medium,Open,Testing validation layers

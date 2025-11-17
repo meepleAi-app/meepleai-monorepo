@@ -35,11 +35,6 @@ describe('AuthProvider', () => {
       defaultOptions: {
         queries: { retry: false, staleTime: 0 },
       },
-      logger: {
-        log: () => {},
-        warn: () => {},
-        error: () => {},
-      },
     });
   });
 
@@ -104,7 +99,7 @@ describe('AuthProvider', () => {
         role: 'User',
       };
 
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: null }); // Initial load (not authenticated)
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load (not authenticated)
       mockLoginAction.mockResolvedValueOnce({
         success: true,
         user: mockUser,
@@ -136,7 +131,7 @@ describe('AuthProvider', () => {
     });
 
     it('handles login failure', async () => {
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: null }); // Initial load
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load
       mockLoginAction.mockResolvedValueOnce({
         success: false,
         error: {
@@ -149,17 +144,19 @@ describe('AuthProvider', () => {
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      let thrownError: Error | null = null;
+      let thrownError: unknown;
       await act(async () => {
         try {
           await result.current.login('test@example.com', 'wrongpassword');
         } catch (err) {
-          thrownError = err as Error;
+          thrownError = err;
         }
       });
 
       expect(result.current.user).toBeNull();
-      expect(thrownError?.message).toBe('Email o password non corretti.');
+      expect(thrownError).toBeTruthy();
+      expect(thrownError).toBeInstanceOf(Error);
+      expect((thrownError as Error).message).toBe('Email o password non corretti.');
       // Issue #1079: Errors from login/register are thrown, not stored in state
       // The error state comes from TanStack Query's error, which is cleared on next successful query
     });
@@ -174,7 +171,7 @@ describe('AuthProvider', () => {
         role: 'User',
       };
 
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: null }); // Initial load (not authenticated)
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load (not authenticated)
       mockRegisterAction.mockResolvedValueOnce({
         success: true,
         user: mockUser,
@@ -211,7 +208,7 @@ describe('AuthProvider', () => {
     });
 
     it('handles registration failure', async () => {
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: null }); // Initial load
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load
       mockRegisterAction.mockResolvedValueOnce({
         success: false,
         error: {
@@ -225,7 +222,7 @@ describe('AuthProvider', () => {
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      let thrownError: Error | null = null;
+      let thrownError: unknown;
       await act(async () => {
         try {
           await result.current.register({
@@ -233,12 +230,14 @@ describe('AuthProvider', () => {
             password: 'password123',
           });
         } catch (err) {
-          thrownError = err as Error;
+          thrownError = err;
         }
       });
 
       expect(result.current.user).toBeNull();
-      expect(thrownError?.message).toContain('già registrata');
+      expect(thrownError).toBeTruthy();
+      expect(thrownError).toBeInstanceOf(Error);
+      expect((thrownError as Error).message).toContain('già registrata');
       // Issue #1079: Errors from login/register are thrown, not stored in state
     });
   });
@@ -332,7 +331,7 @@ describe('AuthProvider', () => {
 
   describe('clearError', () => {
     it('clearError is a no-op with TanStack Query (backward compatibility)', async () => {
-      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: null }); // Initial load
+      mockGetCurrentUser.mockResolvedValueOnce({ success: false, user: undefined }); // Initial load
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 

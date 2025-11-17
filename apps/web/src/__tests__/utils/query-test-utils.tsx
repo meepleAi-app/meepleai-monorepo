@@ -37,12 +37,6 @@ export function createTestQueryClient(): QueryClient {
         retry: false,
       },
     },
-    // Silent logger (no console noise in tests)
-    logger: {
-      log: () => {},
-      warn: () => {},
-      error: () => {},
-    },
   });
 }
 
@@ -102,7 +96,9 @@ export function renderWithQuery(
  * ```
  */
 export async function waitForQueries(queryClient: QueryClient): Promise<void> {
-  await queryClient.getQueryCache().find({ type: 'active' })?.promise;
+  // Wait for all active queries to settle
+  const queries = queryClient.getQueryCache().getAll();
+  await Promise.all(queries.map(q => q.promise).filter(Boolean));
 }
 
 /**

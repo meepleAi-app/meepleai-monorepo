@@ -89,11 +89,6 @@ function renderWithAuth(component: React.ReactElement) {
         staleTime: 0,
       },
     },
-    logger: {
-      log: () => {},
-      warn: () => {},
-      error: () => {},
-    },
   });
 
   return render(

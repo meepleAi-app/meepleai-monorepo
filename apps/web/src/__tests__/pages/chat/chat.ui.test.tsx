@@ -197,11 +197,6 @@ describe('ChatPage - UI Interactions', () => {
           staleTime: 0,
         },
       },
-      logger: {
-        log: () => {},
-        warn: () => {},
-        error: () => {},
-      },
     });
 
     return render(

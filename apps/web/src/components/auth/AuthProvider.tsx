@@ -11,9 +11,10 @@
  * Designed to wrap the entire app in _app.tsx for global auth availability
  */
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, PropsWithChildren } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, PropsWithChildren } from 'react';
 import { AuthUser } from '@/types';
-import { loginAction, registerAction, logoutAction, getCurrentUser } from '@/actions/auth';
+import { loginAction, registerAction, logoutAction } from '@/actions/auth';
+import { useCurrentUser, useQueryClient } from '@/hooks/queries';
 
 // ============================================================================
 // Types
@@ -47,32 +48,14 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // ============================================================================
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Issue #1079: Use TanStack Query for user data
+  const { data: user, isLoading: loading, error: queryError, refetch } = useCurrentUser();
+  const queryClient = useQueryClient();
 
-  // Load user on mount
-  useEffect(() => {
-    void loadCurrentUser();
-  }, []);
-
-  const loadCurrentUser = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await getCurrentUser();
-      setUser(result.user ?? null);
-    } catch (err) {
-      console.error('Failed to load current user:', err);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Convert query error to string for backward compatibility
+  const error = queryError ? queryError.message : null;
 
   const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
-    setLoading(true);
-    setError(null);
     try {
       const formData = new FormData();
       formData.append('email', email);
@@ -82,25 +65,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (!result.success || !result.user) {
         const errorMessage = result.error?.message || 'Login fallito';
-        setError(errorMessage);
         throw new Error(errorMessage);
       }
 
-      setUser(result.user);
+      // Issue #1079: Invalidate user query to refetch
+      await queryClient.invalidateQueries({ queryKey: ['user', 'current'] });
+
       return result.user;
     } catch (err) {
       console.error('Login failed:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Login fallito';
-      setError(errorMessage);
       throw err;
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [queryClient]);
 
   const register = useCallback(async (data: RegisterData): Promise<AuthUser> => {
-    setLoading(true);
-    setError(null);
     try {
       const formData = new FormData();
       formData.append('email', data.email);
@@ -113,48 +91,43 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (!result.success || !result.user) {
         const errorMessage = result.error?.message || 'Registrazione fallita';
-        setError(errorMessage);
         throw new Error(errorMessage);
       }
 
-      setUser(result.user);
+      // Issue #1079: Invalidate user query to refetch
+      await queryClient.invalidateQueries({ queryKey: ['user', 'current'] });
+
       return result.user;
     } catch (err) {
       console.error('Registration failed:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Registrazione fallita';
-      setError(errorMessage);
       throw err;
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [queryClient]);
 
   const logout = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
       await logoutAction();
     } catch (err) {
       console.error('Logout failed:', err);
-      setError(err instanceof Error ? err.message : 'Logout fallito');
     } finally {
-      // Always clear user, even if API call fails
-      setUser(null);
-      setLoading(false);
+      // Issue #1079: Clear user cache on logout
+      queryClient.setQueryData(['user', 'current'], null);
     }
-  }, []);
+  }, [queryClient]);
 
   const refreshUser = useCallback(async () => {
-    await loadCurrentUser();
-  }, [loadCurrentUser]);
+    // Issue #1079: Refetch user data using TanStack Query
+    await refetch();
+  }, [refetch]);
 
   const clearError = useCallback(() => {
-    setError(null);
+    // Error is now derived from query state, no manual clearing needed
+    // Keep for backward compatibility
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      user,
+      user: user ?? null,
       loading,
       error,
       login,

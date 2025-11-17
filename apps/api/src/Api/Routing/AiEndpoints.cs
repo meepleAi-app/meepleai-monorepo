@@ -236,24 +236,60 @@ public static class AiEndpoints
             logger.LogInformation("Streaming explain request from user {UserId} for game {GameId}: {Topic}",
                 session.User.Id, req.gameId, req.topic);
 
-            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             // Set SSE headers
             context.Response.Headers["Content-Type"] = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
 
-            var query = new StreamExplainQuery(req.gameId, req.topic);
-            await foreach (var evt in mediator.CreateStream(query, ct))
+            try
             {
-                // Serialize event as JSON
-                var json = System.Text.Json.JsonSerializer.Serialize(evt);
+                var query = new StreamExplainQuery(req.gameId, req.topic);
+                await foreach (var evt in mediator.CreateStream(query, ct))
+                {
+                    // Serialize event as JSON
+                    var json = System.Text.Json.JsonSerializer.Serialize(evt);
 
-                // Write SSE format: "data: {json}\n\n"
-                await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                await context.Response.Body.FlushAsync(ct);
+                    // Write SSE format: "data: {json}\n\n"
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                    await context.Response.Body.FlushAsync(ct);
+                }
+
+                logger.LogInformation("Streaming explain completed for game {GameId}, topic: {Topic}", req.gameId, req.topic);
             }
+            catch (OperationCanceledException)
+            {
+                logger.LogInformation("Streaming explain cancelled by client for game {GameId}, topic: {Topic}", req.gameId, req.topic);
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
+            // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
+            catch (Exception ex)
+            {
+                // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
+                // Sends error event to client stream, specific exception handling in service layer
+                logger.LogError(ex, "Error during streaming explain for game {GameId}, topic: {Topic}", req.gameId, req.topic);
 
-            logger.LogInformation("Streaming explain completed for game {GameId}, topic: {Topic}", req.gameId, req.topic);
+                // Send error event if possible
+                try
+                {
+                    var errorEvent = new RagStreamingEvent(
+                        StreamingEventType.Error,
+                        new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
+                        DateTime.UtcNow);
+                    var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                    await context.Response.Body.FlushAsync(ct);
+                }
+#pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Cleanup operation - must not throw during disposal/cleanup
+                // Error event sending failure is logged but suppressed to ensure graceful stream termination
+                catch
+                {
+                    // If we can't send error event, client connection is likely broken
+                }
+#pragma warning restore CA1031
+            }
+#pragma warning restore CA1031
 
             return Results.Empty;
         });
@@ -302,7 +338,6 @@ public static class AiEndpoints
             logger.LogInformation("Streaming QA request from user {UserId} for game {GameId}: {Query}",
                 session.User.Id, req.gameId, req.query);
 
-            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             // Set SSE headers
             context.Response.Headers["Content-Type"] = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
@@ -313,90 +348,127 @@ public static class AiEndpoints
             double? confidence = null;
             var snippets = new List<Snippet>();
 
-            // CHAT-02: Follow-up question generation (fire-and-forget after Complete event)
-            Task<IReadOnlyList<string>>? followUpTask = null;
-            IReadOnlyList<string>? followUpQuestions = null;
-            string? gameName = null;
-
-            var query = new StreamQaQuery(req.gameId, req.query, req.chatId);
-            await foreach (var evt in mediator.CreateStream(query, ct))
+            try
             {
-                // Serialize event as JSON
-                var json = System.Text.Json.JsonSerializer.Serialize(evt);
+                // CHAT-02: Follow-up question generation (fire-and-forget after Complete event)
+                Task<IReadOnlyList<string>>? followUpTask = null;
+                IReadOnlyList<string>? followUpQuestions = null;
+                string? gameName = null;
 
-                // Write SSE format: "data: {json}\n\n"
-                await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                await context.Response.Body.FlushAsync(ct);
+                var query = new StreamQaQuery(req.gameId, req.query, req.chatId);
+                await foreach (var evt in mediator.CreateStream(query, ct))
+                {
+                    // Serialize event as JSON
+                    var json = System.Text.Json.JsonSerializer.Serialize(evt);
 
-                // Track response data for logging and chat persistence
-                // Issue #1186: Handlers now emit strongly-typed objects, not JsonElements
-                if (evt.Type == StreamingEventType.Token && evt.Data is StreamingToken tokenData)
-                {
-                    answerBuilder.Append(tokenData.token);
-                }
-                else if (evt.Type == StreamingEventType.Citations && evt.Data is StreamingCitations citationsData)
-                {
-                    snippets = citationsData.citations.ToList();
-                }
-                else if (evt.Type == StreamingEventType.Complete && evt.Data is StreamingComplete completeData)
-                {
-                    totalTokens = completeData.totalTokens;
-                    confidence = completeData.confidence;
+                    // Write SSE format: "data: {json}\n\n"
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                    await context.Response.Body.FlushAsync(ct);
 
-                    // CHAT-02: Start follow-up generation in parallel (fire-and-forget)
-                    if (generateFollowUps && followUpTask == null)
+                    // Track response data for logging and chat persistence
+                    // Issue #1186: Handlers now emit strongly-typed objects, not JsonElements
+                    if (evt.Type == StreamingEventType.Token && evt.Data is StreamingToken tokenData)
                     {
-                        followUpTask = Task.Run(async () =>
+                        answerBuilder.Append(tokenData.token);
+                    }
+                    else if (evt.Type == StreamingEventType.Citations && evt.Data is StreamingCitations citationsData)
+                    {
+                        snippets = citationsData.citations.ToList();
+                    }
+                    else if (evt.Type == StreamingEventType.Complete && evt.Data is StreamingComplete completeData)
+                    {
+                        totalTokens = completeData.totalTokens;
+                        confidence = completeData.confidence;
+
+                        // CHAT-02: Start follow-up generation in parallel (fire-and-forget)
+                        if (generateFollowUps && followUpTask == null)
                         {
-                            // Use CQRS Query to fetch game name
-                            var gameGuid = Guid.Parse(req.gameId);
-                            var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct);
-
-                            if (gameDto == null || string.IsNullOrEmpty(gameDto.Title))
+                            followUpTask = Task.Run(async () =>
                             {
-                                logger.LogWarning("Game {GameId} not found for follow-up generation", req.gameId);
-                                return new List<string>().AsReadOnly();
-                            }
+                                // Use CQRS Query to fetch game name
+                                var gameGuid = Guid.Parse(req.gameId);
+                                var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct);
 
-                            gameName = gameDto.Title;
-                            var answer = answerBuilder.ToString();
-                            // CHAT-02: Use CQRS query for follow-up generation (Issue #1188)
-                            return await mediator.Send(new GenerateFollowUpQuestionsQuery
-                            {
-                                OriginalQuestion = req.query,
-                                GeneratedAnswer = answer,
-                                RagContext = snippets,
-                                GameName = gameName,
-                                MaxQuestions = 5
-                            }, ct);
-                        });
+                                if (gameDto == null || string.IsNullOrEmpty(gameDto.Title))
+                                {
+                                    logger.LogWarning("Game {GameId} not found for follow-up generation", req.gameId);
+                                    return new List<string>().AsReadOnly();
+                                }
+
+                                gameName = gameDto.Title;
+                                var answer = answerBuilder.ToString();
+                                // CHAT-02: Use CQRS query for follow-up generation (Issue #1188)
+                                return await mediator.Send(new GenerateFollowUpQuestionsQuery
+                                {
+                                    OriginalQuestion = req.query,
+                                    GeneratedAnswer = answer,
+                                    RagContext = snippets,
+                                    GameName = gameName,
+                                    MaxQuestions = 5
+                                }, ct);
+                            });
+                        }
                     }
                 }
+
+                // CHAT-02: Wait for follow-up questions and send event
+                if (followUpTask != null)
+                {
+                    followUpQuestions = await followUpTask;
+                    if (followUpQuestions != null && followUpQuestions.Count > 0)
+                    {
+                        var followUpEvent = new RagStreamingEvent(
+                            StreamingEventType.FollowUpQuestions,
+                            new StreamingFollowUpQuestions(followUpQuestions),
+                            DateTime.UtcNow);
+                        var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent);
+                        await context.Response.WriteAsync($"data: {followUpJson}\n\n", ct);
+                        await context.Response.Body.FlushAsync(ct);
+
+                        logger.LogInformation("Sent {Count} follow-up questions for game {GameId}",
+                            followUpQuestions.Count, req.gameId);
+                    }
+                }
+
+                logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
             }
+            catch (OperationCanceledException)
+            {
+                logger.LogInformation("Streaming QA cancelled by client for game {GameId}, query: {Query}", req.gameId, req.query);
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
+            // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
+            catch (Exception ex)
+            {
+                // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
+                // Sends error event to client stream, specific exception handling in service layer
+                logger.LogError(ex, "Error during streaming QA for game {GameId}, query: {Query}", req.gameId, req.query);
+
+                // Send error event if possible
+                try
+                {
+                    var errorEvent = new RagStreamingEvent(
+                        StreamingEventType.Error,
+                        new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
+                        DateTime.UtcNow);
+                    var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                    await context.Response.Body.FlushAsync(ct);
+                }
+#pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Cleanup operation - must not throw during disposal/cleanup
+                // Error event sending failure is logged but suppressed to ensure graceful stream termination
+                catch
+                {
+                    // If we can't send error event, client connection is likely broken
+                }
+#pragma warning restore CA1031
+            }
+#pragma warning restore CA1031
 
             var answer = answerBuilder.ToString();
             var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-            // CHAT-02: Wait for follow-up questions and send event
-            if (followUpTask != null)
-            {
-                followUpQuestions = await followUpTask;
-                if (followUpQuestions != null && followUpQuestions.Count > 0)
-                {
-                    var followUpEvent = new RagStreamingEvent(
-                        StreamingEventType.FollowUpQuestions,
-                        new StreamingFollowUpQuestions(followUpQuestions),
-                        DateTime.UtcNow);
-                    var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent);
-                    await context.Response.WriteAsync($"data: {followUpJson}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
-
-                    logger.LogInformation("Sent {Count} follow-up questions for game {GameId}",
-                        followUpQuestions.Count, req.gameId);
-                }
-            }
-
-            logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
 
             // Log AI request using CQRS
             var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
@@ -443,7 +515,6 @@ public static class AiEndpoints
             logger.LogInformation("Setup guide streaming request from user {UserId} for game {GameId}",
                 session.User.Id, req.gameId);
 
-            // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             // Set SSE headers for streaming
             context.Response.Headers["Content-Type"] = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
@@ -455,41 +526,78 @@ public static class AiEndpoints
             double? confidence = null;
             int estimatedTime = 0;
 
-            var query = new StreamSetupGuideQuery(req.gameId);
-            await foreach (var evt in mediator.CreateStream(query, ct))
+            try
             {
-                // Serialize event as JSON
-                var json = System.Text.Json.JsonSerializer.Serialize(evt);
-
-                // Write SSE format: "data: {json}\n\n"
-                await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                await context.Response.Body.FlushAsync(ct);
-
-                // Track data for chat persistence and logging
-                if (evt.Type == StreamingEventType.SetupStep && evt.Data is System.Text.Json.JsonElement stepElement)
+                var query = new StreamSetupGuideQuery(req.gameId);
+                await foreach (var evt in mediator.CreateStream(query, ct))
                 {
-                    var stepData = System.Text.Json.JsonSerializer.Deserialize<StreamingSetupStep>(stepElement.GetRawText());
-                    if (stepData?.step != null)
+                    // Serialize event as JSON
+                    var json = System.Text.Json.JsonSerializer.Serialize(evt);
+
+                    // Write SSE format: "data: {json}\n\n"
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                    await context.Response.Body.FlushAsync(ct);
+
+                    // Track data for chat persistence and logging
+                    if (evt.Type == StreamingEventType.SetupStep && evt.Data is System.Text.Json.JsonElement stepElement)
                     {
-                        steps.Add(stepData.step);
+                        var stepData = System.Text.Json.JsonSerializer.Deserialize<StreamingSetupStep>(stepElement.GetRawText());
+                        if (stepData?.step != null)
+                        {
+                            steps.Add(stepData.step);
+                        }
+                    }
+                    else if (evt.Type == StreamingEventType.Complete && evt.Data is System.Text.Json.JsonElement completeElement)
+                    {
+                        var completeData = System.Text.Json.JsonSerializer.Deserialize<StreamingComplete>(completeElement.GetRawText());
+                        if (completeData != null)
+                        {
+                            estimatedTime = completeData.estimatedReadingTimeMinutes;
+                            totalTokens = completeData.totalTokens;
+                            confidence = completeData.confidence;
+                        }
                     }
                 }
-                else if (evt.Type == StreamingEventType.Complete && evt.Data is System.Text.Json.JsonElement completeElement)
-                {
-                    var completeData = System.Text.Json.JsonSerializer.Deserialize<StreamingComplete>(completeElement.GetRawText());
-                    if (completeData != null)
-                    {
-                        estimatedTime = completeData.estimatedReadingTimeMinutes;
-                        totalTokens = completeData.totalTokens;
-                        confidence = completeData.confidence;
-                    }
-                }
+
+                logger.LogInformation("Setup guide streaming completed for game {GameId}, {StepCount} steps, estimated {Minutes} min",
+                    req.gameId, steps.Count, estimatedTime);
             }
+            catch (OperationCanceledException)
+            {
+                logger.LogInformation("Setup guide streaming cancelled by client for game {GameId}", req.gameId);
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
+            // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
+            catch (Exception ex)
+            {
+                // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
+                // Sends error event to client stream, specific exception handling in service layer
+                logger.LogError(ex, "Error during setup guide streaming for game {GameId}", req.gameId);
+
+                // Send error event if possible
+                try
+                {
+                    var errorEvent = new RagStreamingEvent(
+                        StreamingEventType.Error,
+                        new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
+                        DateTime.UtcNow);
+                    var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
+                    await context.Response.Body.FlushAsync(ct);
+                }
+#pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Cleanup operation - must not throw during disposal/cleanup
+                // Error event sending failure is logged but suppressed to ensure graceful stream termination
+                catch
+                {
+                    // If we can't send error event, client connection is likely broken
+                }
+#pragma warning restore CA1031
+            }
+#pragma warning restore CA1031
 
             var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-            logger.LogInformation("Setup guide streaming completed for game {GameId}, {StepCount} steps, estimated {Minutes} min",
-                req.gameId, steps.Count, estimatedTime);
 
             // ADM-01: Log AI request
             var responseSnippet = steps.Count > 0

@@ -16,6 +16,8 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUploadResult>
 {
+    #region Fields & Constants
+
     private readonly MeepleAiDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<UploadPdfCommandHandler> _logger;
@@ -28,6 +30,10 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 
     private const long MaxFileSizeBytes = FileConstants.MaxPdfFileSizeBytes;
     private static readonly HashSet<string> AllowedContentTypes = new() { "application/pdf" };
+
+    #endregion
+
+    #region Constructor
 
     public UploadPdfCommandHandler(
         MeepleAiDbContext db,
@@ -50,6 +56,10 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
+
+    #endregion
+
+    #region Public Methods
 
     public async Task<PdfUploadResult> Handle(UploadPdfCommand command, CancellationToken cancellationToken)
     {
@@ -193,6 +203,10 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         }
 #pragma warning restore CA1031
     }
+
+    #endregion
+
+    #region Background Processing
 
     private async Task ProcessPdfAsync(string pdfId, string filePath, CancellationToken ct)
     {
@@ -483,6 +497,10 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 #pragma warning restore CA1031
     }
 
+    #endregion
+
+    #region Helper Methods
+
     private async Task UpdateProgressAsync(
         MeepleAiDbContext db,
         string pdfId,
@@ -562,6 +580,8 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             || vector.Length == 0
             || Array.Exists(vector, v => float.IsNaN(v) || float.IsInfinity(v));
     }
+
+    #endregion
 }
 
 // Helper class for document chunk input

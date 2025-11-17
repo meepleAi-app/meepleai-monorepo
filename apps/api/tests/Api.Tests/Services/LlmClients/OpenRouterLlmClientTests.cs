@@ -102,7 +102,8 @@ public class OpenRouterLlmClientTests
         Assert.Equal(5, result.Usage.CompletionTokens);
     }
 
-    [Fact(Skip = "Requires integration test - mock handler setup issue")]
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task Test05_GenerateCompletion_ApiError_ReturnsFailure()
     {
         // Arrange
@@ -152,7 +153,8 @@ public class OpenRouterLlmClientTests
         Assert.Contains("timed out", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact(Skip = "Requires integration test - SSE streaming mock complex")]
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task Test07_GenerateCompletionStream_Success_YieldsChunks()
     {
         // Arrange - SSE format streaming
@@ -241,7 +243,8 @@ public class OpenRouterLlmClientTests
         Assert.Contains("forma di L", result.Response);
     }
 
-    [Fact(Skip = "Requires integration test with real HTTP client")]
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task Test09_ConcurrentRequests_HandledCorrectly()
     {
         // Arrange

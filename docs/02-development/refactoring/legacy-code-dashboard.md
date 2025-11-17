@@ -1,7 +1,11 @@
 # 🎯 Legacy Code Removal Dashboard
 
-**Last Updated**: 2025-11-13
-**Status**: 🔴 In Progress (99% → 100%)
+**Last Updated**: 2025-11-17
+**Status**: 🔴 In Progress (Backend DDD Complete, Frontend Migration Pending)
+
+> **⚠️ BREAKING CHANGE (2025-11-17)**: Legacy `SimpleRuleComment` system removed from backend (~987 lines).
+> Frontend still uses legacy endpoints and requires migration to EDIT-05.
+> See: `docs/02-development/refactoring/MIGRATION-EDIT05-FRONTEND.md`
 
 ---
 

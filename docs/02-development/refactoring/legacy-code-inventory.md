@@ -1,9 +1,15 @@
 # Legacy Code Inventory & Removal Plan
 
 **Document Status**: Active
-**Last Updated**: 2025-11-13
-**DDD Refactoring Progress**: 99% → Target 100%
-**Estimated Legacy Code**: ~24,000-28,000 lines
+**Last Updated**: 2025-11-17
+**DDD Refactoring Progress**: Backend 100% (Frontend migration pending)
+**Estimated Legacy Code**: ~23,000-27,000 lines (reduced from ~24,000-28,000)
+
+> **⚠️ RECENT REMOVAL (2025-11-17)**:
+> - Backend: `SimpleRuleComment` system removed (~987 lines)
+> - **Frontend Migration Required**: See `MIGRATION-EDIT05-FRONTEND.md`
+> - Removed: 12 files (Commands, Queries, Handlers, Models, Tests)
+> - Removed: 4 legacy REST endpoints in `RuleSpecEndpoints.cs`
 
 ---
 

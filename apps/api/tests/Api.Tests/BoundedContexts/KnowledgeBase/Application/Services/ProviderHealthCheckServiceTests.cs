@@ -130,7 +130,8 @@ public class ProviderHealthCheckServiceTests
         await service.StopAsync(TestCancellationToken);
     }
 
-    [Fact(Skip = "Requires 10s warmup - integration test")]
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task HealthCheck_SuccessfulResponse_UpdatesHealthyStatus()
     {
         // Arrange
@@ -165,7 +166,8 @@ public class ProviderHealthCheckServiceTests
         Assert.True(health.IsAvailable());
     }
 
-    [Fact(Skip = "Requires 10s warmup - integration test")]
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task HealthCheck_FailedResponse_UpdatesUnhealthyStatus()
     {
         // Arrange
@@ -200,7 +202,8 @@ public class ProviderHealthCheckServiceTests
         Assert.False(health.IsAvailable());
     }
 
-    [Fact(Skip = "Requires 10s warmup + 5s timeout - integration test")]
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task HealthCheck_Timeout_UpdatesUnhealthyStatus()
     {
         // Arrange

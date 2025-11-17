@@ -38,6 +38,9 @@ public static class KnowledgeBaseServiceExtensions
         // ISSUE-981: BGAI-039 - Validation Accuracy Baseline Measurement
         services.AddScoped<ValidationAccuracyTrackingService>();
 
+        // ISSUE-977: BGAI-035 - RAG Validation Pipeline (all 5 layers integrated)
+        services.AddScoped<IRagValidationPipelineService, RagValidationPipelineService>();
+
         // ISSUE-958: LLM Hybrid Architecture
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();

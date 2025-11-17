@@ -32,7 +32,6 @@ describe('UploadPage - PDF Upload', () => {
     setupWorkerMock({ uploadDelay: 0, autoUpload: true });
 
     // Mock BroadcastChannel
-    // @ts-expect-error - Mocking global BroadcastChannel for tests
     global.BroadcastChannel = MockBroadcastChannel;
 
     // Mock localStorage

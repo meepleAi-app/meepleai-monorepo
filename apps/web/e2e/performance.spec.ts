@@ -74,8 +74,9 @@ test.describe('Performance Testing - Critical Pages', () => {
 
     // Launch browser with worker-specific debugging port
     await context.close();
-    const browser = await testInfo.project.use.browserName === 'chromium'
-      ? (await import('@playwright/test')).chromium.launch({
+    const { chromium } = await import('@playwright/test');
+    const browser = testInfo.project.use.browserName === 'chromium'
+      ? await chromium.launch({
           args: [
             `--remote-debugging-port=${port}`,
             '--no-sandbox',
@@ -117,8 +118,9 @@ test.describe('Performance Testing - Critical Pages', () => {
     const baseURL = testInfo.project.use.baseURL;
 
     await context.close();
-    const browser = await testInfo.project.use.browserName === 'chromium'
-      ? (await import('@playwright/test')).chromium.launch({
+    const { chromium } = await import('@playwright/test');
+    const browser = testInfo.project.use.browserName === 'chromium'
+      ? await chromium.launch({
           args: [
             `--remote-debugging-port=${port}`,
             '--no-sandbox',
@@ -160,8 +162,9 @@ test.describe('Performance Testing - Critical Pages', () => {
     const baseURL = testInfo.project.use.baseURL;
 
     await context.close();
-    const browser = await testInfo.project.use.browserName === 'chromium'
-      ? (await import('@playwright/test')).chromium.launch({
+    const { chromium } = await import('@playwright/test');
+    const browser = testInfo.project.use.browserName === 'chromium'
+      ? await chromium.launch({
           args: [
             `--remote-debugging-port=${port}`,
             '--no-sandbox',
@@ -205,8 +208,9 @@ test.describe('Performance Testing - Additional Pages', () => {
     const baseURL = testInfo.project.use.baseURL;
 
     await context.close();
-    const browser = await testInfo.project.use.browserName === 'chromium'
-      ? (await import('@playwright/test')).chromium.launch({
+    const { chromium } = await import('@playwright/test');
+    const browser = testInfo.project.use.browserName === 'chromium'
+      ? await chromium.launch({
           args: [
             `--remote-debugging-port=${port}`,
             '--no-sandbox',
@@ -250,8 +254,9 @@ test.describe('Performance Testing - Additional Pages', () => {
     const baseURL = testInfo.project.use.baseURL;
 
     await context.close();
-    const browser = await testInfo.project.use.browserName === 'chromium'
-      ? (await import('@playwright/test')).chromium.launch({
+    const { chromium } = await import('@playwright/test');
+    const browser = testInfo.project.use.browserName === 'chromium'
+      ? await chromium.launch({
           args: [
             `--remote-debugging-port=${port}`,
             '--no-sandbox',

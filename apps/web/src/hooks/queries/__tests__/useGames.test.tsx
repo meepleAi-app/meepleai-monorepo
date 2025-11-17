@@ -125,7 +125,7 @@ describe('useGames hooks', () => {
     });
 
     it('fetches games with sorting', async () => {
-      const sort = { field: 'title', order: 'asc' as const };
+      const sort = { field: 'title' as const, direction: 'asc' as const };
       const mockResponse = {
         games: [{ id: 'game-1', title: 'Catan' }],
         total: 1,

@@ -27,9 +27,24 @@ function TestComponent() {
 }
 
 describe('QueryProvider', () => {
+  const originalEnv = process.env.NODE_ENV;
+
   beforeEach(() => {
-    // Reset NODE_ENV before each test
-    delete (process.env as any).NODE_ENV;
+    // Make NODE_ENV writable for tests
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    // Restore original NODE_ENV
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: originalEnv,
+      writable: true,
+      configurable: true,
+    });
   });
 
   it('renders children correctly', () => {
@@ -54,7 +69,7 @@ describe('QueryProvider', () => {
   });
 
   it('renders DevTools in development mode', () => {
-    process.env.NODE_ENV = 'development';
+    (process.env as any).NODE_ENV = 'development';
 
     render(
       <QueryProvider>
@@ -66,7 +81,7 @@ describe('QueryProvider', () => {
   });
 
   it('does not render DevTools in production mode', () => {
-    process.env.NODE_ENV = 'production';
+    (process.env as any).NODE_ENV = 'production';
 
     render(
       <QueryProvider>
@@ -78,7 +93,7 @@ describe('QueryProvider', () => {
   });
 
   it('does not render DevTools in test mode', () => {
-    process.env.NODE_ENV = 'test';
+    (process.env as any).NODE_ENV = 'test';
 
     render(
       <QueryProvider>

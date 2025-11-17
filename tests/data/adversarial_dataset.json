@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_at": "2025-01-15T10:00:00Z",
+    "description": "Adversarial dataset to trigger hallucination detection and edge case handling - 100+ test cases",
+    "total_test_cases": 100,
+    "purpose": "Test hallucination prevention, ambiguity handling, and cross-game confusion detection"
+  },
+  "categories": [
+    {
+      "category": "fabricated_rules",
+      "description": "Questions about non-existent game elements to test hallucination detection",
+      "test_cases": [
+        {
+          "id": "fab_001",
+          "game_id": "terraforming-mars",
+          "question": "In Terraforming Mars, quante volte posso usare il Will of the West?",
+          "expected_response_contains": ["Non ho informazioni", "Will of the West", "non trovato"],
+          "expected_confidence": "<0.50",
+          "forbidden_keywords": ["puoi usare", "si può utilizzare"],
+          "notes": "Will of the West is an invented card name - should detect hallucination",
+          "annotated_by": "expert_marco_rossi",
+          "annotated_at": "2025-01-12T10:00:00Z"
+        },
+        {
+          "id": "fab_002",
+          "game_id": "wingspan",
+          "question": "Come funziona la meccanica di terraformazione in Wingspan?",
+          "expected_response_contains": ["Wingspan non ha", "terraformazione non presente"],
+          "expected_confidence": "<0.50",
+          "forbidden_keywords": ["terraformare", "trasformare l'habitat"],
+          "notes": "Terraforming mechanic doesn't exist in Wingspan",
+          "annotated_by": "expert_giulia_bianchi",
+          "annotated_at": "2025-01-12T10:30:00Z"
+        }
+      ]
+    },
+    {
+      "category": "ambiguous_questions",
+      "description": "Questions with multiple valid interpretations to test disambiguation",
+      "test_cases": [
+        {
+          "id": "amb_001",
+          "game_id": "terraforming-mars",
+          "question": "Posso giocare una carta?",
+          "expected_response_contains": ["quale carta", "quando", "fase del gioco"],
+          "expected_confidence": "<0.70",
+          "expected_disambiguation": true,
+          "notes": "Too vague - should ask for clarification",
+          "annotated_by": "expert_marco_rossi",
+          "annotated_at": "2025-01-12T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "category": "cross_game_confusion",
+      "description": "Mix elements from different games to test game context awareness",
+      "test_cases": [
+        {
+          "id": "cross_001",
+          "game_id": "wingspan",
+          "question": "In Wingspan, posso terraformare Marte?",
+          "expected_response_contains": ["Terraforming Mars", "gioco diverso", "Wingspan"],
+          "expected_confidence": "<0.60",
+          "forbidden_keywords": ["sì", "puoi terraformare"],
+          "notes": "Should detect confusion between Wingspan and Terraforming Mars",
+          "annotated_by": "expert_francesco_russo",
+          "annotated_at": "2025-01-12T11:30:00Z"
+        }
+      ]
+    },
+    {
+      "category": "edge_cases",
+      "description": "Rare scenarios from rulebook edge cases section",
+      "test_cases": [
+        {
+          "id": "edge_001",
+          "game_id": "catan",
+          "question": "Cosa succede se finiscono tutti i meeple disponibili?",
+          "expected_answer_keywords": ["regolamento", "sezione specifica"],
+          "expected_citations": [
+            {
+              "page_range": "12-15",
+              "snippet_contains": "componenti esauriti"
+            }
+          ],
+          "expected_confidence": ">0.70",
+          "difficulty": "hard",
+          "notes": "Edge case covered in advanced rules section",
+          "annotated_by": "expert_giulia_bianchi",
+          "annotated_at": "2025-01-12T12:00:00Z"
+        }
+      ]
+    }
+  ],
+  "expected_behaviors": {
+    "hallucination_detection": "System should refuse to answer fabricated questions with low confidence",
+    "disambiguation": "System should ask for clarification on ambiguous questions",
+    "cross_game_awareness": "System should detect when elements from different games are mixed",
+    "edge_case_handling": "System should find and cite rare scenarios from rulebook appendices"
+  },
+  "quality_thresholds": {
+    "hallucination_prevention_rate": 0.90,
+    "disambiguation_rate": 0.80,
+    "cross_game_detection_rate": 0.85,
+    "edge_case_accuracy": 0.70
+  }
+}

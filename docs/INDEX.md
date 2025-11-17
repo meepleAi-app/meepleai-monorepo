@@ -12,7 +12,7 @@
 1. [Quick Start](./00-getting-started/quick-start.md) - Get up and running in 15 minutes
 2. [System Architecture](./01-architecture/overview/system-architecture.md) - Understand the technical design
 3. [API Specification](./03-api/board-game-ai-api-specification.md) - Learn the API
-4. [Testing Strategy](./02-development/testing/testing-strategy.md) - Quality standards
+4. [Testing Strategy](./02-development/testing/testing-strategy.md) ⭐ **MANDATORY** - Test pyramid (70/20/5/5), 5-metric framework, quality gates
 5. [Deployment Guide](./05-operations/deployment/board-game-ai-deployment-guide.md) - Deploy to production
 
 **Find docs by role** → See [README.md](./README.md#-finding-documentation) for role-based navigation
@@ -86,8 +86,8 @@
   - [Next Steps](./02-development/refactoring/next-steps.md)
 
 - **[testing/](./02-development/testing/)** - Testing documentation (9 files)
+  - [Testing Strategy](./02-development/testing/testing-strategy.md) ⭐⭐ **START HERE** - Test pyramid (70/20/5/5), 5-metric quality framework, golden dataset (30 pages)
   - [Testing Guide](./02-development/testing/testing-guide.md) ⭐ - Comprehensive test writing guide (60+ pages)
-  - [Testing Strategy](./02-development/testing/testing-strategy.md) ⭐ - Test pyramid, quality gates (30 pages)
   - [Integration Tests Performance Guide](./02-development/testing/integration-tests-performance-guide.md) ⭐ NEW - Optimize integration tests for 4-11x speedup (80+ pages)
   - [Integration Tests Quick Reference](./02-development/testing/integration-tests-quick-reference.md) - Quick cheat sheet for performant integration tests
   - [Testing Specialized](./02-development/testing/testing-specialized.md) - Manual, accessibility, concurrency, API testing

@@ -198,7 +198,24 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 
 ## Testing
 
+**Strategy**: Test Pyramid (70% unit, 20% integration, 5% quality, 5% E2E)
 **Coverage**: 90%+ enforced (frontend 90.03%, backend 90%+)
+
+**Test Pyramid**:
+```
+           /\
+          /  \     E2E Tests (5%) - ~5min
+         /____\    User journey scenarios
+        /      \
+       /________\  Quality Tests (5%) - ~15min
+      /          \ 5-metric framework
+     /____________\
+    /              \ Integration Tests (20%) - <2min
+   /                \ Multi-service interaction
+  /____________________\
+ /                      \ Unit Tests (70%) - <5s
+/__________________________\ 90%+ coverage
+```
 
 **Stack**:
 - Backend: xUnit + Moq + Testcontainers (Postgres, Qdrant, Unstructured, SmolDocling)
@@ -207,6 +224,13 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 
 **Tests**: 4,033 frontend + 162 backend + 30 E2E = 4,225 total
 
+**Quality Tests** (5-Metric Framework):
+- **Accuracy**: ≥80% on golden dataset (1000 Q&A pairs)
+- **Hallucination**: ≤10% forbidden keywords detection
+- **Confidence**: ≥0.70 average RAG retrieval quality
+- **Citation**: ≥80% page number + snippet validation
+- **Latency**: ≤3000ms P95 response time
+
 **Performance Testing** (Issue #842):
 - **Lighthouse CI**: Automated performance monitoring with Core Web Vitals
 - **Thresholds**: LCP <2.5s, FID <100ms, CLS <0.1, Performance ≥85%, Accessibility ≥95%
@@ -214,6 +238,22 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 - **CI/CD**: Automatic runs on PRs, >10% regression fails build
 - **Commands**: `pnpm test:performance` (Playwright) | `pnpm lighthouse:ci` (audits)
 - **Reports**: HTML/JSON artifacts with 30-day retention
+
+**Test Execution**:
+```bash
+# Unit Tests (70%)
+pnpm test                    # Frontend unit tests
+dotnet test                  # Backend unit tests
+
+# Integration Tests (20%)
+dotnet test --filter "Category=Integration"
+
+# Quality Tests (5%)
+dotnet test --filter "FullyQualifiedName~RagEvaluationIntegrationTests"
+
+# E2E Tests (5%)
+pnpm test:e2e               # User journey scenarios
+```
 
 ---
 

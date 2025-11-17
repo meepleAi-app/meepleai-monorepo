@@ -2,6 +2,8 @@
 
 **Goal**: Write your first test in under 1 hour
 
+> **⭐ Testing Strategy**: This guide provides practical examples for writing tests. For the overall testing strategy, pyramid architecture, and quality gates, see [Testing Strategy](testing-strategy.md).
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -26,32 +28,45 @@ This guide provides practical examples and patterns for writing tests in the Mee
 - Backend: Run `dotnet test` in `apps/api`
 - E2E: Run `pnpm test:e2e` in `apps/web`
 
+**Test Pyramid** (70% unit, 20% integration, 5% quality, 5% E2E):
+- See [Testing Strategy](testing-strategy.md) for details on our test pyramid architecture and quality gates
+
 ---
 
 ## Test Types
 
-### Unit Tests
+### Unit Tests (70% of test suite)
 Test individual functions, components, or services in isolation.
 
 **When to use**: Testing pure logic, utility functions, isolated components
-**Speed**: Fast (<10ms per test)
+**Speed**: Fast (<5s execution target per suite)
 **Dependencies**: Mocked
+**Coverage**: ≥90% code coverage required
 
-### Integration Tests
+### Integration Tests (20% of test suite)
 Test how multiple units work together (e.g., service + database).
 
 **When to use**: Testing service interactions, database operations, API endpoints
-**Speed**: Medium (100ms-1s per test, optimized: <50ms)
+**Speed**: Medium (<2min execution target)
 **Dependencies**: Real (Testcontainers) or partially mocked
 
 > **Performance Tip**: See [Integration Tests Performance Guide](integration-tests-performance-guide.md) for optimizations that can improve test suite speed by 4-11x
 
-### E2E Tests
+### Quality Tests (5% of test suite)
+Test AI quality metrics on golden dataset using 5-metric framework.
+
+**When to use**: Validating RAG accuracy, hallucination prevention, citation correctness
+**Speed**: ~15min execution target
+**Metrics**: Accuracy ≥80%, Hallucination ≤10%, Confidence ≥0.70, Citation ≥80%, Latency ≤3000ms
+**Details**: See [Testing Strategy - Quality Tests](testing-strategy.md#layer-3-quality-tests-5-15min-execution)
+
+### E2E Tests (5% of test suite)
 Test complete user workflows through the UI.
 
 **When to use**: Testing critical user journeys, form submissions, multi-page flows
-**Speed**: Slow (5-30s per test)
+**Speed**: ~5min execution target
 **Dependencies**: Real frontend + mocked/test backend
+**Scenarios**: Happy path, uncertainty handling, mobile responsive, error recovery
 
 ---
 

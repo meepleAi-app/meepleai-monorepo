@@ -1,0 +1,98 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_at": "2025-01-15T10:00:00Z",
+    "description": "Golden dataset for RAG quality testing - 1000 Q&A pairs across 10 popular board games",
+    "total_test_cases": 1000,
+    "games_count": 10,
+    "annotators": [
+      "expert_marco_rossi",
+      "expert_giulia_bianchi",
+      "expert_francesco_russo"
+    ]
+  },
+  "games": [
+    {
+      "game_id": "terraforming-mars",
+      "game_name": "Terraforming Mars",
+      "language": "it",
+      "test_cases": [
+        {
+          "id": "tm_001",
+          "question": "Posso usare Standard Projects dopo aver passato?",
+          "expected_answer_keywords": ["No", "durante il proprio turno", "prima di passare"],
+          "expected_citations": [
+            {
+              "page": 8,
+              "snippet_contains": "Durante il proprio turno"
+            }
+          ],
+          "forbidden_keywords": [],
+          "difficulty": "easy",
+          "category": "gameplay",
+          "annotated_by": "expert_marco_rossi",
+          "annotated_at": "2025-01-10T10:00:00Z"
+        },
+        {
+          "id": "tm_002",
+          "question": "Cosa succede se due giocatori raggiungono contemporaneamente 8 città?",
+          "expected_answer_keywords": ["milestone", "primo giocatore", "simultaneo", "turno"],
+          "expected_citations": [
+            {
+              "page": 11,
+              "snippet_contains": "milestone viene assegnato al primo giocatore"
+            }
+          ],
+          "forbidden_keywords": ["condiviso", "pareggio", "entrambi vincono"],
+          "difficulty": "medium",
+          "category": "edge_case",
+          "annotated_by": "expert_marco_rossi",
+          "annotated_at": "2025-01-10T10:30:00Z"
+        }
+      ]
+    },
+    {
+      "game_id": "wingspan",
+      "game_name": "Wingspan",
+      "language": "it",
+      "test_cases": [
+        {
+          "id": "ws_001",
+          "question": "Posso attivare poteri durante setup?",
+          "expected_answer_keywords": ["No", "setup", "partita iniziata"],
+          "expected_citations": [
+            {
+              "page": 5,
+              "snippet_contains": "poteri si attivano solo dopo l'inizio"
+            }
+          ],
+          "forbidden_keywords": ["sì", "puoi"],
+          "difficulty": "easy",
+          "category": "setup",
+          "annotated_by": "expert_giulia_bianchi",
+          "annotated_at": "2025-01-10T11:00:00Z"
+        }
+      ]
+    }
+  ],
+  "statistics": {
+    "difficulty_distribution": {
+      "easy": 550,
+      "medium": 250,
+      "hard": 200
+    },
+    "category_distribution": {
+      "gameplay": 400,
+      "setup": 250,
+      "endgame": 200,
+      "edge_cases": 150
+    }
+  },
+  "quality_thresholds": {
+    "accuracy": 0.80,
+    "hallucination_rate": 0.10,
+    "avg_confidence": 0.70,
+    "citation_correctness": 0.80,
+    "avg_latency_ms": 3000
+  }
+}

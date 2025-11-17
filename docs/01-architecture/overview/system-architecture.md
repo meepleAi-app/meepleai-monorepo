@@ -963,6 +963,77 @@ spec:
 
 ---
 
+## Testing & Quality Assurance
+
+**Strategy**: Test Pyramid (70% unit, 20% integration, 5% quality, 5% E2E)
+**Reference**: See [Testing Strategy](../../02-development/testing/testing-strategy.md) for complete details
+
+### Test Pyramid Architecture
+
+```
+           /\
+          /  \     E2E Tests (5%) - ~5min
+         /____\    User journey scenarios
+        /      \
+       /________\  Quality Tests (5%) - ~15min
+      /          \ 5-metric framework
+     /____________\
+    /              \ Integration Tests (20%) - <2min
+   /                \ Multi-service interaction
+  /____________________\
+ /                      \ Unit Tests (70%) - <5s
+/__________________________\ ≥90% coverage
+```
+
+### Quality Gates
+
+**Pull Request Gates** (Automated in CI):
+- ✅ Unit tests: 100% pass + ≥90% coverage
+- ✅ Integration tests: 100% pass
+- ✅ Linting: Zero errors
+- ✅ Type checking: Zero errors
+- ✅ Security scan: No critical/high vulnerabilities
+
+**Pre-Production Gates** (Manual + Automated):
+- ✅ Quality tests (5-metric framework):
+  - **Accuracy**: ≥80% on golden dataset (1000 Q&A pairs)
+  - **Hallucination**: ≤10% forbidden keywords detection
+  - **Confidence**: ≥0.70 average RAG retrieval quality
+  - **Citation**: ≥80% page number + snippet validation
+  - **Latency**: ≤3000ms P95 response time
+- ✅ E2E tests: 100% pass
+- ✅ Load testing: 100 RPS sustained for 10 min, error rate <1%
+- ✅ Manual QA: 10 games smoke tested
+
+### Golden Dataset
+
+**Purpose**: Validate AI quality metrics on real-world board game questions
+
+**Composition**:
+- **10 Games**: Terraforming Mars, Wingspan, Azul, Scythe, Ticket to Ride, Catan, Pandemic, 7 Wonders, Agricola, Splendor
+- **1000 Q&A pairs**: Manually annotated by board game experts
+- **Difficulty**: 55% easy, 25% medium, 20% hard
+- **Categories**: 40% gameplay, 25% setup, 20% endgame, 15% edge cases
+
+**Storage**: `tests/data/golden_dataset.json` (version controlled)
+
+### CI/CD Pipeline
+
+**GitHub Actions Workflow** (~14min total):
+1. **Unit Tests** (70%): <5s execution target
+2. **Integration Tests** (20%): <2min execution target
+3. **Quality Tests** (5%): ~15min execution target (5-metric framework)
+4. **E2E Tests** (5%): ~5min execution target (user journey scenarios)
+
+**Quality Metrics Tracking**:
+- Prometheus metrics for accuracy, hallucination rate, confidence, latency
+- Weekly regression testing on golden dataset
+- Monthly model re-evaluation after LLM updates
+
+For detailed testing procedures and examples, see [Testing Strategy](../../02-development/testing/testing-strategy.md).
+
+---
+
 ## Appendix A: Technology Selection Criteria
 
 ### Vector Database Comparison

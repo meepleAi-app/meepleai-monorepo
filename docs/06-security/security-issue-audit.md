@@ -461,12 +461,12 @@ The MeepleAI codebase demonstrates **exceptional security practices**:
 ## References
 
 ### Documentation
-- `SECURITY_ANALYSIS_954_ISSUES.md` - Comprehensive analysis (691 lines)
+- `../issues/issue-954/security-analysis.md` - Comprehensive analysis (691 lines)
 - `code-scanning-remediation-summary.md` - P0 fixes
 - `disposable-resource-leak-remediation.md` - P1 IDisposable fixes
 - `null-reference-remediation.md` - P2 null handling
 - `generic-catch-analysis.md` - P2 exception handling
-- `SECURITY_AUDIT_2025-11-04.md` - Manual audit
+- `../archive/security-audits/security-audit-2025-11-04.md` - Manual audit
 - `SECURITY.md` - Security policy
 - `.semgrep.yml` - Custom security rules
 

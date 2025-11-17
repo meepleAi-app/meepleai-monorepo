@@ -1052,7 +1052,7 @@ curl http://localhost:9090/metrics
 
 **Documentation**:
 - [Architecture Overview](../architecture/board-game-ai-architecture-overview.md)
-- [Security Documentation](../security/sensitive-info-exposure-fix-733.md)
+- [Security Documentation - Issue 733](../../issues/issue-733/fix-report.md)
 - [Troubleshooting Guide](../troubleshooting.md)
 
 **Issues**:

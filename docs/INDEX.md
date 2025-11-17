@@ -76,17 +76,14 @@
   - [Migration Management](./02-development/guides/migration-management.md)
   - [PDF Processing Guide](./02-development/guides/pdf-processing-guide.md) ⭐
 
-- **[refactoring/](./02-development/refactoring/)** - DDD migration docs (4 files)
+- **[refactoring/](./02-development/refactoring/)** - DDD migration docs (5 files)
   - [Legacy Code Inventory](./02-development/refactoring/legacy-code-inventory.md) (150+ pages)
   - [Legacy Code Dashboard](./02-development/refactoring/legacy-code-dashboard.md)
   - [Implementation Notes](./02-development/refactoring/implementation-notes.md)
+  - [Migration Edit 05 Frontend](./02-development/refactoring/migration-edit05-frontend.md)
   - [Next Steps](./02-development/refactoring/next-steps.md)
 
-- **[implementation/](./02-development/implementation/)** - Implementation findings (2 files)
-  - [RAG Service Migration](./02-development/implementation/bgai-023-ragservice-migration.md)
-  - [Cost Tracking Verification](./02-development/implementation/bgai-026-cost-tracking.md)
-
-- **[testing/](./02-development/testing/)** - Testing documentation (8 files)
+- **[testing/](./02-development/testing/)** - Testing documentation (9 files)
   - [Testing Guide](./02-development/testing/testing-guide.md) ⭐ - Comprehensive test writing guide (60+ pages)
   - [Testing Strategy](./02-development/testing/testing-strategy.md) ⭐ - Test pyramid, quality gates (30 pages)
   - [Integration Tests Performance Guide](./02-development/testing/integration-tests-performance-guide.md) ⭐ NEW - Optimize integration tests for 4-11x speedup (80+ pages)
@@ -94,6 +91,7 @@
   - [Testing Specialized](./02-development/testing/testing-specialized.md) - Manual, accessibility, concurrency, API testing
   - [Testing Quick Reference](./02-development/testing/testing-quick-reference.md) - Pattern lookup
   - [Testing React 19 Patterns](./02-development/testing/testing-react-19-patterns.md) - React 19 specific patterns
+  - [Testing Checkpoint Guide](./02-development/testing/testing-checkpoint-guide.md) (Italian) - Checkpoint verification guide
   - [Manual Testing Guide](./02-development/testing/manual-testing-guide.md) (Italian) - Full QA procedures
 
 ### [03 - API](./03-api/)
@@ -144,14 +142,13 @@
 **Audience**: Security team, compliance, developers
 **Purpose**: Security audits, vulnerability remediation, best practices
 
-- [Security Audit 2025-11-04](./06-security/SECURITY_AUDIT_2025-11-04.md) ⭐
-- [Code Scanning Remediation](./06-security/code-scanning-remediation-summary.md)
+- [Code Scanning Remediation](./06-security/code-scanning-remediation-summary.md) ⭐
 - [OAuth Security](./06-security/oauth-security.md)
+- [Security Issue Audit](./06-security/security-issue-audit.md)
 - [Log Forging Prevention](./06-security/log-forging-prevention.md)
 - [Disposable Resource Leak Remediation](./06-security/disposable-resource-leak-remediation.md)
 - [Generic Catch Analysis](./06-security/generic-catch-analysis.md)
 - [Null Reference Remediation](./06-security/null-reference-remediation.md)
-- [Sensitive Info Exposure Fix](./06-security/sensitive-info-exposure-fix-733.md)
 
 ### [07 - Project Management](./07-project-management/)
 **Audience**: Project managers, product owners, leadership
@@ -167,11 +164,12 @@
   - [Sprint 5 Integration Tests Plan](./07-project-management/planning/sprint-5-integration-tests-plan.md)
   - _...and 4 more planning docs_
 
-- **[roadmap/](./07-project-management/roadmap/)** - Strategic roadmap (7 files)
+- **[roadmap/](./07-project-management/roadmap/)** - Strategic roadmap (8 files)
   - [Strategic Roadmap](./07-project-management/roadmap/board-game-ai-strategic-roadmap.md) (50 pages) ⭐
+  - [Master Roadmap 2025](./07-project-management/roadmap/master-roadmap-2025.md)
   - [Code Quality Roadmap 2025](./07-project-management/roadmap/ROADMAP-CODE-QUALITY-2025.md) (11-week plan)
   - [Frontend Roadmap 2025](./07-project-management/roadmap/frontend-roadmap-2025.md)
-  - [Quick Reference: Top 10 Issues](./07-project-management/roadmap/QUICK-REFERENCE-TOP-10-ISSUES.md)
+  - [Quick Reference: Top 10 Issues](./07-project-management/roadmap/quick-reference-top-10-issues.md)
   - _...and 3 more roadmap docs_
 
 - **[organization/](./07-project-management/organization/)** - Team & execution (7 files)
@@ -183,9 +181,7 @@
   - [Project Prioritization 2025](./07-project-management/organization/project-prioritization-2025.md)
   - [README](./07-project-management/organization/README.md)
 
-- **[tracking/](./07-project-management/tracking/)** - Metrics & baselines (5 files)
-  - [RAG Backward Compatibility Testing](./07-project-management/tracking/bgai-024-rag-backward-compatibility-testing.md)
-  - [RAG Performance Baseline](./07-project-management/tracking/bgai-025-rag-performance-baseline.md)
+- **[tracking/](./07-project-management/tracking/)** - Metrics & baselines (3 files)
   - [Integration Tests Known Issues](./07-project-management/tracking/integration-tests-known-issues.md)
   - [Migration Ordering Issue](./07-project-management/tracking/migration-ordering-issue.md)
   - [Time Provider Services Inventory](./07-project-management/tracking/time-provider-services-inventory.md)
@@ -193,9 +189,8 @@
 - **[improvement-plans/](./07-project-management/improvement-plans/)** - Improvement initiatives
   - [Backend Improvements](./07-project-management/improvement-plans/backend/) (5 files)
 
-- **[completion-reports/](./07-project-management/completion-reports/)** - Phase reports (2 files)
-  - [Phase 1a Completion](./07-project-management/completion-reports/phase-1a-completion-report.md)
-  - [Sprint 4 Completion](./07-project-management/completion-reports/sprint-4/)
+- **[completion-reports/](./07-project-management/completion-reports/)** - Phase reports
+  - _See [archive/completion-reports/](./archive/completion-reports/) for historical reports_
 
 ### [08 - Business](./08-business/)
 **Audience**: Investors, founders, business stakeholders
@@ -207,15 +202,46 @@
 **Audience**: Research team, technical leadership
 **Purpose**: Research findings, competitive analysis, experiments
 
-- [Ollama Quality Findings](./09-research/bgai-016-ollama-quality-findings.md)
+- _See [archive/bgai-implementations/](./archive/bgai-implementations/) for BGAI research findings_
 
 ### [10 - Knowledge Base](./10-knowledge-base/)
 **Audience**: All users
 **Purpose**: External references, research papers, wiki content
 
-- [AI Systems for Board Games 2025](./10-knowledge-base/Sistemi%20AI%20per%20arbitrare%20giochi%20da%20tavolo%20%20stato%20dell'arte%202025.md) (Italian)
+- [AI Systems for Board Games 2025](./10-knowledge-base/ai-systems-board-games-state-of-art-2025-it.md) (Italian)
 - [references/](./10-knowledge-base/references/) - External references
   - [OpenRouter Models Reference](./10-knowledge-base/references/openrouter-models-reference.wiki)
+
+---
+
+## 📦 Archive & Issue-Specific Docs
+
+### [archive/](./archive/)
+**Purpose**: Historical documentation, completed reports, archived research
+
+- **[security-audits/](./archive/security-audits/)** - Historical security audits
+  - [Security Audit 2025-11-04](./archive/security-audits/security-audit-2025-11-04.md)
+
+- **[completion-reports/](./archive/completion-reports/)** - Completed sprint/phase reports
+  - [Phase 1a Completion Report](./archive/completion-reports/phase-1a-completion-report.md)
+  - [Sprint 4 Reports](./archive/completion-reports/sprint-4/)
+
+- **[bgai-implementations/](./archive/bgai-implementations/)** - BGAI implementation research (6 files)
+  - [BGAI-016: Ollama Quality Findings](./archive/bgai-implementations/bgai-016-ollama-quality-findings.md)
+  - [BGAI-023: RAG Service Migration](./archive/bgai-implementations/bgai-023-ragservice-migration.md)
+  - [BGAI-024: RAG Backward Compatibility](./archive/bgai-implementations/bgai-024-rag-backward-compatibility-testing.md)
+  - [BGAI-025: RAG Performance Baseline](./archive/bgai-implementations/bgai-025-rag-performance-baseline.md)
+  - [BGAI-026: Cost Tracking](./archive/bgai-implementations/bgai-026-cost-tracking.md)
+  - [BGAI-030: Multilingual Patterns](./archive/bgai-implementations/bgai-030-multilingual-patterns.md)
+
+### [issues/](./issues/)
+**Purpose**: Issue-specific documentation, fix reports, implementation summaries
+
+- **[issue-733/](./issues/issue-733/)** - Sensitive Info Exposure Fix
+- **[issue-954/](./issues/issue-954/)** - Security Analysis (954 issues)
+- **[issue-1089/](./issues/issue-1089/)** - Implementation Summary
+- **[issue-1134/](./issues/issue-1134/)** - Session Management UI
+- **[issue-1191/](./issues/issue-1191/)** - OAuth Callback CQRS Migration
 
 ---
 
@@ -255,33 +281,37 @@
 
 ## 📊 Documentation Statistics
 
-- **Total Files**: 116 markdown documents
-- **Total Pages**: ~810 pages (estimated)
-- **Categories**: 11 numbered folders (00-10)
+- **Total Files**: ~140 markdown documents (including archive and issue-specific docs)
+- **Total Pages**: ~850 pages (estimated)
+- **Categories**: 11 numbered folders (00-10) + archive + issues
 - **Largest Docs**:
   - Legacy Code Inventory: 150+ pages
+  - Integration Tests Performance Guide: 80+ pages
+  - Testing Guide: 60+ pages
   - System Architecture: 60+ pages
   - Strategic Roadmap: 50 pages
+  - Testing Checkpoint Guide: 40 pages
   - API Specification: 40 pages
-  - Business Plan: 35 pages
-  - Deployment Guide: 35 pages
-  - Testing Strategy: 30 pages
 
 ---
 
 ## 🗺️ Documentation Roadmap
 
-### Completed (2025-11-13)
+### Completed (2025-11-17)
 - ✅ Major reorganization into numbered folders
 - ✅ Updated README with role-based navigation
 - ✅ Created comprehensive INDEX
 - ✅ Standardized file naming (kebab-case)
+- ✅ Created archive/ and issues/ directories for better organization
+- ✅ Archived historical security audits and completion reports
+- ✅ Organized issue-specific documentation into dedicated folders
+- ✅ Consolidated BGAI implementation research docs
+- ✅ Cleaned up testing documentation
 
 ### Planned (Q1 2025)
 - [ ] Add missing ADRs (ADR-005: Vector DB, ADR-006: Caching)
 - [ ] Create developer onboarding video walkthrough
 - [ ] Add interactive architecture diagrams (clickable)
-- [ ] Consolidate testing docs (reduce from 21 to ~10 files)
 - [ ] Create API client SDK documentation
 
 ### Backlog
@@ -298,7 +328,7 @@
 ### External Resources
 
 **Research Foundation**:
-- [AI Systems for Board Games 2025](./10-knowledge-base/Sistemi%20AI%20per%20arbitrare%20giochi%20da%20tavolo%20%20stato%20dell'arte%202025.md) - Comprehensive landscape analysis
+- [AI Systems for Board Games 2025](./10-knowledge-base/ai-systems-board-games-state-of-art-2025-it.md) - Comprehensive landscape analysis (Italian)
 
 **Academic Papers**:
 - Mills 2013: "Learning Board Game Rules from an Instruction Manual"
@@ -368,7 +398,7 @@ See [README.md - Contributing Documentation](./README.md#-contributing-documenta
 **Legend**: ⭐ = Essential reading, highly recommended
 
 **Index Metadata**:
-- **Version**: 2.0
+- **Version**: 2.1
 - **Maintainer**: Documentation Team
-- **Last Updated**: 2025-11-15
-- **Next Review**: 2025-12-15
+- **Last Updated**: 2025-11-17
+- **Next Review**: 2025-12-17

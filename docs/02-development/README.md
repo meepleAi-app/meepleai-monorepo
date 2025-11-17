@@ -22,8 +22,7 @@
 │   ├── implementation-notes.md   # Migration notes
 │   └── next-steps.md             # Remaining tasks
 ├── implementation/                # Implementation findings
-│   ├── bgai-023-ragservice-migration.md
-│   └── bgai-026-cost-tracking.md
+│   └── (archived - see docs/archive/bgai-implementations/)
 ├── testing/                       # Testing documentation (21 files)
 │   ├── testing-guide.md          # Comprehensive test writing guide (60+ pages) ⭐
 │   ├── testing-strategy.md       # Test pyramid, quality gates (30 pages) ⭐
@@ -229,8 +228,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
 
 | Document | Description |
 |----------|-------------|
-| [RAG Service Migration](./implementation/bgai-023-ragservice-migration.md) | RAG service migration findings (BGAI-023) |
-| [Cost Tracking Verification](./implementation/bgai-026-cost-tracking.md) | LLM cost tracking verification (BGAI-026) |
+| [RAG Service Migration](../archive/bgai-implementations/bgai-023-ragservice-migration.md) | RAG service migration findings (BGAI-023) |
+| [Cost Tracking Verification](../archive/bgai-implementations/bgai-026-cost-tracking.md) | LLM cost tracking verification (BGAI-026) |
 
 ---
 

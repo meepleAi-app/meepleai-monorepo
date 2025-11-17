@@ -233,7 +233,7 @@ services.AddScoped<ILlmService, HybridLlmService>();
 
 ## References
 
-- **Test Results**: `docs/research/bgai-016-ollama-quality-findings.md`
+- **Test Results**: `docs/archive/bgai-implementations/bgai-016-ollama-quality-findings.md`
 - **Model Reference**: `docs/wiki/openrouter-models-reference.wiki`
 - **Issue**: #958 - BGAI-016 LLM Strategy Evaluation
 - **ADR-003**: 3-Stage PDF Processing Pipeline (quality threshold precedent)

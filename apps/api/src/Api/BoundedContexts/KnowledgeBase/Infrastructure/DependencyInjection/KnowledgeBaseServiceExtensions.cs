@@ -32,6 +32,9 @@ public static class KnowledgeBaseServiceExtensions
         // ISSUE-972: BGAI-030 - Hallucination Detection (forbidden keywords, multilingual)
         services.AddSingleton<IHallucinationDetectionService, HallucinationDetectionService>();
 
+        // ISSUE-974: BGAI-032 - Multi-Model Consensus Validation (GPT-4 + Claude)
+        services.AddSingleton<IMultiModelValidationService, MultiModelValidationService>();
+
         // ISSUE-958: LLM Hybrid Architecture
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();

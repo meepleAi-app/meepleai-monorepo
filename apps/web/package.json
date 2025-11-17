@@ -73,6 +73,7 @@
     "react-dom": "19.2.0",
     "react-hook-form": "^7.66.0",
     "react-intersection-observer": "^10.0.0",
+    "react-intl": "^7.1.14",
     "react-pdf": "^10.2.0",
     "react-window": "^2.2.3",
     "recharts": "^3.4.1",

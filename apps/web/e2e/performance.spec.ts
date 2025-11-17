@@ -63,7 +63,7 @@ test.describe.serial('Performance Testing - Critical Pages', () => {
   test.use({
     launchOptions: {
       args: [
-        // REMOVED: '--remote-debugging-port=9222' - let Playwright allocate a unique port
+        '--remote-debugging-port=9222', // Required for playwright-lighthouse to connect
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -79,16 +79,16 @@ test.describe.serial('Performance Testing - Critical Pages', () => {
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
 
-    // Run Lighthouse audit - port will be auto-detected from the browser
+    // Run Lighthouse audit with explicit port (required for playwright-lighthouse)
     await playAudit({
       page,
+      port: 9222,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
       reports: {
         ...reportConfig,
         name: 'lighthouse-homepage',
       },
-      // REMOVED: port: 9222 - auto-detect from browser instance
     });
 
     // Additional checks for page functionality
@@ -102,16 +102,16 @@ test.describe.serial('Performance Testing - Critical Pages', () => {
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
 
-    // Run Lighthouse audit - port will be auto-detected from the browser
+    // Run Lighthouse audit with explicit port (required for playwright-lighthouse)
     await playAudit({
       page,
+      port: 9222,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
       reports: {
         ...reportConfig,
         name: 'lighthouse-chat',
       },
-      // REMOVED: port: 9222 - auto-detect from browser instance
     });
 
     // Verify chat interface is present
@@ -126,16 +126,16 @@ test.describe.serial('Performance Testing - Critical Pages', () => {
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
 
-    // Run Lighthouse audit - port will be auto-detected from the browser
+    // Run Lighthouse audit with explicit port (required for playwright-lighthouse)
     await playAudit({
       page,
+      port: 9222,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
       reports: {
         ...reportConfig,
         name: 'lighthouse-upload',
       },
-      // REMOVED: port: 9222 - auto-detect from browser instance
     });
 
     // Verify upload interface is present
@@ -149,7 +149,7 @@ test.describe.serial('Performance Testing - Additional Pages', () => {
   test.use({
     launchOptions: {
       args: [
-        // REMOVED: '--remote-debugging-port=9222' - let Playwright allocate a unique port
+        '--remote-debugging-port=9222', // Required for playwright-lighthouse to connect
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -165,6 +165,7 @@ test.describe.serial('Performance Testing - Additional Pages', () => {
 
     await playAudit({
       page,
+      port: 9222,
       thresholds: {
         performance: 80, // Slightly lower for content-heavy pages
         accessibility: 95,
@@ -176,7 +177,6 @@ test.describe.serial('Performance Testing - Additional Pages', () => {
         ...reportConfig,
         name: 'lighthouse-games',
       },
-      // REMOVED: port: 9222 - auto-detect from browser instance
     });
   });
 
@@ -186,13 +186,13 @@ test.describe.serial('Performance Testing - Additional Pages', () => {
 
     await playAudit({
       page,
+      port: 9222,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
       reports: {
         ...reportConfig,
         name: 'lighthouse-login',
       },
-      // REMOVED: port: 9222 - auto-detect from browser instance
     });
   });
 });

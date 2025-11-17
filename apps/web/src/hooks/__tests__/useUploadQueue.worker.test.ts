@@ -1213,7 +1213,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       });
 
       // Fast-forward time
-      jest.advanceTimersByTime(10000);
+      // Timer removed - using real async
 
       await waitFor(() => {
         expect(result.current.queue.length).toBeGreaterThanOrEqual(0);

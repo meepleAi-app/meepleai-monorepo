@@ -1,9 +1,11 @@
 /**
  * Test helpers and mocks for Upload Queue tests
  * FE-IMP-008: Web Worker implementation
+ *
+ * CRITICAL: Only import TYPES from UploadQueueStore to prevent singleton initialization
  */
 
-import type { UploadQueueItem, UploadStatus } from '../../stores/UploadQueueStore';
+import type { UploadQueueItem, UploadStatus } from '../../workers/uploadQueue.worker';
 
 /**
  * Creates a mock UploadQueueItem for testing
@@ -70,9 +72,32 @@ import type {
  * - Persistence requests
  */
 export class MockUploadWorker {
-  onmessage: ((event: MessageEvent) => void) | null = null;
+  private _onmessage: ((event: MessageEvent) => void) | null = null;
+  private _pendingMessages: MessageEvent[] = []; // Queue messages until onmessage is set
+
   onerror: ((event: ErrorEvent) => void) | null = null;
   onmessageerror: ((event: MessageEvent) => void) | null = null;
+
+  // Property getter/setter to intercept onmessage assignment and flush pending messages
+  get onmessage(): ((event: MessageEvent) => void) | null {
+    return this._onmessage;
+  }
+
+  set onmessage(handler: ((event: MessageEvent) => void) | null) {
+    console.log('[MockWorker] onmessage setter called, pending messages:', this._pendingMessages.length);
+    this._onmessage = handler;
+
+    // Flush any pending messages that were queued before handler was set
+    if (handler && this._pendingMessages.length > 0) {
+      console.log('[MockWorker] Flushing', this._pendingMessages.length, 'pending messages');
+      const pending = [...this._pendingMessages];
+      this._pendingMessages = [];
+      pending.forEach(event => {
+        console.log('[MockWorker] Delivering queued message:', event.data.type);
+        handler(event);
+      });
+    }
+  }
 
   private messageHandlers: Array<(event: MessageEvent) => void> = [];
   private state: UploadQueueState = {
@@ -396,8 +421,14 @@ export class MockUploadWorker {
   private emit(response: WorkerResponse): void {
     const event = new MessageEvent('message', { data: response });
 
-    if (this.onmessage) {
-      this.onmessage(event);
+    console.log('[MockWorker] Emitting:', response.type, 'handler attached:', !!this._onmessage, 'queued:', this._pendingMessages.length);
+
+    if (this._onmessage) {
+      this._onmessage(event);
+    } else {
+      // Queue message if handler not attached yet (race condition prevention)
+      this._pendingMessages.push(event);
+      console.log('[MockWorker] Queued message (total pending:', this._pendingMessages.length, ')');
     }
 
     this.messageHandlers.forEach(handler => handler(event));

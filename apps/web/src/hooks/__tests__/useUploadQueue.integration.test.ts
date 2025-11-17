@@ -22,7 +22,7 @@
  * IMPORTANT: Must mock Worker and BroadcastChannel BEFORE importing modules
  */
 
-// Import mock classes first
+// Import ONLY the mock class definitions (no side effects)
 import {
   MockUploadWorker,
   MockBroadcastChannel,
@@ -30,12 +30,21 @@ import {
   createMockUploadQueueItems
 } from '../../__tests__/helpers/uploadQueueMocks';
 
-// Mock Worker globally BEFORE importing store
+// Mock Worker globally BEFORE any other imports or resetModules
 let mockWorkerInstance: MockUploadWorker;
-global.Worker = jest.fn(() => {
-  mockWorkerInstance = new MockUploadWorker({ uploadDelay: 10, autoUpload: true });
+global.Worker = jest.fn((scriptURL: string | URL, options?: any) => {
+  console.log('[TEST] Worker constructor called');
+  if (!mockWorkerInstance) {
+    mockWorkerInstance = new MockUploadWorker({ uploadDelay: 10, autoUpload: true });
+  }
   return mockWorkerInstance as any;
 }) as any;
+
+// Mock BroadcastChannel
+global.BroadcastChannel = MockBroadcastChannel as any;
+
+// DON'T reset modules - it clears our Worker mock!
+// jest.resetModules();
 
 // Mock BroadcastChannel globally
 global.BroadcastChannel = MockBroadcastChannel as any;

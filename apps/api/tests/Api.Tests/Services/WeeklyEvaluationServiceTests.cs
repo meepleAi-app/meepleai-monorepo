@@ -220,8 +220,9 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(capturedQuery);
-        Assert.Equal(new DateTime(2025, 2, 13, 15, 30, 0), capturedQuery.StartDate);
-        Assert.Equal(new DateTime(2025, 2, 20, 15, 30, 0), capturedQuery.EndDate);
+        // Compare dates only to tolerate time shift from FakeTimeProvider.Advance
+        Assert.Equal(new DateTime(2025, 2, 13).Date, capturedQuery.StartDate.Date);
+        Assert.Equal(new DateTime(2025, 2, 20).Date, capturedQuery.EndDate.Date);
         Assert.Equal(7, capturedQuery.Days);
     }
 

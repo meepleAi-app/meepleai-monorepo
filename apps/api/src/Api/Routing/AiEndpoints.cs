@@ -1,14 +1,12 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Configuration;
 using Api.Extensions;
-using Api.Infrastructure;
-using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Api.Routing;
@@ -29,7 +27,6 @@ public static class AiEndpoints
             IResponseQualityService qualityService, // AI-11: Quality scoring
             IMediator mediator, // CHAT-02: for GenerateFollowUpQuestionsQuery (Issue #1188)
             IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
-            MeepleAiDbContext dbContext, // CHAT-02: for game name lookup
             ILogger<Program> logger,
             bool bypassCache = false,
             bool generateFollowUps = true, // CHAT-02: opt-in parameter
@@ -77,20 +74,17 @@ public static class AiEndpoints
             if (generateFollowUps)
             {
                 var gameGuid = Guid.Parse(req.gameId);
-                var game = await dbContext.Games
-                    .Where(g => g.Id == gameGuid)
-                    .AsNoTracking()
-                    .Select(g => g.Name)
-                    .FirstOrDefaultAsync(ct);
+                // Use CQRS Query to get game name
+                var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct);
 
-                if (!string.IsNullOrEmpty(game))
+                if (gameDto != null && !string.IsNullOrEmpty(gameDto.Title))
                 {
                     followUpQuestions = await mediator.Send(new GenerateFollowUpQuestionsQuery
                     {
                         OriginalQuestion = req.query,
                         GeneratedAnswer = resp.answer,
                         RagContext = resp.snippets,
-                        GameName = game,
+                        GameName = gameDto.Title,
                         MaxQuestions = 5
                     }, ct);
 
@@ -272,7 +266,6 @@ public static class AiEndpoints
             IMediator mediator,
             AiRequestLogService aiLog,
             IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
-            MeepleAiDbContext dbContext, // CHAT-02: for game name lookup
             IFeatureFlagService featureFlags, // CONFIG-05
             ILogger<Program> logger,
             bool generateFollowUps = true, // CHAT-02: opt-in parameter (Issue #1188)
@@ -356,19 +349,17 @@ public static class AiEndpoints
                     {
                         followUpTask = Task.Run(async () =>
                         {
-                            // Fetch game name
-                            gameName = await dbContext.Games
-                                .Where(g => g.Id.ToString() == req.gameId)
-                                .AsNoTracking()
-                                .Select(g => g.Name)
-                                .FirstOrDefaultAsync(ct);
+                            // Use CQRS Query to fetch game name
+                            var gameGuid = Guid.Parse(req.gameId);
+                            var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct);
 
-                            if (gameName == null)
+                            if (gameDto == null || string.IsNullOrEmpty(gameDto.Title))
                             {
                                 logger.LogWarning("Game {GameId} not found for follow-up generation", req.gameId);
                                 return new List<string>().AsReadOnly();
                             }
 
+                            gameName = gameDto.Title;
                             var answer = answerBuilder.ToString();
                             // CHAT-02: Use CQRS query for follow-up generation (Issue #1188)
                             return await mediator.Send(new GenerateFollowUpQuestionsQuery

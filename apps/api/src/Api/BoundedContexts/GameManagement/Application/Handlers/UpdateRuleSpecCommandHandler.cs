@@ -18,17 +18,20 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
     private readonly MeepleAiDbContext _dbContext;
     private readonly RuleSpecVersioningDomainService _versioningService;
     private readonly IAiResponseCacheService _cache;
+    private readonly AuditService _auditService;
     private readonly TimeProvider _timeProvider;
 
     public UpdateRuleSpecCommandHandler(
         MeepleAiDbContext dbContext,
         RuleSpecVersioningDomainService versioningService,
         IAiResponseCacheService cache,
+        AuditService auditService,
         TimeProvider timeProvider)
     {
         _dbContext = dbContext;
         _versioningService = versioningService;
         _cache = cache;
+        _auditService = auditService;
         _timeProvider = timeProvider;
     }
 
@@ -98,6 +101,18 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
 
         // Invalidate cache
         await _cache.InvalidateGameAsync(command.GameId.ToString(), cancellationToken);
+
+        // Audit trail
+        await _auditService.LogAsync(
+            command.UserId.ToString(),
+            "UPDATE_RULESPEC",
+            "RuleSpec",
+            command.GameId.ToString(),
+            "Success",
+            $"Updated RuleSpec to version {version}",
+            command.IpAddress,
+            command.UserAgent,
+            cancellationToken);
 
         return new RuleSpecDto(
             Id: specEntity.Id,

@@ -11,5 +11,7 @@ public record UpdateRuleSpecCommand(
     Guid GameId,
     string? Version,
     IReadOnlyList<RuleAtomDto> Atoms,
-    Guid UserId
+    Guid UserId,
+    string? IpAddress = null,
+    string? UserAgent = null
 ) : ICommand<RuleSpecDto>;

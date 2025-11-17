@@ -36,4 +36,10 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Gets all backup codes for a user (used for 2FA).
     /// </summary>
     Task<List<Api.Infrastructure.Entities.UserBackupCodeEntity>> GetBackupCodesAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches users by display name or email.
+    /// Returns domain entities for autocomplete scenarios (e.g., @mentions).
+    /// </summary>
+    Task<List<User>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default);
 }

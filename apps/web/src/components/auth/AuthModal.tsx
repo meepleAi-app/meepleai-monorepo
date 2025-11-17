@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { AccessibleModal } from '@/components/accessible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginForm, LoginFormData } from './LoginForm';

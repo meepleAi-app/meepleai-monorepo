@@ -14,7 +14,7 @@
 import React, { useRef, useEffect } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import ChatPage from '../../pages/chat';
+import ChatPage from '@/components/pages/ChatPage';
 import { api } from '../../lib/api';
 
 // Mock the compatibility layer (Zustand-based)

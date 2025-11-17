@@ -347,6 +347,8 @@ public static class AiEndpoints
             var totalTokens = 0;
             double? confidence = null;
             var snippets = new List<Snippet>();
+            string streamStatus = "Success";
+            string? streamErrorMessage = null;
 
             try
             {
@@ -435,6 +437,8 @@ public static class AiEndpoints
             catch (OperationCanceledException)
             {
                 logger.LogInformation("Streaming QA cancelled by client for game {GameId}, query: {Query}", req.gameId, req.query);
+                streamStatus = "Cancelled";
+                streamErrorMessage = "Client disconnected";
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
@@ -444,6 +448,8 @@ public static class AiEndpoints
                 // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
                 // Sends error event to client stream, specific exception handling in service layer
                 logger.LogError(ex, "Error during streaming QA for game {GameId}, query: {Query}", req.gameId, req.query);
+                streamStatus = "Error";
+                streamErrorMessage = ex.Message;
 
                 // Send error event if possible
                 try
@@ -470,7 +476,7 @@ public static class AiEndpoints
             var answer = answerBuilder.ToString();
             var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
-            // Log AI request using CQRS
+            // Log AI request using CQRS - Use CancellationToken.None to ensure logging completes even if request was cancelled
             var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
                 UserId: session.User.Id,
                 GameId: req.gameId,
@@ -480,13 +486,13 @@ public static class AiEndpoints
                 LatencyMs: latencyMs,
                 TokenCount: totalTokens,
                 Confidence: confidence,
-                Status: "Success",
-                ErrorMessage: null,
+                Status: streamStatus,
+                ErrorMessage: streamErrorMessage,
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString(),
                 CompletionTokens: totalTokens
             );
-            await mediator.Send(logCommand, ct);
+            await mediator.Send(logCommand, CancellationToken.None);
 
             return Results.Empty;
         });
@@ -525,6 +531,8 @@ public static class AiEndpoints
             int totalTokens = 0;
             double? confidence = null;
             int estimatedTime = 0;
+            string streamStatus = "Success";
+            string? streamErrorMessage = null;
 
             try
             {
@@ -565,6 +573,8 @@ public static class AiEndpoints
             catch (OperationCanceledException)
             {
                 logger.LogInformation("Setup guide streaming cancelled by client for game {GameId}", req.gameId);
+                streamStatus = "Cancelled";
+                streamErrorMessage = "Client disconnected";
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
@@ -574,6 +584,8 @@ public static class AiEndpoints
                 // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
                 // Sends error event to client stream, specific exception handling in service layer
                 logger.LogError(ex, "Error during setup guide streaming for game {GameId}", req.gameId);
+                streamStatus = "Error";
+                streamErrorMessage = ex.Message;
 
                 // Send error event if possible
                 try
@@ -608,7 +620,7 @@ public static class AiEndpoints
                 responseSnippet = responseSnippet.Substring(0, 500);
             }
 
-            // Log AI request using CQRS
+            // Log AI request using CQRS - Use CancellationToken.None to ensure logging completes even if request was cancelled
             var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
                 UserId: session.User.Id,
                 GameId: req.gameId,
@@ -618,14 +630,14 @@ public static class AiEndpoints
                 LatencyMs: latencyMs,
                 TokenCount: totalTokens,
                 Confidence: confidence,
-                Status: "Success",
-                ErrorMessage: null,
+                Status: streamStatus,
+                ErrorMessage: streamErrorMessage,
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString(),
                 PromptTokens: 0, // Not tracked in streaming
                 CompletionTokens: totalTokens
             );
-            await mediator.Send(logCommand, ct);
+            await mediator.Send(logCommand, CancellationToken.None);
 
             return Results.Empty;
         });

@@ -875,6 +875,15 @@ User must have at least one authentication method remaining (password or another
                 return Results.BadRequest(new { error = result.ErrorMessage });
             }
 
+            // Refresh session cookie with new expiration if this is the current session
+            var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
+            var currentSessionToken = context.Request.Cookies[sessionCookieName];
+            if (!string.IsNullOrEmpty(currentSessionToken) && result.NewExpiresAt.HasValue)
+            {
+                CookieHelpers.WriteSessionCookie(context, currentSessionToken, result.NewExpiresAt.Value);
+                logger.LogInformation("Session cookie refreshed for session {SessionId}, new expiration: {ExpiresAt}", sessionId, result.NewExpiresAt.Value);
+            }
+
             return Results.Json(new { ok = true, expiresAt = result.NewExpiresAt });
         }).RequireAuthorization();
 

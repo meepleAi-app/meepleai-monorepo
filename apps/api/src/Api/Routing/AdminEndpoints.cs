@@ -1671,7 +1671,7 @@ public static class AdminEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
-            var command = new Api.BoundedContexts.Administration.Application.Commands.ActivatePromptVersionCommand(templateId.ToString(), versionId.ToString(), Guid.Parse(session.User.Id), request.Reason);
+            var command = new Api.BoundedContexts.Administration.Application.Commands.ActivatePromptVersionCommand(templateId, versionId, Guid.Parse(session.User.Id), request.Reason);
             var activatedVersion = await mediator.Send(command, ct);
             logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
             return Results.Json(activatedVersion);

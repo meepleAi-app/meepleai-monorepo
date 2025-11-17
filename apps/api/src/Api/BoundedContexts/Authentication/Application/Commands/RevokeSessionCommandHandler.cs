@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -12,16 +13,19 @@ public class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand,
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISessionCacheService? _sessionCache;
     private readonly ILogger<RevokeSessionCommandHandler> _logger;
 
     public RevokeSessionCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
-        ILogger<RevokeSessionCommandHandler> logger)
+        ILogger<RevokeSessionCommandHandler> logger,
+        ISessionCacheService? sessionCache = null)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _sessionCache = sessionCache;
     }
 
     public async Task<RevokeSessionResponse> Handle(RevokeSessionCommand command, CancellationToken cancellationToken)
@@ -57,6 +61,23 @@ public class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand,
             // Persist changes (domain events will be collected automatically)
             await _sessionRepository.UpdateAsync(session, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Invalidate cache to ensure immediate effect
+            if (_sessionCache != null)
+            {
+                try
+                {
+                    await _sessionCache.InvalidateAsync(session.TokenHash, cancellationToken);
+                }
+#pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Service boundary - cache failure resilience
+                // RESILIENCE: Cache failures should not prevent session revocation
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to invalidate cache for session {SessionId}, session revoked in database", command.SessionId);
+                }
+#pragma warning restore CA1031
+            }
 
             _logger.LogInformation(
                 "Session {SessionId} revoked by user {RequestingUserId}. Reason: {Reason}",

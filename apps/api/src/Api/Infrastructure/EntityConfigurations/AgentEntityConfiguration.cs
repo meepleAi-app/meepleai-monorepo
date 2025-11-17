@@ -45,9 +45,5 @@ public class AgentEntityConfiguration : IEntityTypeConfiguration<AgentEntity>
         builder.HasIndex(e => e.Type);
         builder.HasIndex(e => e.IsActive);
         builder.HasIndex(e => e.LastInvokedAt);
-
-        // DEPRECATED properties for backward compatibility
-        builder.Property(e => e.GameId); // Optional, nullable
-        builder.Property(e => e.Kind).HasMaxLength(50); // Optional, nullable
     }
 }

@@ -2,6 +2,9 @@ using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -24,7 +27,9 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mediatorMock = new Mock<IMediator>();
+        var domainEventCollectorMock = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, domainEventCollectorMock.Object);
         _loggerMock = new Mock<ILogger<GetSessionStatusQueryHandler>>();
 
         _handler = new GetSessionStatusQueryHandler(_dbContext, _loggerMock.Object);

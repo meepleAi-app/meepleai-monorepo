@@ -47,11 +47,20 @@ describe('useGames hooks', () => {
     it('generates correct query keys', () => {
       expect(gamesKeys.all).toEqual(['games']);
       expect(gamesKeys.lists()).toEqual(['games', 'list']);
-      expect(gamesKeys.list()).toEqual(['games', 'list', {}]);
+      expect(gamesKeys.list()).toEqual([
+        'games',
+        'list',
+        { filters: undefined, sort: undefined, page: undefined, pageSize: undefined },
+      ]);
       expect(gamesKeys.list({ search: 'Catan' })).toEqual([
         'games',
         'list',
-        { filters: { search: 'Catan' } },
+        {
+          filters: { search: 'Catan' },
+          sort: undefined,
+          page: undefined,
+          pageSize: undefined,
+        },
       ]);
       expect(gamesKeys.detail('game-1')).toEqual(['games', 'detail', 'game-1']);
       expect(gamesKeys.sessions('game-1')).toEqual(['games', 'sessions', 'game-1']);

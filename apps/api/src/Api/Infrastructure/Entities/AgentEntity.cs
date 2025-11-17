@@ -11,15 +11,4 @@ public class AgentEntity
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastInvokedAt { get; set; }
     public int InvocationCount { get; set; }
-
-    // TODO Issue #866: DEPRECATED - For backward compatibility with legacy ChatService only
-    // These properties are NOT part of the DDD Agent aggregate and should not be used
-    [Obsolete("Legacy property for ChatService compatibility only")]
-    public Guid? GameId { get; set; }
-
-    [Obsolete("Legacy property for ChatService compatibility only - use Type instead")]
-    public string? Kind { get; set; }
-
-    [Obsolete("Legacy collection for ChatService compatibility only")]
-    public ICollection<ChatEntity> Chats { get; set; } = new List<ChatEntity>();
 }

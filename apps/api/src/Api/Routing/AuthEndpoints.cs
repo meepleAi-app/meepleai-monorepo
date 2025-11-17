@@ -11,7 +11,13 @@ using DddRegisterCommand = Api.BoundedContexts.Authentication.Application.Comman
 using DddLoginCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginCommand;
 using DddLogoutCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutCommand;
 using DddCreateSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.CreateSessionCommand;
+using InitiateOAuthLoginCommand = Api.BoundedContexts.Authentication.Application.Commands.OAuth.InitiateOAuthLoginCommand;
 using HandleOAuthCallbackCommand = Api.BoundedContexts.Authentication.Application.Commands.OAuth.HandleOAuthCallbackCommand;
+using RequestPasswordResetCommand = Api.BoundedContexts.Authentication.Application.Commands.PasswordReset.RequestPasswordResetCommand;
+using ValidatePasswordResetTokenQuery = Api.BoundedContexts.Authentication.Application.Queries.PasswordReset.ValidatePasswordResetTokenQuery;
+using ResetPasswordCommand = Api.BoundedContexts.Authentication.Application.Commands.PasswordReset.ResetPasswordCommand;
+using GenerateTotpSetupCommand = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.GenerateTotpSetupCommand;
+using Verify2FACommand = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.Verify2FACommand;
 using GetSessionStatusQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionStatusQuery;
 using ExtendSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.ExtendSessionCommand;
 using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
@@ -196,7 +202,7 @@ public static class AuthEndpoints
     // AUTH-07: Two-Factor Authentication endpoints
     private static void Map2FAEndpoints(RouteGroupBuilder group)
     {
-        group.MapPost("/auth/2fa/setup", async (HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+        group.MapPost("/auth/2fa/setup", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var userIdStr = context.User.FindFirst("sub")?.Value;
             var userEmail = context.User.FindFirst("email")?.Value;
@@ -211,8 +217,15 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
-            var setup = await totpService.GenerateSetupAsync(userId, userEmail);
-            logger.LogInformation("2FA setup generated for user {UserId}", userId);
+            // Execute TOTP setup generation via CQRS handler
+            var command = new GenerateTotpSetupCommand
+            {
+                UserId = userId,
+                UserEmail = userEmail
+            };
+
+            var setup = await mediator.Send(command, ct);
+            logger.LogInformation("2FA setup generated for user {UserId} via CQRS", userId);
             return Results.Ok(setup);
         })
         .RequireAuthorization()
@@ -257,7 +270,7 @@ public static class AuthEndpoints
         .WithName("Enable2FA")
         .WithTags("Authentication");
 
-        group.MapPost("/auth/2fa/verify", async (TwoFactorVerifyRequest request, HttpContext context, ITotpService totpService, ITempSessionService tempSessionService, IRateLimitService rateLimitService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/auth/2fa/verify", async (TwoFactorVerifyRequest request, HttpContext context, IRateLimitService rateLimitService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Rate limit: 3 attempts per minute per session token
             var rateLimitKey = $"2fa:verify:{request.SessionToken}";
@@ -269,39 +282,31 @@ public static class AuthEndpoints
                 return Results.StatusCode(429);
             }
 
-            // Validate and consume temp session (5-min TTL, single-use)
-            var userIdNullable = await tempSessionService.ValidateAndConsumeTempSessionAsync(request.SessionToken);
-            if (userIdNullable == null)
+            // Execute 2FA verification via CQRS handler
+            var verifyCommand = new Verify2FACommand
             {
-                logger.LogWarning("2FA verify failed: Invalid temp session");
-                return Results.Unauthorized();
-            }
+                SessionToken = request.SessionToken,
+                Code = request.Code
+            };
 
-            var userId = userIdNullable.Value;
+            var verifyResult = await mediator.Send(verifyCommand, ct);
 
-            // Verify TOTP or backup code
-            var isValid = await totpService.VerifyCodeAsync(userId, request.Code);
-            if (!isValid)
+            if (!verifyResult.Success || verifyResult.UserId == null)
             {
-                isValid = await totpService.VerifyBackupCodeAsync(userId, request.Code);
-            }
-
-            if (!isValid)
-            {
-                logger.LogWarning("2FA verify failed for user {UserId}", userId);
+                logger.LogWarning("2FA verification failed: {ErrorMessage}", verifyResult.ErrorMessage);
                 return Results.Unauthorized();
             }
 
             // Create actual session after 2FA verification - DDD CQRS
-            var command = new DddCreateSessionCommand(
-                UserId: userId,
+            var sessionCommand = new DddCreateSessionCommand(
+                UserId: verifyResult.UserId.Value,
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString());
 
-            var sessionResult = await mediator.Send(command, ct);
+            var sessionResult = await mediator.Send(sessionCommand, ct);
 
             CookieHelpers.WriteSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
-            logger.LogInformation("2FA verified, session created for user {UserId}", userId);
+            logger.LogInformation("2FA verified and session created for user {UserId} via CQRS", verifyResult.UserId.Value);
 
             // Map to legacy format for backward compatibility
             var legacyUser = new AuthUser(
@@ -392,10 +397,11 @@ public static class AuthEndpoints
     {
         group.MapGet("/auth/oauth/{provider}/login", async (
             string provider,
-            IOAuthService oauthService,
+            IMediator mediator,
             HttpContext context,
             IRateLimitService rateLimiter,
-            IConfigurationService configService) =>
+            IConfigurationService configService,
+            CancellationToken ct) =>
         {
             // AUTH-06-P4: Rate limiting to prevent OAuth abuse (configurable via admin UI)
             var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -413,12 +419,21 @@ public static class AuthEndpoints
                 return Results.StatusCode(429); // Too Many Requests
             }
 
-            // Generate secure CSRF state
-            var state = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
-            await oauthService.StoreStateAsync(state);
+            // Execute OAuth login initiation via CQRS handler
+            var command = new InitiateOAuthLoginCommand
+            {
+                Provider = provider,
+                IpAddress = ipAddress
+            };
 
-            var authUrl = await oauthService.GetAuthorizationUrlAsync(provider, state);
-            return Results.Redirect(authUrl);
+            var result = await mediator.Send(command, ct);
+
+            if (!result.Success)
+            {
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            return Results.Redirect(result.AuthorizationUrl!);
         })
         .WithName("InitiateOAuthLogin")
         .WithTags("Authentication", "OAuth")
@@ -699,7 +714,7 @@ User must have at least one authentication method remaining (password or another
     {
         group.MapPost("/auth/password-reset/request", async (
             PasswordResetRequestPayload payload,
-            IPasswordResetService passwordResetService,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -708,15 +723,22 @@ User must have at least one authentication method remaining (password or another
                 return Results.BadRequest(new { error = "Email is required" });
             }
 
-            await passwordResetService.RequestPasswordResetAsync(payload.Email, ct);
+            // Execute password reset request via CQRS handler
+            var command = new RequestPasswordResetCommand { Email = payload.Email };
+            var result = await mediator.Send(command, ct);
+
+            if (!result.Success)
+            {
+                return Results.StatusCode(429); // Too Many Requests
+            }
 
             // Always return success to prevent email enumeration
-            return Results.Json(new { ok = true, message = "If the email exists, a password reset link has been sent" });
+            return Results.Json(new { ok = true, message = result.Message });
         });
 
         group.MapGet("/auth/password-reset/verify", async (
             string token,
-            IPasswordResetService passwordResetService,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -725,9 +747,11 @@ User must have at least one authentication method remaining (password or another
                 return Results.BadRequest(new { error = "Token is required" });
             }
 
-            var isValid = await passwordResetService.ValidateResetTokenAsync(token, ct);
+            // Execute password reset token validation via CQRS query
+            var query = new ValidatePasswordResetTokenQuery { Token = token };
+            var result = await mediator.Send(query, ct);
 
-            if (!isValid)
+            if (!result.IsValid)
             {
                 return Results.BadRequest(new { error = "Invalid or expired token" });
             }
@@ -738,7 +762,6 @@ User must have at least one authentication method remaining (password or another
         group.MapPut("/auth/password-reset/confirm", async (
             PasswordResetConfirmPayload payload,
             HttpContext context,
-            IPasswordResetService passwordResetService,
             IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
@@ -753,26 +776,27 @@ User must have at least one authentication method remaining (password or another
                 return Results.BadRequest(new { error = "New password is required" });
             }
 
-            // Tuple destructuring for userId
-            var (success, userIdNullable) = await passwordResetService.ResetPasswordAsync(
-                payload.Token,
-                payload.NewPassword,
-                ct);
-
-            if (!success || userIdNullable == null)
+            // Execute password reset via CQRS command
+            var resetCommand = new ResetPasswordCommand
             {
-                return Results.NotFound(new { error = "Invalid or expired token" });
+                Token = payload.Token,
+                NewPassword = payload.NewPassword
+            };
+
+            var resetResult = await mediator.Send(resetCommand, ct);
+
+            if (!resetResult.Success || resetResult.UserId == null)
+            {
+                return Results.NotFound(new { error = resetResult.ErrorMessage ?? "Invalid or expired token" });
             }
 
-            var userId = userIdNullable.Value;
-
             // Create new session for auto-login - DDD CQRS
-            var command = new DddCreateSessionCommand(
-                UserId: userId,
+            var sessionCommand = new DddCreateSessionCommand(
+                UserId: resetResult.UserId.Value,
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString());
 
-            var sessionResult = await mediator.Send(command, ct);
+            var sessionResult = await mediator.Send(sessionCommand, ct);
 
             writeSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
 

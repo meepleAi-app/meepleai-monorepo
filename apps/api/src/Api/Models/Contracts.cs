@@ -211,8 +211,8 @@ public record ValidateTemplateRequest(
 );
 
 public record ValidateTemplateResponse(
-    bool IsValid,
-    List<string>? Errors
+    [property: JsonPropertyName("valid")] bool IsValid,
+    [property: JsonPropertyName("errors")] List<string>? Errors
 );
 
 // UI-01: Chat management models

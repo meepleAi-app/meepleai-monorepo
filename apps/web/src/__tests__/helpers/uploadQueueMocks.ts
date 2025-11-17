@@ -451,6 +451,50 @@ export class MockUploadWorker {
   public setAutoUpload(enabled: boolean): void {
     this.config.autoUpload = enabled;
   }
+
+  /**
+   * Simulate worker crash (for lifecycle testing)
+   */
+  public simulateCrash(): void {
+    const errorEvent = new ErrorEvent('error', {
+      message: 'Simulated worker crash',
+      error: new Error('Simulated worker crash')
+    });
+
+    if (this.onerror) {
+      this.onerror(errorEvent);
+    }
+  }
+
+  /**
+   * Get active uploads count
+   */
+  public getActiveUploadsCount(): number {
+    return this.activeUploads.size;
+  }
+
+  /**
+   * Get file data cache size (for memory leak detection)
+   */
+  public getFileDataCacheSize(): number {
+    return this.fileDataCache.size;
+  }
+
+  /**
+   * Clear all error simulations
+   */
+  public clearAllErrors(): void {
+    this.config.simulateErrors = {};
+  }
+
+  /**
+   * Wait for all active uploads to complete
+   */
+  public async waitForAllUploads(): Promise<void> {
+    while (this.activeUploads.size > 0) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  }
 }
 
 /**
@@ -478,33 +522,74 @@ export function setupWorkerMock(config?: Partial<MockUploadWorker['config']>): M
 
 /**
  * Mock BroadcastChannel for testing
+ * Simulates multi-tab communication
  */
 export class MockBroadcastChannel {
   name: string;
   onmessage: ((event: MessageEvent) => void) | null = null;
   onmessageerror: ((event: MessageEvent) => void) | null = null;
 
+  private static channels = new Map<string, MockBroadcastChannel[]>();
+  private messageHandlers: Array<(event: MessageEvent) => void> = [];
+
   constructor(name: string) {
     this.name = name;
+
+    // Register this channel instance
+    if (!MockBroadcastChannel.channels.has(name)) {
+      MockBroadcastChannel.channels.set(name, []);
+    }
+    MockBroadcastChannel.channels.get(name)!.push(this);
   }
 
   postMessage(message: any): void {
-    // No-op for mock
+    // Broadcast to all other channels with the same name
+    const channels = MockBroadcastChannel.channels.get(this.name) || [];
+    channels.forEach(channel => {
+      if (channel !== this) {
+        const event = new MessageEvent('message', { data: message });
+        if (channel.onmessage) {
+          channel.onmessage(event);
+        }
+        channel.messageHandlers.forEach(handler => handler(event));
+      }
+    });
   }
 
   close(): void {
-    // No-op for mock
+    // Unregister this channel
+    const channels = MockBroadcastChannel.channels.get(this.name);
+    if (channels) {
+      const index = channels.indexOf(this);
+      if (index > -1) {
+        channels.splice(index, 1);
+      }
+    }
   }
 
   addEventListener(type: string, listener: EventListenerOrEventListenerObject): void {
-    // No-op for mock
+    if (type === 'message' && typeof listener === 'function') {
+      this.messageHandlers.push(listener as (event: MessageEvent) => void);
+    }
   }
 
   removeEventListener(type: string, listener: EventListenerOrEventListenerObject): void {
-    // No-op for mock
+    if (type === 'message' && typeof listener === 'function') {
+      const index = this.messageHandlers.indexOf(listener as (event: MessageEvent) => void);
+      if (index > -1) {
+        this.messageHandlers.splice(index, 1);
+      }
+    }
   }
 
   dispatchEvent(event: Event): boolean {
     return true;
+  }
+
+  /**
+   * Test helper: Clear all channels (use between tests)
+   */
+  static clearAll(): void {
+    MockBroadcastChannel.channels.clear();
   }
 }

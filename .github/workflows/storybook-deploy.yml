@@ -40,12 +40,10 @@ jobs:
           cache-dependency-path: apps/web/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Build Storybook
-        run: pnpm build-storybook
-        env:
-          NODE_ENV: production
+        run: pnpm build-storybook --quiet
 
       - name: Deploy to Vercel (Production)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

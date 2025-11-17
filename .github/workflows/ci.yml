@@ -91,7 +91,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       # TODO: Re-enable after migrating to ESLint CLI (Next.js 15.5.6 circular dependency bug)
-      # See issue #XXX for ESLint CLI migration
       # - name: Lint
       #   run: pnpm lint
       - name: Typecheck

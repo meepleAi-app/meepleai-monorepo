@@ -39,13 +39,15 @@
   - [System Architecture](./01-architecture/overview/system-architecture.md) (60+ pages)
   - [Consolidation Strategy](./01-architecture/overview/consolidation-strategy.md)
 
-- **[adr/](./01-architecture/adr/)** - Architecture Decision Records (6 ADRs)
+- **[adr/](./01-architecture/adr/)** - Architecture Decision Records (8 ADRs)
   - [ADR-001: Hybrid RAG](./01-architecture/adr/adr-001-hybrid-rag.md)
   - [ADR-002: Multilingual Embedding](./01-architecture/adr/adr-002-multilingual-embedding.md)
   - [ADR-003: PDF Processing](./01-architecture/adr/adr-003-pdf-processing.md)
   - [ADR-003b: Unstructured PDF](./01-architecture/adr/adr-003b-unstructured-pdf.md)
   - [ADR-004: AI Agents](./01-architecture/adr/adr-004-ai-agents.md)
   - [ADR-004b: Hybrid LLM](./01-architecture/adr/adr-004b-hybrid-llm.md)
+  - [ADR-005: Cosine Similarity Consensus](./01-architecture/adr/adr-005-cosine-similarity-consensus.md)
+  - [ADR-006: Multi-Layer Validation](./01-architecture/adr/adr-006-multi-layer-validation.md)
 
 - **[diagrams/](./01-architecture/diagrams/)** - Architecture diagrams (Mermaid)
   - [Bounded Contexts Interactions](./01-architecture/diagrams/bounded-contexts-interactions.md)
@@ -309,7 +311,7 @@
 - ✅ Cleaned up testing documentation
 
 ### Planned (Q1 2025)
-- [ ] Add missing ADRs (ADR-005: Vector DB, ADR-006: Caching)
+- [x] Add missing ADRs (ADR-005: Cosine Similarity, ADR-006: Multi-Layer Validation)
 - [ ] Create developer onboarding video walkthrough
 - [ ] Add interactive architecture diagrams (clickable)
 - [ ] Create API client SDK documentation
@@ -398,7 +400,7 @@ See [README.md - Contributing Documentation](./README.md#-contributing-documenta
 **Legend**: ⭐ = Essential reading, highly recommended
 
 **Index Metadata**:
-- **Version**: 2.1
+- **Version**: 2.2
 - **Maintainer**: Documentation Team
 - **Last Updated**: 2025-11-17
 - **Next Review**: 2025-12-17

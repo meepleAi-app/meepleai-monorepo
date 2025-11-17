@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { AuthUser } from '@/types/auth';
 
 interface GameSummary {
   id: string;
   name: string;
   createdAt: string;
-}
-
-interface AuthUser {
-  id: string;
-  email: string;
-  displayName?: string | null;
-  role: string;
 }
 
 interface AuthResponse {

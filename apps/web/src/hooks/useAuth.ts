@@ -14,17 +14,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation'; // App Router
 import { api } from '@/lib/api';
+import { AuthUser } from '@/types/auth';
 
 // ============================================================================
 // Types
 // ============================================================================
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  displayName?: string | null;
-  role: string;
-}
 
 export interface AuthResponse {
   user: AuthUser;

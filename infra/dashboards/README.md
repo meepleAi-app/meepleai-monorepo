@@ -30,6 +30,33 @@ This directory contains Grafana dashboard JSON files for the MeepleAI observabil
    - Cache operations (hits, misses, evictions)
    - PDF processing metrics
 
+4. **ai-quality-monitoring.json** - AI quality monitoring (detailed view)
+   - Overall confidence trend
+   - Quality tier distribution (donut chart)
+   - Low-quality response rate gauge
+   - Dimensional confidence breakdown
+   - Confidence percentiles (p50, p95, p99)
+   - Response volume by agent type
+   - Low-quality responses by agent type
+
+5. **quality-metrics-gauges.json** - Quality metrics dashboard (5 gauges) **[BGAI-044]**
+   - Overall Confidence Score gauge
+   - RAG Confidence Score gauge
+   - LLM Confidence Score gauge
+   - Citation Quality Score gauge
+   - Low-Quality Response Rate gauge
+   - Quality metrics summary table
+
+6. **cache-optimization.json** - Cache optimization metrics
+   - Cache hit/miss rates
+   - Cache performance statistics
+   - Cache optimization monitoring
+
+7. **error-monitoring.json** - Error tracking and monitoring
+   - Error rates by type
+   - Exception tracking
+   - Error distribution by endpoint
+
 ## Auto-Provisioning
 
 Dashboards in this directory are automatically provisioned to Grafana on startup via the `grafana-dashboards.yml` configuration.

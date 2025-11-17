@@ -203,15 +203,23 @@ public static class AdminEndpoints
 
         group.MapGet("/admin/quality/report", async (
             HttpContext context,
-            IQualityReportService reportService,
-            int days = 7) =>
+            IMediator mediator,
+            int days = 7,
+            CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             var endDate = DateTime.UtcNow;
             var startDate = endDate.AddDays(-days);
-            var report = await reportService.GenerateReportAsync(startDate, endDate);
+
+            var query = new Api.BoundedContexts.Administration.Application.Queries.QualityReports.GenerateQualityReportQuery
+            {
+                StartDate = startDate,
+                EndDate = endDate,
+                Days = days
+            };
+            var report = await mediator.Send(query, ct);
             return Results.Ok(report);
         })
         .RequireAuthorization()
@@ -321,24 +329,34 @@ public static class AdminEndpoints
             return Results.Json(new { ok = true });
         });
 
-        group.MapPost("/admin/n8n/{configId:guid}/test", async (Guid configId, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/admin/n8n/{configId:guid}/test", async (Guid configId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session.User.Id, configId);
-            var result = await n8nService.TestConnectionAsync(configId.ToString(), ct);
+
+            var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8nConfig.TestN8nConnectionCommand
+            {
+                ConfigId = configId
+            };
+            var result = await mediator.Send(command, ct);
+
             logger.LogInformation("n8n config {ConfigId} test result: {Success}", configId, result.Success);
             return Results.Json(result);
         });
 
-        // N8N-04: Workflow template endpoints
+        // N8N-04: Workflow template endpoints (CQRS pattern)
         group.MapGet("/n8n/templates", async (
             string? category,
-            N8nTemplateService templateService,
+            IMediator mediator,
             CancellationToken ct) =>
         {
-            var templates = await templateService.GetTemplatesAsync(category, ct);
+            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8nTemplates.GetN8nTemplatesQuery
+            {
+                Category = category
+            };
+            var templates = await mediator.Send(query, ct);
             return Results.Ok(templates);
         })
         .RequireAuthorization()
@@ -348,10 +366,14 @@ public static class AdminEndpoints
 
         group.MapGet("/n8n/templates/{id}", async (
             string id,
-            N8nTemplateService templateService,
+            IMediator mediator,
             CancellationToken ct) =>
         {
-            var template = await templateService.GetTemplateAsync(id, ct);
+            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8nTemplates.GetN8nTemplateByIdQuery
+            {
+                TemplateId = id
+            };
+            var template = await mediator.Send(query, ct);
             if (template == null)
             {
                 return Results.NotFound(new { error = $"Template '{id}' not found" });
@@ -367,7 +389,7 @@ public static class AdminEndpoints
         group.MapPost("/n8n/templates/{id}/import", async (
             string id,
             ImportTemplateRequest request,
-            N8nTemplateService templateService,
+            IMediator mediator,
             HttpContext context,
             ILogger<Program> logger,
             CancellationToken ct) =>
@@ -377,7 +399,15 @@ public static class AdminEndpoints
             if (!authenticated) return error!;
 
             logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session.User.Id, id);
-            var result = await templateService.ImportTemplateAsync(id, request.Parameters, session.User.Id, ct);
+
+            var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8nTemplates.ImportN8nTemplateCommand
+            {
+                TemplateId = id,
+                Parameters = request.Parameters,
+                UserId = session.User.Id
+            };
+            var result = await mediator.Send(command, ct);
+
             logger.LogInformation("Template {TemplateId} imported successfully as workflow {WorkflowId}", id, result.WorkflowId);
             return Results.Ok(result);
         })
@@ -386,9 +416,9 @@ public static class AdminEndpoints
         .WithTags("N8N")
         .WithDescription("Import an n8n workflow template with parameter substitution");
 
-        group.MapPost("/n8n/templates/validate", (
+        group.MapPost("/n8n/templates/validate", async (
             ValidateTemplateRequest request,
-            N8nTemplateService templateService,
+            IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
         {
@@ -396,7 +426,11 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var result = templateService.ValidateTemplate(request.TemplateJson);
+            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.N8nTemplates.ValidateN8nTemplateQuery
+            {
+                TemplateJson = request.TemplateJson
+            };
+            var result = await mediator.Send(query, ct);
             return Results.Ok(result);
         })
         .RequireAuthorization()
@@ -511,11 +545,20 @@ public static class AdminEndpoints
 
         // Webhook endpoint for n8n (no authentication required for simplicity)
         group.MapPost("/logs/workflow-error", async (
-            IWorkflowErrorLoggingService errorLoggingService,
+            IMediator mediator,
             LogWorkflowErrorRequest request,
             CancellationToken ct = default) =>
         {
-            await errorLoggingService.LogErrorAsync(request, ct);
+            var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.WorkflowErrors.LogWorkflowErrorCommand
+            {
+                WorkflowId = request.WorkflowId,
+                ExecutionId = request.ExecutionId,
+                ErrorMessage = request.ErrorMessage,
+                NodeName = request.NodeName,
+                RetryCount = request.RetryCount,
+                StackTrace = request.StackTrace
+            };
+            await mediator.Send(command, ct);
             return Results.Ok(new { message = "Error logged successfully" });
         })
         .WithName("LogWorkflowError")
@@ -527,7 +570,7 @@ public static class AdminEndpoints
         // Admin endpoint to list workflow errors
         group.MapGet("/admin/workflows/errors", async (
             HttpContext context,
-            IWorkflowErrorLoggingService errorLoggingService,
+            IMediator mediator,
             string? workflowId = null,
             DateTime? fromDate = null,
             DateTime? toDate = null,
@@ -538,8 +581,15 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var queryParams = new WorkflowErrorsQueryParams(workflowId, fromDate, toDate, page, limit);
-            var errors = await errorLoggingService.GetErrorsAsync(queryParams, ct);
+            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.WorkflowErrors.GetWorkflowErrorsQuery
+            {
+                WorkflowId = workflowId,
+                FromDate = fromDate,
+                ToDate = toDate,
+                Page = page,
+                Limit = limit
+            };
+            var errors = await mediator.Send(query, ct);
             return Results.Ok(errors);
         })
         .WithName("GetWorkflowErrors")
@@ -552,14 +602,18 @@ public static class AdminEndpoints
         // Admin endpoint to get specific workflow error
         group.MapGet("/admin/workflows/errors/{id:guid}", async (
             HttpContext context,
-            IWorkflowErrorLoggingService errorLoggingService,
+            IMediator mediator,
             Guid id,
             CancellationToken ct = default) =>
         {
             var (authorized, session, authError) = context.RequireAdminSession();
             if (!authorized) return authError!;
 
-            var error = await errorLoggingService.GetErrorByIdAsync(id, ct);
+            var query = new Api.BoundedContexts.WorkflowIntegration.Application.Queries.WorkflowErrors.GetWorkflowErrorByIdQuery
+            {
+                ErrorId = id
+            };
+            var error = await mediator.Send(query, ct);
 
             if (error == null)
             {
@@ -829,29 +883,38 @@ public static class AdminEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
 
-        // Activate a specific version (CRITICAL endpoint)
+        // Activate a specific version (CRITICAL endpoint - CQRS pattern with audit trail)
         group.MapPost("/admin/prompts/{id:guid}/versions/{versionId:guid}/activate", async (
             Guid id,
             Guid versionId,
             HttpContext context,
-            IPromptTemplateService promptService,
+            IMediator mediator,
             CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var activated = await promptService.ActivateVersionAsync(id, versionId, Guid.Parse(session.User.Id), ct);
+            // Execute prompt activation via CQRS handler (with transaction and audit logging)
+            var command = new ActivatePromptVersionCommand(
+                TemplateId: id,
+                VersionId: versionId,
+                ActivatedByUserId: Guid.Parse(session.User.Id),
+                Reason: "Admin activation via UI"
+            );
 
-            if (!activated)
+            try
+            {
+                var result = await mediator.Send(command, ct);
+                return Results.Ok(new { message = "Version activated successfully", version = result });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
             {
                 return Results.NotFound(new { error = "Version not found" });
             }
-
-            return Results.Ok(new { message = "Version activated successfully" });
         })
         .WithName("ActivatePromptVersion")
         .WithTags("Admin", "PromptManagement")
-        .WithDescription("Activate a specific prompt version with transaction safety and cache invalidation (admin only)")
+        .WithDescription("Activate a specific prompt version with transaction safety, audit trail, and cache invalidation (admin only). Uses CQRS pattern for domain event support.")
         .Produces(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status401Unauthorized)
@@ -865,7 +928,7 @@ public static class AdminEndpoints
             string templateId,
             string versionId,
             EvaluatePromptRequest request,
-            IPromptEvaluationService evaluationService,
+            IMediator mediator,
             HttpContext context,
             ILogger<Program> logger,
             CancellationToken ct) =>
@@ -876,18 +939,16 @@ public static class AdminEndpoints
             logger.LogInformation("Admin {AdminId} evaluating prompt template {TemplateId}, version {VersionId}",
                 session.User.Id, templateId, versionId);
 
-            var result = await evaluationService.EvaluateAsync(
-                templateId,
-                versionId,
-                request.DatasetPath,
-                progressCallback: null,
-                ct);
-
-            if (request.StoreResults)
+            // ADMIN-01: Use CQRS pattern for prompt evaluation
+            var command = new Api.BoundedContexts.Administration.Application.Commands.PromptEvaluation.EvaluatePromptCommand
             {
-                await evaluationService.StoreResultsAsync(result, ct);
-                logger.LogInformation("Evaluation result {EvaluationId} stored to database", result.EvaluationId);
-            }
+                TemplateId = templateId,
+                VersionId = versionId,
+                DatasetPath = request.DatasetPath,
+                StoreResults = request.StoreResults
+            };
+
+            var result = await mediator.Send(command, ct);
 
             return Results.Ok(result);
         })
@@ -903,7 +964,7 @@ public static class AdminEndpoints
         group.MapPost("/admin/prompts/{templateId}/compare", async (
             string templateId,
             ComparePromptsRequest request,
-            IPromptEvaluationService evaluationService,
+            IMediator mediator,
             HttpContext context,
             ILogger<Program> logger,
             CancellationToken ct) =>
@@ -915,12 +976,16 @@ public static class AdminEndpoints
                 "Admin {AdminId} comparing prompt versions: Baseline {BaselineId} vs Candidate {CandidateId}",
                 session.User.Id, request.BaselineVersionId, request.CandidateVersionId);
 
-            var comparison = await evaluationService.CompareVersionsAsync(
-                templateId,
-                request.BaselineVersionId,
-                request.CandidateVersionId,
-                request.DatasetPath,
-                ct);
+            // ADMIN-01: Use CQRS pattern for prompt comparison
+            var command = new Api.BoundedContexts.Administration.Application.Commands.PromptEvaluation.ComparePromptVersionsCommand
+            {
+                TemplateId = templateId,
+                BaselineVersionId = request.BaselineVersionId,
+                CandidateVersionId = request.CandidateVersionId,
+                DatasetPath = request.DatasetPath
+            };
+
+            var comparison = await mediator.Send(command, ct);
 
             logger.LogInformation("Comparison completed - Recommendation: {Recommendation}", comparison.Recommendation);
 
@@ -937,14 +1002,21 @@ public static class AdminEndpoints
         group.MapGet("/admin/prompts/{templateId:guid}/evaluations", async (
             Guid templateId,
             int limit,
-            IPromptEvaluationService evaluationService,
+            IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var results = await evaluationService.GetHistoricalResultsAsync(templateId.ToString(), limit, ct);
+            // ADMIN-01: Use CQRS pattern for evaluation history
+            var query = new Api.BoundedContexts.Administration.Application.Queries.PromptEvaluation.GetEvaluationHistoryQuery
+            {
+                TemplateId = templateId,
+                Limit = limit
+            };
+
+            var results = await mediator.Send(query, ct);
             return Results.Ok(results);
         })
         .WithName("GetEvaluationHistory")
@@ -957,7 +1029,7 @@ public static class AdminEndpoints
         group.MapGet("/admin/prompts/evaluations/{evaluationId}/report", async (
             string evaluationId,
             string format,
-            IPromptEvaluationService evaluationService,
+            IMediator mediator,
             HttpContext context,
             ILogger<Program> logger,
             CancellationToken ct) =>
@@ -965,26 +1037,26 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            // Get all historical results and find the specific evaluation
-            var allResults = await evaluationService.GetHistoricalResultsAsync("", 1000, ct);
-            var result = allResults.FirstOrDefault(r => r.EvaluationId == evaluationId);
-
-            if (result == null)
-            {
-                return Results.NotFound(new { error = "Evaluation not found" });
-            }
-
+            // ADMIN-01: Use CQRS pattern for report generation
             var reportFormat = format?.ToLowerInvariant() == "json"
                 ? ReportFormat.Json
                 : ReportFormat.Markdown;
 
-            var report = evaluationService.GenerateReport(result, reportFormat);
+            var query = new Api.BoundedContexts.Administration.Application.Queries.PromptEvaluation.GenerateEvaluationReportQuery
+            {
+                EvaluationId = evaluationId,
+                Format = reportFormat
+            };
 
-            var contentType = reportFormat == ReportFormat.Json
-                ? "application/json"
-                : "text/markdown";
-
-            return Results.Content(report, contentType);
+            try
+            {
+                var (report, contentType) = await mediator.Send(query, ct);
+                return Results.Content(report, contentType);
+            }
+            catch (InvalidOperationException)
+            {
+                return Results.NotFound(new { error = "Evaluation not found" });
+            }
         })
         .WithName("GetEvaluationReport")
         .WithTags("Admin", "PromptManagement", "Testing")

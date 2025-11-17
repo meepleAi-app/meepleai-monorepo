@@ -4,7 +4,6 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Models;
-using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -136,11 +135,6 @@ public static class GameEndpoints
             var result = await mediator.Send(command, ct);
             return Results.Ok(result);
         });
-
-        // CHAT-06: Get agents for a specific game
-        // TODO Issue #866: This legacy endpoint was removed. Agents are now in KnowledgeBase context.
-        // Use /api/v1/agents instead of /api/v1/games/{gameId}/agents
-
 
         // ========================================
         // GameSession CQRS Endpoints

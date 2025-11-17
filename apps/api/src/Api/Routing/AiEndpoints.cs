@@ -175,7 +175,7 @@ public static class AiEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status500InternalServerError);
 
-        group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, IRagService rag, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, IRagService rag, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -197,25 +197,26 @@ public static class AiEndpoints
             logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
                 req.gameId, resp.estimatedReadingTimeMinutes);
 
-            // ADM-01: Log AI request
-            await aiLog.LogRequestAsync(
-                session.User.Id,
-                req.gameId,
-                "explain",
-                req.topic,
-                resp.script?.Length > 500 ? resp.script.Substring(0, 500) : resp.script,
-                latencyMs,
-                resp.totalTokens,
-                resp.confidence,
-                "Success",
-                null,
-                context.Connection.RemoteIpAddress?.ToString(),
-                context.Request.Headers.UserAgent.ToString(),
-                promptTokens: resp.promptTokens,
-                completionTokens: resp.completionTokens,
-                model: null,
-                finishReason: null,
-                ct: ct);
+            // ADM-01: Log AI request using CQRS
+            var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
+                UserId: session.User.Id,
+                GameId: req.gameId,
+                Endpoint: "explain",
+                Query: req.topic,
+                ResponseSnippet: resp.script?.Length > 500 ? resp.script.Substring(0, 500) : resp.script,
+                LatencyMs: latencyMs,
+                TokenCount: resp.totalTokens,
+                Confidence: resp.confidence,
+                Status: "Success",
+                ErrorMessage: null,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString(),
+                PromptTokens: resp.promptTokens,
+                CompletionTokens: resp.completionTokens,
+                Model: null,
+                FinishReason: null
+            );
+            await mediator.Send(logCommand, ct);
 
             return Results.Json(resp);
         });
@@ -263,7 +264,6 @@ public static class AiEndpoints
             QaRequest req,
             HttpContext context,
             IMediator mediator,
-            AiRequestLogService aiLog,
             IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
             IFeatureFlagService featureFlags, // CONFIG-05
             ILogger<Program> logger,
@@ -398,29 +398,30 @@ public static class AiEndpoints
 
             logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
 
-            // Log AI request
-            await aiLog.LogRequestAsync(
-                session.User.Id,
-                req.gameId,
-                "qa-stream",
-                req.query,
-                answer?.Length > 500 ? answer.Substring(0, 500) : answer,
-                latencyMs,
-                totalTokens,
-                confidence,
-                "Success",
-                null,
-                context.Connection.RemoteIpAddress?.ToString(),
-                context.Request.Headers.UserAgent.ToString(),
-                completionTokens: totalTokens,
-                ct: ct);
+            // Log AI request using CQRS
+            var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
+                UserId: session.User.Id,
+                GameId: req.gameId,
+                Endpoint: "qa-stream",
+                Query: req.query,
+                ResponseSnippet: answer?.Length > 500 ? answer.Substring(0, 500) : answer,
+                LatencyMs: latencyMs,
+                TokenCount: totalTokens,
+                Confidence: confidence,
+                Status: "Success",
+                ErrorMessage: null,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString(),
+                CompletionTokens: totalTokens
+            );
+            await mediator.Send(logCommand, ct);
 
             return Results.Empty;
         });
 
         // AI-03: RAG Setup Guide endpoint (Streaming)
         // Migrated to CQRS: Uses StreamSetupGuideQuery via MediatR with SSE streaming (Issue #1186)
-        group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, IMediator mediator, AiRequestLogService aiLog, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, IMediator mediator, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -499,24 +500,24 @@ public static class AiEndpoints
                 responseSnippet = responseSnippet.Substring(0, 500);
             }
 
-            await aiLog.LogRequestAsync(
-                session.User.Id,
-                req.gameId,
-                "setup-stream",
-                "setup_guide",
-                responseSnippet,
-                latencyMs,
-                totalTokens,
-                confidence,
-                "Success",
-                null,
-                context.Connection.RemoteIpAddress?.ToString(),
-                context.Request.Headers.UserAgent.ToString(),
-                promptTokens: 0, // Not tracked in streaming
-                completionTokens: totalTokens,
-                model: null,
-                finishReason: null,
-                ct: ct);
+            // Log AI request using CQRS
+            var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
+                UserId: session.User.Id,
+                GameId: req.gameId,
+                Endpoint: "setup-stream",
+                Query: "setup_guide",
+                ResponseSnippet: responseSnippet,
+                LatencyMs: latencyMs,
+                TokenCount: totalTokens,
+                Confidence: confidence,
+                Status: "Success",
+                ErrorMessage: null,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString(),
+                PromptTokens: 0, // Not tracked in streaming
+                CompletionTokens: totalTokens
+            );
+            await mediator.Send(logCommand, ct);
 
             return Results.Empty;
         });
@@ -559,7 +560,7 @@ public static class AiEndpoints
 
         // CHESS-04: Chess conversational agent endpoint
         // Migrated to CQRS: Uses InvokeChessAgentCommand via MediatR (Issue #1188)
-        group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IMediator mediator, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -600,25 +601,26 @@ public static class AiEndpoints
                 }
             }
 
-            // ADM-01: Log AI request
-            await aiLog.LogRequestAsync(
-                session.User.Id,
-                "chess",
-                "chess",
-                req.question,
-                resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
-                latencyMs,
-                resp.totalTokens,
-                resp.confidence,
-                "Success",
-                null,
-                context.Connection.RemoteIpAddress?.ToString(),
-                context.Request.Headers.UserAgent.ToString(),
-                promptTokens: resp.promptTokens,
-                completionTokens: resp.completionTokens,
-                model: model,
-                finishReason: finishReason,
-                ct: ct);
+            // ADM-01: Log AI request using CQRS
+            var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
+                UserId: session.User.Id,
+                GameId: "chess",
+                Endpoint: "chess",
+                Query: req.question,
+                ResponseSnippet: resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
+                LatencyMs: latencyMs,
+                TokenCount: resp.totalTokens,
+                Confidence: resp.confidence,
+                Status: "Success",
+                ErrorMessage: null,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString(),
+                PromptTokens: resp.promptTokens,
+                CompletionTokens: resp.completionTokens,
+                Model: model,
+                FinishReason: finishReason
+            );
+            await mediator.Send(logCommand, ct);
 
             return Results.Json(resp);
         });
@@ -627,7 +629,7 @@ public static class AiEndpoints
             HttpContext context,
             [FromQuery] string? q,
             [FromQuery] bool exact,
-            IBggApiService bggService,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -642,7 +644,12 @@ public static class AiEndpoints
             }
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-            var results = await bggService.SearchGamesAsync(q, exact, ct);
+            var query = new Api.BoundedContexts.GameManagement.Application.Queries.BggApi.SearchBggGamesQuery
+            {
+                Query = q,
+                Exact = exact
+            };
+            var results = await mediator.Send(query, ct);
             logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
             return Results.Json(new { results });
         });
@@ -650,7 +657,7 @@ public static class AiEndpoints
         group.MapGet("/bgg/games/{bggId:int}", async (
             int bggId,
             HttpContext context,
-            IBggApiService bggService,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -665,7 +672,11 @@ public static class AiEndpoints
             }
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-            var details = await bggService.GetGameDetailsAsync(bggId, ct);
+            var query = new Api.BoundedContexts.GameManagement.Application.Queries.BggApi.GetBggGameDetailsQuery
+            {
+                BggId = bggId
+            };
+            var details = await mediator.Send(query, ct);
 
             if (details == null)
             {

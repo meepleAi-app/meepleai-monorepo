@@ -30,12 +30,12 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
         var activatedByUserId = command.ActivatedByUserId;
         var reason = command.Reason;
 
-        if (string.IsNullOrWhiteSpace(templateId))
+        if (templateId == Guid.Empty)
         {
             throw new ArgumentException("Template ID is required", nameof(templateId));
         }
 
-        if (string.IsNullOrWhiteSpace(versionId))
+        if (versionId == Guid.Empty)
         {
             throw new ArgumentException("Version ID is required", nameof(versionId));
         }
@@ -49,7 +49,7 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
         var versionToActivate = await _db.PromptVersions
             .Include(v => v.Template)
             .Include(v => v.CreatedBy)
-            .FirstOrDefaultAsync(v => v.Id.ToString() == versionId && v.TemplateId.ToString() == templateId, cancellationToken);
+            .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, cancellationToken);
 
         if (versionToActivate == null)
         {
@@ -74,7 +74,7 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
         {
             // Deactivate all other versions of the same template
             var otherVersions = await _db.PromptVersions
-                .Where(v => v.TemplateId.ToString() == templateId && v.Id.ToString() != versionId && v.IsActive)
+                .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
                 .ToListAsync(cancellationToken);
 
             foreach (var otherVersion in otherVersions)
@@ -85,7 +85,7 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
                 var deactivationAuditLog = new PromptAuditLogEntity
                 {
                     Id = Guid.NewGuid(),
-                    TemplateId = Guid.Parse(templateId),
+                    TemplateId = templateId,
                     VersionId = otherVersion.Id,
                     Action = "version_deactivated",
                     ChangedByUserId = activatedByUserId,
@@ -112,8 +112,8 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
             var activationAuditLog = new PromptAuditLogEntity
             {
                 Id = Guid.NewGuid(),
-                TemplateId = Guid.Parse(templateId),
-                VersionId = Guid.Parse(versionId),
+                TemplateId = templateId,
+                VersionId = versionId,
                 Action = "version_activated",
                 ChangedByUserId = activatedByUserId,
                 ChangedAt = now,

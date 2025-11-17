@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {  screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import { useRouter } from 'next/router';
 import NewPromptVersion from '../../pages/admin/prompts/[id]/versions/new';
 import { api } from '../../lib/api';
@@ -56,7 +57,7 @@ describe('NewPromptVersion Page', () => {
 
   describe('Rendering', () => {
     it('should render the page with all form fields', () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       expect(screen.getByText('Create New Version')).toBeInTheDocument();
       expect(screen.getByText(/Prompt Content/)).toBeInTheDocument(); // Label text
@@ -69,7 +70,7 @@ describe('NewPromptVersion Page', () => {
     });
 
     it('should render back button with correct link', () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const backButton = screen.getByText('← Back to Template');
       expect(backButton.closest('a')).toHaveAttribute(
@@ -79,7 +80,7 @@ describe('NewPromptVersion Page', () => {
     });
 
     it('should render cancel button with correct link', () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const cancelButton = screen.getByText('Cancel');
       expect(cancelButton.closest('a')).toHaveAttribute(
@@ -91,7 +92,7 @@ describe('NewPromptVersion Page', () => {
 
   describe('Form Validation', () => {
     it('should show error when submitting without content', async () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const form = screen.getByText('Create Version').closest('form');
       fireEvent.submit(form!);
@@ -107,7 +108,7 @@ describe('NewPromptVersion Page', () => {
     });
 
     it('should show error for invalid JSON metadata', async () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Valid content' } });
@@ -128,7 +129,7 @@ describe('NewPromptVersion Page', () => {
     it('should accept valid JSON metadata', async () => {
       (api.post as jest.Mock).mockResolvedValue({ id: 'version-123' });
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Valid content' } });
@@ -155,7 +156,7 @@ describe('NewPromptVersion Page', () => {
     it('should allow empty metadata', async () => {
       (api.post as jest.Mock).mockResolvedValue({ id: 'version-123' });
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Valid content' } });
@@ -178,7 +179,7 @@ describe('NewPromptVersion Page', () => {
     it('should create version successfully without activation', async () => {
       (api.post as jest.Mock).mockResolvedValue({ id: 'version-123' });
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, {
@@ -213,7 +214,7 @@ describe('NewPromptVersion Page', () => {
     it('should create and activate version when checkbox is checked', async () => {
       (api.post as jest.Mock).mockResolvedValue({ id: 'version-123' });
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, {
@@ -256,7 +257,7 @@ describe('NewPromptVersion Page', () => {
 
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, {
@@ -286,7 +287,7 @@ describe('NewPromptVersion Page', () => {
         () => new Promise((resolve) => setTimeout(() => resolve({ id: '123' }), 100))
       );
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Content' } });
@@ -303,7 +304,7 @@ describe('NewPromptVersion Page', () => {
     it('should handle creation error', async () => {
       (api.post as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Content' } });
@@ -321,7 +322,7 @@ describe('NewPromptVersion Page', () => {
     it('should handle null API response', async () => {
       (api.post as jest.Mock).mockResolvedValue(null);
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Content' } });
@@ -337,7 +338,7 @@ describe('NewPromptVersion Page', () => {
 
   describe('Content Editor', () => {
     it('should update content when editor changes', () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, {
@@ -348,7 +349,7 @@ describe('NewPromptVersion Page', () => {
     });
 
     it('should display placeholder in editor', () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       expect(contentEditor).toHaveAttribute(
@@ -360,7 +361,7 @@ describe('NewPromptVersion Page', () => {
 
   describe('Metadata Editor', () => {
     it('should update metadata when textarea changes', () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const metadataTextarea = screen.getByPlaceholderText(/temperature/);
       const jsonValue = '{"temperature": 0.7, "max_tokens": 1000}';
@@ -370,7 +371,7 @@ describe('NewPromptVersion Page', () => {
     });
 
     it('should clear errors when valid JSON is entered', async () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Content' } });
@@ -398,7 +399,7 @@ describe('NewPromptVersion Page', () => {
 
   describe('Activate Checkbox', () => {
     it('should toggle activation checkbox', () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const checkbox = screen.getByRole('checkbox', { name: /Activate this version immediately/ });
       expect(checkbox).not.toBeChecked();
@@ -415,7 +416,7 @@ describe('NewPromptVersion Page', () => {
     it('should auto-hide success toast after 5 seconds', async () => {
       (api.post as jest.Mock).mockResolvedValue({ id: 'version-123' });
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Content' } });
@@ -441,7 +442,7 @@ describe('NewPromptVersion Page', () => {
     it('should auto-hide error toast after 5 seconds', async () => {
       (api.post as jest.Mock).mockRejectedValue(new Error('API error'));
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Content' } });
@@ -470,14 +471,14 @@ describe('NewPromptVersion Page', () => {
         query: {},
       });
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       // Should still render the form
       expect(screen.getByText('Create New Version')).toBeInTheDocument();
     });
 
     it('should trim whitespace from content before validation', async () => {
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: '   ' } });
@@ -493,7 +494,7 @@ describe('NewPromptVersion Page', () => {
     it('should handle complex nested JSON metadata', async () => {
       (api.post as jest.Mock).mockResolvedValue({ id: 'version-123' });
 
-      render(<NewPromptVersion />);
+      renderWithQuery(<NewPromptVersion />);
 
       const contentEditor = screen.getByTestId('prompt-editor');
       fireEvent.change(contentEditor, { target: { value: 'Content' } });

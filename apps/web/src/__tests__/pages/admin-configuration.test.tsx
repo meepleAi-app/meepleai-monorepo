@@ -6,7 +6,8 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {  screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import '@testing-library/jest-dom';
 import ConfigurationManagement from '../../pages/admin/configuration';
 import { api } from '../../lib/api';
@@ -186,7 +187,7 @@ describe('ConfigurationManagement Page', () => {
       );
 
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       expect(screen.getByText('Loading configurations...')).toBeInTheDocument();
@@ -197,7 +198,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('fetches configurations and categories on mount', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -218,7 +219,7 @@ describe('ConfigurationManagement Page', () => {
       (api.config.getConfigurations as jest.Mock).mockRejectedValue(networkError);
 
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -234,7 +235,7 @@ describe('ConfigurationManagement Page', () => {
       (api.config.getConfigurations as jest.Mock).mockRejectedValue(unauthorizedError);
 
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -251,7 +252,7 @@ describe('ConfigurationManagement Page', () => {
       (api.config.getConfigurations as jest.Mock).mockRejectedValue(forbiddenError);
 
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -264,7 +265,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('renders success state with configurations and stats', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -291,7 +292,7 @@ describe('ConfigurationManagement Page', () => {
   describe('Tab Navigation', () => {
     test('renders all 4 tabs with correct labels', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -304,7 +305,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('renders tab icons and descriptions', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -317,7 +318,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('switches to Rate Limiting tab when clicked', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByTestId('feature-flags-tab')).toBeInTheDocument();
@@ -337,7 +338,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('switches to AI/LLM tab when clicked', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByTestId('feature-flags-tab')).toBeInTheDocument();
@@ -355,7 +356,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('switches to RAG tab when clicked', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByTestId('feature-flags-tab')).toBeInTheDocument();
@@ -373,7 +374,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('highlights active tab with correct styling', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         const featureFlagsTab = screen.getByRole('button', { name: /feature flags/i });
@@ -394,7 +395,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('passes correct configurations to each tab', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert - Feature Flags tab should show 1 config
       await waitFor(() => {
@@ -411,7 +412,7 @@ describe('ConfigurationManagement Page', () => {
   describe('Action Buttons', () => {
     test('reloads configurations when Reload button clicked', async () => {
       // Arrange
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /reload/i })).toBeInTheDocument();
@@ -431,7 +432,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('handles reload failure gracefully', async () => {
       // Arrange
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /reload/i })).toBeInTheDocument();
@@ -455,7 +456,7 @@ describe('ConfigurationManagement Page', () => {
     test('invalidates cache when Clear Cache button clicked', async () => {
       // Arrange
       (api.config.invalidateCache as jest.Mock).mockResolvedValue(undefined);
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /clear cache/i })).toBeInTheDocument();
@@ -478,7 +479,7 @@ describe('ConfigurationManagement Page', () => {
       (api.config.invalidateCache as jest.Mock).mockRejectedValue(
         new Error('Cache invalidation failed')
       );
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /clear cache/i })).toBeInTheDocument();
@@ -497,7 +498,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('renders Back to Admin link', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -515,7 +516,7 @@ describe('ConfigurationManagement Page', () => {
   describe('Warning Banner', () => {
     test('displays warning banner initially', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -528,7 +529,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('dismisses banner when close button clicked', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(
@@ -547,7 +548,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('banner Learn more link has correct attributes', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -566,7 +567,7 @@ describe('ConfigurationManagement Page', () => {
   describe('Footer Stats', () => {
     test('displays correct total configurations count', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -580,7 +581,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('displays correct active configurations count', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -595,7 +596,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('displays correct categories count', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -608,7 +609,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('updates stats after configuration change', async () => {
       // Arrange
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByText('Total Configurations')).toBeInTheDocument();
@@ -668,7 +669,7 @@ describe('ConfigurationManagement Page', () => {
       (api.config.getConfigurations as jest.Mock).mockRejectedValue(error);
 
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -684,7 +685,7 @@ describe('ConfigurationManagement Page', () => {
         .mockRejectedValueOnce(error)
         .mockResolvedValueOnce(mockApiResponse);
 
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -709,7 +710,7 @@ describe('ConfigurationManagement Page', () => {
       (api.config.getConfigurations as jest.Mock).mockRejectedValue(authError);
 
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -728,7 +729,7 @@ describe('ConfigurationManagement Page', () => {
     test('full flow: load → tab switch → reload → cache clear', async () => {
       // Arrange
       (api.config.invalidateCache as jest.Mock).mockResolvedValue(undefined);
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert - Initial load
       await waitFor(() => {
@@ -766,7 +767,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('configuration change callback triggers reload', async () => {
       // Arrange
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       await waitFor(() => {
         expect(screen.getByTestId('feature-flags-tab')).toBeInTheDocument();
@@ -785,7 +786,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('tabs display filtered configurations correctly', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Feature Flags tab (default)
       await waitFor(() => {
@@ -820,7 +821,7 @@ describe('ConfigurationManagement Page', () => {
   describe('Accessibility', () => {
     test('has proper ARIA labels for tabs', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -833,7 +834,7 @@ describe('ConfigurationManagement Page', () => {
 
     test('sets correct page title', async () => {
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -858,7 +859,7 @@ describe('ConfigurationManagement Page', () => {
       });
 
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -873,7 +874,7 @@ describe('ConfigurationManagement Page', () => {
       (api.config.getCategories as jest.Mock).mockResolvedValue([]);
 
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert
       await waitFor(() => {
@@ -914,7 +915,7 @@ describe('ConfigurationManagement Page', () => {
       });
 
       // Act
-      render(<ConfigurationManagement />);
+      renderWithQuery(<ConfigurationManagement />);
 
       // Assert - Should render without errors
       await waitFor(() => {

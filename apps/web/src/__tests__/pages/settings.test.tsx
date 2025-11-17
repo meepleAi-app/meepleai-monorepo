@@ -11,7 +11,8 @@
  * - Tab navigation and content switching
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import {  screen, waitFor } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/router';
 import SettingsPage from '../../pages/settings';
@@ -152,7 +153,7 @@ describe('SettingsPage', () => {
     it('displays loading spinner initially', () => {
       mockAuthApi.getTwoFactorStatus.mockReturnValue(new Promise(() => {})); // Never resolves
 
-      const { container } = render(<SettingsPage />);
+      const { container } = renderWithQuery(<SettingsPage />);
 
       // Check for loading spinner by class
       const spinner = container.querySelector('.animate-spin');
@@ -162,7 +163,7 @@ describe('SettingsPage', () => {
     it('loads profile and 2FA status on mount', async () => {
       mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
@@ -176,7 +177,7 @@ describe('SettingsPage', () => {
     it('hides loading after data loads', async () => {
       mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusDisabled);
 
-      const { container } = render(<SettingsPage />);
+      const { container } = renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         const spinner = container.querySelector('.animate-spin');
@@ -202,7 +203,7 @@ describe('SettingsPage', () => {
         } as Response);
       });
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(mockRouter.push).toHaveBeenCalledWith('/login');
@@ -216,7 +217,7 @@ describe('SettingsPage', () => {
     });
 
     it('renders page title', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -224,7 +225,7 @@ describe('SettingsPage', () => {
     });
 
     it('renders page description', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText(/Manage your account settings and preferences/i)).toBeInTheDocument();
@@ -232,7 +233,7 @@ describe('SettingsPage', () => {
     });
 
     it('renders all four tabs', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByRole('tab', { name: 'Profile' })).toBeInTheDocument();
@@ -243,7 +244,7 @@ describe('SettingsPage', () => {
     });
 
     it('renders "Back to Home" button', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         const backButton = screen.getByRole('button', { name: /Back to Home/i });
@@ -256,7 +257,7 @@ describe('SettingsPage', () => {
       const mockRouter = createMockRouter({ pathname: '/settings' });
       useRouterMock.mockReturnValue(mockRouter);
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -275,7 +276,7 @@ describe('SettingsPage', () => {
     });
 
     it('shows Profile tab content by default', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profile Information')).toBeInTheDocument();
@@ -285,7 +286,7 @@ describe('SettingsPage', () => {
 
     it('switches to Preferences tab when clicked', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -300,7 +301,7 @@ describe('SettingsPage', () => {
 
     it('switches to Privacy tab when clicked', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -315,7 +316,7 @@ describe('SettingsPage', () => {
 
     it('switches to Advanced tab when clicked', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -336,7 +337,7 @@ describe('SettingsPage', () => {
     });
 
     it('displays user profile information', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
@@ -346,7 +347,7 @@ describe('SettingsPage', () => {
     });
 
     it('shows disabled Update Profile button', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         const updateButton = screen.getByRole('button', { name: /Update Profile/i });
@@ -356,7 +357,7 @@ describe('SettingsPage', () => {
     });
 
     it('shows password change fields', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByLabelText('Current Password')).toBeInTheDocument();
@@ -366,7 +367,7 @@ describe('SettingsPage', () => {
     });
 
     it('shows disabled Change Password button', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         const changePasswordButton = screen.getByRole('button', { name: /Change Password/i });
@@ -383,7 +384,7 @@ describe('SettingsPage', () => {
 
     it('displays language selector', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -398,7 +399,7 @@ describe('SettingsPage', () => {
 
     it('displays theme selector', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -413,7 +414,7 @@ describe('SettingsPage', () => {
 
     it('displays email notifications toggle', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -428,7 +429,7 @@ describe('SettingsPage', () => {
 
     it('displays data retention selector', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -443,7 +444,7 @@ describe('SettingsPage', () => {
 
     it('shows Save Preferences button', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -465,7 +466,7 @@ describe('SettingsPage', () => {
 
     it('displays 2FA section in Privacy tab', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -480,7 +481,7 @@ describe('SettingsPage', () => {
 
     it('displays description about 2FA', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -496,7 +497,7 @@ describe('SettingsPage', () => {
 
     it('renders "Enable Two-Factor Authentication" button', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -514,7 +515,7 @@ describe('SettingsPage', () => {
       const user = userEvent.setup();
       mockAuthApi.setup2FA.mockResolvedValue(mockTotpSetup);
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -539,7 +540,7 @@ describe('SettingsPage', () => {
         () => new Promise((resolve) => setTimeout(() => resolve(mockTotpSetup), 100))
       );
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -561,7 +562,7 @@ describe('SettingsPage', () => {
       const user = userEvent.setup();
       mockAuthApi.setup2FA.mockRejectedValue(new Error('Setup failed'));
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -591,7 +592,7 @@ describe('SettingsPage', () => {
 
     it('displays QR code after setup', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -614,7 +615,7 @@ describe('SettingsPage', () => {
 
     it('displays manual entry secret in details', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -641,7 +642,7 @@ describe('SettingsPage', () => {
 
     it('displays backup codes after setup', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -664,7 +665,7 @@ describe('SettingsPage', () => {
 
     it('downloads backup codes as text file', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -703,7 +704,7 @@ describe('SettingsPage', () => {
 
     it('hides backup codes when "I\'ve Saved My Codes" clicked', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -730,7 +731,7 @@ describe('SettingsPage', () => {
 
     it('renders verification code input', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -759,7 +760,7 @@ describe('SettingsPage', () => {
 
     it('formats verification code to digits only', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -788,7 +789,7 @@ describe('SettingsPage', () => {
 
     it('disables verify button when code length is not 6', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -827,7 +828,7 @@ describe('SettingsPage', () => {
       mockAuthApi.getTwoFactorStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
       mockAuthApi.getTwoFactorStatus.mockResolvedValueOnce(mock2FAStatusEnabled);
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -865,7 +866,7 @@ describe('SettingsPage', () => {
       const user = userEvent.setup();
       mockAuthApi.enable2FA.mockRejectedValue(new Error('Invalid code'));
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -901,7 +902,7 @@ describe('SettingsPage', () => {
 
     it('cancels setup and returns to initial state', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -936,7 +937,7 @@ describe('SettingsPage', () => {
 
     it('displays enabled status with checkmark', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -950,7 +951,7 @@ describe('SettingsPage', () => {
 
     it('displays backup codes count', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -968,7 +969,7 @@ describe('SettingsPage', () => {
       mockAuthApi.getTwoFactorStatus.mockResolvedValue(mock2FAStatusLowBackupCodes);
 
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -984,7 +985,7 @@ describe('SettingsPage', () => {
 
     it('does not show warning when backup codes are sufficient', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -999,7 +1000,7 @@ describe('SettingsPage', () => {
 
     it('renders disable 2FA section', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1013,7 +1014,7 @@ describe('SettingsPage', () => {
 
     it('renders password input for disable', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1029,7 +1030,7 @@ describe('SettingsPage', () => {
 
     it('renders code input for disable', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1045,7 +1046,7 @@ describe('SettingsPage', () => {
 
     it('disables button when password or code is empty', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1060,7 +1061,7 @@ describe('SettingsPage', () => {
 
     it('enables button when both password and code are provided', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1083,7 +1084,7 @@ describe('SettingsPage', () => {
       const user = userEvent.setup();
       mockConfirm.mockReturnValue(false);
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1110,7 +1111,7 @@ describe('SettingsPage', () => {
       const user = userEvent.setup();
       mockConfirm.mockReturnValue(false);
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1138,7 +1139,7 @@ describe('SettingsPage', () => {
       mockAuthApi.getTwoFactorStatus.mockResolvedValueOnce(mock2FAStatusEnabled);
       mockAuthApi.getTwoFactorStatus.mockResolvedValueOnce(mock2FAStatusDisabled);
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1168,7 +1169,7 @@ describe('SettingsPage', () => {
       mockConfirm.mockReturnValue(true);
       mockAuthApi.disable2FA.mockRejectedValue(new Error('Invalid credentials'));
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1203,7 +1204,7 @@ describe('SettingsPage', () => {
 
     it('displays OAuth section in Privacy tab', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1218,7 +1219,7 @@ describe('SettingsPage', () => {
 
     it('displays OAuth provider options', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1234,7 +1235,7 @@ describe('SettingsPage', () => {
 
     it('shows connected status for linked accounts', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1256,7 +1257,7 @@ describe('SettingsPage', () => {
 
     it('shows Link button for unlinked accounts', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1272,7 +1273,7 @@ describe('SettingsPage', () => {
 
     it('shows Unlink button for linked accounts', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1294,7 +1295,7 @@ describe('SettingsPage', () => {
 
     it('displays API Keys section with coming soon message', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1309,7 +1310,7 @@ describe('SettingsPage', () => {
 
     it('displays Active Sessions section with coming soon message', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1324,7 +1325,7 @@ describe('SettingsPage', () => {
 
     it('displays Danger Zone section', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1339,7 +1340,7 @@ describe('SettingsPage', () => {
 
     it('shows disabled Delete Account button', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1359,7 +1360,7 @@ describe('SettingsPage', () => {
       const consoleError = jest.spyOn(console, 'error').mockImplementation();
       mockAuthApi.getTwoFactorStatus.mockRejectedValue(new Error('Network error'));
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       // The error from getStatus is caught but doesn't set the main error state
       // Instead, let's test error display by simulating a setup error
@@ -1389,7 +1390,7 @@ describe('SettingsPage', () => {
 
     it('displays success alert when operation succeeds', async () => {
       const user = userEvent.setup();
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1413,7 +1414,7 @@ describe('SettingsPage', () => {
     });
 
     it('has proper heading hierarchy', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         const h1 = screen.getByRole('heading', { level: 1, name: 'Settings' });
@@ -1422,7 +1423,7 @@ describe('SettingsPage', () => {
     });
 
     it('tabs have proper ARIA roles', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         const tabList = screen.getByRole('tablist');
@@ -1434,7 +1435,7 @@ describe('SettingsPage', () => {
     });
 
     it('tab panels have proper ARIA roles', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         const tabPanel = screen.getByRole('tabpanel');
@@ -1443,7 +1444,7 @@ describe('SettingsPage', () => {
     });
 
     it('form inputs have proper labels', async () => {
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByLabelText('Display Name')).toBeInTheDocument();
@@ -1456,7 +1457,7 @@ describe('SettingsPage', () => {
       const user = userEvent.setup();
       mockAuthApi.setup2FA.mockResolvedValue(mockTotpSetup);
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1486,7 +1487,7 @@ describe('SettingsPage', () => {
         backupCodes: [],
       });
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
@@ -1519,7 +1520,7 @@ describe('SettingsPage', () => {
         } as Response);
       });
 
-      render(<SettingsPage />);
+      renderWithQuery(<SettingsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Failed to load profile')).toBeInTheDocument();

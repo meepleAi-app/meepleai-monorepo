@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import {  screen, waitFor } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import userEvent from '@testing-library/user-event';
 import SetupPage from '../../pages/setup';
 import { api } from '../../lib/api';
@@ -93,7 +94,7 @@ describe('SetupPage', () => {
     it('shows unauthenticated state when user is not logged in', async () => {
       mockApi.get.mockResolvedValueOnce(null);
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitForApiCall(mockApi.get, '/api/v1/auth/me');
 
@@ -105,7 +106,7 @@ describe('SetupPage', () => {
     it('shows authenticated interface when user is logged in', async () => {
       setupAuthenticatedState();
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: 'Game Setup Guide' })).toBeInTheDocument();
@@ -118,7 +119,7 @@ describe('SetupPage', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockApi.get.mockRejectedValueOnce(new Error('Auth failed'));
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitForApiCall(mockApi.get, '/api/v1/auth/me');
 
@@ -136,7 +137,7 @@ describe('SetupPage', () => {
     it('loads games after authentication', async () => {
       setupAuthenticatedState();
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -148,7 +149,7 @@ describe('SetupPage', () => {
     it('auto-selects first game when games are loaded', async () => {
       setupAuthenticatedState();
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -160,7 +161,7 @@ describe('SetupPage', () => {
       mockApi.get.mockResolvedValueOnce(mockAuthResponse);
       mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => {
         const gameSelect = screen.getByLabelText('Game:') as HTMLSelectElement;
@@ -172,7 +173,7 @@ describe('SetupPage', () => {
       mockApi.get.mockResolvedValueOnce(mockAuthResponse);
       mockApi.get.mockResolvedValueOnce([]);
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -186,7 +187,7 @@ describe('SetupPage', () => {
       mockApi.get.mockResolvedValueOnce(mockAuthResponse);
       mockApi.get.mockRejectedValueOnce(new Error('Games API failed'));
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -205,7 +206,7 @@ describe('SetupPage', () => {
       setupAuthenticatedState();
       mockApi.post.mockResolvedValueOnce(mockSetupGuideResponse);
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -228,7 +229,7 @@ describe('SetupPage', () => {
       setupAuthenticatedState();
       mockApi.post.mockImplementation(() => new Promise(() => {})); // Never resolves
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -246,7 +247,7 @@ describe('SetupPage', () => {
     it('disables generate button when no game is selected', async () => {
       setupAuthenticatedState();
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -264,7 +265,7 @@ describe('SetupPage', () => {
       setupAuthenticatedState();
       mockApi.post.mockRejectedValueOnce(new Error('Generation failed'));
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -292,7 +293,7 @@ describe('SetupPage', () => {
     });
 
     it('displays all setup steps', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -307,7 +308,7 @@ describe('SetupPage', () => {
     });
 
     it('marks optional steps with badge', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -321,7 +322,7 @@ describe('SetupPage', () => {
     });
 
     it('toggles step completion when checkbox is clicked', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -347,7 +348,7 @@ describe('SetupPage', () => {
     });
 
     it('updates progress percentage when steps are completed', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -375,7 +376,7 @@ describe('SetupPage', () => {
     });
 
     it('shows completion message when all steps are done', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -400,7 +401,7 @@ describe('SetupPage', () => {
     it('resets progress when reset button is clicked', async () => {
       window.confirm = jest.fn(() => true);
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -438,7 +439,7 @@ describe('SetupPage', () => {
     it('does not reset progress when user cancels confirmation', async () => {
       window.confirm = jest.fn(() => false);
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -477,7 +478,7 @@ describe('SetupPage', () => {
     });
 
     it('shows references button for steps with citations', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -491,7 +492,7 @@ describe('SetupPage', () => {
     });
 
     it('does not show references button for steps without citations', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -508,7 +509,7 @@ describe('SetupPage', () => {
     });
 
     it('opens citation modal when reference button is clicked', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -532,7 +533,7 @@ describe('SetupPage', () => {
     });
 
     it('closes citation modal when close button is clicked', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -560,7 +561,7 @@ describe('SetupPage', () => {
     });
 
     it('closes citation modal when clicking outside', async () => {
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -600,7 +601,7 @@ describe('SetupPage', () => {
     it('shows empty state before generating guide', async () => {
       setupAuthenticatedState();
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -612,7 +613,7 @@ describe('SetupPage', () => {
       setupAuthenticatedState();
       mockApi.post.mockResolvedValueOnce(mockSetupGuideResponse);
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -630,7 +631,7 @@ describe('SetupPage', () => {
       setupAuthenticatedState();
       mockApi.post.mockResolvedValueOnce(mockSetupGuideResponse);
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -646,7 +647,7 @@ describe('SetupPage', () => {
       setupAuthenticatedState();
       mockApi.post.mockResolvedValueOnce(mockSetupGuideResponse);
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
@@ -663,7 +664,7 @@ describe('SetupPage', () => {
       setupAuthenticatedState();
       mockApi.post.mockResolvedValueOnce(mockSetupGuideResponse);
 
-      render(<SetupPage />);
+      renderWithQuery(<SetupPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 

@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import {  screen, waitFor, within } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import userEvent from '@testing-library/user-event';
 import type { NextRouter } from 'next/router';
 import VersionHistory from '../../pages/versions';
@@ -221,7 +222,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitForApiCall(mockApi.get, '/api/v1/auth/me');
     });
@@ -231,7 +232,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitForApiCall(mockApi.get, '/api/v1/games/demo-chess/rulespec/history');
 
@@ -243,7 +244,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
 
       mockUseRouter.mockReturnValue(createRouter());
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Specifica un gameId nella query string/i)).toBeInTheDocument();
@@ -253,7 +254,7 @@ describe('VersionHistory Page', () => {
     it('handles auth failure', async () => {
       mockApi.get.mockResolvedValueOnce(null);
 
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Devi effettuare l'accesso/i)).toBeInTheDocument();
@@ -273,7 +274,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitForApiCall(mockApi.get, '/api/v1/games/demo-chess/rulespec/history');
     });
@@ -283,7 +284,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText('3.0.0')).toBeInTheDocument();
@@ -301,7 +302,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Caricamento storico\.\.\./i)).toBeInTheDocument();
@@ -317,7 +318,7 @@ describe('VersionHistory Page', () => {
       });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Versioni \(0\)/i)).toBeInTheDocument();
@@ -330,7 +331,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockRejectedValueOnce({ message: 'Game not found' });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Game not found/i)).toBeInTheDocument();
@@ -345,7 +346,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockRejectedValueOnce({ message: 'Internal server error' });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Internal server error/i)).toBeInTheDocument();
@@ -359,7 +360,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Versioni \(3\)/i)).toBeInTheDocument();
@@ -371,7 +372,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         const expectedDate = new Date('2024-03-01T12:00:00Z').toLocaleString();
@@ -392,7 +393,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         const fromSelect = screen.getByLabelText(/^Da versione:/i) as HTMLSelectElement;
@@ -412,7 +413,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData); // After manual selection
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       // Wait for version history to load and dropdowns to appear
       await waitFor(() => {
@@ -436,7 +437,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData); // After manual selection
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       // Wait for version history to load and dropdowns to appear
       await waitFor(() => {
@@ -458,7 +459,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitForApiCall(mockApi.get, '/api/v1/games/demo-chess/rulespec/diff?from=2.0.0&to=3.0.0');
     });
@@ -470,7 +471,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         const fromSelect = screen.getByLabelText(/^Da versione:/i);
@@ -493,7 +494,7 @@ describe('VersionHistory Page', () => {
       });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Caricamento diff\.\.\./i)).toBeInTheDocument();
@@ -508,7 +509,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
@@ -532,7 +533,7 @@ describe('VersionHistory Page', () => {
       });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Seleziona due versioni per visualizzare le differenze/i)).toBeInTheDocument();
@@ -552,7 +553,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
@@ -566,7 +567,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-from-version')).toHaveTextContent('2.0.0');
@@ -581,7 +582,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-summary')).toHaveTextContent('3 added, 1 modified, 1 deleted');
@@ -596,7 +597,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
@@ -618,7 +619,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-show-only-changes')).toHaveTextContent('true');
@@ -633,7 +634,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('diff-show-only-changes')).toHaveTextContent('true');
@@ -660,7 +661,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('comment-thread')).toBeInTheDocument();
@@ -674,7 +675,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('comment-game-id')).toHaveTextContent('demo-chess');
@@ -688,7 +689,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('comment-version')).toHaveTextContent('3.0.0');
@@ -702,7 +703,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('comment-user-id')).toHaveTextContent('admin-1');
@@ -716,7 +717,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByTestId('comment-user-role')).toHaveTextContent('Admin');
@@ -732,7 +733,7 @@ describe('VersionHistory Page', () => {
       });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.queryByTestId('comment-thread')).not.toBeInTheDocument();
@@ -750,7 +751,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText('Storico Versioni RuleSpec')).toBeInTheDocument();
@@ -762,7 +763,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         const editorLink = screen.getByText('Editor').closest('a');
@@ -775,7 +776,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       // Wait for auth to load first
       await waitFor(() => {
@@ -793,7 +794,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       // Wait for auth to load first
       await waitFor(() => {
@@ -817,7 +818,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       // Wait for auth to load first
       await waitFor(() => {
@@ -835,7 +836,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       // Wait for auth to load first
       await waitFor(() => {
@@ -853,7 +854,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Ripristina/i)).not.toBeInTheDocument();
@@ -865,7 +866,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         const restoreButtons = screen.getAllByRole('button', { name: /Ripristina/i });
@@ -895,7 +896,7 @@ describe('VersionHistory Page', () => {
       mockApi.put.mockResolvedValueOnce({ ...mockRuleSpec, version: '4.0.0' });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getAllByText(/Ripristina/i).length).toBeGreaterThan(0);
@@ -924,7 +925,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getAllByText(/Ripristina/i).length).toBeGreaterThan(0);
@@ -956,7 +957,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockRejectedValueOnce({ message: 'Diff calculation failed' });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Diff calculation failed/i)).toBeInTheDocument();
@@ -984,7 +985,7 @@ describe('VersionHistory Page', () => {
       });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getAllByText(/Ripristina/i).length).toBeGreaterThan(0);
@@ -1012,7 +1013,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getAllByText(/Ripristina/i).length).toBeGreaterThan(0);
@@ -1032,7 +1033,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockRejectedValueOnce({});
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText(/Impossibile caricare lo storico versioni/i)).toBeInTheDocument();
@@ -1056,7 +1057,7 @@ describe('VersionHistory Page', () => {
       });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         const fromSelect = screen.getByLabelText(/^Da versione:/i) as HTMLSelectElement;
@@ -1072,7 +1073,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
-      render(<VersionHistory />);
+      renderWithQuery(<VersionHistory />);
 
       await waitFor(() => {
         expect(screen.getByText('(corrente)')).toBeInTheDocument();

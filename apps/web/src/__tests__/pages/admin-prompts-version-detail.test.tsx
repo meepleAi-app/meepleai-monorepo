@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {  screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { renderWithQuery } from '../utils/query-test-utils';
 import { useRouter } from 'next/router';
 import PromptVersionDetail from '../../pages/admin/prompts/[id]/versions/[versionId]';
 import { api } from '../../lib/api';
@@ -78,7 +79,7 @@ describe('PromptVersionDetail Page', () => {
     it('should show loading indicator while fetching', () => {
       (api.get as jest.Mock).mockImplementation(() => new Promise(() => {}));
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
@@ -88,7 +89,7 @@ describe('PromptVersionDetail Page', () => {
     it('should display error message when fetch fails', async () => {
       (api.get as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -100,7 +101,7 @@ describe('PromptVersionDetail Page', () => {
     it('should display unauthorized error when API returns null', async () => {
       (api.get as jest.Mock).mockResolvedValue(null);
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -110,7 +111,7 @@ describe('PromptVersionDetail Page', () => {
     it('should display not found message when version is missing', async () => {
       (api.get as jest.Mock).mockResolvedValue(null);
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -120,7 +121,7 @@ describe('PromptVersionDetail Page', () => {
     it('should have working back button in error state', async () => {
       (api.get as jest.Mock).mockRejectedValue(new Error('Not found'));
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -140,7 +141,7 @@ describe('PromptVersionDetail Page', () => {
     });
 
     it('should display version information', async () => {
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Version 2')).toBeInTheDocument();
@@ -152,7 +153,7 @@ describe('PromptVersionDetail Page', () => {
     });
 
     it('should display prompt content in readonly editor', async () => {
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         const editor = screen.getByTestId('prompt-editor');
@@ -162,7 +163,7 @@ describe('PromptVersionDetail Page', () => {
     });
 
     it('should display metadata when present', async () => {
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Metadata')).toBeInTheDocument();
@@ -177,7 +178,7 @@ describe('PromptVersionDetail Page', () => {
         metadata: {},
       });
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.queryByText('Metadata')).not.toBeInTheDocument();
@@ -190,7 +191,7 @@ describe('PromptVersionDetail Page', () => {
         metadata: null,
       });
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.queryByText('Metadata')).not.toBeInTheDocument();
@@ -202,7 +203,7 @@ describe('PromptVersionDetail Page', () => {
     it('should show active badge for active version', async () => {
       (api.get as jest.Mock).mockResolvedValue(mockActiveVersion);
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('✓ Active')).toBeInTheDocument();
@@ -212,7 +213,7 @@ describe('PromptVersionDetail Page', () => {
     it('should not show active badge for inactive version', async () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersion);
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.queryByText('✓ Active')).not.toBeInTheDocument();
@@ -224,7 +225,7 @@ describe('PromptVersionDetail Page', () => {
     it('should show activate button for inactive version', async () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersion);
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Activate Version')).toBeInTheDocument();
@@ -234,7 +235,7 @@ describe('PromptVersionDetail Page', () => {
     it('should not show activate button for active version', async () => {
       (api.get as jest.Mock).mockResolvedValue(mockActiveVersion);
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.queryByText('Activate Version')).not.toBeInTheDocument();
@@ -245,7 +246,7 @@ describe('PromptVersionDetail Page', () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersion);
       (api.post as jest.Mock).mockResolvedValue({});
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Activate Version')).toBeInTheDocument();
@@ -272,7 +273,7 @@ describe('PromptVersionDetail Page', () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersion);
       (api.post as jest.Mock).mockRejectedValue(new Error('Activation failed'));
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Activate Version')).toBeInTheDocument();
@@ -291,7 +292,7 @@ describe('PromptVersionDetail Page', () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersion);
       (api.post as jest.Mock).mockResolvedValue({});
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Activate Version')).toBeInTheDocument();
@@ -314,7 +315,7 @@ describe('PromptVersionDetail Page', () => {
     });
 
     it('should have back to template link', async () => {
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         const backButton = screen.getByText('← Back to Template');
@@ -326,7 +327,7 @@ describe('PromptVersionDetail Page', () => {
     });
 
     it('should have compare link with version query param', async () => {
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         const compareButton = screen.getByText('Compare');
@@ -343,7 +344,7 @@ describe('PromptVersionDetail Page', () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersion);
       (api.post as jest.Mock).mockResolvedValue({});
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Activate Version')).toBeInTheDocument();
@@ -373,7 +374,7 @@ describe('PromptVersionDetail Page', () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersion);
       (api.post as jest.Mock).mockRejectedValue(new Error('Error'));
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Activate Version')).toBeInTheDocument();
@@ -405,7 +406,7 @@ describe('PromptVersionDetail Page', () => {
         query: {},
       });
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       // Should show loading state
       expect(screen.getByText('Loading...')).toBeInTheDocument();
@@ -417,7 +418,7 @@ describe('PromptVersionDetail Page', () => {
         query: { versionId: 'version-456' },
       });
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       expect(api.get).not.toHaveBeenCalled();
     });
@@ -428,7 +429,7 @@ describe('PromptVersionDetail Page', () => {
         query: { id: 'template-123' },
       });
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       expect(api.get).not.toHaveBeenCalled();
     });
@@ -436,7 +437,7 @@ describe('PromptVersionDetail Page', () => {
     it('should display error toast on initial load failure', async () => {
       (api.get as jest.Mock).mockRejectedValue(new Error('Load error'));
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Unexpected Error')).toBeInTheDocument();
@@ -446,7 +447,7 @@ describe('PromptVersionDetail Page', () => {
     it('should format metadata as pretty JSON', async () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersion);
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         // Check that JSON metadata is rendered
@@ -462,7 +463,7 @@ describe('PromptVersionDetail Page', () => {
         createdByEmail: '',
       });
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         expect(screen.getByText('Version 2')).toBeInTheDocument();
@@ -474,7 +475,7 @@ describe('PromptVersionDetail Page', () => {
     it('should format creation date correctly', async () => {
       (api.get as jest.Mock).mockResolvedValue(mockVersion);
 
-      render(<PromptVersionDetail />);
+      renderWithQuery(<PromptVersionDetail />);
 
       await waitFor(() => {
         const formattedDate = new Date(mockVersion.createdAt).toLocaleString();

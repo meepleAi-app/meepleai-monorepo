@@ -84,8 +84,20 @@ jobs:
           path: apps/web/playwright-report/
           retention-days: 7
 
-      - name: Upload Lighthouse Reports
+      - name: Check if Lighthouse Reports exist
         if: always()
+        id: check-reports
+        run: |
+          if [ -d "lighthouse-reports" ] && [ "$(ls -A lighthouse-reports 2>/dev/null)" ]; then
+            echo "reports_exist=true" >> $GITHUB_OUTPUT
+            echo "✅ Lighthouse reports directory exists and contains files"
+          else
+            echo "reports_exist=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Lighthouse reports directory is empty or does not exist"
+          fi
+
+      - name: Upload Lighthouse Reports
+        if: always() && steps.check-reports.outputs.reports_exist == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: lighthouse-reports-${{ github.run_number }}

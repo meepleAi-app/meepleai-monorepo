@@ -87,9 +87,10 @@ public class SessionAutoRevocationService : BackgroundService
         try
         {
             using var scope = _scopeFactory.CreateScope();
-            var sessionManagement = scope.ServiceProvider.GetRequiredService<ISessionManagementService>();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-            var revokedCount = await sessionManagement.RevokeInactiveSessionsAsync(ct);
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeInactiveSessionsCommand();
+            var revokedCount = await mediator.Send(command, ct);
 
             if (revokedCount > 0)
             {

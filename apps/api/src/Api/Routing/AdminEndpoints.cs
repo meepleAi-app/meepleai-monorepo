@@ -30,12 +30,13 @@ public static class AdminEndpoints
 {
     public static RouteGroupBuilder MapAdminEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/logs", async (HttpContext context, AiRequestLogService logService, CancellationToken ct) =>
+        group.MapGet("/logs", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var result = await logService.GetRequestsAsync(limit: 100, ct: ct);
+            var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestsQuery(Limit: 100);
+            var result = await mediator.Send(query, ct);
 
             var response = result.Requests
                 .Select(log =>
@@ -120,30 +121,31 @@ public static class AdminEndpoints
         });
 
         // ADM-01: Admin dashboard endpoints
-        group.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService logService, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, string? gameId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
+        group.MapGet("/admin/requests", async (HttpContext context, IMediator mediator, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, string? gameId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var result = await logService.GetRequestsAsync(
+            var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestsQuery(
                 limit,
                 offset,
                 endpoint,
                 userId,
                 gameId,
                 startDate,
-                endDate,
-                ct);
+                endDate);
+            var result = await mediator.Send(query, ct);
 
             return Results.Json(new { requests = result.Requests, totalCount = result.TotalCount });
         });
 
-        group.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
+        group.MapGet("/admin/stats", async (HttpContext context, IMediator mediator, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var stats = await logService.GetStatsAsync(startDate, endDate, userId, gameId, ct);
+            var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestStatsQuery(startDate, endDate, userId, gameId);
+            var stats = await mediator.Send(query, ct);
             // TODO: Add feedback stats query when AgentFeedbackService is migrated to CQRS
 
             return Results.Json(new
@@ -404,23 +406,28 @@ public static class AdminEndpoints
         .WithDescription("Validate n8n workflow template JSON structure (admin only)");
 
         // AUTH-03: Session management endpoints
-        group.MapGet("/admin/sessions", async (HttpContext context, ISessionManagementService sessionManagement, int limit = 100, string? userId = null, CancellationToken ct = default) =>
+        group.MapGet("/admin/sessions", async (HttpContext context, IMediator mediator, int limit = 100, string? userId = null, CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var sessions = await sessionManagement.GetAllSessionsAsync(string.IsNullOrEmpty(userId) ? (Guid?)null : Guid.Parse(userId), limit, ct);
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetAllSessionsQuery(
+                UserId: string.IsNullOrEmpty(userId) ? null : Guid.Parse(userId),
+                Limit: limit
+            );
+            var sessions = await mediator.Send(query, ct);
             return Results.Json(sessions);
         });
 
-        group.MapDelete("/admin/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/admin/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} revoking session {SessionId}", session.User.Id, sessionId);
 
-            var revoked = await sessionManagement.RevokeSessionAsync(sessionId, ct);
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand(sessionId);
+            var revoked = await mediator.Send(command, ct);
             if (!revoked)
             {
                 return Results.NotFound(new { error = "Session not found or already revoked" });
@@ -430,14 +437,15 @@ public static class AdminEndpoints
             return Results.Json(new { ok = true });
         });
 
-        group.MapDelete("/admin/users/{userId:guid}/sessions", async (Guid userId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/admin/users/{userId:guid}/sessions", async (Guid userId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} revoking all sessions for user {UserId}", session.User.Id, userId);
 
-            var count = await sessionManagement.RevokeAllUserSessionsAsync(userId, ct);
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeAllUserSessionsCommand(userId);
+            var count = await mediator.Send(command, ct);
 
             logger.LogInformation("Revoked {Count} sessions for user {UserId}", count, userId);
             return Results.Json(new { ok = true, revokedCount = count });
@@ -1055,14 +1063,15 @@ public static class AdminEndpoints
         .WithTags("Admin");
 
         // API-04: Admin API Key Management endpoint
-        group.MapDelete("/admin/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/admin/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} permanently deleting API key {KeyId}", session.User.Id, keyId);
 
-            var success = await apiKeyManagement.DeleteApiKeyAsync(keyId, session.User.Id, ct);
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.DeleteApiKeyCommand(keyId, session.User.Id);
+            var success = await mediator.Send(command, ct);
 
             if (!success)
             {
@@ -1531,53 +1540,58 @@ public static class AdminEndpoints
         // AI-07: Prompt versioning and management endpoints
 
         // Create prompt template (Admin only)
-        group.MapPost("/prompts", async (CreatePromptTemplateRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/prompts", async (CreatePromptTemplateRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} creating prompt template '{TemplateName}'", session.User.Id, request.Name);
-            var response = await promptManagement.CreatePromptTemplateAsync(request, Guid.Parse(session.User.Id), ct);
+            var command = new Api.BoundedContexts.Administration.Application.Commands.CreatePromptTemplateCommand(request, Guid.Parse(session.User.Id));
+            var response = await mediator.Send(command, ct);
             logger.LogInformation("Prompt template {TemplateId} created successfully", response.Template.Id);
             return Results.Created($"/api/v1/prompts/{response.Template.Id}", response);
         });
 
         // Create new version of prompt template (Admin only)
-        group.MapPost("/prompts/{templateId:guid}/versions", async (Guid templateId, CreatePromptVersionRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/prompts/{templateId:guid}/versions", async (Guid templateId, CreatePromptVersionRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} creating new version for prompt template {TemplateId}", session.User.Id, templateId);
-            var version = await promptManagement.CreatePromptVersionAsync(templateId.ToString(), request, Guid.Parse(session.User.Id), ct);
+            var command = new Api.BoundedContexts.Administration.Application.Commands.CreatePromptVersionCommand(templateId.ToString(), request, Guid.Parse(session.User.Id));
+            var version = await mediator.Send(command, ct);
             logger.LogInformation("Prompt version {VersionId} (v{VersionNumber}) created successfully", version.Id, version.VersionNumber);
             return Results.Created($"/api/v1/prompts/{templateId}/versions/{version.VersionNumber}", version);
         });
 
         // Get version history for prompt template (Admin only)
-        group.MapGet("/prompts/{templateId:guid}/versions", async (Guid templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/prompts/{templateId:guid}/versions", async (Guid templateId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var history = await promptManagement.GetVersionHistoryAsync(templateId.ToString(), ct);
+            var query = new Api.BoundedContexts.Administration.Application.Queries.GetPromptVersionHistoryQuery(templateId.ToString());
+            var history = await mediator.Send(query, ct);
             return Results.Json(history);
         });
 
         // Get active version of prompt template (Authenticated users)
-        group.MapGet("/prompts/{templateId:guid}/versions/active", async (Guid templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/prompts/{templateId:guid}/versions/active", async (Guid templateId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
             // Get template to retrieve name
-            var template = await promptManagement.GetTemplateAsync(templateId.ToString(), ct);
+            var templateQuery = new Api.BoundedContexts.Administration.Application.Queries.GetPromptTemplateQuery(templateId.ToString());
+            var template = await mediator.Send(templateQuery, ct);
             if (template == null)
             {
                 return Results.NotFound(new { error = "Template not found" });
             }
 
-            var activeVersion = await promptManagement.GetActiveVersionAsync(template.Name, ct);
+            var activeQuery = new Api.BoundedContexts.Administration.Application.Queries.GetActivePromptVersionQuery(template.Name);
+            var activeVersion = await mediator.Send(activeQuery, ct);
             if (activeVersion == null)
             {
                 return Results.NotFound(new { error = "No active version found for this template" });
@@ -1587,44 +1601,48 @@ public static class AdminEndpoints
         });
 
         // Activate version (rollback capability) (Admin only)
-        group.MapPut("/prompts/{templateId:guid}/versions/{versionId:guid}/activate", async (Guid templateId, Guid versionId, ActivatePromptVersionRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPut("/prompts/{templateId:guid}/versions/{versionId:guid}/activate", async (Guid templateId, Guid versionId, ActivatePromptVersionRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
-            var activatedVersion = await promptManagement.ActivateVersionAsync(templateId.ToString(), versionId.ToString(), Guid.Parse(session.User.Id), request.Reason, ct);
+            var command = new Api.BoundedContexts.Administration.Application.Commands.ActivatePromptVersionCommand(templateId.ToString(), versionId.ToString(), Guid.Parse(session.User.Id), request.Reason);
+            var activatedVersion = await mediator.Send(command, ct);
             logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
             return Results.Json(activatedVersion);
         });
 
         // Get audit log for prompt template (Admin only)
-        group.MapGet("/prompts/{templateId:guid}/audit-log", async (Guid templateId, int limit, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/prompts/{templateId:guid}/audit-log", async (Guid templateId, int limit, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var auditLog = await promptManagement.GetAuditLogAsync(templateId.ToString(), limit, ct);
+            var query = new Api.BoundedContexts.Administration.Application.Queries.GetPromptAuditLogQuery(templateId.ToString(), limit);
+            var auditLog = await mediator.Send(query, ct);
             return Results.Json(auditLog);
         });
 
         // List all prompt templates (Admin only)
-        group.MapGet("/prompts", async (string? category, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/prompts", async (string? category, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var templates = await promptManagement.ListTemplatesAsync(category, ct);
+            var query = new Api.BoundedContexts.Administration.Application.Queries.ListPromptTemplatesQuery(category);
+            var templates = await mediator.Send(query, ct);
             return Results.Json(templates);
         });
 
         // Get specific prompt template (Admin only)
-        group.MapGet("/prompts/{templateId:guid}", async (Guid templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/prompts/{templateId:guid}", async (Guid templateId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var template = await promptManagement.GetTemplateAsync(templateId.ToString(), ct);
+            var query = new Api.BoundedContexts.Administration.Application.Queries.GetPromptTemplateQuery(templateId.ToString());
+            var template = await mediator.Send(query, ct);
             if (template == null)
             {
                 return Results.NotFound(new { error = "Template not found" });
@@ -1634,7 +1652,7 @@ public static class AdminEndpoints
         });
 
         // API-04: API Key Management endpoints
-        group.MapPost("/api-keys", async (CreateApiKeyRequest request, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/api-keys", async (CreateApiKeyRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -1646,31 +1664,37 @@ public static class AdminEndpoints
 
             logger.LogInformation("User {UserId} creating API key '{KeyName}'", session.User.Id, request.KeyName);
 
-            var result = await apiKeyManagement.CreateApiKeyAsync(
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.CreateApiKeyManagementCommand(
                 session.User.Id,
-                request,
-                ct);
+                request);
+            var result = await mediator.Send(command, ct);
 
             logger.LogInformation("API key '{KeyId}' created for user {UserId}", result.ApiKey.Id, session.User.Id);
 
             return Results.Created($"/api/v1/api-keys/{result.ApiKey.Id}", result);
         });
 
-        group.MapGet("/api-keys", async (HttpContext context, ApiKeyManagementService apiKeyManagement, bool includeRevoked = false, int page = 1, int pageSize = 20, CancellationToken ct = default) =>
+        group.MapGet("/api-keys", async (HttpContext context, IMediator mediator, bool includeRevoked = false, int page = 1, int pageSize = 20, CancellationToken ct = default) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var result = await apiKeyManagement.ListApiKeysAsync(session.User.Id, includeRevoked, page, pageSize, ct);
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.ListApiKeysQuery(
+                session.User.Id,
+                includeRevoked,
+                page,
+                pageSize);
+            var result = await mediator.Send(query, ct);
             return Results.Json(result);
         });
 
-        group.MapGet("/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var apiKey = await apiKeyManagement.GetApiKeyAsync(keyId, session.User.Id, ct);
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyQuery(keyId, session.User.Id);
+            var apiKey = await mediator.Send(query, ct);
 
             if (apiKey == null)
             {
@@ -1681,18 +1705,18 @@ public static class AdminEndpoints
             return Results.Json(apiKey);
         });
 
-        group.MapPut("/api-keys/{keyId}", async (string keyId, UpdateApiKeyRequest request, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPut("/api-keys/{keyId}", async (string keyId, UpdateApiKeyRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
             logger.LogInformation("User {UserId} updating API key {KeyId}", session.User.Id, keyId);
 
-            var updated = await apiKeyManagement.UpdateApiKeyAsync(
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.UpdateApiKeyManagementCommand(
                 keyId,
                 session.User.Id,
-                request,
-                ct);
+                request);
+            var updated = await mediator.Send(command, ct);
 
             if (updated == null)
             {
@@ -1704,14 +1728,15 @@ public static class AdminEndpoints
             return Results.Json(updated);
         });
 
-        group.MapDelete("/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
             logger.LogInformation("User {UserId} revoking API key {KeyId}", session.User.Id, keyId);
 
-            var success = await apiKeyManagement.RevokeApiKeyAsync(keyId, session.User.Id, ct);
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeApiKeyManagementCommand(keyId, session.User.Id);
+            var success = await mediator.Send(command, ct);
 
             if (!success)
             {
@@ -1723,18 +1748,18 @@ public static class AdminEndpoints
             return Results.NoContent();
         });
 
-        group.MapPost("/api-keys/{keyId}/rotate", async (string keyId, RotateApiKeyRequest? request, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/api-keys/{keyId}/rotate", async (string keyId, RotateApiKeyRequest? request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
             logger.LogInformation("User {UserId} rotating API key {KeyId}", session.User.Id, keyId);
 
-            var result = await apiKeyManagement.RotateApiKeyAsync(
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.RotateApiKeyCommand(
                 keyId,
                 session.User.Id,
-                request ?? new RotateApiKeyRequest(),
-                ct);
+                request ?? new RotateApiKeyRequest());
+            var result = await mediator.Send(command, ct);
 
             if (result == null)
             {
@@ -1746,12 +1771,13 @@ public static class AdminEndpoints
             return Results.Json(result);
         });
 
-        group.MapGet("/api-keys/{keyId}/usage", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/api-keys/{keyId}/usage", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var usage = await apiKeyManagement.GetApiKeyUsageAsync(keyId, session.User.Id, ct);
+            var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyUsageQuery(keyId, session.User.Id);
+            var usage = await mediator.Send(query, ct);
 
             if (usage == null)
             {

@@ -62,7 +62,6 @@ public static class AuthenticationServiceExtensions
         services.AddScoped<ApiKeyAuthenticationService>();
 
         // API-04: API key management service
-        services.AddScoped<ApiKeyManagementService>();
 
         // AUTH-06: OAuth services
         services.AddScoped<IEncryptionService, EncryptionService>();
@@ -78,7 +77,6 @@ public static class AuthenticationServiceExtensions
     private static IServiceCollection AddSessionServices(this IServiceCollection services)
     {
         // AUTH-03: Session management service
-        services.AddScoped<ISessionManagementService, SessionManagementService>();
         services.AddHostedService<SessionAutoRevocationService>();
 
         return services;

@@ -14,6 +14,7 @@ using DddCreateSessionCommand = Api.BoundedContexts.Authentication.Application.C
 using HandleOAuthCallbackCommand = Api.BoundedContexts.Authentication.Application.Commands.OAuth.HandleOAuthCallbackCommand;
 using GetSessionStatusQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionStatusQuery;
 using ExtendSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.ExtendSessionCommand;
+using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
 
 namespace Api.Routing;
 
@@ -682,12 +683,13 @@ User must have at least one authentication method remaining (password or another
             return Results.Json(response);
         });
 
-        group.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagementService sessionManagement, CancellationToken ct = default) =>
+        group.MapGet("/users/me/sessions", async (HttpContext context, IMediator mediator, CancellationToken ct = default) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var sessions = await sessionManagement.GetUserSessionsAsync(Guid.Parse(session.User.Id), ct);
+            var query = new GetUserSessionsQuery(Guid.Parse(session.User.Id));
+            var sessions = await mediator.Send(query, ct);
             return Results.Json(sessions);
         });
     }

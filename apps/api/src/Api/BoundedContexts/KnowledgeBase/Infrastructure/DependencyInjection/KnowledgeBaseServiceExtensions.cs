@@ -35,6 +35,9 @@ public static class KnowledgeBaseServiceExtensions
         // ISSUE-974: BGAI-032 - Multi-Model Consensus Validation (GPT-4 + Claude)
         services.AddSingleton<IMultiModelValidationService, MultiModelValidationService>();
 
+        // ISSUE-981: BGAI-039 - Validation Accuracy Baseline Measurement
+        services.AddScoped<ValidationAccuracyTrackingService>();
+
         // ISSUE-958: LLM Hybrid Architecture
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();

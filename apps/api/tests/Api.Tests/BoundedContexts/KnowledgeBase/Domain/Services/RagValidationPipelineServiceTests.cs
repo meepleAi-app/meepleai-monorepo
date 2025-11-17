@@ -10,6 +10,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// <summary>
 /// Unit tests for RagValidationPipelineService
 /// ISSUE-977: BGAI-035 - Wire all 5 validation layers in RAG pipeline
+/// ISSUE-979: BGAI-037 - Performance optimization (parallel validation)
 /// </summary>
 public class RagValidationPipelineServiceTests
 {

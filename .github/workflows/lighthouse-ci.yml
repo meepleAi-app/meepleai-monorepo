@@ -36,9 +36,10 @@ jobs:
             web:
               - 'apps/web/**'
 
-  lighthouse-performance:
+  # Build Next.js once and share across jobs (saves ~2-3min)
+  build-nextjs:
     needs: changes
-    name: Lighthouse - Performance Testing
+    name: Build Next.js (Shared)
     runs-on: ubuntu-latest
     if: needs.changes.outputs.web == 'true'
     defaults:
@@ -63,9 +64,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
-
       - name: Setup Test Environment
         run: cp .env.test.example .env.test
 
@@ -73,6 +71,68 @@ jobs:
         run: pnpm build
         env:
           NODE_ENV: production
+
+      - name: Upload Next.js Build Artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: nextjs-build-${{ github.sha }}
+          path: |
+            apps/web/.next/
+            apps/web/.env.test
+            apps/web/node_modules/.cache/
+          retention-days: 1
+
+  lighthouse-performance:
+    needs: build-nextjs
+    name: Lighthouse - Performance Testing
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # Cache Playwright browsers (saves ~30-60s)
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(pnpm list @playwright/test --depth=0 --json | jq -r '.[0].devDependencies["@playwright/test"].version')" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright System Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      - name: Download Next.js Build
+        uses: actions/download-artifact@v5
+        with:
+          name: nextjs-build-${{ github.sha }}
+          path: apps/web/
 
       - name: Run Lighthouse Performance Tests (Playwright)
         run: pnpm test:e2e e2e/performance.spec.ts
@@ -105,13 +165,12 @@ jobs:
         with:
           name: lighthouse-reports-${{ github.run_number }}
           path: apps/web/lighthouse-reports/
-          retention-days: 30
+          retention-days: 7
 
   lighthouse-cli:
-    needs: changes
+    needs: build-nextjs
     name: Lighthouse CI - Core Web Vitals
     runs-on: ubuntu-latest
-    if: needs.changes.outputs.web == 'true'
     defaults:
       run:
         working-directory: apps/web
@@ -136,10 +195,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build Next.js for Production
-        run: pnpm build
-        env:
-          NODE_ENV: production
+      - name: Download Next.js Build
+        uses: actions/download-artifact@v5
+        with:
+          name: nextjs-build-${{ github.sha }}
+          path: apps/web/
 
       - name: Run Lighthouse CI
         run: |
@@ -153,7 +213,7 @@ jobs:
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci/
-          retention-days: 30
+          retention-days: 7
 
       - name: Comment PR with Performance Results
         if: github.event_name == 'pull_request'
@@ -197,10 +257,10 @@ jobs:
             }
 
   performance-regression-check:
-    needs: [changes, lighthouse-performance]
+    needs: [build-nextjs, lighthouse-performance]
     name: Check Performance Regression
     runs-on: ubuntu-latest
-    if: needs.changes.outputs.web == 'true' && github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v5

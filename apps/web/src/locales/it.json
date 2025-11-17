@@ -1,0 +1,272 @@
+{
+  "common": {
+    "loading": "Caricamento...",
+    "error": "Errore",
+    "success": "Successo",
+    "cancel": "Annulla",
+    "save": "Salva",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "close": "Chiudi",
+    "confirm": "Conferma",
+    "back": "Indietro",
+    "next": "Avanti",
+    "search": "Cerca",
+    "filter": "Filtra",
+    "clear": "Cancella",
+    "all": "Tutti",
+    "none": "Nessuno",
+    "yes": "Sì",
+    "no": "No",
+    "ok": "OK",
+    "submit": "Invia",
+    "reset": "Reimposta",
+    "export": "Esporta",
+    "import": "Importa",
+    "download": "Scarica",
+    "upload": "Carica",
+    "copy": "Copia",
+    "paste": "Incolla",
+    "cut": "Taglia",
+    "select": "Seleziona",
+    "selectAll": "Seleziona tutto",
+    "deselect": "Deseleziona",
+    "deselectAll": "Deseleziona tutto"
+  },
+  "navigation": {
+    "home": "Home",
+    "games": "Giochi",
+    "chat": "Chat",
+    "upload": "Carica",
+    "settings": "Impostazioni",
+    "profile": "Profilo",
+    "admin": "Amministrazione",
+    "login": "Accedi",
+    "logout": "Esci",
+    "register": "Registrati"
+  },
+  "app": {
+    "title": "MeepleAI - Assistente AI per Regolamenti di Giochi da Tavolo",
+    "description": "Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.",
+    "tagline": "Il tuo assistente intelligente per i giochi da tavolo"
+  },
+  "auth": {
+    "login": {
+      "title": "Accedi",
+      "email": "Email",
+      "password": "Password",
+      "rememberMe": "Ricordami",
+      "forgotPassword": "Password dimenticata?",
+      "submit": "Accedi",
+      "noAccount": "Non hai un account?",
+      "signUp": "Registrati",
+      "error": "Credenziali non valide. Riprova.",
+      "success": "Accesso effettuato con successo!"
+    },
+    "register": {
+      "title": "Registrati",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Conferma password",
+      "displayName": "Nome visualizzato",
+      "submit": "Registrati",
+      "hasAccount": "Hai già un account?",
+      "signIn": "Accedi",
+      "error": "Registrazione fallita. Riprova.",
+      "success": "Registrazione completata! Puoi ora accedere."
+    },
+    "resetPassword": {
+      "title": "Reimposta password",
+      "email": "Email",
+      "submit": "Invia link di reimpostazione",
+      "success": "Link di reimpostazione inviato! Controlla la tua email.",
+      "error": "Impossibile inviare il link di reimpostazione. Riprova."
+    },
+    "session": {
+      "expired": "La tua sessione è scaduta. Accedi nuovamente.",
+      "expiringSoon": "La tua sessione scadrà tra {minutes} minuti.",
+      "stayLoggedIn": "Rimani connesso",
+      "logOut": "Esci"
+    },
+    "twoFactor": {
+      "title": "Autenticazione a due fattori",
+      "code": "Codice di verifica",
+      "submit": "Verifica",
+      "error": "Codice non valido. Riprova.",
+      "backupCode": "Usa un codice di backup"
+    }
+  },
+  "games": {
+    "title": "I miei giochi",
+    "noGames": "Nessun gioco trovato",
+    "addGame": "Aggiungi gioco",
+    "searchGames": "Cerca giochi...",
+    "filterByCategory": "Filtra per categoria",
+    "sortBy": "Ordina per",
+    "grid": "Griglia",
+    "list": "Lista",
+    "details": {
+      "title": "Dettagli gioco",
+      "players": "Giocatori",
+      "duration": "Durata",
+      "difficulty": "Difficoltà",
+      "category": "Categoria",
+      "designer": "Designer",
+      "publisher": "Editore",
+      "yearPublished": "Anno di pubblicazione",
+      "description": "Descrizione",
+      "rules": "Regolamento"
+    }
+  },
+  "chat": {
+    "title": "Chat AI",
+    "placeholder": "Chiedi qualcosa sul regolamento...",
+    "send": "Invia",
+    "newChat": "Nuova chat",
+    "history": "Cronologia",
+    "clearHistory": "Cancella cronologia",
+    "noMessages": "Nessun messaggio ancora. Inizia una conversazione!",
+    "thinking": "Sto pensando...",
+    "error": "Si è verificato un errore. Riprova.",
+    "retry": "Riprova",
+    "selectGame": "Seleziona un gioco",
+    "gameSelected": "Gioco selezionato: {gameName}",
+    "confidence": "Confidenza",
+    "sources": "Fonti",
+    "page": "Pagina",
+    "citation": "Citazione"
+  },
+  "upload": {
+    "title": "Carica regolamento PDF",
+    "dragDrop": "Trascina e rilascia il PDF qui, oppure clicca per selezionare",
+    "selectFile": "Seleziona file",
+    "uploading": "Caricamento in corso...",
+    "processing": "Elaborazione in corso...",
+    "success": "PDF caricato ed elaborato con successo!",
+    "error": "Errore durante il caricamento. Riprova.",
+    "validFormats": "Formati supportati: PDF",
+    "maxSize": "Dimensione massima: {size}MB",
+    "requirements": {
+      "title": "Requisiti",
+      "quality": "PDF di alta qualità (non scansioni)",
+      "text": "Testo selezionabile",
+      "pages": "Massimo {max} pagine"
+    },
+    "metadata": {
+      "title": "Metadati",
+      "gameName": "Nome del gioco",
+      "language": "Lingua",
+      "version": "Versione regolamento",
+      "notes": "Note"
+    }
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "tabs": {
+      "profile": "Profilo",
+      "preferences": "Preferenze",
+      "privacy": "Privacy",
+      "advanced": "Avanzate"
+    },
+    "profile": {
+      "title": "Informazioni profilo",
+      "displayName": "Nome visualizzato",
+      "email": "Email",
+      "avatar": "Avatar",
+      "changePassword": "Cambia password",
+      "currentPassword": "Password attuale",
+      "newPassword": "Nuova password",
+      "confirmPassword": "Conferma nuova password"
+    },
+    "preferences": {
+      "title": "Preferenze",
+      "language": "Lingua",
+      "theme": "Tema",
+      "themeLight": "Chiaro",
+      "themeDark": "Scuro",
+      "themeSystem": "Sistema",
+      "notifications": "Notifiche",
+      "emailNotifications": "Notifiche email",
+      "pushNotifications": "Notifiche push"
+    },
+    "privacy": {
+      "title": "Privacy e sicurezza",
+      "twoFactor": "Autenticazione a due fattori",
+      "enable2FA": "Abilita 2FA",
+      "disable2FA": "Disabilita 2FA",
+      "backupCodes": "Codici di backup",
+      "generateCodes": "Genera nuovi codici",
+      "linkedAccounts": "Account collegati",
+      "linkAccount": "Collega account",
+      "unlinkAccount": "Scollega account"
+    },
+    "advanced": {
+      "title": "Impostazioni avanzate",
+      "apiKeys": "Chiavi API",
+      "generateKey": "Genera nuova chiave",
+      "revokeKey": "Revoca chiave",
+      "sessions": "Sessioni attive",
+      "terminateSession": "Termina sessione",
+      "terminateAll": "Termina tutte le sessioni",
+      "dataRetention": "Conservazione dati",
+      "exportData": "Esporta i miei dati",
+      "deleteAccount": "Elimina account",
+      "dangerZone": "Zona pericolosa"
+    }
+  },
+  "admin": {
+    "title": "Pannello amministrazione",
+    "users": "Utenti",
+    "games": "Giochi",
+    "analytics": "Analisi",
+    "configuration": "Configurazione",
+    "logs": "Log",
+    "cache": "Cache",
+    "workflows": "Flussi di lavoro"
+  },
+  "errors": {
+    "generic": "Si è verificato un errore. Riprova più tardi.",
+    "network": "Errore di rete. Controlla la tua connessione.",
+    "notFound": "Pagina non trovata.",
+    "unauthorized": "Non autorizzato. Accedi per continuare.",
+    "forbidden": "Accesso negato.",
+    "serverError": "Errore del server. Riprova più tardi.",
+    "validation": "Errore di validazione. Controlla i campi del modulo."
+  },
+  "validation": {
+    "required": "Questo campo è obbligatorio",
+    "email": "Inserisci un'email valida",
+    "minLength": "Deve contenere almeno {min} caratteri",
+    "maxLength": "Non può superare {max} caratteri",
+    "passwordMatch": "Le password non coincidono",
+    "invalidFormat": "Formato non valido"
+  },
+  "dates": {
+    "today": "Oggi",
+    "yesterday": "Ieri",
+    "tomorrow": "Domani",
+    "now": "Ora",
+    "minute": "minuto",
+    "minutes": "minuti",
+    "hour": "ora",
+    "hours": "ore",
+    "day": "giorno",
+    "days": "giorni",
+    "week": "settimana",
+    "weeks": "settimane",
+    "month": "mese",
+    "months": "mesi",
+    "year": "anno",
+    "years": "anni",
+    "ago": "{time} fa",
+    "in": "tra {time}"
+  },
+  "accessibility": {
+    "skipToMain": "Salta al contenuto principale",
+    "menu": "Menu",
+    "close": "Chiudi",
+    "openInNewTab": "Apri in una nuova scheda",
+    "loading": "Caricamento in corso, attendere prego",
+    "errorOccurred": "Si è verificato un errore"
+  }
+}

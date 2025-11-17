@@ -18,6 +18,7 @@ import { SessionWarningModal } from '@/components/SessionWarningModal';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { QueryProvider } from '@/app/QueryProvider';
+import { IntlProvider } from '@/components/providers/IntlProvider';
 import { api } from '@/lib/api';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -101,6 +102,7 @@ function AppContent({ children }: { children: ReactNode }) {
  * AppProviders - Client Component Wrapper for App Router
  *
  * Provides all necessary context providers for the application:
+ * - IntlProvider (internationalization - Issue #990)
  * - ThemeProvider (dark/light mode)
  * - QueryProvider (TanStack Query data layer - Issue #1079)
  * - AuthProvider (authentication state)
@@ -111,19 +113,21 @@ function AppContent({ children }: { children: ReactNode }) {
  */
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <QueryProvider>
-        <AuthProvider>
-          <ErrorBoundary
-            componentName="App"
-            showDetails={process.env.NODE_ENV === 'development'}
-          >
-            <RouteErrorBoundary routeName="AppContent">
-              <AppContent>{children}</AppContent>
-            </RouteErrorBoundary>
-          </ErrorBoundary>
-        </AuthProvider>
-      </QueryProvider>
-    </ThemeProvider>
+    <IntlProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <QueryProvider>
+          <AuthProvider>
+            <ErrorBoundary
+              componentName="App"
+              showDetails={process.env.NODE_ENV === 'development'}
+            >
+              <RouteErrorBoundary routeName="AppContent">
+                <AppContent>{children}</AppContent>
+              </RouteErrorBoundary>
+            </ErrorBoundary>
+          </AuthProvider>
+        </QueryProvider>
+      </ThemeProvider>
+    </IntlProvider>
   );
 }

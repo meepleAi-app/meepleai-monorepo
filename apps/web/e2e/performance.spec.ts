@@ -70,6 +70,7 @@ const coreWebVitalsThresholds = {
 test.describe('Performance Testing - Critical Pages', () => {
   test('Homepage (/) - Performance Metrics', async ({ page, context }, testInfo) => {
     const port = getRemoteDebuggingPort(testInfo.workerIndex);
+    const baseURL = testInfo.project.use.baseURL;
 
     // Launch browser with worker-specific debugging port
     await context.close();
@@ -88,7 +89,7 @@ test.describe('Performance Testing - Critical Pages', () => {
 
     if (!browser) throw new Error('Browser launch failed');
 
-    const newContext = await browser.newContext();
+    const newContext = await browser.newContext({ baseURL });
     const newPage = await newContext.newPage();
 
     await newPage.goto('/');
@@ -113,6 +114,7 @@ test.describe('Performance Testing - Critical Pages', () => {
 
   test('Chat Page (/chat) - Performance Metrics', async ({ page, context }, testInfo) => {
     const port = getRemoteDebuggingPort(testInfo.workerIndex);
+    const baseURL = testInfo.project.use.baseURL;
 
     await context.close();
     const browser = await testInfo.project.use.browserName === 'chromium'
@@ -130,7 +132,7 @@ test.describe('Performance Testing - Critical Pages', () => {
 
     if (!browser) throw new Error('Browser launch failed');
 
-    const newContext = await browser.newContext();
+    const newContext = await browser.newContext({ baseURL });
     const newPage = await newContext.newPage();
 
     await newPage.goto('/chat');
@@ -155,6 +157,7 @@ test.describe('Performance Testing - Critical Pages', () => {
 
   test('Upload Page (/upload) - Performance Metrics', async ({ page, context }, testInfo) => {
     const port = getRemoteDebuggingPort(testInfo.workerIndex);
+    const baseURL = testInfo.project.use.baseURL;
 
     await context.close();
     const browser = await testInfo.project.use.browserName === 'chromium'
@@ -172,7 +175,7 @@ test.describe('Performance Testing - Critical Pages', () => {
 
     if (!browser) throw new Error('Browser launch failed');
 
-    const newContext = await browser.newContext();
+    const newContext = await browser.newContext({ baseURL });
     const newPage = await newContext.newPage();
 
     await newPage.goto('/upload');
@@ -199,6 +202,7 @@ test.describe('Performance Testing - Critical Pages', () => {
 test.describe('Performance Testing - Additional Pages', () => {
   test('Games Page (/games) - Performance Metrics', async ({ page, context }, testInfo) => {
     const port = getRemoteDebuggingPort(testInfo.workerIndex);
+    const baseURL = testInfo.project.use.baseURL;
 
     await context.close();
     const browser = await testInfo.project.use.browserName === 'chromium'
@@ -216,7 +220,7 @@ test.describe('Performance Testing - Additional Pages', () => {
 
     if (!browser) throw new Error('Browser launch failed');
 
-    const newContext = await browser.newContext();
+    const newContext = await browser.newContext({ baseURL });
     const newPage = await newContext.newPage();
 
     await newPage.goto('/games');
@@ -243,6 +247,7 @@ test.describe('Performance Testing - Additional Pages', () => {
 
   test('Login Page (/login) - Performance Metrics', async ({ page, context }, testInfo) => {
     const port = getRemoteDebuggingPort(testInfo.workerIndex);
+    const baseURL = testInfo.project.use.baseURL;
 
     await context.close();
     const browser = await testInfo.project.use.browserName === 'chromium'
@@ -260,7 +265,7 @@ test.describe('Performance Testing - Additional Pages', () => {
 
     if (!browser) throw new Error('Browser launch failed');
 
-    const newContext = await browser.newContext();
+    const newContext = await browser.newContext({ baseURL });
     const newPage = await newContext.newPage();
 
     await newPage.goto('/login');

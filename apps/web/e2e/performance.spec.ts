@@ -35,14 +35,16 @@ const lighthouseOptions = {
     onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
     skipAudits: ['uses-http2'],
   },
-  reports: {
-    formats: {
-      html: true,
-      json: true,
-    },
-    name: 'lighthouse-report',
-    directory: 'lighthouse-reports',
+};
+
+// Report configuration for generating HTML/JSON reports
+const reportConfig = {
+  formats: {
+    html: true,
+    json: true,
   },
+  name: 'lighthouse-report',
+  directory: 'lighthouse-reports',
 };
 
 // Core Web Vitals thresholds
@@ -55,11 +57,13 @@ const coreWebVitalsThresholds = {
   si: 3000,  // Speed Index < 3s
 };
 
-test.describe('Performance Testing - Critical Pages', () => {
+// CRITICAL FIX: Use serial execution to avoid port conflicts when running in parallel
+// Each Chromium instance needs a unique debugging port for Lighthouse
+test.describe.serial('Performance Testing - Critical Pages', () => {
   test.use({
     launchOptions: {
       args: [
-        '--remote-debugging-port=9222',
+        // REMOVED: '--remote-debugging-port=9222' - let Playwright allocate a unique port
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -75,12 +79,16 @@ test.describe('Performance Testing - Critical Pages', () => {
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
 
-    // Run Lighthouse audit
+    // Run Lighthouse audit - port will be auto-detected from the browser
     await playAudit({
       page,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
-      port: 9222,
+      reports: {
+        ...reportConfig,
+        name: 'lighthouse-homepage',
+      },
+      // REMOVED: port: 9222 - auto-detect from browser instance
     });
 
     // Additional checks for page functionality
@@ -94,12 +102,16 @@ test.describe('Performance Testing - Critical Pages', () => {
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
 
-    // Run Lighthouse audit
+    // Run Lighthouse audit - port will be auto-detected from the browser
     await playAudit({
       page,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
-      port: 9222,
+      reports: {
+        ...reportConfig,
+        name: 'lighthouse-chat',
+      },
+      // REMOVED: port: 9222 - auto-detect from browser instance
     });
 
     // Verify chat interface is present
@@ -114,12 +126,16 @@ test.describe('Performance Testing - Critical Pages', () => {
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
 
-    // Run Lighthouse audit
+    // Run Lighthouse audit - port will be auto-detected from the browser
     await playAudit({
       page,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
-      port: 9222,
+      reports: {
+        ...reportConfig,
+        name: 'lighthouse-upload',
+      },
+      // REMOVED: port: 9222 - auto-detect from browser instance
     });
 
     // Verify upload interface is present
@@ -128,11 +144,12 @@ test.describe('Performance Testing - Critical Pages', () => {
   });
 });
 
-test.describe('Performance Testing - Additional Pages', () => {
+// CRITICAL FIX: Use serial execution to avoid port conflicts
+test.describe.serial('Performance Testing - Additional Pages', () => {
   test.use({
     launchOptions: {
       args: [
-        '--remote-debugging-port=9222',
+        // REMOVED: '--remote-debugging-port=9222' - let Playwright allocate a unique port
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -155,7 +172,11 @@ test.describe('Performance Testing - Additional Pages', () => {
         seo: 90,
       },
       opts: lighthouseOptions.opts,
-      port: 9222,
+      reports: {
+        ...reportConfig,
+        name: 'lighthouse-games',
+      },
+      // REMOVED: port: 9222 - auto-detect from browser instance
     });
   });
 
@@ -167,7 +188,11 @@ test.describe('Performance Testing - Additional Pages', () => {
       page,
       thresholds: lighthouseOptions.thresholds,
       opts: lighthouseOptions.opts,
-      port: 9222,
+      reports: {
+        ...reportConfig,
+        name: 'lighthouse-login',
+      },
+      // REMOVED: port: 9222 - auto-detect from browser instance
     });
   });
 });

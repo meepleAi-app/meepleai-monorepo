@@ -71,15 +71,20 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       headers: new Headers()
     });
 
-    // Ensure store is ready for tests
-    uploadQueueStore.destroy();
+    // CRITICAL FIX: Do NOT call uploadQueueStore.destroy() here!
+    // destroy() terminates the singleton worker and it never re-initializes.
+    // Instead, clear the queue state via the worker's message protocol.
+
+    // Clear the queue using the store's clearAll method
+    uploadQueueStore.clearAll();
+
+    // Wait a tick for the clear to process
+    return new Promise(resolve => setTimeout(resolve, 10));
   });
 
   afterEach(() => {
-    if (mockWorkerInstance) {
-      mockWorkerInstance.terminate();
-    }
-    uploadQueueStore.destroy();
+    // Clean up after each test
+    uploadQueueStore.clearAll();
   });
 
   // ============================================================================

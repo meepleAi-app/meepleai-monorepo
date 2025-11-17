@@ -134,7 +134,7 @@ export default function SettingsPage() {
 
   const load2FAStatus = async () => {
     try {
-      const status = await api.twoFactor.getStatus();
+      const status = await api.auth.getTwoFactorStatus();
       setTwoFactorStatus(status);
     } catch (err) {
       console.error('Failed to load 2FA status:', err);
@@ -210,7 +210,7 @@ export default function SettingsPage() {
   const handleSetup2FA = async () => {
     try {
       setLoading(true);
-      const setupResponse = await api.twoFactor.setup();
+      const setupResponse = await api.auth.setup2FA();
       setSetup(setupResponse);
       setShowBackupCodes(true);
       setError(null);
@@ -225,7 +225,7 @@ export default function SettingsPage() {
   const handleEnable2FA = async () => {
     try {
       setLoading(true);
-      await api.twoFactor.enable(verificationCode);
+      await api.auth.enable2FA(verificationCode);
       setSuccess('Two-factor authentication enabled successfully!');
       setSetup(null);
       setShowBackupCodes(false);
@@ -246,7 +246,7 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
-      await api.twoFactor.disable(disablePassword, disableCode);
+      await api.auth.disable2FA(disablePassword, disableCode);
       setSuccess('Two-factor authentication disabled.');
       setDisablePassword('');
       setDisableCode('');

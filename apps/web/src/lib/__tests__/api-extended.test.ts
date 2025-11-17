@@ -50,7 +50,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
   // ==================================================================
   // EDIT-05: Threaded Reply Support (Lines 415-427)
   // ==================================================================
-  describe('api.ruleSpecComments - Extended (EDIT-05)', () => {
+  describe('api.chat (RuleSpec Comments) - Extended (EDIT-05)', () => {
     const commentId = 'comment-123';
 
     describe('createReply', () => {
@@ -67,7 +67,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
 
         setFetchResponse(201, mockReply);
 
-        const result = await api.ruleSpecComments.createReply(commentId, request);
+        const result = await api.chat.createCommentReply(commentId, request);
 
         expect(fetch).toHaveBeenCalledWith(
           `http://localhost:8080/api/v1/rulespec/comments/${commentId}/replies`,
@@ -85,7 +85,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         setFetchResponse(401, null, { 'X-Correlation-Id': 'corr-123' });
 
         await expect(
-          api.ruleSpecComments.createReply(commentId, { commentText: 'Reply' })
+          api.chat.createCommentReply(commentId, { commentText: 'Reply' })
         ).rejects.toThrow('Unauthorized');
       });
 
@@ -93,7 +93,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         setFetchResponse(404, { error: 'Parent comment not found' });
 
         await expect(
-          api.ruleSpecComments.createReply(commentId, { commentText: 'Reply' })
+          api.chat.createCommentReply(commentId, { commentText: 'Reply' })
         ).rejects.toThrow(ApiError);
       });
     });
@@ -102,7 +102,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should resolve a comment', async () => {
         setFetchResponse(200, {});
 
-        await api.ruleSpecComments.resolveComment(commentId);
+        await api.chat.resolveComment(commentId);
 
         expect(fetch).toHaveBeenCalledWith(
           `http://localhost:8080/api/v1/rulespec/comments/${commentId}/resolve`,
@@ -118,7 +118,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should throw on 401 Unauthorized', async () => {
         setFetchResponse(401, null, { 'X-Correlation-Id': 'corr-456' });
 
-        await expect(api.ruleSpecComments.resolveComment(commentId)).rejects.toThrow(
+        await expect(api.chat.resolveComment(commentId)).rejects.toThrow(
           'Unauthorized'
         );
       });
@@ -126,7 +126,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should throw on 403 Forbidden', async () => {
         setFetchResponse(403, { error: 'Cannot resolve other users comments' });
 
-        await expect(api.ruleSpecComments.resolveComment(commentId)).rejects.toThrow(
+        await expect(api.chat.resolveComment(commentId)).rejects.toThrow(
           ApiError
         );
       });
@@ -136,7 +136,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should unresolve a comment', async () => {
         setFetchResponse(200, {});
 
-        await api.ruleSpecComments.unresolveComment(commentId);
+        await api.chat.unresolveComment(commentId);
 
         expect(fetch).toHaveBeenCalledWith(
           `http://localhost:8080/api/v1/rulespec/comments/${commentId}/unresolve`,
@@ -152,7 +152,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should throw on 401 Unauthorized', async () => {
         setFetchResponse(401, null, { 'X-Correlation-Id': 'corr-789' });
 
-        await expect(api.ruleSpecComments.unresolveComment(commentId)).rejects.toThrow(
+        await expect(api.chat.unresolveComment(commentId)).rejects.toThrow(
           'Unauthorized'
         );
       });
@@ -183,7 +183,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
 
         setFetchResponse(200, mockStats);
 
-        const result = await api.cache.getStats();
+        const result = await api.chat.getCacheStats();
 
         expect(fetch).toHaveBeenCalledWith(
           'http://localhost:8080/api/v1/admin/cache/stats',
@@ -207,7 +207,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
 
         setFetchResponse(200, mockStats);
 
-        const result = await api.cache.getStats('chess');
+        const result = await api.chat.getCacheStats('chess');
 
         expect(fetch).toHaveBeenCalledWith(
           'http://localhost:8080/api/v1/admin/cache/stats?gameId=chess',
@@ -222,7 +222,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should encode gameId parameter', async () => {
         setFetchResponse(200, {});
 
-        await api.cache.getStats('game with spaces');
+        await api.chat.getCacheStats('game with spaces');
 
         expect(fetch).toHaveBeenCalledWith(
           expect.stringContaining('gameId=game%20with%20spaces'),
@@ -233,7 +233,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should return null on 401', async () => {
         setFetchResponse(401);
 
-        const result = await api.cache.getStats();
+        const result = await api.chat.getCacheStats();
 
         expect(result).toBeNull();
       });
@@ -243,7 +243,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should invalidate game cache', async () => {
         setFetchResponse(204);
 
-        await api.cache.invalidateGameCache('chess');
+        await api.chat.invalidateGameCache('chess');
 
         expect(fetch).toHaveBeenCalledWith(
           'http://localhost:8080/api/v1/admin/cache/games/chess',
@@ -257,7 +257,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should encode gameId in URL', async () => {
         setFetchResponse(204);
 
-        await api.cache.invalidateGameCache('game/with/slashes');
+        await api.chat.invalidateGameCache('game/with/slashes');
 
         expect(fetch).toHaveBeenCalledWith(
           expect.stringContaining('games/game%2Fwith%2Fslashes'),
@@ -268,7 +268,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should throw on 401 Unauthorized', async () => {
         setFetchResponse(401, null, { 'X-Correlation-Id': 'corr-cache-1' });
 
-        await expect(api.cache.invalidateGameCache('chess')).rejects.toThrow(
+        await expect(api.chat.invalidateGameCache('chess')).rejects.toThrow(
           'Unauthorized'
         );
       });
@@ -278,7 +278,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should invalidate cache by tag', async () => {
         setFetchResponse(204);
 
-        await api.cache.invalidateByTag('rag-responses');
+        await api.chat.invalidateCacheByTag('rag-responses');
 
         expect(fetch).toHaveBeenCalledWith(
           'http://localhost:8080/api/v1/admin/cache/tags/rag-responses',
@@ -292,7 +292,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should encode tag in URL', async () => {
         setFetchResponse(204);
 
-        await api.cache.invalidateByTag('tag:with:colons');
+        await api.chat.invalidateCacheByTag('tag:with:colons');
 
         expect(fetch).toHaveBeenCalledWith(
           expect.stringContaining('tags/tag%3Awith%3Acolons'),
@@ -303,7 +303,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
       it('should throw on 401 Unauthorized', async () => {
         setFetchResponse(401, null, { 'X-Correlation-Id': 'corr-cache-2' });
 
-        await expect(api.cache.invalidateByTag('tag')).rejects.toThrow('Unauthorized');
+        await expect(api.chat.invalidateCacheByTag('tag')).rejects.toThrow('Unauthorized');
       });
     });
   });

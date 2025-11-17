@@ -1,9 +1,9 @@
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminDashboard from '../../pages/admin';
-import { API_BASE_FALLBACK } from '../../pages/../lib/api';
 
 type FetchMock = jest.MockedFunction<typeof fetch>;
+const API_BASE_FALLBACK = 'http://localhost:8080'; // Default API base for tests (FE-IMP-005)
 
 const createJsonResponse = (data: unknown, ok = true) =>
   ({

@@ -34,7 +34,7 @@ export const createMessagesSlice: StateCreator<
     setError(null);
 
     try {
-      const thread = await api.chatThreads.getById(threadId);
+      const thread = await api.chat.getThreadById(threadId);
       if (thread) {
         const uiMessages: Message[] = thread.messages.map((msg, index) => ({
           id: `${threadId}-${index}`,
@@ -90,7 +90,7 @@ export const createMessagesSlice: StateCreator<
 
       if (!threadId) {
         const autoTitle = content.trim().substring(0, 50) + (content.length > 50 ? '...' : '');
-        const newThread = await api.chatThreads.create({
+        const newThread = await api.chat.createThread({
           gameId: selectedGameId,
           title: autoTitle,
           initialMessage: null,
@@ -116,7 +116,7 @@ export const createMessagesSlice: StateCreator<
       });
 
       // Send to backend
-      await api.chatThreads.addMessage(threadId, {
+      await api.chat.addMessage(threadId, {
         content: content.trim(),
         role: 'user',
       });
@@ -230,12 +230,15 @@ export const createMessagesSlice: StateCreator<
     });
 
     try {
-      await api.post('/api/v1/agents/feedback', {
-        messageId: feedbackMessageId,
-        endpoint,
-        gameId,
-        feedback: nextFeedback,
-      });
+      // Only submit feedback if it's not null (FE-IMP-005: API doesn't accept null)
+      if (nextFeedback !== null) {
+        await api.chat.submitAgentFeedback({
+          messageId: feedbackMessageId,
+          endpoint,
+          gameId,
+          feedback: nextFeedback,
+        });
+      }
     } catch (err) {
       console.error('Failed to set feedback:', err);
 

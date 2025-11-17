@@ -88,7 +88,7 @@ describe('Type Index Exports', () => {
         message: 'Hello',
         metadataJson: null,
         createdAt: '2024-01-01',
-        updatedAt: null,
+        updatedAt: '2024-01-01',
         isDeleted: false,
         isInvalidated: false,
       };
@@ -197,22 +197,18 @@ describe('Type Index Exports', () => {
     });
 
     it('should export ProcessingProgress type', () => {
-      const { ProcessingStep } = require('../index');
       const progress: import('../index').ProcessingProgress = {
-        currentStep: ProcessingStep.Extracting,
-        percentComplete: 0.5,
-        updatedAt: '2024-01-01',
+        status: 'Processing',
+        percentComplete: 50,
       };
 
       expect(progress).toBeDefined();
     });
 
     it('should export processing helper functions', () => {
-      const { isProcessingComplete, getStepLabel, getStepOrder } = require('../index');
+      const { isProcessingComplete } = require('../index');
 
       expect(typeof isProcessingComplete).toBe('function');
-      expect(typeof getStepLabel).toBe('function');
-      expect(typeof getStepOrder).toBe('function');
     });
   });
 

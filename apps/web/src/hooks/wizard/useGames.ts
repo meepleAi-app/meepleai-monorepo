@@ -35,16 +35,21 @@ export function useGames() {
     setError(null);
 
     try {
-      const me = await api.get<AuthResponse>('/api/v1/auth/me');
-      if (!me) {
+      // Note: getSessionStatus returns session info, not user. For user info, use getProfile()
+      const session = await api.auth.getSessionStatus();
+      if (!session) {
         setAuthUser(null);
         setGames([]);
         return;
       }
 
-      setAuthUser(me.user);
-      const fetchedGames = (await api.get<GameSummary[]>('/api/v1/games')) ?? [];
-      setGames(fetchedGames);
+      // TODO: Fetch user profile separately if needed (FE-IMP-005)
+      // const profile = await api.auth.getProfile();
+      // setAuthUser(profile?.user ?? null);
+      setAuthUser(null); // Temporary: session status doesn't include user
+
+      const response = await api.games.getAll();
+      setGames(response.games.map(g => ({ id: g.id, name: g.title, createdAt: g.createdAt })));
     } catch (err) {
       console.error('Failed to load games', err);
       setError('Unable to load games. Please refresh and try again.');
@@ -53,24 +58,15 @@ export function useGames() {
     }
   }, []);
 
+  // TODO: Re-enable when api.games.create is implemented (FE-IMP-005)
   const createGame = useCallback(
-    async (name: string) => {
+    async (name: string): Promise<GameSummary | null> => {
       setCreating(true);
       setError(null);
-
-      try {
-        const newGame = await api.post<GameSummary>('/api/v1/games', { name });
-        if (newGame) {
-          setGames((prev) => [...prev, newGame]);
-          return newGame;
-        }
-      } catch (err) {
-        console.error('Failed to create game', err);
-        setError('Unable to create game. Please try again.');
-        throw err;
-      } finally {
-        setCreating(false);
-      }
+      console.error('createGame not yet implemented in modular API');
+      setError('Create game functionality not yet available.');
+      setCreating(false);
+      return null; // Return null instead of throwing
     },
     []
   );

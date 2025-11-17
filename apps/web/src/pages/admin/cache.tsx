@@ -71,7 +71,7 @@ export default function CacheDashboard() {
       setError(null);
 
       const gameId = selectedGameId === "all" ? undefined : selectedGameId;
-      const statsData = await api.cache.getStats(gameId);
+      const statsData = await api.chat.getCacheStats(gameId);
 
       if (!statsData) {
         throw new Error("Unauthorized - Admin access required");
@@ -102,7 +102,7 @@ export default function CacheDashboard() {
       message: `Are you sure you want to invalidate all cached responses for "${gameName}"? This action cannot be undone.`,
       onConfirm: async () => {
         try {
-          await api.cache.invalidateGameCache(gameId);
+          await api.chat.invalidateGameCache(gameId);
           addToast("success", `Cache invalidated successfully for "${gameName}"`);
           setConfirmation({ ...confirmation, isOpen: false });
           // Refresh stats after invalidation
@@ -127,7 +127,7 @@ export default function CacheDashboard() {
       message: `Are you sure you want to invalidate all cached responses with tag "${tagInput}"? This action cannot be undone.`,
       onConfirm: async () => {
         try {
-          await api.cache.invalidateByTag(tagInput.trim());
+          await api.chat.invalidateCacheByTag(tagInput.trim());
           addToast("success", `Cache invalidated successfully for tag "${tagInput}"`);
           setTagInput("");
           setConfirmation({ ...confirmation, isOpen: false });

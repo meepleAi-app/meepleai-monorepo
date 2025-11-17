@@ -36,7 +36,7 @@ export const createChatSlice: StateCreator<
     setError(null);
 
     try {
-      const chatThreads = await api.chatThreads.getByGame(gameId);
+      const chatThreads = await api.chat.getThreadsByGame(gameId);
       set((state) => {
         state.chatsByGame[gameId] = chatThreads ?? [];
       });
@@ -63,7 +63,7 @@ export const createChatSlice: StateCreator<
     setError(null);
 
     try {
-      const newThread = await api.chatThreads.create({
+      const newThread = await api.chat.createThread({
         gameId: selectedGameId,
         title: null,
         initialMessage: null,
@@ -89,7 +89,7 @@ export const createChatSlice: StateCreator<
 
           if (toArchive) {
             try {
-              await api.chatThreads.close(toArchive.id);
+              await api.chat.closeThread(toArchive.id);
               await get().loadChats(selectedGameId);
             } catch (archiveErr) {
               console.error('Failed to auto-archive thread:', archiveErr);

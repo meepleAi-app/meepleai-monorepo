@@ -1,0 +1,246 @@
+/**
+ * Chat Client (FE-IMP-005)
+ *
+ * Modular client for KnowledgeBase bounded context (Chat).
+ * Covers: ChatThreads, Messages, RuleSpec Comments, Cache Management, Export
+ */
+
+import type { HttpClient } from '../core/httpClient';
+import { downloadFile } from '../core/httpClient';
+import {
+  ChatThreadDtoSchema,
+  ChatMessageResponseSchema,
+  RuleSpecCommentsResponseSchema,
+  RuleSpecCommentSchema,
+  CacheStatsSchema,
+  type ChatThreadDto,
+  type ChatMessageResponse,
+  type RuleSpecCommentsResponse,
+  type RuleSpecComment,
+  type CacheStats,
+} from '../schemas';
+
+export interface CreateChatClientParams {
+  httpClient: HttpClient;
+}
+
+export interface CreateChatThreadRequest {
+  gameId?: string | null;
+  title?: string | null;
+  initialMessage?: string | null;
+}
+
+export interface AddMessageRequest {
+  content: string;
+  role: string;
+}
+
+export interface CreateRuleSpecCommentRequest {
+  atomId: string | null;
+  lineNumber?: number | null;
+  commentText: string;
+}
+
+export interface UpdateRuleSpecCommentRequest {
+  commentText: string;
+}
+
+export interface CreateReplyRequest {
+  commentText: string;
+}
+
+export type ExportFormat = 'pdf' | 'txt' | 'md';
+
+export interface ExportChatRequest {
+  format: ExportFormat;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface BulkExportRequest {
+  ruleSpecIds: string[];
+}
+
+/**
+ * Create Chat API client with Zod validation
+ */
+export function createChatClient({ httpClient }: CreateChatClientParams) {
+  return {
+    // ========== Chat Threads ==========
+
+    async getThreadsByGame(gameId: string): Promise<ChatThreadDto[]> {
+      const response = await httpClient.get<ChatThreadDto[]>(
+        `/api/v1/knowledge-base/chat-threads?gameId=${encodeURIComponent(gameId)}`
+      );
+      return response ?? [];
+    },
+
+    async getThreadById(threadId: string): Promise<ChatThreadDto | null> {
+      return httpClient.get(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}`,
+        ChatThreadDtoSchema
+      );
+    },
+
+    async createThread(request: CreateChatThreadRequest): Promise<ChatThreadDto> {
+      return httpClient.post(
+        '/api/v1/knowledge-base/chat-threads',
+        request,
+        ChatThreadDtoSchema
+      );
+    },
+
+    async addMessage(threadId: string, request: AddMessageRequest): Promise<ChatThreadDto> {
+      return httpClient.post(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/messages`,
+        request,
+        ChatThreadDtoSchema
+      );
+    },
+
+    async closeThread(threadId: string): Promise<ChatThreadDto> {
+      return httpClient.post(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/close`,
+        {},
+        ChatThreadDtoSchema
+      );
+    },
+
+    async reopenThread(threadId: string): Promise<ChatThreadDto> {
+      return httpClient.post(
+        `/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/reopen`,
+        {},
+        ChatThreadDtoSchema
+      );
+    },
+
+    // ========== Chat Messages ==========
+
+    async updateMessage(
+      chatId: string,
+      messageId: string,
+      content: string
+    ): Promise<ChatMessageResponse> {
+      return httpClient.put(
+        `/api/v1/chats/${chatId}/messages/${messageId}`,
+        { content },
+        ChatMessageResponseSchema
+      );
+    },
+
+    async deleteMessage(chatId: string, messageId: string): Promise<void> {
+      return httpClient.delete(`/api/v1/chats/${chatId}/messages/${messageId}`);
+    },
+
+    // ========== Chat Export ==========
+
+    async exportChat(chatId: string, request: ExportChatRequest): Promise<void> {
+      const { blob, filename } = await httpClient.postFile(
+        `/api/v1/chats/${encodeURIComponent(chatId)}/export`,
+        request
+      );
+      downloadFile(blob, filename);
+    },
+
+    // ========== RuleSpec Comments ==========
+
+    async getRuleSpecComments(
+      gameId: string,
+      version: string,
+      includeResolved: boolean = true
+    ): Promise<RuleSpecCommentsResponse | null> {
+      const resolvedParam = includeResolved ? 'true' : 'false';
+      return httpClient.get(
+        `/api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=${resolvedParam}`,
+        RuleSpecCommentsResponseSchema
+      );
+    },
+
+    async createRuleSpecComment(
+      gameId: string,
+      version: string,
+      request: CreateRuleSpecCommentRequest
+    ): Promise<RuleSpecComment> {
+      return httpClient.post(
+        `/api/v1/games/${gameId}/rulespec/versions/${version}/comments`,
+        request,
+        RuleSpecCommentSchema
+      );
+    },
+
+    async updateRuleSpecComment(
+      gameId: string,
+      commentId: string,
+      request: UpdateRuleSpecCommentRequest
+    ): Promise<RuleSpecComment> {
+      return httpClient.put(
+        `/api/v1/games/${gameId}/rulespec/comments/${commentId}`,
+        request,
+        RuleSpecCommentSchema
+      );
+    },
+
+    async deleteRuleSpecComment(gameId: string, commentId: string): Promise<void> {
+      return httpClient.delete(`/api/v1/games/${gameId}/rulespec/comments/${commentId}`);
+    },
+
+    async createCommentReply(
+      parentCommentId: string,
+      request: CreateReplyRequest
+    ): Promise<RuleSpecComment> {
+      return httpClient.post(
+        `/api/v1/rulespec/comments/${parentCommentId}/replies`,
+        request,
+        RuleSpecCommentSchema
+      );
+    },
+
+    async resolveComment(commentId: string): Promise<void> {
+      return httpClient.post(`/api/v1/rulespec/comments/${commentId}/resolve`, {});
+    },
+
+    async unresolveComment(commentId: string): Promise<void> {
+      return httpClient.post(`/api/v1/rulespec/comments/${commentId}/unresolve`, {});
+    },
+
+    // ========== Bulk Operations ==========
+
+    async bulkExportRuleSpecs(request: BulkExportRequest): Promise<void> {
+      const { blob, filename } = await httpClient.postFile(
+        '/api/v1/rulespecs/bulk/export',
+        request
+      );
+      downloadFile(blob, filename);
+    },
+
+    // ========== Cache Management ==========
+
+    async getCacheStats(gameId?: string): Promise<CacheStats | null> {
+      const path = gameId
+        ? `/api/v1/admin/cache/stats?gameId=${encodeURIComponent(gameId)}`
+        : '/api/v1/admin/cache/stats';
+      return httpClient.get(path, CacheStatsSchema);
+    },
+
+    async invalidateGameCache(gameId: string): Promise<void> {
+      return httpClient.delete(`/api/v1/admin/cache/games/${encodeURIComponent(gameId)}`);
+    },
+
+    async invalidateCacheByTag(tag: string): Promise<void> {
+      return httpClient.delete(`/api/v1/admin/cache/tags/${encodeURIComponent(tag)}`);
+    },
+
+    // ========== Agent Feedback ==========
+
+    async submitAgentFeedback(request: {
+      messageId: string;
+      endpoint: string;
+      gameId: string;
+      feedback: 'helpful' | 'not-helpful';
+    }): Promise<void> {
+      return httpClient.post('/api/v1/agents/feedback', request);
+    },
+  };
+}
+
+export type ChatClient = ReturnType<typeof createChatClient>;

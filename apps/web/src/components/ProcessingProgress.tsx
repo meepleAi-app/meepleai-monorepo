@@ -8,11 +8,8 @@
 import { useEffect, useState, useCallback, useRef, type CSSProperties } from 'react';
 import { api } from '../lib/api';
 import {
-  ProcessingStep,
   type ProcessingProgress as ProcessingProgressType,
   isProcessingComplete,
-  getStepLabel,
-  getStepOrder
 } from '../types/pdf';
 import { SkeletonLoader } from './loading';
 
@@ -24,28 +21,6 @@ interface ProcessingProgressProps {
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_DURATION_MS = 600000; // 10 minutes max
-
-/**
- * Formats seconds into human-readable time (e.g., "2 min 30 sec")
- */
-function formatTimeRemaining(seconds: number): string {
-  if (seconds <= 0) {
-    return 'Less than a minute';
-  }
-
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-
-  if (minutes === 0) {
-    return `${remainingSeconds} sec`;
-  }
-
-  if (remainingSeconds === 0) {
-    return `${minutes} min`;
-  }
-
-  return `${minutes} min ${remainingSeconds} sec`;
-}
 
 export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingProgressProps) {
   const [progress, setProgress] = useState<ProcessingProgressType | null>(null);
@@ -95,17 +70,17 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       setNetworkError(null);
       setLoading(false);
 
-      // Check for completion
-      if (isProcessingComplete(data.currentStep)) {
+      // Check for completion (FE-IMP-005: Use status instead of currentStep)
+      if (isProcessingComplete(data.status)) {
         if (
-          data.currentStep === ProcessingStep.Completed &&
+          data.status === 'Completed' &&
           onComplete &&
           !hasNotifiedCompletionRef.current
         ) {
           hasNotifiedCompletionRef.current = true;
           onComplete();
-        } else if (data.currentStep === ProcessingStep.Failed && onError && data.errorMessage) {
-          onError(data.errorMessage);
+        } else if (data.status === 'Failed' && onError && data.error) {
+          onError(data.error);
         }
       }
     } catch (error) {
@@ -149,7 +124,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       }
 
       const currentProgress = latestProgressRef.current;
-      if (currentProgress && isProcessingComplete(currentProgress.currentStep)) {
+      if (currentProgress && isProcessingComplete(currentProgress.status)) {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
@@ -234,39 +209,14 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     width: `${progress?.percentComplete ?? 0}%`,
     height: '100%',
     backgroundColor:
-      progress?.currentStep === ProcessingStep.Completed
+      progress?.status === 'Completed'
         ? '#34a853'
-        : progress?.currentStep === ProcessingStep.Failed
+        : progress?.status === 'Failed'
           ? '#d93025'
           : '#0070f3',
     transition: 'width 0.6s ease'
   };
 
-  const stepIndicatorContainerStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '20px',
-    gap: '8px'
-  };
-
-  const stepIndicatorStyle = (step: ProcessingStep): CSSProperties => {
-    const currentStepOrder = progress ? getStepOrder(progress.currentStep) : -1;
-    const stepOrder = getStepOrder(step);
-    const isActive = progress?.currentStep === step;
-    const isCompleted = stepOrder < currentStepOrder;
-
-    return {
-      flex: 1,
-      textAlign: 'center',
-      padding: '8px 4px',
-      borderRadius: '4px',
-      fontSize: '12px',
-      backgroundColor: isActive ? '#e3f2fd' : isCompleted ? '#e8f5e9' : '#f5f5f5',
-      border: `2px solid ${isActive ? '#0070f3' : isCompleted ? '#34a853' : '#ddd'}`,
-      color: isActive ? '#0070f3' : isCompleted ? '#34a853' : '#666',
-      fontWeight: isActive ? 600 : 400
-    };
-  };
 
   const statusTextStyle: CSSProperties = {
     marginBottom: '12px',
@@ -381,14 +331,6 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     cursor: 'pointer'
   };
 
-  // Non-terminal steps for step indicator
-  const steps = [
-    ProcessingStep.Uploading,
-    ProcessingStep.Extracting,
-    ProcessingStep.Chunking,
-    ProcessingStep.Embedding,
-    ProcessingStep.Indexing
-  ];
 
   if (loading && !progress) {
     return (
@@ -415,15 +357,6 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
         <div style={progressBarFillStyle} />
       </div>
 
-      {/* Step Indicators */}
-      <div style={stepIndicatorContainerStyle} aria-label="Processing steps">
-        {steps.map((step) => (
-          <div key={step} style={stepIndicatorStyle(step)} title={getStepLabel(step)}>
-            {step}
-          </div>
-        ))}
-      </div>
-
       {/* Network Error - Display even when progress is null */}
       {/* This allows errors to be shown during initial fetch failures */}
       {networkError && (
@@ -436,18 +369,8 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       {progress && (
         <div>
           <p style={statusTextStyle}>
-            <strong>Processing status:</strong> {getStepLabel(progress.currentStep)}
+            <strong>Processing status:</strong> {progress.status}
           </p>
-
-          {/* Time Remaining */}
-          {progress.estimatedTimeRemaining !== undefined &&
-            progress.estimatedTimeRemaining !== null &&
-            !isProcessingComplete(progress.currentStep) && (
-              <p style={timeRemainingStyle}>
-                <strong>Estimated time remaining:</strong>{' '}
-                {formatTimeRemaining(progress.estimatedTimeRemaining)}
-              </p>
-            )}
 
           {/* Progress Percentage */}
           <p style={timeRemainingStyle}>
@@ -455,14 +378,14 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
           </p>
 
           {/* Error Message - Processing failure errors */}
-          {progress.currentStep === ProcessingStep.Failed && progress.errorMessage && (
+          {progress.status === 'Failed' && progress.error && (
             <div style={errorMessageStyle} role="alert">
-              <strong>Error:</strong> {progress.errorMessage}
+              <strong>Error:</strong> {progress.error}
             </div>
           )}
 
           {/* Cancel Button */}
-          {!isProcessingComplete(progress.currentStep) && (
+          {!isProcessingComplete(progress.status) && (
             <div style={buttonContainerStyle}>
               <button
                 onClick={handleCancelClick}

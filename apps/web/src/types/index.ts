@@ -60,12 +60,9 @@ export {
   createApiError
 } from './api';
 
-// PDF Processing Types
+// PDF Processing Types (FE-IMP-005: Simplified, using API schemas)
 export {
-  ProcessingStep,
   isProcessingComplete,
-  getStepLabel,
-  getStepOrder
 } from './pdf';
 
 export type {

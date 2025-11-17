@@ -28,7 +28,7 @@ export function CommentThread({
     setIsLoading(true);
     setError("");
     try {
-      const response = await api.ruleSpecComments.getComments(gameId, version, includeResolved);
+      const response = await api.chat.getRuleSpecComments(gameId, version, includeResolved);
       if (response) {
         // Filter by line number if specified
         const filteredComments = lineNumber !== null
@@ -53,7 +53,7 @@ export function CommentThread({
     setIsSubmitting(true);
     setError("");
     try {
-      await api.ruleSpecComments.createComment(gameId, version, {
+      await api.chat.createRuleSpecComment(gameId, version, {
         atomId,
         lineNumber: lineNumber,
         commentText
@@ -72,7 +72,7 @@ export function CommentThread({
     setIsSubmitting(true);
     setError("");
     try {
-      await api.ruleSpecComments.updateComment(gameId, commentId, {
+      await api.chat.updateRuleSpecComment(gameId, commentId, {
         commentText: newText
       });
       await loadComments();
@@ -92,7 +92,7 @@ export function CommentThread({
     setIsSubmitting(true);
     setError("");
     try {
-      await api.ruleSpecComments.deleteComment(gameId, commentId);
+      await api.chat.deleteRuleSpecComment(gameId, commentId);
       await loadComments();
     } catch (err: any) {
       console.error("Failed to delete comment:", err);
@@ -107,7 +107,7 @@ export function CommentThread({
     setIsSubmitting(true);
     setError("");
     try {
-      await api.ruleSpecComments.createReply(parentCommentId, {
+      await api.chat.createCommentReply(parentCommentId, {
         commentText: replyText
       });
       await loadComments();
@@ -124,7 +124,7 @@ export function CommentThread({
     setIsSubmitting(true);
     setError("");
     try {
-      await api.ruleSpecComments.resolveComment(commentId);
+      await api.chat.resolveComment(commentId);
       await loadComments();
     } catch (err: any) {
       console.error("Failed to resolve comment:", err);
@@ -139,7 +139,7 @@ export function CommentThread({
     setIsSubmitting(true);
     setError("");
     try {
-      await api.ruleSpecComments.unresolveComment(commentId);
+      await api.chat.unresolveComment(commentId);
       await loadComments();
     } catch (err: any) {
       console.error("Failed to unresolve comment:", err);

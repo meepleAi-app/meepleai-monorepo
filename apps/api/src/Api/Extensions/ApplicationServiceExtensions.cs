@@ -208,6 +208,9 @@ public static class ApplicationServiceExtensions
         services.AddSingleton<IQualityReportService>(sp => sp.GetRequiredService<QualityReportService>());
         services.AddHostedService(sp => sp.GetRequiredService<QualityReportService>());
 
+        // BGAI-042: Weekly automated quality evaluation
+        services.AddHostedService<WeeklyEvaluationService>();
+
         return services;
     }
 }

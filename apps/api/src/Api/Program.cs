@@ -135,6 +135,7 @@ builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
+builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 
 // BGAI-021 (Issue #963): AI provider configuration with startup validation
 builder.Services.Configure<AiProviderSettings>(builder.Configuration.GetSection(AiProviderSettings.SectionName));

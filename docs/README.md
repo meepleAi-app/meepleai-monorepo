@@ -2,7 +2,7 @@
 
 **Welcome to the MeepleAI documentation!** This directory contains comprehensive documentation for the MeepleAI monorepo, organized by audience and purpose.
 
-> **Quick Links**: [Getting Started](./00-getting-started/quick-start.md) | [Architecture Overview](./01-architecture/overview/system-architecture.md) | [API Docs](./03-api/board-game-ai-api-specification.md) | [Testing Guide](./02-development/testing/test-writing-guide.md)
+> **Quick Links**: [Getting Started](./00-getting-started/quick-start.md) | [Architecture Overview](./01-architecture/overview/system-architecture.md) | [API Docs](./03-api/board-game-ai-api-specification.md) | [Testing Guide](./02-development/testing/testing-guide.md)
 
 ---
 
@@ -22,7 +22,9 @@ docs/
 ├── 07-project-management/        # Planning, roadmap, organization
 ├── 08-business/                  # Business plan & strategy
 ├── 09-research/                  # Research findings & analysis
-└── 10-knowledge-base/            # External references & wiki
+├── 10-knowledge-base/            # External references & wiki
+├── archive/                      # Historical docs, completed reports
+└── issues/                       # Issue-specific documentation
 ```
 
 ---
@@ -40,7 +42,7 @@ docs/
 - **Setup**: [Quick Start](./00-getting-started/quick-start.md), [🇮🇹 Guida Setup Locale](./00-getting-started/guida-setup-locale.md)
 - **Architecture**: [System Architecture](./01-architecture/overview/system-architecture.md), [Architecture Diagrams](./01-architecture/diagrams/)
 - **API**: [API Specification](./03-api/board-game-ai-api-specification.md)
-- **Testing**: [Test Writing Guide](./02-development/testing/test-writing-guide.md), [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md)
+- **Testing**: [Testing Guide](./02-development/testing/testing-guide.md), [Testing Strategy](./02-development/testing/testing-strategy.md)
 - **Guides**: [LLM Integration](./02-development/guides/llm-integration.md), [Unstructured Setup](./02-development/guides/unstructured-setup.md)
 - **Refactoring**: [DDD Status](./02-development/refactoring/legacy-code-dashboard.md), [DDD Quick Reference](./01-architecture/ddd/quick-reference.md)
 
@@ -144,19 +146,20 @@ docs/
 #### Implementation
 | Document | Description |
 |----------|-------------|
-| [RAG Service Migration](./02-development/implementation/bgai-023-ragservice-migration.md) | RAG service migration findings |
-| [Cost Tracking Verification](./02-development/implementation/bgai-026-cost-tracking.md) | LLM cost tracking verification |
+| [RAG Service Migration](./archive/bgai-implementations/bgai-023-ragservice-migration.md) | RAG service migration findings |
+| [Cost Tracking Verification](./archive/bgai-implementations/bgai-026-cost-tracking.md) | LLM cost tracking verification |
 
 #### Testing
 | Document | Description |
 |----------|-------------|
-| [Test Writing Guide](./02-development/testing/test-writing-guide.md) | How to write tests (unit, integration, E2E) |
-| [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md) | Complete testing strategy (30 pages) |
-| [Test Patterns](./02-development/testing/test-patterns.md) | Common test patterns (AAA, mocking, etc.) |
-| [Accessibility Testing](./02-development/testing/accessibility-testing-guide.md) | Accessibility testing with Playwright |
-| [E2E Contribution Guide](./02-development/testing/e2e-contribution-guide.md) | Contributing E2E tests |
-| [Page Object Model](./02-development/testing/pom-architecture-design.md) | POM architecture for E2E tests |
-| _...and 15 more testing docs_ | See [02-development/testing/](./02-development/testing/) |
+| [Testing Guide](./02-development/testing/testing-guide.md) | Comprehensive test writing guide (60+ pages) |
+| [Testing Strategy](./02-development/testing/testing-strategy.md) | Complete testing strategy (30 pages) |
+| [Testing Quick Reference](./02-development/testing/testing-quick-reference.md) | Quick reference for testing patterns |
+| [Integration Tests Performance](./02-development/testing/integration-tests-performance-guide.md) | Optimize integration tests for 4-11x speedup (80+ pages) |
+| [Testing Specialized](./02-development/testing/testing-specialized.md) | Accessibility, concurrency, API testing |
+| [Manual Testing Guide](./02-development/testing/manual-testing-guide.md) | 🇮🇹 Full QA procedures (Italian) |
+| [Testing Checkpoint Guide](./02-development/testing/testing-checkpoint-guide.md) | 🇮🇹 Checkpoint verification (Italian) |
+| _...and 2 more testing docs_ | See [02-development/testing/](./02-development/testing/) |
 
 ### 03 - API
 
@@ -204,7 +207,7 @@ docs/
 
 | Document | Description |
 |----------|-------------|
-| [Security Audit 2025-11-04](./06-security/SECURITY_AUDIT_2025-11-04.md) | Latest security audit report |
+| [Security Audit 2025-11-04](./archive/security-audits/security-audit-2025-11-04.md) | Latest security audit report |
 | [Code Scanning Remediation](./06-security/code-scanning-remediation-summary.md) | CodeQL findings remediation |
 | [OAuth Security](./06-security/oauth-security.md) | OAuth 2.0 security best practices |
 | [Log Forging Prevention](./06-security/log-forging-prevention.md) | Preventing log injection attacks |
@@ -249,7 +252,7 @@ docs/
 
 | Document | Description |
 |----------|-------------|
-| [Ollama Quality Findings](./09-research/bgai-016-ollama-quality-findings.md) | Local LLM quality evaluation |
+| [Ollama Quality Findings](./archive/bgai-implementations/bgai-016-ollama-quality-findings.md) | Local LLM quality evaluation |
 
 ### 10 - Knowledge Base
 
@@ -289,7 +292,7 @@ docs/
 ### File Naming
 
 - **Use kebab-case**: `quick-start.md`, not `QuickStart.md` or `quick_start.md`
-- **Be descriptive**: `board-game-ai-testing-strategy.md` not `testing.md`
+- **Be descriptive**: `testing-strategy.md` not `testing.md`
 - **Avoid prefixes**: Use folder structure instead of `board-game-ai-*` prefixes
 
 ### Structure

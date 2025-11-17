@@ -686,8 +686,8 @@ services.AddSingleton<OllamaLlmClient>();
 - **Architecture**: `docs/architecture/adr-004-hybrid-llm-architecture.md`
 - **Cost Tracking API**: `docs/api/llm-cost-tracking-api.md`
 - **Testing Guide**: `docs/testing/test-writing-guide.md`
-- **Performance Baseline**: `docs/testing/bgai-025-rag-performance-baseline.md`
-- **Backward Compatibility**: `docs/testing/bgai-024-rag-backward-compatibility-testing.md`
+- **Performance Baseline**: `docs/archive/bgai-implementations/bgai-025-rag-performance-baseline.md`
+- **Backward Compatibility**: `docs/archive/bgai-implementations/bgai-024-rag-backward-compatibility-testing.md`
 
 ---
 

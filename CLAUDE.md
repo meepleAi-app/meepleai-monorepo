@@ -307,6 +307,8 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **Architecture** | `docs/01-architecture/overview/system-architecture.md` |
 | **API Spec** | `docs/03-api/board-game-ai-api-specification.md` |
 | **ADR Hybrid RAG** | `docs/01-architecture/adr/adr-001-hybrid-rag.md` |
+| **ADR Multi-Layer Validation** | `docs/01-architecture/adr/adr-006-multi-layer-validation.md` |
+| **ADR Cosine Similarity** | `docs/01-architecture/adr/adr-005-cosine-similarity-consensus.md` |
 | **ADR PDF Processing** | `docs/01-architecture/adr/adr-003b-unstructured-pdf.md` |
 | **Security** | `SECURITY.md`, `docs/06-security/code-scanning-remediation-summary.md` |
 | **OAuth Security** | `docs/06-security/oauth-security.md` |

@@ -374,11 +374,15 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 
 ## CI/CD
 
-**GitHub Actions** (`.github/workflows/ci.yml`):
-- ci-web: Lint → Typecheck → Test (90%+)
-- ci-api: Build → Test → RAG eval
-- security-scan: CodeQL, dependency audit, analyzers
-- Performance: ~14min (38% faster, optimized 2025-11-09)
+**GitHub Actions** (5 workflows optimized):
+- **`ci.yml`**: Main CI pipeline (~14min, 38% faster since 2025-11-09)
+  - Web: Lint → Typecheck → Unit Tests (90%+) → E2E Tests → Accessibility
+  - API: Build → Unit & Integration Tests (90%+) → Quality Tests (RAG evaluation)
+  - Validation: Schemas, Observability configs (Prometheus, Alertmanager, Grafana)
+- **`security-scan.yml`**: CodeQL (C#, JS/TS) + Dependency scanning + Semgrep + Secrets detection
+- **`migration-guard.yml`**: EF Core migration validation (prevents deletion)
+- **`lighthouse-ci.yml`**: Performance monitoring (Core Web Vitals, Lighthouse CI)
+- **`storybook-deploy.yml`**: Storybook build + deploy (Vercel, Chromatic)
 
 **Security**:
 - CodeQL SAST (C#, JS/TS)
@@ -386,17 +390,21 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 - `pnpm audit --audit-level=high`
 - Dependabot: Weekly
 
+**2025-11-17 Optimization**: Removed 3 redundant workflows (test-automation, integration-tests, cleanup-caches), saving ~50% CI time and costs
+
 ---
 
 ## Maintenance
 
-**Cache Cleanup** (monthly):
+**Local Cache Cleanup** (run locally as needed):
 ```bash
 bash tools/cleanup-caches.sh --dry-run      # Preview
 bash tools/cleanup-caches.sh                # Run
 ```
 
 **Cleans**: `.serena/`, `codeql-db/`, `.playwright-mcp/`, build artifacts
+
+**Note**: Cache cleanup is for local development only. GitHub Actions runners are ephemeral and auto-cleaned.
 
 ---
 

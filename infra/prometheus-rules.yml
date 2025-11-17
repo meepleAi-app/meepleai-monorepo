@@ -479,7 +479,7 @@ groups:
           (
             rate(meepleai_pdf_extraction_stage_success[5m])
             /
-            rate(meepleai_pdf_extraction_stage_attempts[5m])
+            sum by(stage) (rate(meepleai_pdf_extraction_stage_attempts[5m]))
           ) OR on() vector(0)
         labels:
           service: meepleai-api

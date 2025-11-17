@@ -23,9 +23,8 @@ public static class AiEndpoints
             QaRequest req,
             HttpContext context,
             IRagService rag,
-            AiRequestLogService aiLog,
             IResponseQualityService qualityService, // AI-11: Quality scoring
-            IMediator mediator, // CHAT-02: for GenerateFollowUpQuestionsQuery (Issue #1188)
+            IMediator mediator, // CHAT-02: for GenerateFollowUpQuestionsQuery (Issue #1188) + AI logging
             IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
             ILogger<Program> logger,
             bool bypassCache = false,

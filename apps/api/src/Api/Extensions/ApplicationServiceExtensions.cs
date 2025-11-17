@@ -136,11 +136,10 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IRagEvaluationService, RagEvaluationService>();
 
         // AI-07: Prompt versioning and management service
-        services.AddScoped<IPromptManagementService, PromptManagementService>();
 
         // Audit and logging
         services.AddScoped<AuditService>();
-        services.AddScoped<AiRequestLogService>();
+        // AiRequestLogService migrated to CQRS (LogAiRequestCommand)
 
         return services;
     }
@@ -155,8 +154,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IBlobStorageService, BlobStorageService>();
 
         // PDF main services
-        // DDD-PHASE4: PDF services migrated to DocumentProcessing bounded context
-        services.AddScoped<PdfStorageService>(); // Orchestration service - coordinates bounded contexts
+        // DDD-COMPLETE: PDF services fully migrated to CQRS in DocumentProcessing bounded context
 
         // Issue #940 Phase 3: DDD PDF text extraction adapter
         services.AddSingleton<BoundedContexts.DocumentProcessing.Domain.Services.PdfTextProcessingDomainService>();

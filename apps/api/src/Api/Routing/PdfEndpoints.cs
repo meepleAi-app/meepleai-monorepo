@@ -22,7 +22,7 @@ public static class PdfEndpoints
 {
     public static RouteGroupBuilder MapPdfEndpoints(this RouteGroupBuilder group)
     {
-        group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidator pdfValidator, PdfStorageService pdfStorage, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidator pdfValidator, IMediator mediator, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
         {
             // CONFIG-05: Check if PDF upload feature is enabled (return 403 before auth to reflect feature gating)
             if (!await featureFlags.IsEnabledAsync("Features.PdfUpload"))
@@ -76,7 +76,7 @@ public static class PdfEndpoints
             // Reset stream position for processing
             stream.Position = 0;
 
-            var result = await pdfStorage.UploadPdfAsync(gameId, userId, file!, ct);
+            var result = await mediator.Send(new UploadPdfCommand(gameId, userId, file!), ct);
 
             if (!result.Success)
             {
@@ -149,12 +149,12 @@ public static class PdfEndpoints
             return Results.Json(details);
         });
 
-        group.MapGet("/games/{gameId:guid}/pdfs", async (Guid gameId, HttpContext context, PdfStorageService pdfStorage, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/pdfs", async (Guid gameId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var pdfs = await pdfStorage.GetPdfsByGameAsync(gameId.ToString(), ct);
+            var pdfs = await mediator.Send(new GetPdfDocumentsByGameQuery(gameId), ct);
             return Results.Json(new { pdfs });
         });
 
@@ -175,7 +175,7 @@ public static class PdfEndpoints
         });
 
         // SEC-02: Delete PDF with Row-Level Security
-        group.MapDelete("/pdf/{pdfId:guid}", async (Guid pdfId, HttpContext context, PdfStorageService pdfStorage, AuditService auditService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/pdf/{pdfId:guid}", async (Guid pdfId, HttpContext context, AuditService auditService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
@@ -218,7 +218,7 @@ public static class PdfEndpoints
             }
 
             // Delete PDF
-            var result = await pdfStorage.DeletePdfAsync(pdfId.ToString(), ct);
+            var result = await mediator.Send(new DeletePdfCommand(pdfId.ToString()), ct);
 
             if (!result.Success)
             {

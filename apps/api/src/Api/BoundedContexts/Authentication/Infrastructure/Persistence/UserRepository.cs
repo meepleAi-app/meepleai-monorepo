@@ -238,4 +238,21 @@ public class UserRepository : RepositoryBase, IUserRepository
             .AsNoTracking()
             .CountAsync(u => u.Role == adminRole, cancellationToken);
     }
+
+    public async Task<List<User>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return new List<User>();
+        }
+
+        var userEntities = await DbContext.Users
+            .Where(u => (u.DisplayName != null && u.DisplayName.Contains(query)) || u.Email.Contains(query))
+            .OrderBy(u => u.DisplayName ?? u.Email)
+            .Take(maxResults)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return userEntities.Select(MapToDomain).ToList();
+    }
 }

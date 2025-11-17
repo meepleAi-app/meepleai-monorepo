@@ -1,12 +1,9 @@
 using Api.Configuration;
 using Api.Extensions;
-using Api.Infrastructure;
-using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc; // For [FromBody] attribute
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 // DDD CQRS imports (using aliases to avoid conflicts with Api.Models)
@@ -15,6 +12,8 @@ using DddLoginCommand = Api.BoundedContexts.Authentication.Application.Commands.
 using DddLogoutCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutCommand;
 using DddCreateSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.CreateSessionCommand;
 using HandleOAuthCallbackCommand = Api.BoundedContexts.Authentication.Application.Commands.OAuth.HandleOAuthCallbackCommand;
+using GetSessionStatusQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionStatusQuery;
+using ExtendSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.ExtendSessionCommand;
 
 namespace Api.Routing;
 
@@ -617,19 +616,17 @@ User must have at least one authentication method remaining (password or another
     {
         group.MapGet("/auth/session/status", async (
             HttpContext context,
-            MeepleAiDbContext db,
+            IMediator mediator,
             IConfiguration config,
-            TimeProvider timeProvider,
             CancellationToken ct) =>
         {
             // Require authentication
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var now = timeProvider.GetUtcNow().UtcDateTime;
             var inactivityTimeoutDays = config.GetValue<int>("Authentication:SessionManagement:InactivityTimeoutDays", 30);
 
-            // Get session from database to access LastSeenAt
+            // Get session token hash from cookie
             var sessionCookieName = getSessionCookieName(context);
             if (!context.Request.Cookies.TryGetValue(sessionCookieName, out var token) || string.IsNullOrWhiteSpace(token))
             {
@@ -639,49 +636,31 @@ User must have at least one authentication method remaining (password or another
             var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
             var tokenHash = Convert.ToBase64String(hash);
 
-            var dbSession = await db.UserSessions
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct);
+            // Use CQRS Query to get session status
+            var query = new GetSessionStatusQuery(tokenHash, inactivityTimeoutDays);
+            var response = await mediator.Send(query, ct);
 
-            if (dbSession == null)
+            if (response == null)
             {
                 return Results.Unauthorized();
             }
-
-            if (dbSession.RevokedAt != null)
-            {
-                return Results.Unauthorized();
-            }
-
-            // Calculate remaining minutes until session expires from inactivity
-            var lastActivity = dbSession.LastSeenAt ?? dbSession.CreatedAt;
-            var expiryTime = lastActivity.AddDays(inactivityTimeoutDays);
-            var remainingMinutes = (int)Math.Max(0, (expiryTime - now).TotalMinutes);
-
-            var response = new SessionStatusResponse(
-                dbSession.ExpiresAt,
-                dbSession.LastSeenAt,
-                remainingMinutes);
 
             return Results.Json(response);
         });
 
         group.MapPost("/auth/session/extend", async (
             HttpContext context,
-            MeepleAiDbContext db,
-            ISessionCacheService? sessionCache,
+            IMediator mediator,
             IConfiguration config,
-            TimeProvider timeProvider,
             CancellationToken ct) =>
         {
             // Require authentication
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var now = timeProvider.GetUtcNow().UtcDateTime;
             var inactivityTimeoutDays = config.GetValue<int>("Authentication:SessionManagement:InactivityTimeoutDays", 30);
 
-            // Get session from database
+            // Get session token hash from cookie
             var sessionCookieName = getSessionCookieName(context);
             if (!context.Request.Cookies.TryGetValue(sessionCookieName, out var token) || string.IsNullOrWhiteSpace(token))
             {
@@ -691,37 +670,14 @@ User must have at least one authentication method remaining (password or another
             var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
             var tokenHash = Convert.ToBase64String(hash);
 
-            var dbSession = await db.UserSessions
-                .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct);
+            // Use CQRS Command to extend session
+            var command = new ExtendSessionCommand(tokenHash, inactivityTimeoutDays);
+            var response = await mediator.Send(command, ct);
 
-            if (dbSession == null)
+            if (response == null)
             {
                 return Results.Unauthorized();
             }
-
-            if (dbSession.RevokedAt != null)
-            {
-                return Results.Unauthorized();
-            }
-
-            // Update LastSeenAt to extend session
-            dbSession.LastSeenAt = now;
-            await db.SaveChangesAsync(ct);
-
-            // Invalidate cache to force refresh on next request
-            if (sessionCache != null)
-            {
-                await sessionCache.InvalidateAsync(tokenHash, ct);
-            }
-
-            // Calculate new remaining minutes
-            var expiryTime = now.AddDays(inactivityTimeoutDays);
-            var remainingMinutes = (int)Math.Max(0, (expiryTime - now).TotalMinutes);
-
-            var response = new SessionStatusResponse(
-                dbSession.ExpiresAt,
-                now,
-                remainingMinutes);
 
             return Results.Json(response);
         });

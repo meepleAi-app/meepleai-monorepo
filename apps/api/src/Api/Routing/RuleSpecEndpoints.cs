@@ -37,7 +37,7 @@ public static class RuleSpecEndpoints
             return Results.Json(ruleSpec);
         });
 
-        group.MapPut("/games/{gameId:guid}/rulespec", async (Guid gameId, RuleSpec ruleSpec, HttpContext context, IMediator mediator, AuditService auditService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPut("/games/{gameId:guid}/rulespec", async (Guid gameId, RuleSpec ruleSpec, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminOrEditorSession();
             if (!authorized) return error!;
@@ -55,28 +55,18 @@ public static class RuleSpecEndpoints
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", userId, gameId);
 
-            // Convert Model to Command
+            // Convert Model to Command (including audit context)
             var command = new UpdateRuleSpecCommand(
                 GameId: gameId,
                 Version: ruleSpec.version,
                 Atoms: ruleSpec.rules.Select(r => new RuleAtomDto(r.id, r.text, r.section, r.page, r.line)).ToList(),
-                UserId: userId
+                UserId: userId,
+                IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                UserAgent: context.Request.Headers.UserAgent.ToString()
             );
 
             var updated = await mediator.Send(command, ct);
             logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.Version);
-
-            // Audit trail
-            await auditService.LogAsync(
-                session.User.Id,
-                "UPDATE_RULESPEC",
-                "RuleSpec",
-                gameId.ToString(),
-                "Success",
-                $"Updated RuleSpec to version {updated.Version}",
-                context.Connection.RemoteIpAddress?.ToString(),
-                context.Request.Headers.UserAgent.ToString(),
-                ct);
 
             // Convert DTO back to Model for backward compatibility
             var modelResult = ToModel(updated);

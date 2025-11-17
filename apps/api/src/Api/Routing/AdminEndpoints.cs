@@ -3,7 +3,6 @@ using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
-using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
@@ -69,7 +68,7 @@ public static class AdminEndpoints
 
         group.MapGet("/users/search", async (
             string query,
-            MeepleAiDbContext db,
+            IMediator mediator,
             HttpContext context,
             ILogger<Program> logger,
             CancellationToken ct) =>
@@ -77,24 +76,12 @@ public static class AdminEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session.User.Id;
+            logger.LogInformation("User {UserId} searching for users with query: {Query}", session.User.Id, query);
 
-            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
-            {
-                return Results.Ok(Array.Empty<UserSearchResultDto>());
-            }
+            // Use CQRS Query for user search
+            var searchQuery = new SearchUsersQuery(query, MaxResults: 10);
+            var users = await mediator.Send(searchQuery, ct);
 
-            logger.LogInformation("User {UserId} searching for users with query: {Query}", userId, query);
-
-            var users = await db.Users
-                .Where(u => (u.DisplayName != null && u.DisplayName.Contains(query)) || u.Email.Contains(query))
-                .OrderBy(u => u.DisplayName ?? u.Email)
-                .Take(10)
-                .AsNoTracking()
-                .Select(u => new UserSearchResultDto(u.Id.ToString(), u.DisplayName ?? u.Email, u.Email))
-                .ToListAsync(ct);
-
-            logger.LogInformation("Found {Count} users matching query: {Query}", users.Count, query);
             return Results.Ok(users);
         })
         .RequireAuthorization()
@@ -191,7 +178,7 @@ public static class AdminEndpoints
         // AI-11: Quality tracking endpoints
         group.MapGet("/admin/quality/low-responses", async (
             HttpContext context,
-            MeepleAiDbContext dbContext,
+            IMediator mediator,
             int limit = 100,
             int offset = 0,
             DateTime? startDate = null,
@@ -201,41 +188,11 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            // Convert DateTime parameters to UTC if they have Kind=Unspecified (from query string parsing)
-            // PostgreSQL requires UTC DateTimes
-            if (startDate.HasValue && startDate.Value.Kind == DateTimeKind.Unspecified)
-                startDate = DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc);
-            if (endDate.HasValue && endDate.Value.Kind == DateTimeKind.Unspecified)
-                endDate = DateTime.SpecifyKind(endDate.Value, DateTimeKind.Utc);
+            // Use CQRS Query to get low-quality responses
+            var query = new GetLowQualityResponsesQuery(limit, offset, startDate, endDate);
+            var result = await mediator.Send(query, ct);
 
-            // Query low-quality responses with filters
-            var query = dbContext.AiRequestLogs
-                .AsNoTracking()
-                .Where(log => log.IsLowQuality);
-
-            if (startDate.HasValue)
-                query = query.Where(log => log.CreatedAt >= startDate.Value);
-            if (endDate.HasValue)
-                query = query.Where(log => log.CreatedAt <= endDate.Value);
-
-            var totalCount = await query.CountAsync(ct);
-            var responses = await query
-                .OrderByDescending(log => log.CreatedAt)
-                .Skip(offset)
-                .Take(limit)
-                .Select(log => new LowQualityResponseDto(
-                    log.Id,
-                    log.CreatedAt,
-                    log.Query ?? string.Empty,
-                    log.RagConfidence ?? 0.0,
-                    log.LlmConfidence ?? 0.0,
-                    log.CitationQuality ?? 0.0,
-                    log.OverallConfidence ?? 0.0,
-                    log.IsLowQuality
-                ))
-                .ToListAsync(ct);
-
-            return Results.Ok(new LowQualityResponsesResult(totalCount, responses));
+            return Results.Ok(result);
         })
         .RequireAuthorization()
         .WithTags("Admin", "Quality")
@@ -1520,14 +1477,14 @@ public static class AdminEndpoints
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status500InternalServerError);
 
-        group.MapDelete("/admin/cache/games/{gameId:guid}", async (Guid gameId, HttpContext context, IAiResponseCacheService cacheService, MeepleAiDbContext dbContext, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/admin/cache/games/{gameId:guid}", async (Guid gameId, HttpContext context, IAiResponseCacheService cacheService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            // Validate game exists (but proceed with cache invalidation even if not - idempotent)
-            var gameExists = await dbContext.Games.AsNoTracking().AnyAsync(g => g.Id == gameId, ct);
-            if (!gameExists)
+            // Validate game exists using CQRS Query (but proceed with cache invalidation even if not - idempotent)
+            var game = await mediator.Send(new GetGameByIdQuery(gameId), ct);
+            if (game == null)
             {
                 logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session.User.Id, gameId);
             }
@@ -1958,18 +1915,16 @@ public static class AdminEndpoints
 
         group.MapPost("/llm-costs/check-alerts", async (
             HttpContext context,
-            LlmCostAlertService alertService,
+            IMediator mediator,
             CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            // Check all thresholds (daily, weekly, monthly projection)
-            await alertService.CheckDailyCostThresholdAsync(ct);
-            await alertService.CheckWeeklyCostThresholdAsync(ct);
-            await alertService.CheckMonthlyCostProjectionAsync(ct);
+            // Use CQRS Command to check all thresholds
+            var result = await mediator.Send(new CheckLlmCostAlertsCommand(), ct);
 
-            return Results.Json(new { success = true, message = "Cost threshold checks completed" });
+            return Results.Json(new { success = result.Success, message = result.Message });
         })
         .WithTags("Admin", "LLM", "Alerts")
         .WithName("CheckLlmCostAlerts");

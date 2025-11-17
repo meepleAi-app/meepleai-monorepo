@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.Extensions;
@@ -9,7 +10,6 @@ using Api.Models;
 using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using PdfIndexingErrorCode = Api.BoundedContexts.DocumentProcessing.Application.DTOs.PdfIndexingErrorCode;
 
 namespace Api.Routing;
@@ -158,26 +158,13 @@ public static class PdfEndpoints
             return Results.Json(new { pdfs });
         });
 
-        group.MapGet("/pdfs/{pdfId:guid}/text", async (Guid pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
+        group.MapGet("/pdfs/{pdfId:guid}/text", async (Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var pdf = await db.PdfDocuments
-                .Where(p => p.Id == pdfId)
-                .AsNoTracking()
-                .Select(p => new
-                {
-                    p.Id,
-                    p.FileName,
-                    p.ExtractedText,
-                    p.ProcessingStatus,
-                    p.ProcessedAt,
-                    p.PageCount,
-                    p.CharacterCount,
-                    p.ProcessingError
-                })
-                .FirstOrDefaultAsync(ct);
+            // Use CQRS Query to get PDF text
+            var pdf = await mediator.Send(new GetPdfTextQuery(pdfId), ct);
 
             if (pdf == null)
             {
@@ -188,17 +175,13 @@ public static class PdfEndpoints
         });
 
         // SEC-02: Delete PDF with Row-Level Security
-        group.MapDelete("/pdf/{pdfId:guid}", async (Guid pdfId, HttpContext context, PdfStorageService pdfStorage, AuditService auditService, MeepleAiDbContext db, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/pdf/{pdfId:guid}", async (Guid pdfId, HttpContext context, PdfStorageService pdfStorage, AuditService auditService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            // Load PDF to check ownership
-            var pdf = await db.PdfDocuments
-                .Where(p => p.Id == pdfId)
-                .AsNoTracking()
-                .Select(p => new { p.Id, p.UploadedByUserId, p.GameId })
-                .FirstOrDefaultAsync(ct);
+            // Use CQRS Query to check ownership
+            var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct);
 
             if (pdf == null)
             {
@@ -261,21 +244,13 @@ public static class PdfEndpoints
         });
 
         // PDF-08: Get PDF processing progress
-        group.MapGet("/pdfs/{pdfId:guid}/progress", async (Guid pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
+        group.MapGet("/pdfs/{pdfId:guid}/progress", async (Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var pdf = await db.PdfDocuments
-                .Where(p => p.Id == pdfId)
-                .AsNoTracking()
-                .Select(p => new
-                {
-                    p.Id,
-                    p.UploadedByUserId,
-                    p.ProcessingProgressJson
-                })
-                .FirstOrDefaultAsync(ct);
+            // Use CQRS Query to get PDF progress
+            var pdf = await mediator.Send(new GetPdfProgressQuery(pdfId), ct);
 
             if (pdf == null)
             {
@@ -322,16 +297,13 @@ public static class PdfEndpoints
         .WithName("GetPdfProcessingProgress");
 
         // PDF-08: Cancel PDF processing
-        group.MapDelete("/pdfs/{pdfId:guid}/processing", async (Guid pdfId, HttpContext context, MeepleAiDbContext db, IBackgroundTaskService backgroundTaskService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/pdfs/{pdfId:guid}/processing", async (Guid pdfId, HttpContext context, IMediator mediator, IBackgroundTaskService backgroundTaskService, ILogger<Program> logger, CancellationToken ct) =>
         {
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var pdf = await db.PdfDocuments
-                .Where(p => p.Id == pdfId)
-                .AsNoTracking()
-                .Select(p => new { p.Id, p.UploadedByUserId, p.ProcessingStatus })
-                .FirstOrDefaultAsync(ct);
+            // Use CQRS Query to check ownership and status
+            var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct);
 
             if (pdf == null)
             {

@@ -242,13 +242,13 @@ export class HttpClient {
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {};
 
-    // API Key authentication (optional)
-    if (typeof window !== 'undefined') {
-      const apiKey = localStorage.getItem('api_key');
-      if (apiKey) {
-        headers['X-API-Key'] = apiKey;
-      }
+    // API Key authentication via httpOnly cookie (secure, XSS-protected)
+    // API keys are now stored in secure httpOnly cookies set by the backend.
+    // The browser automatically includes the cookie in requests.
+    // For programmatic API access (CLI, scripts), use the X-API-Key header directly.
+    // SECURITY: API keys are NO LONGER stored in localStorage to prevent XSS attacks.
 
+    if (typeof window !== 'undefined') {
       // Correlation ID for distributed tracing
       let correlationId = sessionStorage.getItem('correlation_id');
       if (!correlationId) {

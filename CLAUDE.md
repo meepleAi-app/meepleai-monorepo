@@ -80,6 +80,9 @@ docs/                Architecture, ADRs, guides
 ### Auth (Dual + 2FA)
 - **Cookie**: Session-based (httpOnly, secure)
 - **API Key**: `mpl_{env}_{base64}` format, PBKDF2 (210k iter)
+  - **Browser**: httpOnly cookie (XSS-protected, POST /api/v1/auth/apikey/login)
+  - **Programmatic**: X-API-Key header (CLI, scripts)
+  - **Priority**: Cookie > Header
 - **OAuth**: Google/Discord/GitHub, token encryption (DataProtection)
 - **2FA**: TOTP + backup codes, temp sessions (5min)
 
@@ -88,7 +91,7 @@ docs/                Architecture, ADRs, guides
   - Profile: Display name, email, password change (UI ready, backend pending)
   - Preferences: Language, theme, notifications, data retention (mock data)
   - Privacy: 2FA management + OAuth linking (fully functional)
-  - Advanced: API keys, sessions, account deletion (placeholders)
+  - Advanced: API key authentication (fully functional), sessions, account deletion (placeholders)
 - **Profile** (`/profile`): Deprecated, redirects to `/settings`
 - **UI**: Shadcn/UI components (Tabs, Label, Alert, Separator, Card, Input, Select, Switch)
 
@@ -136,6 +139,8 @@ docs/                Architecture, ADRs, guides
 POST   /api/v1/auth/register               → RegisterCommand
 POST   /api/v1/auth/login                  → LoginCommand (2FA support)
 POST   /api/v1/auth/logout                 → LogoutCommand
+POST   /api/v1/auth/apikey/login           → LoginWithApiKeyCommand (sets httpOnly cookie)
+POST   /api/v1/auth/apikey/logout          → LogoutApiKeyCommand (removes httpOnly cookie)
 GET    /api/v1/auth/oauth/{provider}/callback → HandleOAuthCallbackCommand (CQRS)
 
 // Games

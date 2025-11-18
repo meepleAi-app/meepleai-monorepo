@@ -158,27 +158,9 @@ describe('HttpClient', () => {
       );
     });
 
-    it('should include API key in headers if present', async () => {
-      mockLocalStorage['api_key'] = 'test-api-key';
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: 'test' }),
-        headers: new Headers(),
-      });
-
-      await client.get('/api/v1/test');
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/test',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'X-API-Key': 'test-api-key',
-          }),
-        })
-      );
-    });
+    // REMOVED: API keys are no longer stored in localStorage (security improvement)
+    // API keys are now stored in secure httpOnly cookies set by the backend
+    // See: /api/v1/auth/apikey/login endpoint
 
     it('should throw error for non-401 failures', async () => {
       mockFetch.mockResolvedValueOnce({

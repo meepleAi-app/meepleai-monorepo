@@ -33,6 +33,9 @@ INFRA_DIR="$ROOT_DIR/infra"
 API_PID=""
 WEB_PID=""
 
+# Test failure tracking
+TEST_FAILURES=0
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -315,6 +318,7 @@ if [ "$SKIP_TESTS" = false ]; then
             echo -e "${GREEN}✓ Backend tests passed${NC}"
         else
             echo -e "${RED}✗ Backend tests failed (see test-backend.log)${NC}"
+            TEST_FAILURES=$((TEST_FAILURES + 1))
         fi
 
         # Frontend tests
@@ -325,6 +329,7 @@ if [ "$SKIP_TESTS" = false ]; then
             echo -e "${GREEN}✓ Frontend tests passed${NC}"
         else
             echo -e "${RED}✗ Frontend tests failed (see test-frontend.log)${NC}"
+            TEST_FAILURES=$((TEST_FAILURES + 1))
         fi
 
         # Full test suite (E2E)
@@ -336,6 +341,7 @@ if [ "$SKIP_TESTS" = false ]; then
                 echo -e "${GREEN}✓ E2E tests passed${NC}"
             else
                 echo -e "${RED}✗ E2E tests failed (see test-e2e.log)${NC}"
+                TEST_FAILURES=$((TEST_FAILURES + 1))
             fi
         fi
     else
@@ -350,41 +356,66 @@ fi
 echo ""
 
 # Summary
-echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║   Setup Complete!                          ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
-echo ""
-
-if [ "$DRY_RUN" = false ]; then
-    echo -e "${GREEN}✓ Environment is ready!${NC}"
+if [ "$TEST_FAILURES" -gt 0 ] && [ "$SKIP_TESTS" = false ] && [ "$DRY_RUN" = false ]; then
+    # Test failures detected - exit with error
+    echo -e "${RED}╔════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║   Setup Failed - Tests Failed              ║${NC}"
+    echo -e "${RED}╚════════════════════════════════════════════╝${NC}"
     echo ""
-    echo -e "${CYAN}📍 Service URLs:${NC}"
-    echo -e "  ${GREEN}Frontend:${NC}      http://localhost:3000"
-    echo -e "  ${GREEN}API:${NC}           http://localhost:8080"
-    echo -e "  ${GREEN}Health Check:${NC}  http://localhost:8080/health"
-    echo -e "  ${GREEN}Seq (Logs):${NC}    http://localhost:8081"
-    echo -e "  ${GREEN}Qdrant:${NC}        http://localhost:6333/dashboard"
+    echo -e "${RED}✗ $TEST_FAILURES test suite(s) failed${NC}"
     echo ""
-    echo -e "${CYAN}👤 Demo Users:${NC}"
-    echo -e "  ${GREEN}admin@meepleai.dev${NC}   - Password: ${GREEN}Demo123!${NC}"
-    echo -e "  ${GREEN}editor@meepleai.dev${NC}  - Password: ${GREEN}Demo123!${NC}"
-    echo -e "  ${GREEN}user@meepleai.dev${NC}    - Password: ${GREEN}Demo123!${NC}"
-    echo ""
-    echo -e "${CYAN}📋 Logs:${NC}"
-    echo -e "  ${GREEN}API:${NC}      tail -f $ROOT_DIR/api.log"
-    if [ "$SKIP_FRONTEND" = false ]; then
-        echo -e "  ${GREEN}Frontend:${NC} tail -f $ROOT_DIR/web.log"
+    echo -e "${CYAN}📋 Test Logs:${NC}"
+    if [ -f "$ROOT_DIR/test-backend.log" ]; then
+        echo -e "  ${RED}Backend:${NC}  cat $ROOT_DIR/test-backend.log"
     fi
-    if [ "$SKIP_TESTS" = false ]; then
-        echo -e "  ${GREEN}Tests:${NC}    ls -la $ROOT_DIR/test-*.log"
+    if [ -f "$ROOT_DIR/test-frontend.log" ]; then
+        echo -e "  ${RED}Frontend:${NC} cat $ROOT_DIR/test-frontend.log"
+    fi
+    if [ -f "$ROOT_DIR/test-e2e.log" ]; then
+        echo -e "  ${RED}E2E:${NC}      cat $ROOT_DIR/test-e2e.log"
     fi
     echo ""
-    echo -e "${YELLOW}💡 Press Ctrl+C to stop all services${NC}"
+    echo -e "${YELLOW}💡 Fix the failing tests and run the script again${NC}"
     echo ""
-
-    # Keep script running
-    echo -e "${CYAN}⏳ Services running... (Ctrl+C to stop)${NC}"
-    wait
+    exit 1
 else
-    echo -e "${YELLOW}✓ Dry run complete. Use without --dry-run to execute.${NC}"
+    # Success - all tests passed or tests were skipped
+    echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║   Setup Complete!                          ║${NC}"
+    echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
+    echo ""
+
+    if [ "$DRY_RUN" = false ]; then
+        echo -e "${GREEN}✓ Environment is ready!${NC}"
+        echo ""
+        echo -e "${CYAN}📍 Service URLs:${NC}"
+        echo -e "  ${GREEN}Frontend:${NC}      http://localhost:3000"
+        echo -e "  ${GREEN}API:${NC}           http://localhost:8080"
+        echo -e "  ${GREEN}Health Check:${NC}  http://localhost:8080/health"
+        echo -e "  ${GREEN}Seq (Logs):${NC}    http://localhost:8081"
+        echo -e "  ${GREEN}Qdrant:${NC}        http://localhost:6333/dashboard"
+        echo ""
+        echo -e "${CYAN}👤 Demo Users:${NC}"
+        echo -e "  ${GREEN}admin@meepleai.dev${NC}   - Password: ${GREEN}Demo123!${NC}"
+        echo -e "  ${GREEN}editor@meepleai.dev${NC}  - Password: ${GREEN}Demo123!${NC}"
+        echo -e "  ${GREEN}user@meepleai.dev${NC}    - Password: ${GREEN}Demo123!${NC}"
+        echo ""
+        echo -e "${CYAN}📋 Logs:${NC}"
+        echo -e "  ${GREEN}API:${NC}      tail -f $ROOT_DIR/api.log"
+        if [ "$SKIP_FRONTEND" = false ]; then
+            echo -e "  ${GREEN}Frontend:${NC} tail -f $ROOT_DIR/web.log"
+        fi
+        if [ "$SKIP_TESTS" = false ]; then
+            echo -e "  ${GREEN}Tests:${NC}    ls -la $ROOT_DIR/test-*.log"
+        fi
+        echo ""
+        echo -e "${YELLOW}💡 Press Ctrl+C to stop all services${NC}"
+        echo ""
+
+        # Keep script running
+        echo -e "${CYAN}⏳ Services running... (Ctrl+C to stop)${NC}"
+        wait
+    else
+        echo -e "${YELLOW}✓ Dry run complete. Use without --dry-run to execute.${NC}"
+    fi
 fi

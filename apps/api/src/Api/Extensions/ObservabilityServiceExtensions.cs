@@ -3,6 +3,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Api.Observability;
 using Api.Infrastructure;
+using Microsoft.OpenApi;
 
 namespace Api.Extensions;
 
@@ -142,12 +143,12 @@ public static class ObservabilityServiceExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
-            options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+            options.SwaggerDoc("v1", new OpenApiInfo
             {
                 Version = "v1",
                 Title = "MeepleAI API",
                 Description = "AI-powered board game rules assistant API with RAG-based question answering, rule explanations, and chess analysis",
-                Contact = new Microsoft.OpenApi.Models.OpenApiContact
+                Contact = new OpenApiContact
                 {
                     Name = "MeepleAI Support",
                     Email = "support@meepleai.dev"
@@ -155,48 +156,46 @@ public static class ObservabilityServiceExtensions
             });
 
             // API Key Security Scheme
-            options.AddSecurityDefinition("ApiKey", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            options.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
             {
-                Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Header,
                 Name = "X-API-Key",
                 Description = "API key authentication. Format: mpl_live_{40_random_chars} or mpl_test_{40_random_chars}"
             });
 
             // Cookie Security Scheme (existing session-based auth)
-            options.AddSecurityDefinition("Cookie", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            options.AddSecurityDefinition("Cookie", new OpenApiSecurityScheme
             {
-                Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-                In = Microsoft.OpenApi.Models.ParameterLocation.Cookie,
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Cookie,
                 Name = "meeple_session",
                 Description = "Cookie-based session authentication for web clients"
             });
 
             // Apply security requirements globally
-            options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+            var apiKeySchemeReference = new OpenApiSecuritySchemeReference("ApiKey", null, null)
             {
+                Reference = new OpenApiReferenceWithDescription
                 {
-                    new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-                    {
-                        Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                        {
-                            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                            Id = "ApiKey"
-                        }
-                    },
-                    Array.Empty<string>()
-                },
-                {
-                    new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-                    {
-                        Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                        {
-                            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                            Id = "Cookie"
-                        }
-                    },
-                    Array.Empty<string>()
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
                 }
+            };
+
+            var cookieSchemeReference = new OpenApiSecuritySchemeReference("Cookie", null, null)
+            {
+                Reference = new OpenApiReferenceWithDescription
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Cookie"
+                }
+            };
+
+            options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+            {
+                { apiKeySchemeReference, new List<string>() },
+                { cookieSchemeReference, new List<string>() }
             });
         });
 

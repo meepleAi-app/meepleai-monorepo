@@ -568,8 +568,8 @@ public class RagValidationPipelineServiceTests
             answer: "This is a test answer",
             snippets: new[]
             {
-                new Snippet("Snippet 1", "PDF:123", 1, 0, 0.9),
-                new Snippet("Snippet 2", "PDF:123", 2, 0, 0.8)
+                new Snippet("Snippet 1", "PDF:123", 1, 0, 0.9f),
+                new Snippet("Snippet 2", "PDF:123", 2, 0, 0.8f)
             },
             promptTokens: 100,
             completionTokens: 50,

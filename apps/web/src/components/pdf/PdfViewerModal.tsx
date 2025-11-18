@@ -14,8 +14,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-// @ts-ignore - react-window types are incomplete for List component
-import { FixedSizeList } from 'react-window';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -62,7 +60,7 @@ export function PdfViewerModal({
   const [showThumbnails, setShowThumbnails] = useState(true);
 
   const mainCanvasRef = useRef<HTMLDivElement>(null);
-  const thumbnailListRef = useRef<any>(null);
+  const thumbnailListRef = useRef<HTMLDivElement>(null);
 
   // Reset to initial page when modal opens or initialPage changes
   useEffect(() => {
@@ -150,8 +148,12 @@ export function PdfViewerModal({
   const goToPage = useCallback((page: number) => {
     if (numPages && page >= 1 && page <= numPages) {
       setCurrentPage(page);
-      if (thumbnailListRef.current && showThumbnails && typeof thumbnailListRef.current.scrollToItem === 'function') {
-        thumbnailListRef.current.scrollToItem(page - 1, 'center');
+      // Scroll thumbnail into view
+      if (thumbnailListRef.current && showThumbnails) {
+        const thumbnail = thumbnailListRef.current.querySelector(`[data-testid="thumbnail-${page}"]`);
+        if (thumbnail) {
+          thumbnail.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
       }
     }
   }, [numPages, showThumbnails]);
@@ -195,14 +197,13 @@ export function PdfViewerModal({
     goToPage(page);
   }, [goToPage]);
 
-  const renderThumbnail = useCallback((props: { index: number; style: React.CSSProperties }): React.ReactElement => {
-    const { index, style } = props;
-    const pageNumber = index + 1;
+  const renderThumbnail = useCallback((pageNumber: number): React.ReactElement => {
     const isActive = pageNumber === currentPage;
 
     return (
       <div
-        style={{ ...style, padding: '8px', cursor: 'pointer' }}
+        key={pageNumber}
+        style={{ padding: '8px', cursor: 'pointer' }}
         onClick={() => handleThumbnailClick(pageNumber)}
         data-testid={`thumbnail-${pageNumber}`}
       >
@@ -333,23 +334,19 @@ export function PdfViewerModal({
               {/* Thumbnail sidebar */}
               {showThumbnails && numPages && (
                 <div
+                  ref={thumbnailListRef}
                   data-testid="thumbnail-sidebar"
                   className={cn(
-                    "border-gray-300 bg-white overflow-hidden",
+                    "border-gray-300 bg-white overflow-y-auto",
                     isMobile ? "w-full absolute z-10 h-full" : `w-[${THUMBNAIL_WIDTH + 32}px] relative z-[1] border-r`
                   )}
                   role="navigation"
                   aria-label="Page thumbnails"
+                  style={{ maxHeight: isMobile ? '100%' : `${window.innerHeight - 200}px` }}
                 >
-                  <FixedSizeList
-                    ref={thumbnailListRef}
-                    height={window.innerHeight - 200}
-                    itemCount={numPages}
-                    itemSize={THUMBNAIL_HEIGHT + 16}
-                    width={THUMBNAIL_WIDTH + 32}
-                  >
-                    {renderThumbnail as any}
-                  </FixedSizeList>
+                  {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) =>
+                    renderThumbnail(pageNumber)
+                  )}
                 </div>
               )}
 

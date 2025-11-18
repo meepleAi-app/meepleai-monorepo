@@ -25,7 +25,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    versioning-strategy: "increase"
     ignore:
       # Ignore EF Core major updates (requires manual migration planning)
       - dependency-name: "Microsoft.EntityFrameworkCore*"
@@ -58,7 +57,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    versioning-strategy: "increase"
     ignore:
       # Ignore major version updates (requires manual review and testing)
       - dependency-name: "react"

@@ -361,7 +361,7 @@ Consider adding:
 
 ## References
 
-- **Source File**: `apps/web/src/pages/upload.tsx` (1547 lines)
+- **Source File**: `apps/web/src/app/upload/page.tsx` (App Router route, 1,547 lines pre-migration)
 - **Mock Utilities**: `apps/web/src/__tests__/utils/mock-api-router.ts`
 - **Mock Presets**: `apps/web/src/__tests__/utils/mock-api-presets.ts`
 - **Upload Mocks**: `apps/web/src/__tests__/fixtures/upload-mocks.ts`

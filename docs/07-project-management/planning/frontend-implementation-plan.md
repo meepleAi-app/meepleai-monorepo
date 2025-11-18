@@ -216,7 +216,7 @@
    }
    ```
 
-3. Integrate in `_app.tsx` (1h)
+3. Integrate in `AppProviders` (`src/app/providers.tsx`) (1h)
 4. Update all pages to support dark mode (4h)
 5. Test theme persistence (2h)
 6. Accessibility testing (WCAG 2.1 AA) (3h)
@@ -458,7 +458,7 @@
    }
    ```
 
-5. Integrate in `_app.tsx` (1h)
+5. Integrate in `AppProviders` (`src/app/providers.tsx`) (1h)
 6. Update components to use translations (4h)
 
 **Success Criteria**:
@@ -1003,7 +1003,7 @@ export function useStreamingResponse() {
 
 **Usage**:
 ```tsx
-// pages/board-game-ai/ask.tsx
+// src/app/board-game-ai/page.tsx (ask flow)
 export default function AskPage() {
   const { response, isStreaming, streamQuestion } = useStreamingResponse();
 
@@ -1202,7 +1202,7 @@ export function PDFViewer({ pdfUrl, initialPage = 1 }: PDFViewerProps) {
 
 **Integration**:
 ```tsx
-// pages/board-game-ai/ask.tsx
+// src/app/board-game-ai/page.tsx (ask flow)
 export default function AskPage() {
   const [pdfPage, setPdfPage] = useState(1);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -1277,7 +1277,7 @@ export default function AskPage() {
 
 **Page Component**:
 ```tsx
-// pages/board-game-ai/games.tsx
+// src/app/board-game-ai/games/page.tsx
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';

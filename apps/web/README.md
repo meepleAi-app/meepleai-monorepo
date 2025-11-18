@@ -8,53 +8,43 @@
 
 ```
 apps/web/
-├── src/                           # Application source
-│   ├── pages/                     # Next.js pages (routes)
-│   │   ├── index.tsx             # Landing page
-│   │   ├── chat/                 # Chat interface
-│   │   ├── games/                # Games catalog
-│   │   ├── settings/             # User settings (4-tab interface)
-│   │   ├── admin/                # Admin dashboard
-│   │   └── api/                  # API routes (proxies)
-│   ├── components/               # React components
-│   │   ├── ui/                   # Shadcn/UI components
-│   │   ├── auth/                 # Authentication components
-│   │   ├── chat/                 # Chat interface components
-│   │   ├── games/                # Game catalog components
-│   │   ├── pdf/                  # PDF upload/viewer
-│   │   ├── admin/                # Admin components
-│   │   ├── accessible/           # Accessibility components
-│   │   ├── citations/            # Citation components
-│   │   ├── editor/               # Rich text editor
-│   │   ├── loading/              # Loading states
-│   │   ├── timeline/             # Timeline components
-│   │   └── wizard/               # Multi-step wizard
-│   ├── hooks/                    # Custom React hooks
-│   │   ├── wizard/               # Wizard state hooks
-│   │   └── useAuth.ts            # Authentication hook
-│   ├── lib/                      # Utility libraries
-│   │   ├── api.ts                # API client (cookie + API key auth)
-│   │   ├── utils.ts              # General utilities
-│   │   └── validators/           # Form validation
-│   ├── contexts/                 # React contexts
-│   ├── types/                    # TypeScript type definitions
-│   ├── styles/                   # Global styles (Tailwind CSS 4)
-│   ├── test-utils/               # Testing utilities
-│   └── __tests__/                # Test files (mirroring src/)
-├── e2e/                          # End-to-end tests (Playwright)
-│   ├── auth/                     # Auth E2E tests
-│   ├── chat/                     # Chat E2E tests
-│   ├── games/                    # Games E2E tests
-│   └── fixtures/                 # Test fixtures
-├── .storybook/                   # Storybook configuration
-├── scripts/                      # Build/dev scripts
-├── public/                       # Static assets
-├── next.config.js                # Next.js configuration
-├── tailwind.config.js            # Tailwind CSS 4 configuration
-├── jest.config.js                # Jest configuration
-├── playwright.config.ts          # Playwright configuration
-├── tsconfig.json                 # TypeScript configuration
-└── package.json                  # Dependencies
+├── src/                                 # Application source
+│   ├── app/                             # Next.js App Router (server + client routes)
+│   │   ├── layout.tsx                   # Root layout (RSC)
+│   │   ├── providers.tsx                # Shared client providers (Intl, Theme, Query, Auth)
+│   │   ├── page.tsx                     # Landing page (RSC + RSC streaming)
+│   │   ├── admin/*                      # Admin dashboard routes (8 nested segments)
+│   │   ├── chat/page.tsx                # Chat experience (Zustand-powered)
+│   │   ├── upload/page.tsx              # PDF uploads + rulebook matcher
+│   │   ├── sessions/{page.tsx,history,[id]/page.tsx}
+│   │   └── ... (31 total route segments incl. board-game-ai/, chess/, versions/, n8n/, etc.)
+│   ├── pages/api/                       # API routes (health checks, legacy proxy endpoints)
+│   ├── components/                      # React components
+│   │   ├── ui/                          # Shadcn/UI primitives (CVA variants)
+│   │   ├── accessible/                  # WCAG helpers (AccessibleButton, SkipLink, etc.)
+│   │   ├── auth/, chat/, games/, pdf/   # Feature-specific component stacks
+│   │   └── layout/, modals/, errors/    # Shell, keyboard shortcuts, dialog system
+│   ├── store/                           # Zustand stores (chat slices, upload queue, toasts)
+│   ├── hooks/                           # Custom hooks (session check, keyboard shortcuts, SSE)
+│   ├── lib/
+│   │   ├── api/                         # Modular API SDK (core HttpClient + feature clients)
+│   │   ├── logger/, telemetry/          # Observability helpers
+│   │   └── utils.ts                     # Shared utilities
+│   ├── locales/                         # React-intl locale bundles + helpers
+│   ├── styles/                          # Tailwind + shared CSS (globals, diff, prism)
+│   ├── workers/                         # Web Workers (PDF parsing, upload queue)
+│   ├── test-utils/                      # Jest helpers (renderWithProviders, fixtures)
+│   └── __tests__/                       # Unit/integration tests (mirrors src/)
+├── e2e/                                 # Playwright specs + page objects
+├── .storybook/                          # Storybook configuration
+├── scripts/                             # Build/dev scripts
+├── public/                              # Static assets
+├── next.config.js                       # Next.js configuration (App Router defaults)
+├── tailwind.config.js                   # Tailwind CSS 4 configuration
+├── jest.config.js                       # Jest configuration
+├── playwright.config.ts                 # Playwright configuration
+├── tsconfig.json                        # TypeScript project refs
+└── package.json                         # Dependencies
 ```
 
 ---
@@ -152,10 +142,16 @@ pnpm build-storybook
 
 ### Core
 
-- **Framework**: Next.js 16 (App Router + Pages Router hybrid)
+- **Framework**: Next.js 16 App Router (React Server Components + streaming)
 - **React**: React 19 (with Server Components)
 - **TypeScript**: Strict mode enabled
-- **Styling**: Tailwind CSS 4 + CSS Modules
+- **Styling**: Tailwind CSS 4 + CSS Modules + CSS Variables
+
+### Application Shell
+
+- **Root Layout**: `src/app/layout.tsx` (server) renders `<AppProviders>` from `src/app/providers.tsx`
+- **Shared Providers**: ThemeProvider, IntlProvider, QueryProvider, AuthProvider, Error Boundaries
+- **Global UX**: Accessible skip link, keyboard shortcuts modal, session timeout modal via Zustand + TanStack Query
 
 ### UI Components
 
@@ -168,9 +164,9 @@ pnpm build-storybook
 
 ### State Management
 
-- **Server State**: TanStack Query (React Query v5)
-- **Client State**: React Context + hooks
-- **Forms**: React Hook Form + Zod validation
+- **Server/Cache State**: TanStack Query (React Query v5) with centralized `QueryProvider`
+- **Client State**: Modular Zustand stores (`src/store/*`) for chat, upload queue, command palette
+- **Forms**: React Hook Form + Zod validation + controlled inputs
 
 ### Testing
 
@@ -391,7 +387,7 @@ module.exports = {
 ```
 src/__tests__/
 ├── components/          # Component tests (mirroring src/components/)
-├── pages/              # Page tests (mirroring src/pages/)
+├── pages/              # Page-level tests (covering src/app route segments)
 ├── hooks/              # Hook tests
 ├── utils/              # Utility tests
 ├── integration/        # Integration tests
@@ -566,10 +562,10 @@ Planned: i18next integration (Q1 2025)
 
 **Example (future)**:
 ```tsx
-import { useTranslation } from 'next-i18next';
+import { useTranslation } from '@/hooks/useTranslation';
 
 function Component() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation();
   return <h1>{t('welcome')}</h1>;
 }
 ```

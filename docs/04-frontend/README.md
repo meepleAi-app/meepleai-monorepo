@@ -43,9 +43,9 @@ MeepleAI frontend is a Next.js application providing Italian-first AI assistance
 
 ```yaml
 Framework: Next.js 16.0.1
-  - Pages Router (SSR/SSG)
-  - API Routes for backend integration
-  - Incremental Static Regeneration
+  - App Router (React Server Components + streaming)
+  - Route handlers & server actions under `src/app`
+  - `pages/api/*` for health checks + legacy proxies
 
 Frontend:
   - React 19.2.0
@@ -92,10 +92,14 @@ apps/web/
 │   │   ├── api.ts           # Backend API client
 │   │   ├── utils.ts         # Helper functions
 │   │   └── animations/      # Animation utilities
-│   ├── pages/               # Next.js routes
-│   │   ├── admin/           # Admin routes
-│   │   ├── auth/            # Authentication routes
-│   │   └── *.tsx            # Public routes
+│   ├── app/                 # Next.js App Router routes/layouts
+│   │   ├── layout.tsx       # Root layout (server)
+│   │   ├── providers.tsx    # Shared client providers
+│   │   ├── page.tsx         # Landing page
+│   │   ├── admin/*          # Admin area (8 nested segments)
+│   │   ├── chat/page.tsx    # Chat route
+│   │   ├── upload/page.tsx  # Upload wizard
+│   │   └── ... (31 total routes incl. board-game-ai/, sessions/, versions/)
 │   ├── styles/              # Global styles
 │   │   └── globals.css      # Tailwind + Shadcn vars
 │   ├── test-utils/          # Testing utilities
@@ -261,7 +265,7 @@ See [Testing Strategy](./testing-strategy.md) for details.
 **Fallback**: English (en-US)
 
 **Strategy**:
-- next-i18next for translations
+- React Intl provider + `useTranslation` hook
 - Server-side locale detection
 - Client-side language switching
 - 100% Italian UI coverage target

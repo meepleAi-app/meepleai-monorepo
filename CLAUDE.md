@@ -44,8 +44,9 @@ apps/api/
     BackgroundTasks/  IBackgroundTaskOrchestrator (Redis-backed)
   Routing/           HTTP endpoints (use IMediator, NOT services)
 apps/web/
-  pages/             Routes (SSR/SSG)
-  lib/api.ts         Client (cookie+API key auth)
+  src/app/           Next.js App Router (31 routes, RSC + client)
+  src/app/layout.tsx Root layout + AppProviders (Intl, Theme, Query, Auth)
+  src/lib/api/       Modular API SDK (HttpClient + feature clients)
 infra/               Docker Compose
 docs/                Architecture, ADRs, guides
 ```

@@ -154,7 +154,7 @@ import { AccessibleFormInput } from '@/components/accessible';
 ```tsx
 import { AccessibleSkipLink } from '@/components/accessible';
 
-// In _app.tsx or layout
+// In App Router root layout (src/app/layout.tsx) or AppProviders
 <AccessibleSkipLink href="#main-content" />
 
 // In page component
@@ -164,7 +164,7 @@ import { AccessibleSkipLink } from '@/components/accessible';
 </main>
 ```
 
-**Important:** Add this to `_app.tsx` as the **first focusable element** on every page.
+**Important:** Add this to `src/app/layout.tsx` (before `<body>` content) as the **first focusable element** on every page.
 
 ---
 
@@ -259,7 +259,7 @@ test('page should have no accessibility violations', async ({ page }) => {
    - Add `aria-label` to toggle button
    - Proper `<label>` elements in filters
    - Use `<fieldset>` and `<legend>`
-4. **Add Skip Link to `_app.tsx`**
+4. **Add Skip Link to `src/app/layout.tsx`**
 5. **Verify color contrast** (WCAG AA: 4.5:1 for normal text)
 
 ### Phase 6: Manual Testing

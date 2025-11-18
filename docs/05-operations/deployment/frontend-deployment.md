@@ -259,7 +259,7 @@ jobs:
 ### Error Tracking (Sentry)
 
 ```typescript
-// pages/_app.tsx
+// src/app/providers.tsx (client entrypoint for App Router)
 import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({

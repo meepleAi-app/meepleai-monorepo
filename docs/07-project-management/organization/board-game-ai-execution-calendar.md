@@ -119,8 +119,8 @@ Sprint 9-10: Iteration               Sprint 9-10: Beta UX
   - Dark/light mode variables (minimal for Phase 1)
 
 - [ ] **#BGAI-7**: Create BoardGameAI page structure - **2 days**
-  - `/pages/board-game-ai/index.tsx` (game catalog)
-  - `/pages/board-game-ai/[gameId].tsx` (Q&A interface)
+  - `src/app/board-game-ai/page.tsx` (App Router catalog)
+  - `src/app/board-game-ai/[gameId]/page.tsx` (Q&A interface)
   - Layout, routing, navigation
   - Placeholder UI (implement Sprint 3-4)
 
@@ -447,7 +447,7 @@ Sprint 9-10: Iteration               Sprint 9-10: Beta UX
 **FRONTEND TRACK**:
 
 - [ ] **#BGAI-46**: Beta signup page - **2 days**
-  - `/pages/beta-signup.tsx`
+  - `/beta-signup` App Router route (marketing CTA)
   - Google Forms embed or custom form
   - Email collection (MailChimp/SendGrid integration)
   - Waitlist management
@@ -458,7 +458,7 @@ Sprint 9-10: Iteration               Sprint 9-10: Beta UX
   - Feedback channels (Discord link, email)
 
 - [ ] **#BGAI-48**: Admin analytics UI - **1 day**
-  - `/pages/admin/board-game-ai-analytics.tsx`
+  - `src/app/admin/analytics/page.tsx`
   - 5-metric framework display (charts)
   - Query volume by game (table)
   - Export CSV functionality

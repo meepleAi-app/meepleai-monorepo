@@ -9,7 +9,7 @@
 
 ## Architecture Overview
 
-MeepleAI frontend follows a **component-based architecture** with Next.js Pages Router, emphasizing modularity, type safety, and progressive enhancement.
+MeepleAI frontend follows a **component-based architecture** with the Next.js 16 **App Router** (React Server Components + client islands), emphasizing modularity, type safety, and progressive enhancement.
 
 ### Core Principles
 
@@ -424,51 +424,64 @@ export function ApiErrorBoundary({ context, children }) {
 
 ## Routing Architecture
 
-### Page Structure
+### App Router Structure
 
 ```
-pages/
-├── index.tsx              # Homepage (public, SSG)
-├── chat.tsx               # RAG Chat (authenticated, CSR)
-├── upload.tsx             # PDF Upload (authenticated, CSR)
+src/app/
+├── layout.tsx                 # Root layout (server component)
+├── providers.tsx              # Client providers (Intl, Theme, Query, Auth)
+├── page.tsx                   # Landing page (RSC streaming hero)
 ├── admin/
-│   ├── index.tsx          # Dashboard (SSR)
-│   ├── users.tsx          # User management (SSR)
-│   ├── analytics.tsx      # Analytics (SSR)
-│   ├── configuration.tsx  # System config (SSR)
+│   ├── layout.tsx             # Auth gate + navigation shell
+│   ├── page.tsx               # Dashboard overview
+│   ├── users/page.tsx         # User management
+│   ├── cache/page.tsx         # Cache controls
+│   ├── bulk-export/page.tsx   # Data export workflows
+│   ├── analytics/page.tsx     # Observability dashboards
+│   ├── configuration/page.tsx # Feature flags & runtime config
+│   ├── n8n-templates/page.tsx # Workflow catalog
 │   └── prompts/
-│       ├── index.tsx      # Prompt list (SSR)
-│       ├── [id].tsx       # Prompt detail (SSR)
-│       └── [id]/
-│           ├── versions/
-│           │   ├── [versionId].tsx  # Version detail
-│           │   └── new.tsx          # Create version
-│           ├── audit.tsx            # Audit trail
-│           └── compare.tsx          # Version comparison
-├── auth/
-│   ├── login.tsx          # Login (public, SSG)
-│   ├── callback.tsx       # OAuth callback (CSR)
-│   └── reset-password.tsx # Password reset (SSG)
-├── profile.tsx            # User profile (authenticated, SSR)
-├── settings.tsx           # User settings (authenticated, SSR)
-└── _app.tsx               # App wrapper (i18n, providers)
+│       ├── page.tsx                     # Prompt list
+│       ├── [id]/page.tsx                # Prompt detail
+│       ├── [id]/audit/page.tsx          # Audit trail
+│       ├── [id]/compare/page.tsx        # Version comparison
+│       └── [id]/versions/
+│           ├── page.tsx                 # Version list
+│           ├── new/page.tsx             # Create version
+│           └── [versionId]/page.tsx     # Version detail
+├── chat/page.tsx              # Chat interface (RSC shell + client islands)
+├── upload/page.tsx            # PDF upload + matching workflow
+├── sessions/
+│   ├── page.tsx               # Active sessions
+│   ├── history/page.tsx       # Session history timeline
+│   └── [id]/page.tsx          # Session detail
+├── games/
+│   ├── page.tsx               # Games catalog
+│   └── [id]/page.tsx          # Game detail view
+├── board-game-ai/page.tsx     # Marketing + CTA for MeepleAI
+├── chess/page.tsx             # Chess AI showcase
+├── versions/page.tsx          # Release notes
+├── editor/page.tsx            # Prompt/rule editor
+├── settings/page.tsx          # User settings hub
+├── login/page.tsx             # Authentication entry
+├── reset-password/page.tsx    # Password reset flow
+├── setup/page.tsx             # Onboarding wizard
+├── n8n/page.tsx               # Workflow monitor
+├── shadcn-demo/page.tsx       # Component gallery
+├── auth/callback/page.tsx     # OAuth callback handler
+└── (plus) src/pages/api/*    # API routes (health, proxy endpoints)
 ```
 
 ### Rendering Strategies
 
-**Static Generation (SSG)**:
-- Homepage, marketing pages
-- Login, reset password
-- Public documentation
+| Mode | Routes | Notes |
+|------|--------|-------|
+| **React Server Components** | `/`, `/chat`, `/upload`, `/board-game-ai`, `/sessions`, `/games`, `/admin/*` | Fetch data server-side, stream to client; hydration islands for interactive pieces |
+| **Client Components / Islands** | `ChatSidebar`, `MessageInput`, `UploadWizard`, `AdminPromptEditor` | Declared with `"use client"` and mounted inside RSC shells; consume Zustand stores and TanStack Query |
+| **Route Handlers / API** | `pages/api/health.ts`, `pages/api/cache/purge.ts` | Minimal REST endpoints retained for webhooks/CLI |
+| **Edge-ready Assets** | `/login`, `/reset-password`, `/board-game-ai` | Static metadata via App Router `generateMetadata`, no `_app.tsx` |
 
-**Server-Side Rendering (SSR)**:
-- Admin dashboard (requires auth check)
-- User-specific pages (profile, settings)
-- SEO-critical authenticated pages
-
-**Client-Side Rendering (CSR)**:
-- Real-time chat (WebSocket)
-- PDF upload (file handling)
+`src/app/layout.tsx` renders `<AppProviders>` (IntlProvider, ThemeProvider, QueryProvider, AuthProvider, Error Boundaries, keyboard shortcuts, session timeout modal), which replaces the former `_app.tsx`.
 - Interactive editors
 
 ---
@@ -577,10 +590,11 @@ See [Testing Strategy](./testing-strategy.md) for details.
 pnpm build
 
 # Output:
-# .next/static/chunks/*.js     # Code-split bundles
+# .next/static/chunks/*.js      # Code-split client bundles
 # .next/static/css/*.css        # Optimized CSS
-# .next/server/pages/*.html     # Pre-rendered pages
-# .next/cache/                  # Build cache
+# .next/server/app/**/page.js   # React Server Components payloads
+# .next/server/chunks/*.js      # Server action bundles
+# .next/cache/                  # Build cache (Route Segment Config)
 ```
 
 ### Deployment Targets

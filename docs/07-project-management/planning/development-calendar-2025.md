@@ -276,7 +276,7 @@ git worktree prune
 | Lun | ServiceHealthMatrix component (#896) | Health matrix grid logic | Component tests |
 | Mar | ServiceCard component (#897) | Health + Metrics + Actions | Card interaction tests |
 | Mer | MetricsChart component Chart.js (#898) | Real-time chart updates | Chart rendering tests |
-| Gio | /pages/admin/infrastructure.tsx (#899) | API integration | Jest tests (#900) |
+| Gio | Admin infrastructure route (App Router, #899) | API integration | Jest tests (#900) |
 | Ven | Grafana iframe embed (#901) | E2E test + Load test 100 users (#902) | Performance validation |
 
 **Deliverables**:
@@ -321,7 +321,7 @@ git worktree prune
 |--------|-------------------|----------------------|------|
 | Lun | ThemeProvider context | useTheme hook | Theme persistence localStorage |
 | Mar | Theme switcher UI component | Dropdown menu integration | System preference detection |
-| Mer | Update _app.tsx wrapper | Theme in navigation | No FOUC verification |
+| Mer | Update AppProviders (`src/app/providers.tsx`) | Theme in navigation | No FOUC verification |
 | Gio | Test all 3 modes (dark/light/auto) | Browser compatibility | Keyboard accessibility |
 | Ven | Visual polish | Code review | Documentation |
 

@@ -228,14 +228,14 @@ const formatDate = (dateString: string): string => {
 ### Navigation Integration (TODO)
 Pages are ready for integration into main navigation. Suggested locations:
 
-**Option 1: Main Navigation Bar** (`pages/index.tsx` - lines 38-68)
+**Option 1: Main Navigation Bar** (`src/app/page.tsx` - lines 38-68)
 ```tsx
 <Link href="/sessions" className="text-slate-300 hover:text-white">
   Sessions
 </Link>
 ```
 
-**Option 2: Games Library Page** (`pages/games/index.tsx`)
+**Option 2: Games Library Page** (`src/app/games/page.tsx`)
 Add "View Sessions" button after game selection
 
 **Option 3: User Menu Dropdown**
@@ -283,7 +283,7 @@ Add under Chat/Upload links
 5. **Content Structure**
    - Proper heading hierarchy
    - Landmark regions
-   - Skip links support (from _app.tsx)
+  - Skip links support (wired in `src/app/layout.tsx`)
    - Descriptive link text
 
 ---
@@ -320,7 +320,7 @@ Add under Chat/Upload links
 
 ### New Files (7)
 ```
-apps/web/src/pages/sessions/
+apps/web/src/app/sessions/
 ├── index.tsx                    (379 lines - Active Sessions Dashboard)
 ├── history.tsx                  (421 lines - Session History)
 └── [id].tsx                     (390 lines - Session Details)

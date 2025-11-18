@@ -168,7 +168,7 @@ The error shows where the unwrapped state update happens:
 ```
 at scheduleUpdateOnFiber (...react-dom...)
 at dispatchSetState (...react-dom...)
-at setToasts (src/pages/analytics.tsx:57:7)
+at setToasts (apps/web/src/app/admin/analytics/page.tsx:57:7)
                                      ^^^
 at callTimer (fake-timers:806:24)
 ```

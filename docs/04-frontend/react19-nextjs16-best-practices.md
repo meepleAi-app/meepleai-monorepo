@@ -98,36 +98,30 @@ function Component({ showAdmin }: Props) {
 ---
 
 ### 4. Document Metadata (Built-in)
-**What**: Native `<title>`, `<meta>` support without `next/head`
+**What**: Native metadata via App Router `export const metadata` (no `next/head`)
 
-**To-Be Pattern (Next.js 16 Pages Router)**:
+**To-Be Pattern (Next.js 16 App Router)**:
 ```tsx
-// ✅ PREFERRED: Native metadata
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'MeepleAI · Chat',
+  description: 'Ask AI to interpret rulebooks with citations.',
+};
+
 export default function Page() {
   return (
-    <>
-      <title>Page Title</title>
-      <meta name="description" content="Description" />
-      <div>Content</div>
-    </>
+    <main className="...">
+      <h1>Chat</h1>
+      {/* Content */}
+    </main>
   );
 }
 
-// ⚠️ LEGACY: next/head (still works, but not needed)
-import Head from 'next/head';
-export default function Page() {
-  return (
-    <>
-      <Head>
-        <title>Page Title</title>
-      </Head>
-      <div>Content</div>
-    </>
-  );
-}
+// ⚠️ LEGACY: next/head (still works in pages/, avoid in App Router)
 ```
 
-**Guideline**: Use native `<title>/<meta>` for new pages, migrate old pages gradually.
+**Guideline**: Define metadata via `export const metadata` or `generateMetadata` for App Router routes; only use `next/head` inside `pages/api` fallbacks.
 
 ---
 
@@ -352,16 +346,17 @@ export const handlers = [
 
 ## Future Enhancements (React 19 + Next.js 16)
 
-### 1. Server Components (App Router)
-**Current**: Pages Router (all client components)
-**Future**: Migrate to App Router for React Server Components
+### 1. App Router Hardening
+**Status**: ✅ Migration complete (Issue #1077, Nov 2025)
+**Next Steps**:
+- Add regression tests for server-only modules (route handlers, streaming loaders)
+- Audit cache tags + revalidation per route group
+- Document server action patterns (upload workflow, admin prompt editor)
 
 **Benefits**:
-- Zero JS for static content
-- Automatic code splitting
-- Better performance
-
-**Effort**: ~40-60h (major migration)
+- Zero JS for static shells already live
+- Streaming hydration for chat/upload
+- Simplified provider tree via `AppProviders`
 
 ### 2. Suspense for Data Fetching
 **Current**: React Query for async data

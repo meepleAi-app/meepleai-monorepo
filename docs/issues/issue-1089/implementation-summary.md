@@ -188,7 +188,7 @@ apps/web/src/
 ```
 
 ### Modified Files
-- `apps/web/src/pages/upload.tsx` (1563 → 488 lines)
+- `apps/web/src/app/upload/page.tsx` (1563 → 488 lines pre-migration)
 - `apps/web/package.json` (added dependencies)
 
 ### Dependencies Added

@@ -214,7 +214,7 @@ Visit `/shadcn-demo` to see all components in action:
 - **Development**: http://localhost:3000/shadcn-demo
 - **Production**: https://meepleai.dev/shadcn-demo
 
-The demo page (`apps/web/src/pages/shadcn-demo.tsx`) demonstrates:
+The demo page (`apps/web/src/app/shadcn-demo/page.tsx`) demonstrates:
 - All button variants and sizes
 - Card layouts with headers, content, and footers
 - Input field with state management
@@ -261,7 +261,7 @@ Add `className="dark"` to any parent element to enable dark mode for its childre
 
 ## Compatibility
 
-✅ **Next.js 16.0.1** - Fully compatible with App Router and Pages Router
+✅ **Next.js 16.0.1** - Fully compatible with App Router (pages/api only for legacy webhooks)
 ✅ **React 19.2.0** - Works with latest React features
 ✅ **Tailwind CSS 4.1.17** - Integrated with Tailwind v4 configuration
 ✅ **TypeScript 5.9.3** - Full type safety and IntelliSense support
@@ -274,7 +274,7 @@ cd apps/web
 pnpm build
 ```
 **Status**: ✅ Build successful in 5.7s
-**Routes**: 31 pages including `/shadcn-demo`
+**Routes**: 31 App Router segments including `/shadcn-demo`
 
 ### Tests
 ```bash

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type RuleSpecComment, type RuleSpecCommentsResponse } from "../lib/api";
+import { api, type RuleSpecComment, type RuleSpecCommentsResponse } from "@/lib/api";
 import { CommentItem } from "./CommentItem";
 import { CommentForm } from "./CommentForm";
 

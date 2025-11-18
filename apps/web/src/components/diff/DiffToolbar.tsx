@@ -1,5 +1,5 @@
 import React from 'react';
-import { DiffStatistics as DiffStats } from '../../lib/diffProcessor';
+import { DiffStatistics as DiffStats } from '@/lib/diffProcessor';
 import { DiffStatistics } from './DiffStatistics';
 import { DiffSearchInput } from './DiffSearchInput';
 import { DiffNavigationControls } from './DiffNavigationControls';

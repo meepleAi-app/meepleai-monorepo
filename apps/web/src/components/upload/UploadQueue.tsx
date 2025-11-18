@@ -3,7 +3,7 @@
  * Displays the list of files being uploaded with aggregate progress
  */
 
-import type { UploadQueueItem as UploadQueueItemType, UploadQueueStats } from '../hooks/useUploadQueue';
+import type { UploadQueueItem as UploadQueueItemType, UploadQueueStats } from '@/hooks/useUploadQueue';
 import { UploadQueueItem } from './UploadQueueItem';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';

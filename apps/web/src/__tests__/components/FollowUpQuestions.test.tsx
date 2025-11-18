@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { FollowUpQuestions } from '../../components/FollowUpQuestions';
+import { FollowUpQuestions } from '../../components/chat/FollowUpQuestions';
 
 describe('FollowUpQuestions Component', () => {
   const mockOnQuestionClick = jest.fn();

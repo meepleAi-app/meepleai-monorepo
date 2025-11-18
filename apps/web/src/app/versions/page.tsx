@@ -86,7 +86,7 @@ type RuleSpecDiff = {
 
 export default function VersionHistory() {
   const searchParams = useSearchParams();
-  const gameId = searchParams.get('gameId');
+  const gameId = searchParams?.get('gameId') ?? null;
 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [history, setHistory] = useState<RuleSpecHistory | null>(null);

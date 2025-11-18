@@ -1,6 +1,6 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BggSearchModal } from '../BggSearchModal';
+import { BggSearchModal } from '../modals/BggSearchModal';
 import * as api from '@/lib/api';
 
 // Mock the API

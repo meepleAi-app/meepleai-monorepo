@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { CommentItem } from '../../components/CommentItem';
+import { CommentItem } from '../../components/comments/CommentItem';
 import { RuleSpecComment } from '@/lib/api';
 
 // Mock MentionInput component
@@ -20,7 +20,7 @@ interface MockMentionInputProps {
   disabled?: boolean;
 }
 
-jest.mock('../../components/MentionInput', () => ({
+jest.mock('../../components/chat/MentionInput', () => ({
   MentionInput: ({ value, onChange, placeholder, disabled }: MockMentionInputProps) => (
     <textarea
       data-testid="mention-input"

@@ -14,7 +14,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ErrorModal } from '../ErrorModal';
+import { ErrorModal } from '../modals/ErrorModal';
 import { ApiError, NetworkError, ValidationError } from '../../lib/errors';
 
 describe('ErrorModal', () => {

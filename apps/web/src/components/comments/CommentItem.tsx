@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import type { RuleSpecComment } from "../lib/api";
-import { MentionInput } from "./MentionInput";
+import type { RuleSpecComment } from "@/lib/api";
+import { MentionInput } from "../chat/MentionInput";
 import { cn } from "@/lib/utils";
 
 interface CommentItemProps {

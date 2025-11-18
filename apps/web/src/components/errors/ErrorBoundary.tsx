@@ -3,8 +3,8 @@
  */
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { logger } from '../lib/logger';
-import { createErrorContext } from '../lib/errors';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface ErrorBoundaryProps {
   children: ReactNode;

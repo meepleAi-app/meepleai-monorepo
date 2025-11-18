@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { ChangeItem } from '../ChangeItem';
+import { ChangeItem } from '../versioning/ChangeItem';
 
 describe('ChangeItem', () => {
   describe('Regola Aggiunta', () => {

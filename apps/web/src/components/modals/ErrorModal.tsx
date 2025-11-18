@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { ApiError, NetworkError, ValidationError } from '../lib/errors';
+import { ApiError, NetworkError, ValidationError } from '@/lib/errors';
 
 export interface ErrorModalProps {
   isOpen: boolean;

@@ -12,7 +12,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { UploadSummary } from '../../components/UploadSummary';
+import { UploadSummary } from '../../components/upload/UploadSummary';
 import type { UploadQueueStats } from '../../hooks/useUploadQueue';
 
 describe('UploadSummary Component', () => {

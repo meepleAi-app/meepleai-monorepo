@@ -45,7 +45,7 @@ type ViewMode = "rich" | "json";
 export default function RuleSpecEditor() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const gameId = searchParams.get('gameId');
+  const gameId = searchParams?.get('gameId') ?? null;
 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [ruleSpec, setRuleSpec] = useState<RuleSpec | null>(null);

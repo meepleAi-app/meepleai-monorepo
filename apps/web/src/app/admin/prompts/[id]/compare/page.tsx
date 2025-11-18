@@ -26,13 +26,32 @@ type PromptVersion = {
 export default function CompareVersions() {
   const router = useRouter();
   const params = useParams();
-  const id = params.id as string;
+  const id = params?.id as string | undefined;
 
   const [versions, setVersions] = useState<PromptVersion[]>([]);
   const [version1Id, setVersion1Id] = useState<string>("");
   const [version2Id, setVersion2Id] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle missing ID
+  if (!id) {
+    return (
+      <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+        <div className="max-w-[1600px] mx-auto p-8">
+          <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden p-8">
+            <h1 className="text-2xl font-bold mb-4">Invalid Template ID</h1>
+            <p className="text-gray-600 mb-4">No template ID provided.</p>
+            <Link href="/admin/prompts">
+              <button className="px-6 py-2 bg-indigo-500 text-white border-none rounded-lg cursor-pointer hover:bg-indigo-600">
+                Back to Templates
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const fetchVersions = useCallback(async () => {
     if (!id) return;
@@ -53,18 +72,12 @@ export default function CompareVersions() {
       } else if (result.length === 1) {
         setVersion1Id(result[0].id);
       }
-
-      // Check for pre-selected version from query params
-      const { versions: queryVersions } = router.query;
-      if (queryVersions && typeof queryVersions === "string") {
-        setVersion2Id(queryVersions);
-      }
     } catch (err: any) {
       setError(err.message || "Failed to fetch versions");
     } finally {
       setLoading(false);
     }
-  }, [id, router.query]);
+  }, [id]);
 
   useEffect(() => {
     fetchVersions();

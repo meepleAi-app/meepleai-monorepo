@@ -6,12 +6,12 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef, type CSSProperties } from 'react';
-import { api } from '../lib/api';
+import { api } from '@/lib/api';
 import {
   type ProcessingProgress as ProcessingProgressType,
   isProcessingComplete,
-} from '../types/pdf';
-import { SkeletonLoader } from './loading';
+} from '@/types/pdf';
+import { SkeletonLoader } from '../loading';
 
 interface ProcessingProgressProps {
   pdfId: string;

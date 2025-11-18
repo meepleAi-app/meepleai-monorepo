@@ -1,15 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { DiffSummary } from "./DiffSummary";
-import { ChangeItem } from "./ChangeItem";
-import { DiffViewModeToggle } from "./diff/DiffViewModeToggle";
-import { DiffToolbar } from "./diff/DiffToolbar";
-import { SideBySideDiffView } from "./diff/SideBySideDiffView";
+import { ChangeItem } from "../versioning/ChangeItem";
+import { DiffViewModeToggle } from "./DiffViewModeToggle";
+import { DiffToolbar } from "./DiffToolbar";
+import { SideBySideDiffView } from "./SideBySideDiffView";
 import {
   processDiff,
   identifyCollapsibleSections,
   filterChangesByQuery,
   CollapsibleSection
-} from "../lib/diffProcessor";
+} from "@/lib/diffProcessor";
 
 // Existing types from original DiffViewer
 type RuleAtom = {

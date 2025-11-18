@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import SearchModeToggle, { SearchMode } from '../SearchModeToggle';
+import SearchModeToggle, { SearchMode } from '../search/SearchModeToggle';
 
 describe('SearchModeToggle', () => {
   const mockOnChange = jest.fn();

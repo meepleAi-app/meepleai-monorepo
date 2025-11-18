@@ -3,4 +3,4 @@
  */
 
 // AI-14: Search mode toggle for hybrid search feature
-export { default as SearchModeToggle, SearchMode } from './SearchModeToggle';
+export { SearchModeToggle, SearchMode } from './search';

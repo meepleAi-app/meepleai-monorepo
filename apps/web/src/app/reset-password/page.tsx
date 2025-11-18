@@ -129,7 +129,7 @@ const PasswordStrengthIndicator = ({ strength }: { strength: PasswordStrength })
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams?.get('token') ?? null;
 
   // Mode: 'request' (no token) or 'reset' (with token)
   const mode = token ? "reset" : "request";

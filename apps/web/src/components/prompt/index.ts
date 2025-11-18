@@ -1,3 +1,3 @@
 // Barrel exports for prompt module
-export { PromptEditor } from './PromptEditor';
-export { PromptVersionCard } from './PromptVersionCard';
+export { default as PromptEditor } from './PromptEditor';
+export { default as PromptVersionCard } from './PromptVersionCard';

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { DiffSummary } from '../DiffSummary';
+import { DiffSummary } from '../diff/DiffSummary';
 
 describe('DiffSummary', () => {
   it('visualizza correttamente le statistiche delle modifiche', () => {

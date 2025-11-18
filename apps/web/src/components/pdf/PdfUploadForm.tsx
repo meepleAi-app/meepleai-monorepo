@@ -12,7 +12,7 @@ import { categorizeError, type CategorizedError, extractCorrelationId } from '@/
 import { ApiError } from '@/lib/api';
 
 // Dynamic import to prevent SSR issues with react-pdf
-const PdfPreview = dynamic(() => import('../PdfPreview').then(mod => ({ default: mod.PdfPreview })), {
+const PdfPreview = dynamic(() => import('./PdfPreview').then(mod => ({ default: mod.PdfPreview })), {
   ssr: false,
   loading: () => <div className="p-5 text-center text-sm text-muted-foreground">Loading PDF preview...</div>
 });

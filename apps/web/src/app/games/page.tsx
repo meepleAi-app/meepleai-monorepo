@@ -185,15 +185,6 @@ export default function GamesPage() {
   }, []);
 
   return (
-    <>
-      <Head>
-        <title>Game Library - MeepleAI</title>
-        <meta
-          name="description"
-          content="Browse and search our collection of board games with detailed information and BGG integration"
-        />
-      </Head>
-
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Game Library</h1>
@@ -262,6 +253,5 @@ export default function GamesPage() {
           onOpenChange={handleDetailModalClose}
         />
       </div>
-    </>
   );
 }

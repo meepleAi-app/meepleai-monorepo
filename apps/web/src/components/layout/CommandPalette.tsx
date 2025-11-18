@@ -16,9 +16,8 @@ import {
   Filter
 } from 'lucide-react';
 import { useSearch } from '@/hooks/useSearch';
-import { SearchFilters as SearchFiltersComponent } from './SearchFilters';
+import { SearchFilters as SearchFiltersComponent } from '@/components/search/SearchFilters';
 import type { SearchResult, SearchFilters, Game, Agent } from '@/types';
-import './CommandPalette.css';
 
 interface CommandPaletteProps {
   isOpen: boolean;

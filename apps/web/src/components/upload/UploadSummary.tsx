@@ -3,7 +3,7 @@
  * Displays final statistics after all uploads complete
  */
 
-import type { UploadQueueStats } from '../hooks/useUploadQueue';
+import type { UploadQueueStats } from '@/hooks/useUploadQueue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';

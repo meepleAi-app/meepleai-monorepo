@@ -111,8 +111,8 @@ jobs:
       - name: Build Storybook
         run: pnpm build-storybook --quiet
 
-      # Unit Tests: <5s execution target, ≥90% coverage
-      - name: Unit Tests with Coverage (Target: ≥90%)
+      # Unit Tests: <5s execution target, >=90% coverage
+      - name: Unit Tests with Coverage (Target >=90%)
         env:
           NODE_ENV: test
           CI: true
@@ -345,7 +345,7 @@ jobs:
       # Unit Tests: <5s execution target
       # Integration Tests: <2min execution target
       # Combined: 90% of test suite (70% unit + 20% integration)
-      - name: Unit & Integration Tests with Coverage (Target: ≥90%)
+      - name: Unit & Integration Tests with Coverage (Target >=90%)
         timeout-minutes: 20
         env:
           CI: true
@@ -537,11 +537,11 @@ jobs:
         run: |
           # Quality Tests: Validate AI quality metrics on golden dataset
           # Thresholds:
-          #   - Accuracy ≥80%
-          #   - Hallucination ≤10%
-          #   - Avg Confidence ≥0.70
-          #   - Citation Correctness ≥80%
-          #   - Avg Latency ≤3000ms (P95)
+          #   - Accuracy >=80%
+          #   - Hallucination <=10%
+          #   - Avg Confidence >=0.70
+          #   - Citation Correctness >=80%
+          #   - Avg Latency <=3000ms (P95)
           # Reference: docs/02-development/testing/testing-strategy.md
           echo "::notice::Running quality tests (5-metric framework) on golden dataset"
           dotnet test \

@@ -20,6 +20,7 @@ using ValidatePasswordResetTokenQuery = Api.BoundedContexts.Authentication.Appli
 using ResetPasswordCommand = Api.BoundedContexts.Authentication.Application.Commands.PasswordReset.ResetPasswordCommand;
 using GenerateTotpSetupCommand = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.GenerateTotpSetupCommand;
 using Verify2FACommand = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.Verify2FACommand;
+using AdminDisable2FACommand = Api.BoundedContexts.Authentication.Application.Commands.TwoFactor.AdminDisable2FACommand;
 using GetSessionStatusQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionStatusQuery;
 using ExtendSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.ExtendSessionCommand;
 using RevokeSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand;
@@ -471,6 +472,80 @@ After logout, requests will fall back to session cookie authentication if availa
         .RequireAuthorization()
         .WithName("Get2FAStatus")
         .WithTags("Users");
+
+        // AUTH-08: Admin override to disable 2FA for locked-out users
+        group.MapPost("/auth/admin/2fa/disable", async (AdminDisable2FARequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        {
+            // Get admin user ID from authentication context
+            var adminUserIdStr = context.User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(adminUserIdStr))
+            {
+                return Results.Unauthorized();
+            }
+
+            if (!Guid.TryParse(adminUserIdStr, out var adminUserId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid admin user ID format" });
+            }
+
+            // Validate target user ID
+            if (!Guid.TryParse(request.TargetUserId, out var targetUserId))
+            {
+                return Results.BadRequest(new { error = "invalid_target_user_id", message = "Invalid target user ID format" });
+            }
+
+            // Execute admin 2FA disable via CQRS handler
+            var command = new AdminDisable2FACommand(
+                AdminUserId: adminUserId,
+                TargetUserId: targetUserId
+            );
+
+            var result = await mediator.Send(command, ct);
+
+            if (!result.Success)
+            {
+                logger.LogWarning(
+                    "Admin {AdminUserId} failed to disable 2FA for user {TargetUserId}: {ErrorMessage}",
+                    adminUserId,
+                    targetUserId,
+                    result.ErrorMessage);
+
+                // Return appropriate status code based on error
+                if (result.ErrorMessage?.Contains("Unauthorized") == true)
+                {
+                    return Results.Json(new { error = result.ErrorMessage }, statusCode: 403);
+                }
+
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            logger.LogInformation(
+                "Admin {AdminUserId} successfully disabled 2FA for user {TargetUserId}",
+                adminUserId,
+                targetUserId);
+
+            return Results.Ok(new { message = "Two-factor authentication disabled successfully. User has been notified via email." });
+        })
+        .RequireAuthorization()
+        .WithName("AdminDisable2FA")
+        .WithTags("Authentication", "Admin")
+        .WithSummary("Admin override to disable 2FA for locked-out users")
+        .WithDescription(@"Allows administrators to disable two-factor authentication for users who have lost access to their authenticator app and backup codes.
+
+**Authorization**: Requires admin role.
+
+**Security**:
+- Admin authorization is verified in the command handler
+- Email notification is automatically sent to the affected user
+- Action is logged in audit trail with admin override flag
+
+**Use Case**: Support request for users locked out of their accounts due to lost 2FA credentials.
+
+**Implementation**: Uses DDD CQRS pattern with IMediator and AdminDisable2FACommand.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403);
     }
 
     // AUTH-06: OAuth 2.0 endpoints (Google, Discord, GitHub)

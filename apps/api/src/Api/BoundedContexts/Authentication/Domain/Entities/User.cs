@@ -189,8 +189,9 @@ public sealed class User : AggregateRoot<Guid>
     /// Disables two-factor authentication for this user.
     /// DDD: Clears TotpSecret and all backup codes.
     /// </summary>
+    /// <param name="wasAdminOverride">Whether this was an admin override for account recovery.</param>
     /// <exception cref="DomainException">Thrown when 2FA is not enabled.</exception>
-    public void Disable2FA()
+    public void Disable2FA(bool wasAdminOverride = false)
     {
         if (!IsTwoFactorEnabled)
             throw new DomainException("Two-factor authentication is not enabled");
@@ -200,7 +201,7 @@ public sealed class User : AggregateRoot<Guid>
         TwoFactorEnabledAt = null;
         _backupCodes.Clear();
 
-        AddDomainEvent(new TwoFactorDisabledEvent(Id));
+        AddDomainEvent(new TwoFactorDisabledEvent(Id, wasAdminOverride));
     }
 
     /// <summary>

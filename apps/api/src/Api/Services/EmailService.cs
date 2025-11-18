@@ -80,6 +80,53 @@ public class EmailService : IEmailService
 #pragma warning restore CA1031
     }
 
+    public async Task SendTwoFactorDisabledEmailAsync(
+        string toEmail,
+        string toName,
+        bool wasAdminOverride,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var subject = "Two-Factor Authentication Disabled";
+            var body = BuildTwoFactorDisabledEmailBody(toName, wasAdminOverride);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail, toName));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct);
+
+            _logger.LogInformation(
+                "Two-factor authentication disabled email sent successfully to {Email} (Admin override: {AdminOverride})",
+                toEmail,
+                wasAdminOverride);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - wraps external SMTP exceptions with domain exception
+        // External service integration requires catching all SMTP exceptions to provide consistent error handling
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send two-factor authentication disabled email to {Email}",
+                toEmail);
+            throw new InvalidOperationException("Failed to send two-factor authentication disabled email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
     private static string BuildPasswordResetEmailBody(string userName, string resetUrl)
     {
         return $@"
@@ -122,6 +169,68 @@ public class EmailService : IEmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
+    }
+
+    private static string BuildTwoFactorDisabledEmailBody(string userName, bool wasAdminOverride)
+    {
+        var reason = wasAdminOverride
+            ? "An administrator has disabled two-factor authentication on your account, likely due to a support request for lost authenticator access."
+            : "Two-factor authentication has been disabled on your account.";
+
+        var warning = wasAdminOverride
+            ? "If you did not request this change, please contact our support team immediately and consider re-enabling two-factor authentication."
+            : "If you did not make this change, please contact our support team immediately and secure your account.";
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Two-Factor Authentication Disabled</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #fff3cd; padding: 20px; border-radius: 5px; border: 2px solid #ffc107; margin-bottom: 20px;"">
+        <h2 style=""color: #856404; margin-top: 0;"">Security Alert</h2>
+        <p style=""margin: 0; color: #856404; font-weight: bold;"">Two-Factor Authentication Disabled</p>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <p>Hello {userName},</p>
+
+        <p>{reason}</p>
+
+        <p style=""margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #ffc107; border-radius: 3px;"">
+            <strong>Important:</strong> {warning}
+        </p>
+
+        <p style=""margin-top: 30px;"">To re-enable two-factor authentication:</p>
+        <ol>
+            <li>Log in to your MeepleAI account</li>
+            <li>Go to Settings &gt; Privacy &gt; Two-Factor Authentication</li>
+            <li>Follow the setup instructions</li>
+        </ol>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            This notification was sent for security purposes to keep you informed of changes to your account.
+        </p>
+
+        <p style=""font-size: 14px; color: #666;"">
+            If you have any questions or concerns, please contact our support team.
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>This is an automated security notification, please do not reply to this email.</p>
         <p>&copy; 2025 MeepleAI. All rights reserved.</p>
     </div>
 </body>

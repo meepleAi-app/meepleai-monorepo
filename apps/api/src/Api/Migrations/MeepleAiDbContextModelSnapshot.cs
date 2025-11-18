@@ -1121,17 +1121,17 @@ namespace Api.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("accuracy");
 
-                    b.Property<double>("AvgConfidence")
+                    b.Property<double>("CitationQuality")
                         .HasColumnType("double precision")
-                        .HasColumnName("avg_confidence");
+                        .HasColumnName("citation_quality");
 
-                    b.Property<double>("AvgLatencyMs")
+                    b.Property<double>("Clarity")
                         .HasColumnType("double precision")
-                        .HasColumnName("avg_latency_ms");
+                        .HasColumnName("clarity");
 
-                    b.Property<double>("CitationCorrectness")
+                    b.Property<double>("Completeness")
                         .HasColumnType("double precision")
-                        .HasColumnName("citation_correctness");
+                        .HasColumnName("completeness");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1147,10 +1147,6 @@ namespace Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("executed_at");
 
-                    b.Property<double>("HallucinationRate")
-                        .HasColumnType("double precision")
-                        .HasColumnName("hallucination_rate");
-
                     b.Property<bool>("Passed")
                         .HasColumnType("boolean")
                         .HasColumnName("passed");
@@ -1158,6 +1154,10 @@ namespace Api.Migrations
                     b.Property<string>("QueryResultsJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("query_results_json");
+
+                    b.Property<double>("Relevance")
+                        .HasColumnType("double precision")
+                        .HasColumnName("relevance");
 
                     b.Property<string>("Summary")
                         .HasMaxLength(500)
@@ -1774,6 +1774,131 @@ namespace Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("user_sessions", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.ValidationAccuracyBaselineEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Accuracy")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)")
+                        .HasColumnName("accuracy");
+
+                    b.Property<string>("Context")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("context");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DatasetId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("dataset_id");
+
+                    b.Property<Guid?>("EvaluationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluation_id");
+
+                    b.Property<decimal>("F1Score")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)")
+                        .HasColumnName("f1_score");
+
+                    b.Property<int>("FalseNegatives")
+                        .HasColumnType("integer")
+                        .HasColumnName("false_negatives");
+
+                    b.Property<int>("FalsePositives")
+                        .HasColumnType("integer")
+                        .HasColumnName("false_positives");
+
+                    b.Property<decimal>("MatthewsCorrelation")
+                        .HasPrecision(6, 4)
+                        .HasColumnType("numeric(6,4)")
+                        .HasColumnName("matthews_correlation");
+
+                    b.Property<DateTime>("MeasuredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("measured_at");
+
+                    b.Property<bool>("MeetsBaseline")
+                        .HasColumnType("boolean")
+                        .HasColumnName("meets_baseline");
+
+                    b.Property<decimal>("Precision")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)")
+                        .HasColumnName("precision");
+
+                    b.Property<int>("QualityLevel")
+                        .HasColumnType("integer")
+                        .HasColumnName("quality_level");
+
+                    b.Property<decimal>("Recall")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)")
+                        .HasColumnName("recall");
+
+                    b.Property<string>("RecommendationsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("recommendations_json");
+
+                    b.Property<decimal>("Specificity")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)")
+                        .HasColumnName("specificity");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<int>("TotalCases")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_cases");
+
+                    b.Property<int>("TrueNegatives")
+                        .HasColumnType("integer")
+                        .HasColumnName("true_negatives");
+
+                    b.Property<int>("TruePositives")
+                        .HasColumnType("integer")
+                        .HasColumnName("true_positives");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Accuracy")
+                        .HasDatabaseName("ix_validation_accuracy_baselines_accuracy");
+
+                    b.HasIndex("Context")
+                        .HasDatabaseName("ix_validation_accuracy_baselines_context");
+
+                    b.HasIndex("DatasetId")
+                        .HasDatabaseName("ix_validation_accuracy_baselines_dataset_id");
+
+                    b.HasIndex("EvaluationId")
+                        .HasDatabaseName("ix_validation_accuracy_baselines_evaluation_id");
+
+                    b.HasIndex("MeasuredAt")
+                        .HasDatabaseName("ix_validation_accuracy_baselines_measured_at");
+
+                    b.HasIndex("MeetsBaseline")
+                        .HasDatabaseName("ix_validation_accuracy_baselines_meets_baseline");
+
+                    b.ToTable("validation_accuracy_baselines", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.VectorDocumentEntity", b =>

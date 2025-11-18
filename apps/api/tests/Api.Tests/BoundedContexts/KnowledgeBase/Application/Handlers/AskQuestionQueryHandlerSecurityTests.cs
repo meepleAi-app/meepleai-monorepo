@@ -29,6 +29,7 @@ public class AskQuestionQueryHandlerSecurityTests
     private readonly Mock<IChatThreadRepository> _mockThreadRepository;
     private readonly Mock<ILlmService> _mockLlmService;
     private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
+    private readonly Mock<IRagValidationPipelineService> _mockValidationPipeline;
     private readonly Mock<ILogger<AskQuestionQueryHandler>> _mockLogger;
     private readonly AskQuestionQueryHandler _handler;
 
@@ -55,7 +56,46 @@ public class AskQuestionQueryHandlerSecurityTests
         _mockThreadRepository = new Mock<IChatThreadRepository>();
         _mockLlmService = new Mock<ILlmService>();
         _mockPromptTemplateService = new Mock<IPromptTemplateService>();
+        _mockValidationPipeline = new Mock<IRagValidationPipelineService>();
         _mockLogger = new Mock<ILogger<AskQuestionQueryHandler>>();
+
+        // ISSUE-977: Setup validation pipeline mock to return a valid result
+        _mockValidationPipeline
+            .Setup(v => v.ValidateResponseAsync(
+                It.IsAny<Api.Models.QaResponse>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RagValidationResult
+            {
+                IsValid = true,
+                LayersPassed = 3,
+                TotalLayers = 3,
+                ConfidenceValidation = new ConfidenceValidationResult
+                {
+                    IsValid = true,
+                    ValidationMessage = "Confidence is acceptable",
+                    Severity = ValidationSeverity.Pass,
+                    ConfidenceValue = 0.8,
+                    ThresholdValue = 0.7
+                },
+                CitationValidation = new CitationValidationResult
+                {
+                    IsValid = true,
+                    TotalCitations = 3,
+                    ValidCitations = 3,
+                    InvalidCitations = new List<CitationValidationError>()
+                },
+                HallucinationDetection = new HallucinationValidationResult
+                {
+                    IsValid = true,
+                    DetectedKeywords = new List<string>(),
+                    Severity = HallucinationSeverity.None
+                },
+                Message = "All validations passed",
+                Severity = RagValidationSeverity.Pass,
+                DurationMs = 50
+            });
 
         _handler = new AskQuestionQueryHandler(
             _searchHandler,
@@ -64,6 +104,7 @@ public class AskQuestionQueryHandlerSecurityTests
             _mockThreadRepository.Object,
             _mockLlmService.Object,
             _mockPromptTemplateService.Object,
+            _mockValidationPipeline.Object,
             _mockLogger.Object);
     }
 

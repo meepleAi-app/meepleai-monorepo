@@ -43,7 +43,20 @@ public record QaResponseDto(
     double LlmConfidence,
     double OverallConfidence,
     bool IsLowQuality,
-    List<CitationDto> Citations
+    List<CitationDto> Citations,
+    RagValidationResultDto? ValidationResult = null
+);
+
+/// <summary>
+/// DTO for RAG validation pipeline results (ISSUE-977: BGAI-035)
+/// </summary>
+public record RagValidationResultDto(
+    bool IsValid,
+    int LayersPassed,
+    int TotalLayers,
+    string Message,
+    string Severity,
+    long DurationMs
 );
 
 /// <summary>

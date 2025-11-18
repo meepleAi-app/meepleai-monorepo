@@ -27,6 +27,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly ILlmService _llmService;
     private readonly IPromptTemplateService _promptTemplateService;
+    private readonly IRagValidationPipelineService _validationPipeline;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -36,6 +37,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         IChatThreadRepository chatThreadRepository,
         ILlmService llmService,
         IPromptTemplateService promptTemplateService,
+        IRagValidationPipelineService validationPipeline,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -44,6 +46,7 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
+        _validationPipeline = validationPipeline ?? throw new ArgumentNullException(nameof(validationPipeline));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -146,6 +149,49 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             RelevanceScore: sr.RelevanceScore
         )).ToList();
 
+        // ISSUE-977: BGAI-035 - Run RAG validation pipeline (all 5 layers)
+        RagValidationResultDto? validationResult = null;
+        try
+        {
+            // Build QaResponse for validation
+            var qaResponse = new Api.Models.QaResponse(
+                answer: llmResponse,
+                snippets: searchResults.Select(sr => new Api.Models.Snippet(
+                    text: sr.TextContent,
+                    source: $"PDF:{sr.VectorDocumentId}",
+                    page: sr.PageNumber,
+                    line: 0,
+                    score: (float)sr.RelevanceScore
+                )).ToList(),
+                confidence: overallConfidence.Value
+            );
+
+            // Run validation pipeline (standard mode: 3 layers)
+            var validation = await _validationPipeline.ValidateResponseAsync(
+                qaResponse,
+                query.GameId.ToString(),
+                query.Language,
+                cancellationToken);
+
+            validationResult = new RagValidationResultDto(
+                IsValid: validation.IsValid,
+                LayersPassed: validation.LayersPassed,
+                TotalLayers: validation.TotalLayers,
+                Message: validation.Message,
+                Severity: validation.Severity.ToString(),
+                DurationMs: validation.DurationMs
+            );
+
+            _logger.LogInformation(
+                "RAG validation completed: IsValid={IsValid}, Layers={LayersPassed}/{TotalLayers}, Severity={Severity}",
+                validation.IsValid, validation.LayersPassed, validation.TotalLayers, validation.Severity);
+        }
+        catch (Exception ex)
+        {
+            // Log validation failure but don't block the response
+            _logger.LogError(ex, "RAG validation pipeline failed, continuing without validation");
+        }
+
         var response = new QaResponseDto(
             Answer: llmResponse,
             Sources: searchResults,
@@ -153,7 +199,8 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             LlmConfidence: llmConfidence.Value,
             OverallConfidence: overallConfidence.Value,
             IsLowQuality: isLowQuality,
-            Citations: citations
+            Citations: citations,
+            ValidationResult: validationResult
         );
 
         _logger.LogInformation(

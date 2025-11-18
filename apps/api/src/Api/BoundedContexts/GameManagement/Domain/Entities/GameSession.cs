@@ -189,6 +189,11 @@ public sealed class GameSession : AggregateRoot<Guid>
             : DateTime.UtcNow - StartedAt;
 
     /// <summary>
+    /// Convenience accessor for duration expressed in minutes.
+    /// </summary>
+    public double DurationMinutes => Math.Max(0, Duration.TotalMinutes);
+
+    /// <summary>
     /// Gets total player count.
     /// </summary>
     public int PlayerCount => _players.Count;

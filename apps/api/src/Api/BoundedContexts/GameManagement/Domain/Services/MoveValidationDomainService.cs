@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -118,6 +119,7 @@ public class MoveValidationDomainService
             query = query.Where(r => r.Version == version);
         }
 
+<<<<<<< HEAD
         var ruleSpecEntity = await query
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
@@ -144,6 +146,56 @@ public class MoveValidationDomainService
             ruleSpecEntity.Version,
             ruleSpecEntity.CreatedAt,
             rules);
+=======
+        var ruleSpecDto = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new
+            {
+                r.GameId,
+                r.Version,
+                r.CreatedAt,
+                Rules = r.Atoms
+                    .OrderBy(a => a.SortOrder)
+                    .ThenBy(a => a.Id)
+                    .Select(atom => new
+                    {
+                        atom.Id,
+                        atom.Key,
+                        atom.Text,
+                        atom.Section,
+                        atom.PageNumber,
+                        atom.LineNumber
+                    })
+                    .ToList()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (ruleSpecDto == null)
+        {
+            return null;
+        }
+
+        var rules = ruleSpecDto.Rules
+            .Select(atom =>
+            {
+                var ruleKey = string.IsNullOrWhiteSpace(atom.Key) ? atom.Id.ToString() : atom.Key!;
+                var page = atom.PageNumber.HasValue
+                    ? atom.PageNumber.Value.ToString(CultureInfo.InvariantCulture)
+                    : null;
+                var line = atom.LineNumber.HasValue
+                    ? atom.LineNumber.Value.ToString(CultureInfo.InvariantCulture)
+                    : null;
+
+                return new RuleAtom(ruleKey, atom.Text, atom.Section, page, line);
+            })
+            .ToList();
+
+        return new RuleSpec(
+            ruleSpecDto.GameId.ToString(),
+            ruleSpecDto.Version,
+            ruleSpecDto.CreatedAt,
+            rules);
+>>>>>>> 8a6158be (fix(api): stabilize rule validation and workflow logging)
     }
 
     /// <summary>

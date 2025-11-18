@@ -1,3 +1,4 @@
+using System;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -25,14 +26,24 @@ public sealed class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflow
 
     public async Task Handle(LogWorkflowErrorCommand command, CancellationToken cancellationToken)
     {
+        var executionId = command.ExecutionId;
+        if (string.IsNullOrWhiteSpace(executionId))
+        {
+            executionId = $"missing-exec-{Guid.NewGuid():N}";
+            _logger.LogWarning(
+                "ExecutionId was not provided for workflow {WorkflowId}; using generated placeholder {ExecutionId}",
+                command.WorkflowId,
+                executionId);
+        }
+
         _logger.LogInformation(
             "Logging workflow error: WorkflowId={WorkflowId}, ExecutionId={ExecutionId}, NodeName={NodeName}",
-            command.WorkflowId, command.ExecutionId, command.NodeName);
+            command.WorkflowId, executionId, command.NodeName);
 
         // Create request DTO
         var request = new Api.Models.LogWorkflowErrorRequest(
             WorkflowId: command.WorkflowId,
-            ExecutionId: command.ExecutionId,
+            ExecutionId: executionId,
             ErrorMessage: command.ErrorMessage,
             NodeName: command.NodeName,
             RetryCount: command.RetryCount,

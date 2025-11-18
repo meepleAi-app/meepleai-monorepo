@@ -23,9 +23,11 @@ public static class GameManagementServiceExtensions
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
-        // Register domain services (Issue #1185)
+        // Register domain services (Issue #1185, #869)
         services.AddScoped<RuleSpecVersioningDomainService>();
         services.AddScoped<RuleAtomParsingDomainService>();
+        services.AddScoped<RuleSpecDiffDomainService>();
+        services.AddScoped<MoveValidationDomainService>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * PdfViewerModal - Modal dialog for viewing PDF files (BGAI-074)
  *

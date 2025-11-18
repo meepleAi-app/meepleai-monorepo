@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication;
 using Api.Services;
 using Api.Configuration;
 using Api.Authentication;
+using Api.BoundedContexts.Authentication.Application.Interfaces;
+using Api.BoundedContexts.Authentication.Infrastructure;
 
 namespace Api.Extensions;
 
@@ -65,6 +67,7 @@ public static class AuthenticationServiceExtensions
 
         // AUTH-06: OAuth services
         services.AddScoped<IEncryptionService, EncryptionService>();
+        services.AddScoped<IOAuthStateStore, RedisOAuthStateStore>(); // Redis-backed state storage for distributed deployments
         services.AddScoped<IOAuthService, OAuthService>();
 
         // AUTH-07: Two-factor authentication services

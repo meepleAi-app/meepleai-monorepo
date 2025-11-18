@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Api.BoundedContexts.Authentication.Application.Interfaces;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -25,13 +26,11 @@ public class OAuthService : IOAuthService
     private readonly OAuthConfiguration _config;
     private readonly TimeProvider _timeProvider;
     private readonly IMediator _mediator;
-
-    // CSRF state storage (in-memory for MVP, could be Redis for production)
-    private static readonly Dictionary<string, DateTime> _stateStore = new();
-    private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
+    private readonly IOAuthStateStore _stateStore;
 
     // Token encryption purpose for RefreshTokenAsync
     private const string EncryptionPurpose = "OAuthTokens";
+    private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
 
     public OAuthService(
         MeepleAiDbContext db,
@@ -40,6 +39,7 @@ public class OAuthService : IOAuthService
         IHttpClientFactory httpClientFactory,
         IOptions<OAuthConfiguration> config,
         IMediator mediator,
+        IOAuthStateStore stateStore,
         TimeProvider? timeProvider = null)
     {
         _db = db;
@@ -48,6 +48,7 @@ public class OAuthService : IOAuthService
         _httpClientFactory = httpClientFactory;
         _config = config.Value;
         _mediator = mediator;
+        _stateStore = stateStore;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -119,56 +120,25 @@ public class OAuthService : IOAuthService
     }
 
     /// <inheritdoc />
-    public Task<bool> ValidateStateAsync(string state)
+    public async Task<bool> ValidateStateAsync(string state)
     {
         if (string.IsNullOrWhiteSpace(state))
-            return Task.FromResult(false);
+            return false;
 
-        lock (_stateStore)
-        {
-            if (_stateStore.TryGetValue(state, out var expiresAt))
-            {
-                var now = _timeProvider.GetUtcNow().UtcDateTime;
-                if (now <= expiresAt)
-                {
-                    // Valid state - remove it (single-use)
-                    _stateStore.Remove(state);
-                    return Task.FromResult(true);
-                }
-                else
-                {
-                    // Expired - clean up
-                    _stateStore.Remove(state);
-                }
-            }
-        }
-
-        return Task.FromResult(false);
+        // Delegate to Redis-backed state store (single-use validation)
+        return await _stateStore.ValidateAndRemoveStateAsync(state);
     }
 
     /// <inheritdoc />
-    public Task StoreStateAsync(string state)
+    public async Task StoreStateAsync(string state)
     {
         if (string.IsNullOrWhiteSpace(state))
             throw new ArgumentException("State cannot be null or empty", nameof(state));
 
-        var expiresAt = _timeProvider.GetUtcNow().UtcDateTime.Add(StateLifetime);
+        // Delegate to Redis-backed state store with TTL
+        await _stateStore.StoreStateAsync(state, StateLifetime);
 
-        lock (_stateStore)
-        {
-            _stateStore[state] = expiresAt;
-
-            // Cleanup expired states
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
-            var expiredKeys = _stateStore.Where(kvp => kvp.Value < now).Select(kvp => kvp.Key).ToList();
-            foreach (var key in expiredKeys)
-            {
-                _stateStore.Remove(key);
-            }
-        }
-
-        _logger.LogDebug("Stored OAuth state with expiration: {ExpiresAt}", expiresAt);
-        return Task.CompletedTask;
+        _logger.LogDebug("Stored OAuth state with {Lifetime} expiration", StateLifetime);
     }
 
     // Private helper methods

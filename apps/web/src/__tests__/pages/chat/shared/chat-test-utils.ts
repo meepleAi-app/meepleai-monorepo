@@ -56,13 +56,13 @@ export const createChatTestData = () => ({
   ],
 
   mockAgents: [
-    createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', type: 'qa' }),
-    createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Chess Helper', type: 'qa' })
+    createMockAgent({ id: 'agent-1', name: 'Chess Expert', type: 'qa' }),
+    createMockAgent({ id: 'agent-2', name: 'Chess Helper', type: 'qa' })
   ],
 
   mockEditableAgents: [
-    createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Editable Agent', type: 'qa' }),
-    createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Supporting Agent', type: 'qa' })
+    createMockAgent({ id: 'agent-1', name: 'Editable Agent', type: 'qa' }),
+    createMockAgent({ id: 'agent-2', name: 'Supporting Agent', type: 'qa' })
   ],
 
   mockChats: [
@@ -203,14 +203,14 @@ export const setupStreamingMock = (overrides?: {
 export const setupFullChatEnvironment = (options?: {
   user?: Partial<{id: string; email: string; displayName: string; role: string}>;
   game?: Partial<{id: string; name: string}>;
-  agent?: Partial<{id: string; gameId: string; name: string; type: string}>;
+  agent?: Partial<{id: string; name: string; type: string}>;
   chats?: Array<Partial<{id: string; gameId: string; gameName: string; agentId: string; agentName: string; startedAt: string; lastMessageAt: string | null}>>;
   messages?: Array<{id?: string; role: 'user' | 'assistant'; content: string; followUpQuestions?: string[]; feedback?: boolean | null; metadataJson?: any}>;
   activeChat?: boolean;
   activeChatId?: string;
   sessionMinutes?: number;
   additionalGames?: Array<Partial<{id: string; name: string}>>;
-  additionalAgents?: Array<Partial<{id: string; gameId: string; name: string; type: string}>>;
+  additionalAgents?: Array<Partial<{id: string; name: string; type: string}>>;
 }) => {
   const testData = createChatTestData();
 
@@ -227,12 +227,11 @@ export const setupFullChatEnvironment = (options?: {
     ...options?.game
   });
 
-  // Setup agent (with overrides)
+  // Setup agent (with overrides) - Issue #868: global agents
   const mockAgent = createMockAgent({
     id: options?.agent?.id ?? 'agent-1',
-    gameId: options?.agent?.gameId ?? mockGame.id,
     name: options?.agent?.name ?? 'Chess Expert',
-    type: (options?.agent?.type as 'qa' | 'explain' | 'setup') ?? 'qa',
+    type: options?.agent?.type ?? 'qa',
   });
 
   // Setup chats (with overrides or defaults)

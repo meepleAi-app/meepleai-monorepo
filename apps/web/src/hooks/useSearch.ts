@@ -104,16 +104,15 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
     results.push(result);
   });
 
-  // Index agents
+  // Index agents (Issue #868: global agents, no gameId)
   sources.agents?.forEach((agent) => {
     const result: AgentSearchResult = {
       id: agent.id,
       type: 'agent',
       title: agent.name,
-      subtitle: `${agent.kind} Agent`,
+      subtitle: `${agent.type} Agent`,
       timestamp: new Date(agent.createdAt),
       agent,
-      gameId: agent.gameId,
       relevanceScore: 0,
     };
     results.push(result);
@@ -139,8 +138,7 @@ function applyFilters(results: SearchResult[], filters?: SearchFilters): SearchR
       const gameId =
         result.type === 'message' ? result.gameId :
         result.type === 'chat' ? result.gameId :
-        result.type === 'agent' ? result.gameId :
-        undefined;
+        undefined; // Agents are global (no gameId)
       if (gameId !== filters.gameId) return false;
     }
 

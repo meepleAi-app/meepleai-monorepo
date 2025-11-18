@@ -204,10 +204,16 @@ export function createFullChatState(): Partial<ChatStore> {
     agents: [
       {
         id: agentId,
-        gameId,
         name: 'QA Agent',
-        kind: 'qa',
+        type: 'qa',
+        strategyName: 'RagStrategy',
+        strategyParameters: {},
+        isActive: true,
         createdAt: new Date().toISOString(),
+        lastInvokedAt: null,
+        invocationCount: 0,
+        isRecentlyUsed: false,
+        isIdle: true,
       },
     ],
 

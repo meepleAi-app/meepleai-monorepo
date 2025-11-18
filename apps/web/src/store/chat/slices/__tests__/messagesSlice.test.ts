@@ -53,7 +53,7 @@ const createTestStore = () => {
         setGames: (games) => {},
         setAgents: (agents) => {},
         loadGames: async () => {},
-        loadAgents: async (gameId: string) => {},
+        loadAgents: async () => {}, // Issue #868: global agents, no gameId param
 
         // Minimal chat slice
         chatsByGame: {},

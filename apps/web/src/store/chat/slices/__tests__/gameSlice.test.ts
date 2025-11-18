@@ -154,17 +154,29 @@ describe('gameSlice', () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Master',
-          kind: 'expert',
+          type: 'expert',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-01',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
         {
           id: 'agent-2',
-          gameId: 'game-1',
           name: 'Feedback Helper',
-          kind: 'feedback',
+          type: 'feedback',
+          strategyName: 'FeedbackStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-02',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
 
@@ -177,19 +189,31 @@ describe('gameSlice', () => {
       const initialAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Master',
-          kind: 'expert',
+          type: 'expert',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-01',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
       const newAgents: Agent[] = [
         {
           id: 'agent-2',
-          gameId: 'game-2',
           name: 'Agricola Helper',
-          kind: 'general',
+          type: 'general',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-02',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
 
@@ -204,10 +228,16 @@ describe('gameSlice', () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Master',
-          kind: 'expert',
+          type: 'expert',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-01',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
 
@@ -347,17 +377,29 @@ describe('gameSlice', () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Master',
-          kind: 'expert',
+          type: 'expert',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-01',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
         {
           id: 'agent-2',
-          gameId: 'game-2',
           name: 'Feedback Helper',
-          kind: 'feedback',
+          type: 'feedback',
+          strategyName: 'FeedbackStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-02',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
 
@@ -377,10 +419,16 @@ describe('gameSlice', () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Master',
-          kind: 'expert',
+          type: 'expert',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-01',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
 
@@ -402,10 +450,16 @@ describe('gameSlice', () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Master',
-          kind: 'expert',
+          type: 'expert',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-01',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
 
@@ -422,10 +476,16 @@ describe('gameSlice', () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Master',
-          kind: 'expert',
+          type: 'expert',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-01',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
 
@@ -493,10 +553,16 @@ describe('gameSlice', () => {
       const initialAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Master',
-          kind: 'expert',
+          type: 'expert',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-01',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
       store.getState().setAgents(initialAgents);
@@ -512,28 +578,46 @@ describe('gameSlice', () => {
     });
 
     it('should load global agents (not tied to specific games)', async () => {
-      // Issue #868: Agents are global, so they can be from different games
+      // Issue #868: Agents are global
       const globalAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Master',
-          kind: 'expert',
+          type: 'expert',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-01',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
         {
           id: 'agent-2',
-          gameId: 'game-2',
           name: 'Agricola Helper',
-          kind: 'general',
+          type: 'general',
+          strategyName: 'RagStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-02',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
         {
           id: 'agent-3',
-          gameId: 'game-1',
           name: 'Chess Beginner',
-          kind: 'qa',
+          type: 'qa',
+          strategyName: 'QaStrategy',
+          strategyParameters: {},
+          isActive: true,
           createdAt: '2024-01-03',
+          lastInvokedAt: null,
+          invocationCount: 0,
+          isRecentlyUsed: false,
+          isIdle: true,
         },
       ];
 

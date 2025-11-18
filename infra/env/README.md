@@ -1,7 +1,7 @@
 # Environment Variable Guide (infra/env)
 
 This folder contains the `.env` files used by Docker Compose and standalone tooling.  
-Every file has an `.example` template – copy it, rename it without the `.example` suffix, and fill in the values as described here.
+Every file has an `.example` template - copy it, rename it without the `.example` suffix, and fill in the values as described here. If a command accidentally creates a directory instead of a file (sometimes happens on Windows), delete the folder and recreate the `.env` file before starting Docker so `_FILE` references resolve correctly.
 
 > **Tip**  
 > Run `tools/secrets/init-secrets.sh` first: it creates the Docker secret files in `infra/secrets/` so any `_FILE` references already work.
@@ -17,6 +17,34 @@ Every file has an `.example` template – copy it, rename it without the `.examp
 | `alertmanager.env` | Alertmanager notification settings | `cp infra/env/alertmanager.env.example infra/env/alertmanager.env` |
 | `mcp.env.dev` | API keys for MCP helper services | `cp infra/env/mcp.env.dev.example infra/env/mcp.env.dev` |
 | `infisical.env` | Self-hosted Infisical POC | `cp infra/env/infisical.env.example infra/env/infisical.env` |
+
+## Quick setup commands
+
+Run one of the following snippets from the repo root to generate all non-CI `.env` files in one shot.
+
+**macOS / Linux**
+```bash
+cp infra/env/api.env.dev.example infra/env/api.env.dev
+cp infra/env/web.env.dev.example infra/env/web.env.dev
+cp infra/env/n8n.env.dev.example infra/env/n8n.env.dev
+cp infra/env/alertmanager.env.example infra/env/alertmanager.env
+cp infra/env/mcp.env.dev.example infra/env/mcp.env.dev
+cp infra/env/infisical.env.example infra/env/infisical.env
+```
+
+**Windows PowerShell**
+```powershell
+$envDir = "D:/Repositories/meepleai-monorepo/infra/env"
+Copy-Item "$envDir/api.env.dev.example" "$envDir/api.env.dev"
+Copy-Item "$envDir/web.env.dev.example" "$envDir/web.env.dev"
+Copy-Item "$envDir/n8n.env.dev.example" "$envDir/n8n.env.dev"
+Copy-Item "$envDir/alertmanager.env.example" "$envDir/alertmanager.env"
+Copy-Item "$envDir/mcp.env.dev.example" "$envDir/mcp.env.dev"
+Copy-Item "$envDir/infisical.env.example" "$envDir/infisical.env"
+Get-ChildItem $envDir -Filter "*.env" | Select-Object Name, Length
+```
+
+Confirm each file shows a non-zero `Length` so Docker sees real files instead of directories before running `docker compose up`.
 
 Below you’ll find the variables that require manual input and how to obtain each one.
 

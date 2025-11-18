@@ -4,6 +4,8 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Models;
+using Api.SharedKernel.Application.Services;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -26,7 +28,10 @@ public class MoveValidationDomainServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         _loggerMock = new Mock<ILogger<MoveValidationDomainService>>();
         _service = new MoveValidationDomainService(_dbContext, _loggerMock.Object);
     }
@@ -366,11 +371,25 @@ public class MoveValidationDomainServiceTests : IDisposable
             Id = Guid.NewGuid(),
             GameId = gameId,
             Version = version,
-            CreatedAt = DateTime.UtcNow,
-            RulesJson = System.Text.Json.JsonSerializer.Serialize(rules)
+            CreatedAt = DateTime.UtcNow
         };
 
         _dbContext.RuleSpecs.Add(ruleSpecEntity);
+
+        // Add RuleAtomEntity objects
+        var atomEntities = rules.Select((rule, index) => new RuleAtomEntity
+        {
+            Id = Guid.NewGuid(),
+            RuleSpecId = ruleSpecEntity.Id,
+            Key = rule.id,
+            Text = rule.text,
+            Section = rule.section,
+            PageNumber = int.TryParse(rule.page, out var pageNum) ? pageNum : null,
+            LineNumber = int.TryParse(rule.line, out var lineNum) ? lineNum : null,
+            SortOrder = index
+        });
+
+        _dbContext.RuleAtoms.AddRange(atomEntities);
         await _dbContext.SaveChangesAsync();
     }
 

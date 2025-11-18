@@ -36,7 +36,7 @@ public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, S
         var abandonedSessions = sessions.Count(s => s.Status == SessionStatus.Abandoned);
 
         var averageDuration = sessions.Any()
-            ? (int)Math.Round(sessions.Average(s => s.DurationMinutes))
+            ? (int)Math.Round(sessions.Average(s => s.Duration.TotalMinutes))
             : 0;
 
         // Calculate win statistics

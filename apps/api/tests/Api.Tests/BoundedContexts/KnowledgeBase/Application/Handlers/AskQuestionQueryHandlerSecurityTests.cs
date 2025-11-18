@@ -78,8 +78,8 @@ public class AskQuestionQueryHandlerSecurityTests
                     IsValid = true,
                     ValidationMessage = "Confidence is acceptable",
                     Severity = ValidationSeverity.Pass,
-                    ConfidenceValue = 0.8,
-                    ThresholdValue = 0.7
+                    ActualConfidence = 0.8,
+                    RequiredThreshold = 0.7
                 },
                 MultiModelConsensus = new MultiModelConsensusResult
                 {
@@ -112,12 +112,16 @@ public class AskQuestionQueryHandlerSecurityTests
                     IsValid = true,
                     TotalCitations = 3,
                     ValidCitations = 3,
-                    InvalidCitations = new List<CitationValidationError>()
+                    Errors = new List<CitationValidationError>(),
+                    Message = "All citations valid"
                 },
                 HallucinationDetection = new HallucinationValidationResult
                 {
                     IsValid = true,
                     DetectedKeywords = new List<string>(),
+                    Language = "en",
+                    TotalKeywordsChecked = 0,
+                    Message = "No hallucinations detected",
                     Severity = HallucinationSeverity.None
                 },
                 ValidationAccuracyMetrics = "Validation accuracy tracking enabled (baseline threshold: 80%)",

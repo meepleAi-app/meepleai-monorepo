@@ -17,12 +17,12 @@ public sealed record MoveValidationResult
     /// Validation error messages if the move is invalid.
     /// Empty if move is valid.
     /// </summary>
-    public IReadOnlyList<string> Errors { get; init; }
+    public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// Rules that were applied during validation.
     /// </summary>
-    public IReadOnlyList<RuleAtom> ApplicableRules { get; init; }
+    public IReadOnlyList<RuleAtom> ApplicableRules { get; init; } = Array.Empty<RuleAtom>();
 
     /// <summary>
     /// Confidence score of the validation (0.0-1.0).

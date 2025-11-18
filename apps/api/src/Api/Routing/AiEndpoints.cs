@@ -530,7 +530,6 @@ public static class AiEndpoints
             context.Response.Headers["Connection"] = "keep-alive";
 
             var steps = new List<SetupGuideStep>();
-            string? gameTitle = null;
             int totalTokens = 0;
             double? confidence = null;
             int estimatedTime = 0;

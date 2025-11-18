@@ -79,6 +79,7 @@ public class BlobStorageService : IBlobStorageService
 
     public Task<Stream?> RetrieveAsync(string fileId, string gameId, CancellationToken ct = default)
     {
+        FileStream? fileStream = null;
         try
         {
             // SECURITY: Validate parameters to prevent path traversal (SEC-738, CWE-22, CWE-73)
@@ -95,7 +96,7 @@ public class BlobStorageService : IBlobStorageService
             }
 
             var filePath = files[0];
-            var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             return Task.FromResult<Stream?>(fileStream);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -106,6 +107,10 @@ public class BlobStorageService : IBlobStorageService
             // can throw various runtime exceptions (file locked, permissions, disk errors, path issues). We must
             // catch all exceptions to return null instead of crashing the service.
             // Context: File system operations can fail in unpredictable ways across different OS environments
+
+            // RESOURCE LEAK FIX: Dispose FileStream if created but exception occurred before returning
+            fileStream?.Dispose();
+
             _logger.LogError(ex, "Error retrieving file {FileId} for game {GameId}", fileId, gameId);
             return Task.FromResult<Stream?>(null);
         }

@@ -1,4 +1,4 @@
 // Barrel exports for versioning module
-export { VersionTimeline } from './VersionTimeline';
-export { VersionTimelineFilters } from './VersionTimelineFilters';
+export { default as VersionTimeline } from './VersionTimeline';
+export { default as VersionTimelineFilters } from './VersionTimelineFilters';
 export { ChangeItem } from './ChangeItem';

@@ -15,6 +15,7 @@ import { AuthModal } from '@/components/auth';
 
 export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(true);
 
   useEffect(() => {
     setMounted(true);

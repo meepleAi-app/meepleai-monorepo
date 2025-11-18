@@ -16,6 +16,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<RedisBackgroundTaskOrchestrator> _logger;
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _runningTasks;
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _scheduledTasks;
     private const string TaskStatusKeyPrefix = "meepleai:tasks:status:";
     private const string TaskLockKeyPrefix = "meepleai:tasks:lock:";
 
@@ -26,6 +27,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _runningTasks = new ConcurrentDictionary<string, CancellationTokenSource>();
+        _scheduledTasks = new ConcurrentDictionary<string, CancellationTokenSource>();
     }
 
     public async Task ScheduleAsync(
@@ -43,7 +45,11 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
 
         await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled);
 
-        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, cancellationToken), cancellationToken);
+        // Create a linked cancellation token source for this scheduled task
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _scheduledTasks.TryAdd(taskId, cts);
+
+        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token), cts.Token);
     }
 
     public async Task ScheduleDelayedAsync(
@@ -65,14 +71,26 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
 
         await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled);
 
+        // Create a linked cancellation token source for this scheduled task
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _scheduledTasks.TryAdd(taskId, cts);
+
         _ = Task.Run(async () =>
         {
-            await Task.Delay(delay, cancellationToken);
-            if (!cancellationToken.IsCancellationRequested)
+            try
             {
-                await ExecuteTaskAsync(taskId, taskName, taskFactory, cancellationToken);
+                await Task.Delay(delay, cts.Token);
+                if (!cts.Token.IsCancellationRequested)
+                {
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token);
+                }
             }
-        }, cancellationToken);
+            catch (OperationCanceledException)
+            {
+                // Task was cancelled during delay - cleanup handled by CancelAsync
+                _logger.LogInformation("Delayed task {TaskId} ({TaskName}) was cancelled before execution", taskId, taskName);
+            }
+        }, cts.Token);
     }
 
     public async Task ScheduleRecurringAsync(
@@ -94,18 +112,30 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
 
         await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled);
 
+        // Create a linked cancellation token source for this scheduled task
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _scheduledTasks.TryAdd(taskId, cts);
+
         _ = Task.Run(async () =>
         {
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
-                await ExecuteTaskAsync(taskId, taskName, taskFactory, cancellationToken);
-
-                if (!cancellationToken.IsCancellationRequested)
+                while (!cts.Token.IsCancellationRequested)
                 {
-                    await Task.Delay(interval, cancellationToken);
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token);
+
+                    if (!cts.Token.IsCancellationRequested)
+                    {
+                        await Task.Delay(interval, cts.Token);
+                    }
                 }
             }
-        }, cancellationToken);
+            catch (OperationCanceledException)
+            {
+                // Task was cancelled during execution or delay - cleanup handled by CancelAsync
+                _logger.LogInformation("Recurring task {TaskId} ({TaskName}) was cancelled", taskId, taskName);
+            }
+        }, cts.Token);
     }
 
     public async Task<bool> CancelAsync(string taskId)
@@ -113,11 +143,22 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         if (string.IsNullOrWhiteSpace(taskId))
             throw new ArgumentException("Task ID cannot be null or empty", nameof(taskId));
 
-        if (_runningTasks.TryRemove(taskId, out var cts))
+        // First, try to cancel a scheduled task (not yet executing)
+        if (_scheduledTasks.TryRemove(taskId, out var scheduledCts))
         {
-            _logger.LogInformation("Cancelling task {TaskId}", taskId);
-            cts.Cancel();
-            cts.Dispose();
+            _logger.LogInformation("Cancelling scheduled task {TaskId}", taskId);
+            scheduledCts.Cancel();
+            scheduledCts.Dispose();
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled);
+            return true;
+        }
+
+        // If not scheduled, try to cancel a running task
+        if (_runningTasks.TryRemove(taskId, out var runningCts))
+        {
+            _logger.LogInformation("Cancelling running task {TaskId}", taskId);
+            runningCts.Cancel();
+            runningCts.Dispose();
             await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled);
             return true;
         }
@@ -212,6 +253,9 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         Func<CancellationToken, Task> taskFactory,
         CancellationToken cancellationToken)
     {
+        // Remove from scheduled tasks as we're now executing
+        _scheduledTasks.TryRemove(taskId, out _);
+
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _runningTasks.TryAdd(taskId, cts);
 

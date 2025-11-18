@@ -368,4 +368,171 @@ public class RedisBackgroundTaskOrchestratorTests
         await Assert.ThrowsAsync<ArgumentException>(() =>
             _orchestrator.ScheduleRecurringAsync("test-id", "Test", interval, taskFactory));
     }
+
+    [Fact]
+    public async Task CancelAsync_ScheduledDelayedTask_CancelsBeforeExecution()
+    {
+        // Arrange
+        var taskId = "delayed-cancellable-task";
+        var taskName = "Delayed Cancellable Task";
+        var delay = TimeSpan.FromSeconds(10); // Long delay to ensure we can cancel before execution
+        var taskExecuted = false;
+        Func<CancellationToken, Task> taskFactory = async ct =>
+        {
+            await Task.Delay(10, ct);
+            taskExecuted = true;
+        };
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _orchestrator.ScheduleDelayedAsync(taskId, taskName, delay, taskFactory);
+        await Task.Delay(50); // Give task time to be scheduled
+
+        var cancelResult = await _orchestrator.CancelAsync(taskId);
+
+        // Wait to ensure task doesn't execute
+        await Task.Delay(200);
+
+        // Assert
+        Assert.True(cancelResult, "Cancel should return true for scheduled task");
+        Assert.False(taskExecuted, "Task should not execute after cancellation");
+
+        // Verify Cancelled status was set
+        _mockDatabase.Verify(db => db.StringSetAsync(
+            It.Is<RedisKey>(k => k.ToString().Contains(taskId)),
+            It.Is<RedisValue>(v => v.ToString() == BackgroundTaskStatus.Cancelled.ToString()),
+            It.IsAny<TimeSpan?>(),
+            It.IsAny<When>(),
+            It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelAsync_ScheduledRecurringTask_CancelsBeforeExecution()
+    {
+        // Arrange
+        var taskId = "recurring-cancellable-task";
+        var taskName = "Recurring Cancellable Task";
+        var interval = TimeSpan.FromSeconds(1);
+        var executionCount = 0;
+        Func<CancellationToken, Task> taskFactory = async ct =>
+        {
+            await Task.Delay(10, ct);
+            executionCount++;
+        };
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory);
+        await Task.Delay(50); // Give task time to be scheduled but not executed
+
+        var cancelResult = await _orchestrator.CancelAsync(taskId);
+
+        // Wait to ensure task doesn't execute
+        await Task.Delay(200);
+
+        // Assert
+        Assert.True(cancelResult, "Cancel should return true for scheduled recurring task");
+        Assert.Equal(0, executionCount); // Task should not have executed even once
+
+        // Verify Cancelled status was set
+        _mockDatabase.Verify(db => db.StringSetAsync(
+            It.Is<RedisKey>(k => k.ToString().Contains(taskId)),
+            It.Is<RedisValue>(v => v.ToString() == BackgroundTaskStatus.Cancelled.ToString()),
+            It.IsAny<TimeSpan?>(),
+            It.IsAny<When>(),
+            It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelAsync_RecurringTaskAfterFirstExecution_StopsSubsequentExecutions()
+    {
+        // Arrange
+        var taskId = "recurring-partial-task";
+        var taskName = "Recurring Partial Task";
+        var interval = TimeSpan.FromMilliseconds(100);
+        var executionCount = 0;
+        Func<CancellationToken, Task> taskFactory = async ct =>
+        {
+            await Task.Delay(10, ct);
+            executionCount++;
+        };
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory);
+
+        // Wait for first execution to complete
+        await Task.Delay(150);
+
+        var initialCount = executionCount;
+        Assert.True(initialCount >= 1, "Task should have executed at least once");
+
+        // Cancel after first execution
+        var cancelResult = await _orchestrator.CancelAsync(taskId);
+
+        // Wait for potential second execution
+        await Task.Delay(300);
+
+        // Assert
+        Assert.True(cancelResult, "Cancel should return true");
+        Assert.Equal(initialCount, executionCount); // No additional executions after cancellation
+    }
+
+    [Fact]
+    public async Task CancelAsync_ImmediateScheduledTask_CancelsBeforeExecution()
+    {
+        // Arrange
+        var taskId = "immediate-cancellable-task";
+        var taskName = "Immediate Cancellable Task";
+        var taskStarted = false;
+        var taskCompleted = false;
+        Func<CancellationToken, Task> taskFactory = async ct =>
+        {
+            taskStarted = true;
+            await Task.Delay(5000, ct); // Long-running to ensure we can cancel
+            taskCompleted = true;
+        };
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _orchestrator.ScheduleAsync(taskId, taskName, taskFactory);
+        await Task.Delay(50); // Give task time to start
+
+        var cancelResult = await _orchestrator.CancelAsync(taskId);
+
+        // Wait for cancellation to complete
+        await Task.Delay(200);
+
+        // Assert
+        Assert.True(cancelResult, "Cancel should return true");
+        Assert.False(taskCompleted, "Task should not complete after cancellation");
+    }
 }

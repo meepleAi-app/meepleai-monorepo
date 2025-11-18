@@ -111,7 +111,6 @@ public class MoveValidationDomainService
         CancellationToken cancellationToken)
     {
         var query = _dbContext.RuleSpecs
-            .Include(r => r.Atoms)
             .Where(r => r.GameId == gameId);
 
         if (!string.IsNullOrWhiteSpace(version))
@@ -119,34 +118,6 @@ public class MoveValidationDomainService
             query = query.Where(r => r.Version == version);
         }
 
-<<<<<<< HEAD
-        var ruleSpecEntity = await query
-            .OrderByDescending(r => r.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (ruleSpecEntity == null)
-        {
-            return null;
-        }
-
-        // Convert entity to domain model - map from RuleAtomEntity collection
-        var rules = ruleSpecEntity.Atoms
-            .OrderBy(a => a.SortOrder)
-            .Select(a => new RuleAtom(
-                id: a.Key,
-                text: a.Text,
-                section: a.Section,
-                page: a.PageNumber?.ToString(),
-                line: a.LineNumber?.ToString()
-            ))
-            .ToList();
-
-        return new RuleSpec(
-            ruleSpecEntity.GameId.ToString(),
-            ruleSpecEntity.Version,
-            ruleSpecEntity.CreatedAt,
-            rules);
-=======
         var ruleSpecDto = await query
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new
@@ -195,7 +166,6 @@ public class MoveValidationDomainService
             ruleSpecDto.Version,
             ruleSpecDto.CreatedAt,
             rules);
->>>>>>> 8a6158be (fix(api): stabilize rule validation and workflow logging)
     }
 
     /// <summary>

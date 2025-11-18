@@ -9,6 +9,7 @@
  */
 
 import itMessages from './it.json';
+import enMessages from './en.json';
 
 /**
  * Available locales in the application
@@ -38,7 +39,7 @@ export type Messages = typeof itMessages;
  */
 export const messages: Record<Locale, Messages | Record<string, unknown>> = {
   [LOCALES.IT]: itMessages,
-  [LOCALES.EN]: {}, // TODO: Add English translations when needed
+  [LOCALES.EN]: enMessages,
 };
 
 /**

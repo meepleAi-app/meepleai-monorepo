@@ -23,6 +23,7 @@ import { RegisterForm } from './RegisterForm';
 import { DemoCredentialsHint } from './DemoCredentialsHint';
 import OAuthButtons from './OAuthButtons';
 import { useQueryClient } from '@/hooks/queries';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { AuthUser } from '@/types';
 
 // ============================================================================
@@ -56,6 +57,7 @@ export function AuthModal({
 }: AuthModalProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultMode);
 
   // Reset tab when modal opens/closes or default mode changes
@@ -89,8 +91,8 @@ export function AuthModal({
     <AccessibleModal
       isOpen={isOpen}
       onClose={onClose}
-      title={activeTab === 'login' ? 'Accedi a MeepleAI' : 'Crea il tuo Account'}
-      description="Accedi all'assistente AI per regolamenti dei giochi da tavolo"
+      title={activeTab === 'login' ? t('auth.login.signInTo') : t('auth.login.createAccount')}
+      description={t('auth.login.signInDescription')}
       size="md"
     >
       <div className="space-y-6">
@@ -106,10 +108,10 @@ export function AuthModal({
               </span>
               <div>
                 <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                  Sessione Scaduta
+                  {t('auth.login.sessionExpired')}
                 </p>
                 <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-                  La tua sessione è scaduta. Effettua nuovamente l'accesso per continuare.
+                  {t('auth.login.sessionExpiredMessage')}
                 </p>
               </div>
             </div>
@@ -119,8 +121,8 @@ export function AuthModal({
         {/* Auth Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Accedi</TabsTrigger>
-            <TabsTrigger value="register">Registrati</TabsTrigger>
+            <TabsTrigger value="login">{t('navigation.login')}</TabsTrigger>
+            <TabsTrigger value="register">{t('navigation.register')}</TabsTrigger>
           </TabsList>
 
           {/* Login Tab */}
@@ -151,7 +153,7 @@ export function AuthModal({
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-white dark:bg-slate-900 px-2 text-slate-500 dark:text-slate-400">
-                  Per Test
+                  {t('auth.login.forTesting')}
                 </span>
               </div>
             </div>

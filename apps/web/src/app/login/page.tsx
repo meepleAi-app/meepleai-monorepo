@@ -12,6 +12,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthModal } from '@/components/auth';
+import { useTranslation } from '@/hooks/useTranslation';
 
 function LoginPageContent() {
   const [mounted, setMounted] = useState(false);
@@ -51,15 +52,18 @@ function LoginPageContent() {
   );
 }
 
+function LoginFallback() {
+  const { t } = useTranslation();
+  return (
+    <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+      {t('auth.login.loadingMessage')}
+    </div>
+  );
+}
+
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
-          Caricamento login...
-        </div>
-      }
-    >
+    <Suspense fallback={<LoginFallback />}>
       <LoginPageContent />
     </Suspense>
   );

@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/hooks/useTranslation";
 
 // Lazy load below-fold sections
 const FeaturesSection = dynamic(() => import("@/components/landing/FeaturesSection"), {
@@ -35,6 +36,7 @@ const TestimonialsSection = dynamic(() => import("@/components/landing/Testimoni
 export default function HomePage() {
   const router = useRouter();
   const { user: authUser, logout } = useAuth();
+  const { t } = useTranslation();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [demoEmail, setDemoEmail] = useState("");
   const [demoPassword, setDemoPassword] = useState("");
@@ -72,17 +74,17 @@ export default function HomePage() {
               {authUser ? (
                 <>
                   <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
-                    Chat
+                    {t('navigation.chat')}
                   </Link>
                   <Link href="/chess" className="text-slate-300 hover:text-white transition-colors">
                     Chess
                   </Link>
                   <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">
-                    Upload
+                    {t('navigation.upload')}
                   </Link>
                   {authUser.role === "Admin" && (
                     <Link href="/admin" className="text-slate-300 hover:text-white transition-colors">
-                      Admin
+                      {t('navigation.admin')}
                     </Link>
                   )}
                   <button
@@ -90,12 +92,12 @@ export default function HomePage() {
                     className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 py-2 px-4"
                     aria-label="Logout from MeepleAI"
                   >
-                    Logout
+                    {t('navigation.logout')}
                   </button>
                 </>
               ) : (
                 <Button onClick={() => setShowAuthModal(true)} data-testid="nav-get-started">
-                  Get Started
+                  {t('home.hero.cta.getStarted')}
                 </Button>
               )}
             </nav>
@@ -115,13 +117,11 @@ export default function HomePage() {
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
-              Your AI-Powered
-              <br />
-              <span className="gradient-text-accessible">Board Game Rules Assistant</span>
+            <h1 className="text-5xl md:text-7xl font-extrabold leading-tight gradient-text-accessible">
+              {t('home.hero.title')}
             </h1>
             <p className="text-xl text-slate-50 leading-relaxed">
-              Never argue about rules again. Get instant, accurate answers from any game&apos;s rulebook with AI-powered semantic search.
+              {t('home.hero.subtitle')}
             </p>
             <div className="flex flex-wrap gap-4">
               <motion.div
@@ -133,7 +133,7 @@ export default function HomePage() {
                   className="text-lg"
                   data-testid="hero-get-started"
                 >
-                  {authUser ? "Go to Chat" : "Get Started Free"}
+                  {authUser ? t('home.hero.cta.goToChat') : t('home.hero.cta.getStarted')}
                 </Button>
               </motion.div>
               {!authUser && (
@@ -147,7 +147,7 @@ export default function HomePage() {
                     onClick={handleTryDemo}
                     data-testid="hero-try-demo"
                   >
-                    Try Demo Account
+                    {t('home.hero.cta.tryDemo')}
                   </Button>
                 </motion.div>
               )}
@@ -161,7 +161,7 @@ export default function HomePage() {
                   asChild
                 >
                   <a href="#features">
-                    See How It Works
+                    {t('home.hero.cta.seeHow')}
                   </a>
                 </Button>
               </motion.div>
@@ -237,8 +237,8 @@ export default function HomePage() {
           viewport={{ once: true }}
           className="max-w-4xl mx-auto text-center space-y-6"
         >
-          <h2 className="text-5xl font-bold">Ready to Stop Arguing About Rules?</h2>
-          <p className="text-xl opacity-90">Join board game enthusiasts using AI to understand rules better</p>
+          <h2 className="text-5xl font-bold">{t('home.cta.title')}</h2>
+          <p className="text-xl opacity-90">{t('home.cta.subtitle')}</p>
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -248,7 +248,7 @@ export default function HomePage() {
               className="text-lg bg-white text-primary hover:bg-slate-100"
               data-testid="cta-get-started"
             >
-              {authUser ? "Start Chatting" : "Get Started Free"}
+              {authUser ? t('home.hero.cta.startChatting') : t('home.hero.cta.getStarted')}
             </Button>
           </motion.div>
         </motion.div>
@@ -263,11 +263,11 @@ export default function HomePage() {
               <span className="text-3xl">🎲</span>
               <span className="text-xl font-bold gradient-text-accessible">MeepleAI</span>
             </div>
-            <p className="text-slate-300 text-sm">AI-powered board game rules assistance</p>
+            <p className="text-slate-300 text-sm">{t('home.footer.tagline')}</p>
           </div>
 
           <div className="space-y-3">
-            <h4 className="font-semibold">Product</h4>
+            <h4 className="font-semibold">{t('home.footer.product')}</h4>
             <div className="flex flex-col gap-2 text-sm">
               <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">Chat</Link>
               <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">Upload PDF</Link>
@@ -276,7 +276,7 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-3">
-            <h4 className="font-semibold">Resources</h4>
+            <h4 className="font-semibold">{t('home.footer.resources')}</h4>
             <div className="flex flex-col gap-2 text-sm">
               <a href="https://github.com/yourusername/meepleai" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-white transition-colors">GitHub</a>
               <Link href="/docs" className="text-slate-300 hover:text-white transition-colors">Documentation</Link>
@@ -285,7 +285,7 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-3">
-            <h4 className="font-semibold">Demo Accounts</h4>
+            <h4 className="font-semibold">{t('home.footer.demoAccounts')}</h4>
             <div className="text-sm text-slate-300 space-y-1">
               <p>admin@meepleai.dev</p>
               <p>editor@meepleai.dev</p>
@@ -296,7 +296,7 @@ export default function HomePage() {
         </div>
 
         <div className="max-w-6xl mx-auto pt-8 border-t border-white/10 text-center text-sm text-slate-300">
-          <p>© 2025 MeepleAI. Open source project.</p>
+          <p>{t('home.footer.copyright')}</p>
         </div>
       </footer>
 

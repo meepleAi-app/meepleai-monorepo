@@ -61,7 +61,14 @@
       "noAccount": "Non hai un account?",
       "signUp": "Registrati",
       "error": "Credenziali non valide. Riprova.",
-      "success": "Accesso effettuato con successo!"
+      "success": "Accesso effettuato con successo!",
+      "loadingMessage": "Caricamento login...",
+      "signInTo": "Accedi a MeepleAI",
+      "createAccount": "Crea il tuo Account",
+      "signInDescription": "Accedi all'assistente AI per regolamenti di giochi da tavolo",
+      "sessionExpired": "Sessione Scaduta",
+      "sessionExpiredMessage": "La tua sessione è scaduta. Accedi nuovamente.",
+      "forTesting": "Per Test"
     },
     "register": {
       "title": "Registrati",
@@ -268,5 +275,63 @@
     "openInNewTab": "Apri in una nuova scheda",
     "loading": "Caricamento in corso, attendere prego",
     "errorOccurred": "Si è verificato un errore"
+  },
+  "home": {
+    "hero": {
+      "title": "Il tuo Assistente AI per Regolamenti di Giochi da Tavolo",
+      "subtitle": "Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.",
+      "cta": {
+        "getStarted": "Inizia Gratis",
+        "tryDemo": "Prova Account Demo",
+        "seeHow": "Scopri Come Funziona",
+        "goToChat": "Vai alla Chat",
+        "startChatting": "Inizia a Chattare"
+      }
+    },
+    "features": {
+      "title": "Come Funziona",
+      "upload": {
+        "title": "Carica",
+        "description": "Carica il PDF del regolamento del tuo gioco"
+      },
+      "ask": {
+        "title": "Chiedi",
+        "description": "Fai domande sulle regole"
+      },
+      "play": {
+        "title": "Gioca",
+        "description": "Ottieni risposte istantanee e accurate"
+      }
+    },
+    "footer": {
+      "tagline": "Assistenza AI per regolamenti di giochi da tavolo",
+      "product": "Prodotto",
+      "resources": "Risorse",
+      "demoAccounts": "Account Demo",
+      "copyright": "© 2025 MeepleAI. Progetto open source."
+    },
+    "cta": {
+      "title": "Pronto a Non Discutere Più sulle Regole?",
+      "subtitle": "Unisciti agli appassionati di giochi da tavolo che usano l'AI per comprendere meglio le regole"
+    }
+  },
+  "wizard": {
+    "steps": {
+      "upload": "Carica",
+      "parse": "Elabora",
+      "review": "Rivedi",
+      "publish": "Pubblica"
+    },
+    "title": "Wizard Importazione PDF",
+    "description": "Carica, elabora, rivedi e pubblica regolamenti di gioco",
+    "actions": {
+      "confirmGame": "Conferma Selezione Gioco",
+      "parsePdf": "Elabora PDF",
+      "publishRuleSpec": "Pubblica RuleSpec",
+      "importAnother": "Importa un Altro PDF"
+    },
+    "status": {
+      "publishedSuccess": "Pubblicato con Successo!"
+    }
   }
 }

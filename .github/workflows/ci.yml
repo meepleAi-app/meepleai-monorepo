@@ -33,10 +33,10 @@ jobs:
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      web: ${{ steps.filter.outputs.web }}
-      api: ${{ steps.filter.outputs.api }}
-      schemas: ${{ steps.filter.outputs.schemas }}
-      infra: ${{ steps.filter.outputs.infra }}
+      web: ${{ steps.filter.outputs.web == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+      api: ${{ steps.filter.outputs.api == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+      schemas: ${{ steps.filter.outputs.schemas == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+      infra: ${{ steps.filter.outputs.infra == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -45,6 +45,7 @@ jobs:
       - name: Paths Filter
         id: filter
         uses: dorny/paths-filter@v3
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           filters: |

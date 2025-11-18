@@ -65,7 +65,7 @@ jobs:
     name: Schemas - Validate RuleSpec Examples
     runs-on: ubuntu-latest
     # Run on schedule/workflow_dispatch, or when schemas changed in push/PR
-    if: !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.schemas == 'true')
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.schemas == 'true') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -84,7 +84,7 @@ jobs:
     name: Web - Unit Tests (70%)
     runs-on: ubuntu-latest
     # Run on schedule/workflow_dispatch, or when web files changed in push/PR
-    if: !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true')
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true') }}
     defaults:
       run:
         working-directory: apps/web
@@ -142,7 +142,7 @@ jobs:
     name: Web - E2E Tests (5%)
     runs-on: ubuntu-latest
     # Run on schedule/workflow_dispatch, or when web files changed in push/PR
-    if: !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true')
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true') }}
     defaults:
       run:
         working-directory: apps/web
@@ -206,7 +206,7 @@ jobs:
     name: Web - Accessibility Tests (E2E)
     runs-on: ubuntu-latest
     # Run on schedule/workflow_dispatch, or when web files changed in push/PR
-    if: !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true')
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true') }}
     defaults:
       run:
         working-directory: apps/web
@@ -265,7 +265,7 @@ jobs:
     name: API - Unit & Integration Tests (90%)
     runs-on: ubuntu-latest
     # Run on schedule/workflow_dispatch, or when API files changed in push/PR
-    if: !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true')
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true') }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -407,7 +407,7 @@ jobs:
     name: Validate Prometheus & Alertmanager Configs
     runs-on: ubuntu-latest
     # Run on schedule/workflow_dispatch, or when infra files changed in push/PR
-    if: !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.infra == 'true')
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.infra == 'true') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -445,7 +445,7 @@ jobs:
     name: API - Quality Tests (5%)
     runs-on: ubuntu-latest
     # Run on schedule/workflow_dispatch, or when API files changed in push/PR
-    if: !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true')
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true') }}
     services:
       postgres:
         image: postgres:16-alpine

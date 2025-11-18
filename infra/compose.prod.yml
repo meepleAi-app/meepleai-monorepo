@@ -2,7 +2,7 @@
 # Production configuration with security hardening and high availability
 
 services:
-  postgres:
+  meepleai-postgres:
     restart: always
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
@@ -24,7 +24,7 @@ services:
           cpus: '1'
           memory: 2G
 
-  redis:
+  meepleai-redis:
     restart: always
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
@@ -38,7 +38,7 @@ services:
           cpus: '0.5'
           memory: 1G
 
-  qdrant:
+  meepleai-qdrant:
     restart: always
     volumes:
       - qdrantdata-prod:/qdrant/storage
@@ -51,11 +51,11 @@ services:
           cpus: '1'
           memory: 4G
 
-  api:
+  meepleai-api:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: https://+:8080;http://+:8081
-      ConnectionStrings__Postgres: "Host=postgres;Database=meepleai_prod;Username=meepleai;Password_File=/run/secrets/postgres-password"
+      ConnectionStrings__Postgres: "Host=meepleai-postgres;Database=meepleai_prod;Username=meepleai;Password_File=/run/secrets/postgres-password"
     restart: always
     logging:
       driver: "json-file"
@@ -71,7 +71,7 @@ services:
           cpus: '2'
           memory: 4G
 
-  web:
+  meepleai-web:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE: ${PRODUCTION_API_URL}
@@ -91,7 +91,7 @@ services:
           memory: 2G
 
   # Full observability stack with production settings
-  grafana:
+  meepleai-grafana:
     restart: always
     environment:
       - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL}
@@ -99,7 +99,7 @@ services:
     secrets:
       - grafana-admin-password
 
-  prometheus:
+  meepleai-prometheus:
     restart: always
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -117,7 +117,7 @@ services:
           cpus: '2'
           memory: 4G
 
-  jaeger:
+  meepleai-jaeger:
     restart: always
     deploy:
       resources:
@@ -125,7 +125,7 @@ services:
           cpus: '1'
           memory: 2G
 
-  seq:
+  meepleai-seq:
     restart: always
     environment:
       - ACCEPT_EULA=Y
@@ -139,7 +139,7 @@ services:
           cpus: '1'
           memory: 2G
 
-  alertmanager:
+  meepleai-alertmanager:
     restart: always
     deploy:
       resources:
@@ -158,3 +158,5 @@ volumes:
 secrets:
   grafana-admin-password:
     file: ./secrets/prod/grafana-admin-password.txt
+
+

@@ -11,29 +11,44 @@ This directory contains sensitive secrets for local development using Docker Sec
 
 ## Secrets Structure
 
-| Secret File | Purpose | Used By |
-|-------------|---------|---------|
-| `postgres-password.txt` | PostgreSQL database password | postgres, api, n8n |
-| `openrouter-api-key.txt` | OpenRouter API key for LLM | api |
-| `n8n-encryption-key.txt` | n8n workflow encryption | n8n |
-| `n8n-basic-auth-password.txt` | n8n UI authentication | n8n |
-| `gmail-app-password.txt` | Gmail App Password for alerts | alertmanager |
-| `grafana-admin-password.txt` | Grafana admin UI password | grafana |
-| `initial-admin-password.txt` | API bootstrap admin password | api |
+| Secret File | Purpose | Used By | How to Generate |
+|-------------|---------|---------|-----------------|
+| `postgres-password.txt` | PostgreSQL database password | meepleai-postgres, meepleai-api, meepleai-n8n | `openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 24` |
+| `openrouter-api-key.txt` | OpenRouter API key for LLM usage | meepleai-api | Create at [https://openrouter.ai/account/api-keys](https://openrouter.ai/account/api-keys) and paste the value |
+| `n8n-encryption-key.txt` | Encrypts n8n credentials/secrets | meepleai-n8n | `openssl rand -base64 32` |
+| `n8n-basic-auth-password.txt` | Protects n8n UI with Basic Auth | meepleai-n8n | `openssl rand -base64 18 | tr -dc 'A-Za-z0-9' | head -c 18` |
+| `gmail-app-password.txt` | Google App Password for SMTP alerts | meepleai-alertmanager | From Google Account → Security → App Passwords (select “Other (Custom)” → “MeepleAI Alertmanager”) |
+| `grafana-admin-password.txt` | Grafana admin login password | meepleai-grafana | `openssl rand -base64 18 | tr -dc 'A-Za-z0-9' | head -c 18` |
+| `initial-admin-password.txt` | Bootstrap admin password for MeepleAI API | meepleai-api | `openssl rand -base64 18 | tr -dc 'A-Za-z0-9' | head -c 18` |
+| `n8n-service-session.txt` *(optional)* | Service token for n8n workflows | meepleai-n8n workflows | `pwsh tools/setup-n8n-service-account.ps1` generates both token and `.env` file |
 
-## Initialization
+## Secret Setup Checklist
 
-```bash
-# Initialize all secrets from templates
-cd tools/secrets
-./init-secrets.sh
+1. **Run the template initializer (one time)**
+   ```bash
+   cd tools/secrets
+   ./init-secrets.sh
+   ```
+   This creates `*.txt` files from the `.example` templates.
 
-# Or manually create secret files:
-cd infra/secrets
-echo "your-postgres-password" > postgres-password.txt
-echo "your-openrouter-key" > openrouter-api-key.txt
-# ... etc
-```
+2. **Fill each file with the generated secret**
+   ```bash
+   # Example: PostgreSQL
+   openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 24 > infra/secrets/postgres-password.txt
+
+   # Example: n8n encryption key
+   openssl rand -base64 32 > infra/secrets/n8n-encryption-key.txt
+
+   # Example: OpenRouter API key (paste the value you copy from the dashboard)
+   echo "sk-live-xxxxxxxxxxxxxxxx" > infra/secrets/openrouter-api-key.txt
+   ```
+
+3. **Regenerate secrets later with `rotate-secret.sh`**
+   ```bash
+   cd tools/secrets
+   ./rotate-secret.sh postgres-password
+   ```
+   The script backs up the old value, prompts for a new one (or auto-generates), and reminds you which services to restart.
 
 ## Usage in Docker Compose
 

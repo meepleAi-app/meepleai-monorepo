@@ -36,7 +36,7 @@
       "label": "API Base URL",
       "description": "MeepleAI API URL for fetching stats",
       "required": true,
-      "default": "http://api:8080",
+      "default": "http://meepleai-api:8080",
       "options": null,
       "sensitive": false
     },

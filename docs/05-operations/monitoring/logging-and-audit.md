@@ -77,10 +77,10 @@ If using Docker Compose, access container logs directly:
 
 ```bash
 # API logs
-docker compose logs -f api
+docker compose logs -f meepleai-api
 
 # Follow logs with timestamp
-docker compose logs -f --tail=100 api
+docker compose logs -f --tail=100 meepleai-api
 
 # All services
 docker compose logs -f
@@ -890,19 +890,19 @@ WHERE LAG("Id") OVER (ORDER BY "CreatedAt") IS NOT NULL
 **Diagnosis**:
 ```bash
 # Check Seq container is running
-docker compose ps seq
+docker compose ps meepleai-seq
 
 # Check Seq logs
-docker compose logs seq
+docker compose logs meepleai-seq
 
 # Test Seq endpoint
 curl http://localhost:5341/api/events
 ```
 
 **Solutions**:
-1. **Seq not running**: `docker compose up -d seq`
+1. **meepleai-seq not running**: `docker compose up -d meepleai-seq`
 2. **Wrong URL**: Check `SEQ_URL` in `appsettings.json` or env var
-3. **Network issue**: Ensure API container can reach Seq (`docker compose network`)
+3. **Network issue**: Ensure meepleai-api container can reach meepleai-seq (`docker compose network`)
 4. **Seq API key**: If configured, verify `SEQ_API_KEY` is correct
 
 ### Issue 2: Sensitive Data Exposed in Logs
@@ -969,7 +969,7 @@ CorrelationId == null
 **Diagnosis**:
 ```bash
 # Check application logs for audit write errors
-docker compose logs api | grep "Failed to write audit log"
+docker compose logs meepleai-api | grep "Failed to write audit log"
 
 # Check database connection
 psql -h localhost -U postgres -d meepleai -c "SELECT COUNT(*) FROM \"AuditLogs\";"
@@ -988,7 +988,7 @@ psql -h localhost -U postgres -d meepleai -c "SELECT COUNT(*) FROM \"AuditLogs\"
 **Diagnosis**:
 ```bash
 # Check Seq storage
-docker compose exec seq du -sh /data
+docker compose exec meepleai-seq du -sh /data
 
 # Check log retention settings
 curl http://localhost:5341/api/settings
@@ -1009,7 +1009,7 @@ curl http://localhost:5341/api/settings
 | Environment | Console Logs | Seq UI | Jaeger Traces | Metrics |
 |-------------|--------------|--------|---------------|---------|
 | **Development** | Terminal output | http://localhost:8081 | http://localhost:16686 | http://localhost:9090/metrics |
-| **Docker** | `docker compose logs api` | http://localhost:8081 | http://localhost:16686 | http://localhost:9090/metrics |
+| **Docker** | `docker compose logs meepleai-api` | http://localhost:8081 | http://localhost:16686 | http://localhost:9090/metrics |
 | **Production** | CloudWatch/Azure Logs | https://logs.meepleai.dev | https://traces.meepleai.dev | https://metrics.meepleai.dev |
 
 ### Key Configuration Files
@@ -1027,7 +1027,7 @@ curl http://localhost:5341/api/settings
 
 ```bash
 # View live API logs (Docker)
-docker compose logs -f api
+docker compose logs -f meepleai-api
 
 # Search logs in Seq
 # Navigate to http://localhost:8081 and use query syntax:

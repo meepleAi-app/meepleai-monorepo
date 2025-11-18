@@ -26,7 +26,7 @@ except ImportError:
 server = Server("knowledge-graph")
 
 # Configuration
-QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://meepleai-qdrant:6333")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "knowledge_graph")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 

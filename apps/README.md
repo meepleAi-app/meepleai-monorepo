@@ -156,7 +156,7 @@ python app.py
 
 **Container**:
 ```bash
-docker compose up embedding
+docker compose up meepleai-embedding
 ```
 
 ---
@@ -315,7 +315,7 @@ docker compose up -d
 **Option 2: Run Individually**
 ```bash
 # Terminal 1: Infrastructure
-cd infra && docker compose up postgres qdrant redis
+cd infra && docker compose up meepleai-postgres meepleai-qdrant meepleai-redis
 
 # Terminal 2: Embedding Service
 cd apps/embedding-service && python app.py
@@ -422,9 +422,9 @@ Each service has its own configuration:
 **API** (`.env` in `infra/env/`):
 ```bash
 OPENROUTER_API_KEY=sk-or-***
-ConnectionStrings__Postgres=Host=postgres;...
-QDRANT_URL=http://qdrant:6333
-REDIS_URL=redis:6379
+ConnectionStrings__Postgres=Host=meepleai-postgres;...
+QDRANT_URL=http://meepleai-qdrant:6333
+REDIS_URL=meepleai-redis:6379
 EMBEDDING_SERVICE_URL=http://embedding:8000
 UNSTRUCTURED_SERVICE_URL=http://unstructured:8001
 SMOLDOCLING_SERVICE_URL=http://smoldocling:8002
@@ -504,8 +504,8 @@ docker network inspect infra_default
 docker compose ps
 
 # Test connectivity
-docker compose exec api curl http://embedding:8000/health
-docker compose exec api curl http://unstructured:8001/health
+docker compose exec meepleai-api curl http://meepleai-embedding:8000/health
+docker compose exec meepleai-api curl http://unstructured:8001/health
 ```
 
 ### PDF Processing Fails
@@ -568,3 +568,4 @@ See [Deployment Guide](../docs/05-operations/deployment/board-game-ai-deployment
 **Last Updated**: 2025-11-15
 **Maintainer**: Engineering Team
 **Total Services**: 5 (API, Web, Embedding, Unstructured, SmolDocling)
+

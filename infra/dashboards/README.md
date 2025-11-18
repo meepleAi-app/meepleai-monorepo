@@ -64,7 +64,7 @@ Dashboards in this directory are automatically provisioned to Grafana on startup
 ## Usage
 
 1. Place JSON dashboard files in this directory
-2. Restart Grafana service: `docker compose restart grafana`
+2. Restart meepleai-grafana service: `docker compose restart meepleai-grafana`
 3. Dashboards will appear in Grafana UI under the "MeepleAI" folder
 
 ## Creating Dashboards

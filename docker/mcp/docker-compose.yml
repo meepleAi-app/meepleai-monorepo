@@ -169,7 +169,7 @@ services:
     memswap_limit: 512m
     # user: "1000:1000"  # Using default 'node' user from image
     environment:
-      - QDRANT_URL=${KG_QDRANT_URL:-http://qdrant:6333}
+      - QDRANT_URL=${KG_QDRANT_URL:-http://meepleai-qdrant:6333}
       - QDRANT_COLLECTION=${KG_COLLECTION:-knowledge_graph}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - PYTHONUNBUFFERED=1
@@ -197,7 +197,7 @@ services:
     memswap_limit: 512m
     # user: "1000:1000"  # Using default 'node' user from image
     environment:
-      - N8N_API_URL=${N8N_API_URL:-http://n8n:5678/api/v1}
+      - N8N_API_URL=${N8N_API_URL:-http://meepleai-n8n:5678/api/v1}
       - N8N_API_KEY=${N8N_API_KEY}
       - N8N_API_TIMEOUT=${N8N_API_TIMEOUT:-30000}
       - NODE_ENV=production

@@ -412,7 +412,7 @@ public class AdaptiveLlmService
   "AI": {
     "Provider": "Hybrid",
     "Ollama": {
-      "Url": "http://ollama:11434",
+      "Url": "http://meepleai-ollama:11434",
       "Model": "llama3:8b",
       "TimeoutSeconds": 30
     },

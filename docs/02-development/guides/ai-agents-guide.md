@@ -7,7 +7,7 @@ Backend services live in `apps/api/src/Api`, split by feature folders with cross
 - `cd apps/api && dotnet build` compiles backend services; append `dotnet test /p:CollectCoverage=true` to validate and gather coverage.
 - `cd apps/web && pnpm dev` runs the Next.js dev server, while `pnpm build` emits the production bundle.
 - `pnpm lint`, `pnpm lint:fix`, and `pnpm typecheck` enforce Airbnb ESLint rules and strict TypeScript before commits land.
-- `cd infra && docker compose up -d postgres qdrant redis n8n` provisions the shared data stack powering both apps.
+- `cd infra && docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redis meepleai-n8n` provisions the shared data stack powering both apps.
 - `pwsh tools/measure-coverage.ps1 -Project api -GenerateHtml` aggregates multi-project coverage when you need a reportable artifact.
 
 ## Coding Style & Naming Conventions
@@ -21,3 +21,4 @@ Keep branches rebased on `main` and reference issues directly (e.g., `Closes #12
 
 ## Security & Configuration Tips
 Copy environment templates from `infra/env/*.example` before running services and keep secrets such as `OPENROUTER_API_KEY`, `ConnectionStrings__Postgres`, and `NEXT_PUBLIC_API_BASE` out of source control. Consult `SECURITY.md` for rotation timelines and disclosure steps. Prefer sealed secrets or local user secrets instead of `.env` commits, and let GitHub Advanced Security plus `pre-commit` scanners run before every push to prevent accidental exposure.
+

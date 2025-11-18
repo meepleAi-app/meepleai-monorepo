@@ -40,7 +40,7 @@
 - **Frontend**: Next.js 16 (App Router), React 19, TanStack Query, Zustand, React Hook Form + Zod
 - **UI**: Shadcn/UI (Radix + Tailwind CSS 4)
 - **Monitoring**: Prometheus, Grafana, Jaeger, Seq, Alertmanager
-- **Infrastructure**: Docker Compose (15 services), n8n workflows
+- **Infrastructure**: Docker Compose (15 services), meepleai-n8n workflows
 
 ### Key Features MVP ✅ (Most Complete!)
 - 🎲 **9 giochi supportati** - Terraforming Mars, Wingspan, Azul, Scythe, Catan, Pandemic, 7 Wonders, Agricola, Splendor

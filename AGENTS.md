@@ -1,11 +1,11 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-MeepleAI is a DDD-oriented monorepo. Core roots include `apps/api/src/Api` (ASP.NET Core service with bounded contexts under `BoundedContexts/*`), `apps/web` (Next.js 16 UI with feature folders in `src/app` and shared components in `src/components`), and the ingestion workers in `apps/unstructured-service`, `apps/smoldocling-service`, and `apps/embedding-service`. Platform services live in `infra` (Docker Compose, env files) and `tools` (e.g., `tools/secrets/init-secrets.sh` for secret scaffolding). Shared fixtures and scenario data live under `/tests`, while detailed references land in `docs/` (architecture, testing, security).
+MeepleAI is a DDD-oriented monorepo. Core roots include `apps/meepleai-api/src/meepleai-api` (ASP.NET Core service with bounded contexts under `BoundedContexts/*`), `apps/meepleai-web` (Next.js 16 UI with feature folders in `src/app` and shared components in `src/components`), and the ingestion workers in `apps/meepleai-unstructured`, `apps/smoldocling-service`, and `apps/meepleai-embedding`. Platform services live in `infra` (Docker Compose, env files) and `tools` (e.g., `tools/secrets/init-secrets.sh` for secret scaffolding). Shared fixtures and scenario data live under `/tests`, while detailed references land in `docs/` (architecture, testing, security).
 
 ## Build, Test, and Development Commands
 - Initialize secrets once: `cd tools/secrets && ./init-secrets.sh` (writes to `infra/secrets/*.txt`).
-- Bring up dependencies: `cd infra && docker compose up -d postgres qdrant redis n8n`.
+- Bring up dependencies: `cd infra && docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redis meepleai-n8n`.
 - API cycle: `cd apps/api && dotnet restore && dotnet build && dotnet test`; run `dotnet ef database update --project src/Api` after schema changes.
 - Web cycle: `cd apps/web && pnpm install && pnpm dev`; bundle via `pnpm build && pnpm start`.
 - Coverage & reports: `pwsh tools/measure-coverage.ps1 -Project api` (or `-GenerateHtml`) and `pnpm test:coverage`; Playwright flows run through `pnpm test:e2e`, with `pnpm test:e2e:report` to inspect artifacts.

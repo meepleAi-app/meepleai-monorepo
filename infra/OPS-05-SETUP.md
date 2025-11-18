@@ -52,14 +52,14 @@ To receive alert emails at **badsworm@gmail.com**, follow these steps:
 4. Restart Alertmanager:
    ```bash
    cd ../
-   docker compose restart alertmanager
+   docker compose restart meepleai-alertmanager
    ```
 
 ### Step 3: Verify Configuration
 
 Check Alertmanager logs:
 ```bash
-docker compose logs alertmanager
+docker compose logs meepleai-alertmanager
 ```
 
 Should see: `level=info msg="Completed loading of configuration file"`
@@ -179,7 +179,7 @@ To also receive alerts in Slack:
    SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
    ```
 3. Uncomment Slack configs in `infra/alertmanager.yml`
-4. Restart: `docker compose restart alertmanager`
+4. Restart: `docker compose restart meepleai-alertmanager`
 
 ### 4. Create Pull Request
 ```bash
@@ -207,7 +207,7 @@ After PR is merged, close the issue on GitHub.
 
 1. **Check Alertmanager logs**:
    ```bash
-   docker compose logs alertmanager | grep -i error
+   docker compose logs meepleai-alertmanager | grep -i error
    ```
 
 2. **Verify App Password**:
@@ -220,7 +220,7 @@ After PR is merged, close the issue on GitHub.
 4. **Verify SMTP config**:
    ```bash
    # Test SMTP connection
-   docker compose exec alertmanager wget --spider smtp.gmail.com:587
+   docker compose exec meepleai-alertmanager wget --spider smtp.gmail.com:587
    ```
 
 ### Alert Not Firing?

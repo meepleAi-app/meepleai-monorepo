@@ -182,7 +182,7 @@ curl http://localhost:8081/api
 # Verifica env var
 echo $SEQ_URL
 # Restart Seq container
-docker compose restart seq
+docker compose restart meepleai-seq
 ```
 
 **Prevenzione**:

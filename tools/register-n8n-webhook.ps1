@@ -10,7 +10,7 @@ param(
     [string]$N8nBaseUrl = "http://localhost:5678",
 
     [Parameter(Mandatory=$false)]
-    [string]$WebhookUrl = "http://n8n:5678/webhook/explain",
+    [string]$WebhookUrl = "http://meepleai-n8n:5678/webhook/explain",
 
     [Parameter(Mandatory=$false)]
     [string]$AdminEmail = "admin@meepleai.dev",
@@ -219,7 +219,7 @@ Write-Host "Registration Complete!" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "1. Start n8n: docker compose up -d n8n" -ForegroundColor White
+Write-Host "1. Start meepleai-n8n: docker compose up -d meepleai-n8n" -ForegroundColor White
 Write-Host "2. Import workflow in n8n UI: infra/n8n/workflows/agent-explain-orchestrator.json" -ForegroundColor White
 Write-Host "3. Activate the workflow in n8n" -ForegroundColor White
 Write-Host "4. Update n8n API key if using placeholder:" -ForegroundColor White
@@ -228,3 +228,4 @@ Write-Host "5. Test webhook:" -ForegroundColor White
 Write-Host "   POST $WebhookUrl" -ForegroundColor Gray
 Write-Host "   Body: { \"gameId\": \"tic-tac-toe\", \"topic\": \"winning conditions\" }" -ForegroundColor Gray
 Write-Host ""
+

@@ -24,8 +24,8 @@
 ```bash
 # Required for Phase 4 Testing Framework
 export OPENROUTER_API_KEY="sk-or-..."
-export REDIS_URL="redis:6379"
-export ConnectionStrings__Postgres="Host=postgres;Database=meepleai;..."
+export REDIS_URL="meepleai-redis:6379"
+export ConnectionStrings__Postgres="Host=meepleai-postgres;Database=meepleai;..."
 
 # Feature Flags
 export Features__PromptDatabase="false"  # Start disabled for safety
@@ -67,7 +67,7 @@ dotnet build
 dotnet test  # Verify 88% pass rate (15/17 tests)
 
 # Deploy to staging
-docker compose -f infra/docker-compose.yml up -d --build api
+docker compose -f infra/docker-compose.yml up -d --build meepleai-api
 
 # Verify health
 curl http://localhost:8080/health
@@ -93,7 +93,7 @@ curl http://localhost:8080/api/v1/chat/qa \
 export Features__PromptDatabase="true"
 
 # Restart API
-docker compose restart api
+docker compose restart meepleai-api
 
 # Monitor for 48 hours
 ```
@@ -145,7 +145,7 @@ docker compose restart api
 ```bash
 # 1. Disable feature flag immediately
 export Features__PromptDatabase="false"
-docker compose restart api
+docker compose restart meepleai-api
 
 # 2. Verify rollback
 curl http://localhost:8080/health
@@ -155,7 +155,7 @@ curl http://localhost:8080/health
 # Post to #incidents Slack channel
 
 # 4. Investigate root cause
-docker compose logs -f api | grep "Prompt"
+docker compose logs -f meepleai-api | grep "Prompt"
 ```
 
 ### Partial Rollback (Service-Specific)
@@ -284,7 +284,7 @@ psql -d meepleai -c "\d prompt_versions"
 psql -d meepleai -c "SELECT evaluation_id, passed, summary FROM prompt_evaluation_results ORDER BY executed_at DESC LIMIT 10;"
 
 # Check logs
-docker compose logs api | grep "Evaluation"
+docker compose logs meepleai-api | grep "Evaluation"
 ```
 
 **Resolution**:
@@ -373,3 +373,4 @@ curl -X POST http://localhost:8080/api/v1/admin/prompts/{templateId}/compare \
 **Last Review**: 2025-10-26
 
 🤖 Generated with Claude Code
+

@@ -143,13 +143,13 @@
 **Investigation**:
 ```bash
 # Check error logs (Seq)
-curl "http://seq:8081/api/events?filter=@Level='Error'&count=100"
+curl "http://meepleai-seq:8081/api/events?filter=@Level='Error'&count=100"
 
 # Check Prometheus metrics
-curl "http://prometheus:9090/api/v1/query?query=rate(http_requests_total{status=~'5..'}[5m])"
+curl "http://meepleai-prometheus:9090/api/v1/query?query=rate(http_requests_total{status=~'5..'}[5m])"
 
 # Check service health
-curl http://api:8080/health
+curl http://meepleai-api:8080/health
 ```
 
 **Resolution**:
@@ -315,20 +315,20 @@ See [Deployment Guide](./deployment/board-game-ai-deployment-guide.md) for compl
 
 ```bash
 # 1. Check Prometheus metrics
-curl "http://prometheus:9090/api/v1/query?query=rate(http_request_duration_seconds_sum[5m])/rate(http_request_duration_seconds_count[5m])"
+curl "http://meepleai-prometheus:9090/api/v1/query?query=rate(http_request_duration_seconds_sum[5m])/rate(http_request_duration_seconds_count[5m])"
 
 # 2. Check Grafana dashboards
-# - API Performance dashboard (http://grafana:3001/d/api-perf)
-# - Database dashboard (http://grafana:3001/d/database)
+# - API Performance dashboard (http://meepleai-grafana:3001/d/api-perf)
+# - Database dashboard (http://meepleai-grafana:3001/d/database)
 
 # 3. Check Jaeger traces (slowest requests)
-# - Open Jaeger UI (http://jaeger:16686)
+# - Open Jaeger UI (http://meepleai-jaeger:16686)
 # - Filter by service: meepleai-api
 # - Sort by duration (descending)
 # - Identify bottleneck spans (DB queries, external API calls)
 
 # 4. Check Seq logs (errors, warnings)
-curl "http://seq:8081/api/events?filter=@Level='Warning' OR @Level='Error'&count=100"
+curl "http://meepleai-seq:8081/api/events?filter=@Level='Warning' OR @Level='Error'&count=100"
 
 # 5. Profile slow endpoints (if needed)
 # - dotnet-trace for CPU profiling
@@ -361,13 +361,13 @@ docker exec -i postgres psql -U meeple meepleai < backup-20251115-120000.sql
 **Qdrant Backup**:
 ```bash
 # Backup (snapshot API)
-curl -X POST "http://qdrant:6333/collections/board_game_rules/snapshots"
+curl -X POST "http://meepleai-qdrant:6333/collections/board_game_rules/snapshots"
 
 # Download snapshot
-curl "http://qdrant:6333/collections/board_game_rules/snapshots/{snapshot-name}" -o qdrant-backup.snapshot
+curl "http://meepleai-qdrant:6333/collections/board_game_rules/snapshots/{snapshot-name}" -o qdrant-backup.snapshot
 
 # Restore (upload snapshot)
-curl -X PUT "http://qdrant:6333/collections/board_game_rules/snapshots/upload" \
+curl -X PUT "http://meepleai-qdrant:6333/collections/board_game_rules/snapshots/upload" \
   --data-binary @qdrant-backup.snapshot
 ```
 
@@ -521,7 +521,7 @@ kubectl set env deployment/api OPENROUTER_API_KEY=secret://openrouter-api-key/va
 
 ## 📊 Monitoring Dashboards
 
-**Grafana Dashboards** (http://grafana:3001):
+**Grafana Dashboards** (http://meepleai-grafana:3001):
 
 1. **System Overview**
    - Overall health (green/yellow/red)

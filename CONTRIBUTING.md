@@ -80,7 +80,7 @@ Ensure you have the following installed:
 5. **Start Infrastructure**:
    ```bash
    cd ../../infra
-   docker compose up -d postgres qdrant redis seq
+   docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redis meepleai-seq
    ```
 
 6. **Run Database Migrations**:

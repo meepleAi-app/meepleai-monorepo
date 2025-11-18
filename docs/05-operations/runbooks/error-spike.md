@@ -206,7 +206,7 @@ git push
 # Option C: Rollback Docker image
 # If you have versioned images:
 docker compose down
-docker compose pull meepleai/api:previous-version
+docker compose pull meepleai/meepleai-api:previous-version
 docker compose up -d
 ```json
 **Verification**:
@@ -240,16 +240,16 @@ dotnet ef database update
 dotnet ef database update <PreviousMigrationName>
 
 # Restart API
-docker compose restart api
+docker compose restart meepleai-api
 ```
 
 **Verification**:
 ```bash
 # Check database schema
-docker compose exec postgres psql -U meeple -d meepleai -c "\dt"
+docker compose exec meepleai-postgres psql -U meeple -d meepleai -c "\dt"
 
 # Verify table exists
-docker compose exec postgres psql -U meeple -d meepleai -c "\d <table_name>"
+docker compose exec meepleai-postgres psql -U meeple -d meepleai -c "\d <table_name>"
 ```json
 **Resolution time**: 5-10 minutes
 
@@ -281,15 +281,15 @@ git push
 # Option B: Fix config manually
 vi infra/env/api.env.dev
 # Fix the incorrect value
-docker compose restart api
+docker compose restart meepleai-api
 
 # Option C: Use environment variable override
 docker compose up -d \
-  -e REDIS_URL=redis:6379 \
+  -e REDIS_URL=meepleai-redis:6379 \
   api
 ```json
 **Verification**:
-- Check API logs for successful connection: `docker compose logs api`
+- Check meepleai-api logs for successful connection: `docker compose logs meepleai-api`
 - Test affected feature manually
 
 **Resolution time**: 2-5 minutes

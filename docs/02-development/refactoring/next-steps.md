@@ -83,7 +83,7 @@ gh issue view 890  # Check for deferral comment
 - [ ] Document model IDs and pricing
 
 **6. Ollama Fallback** (DevOps, 0.5 day):
-- [ ] Verify Ollama running: `docker compose ps ollama`
+- [ ] Verify meepleai-ollama running: `docker compose ps meepleai-ollama`
 - [ ] Pull models: `docker exec ollama ollama pull mistral:7b-instruct-v0.3-q4_K_M`
 - [ ] Pull models: `docker exec ollama ollama pull llama3.1:8b-instruct-q4_K_M`
 - [ ] Pull embedding: `docker exec ollama ollama pull nomic-embed-text`
@@ -171,7 +171,7 @@ gh issue view 890  # Check for deferral comment
 
 - [ ] **LLMWhisperer**: Signup at https://llmwhisperer.com, get API key
 - [ ] **OpenRouter**: Signup at https://openrouter.ai, get API key, add credits ($50 for testing)
-- [ ] **Ollama**: Verify running in Docker Compose (`docker compose ps ollama`)
+- [ ] **meepleai-ollama**: Verify running in Docker Compose (`docker compose ps meepleai-ollama`)
 - [ ] **La Tana dei Goblin**: Create account, contact admins for partnership
 
 ### Environment Variables (Update .env.dev)

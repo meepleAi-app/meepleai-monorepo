@@ -170,10 +170,10 @@ cd infra && docker compose down
 ### PostgreSQL non si avvia
 ```bash
 # Verifica log Docker
-cd infra && docker compose logs postgres
+cd infra && docker compose logs meepleai-postgres
 
 # Riavvia container
-docker compose restart postgres
+docker compose restart meepleai-postgres
 ```
 
 ### API non passa health check

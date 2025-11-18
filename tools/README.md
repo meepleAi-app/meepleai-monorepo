@@ -276,7 +276,7 @@ Elimina collection dal database vettoriale Qdrant.
 pwsh tools/delete-qdrant-collection.ps1 -CollectionName "meepleai_vectors"
 ```
 
-**Prerequisiti**: Qdrant deve essere in esecuzione (`docker compose up qdrant`)
+**Prerequisiti**: meepleai-qdrant deve essere in esecuzione (`docker compose up meepleai-qdrant`)
 
 ### 8. Configurazione n8n
 

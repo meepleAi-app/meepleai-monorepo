@@ -751,8 +751,8 @@ services:
     ports: ["8000:8000"]
     depends_on: [postgres, redis, weaviate]
     environment:
-      - POSTGRES_URL=postgresql://user:pass@postgres:5432/meepleai
-      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://user:pass@meepleai-postgres:5432/meepleai
+      - REDIS_URL=redis://meepleai-redis:6379
       - WEAVIATE_URL=http://weaviate:8080
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
 
@@ -1209,3 +1209,4 @@ groups:
 - **Next Review**: 2025-04-15 (quarterly)
 - **Approvers**: Engineering Lead, CTO, Product Lead
 - **Status**: APPROVED for Phase 1 Implementation
+

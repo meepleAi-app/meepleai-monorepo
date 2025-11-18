@@ -76,7 +76,7 @@
       "label": "Database Connection",
       "description": "PostgreSQL connection string",
       "required": true,
-      "default": "postgresql://user:pass@postgres:5432/meepleai",
+      "default": "postgresql://user:pass@meepleai-postgres:5432/meepleai",
       "options": null,
       "sensitive": true
     }
@@ -168,3 +168,4 @@
     "staticData": null
   }
 }
+

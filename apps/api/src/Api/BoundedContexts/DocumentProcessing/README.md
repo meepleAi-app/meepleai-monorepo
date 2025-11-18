@@ -312,7 +312,7 @@ PdfDocument
 ```bash
 # From repository root
 cd infra
-docker compose up -d unstructured-service smoldocling-service qdrant postgres
+docker compose up -d meepleai-unstructured meepleai-smoldocling meepleai-qdrant meepleai-postgres
 
 # Verify health
 curl http://localhost:8001/health  # Unstructured
@@ -415,7 +415,7 @@ dotnet test --filter "FullyQualifiedName~ThreeStagePdfPipelineE2E"
     "TimeoutSeconds": 30
   },
   "SmolDocling": {
-    "ApiUrl": "http://smoldocling-service:8002",
+    "ApiUrl": "http://meepleai-smoldocling:8002",
     "TimeoutSeconds": 60
   }
 }
@@ -432,8 +432,8 @@ services:
     environment:
       - UNSTRUCTURED_STRATEGY=fast  # or "hi_res" for accuracy
 
-  smoldocling-service:
-    image: smoldocling-service:latest
+  meepleai-smoldocling:
+    image: meepleai-smoldocling:latest
     ports: ["8002:8002"]
     environment:
       - MODEL_NAME=smoldocling-256m
@@ -566,10 +566,10 @@ See [Troubleshooting Guide](../../../docs/02-development/guides/pdf-processing-t
 curl http://localhost:8001/health
 
 # Restart service
-docker compose restart unstructured-service
+docker compose restart meepleai-unstructured
 
 # Check logs
-docker compose logs unstructured-service --tail=50
+docker compose logs meepleai-unstructured --tail=50
 ```
 
 ### "All stages failed"
@@ -618,3 +618,4 @@ docker compose logs unstructured-service --tail=50
 **Last Updated**: 2025-11-13
 **Owner**: Backend Team
 **Status**: ✅ Production-ready (Month 1 complete)
+

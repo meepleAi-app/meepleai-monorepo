@@ -79,7 +79,7 @@ cd apps/web
 pnpm test:e2e --grep "critical"
 
 # Performance baseline
-docker compose exec api curl http://localhost:8080/metrics > metrics_baseline.txt
+docker compose exec meepleai-api curl http://localhost:8080/metrics > metrics_baseline.txt
 
 # Load testing
 k6 run --vus 100 --duration 5m load_test_baseline.js

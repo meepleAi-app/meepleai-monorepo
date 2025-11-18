@@ -123,7 +123,7 @@ MEMORY_PATH=/data/memory
 MEMORY_MAX_SIZE=100MB
 
 # Knowledge Graph
-KG_QDRANT_URL=http://qdrant:6333
+KG_QDRANT_URL=http://meepleai-qdrant:6333
 KG_COLLECTION=knowledge_graph
 ```
 

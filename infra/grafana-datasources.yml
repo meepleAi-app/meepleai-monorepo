@@ -8,7 +8,7 @@ datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://prometheus:9090
+    url: http://meepleai-prometheus:9090
     isDefault: true
     editable: false
     jsonData:
@@ -21,7 +21,7 @@ datasources:
   - name: Jaeger
     type: jaeger
     access: proxy
-    url: http://jaeger:16686
+    url: http://meepleai-jaeger:16686
     editable: false
     jsonData:
       tracesToLogsV2:

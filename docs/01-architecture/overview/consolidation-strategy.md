@@ -245,7 +245,7 @@ services:
     },
     "Ollama": {
       "Enabled": true,
-      "BaseUrl": "http://ollama:11434",
+      "BaseUrl": "http://meepleai-ollama:11434",
       "Models": {
         "Primary": "mistral:7b-instruct-v0.3-q4_K_M",
         "Validation": "llama3.1:8b-instruct-q4_K_M"

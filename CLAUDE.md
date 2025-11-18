@@ -66,11 +66,11 @@ docs/                Architecture, ADRs, guides
 | **Docker** | `docker compose up -d` | Full stack (15 services) |
 
 **Services**:
-- **Core**: postgres:5432, qdrant:6333, redis:6379
-- **AI/ML**: ollama:11434, embedding:8000, unstructured:8001, smoldocling:8002
-- **Observability**: seq:8081, jaeger:16686, prometheus:9090, alertmanager:9093, grafana:3001
-- **Workflow**: n8n:5678
-- **App**: api:8080, web:3000
+- **Core**: meepleai-postgres:5432, meepleai-qdrant:6333, meepleai-redis:6379
+- **AI/ML**: meepleai-ollama:11434, meepleai-embedding:8000, meepleai-unstructured:8001, meepleai-smoldocling:8002
+- **Observability**: meepleai-seq:8081, meepleai-jaeger:16686, meepleai-prometheus:9090, meepleai-alertmanager:9093, meepleai-grafana:3001
+- **Workflow**: meepleai-n8n:5678
+- **App**: meepleai-api:8080, meepleai-web:3000
 
 ---
 
@@ -348,7 +348,7 @@ PDF → PdfTextExtractor → TextChunking → Embedding → Qdrant → RagServic
 
 **Local Stack**:
 ```bash
-cd infra && docker compose up postgres qdrant redis n8n seq    # T1
+cd infra && docker compose up meepleai-postgres meepleai-qdrant meepleai-redis meepleai-n8n meepleai-seq    # T1
 cd apps/api/src/Api && dotnet run                              # T2 (8080)
 cd apps/web && pnpm dev                                        # T3 (3000)
 ```
@@ -453,3 +453,4 @@ bash tools/cleanup-caches.sh                # Run
 ---
 
 **Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Docker services and ports updated to reflect full observability stack (15 services total).
+

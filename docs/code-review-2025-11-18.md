@@ -513,28 +513,28 @@ services.AddOpenTelemetry()
 **Services:** 15 total
 
 #### Core Services:
-1. **postgres:5432** - PostgreSQL 16.4 (data persistence)
-2. **qdrant:6333** - Vector database (RAG embeddings)
-3. **redis:6379** - Cache & sessions (HybridCache L2)
+1. **meepleai-postgres:5432** - PostgreSQL 16.4 (data persistence)
+2. **meepleai-qdrant:6333** - Vector database (RAG embeddings)
+3. **meepleai-redis:6379** - Cache & sessions (HybridCache L2)
 
 #### AI/ML Services:
-4. **ollama:11434** - Local LLM inference
-5. **embedding-service:8000** - Multilingual embeddings (nomic-embed-text)
+4. **meepleai-ollama:11434** - Local LLM inference
+5. **meepleai-embedding:8000** - Multilingual embeddings (nomic-embed-text)
 6. **unstructured:8001** - PDF text extraction (primary)
 7. **smoldocling:8002** - VLM-based PDF extraction (fallback)
 
 #### Observability Services:
-8. **seq:8081** - Log aggregation and search
-9. **jaeger:16686** - Distributed tracing UI
-10. **prometheus:9090** - Metrics collection
-11. **alertmanager:9093** - Alert routing and grouping
-12. **grafana:3001** - Metrics visualization
+8. **meepleai-seq:8081** - Log aggregation and search
+9. **meepleai-jaeger:16686** - Distributed tracing UI
+10. **meepleai-prometheus:9090** - Metrics collection
+11. **meepleai-alertmanager:9093** - Alert routing and grouping
+12. **meepleai-grafana:3001** - Metrics visualization
 
 #### Workflow Services:
-13. **n8n:5678** - Workflow automation
+13. **meepleai-n8n:5678** - Workflow automation
 
 #### Application Services:
-14. **api:8080** - ASP.NET Core backend
+14. **meepleai-api:8080** - ASP.NET Core backend
 15. **web:3000** - Next.js frontend
 
 #### Highlights:
@@ -597,10 +597,10 @@ dotnet ef database update PreviousMigration
 
 #### Scrape Targets:
 - **meepleai-api:8080** - Application metrics (10s interval)
-- **prometheus:9090** - Self-monitoring
+- **meepleai-prometheus:9090** - Self-monitoring
 - **jaeger:14269** - Tracing metrics
-- **grafana:3000** - Dashboard metrics
-- **alertmanager:9093** - Alert manager metrics
+- **meepleai-grafana:3000** - Dashboard metrics
+- **meepleai-alertmanager:9093** - Alert manager metrics
 
 #### Alert Rules (`infra/prometheus-rules.yml`):
 1. **HighErrorRate** - >5% error rate over 5min

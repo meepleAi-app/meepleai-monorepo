@@ -846,7 +846,7 @@ OpenRouter is a cloud service with potential network issues. Use conservative ci
     "Providers": {
       "Ollama": {
         "Enabled": true,
-        "BaseUrl": "http://ollama:11434",  // Docker service name
+        "BaseUrl": "http://meepleai-ollama:11434",  // Docker service name
         "Models": ["llama3:8b"],
         "HealthCheckIntervalSeconds": 60
       },

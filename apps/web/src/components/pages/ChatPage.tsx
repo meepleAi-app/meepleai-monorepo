@@ -20,7 +20,7 @@ import { ChatStoreProvider } from "@/store/chat/ChatStoreProvider";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatContent } from "@/components/chat/ChatContent";
 import { BottomNav } from "@/components/chat/BottomNav";
-import { ExportChatModal } from "@/components/ExportChatModal";
+import { ExportChatModal } from "@/components/modals";
 
 export default function ChatPage() {
   const [showExportModal, setShowExportModal] = useState(false);

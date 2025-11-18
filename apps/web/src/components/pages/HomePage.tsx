@@ -15,7 +15,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation"; // App Router uses next/navigation
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { ThemeSwitcher } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth";

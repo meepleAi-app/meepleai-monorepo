@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import PromptEditor from "@/components/PromptEditor";
+import PromptEditor from "@/components/prompt";
 import { LoadingButton } from "@/components/loading/LoadingButton";
 
 type ToastState = {

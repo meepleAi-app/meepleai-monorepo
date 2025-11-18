@@ -15,7 +15,7 @@
 
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SessionSetupModal } from '@/components/SessionSetupModal';
+import { SessionSetupModal } from '@/components/modals';
 import { Game, GameSessionDto, api } from '@/lib/api';
 
 // Mock API

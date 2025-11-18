@@ -11,7 +11,7 @@ import { renderWithQuery } from '../utils/query-test-utils';
 import '@testing-library/jest-dom';
 import ConfigurationManagement from '../../pages/admin/configuration';
 import { api } from '../../lib/api';
-import { toast } from '@/components/Toast';
+import { toast } from '@/components/layout';
 
 // Mock Next.js Head
 jest.mock('next/head', () => {
@@ -34,7 +34,7 @@ jest.mock('next/link', () => {
 });
 
 // Mock sonner toast
-jest.mock('@/components/Toast', () => ({
+jest.mock('@/components/layout', () => ({
   toast: {
     success: jest.fn(),
     error: jest.fn(),

@@ -10,17 +10,16 @@
  */
 
 import { ThemeProvider } from 'next-themes';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
+import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { Toaster } from '@/components/ui/sonner';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
-import { SessionWarningModal } from '@/components/SessionWarningModal';
+import { SessionWarningModal } from '@/components/modals';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { QueryProvider } from '@/app/QueryProvider';
 import { IntlProvider } from '@/components/providers/IntlProvider';
 import { api } from '@/lib/api';
-import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
+import { KeyboardShortcutsHelp } from '@/components/layout';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useState, ReactNode } from 'react';
 

@@ -4,10 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { CommentThread } from "@/components/CommentThread";
-import { DiffViewerEnhanced } from "@/components/DiffViewerEnhanced";
-import { VersionTimeline } from "@/components/VersionTimeline";
-import { VersionTimelineFilters } from "@/components/VersionTimelineFilters";
+import { CommentThread } from "@/components/comments";
+import { DiffViewerEnhanced } from "@/components/diff";
+import { VersionTimeline, VersionTimelineFilters } from "@/components/versioning";
 import { cn } from "@/lib/utils";
 
 type AuthUser = {

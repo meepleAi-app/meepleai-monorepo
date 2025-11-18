@@ -14,11 +14,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { toast } from "@/components/Toast";
+import { toast } from "@/components/layout";
 import { api, SystemConfigurationDto } from "@/lib/api";
 import FeatureFlagsTab from "@/components/admin/FeatureFlagsTab";
 import CategoryConfigTab from "@/components/admin/CategoryConfigTab";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
 
 // Tab types

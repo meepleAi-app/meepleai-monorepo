@@ -1,0 +1,61 @@
+# Docker Compose - Test/CI Environment
+# Optimized for CI pipelines with in-memory storage and minimal observability
+
+services:
+  # Core Services - Optimized for Speed
+  postgres:
+    restart: "no"
+    tmpfs:
+      - /var/lib/postgresql/data  # In-memory for speed in CI
+    environment:
+      POSTGRES_PASSWORD: testpassword  # Simple password for testing
+    healthcheck:
+      interval: 3s
+      timeout: 2s
+      retries: 5
+
+  redis:
+    restart: "no"
+    tmpfs:
+      - /data  # In-memory for speed
+
+  qdrant:
+    restart: "no"
+    # Keep persistent storage for test data consistency
+    healthcheck:
+      interval: 3s
+      timeout: 2s
+      retries: 5
+
+  # Disable observability services in test environment (use profiles)
+  grafana:
+    profiles:
+      - observability  # Won't start unless --profile observability is used
+
+  jaeger:
+    profiles:
+      - observability
+
+  prometheus:
+    profiles:
+      - observability
+
+  alertmanager:
+    profiles:
+      - observability
+
+  seq:
+    profiles:
+      - observability
+
+  # Minimal services for testing
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Test
+      ConnectionStrings__Postgres: "Host=postgres;Database=meepleai_test;Username=meepleai;Password=testpassword"
+    restart: "no"
+
+  web:
+    environment:
+      NODE_ENV: test
+    restart: "no"

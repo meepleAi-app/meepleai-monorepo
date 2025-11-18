@@ -1,0 +1,225 @@
+# PDF Processing Pipeline Monitoring Rules
+# BGAI-043: PDF extraction metrics and alerting
+# Tracks PDF upload, extraction quality, and processing performance
+
+groups:
+  # ========================================
+  # Recording Rules
+  # Pre-computed PDF metrics
+  # ========================================
+
+  - name: meepleai_pdf_recording_rules
+    interval: 15s
+    rules:
+      # PDF extraction stage success rate (by stage)
+      - record: meepleai:pdf:stage_success_rate:5m
+        expr: |
+          (
+            sum by(stage) (rate(meepleai_pdf_extraction_stage_success[5m]))
+            /
+            sum by(stage) (rate(meepleai_pdf_extraction_stage_attempts[5m]))
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: pdf
+
+      # PDF quality score average
+      - record: meepleai:pdf:quality_score_avg:5m
+        expr: |
+          avg(meepleai_pdf_quality_score) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: pdf
+
+      # PDF processing duration p95
+      - record: meepleai:pdf:processing_duration_p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(meepleai_pdf_processing_duration_bucket[5m])
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: pdf
+
+      # PDF upload success rate
+      - record: meepleai:pdf:upload_success_rate:5m
+        expr: |
+          (
+            sum(rate(meepleai_pdf_upload_attempts{status="success"}[5m]))
+            /
+            sum(rate(meepleai_pdf_upload_attempts[5m]))
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: pdf
+
+      # Average chunks per document
+      - record: meepleai:pdf:chunks_per_doc_avg:5m
+        expr: |
+          avg(meepleai_pdf_chunks_count) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: pdf
+
+  # ========================================
+  # Critical Alert Rules
+  # ========================================
+
+  - name: meepleai_pdf_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: High PDF extraction failure rate (>40% for 10 minutes)
+      - alert: HighPdfExtractionFailureRate
+        expr: |
+          (1 - meepleai:pdf:stage_success_rate:5m) > 0.40
+        for: 10m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: pdf
+        annotations:
+          summary: "PDF extraction failure rate is critically high"
+          description: |
+            {{ $value | humanizePercentage }} of PDF extractions are failing (threshold: 40%).
+            This affects all 3 stages (Unstructured, SmolDocling, Docnet).
+            Check extraction service health (ports 8001, 8002) and logs.
+          runbook_url: "https://docs.meepleai.dev/runbooks/pdf-extraction-failures"
+          dashboard_url: "http://localhost:3001/d/pdf-processing"
+
+      # CRITICAL: PDF quality score critically low (<0.60 for 1 hour)
+      - alert: LowPdfQualityScore
+        expr: |
+          meepleai:pdf:quality_score_avg:5m < 0.60
+        for: 1h
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: pdf
+        annotations:
+          summary: "PDF extraction quality is critically low"
+          description: |
+            Average PDF quality score is {{ $value | humanizePercentage }} (threshold: 60%).
+            Extracted text quality is below acceptable standards.
+            Check extraction services, OCR configuration, and input PDF quality.
+          runbook_url: "https://docs.meepleai.dev/runbooks/pdf-quality-low"
+          dashboard_url: "http://localhost:3001/d/pdf-processing"
+
+      # CRITICAL: PDF processing stalled (no uploads in 30 minutes during business hours)
+      - alert: PdfProcessingStalled
+        expr: |
+          (
+            rate(meepleai_pdf_upload_attempts[30m]) == 0
+            and
+            rate(http_server_request_duration_count[5m]) > 0
+          )
+        for: 30m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: pdf
+        annotations:
+          summary: "PDF processing pipeline is stalled"
+          description: |
+            No PDF uploads detected for 30 minutes despite active API traffic.
+            This may indicate upload endpoint issues or storage failures.
+            Check /api/v1/pdf/upload endpoint health and blob storage service.
+          runbook_url: "https://docs.meepleai.dev/runbooks/pdf-stalled"
+          dashboard_url: "http://localhost:3001/d/pdf-processing"
+
+      # CRITICAL: Stage 1 (Unstructured) failing consistently
+      - alert: UnstructuredStageFailure
+        expr: |
+          meepleai:pdf:stage_success_rate:5m{stage="unstructured"} < 0.50
+        for: 15m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: pdf
+        annotations:
+          summary: "Unstructured PDF extraction (Stage 1) is failing"
+          description: |
+            Stage 1 success rate: {{ $value | humanizePercentage }} (threshold: 50%).
+            Primary extraction method is degraded, forcing fallback to slower stages.
+            Check Unstructured service at http://unstructured:8001/health
+          runbook_url: "https://docs.meepleai.dev/runbooks/pdf-stage-failure"
+          dashboard_url: "http://localhost:3001/d/pdf-processing"
+
+  # ========================================
+  # Warning Alert Rules
+  # ========================================
+
+  - name: meepleai_pdf_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Elevated PDF processing time (p95 >20s for 10 minutes)
+      - alert: SlowPdfProcessing
+        expr: |
+          meepleai:pdf:processing_duration_p95:5m > 20000
+        for: 10m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: pdf
+        annotations:
+          summary: "PDF processing is slower than normal"
+          description: |
+            P95 processing duration: {{ $value | humanizeDuration }} (threshold: 20s).
+            PDFs are taking longer to process than expected.
+            Check extraction service latency and queue backlog.
+          runbook_url: "https://docs.meepleai.dev/runbooks/pdf-slow"
+          dashboard_url: "http://localhost:3001/d/pdf-processing"
+
+      # WARNING: PDF quality degraded (<0.75 for 30 minutes)
+      - alert: DegradedPdfQuality
+        expr: |
+          meepleai:pdf:quality_score_avg:5m < 0.75
+        for: 30m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: pdf
+        annotations:
+          summary: "PDF extraction quality is degraded"
+          description: |
+            Average quality score: {{ $value | humanizePercentage }} (threshold: 75%).
+            Extraction quality is below optimal levels.
+            Monitor input PDF quality and extraction stage performance.
+          runbook_url: "https://docs.meepleai.dev/runbooks/pdf-quality-low"
+          dashboard_url: "http://localhost:3001/d/pdf-processing"
+
+      # WARNING: Low PDF upload success rate (<90% for 15 minutes)
+      - alert: LowPdfUploadSuccessRate
+        expr: |
+          meepleai:pdf:upload_success_rate:5m < 0.90
+        for: 15m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: pdf
+        annotations:
+          summary: "PDF upload success rate is below normal"
+          description: |
+            Upload success rate: {{ $value | humanizePercentage }} (threshold: 90%).
+            More uploads are failing validation or storage than normal.
+            Check validation rules, blob storage health, and disk space.
+          runbook_url: "https://docs.meepleai.dev/runbooks/pdf-upload-failures"
+          dashboard_url: "http://localhost:3001/d/pdf-processing"
+
+      # WARNING: Excessive chunking (avg >150 chunks per document)
+      - alert: ExcessivePdfChunking
+        expr: |
+          meepleai:pdf:chunks_per_doc_avg:5m > 150
+        for: 15m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: pdf
+        annotations:
+          summary: "PDFs are generating excessive chunks"
+          description: |
+            Average chunks per document: {{ $value | humanize }} (threshold: 150).
+            Large PDFs or improper chunking may impact RAG performance.
+            Review chunk size configuration and input PDF sizes.
+          runbook_url: "https://docs.meepleai.dev/runbooks/pdf-chunking"
+          dashboard_url: "http://localhost:3001/d/pdf-processing"

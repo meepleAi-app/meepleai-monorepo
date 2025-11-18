@@ -19,8 +19,9 @@ alerting:
       api_version: v2
 
 # OPS-05: Rule files for recording and alerting rules
+# Modular alert organization: each category in separate file
 rule_files:
-  - '/etc/prometheus/prometheus-rules.yml'
+  - '/etc/prometheus/alerts/*.yml'
 
 # Scrape configurations
 scrape_configs:

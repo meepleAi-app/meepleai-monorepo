@@ -1,0 +1,156 @@
+# Docker Compose - Production Environment
+# Production configuration with security hardening and high availability
+
+services:
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_DB: meepleai_prod
+    volumes:
+      - pgdata-prod:/var/lib/postgresql/data
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  redis:
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redisdata-prod:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  qdrant:
+    restart: always
+    volumes:
+      - qdrantdata-prod:/qdrant/storage
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 8G
+        reservations:
+          cpus: '1'
+          memory: 4G
+
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: https://+:8080;http://+:8081
+      ConnectionStrings__Postgres: "Host=postgres;Database=meepleai_prod;Username=meepleai;Password_File=/run/secrets/postgres-password"
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+  web:
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE: ${PRODUCTION_API_URL}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  # Full observability stack with production settings
+  grafana:
+    restart: always
+    environment:
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL}
+      - GF_SECURITY_ADMIN_PASSWORD_FILE=/run/secrets/grafana-admin-password
+    secrets:
+      - grafana-admin-password
+
+  prometheus:
+    restart: always
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=90d'  # 90 days retention for production
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.size=50GB'
+    volumes:
+      - prometheus-prod:/prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+  jaeger:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
+  seq:
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORDHASH=${SEQ_PASSWORD_HASH}
+      - SEQ_CACHE_SYSTEMRAMTARGET=0.5
+    volumes:
+      - seqdata-prod:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
+  alertmanager:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  pgdata-prod:
+  redisdata-prod:
+  qdrantdata-prod:
+  prometheus-prod:
+  seqdata-prod:
+
+secrets:
+  grafana-admin-password:
+    file: ./secrets/prod/grafana-admin-password.txt

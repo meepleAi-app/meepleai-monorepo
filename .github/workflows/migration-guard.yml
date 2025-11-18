@@ -140,7 +140,7 @@ jobs:
 
       - name: Comment PR with Migration Info
         if: github.event_name == 'pull_request' && steps.generate_sql.outputs.sql_generated == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');

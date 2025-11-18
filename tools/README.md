@@ -308,62 +308,7 @@ pwsh tools/setup-ollama.ps1
 
 **Output**: Scarica e configura modelli LLM per sviluppo locale
 
-### 10. Generazione Issue Admin Console
-
-**File**: `create-admin-console-issues.{js,ps1,sh}`
-
-Genera issue GitHub per features Admin Console.
-
-**Uso**:
-
-```bash
-# Bash (Linux/Mac/WSL)
-./tools/create-admin-console-issues.sh [--dry-run]
-
-# PowerShell (Windows)
-pwsh tools/create-admin-console-issues.ps1 [-DryRun]
-
-# Node.js (cross-platform)
-node tools/create-admin-console-issues.js [--dry-run]
-```
-
-Vedi `tools/README-admin-console-issues.md` per documentazione completa.
-
-### 11. Setup GitHub Labels
-
-**File**: `setup-github-labels.sh`
-
-Crea label e milestone GitHub per il progetto.
-
-**Uso**:
-
-```bash
-bash tools/setup-github-labels.sh
-```
-
-**Prerequisiti**: GitHub CLI (`gh`) installato e autenticato
-
-### 12. Analisi Complessità Codice
-
-**File**: `analyze-complexity.ps1`
-
-Analizza complessità del codebase per file più grandi.
-
-**Uso**:
-
-```powershell
-# Analizza file C# (top 20)
-pwsh tools/analyze-complexity.ps1 -Path apps/api -Pattern "*.cs" -Top 20
-
-# Analizza file TypeScript
-pwsh tools/analyze-complexity.ps1 -Path apps/web -Pattern "*.ts,*.tsx" -Top 15
-```
-
-**Output**: Tabella ordinata per numero di righe
-
-**Quando usarlo**: Analisi trimestrale complessità, identificazione candidati refactoring
-
-### 13. Validazione Documentazione
+### 10. Validazione Documentazione
 
 **File**: `validate-docs.ps1`
 
@@ -375,7 +320,7 @@ Valida integrità e consistenza della documentazione.
 pwsh tools/validate-docs.ps1
 ```
 
-### 14. Tracking Coverage Trends
+### 11. Tracking Coverage Trends
 
 **File**: `coverage-trends.{sh,ps1}`
 
@@ -393,21 +338,7 @@ pwsh tools/coverage-trends.ps1
 
 **Output**: Appende metriche a `coverage-history.json`
 
-### 15. Migrazione Repository
-
-**File**: `migrate-to-private.ps1`
-
-Migra repository da public a private (o viceversa).
-
-**Uso**:
-
-```powershell
-pwsh tools/migrate-to-private.ps1
-```
-
-**Warning**: Richiede permessi admin sul repository
-
-### 16. Dual VS Code Launcher
+### 12. Dual VS Code Launcher
 
 **File**: `open-dual-vscode.{ps1,sh}`
 
@@ -486,72 +417,3 @@ curl http://localhost:8080/health
 - **Guida sviluppatori**: `../CLAUDE.md`
 - **Code coverage**: `../docs/code-coverage.md`
 - **OpenAPI/Swagger**: Disponibile a `/api/docs` in development mode
-
-### 17. GitHub Issues Strategic Triage
-
-**File**: `run-issue-triage.sh` (master script)
-
-Sistema completo per analisi strategica e pulizia issue GitHub con decisioni data-driven.
-
-**Componenti**:
-- `run-issue-triage.sh` - Script master (esegue tutti gli step)
-- `cleanup-duplicate-issues.sh` - Chiude issue duplicate
-- `assign-infrastructure-milestones.sh` - Assegna milestone a 11 issue
-- `phase-2-issue-labels.sh` - Assicura label consistency
-
-**Documentazione**:
-- `EXECUTIVE_SUMMARY_ISSUE_TRIAGE.md` (316 righe) - Overview esecutivo
-- `issue-triage-analysis.md` (262 righe) - Analisi dettagliata
-- `TRIAGE_QUICKREF.md` (128 righe) - Quick reference
-- `triage-summary.txt` - Summary visuale ASCII
-
-**Uso Quick Start**:
-
-```bash
-# Esegui triage completo (5 minuti, interattivo)
-cd D:/Repositories/meepleai-monorepo-backend
-bash tools/run-issue-triage.sh
-```
-
-**Cosa fa**:
-1. Crea milestone (Month 3, 4, 6, Phase 2)
-2. Chiude #709 come duplicate di #706
-3. Assegna 11 issue infrastructure a milestone
-4. Assicura label `deferred` e `priority-low` su issue Phase 2
-5. Mostra metriche before/after
-
-**Risultati Attesi**:
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Issues senza milestone | 19 | 0 |
-| Issue duplicate | 1 | 0 |
-| Milestone assignments | 0 | 11 |
-
-**Analisi Strategiche**:
-- **Admin Console**: 49 issue (330h, 8.2 settimane) - Defer to Phase 2
-- **Infrastructure**: 11 issue (92h) - Schedule Month 3-6 + Phase 2
-- **Timeline Impact**: Risparmio 8.2 settimane in Phase 1 (50%)
-
-**Verification**:
-
-```bash
-# Verifica 0 issue senza milestone
-gh issue list --search "is:open no:milestone"
-
-# Verifica issue deferred
-gh issue list --search "label:deferred is:open"
-
-# Verifica Phase 2 work
-gh issue list --search "milestone:'Phase 2' is:open"
-```
-
-**Quando usarlo**:
-- Strategic planning session (trimestrale)
-- Issue accumulation >50 senza milestone
-- Pre-planning Phase 2
-- Repository cleanup prima di milestone review
-
-**Prerequisiti**: GitHub CLI (`gh`) installato e autenticato
-
-**Documentazione Completa**: Vedi `EXECUTIVE_SUMMARY_ISSUE_TRIAGE.md`

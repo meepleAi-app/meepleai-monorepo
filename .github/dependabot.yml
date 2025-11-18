@@ -1,33 +1,6 @@
 version: 2
 updates:
-  # .NET dependencies - Security updates (daily)
-  - package-ecosystem: "nuget"
-    directory: "/apps/api"
-    schedule:
-      interval: "daily"
-      time: "00:00"
-      timezone: "UTC"
-    open-pull-requests-limit: 3
-    reviewers:
-      - "DegrassiAaron"
-    labels:
-      - "dependencies"
-      - "dotnet"
-      - "security"
-      - "automerge"
-    commit-message:
-      prefix: "fix(deps)"
-      include: "scope"
-    # Only security updates in daily runs
-    groups:
-      security-patches:
-        patterns:
-          - "*"
-        update-types:
-          - "patch"
-    versioning-strategy: "increase-if-necessary"
-
-  # .NET dependencies - Regular updates (weekly)
+  # .NET dependencies (weekly updates, security updates prioritized automatically)
   - package-ecosystem: "nuget"
     directory: "/apps/api"
     schedule:
@@ -59,38 +32,8 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Npgsql.EntityFrameworkCore.PostgreSQL"
         update-types: ["version-update:semver-major"]
-      # Skip patch updates (handled by daily security updates)
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]
 
-  # Frontend dependencies - Security updates (daily)
-  - package-ecosystem: "npm"
-    directory: "/apps/web"
-    schedule:
-      interval: "daily"
-      time: "00:00"
-      timezone: "UTC"
-    open-pull-requests-limit: 3
-    reviewers:
-      - "DegrassiAaron"
-    labels:
-      - "dependencies"
-      - "frontend"
-      - "security"
-      - "automerge"
-    commit-message:
-      prefix: "fix(deps)"
-      include: "scope"
-    # Only security patch updates in daily runs
-    groups:
-      security-patches:
-        patterns:
-          - "*"
-        update-types:
-          - "patch"
-    versioning-strategy: "increase-if-necessary"
-
-  # Frontend dependencies - Regular updates (weekly)
+  # Frontend dependencies (weekly updates, security updates prioritized automatically)
   - package-ecosystem: "npm"
     directory: "/apps/web"
     schedule:
@@ -107,13 +50,14 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
-    # Group minor updates
+    # Group minor and patch updates
     groups:
-      minor-updates:
+      minor-and-patch:
         patterns:
           - "*"
         update-types:
           - "minor"
+          - "patch"
     versioning-strategy: "increase"
     ignore:
       # Ignore major version updates (requires manual review and testing)
@@ -123,9 +67,6 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "next"
         update-types: ["version-update:semver-major"]
-      # Skip patch updates (handled by daily security updates)
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"

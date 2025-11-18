@@ -2,18 +2,11 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
-<<<<<<< HEAD
-using Api.Infrastructure.Entities.DocumentProcessing;
-using Api.Models;
-using Api.SharedKernel.Application.Services;
-using MediatR;
-=======
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
->>>>>>> 8a6158be (fix(api): stabilize rule validation and workflow logging)
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -36,12 +29,6 @@ public class MoveValidationDomainServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-<<<<<<< HEAD
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
-=======
         var mediatorMock = new Mock<IMediator>();
         var eventCollectorMock = new Mock<IDomainEventCollector>();
         eventCollectorMock
@@ -49,7 +36,6 @@ public class MoveValidationDomainServiceTests : IDisposable
             .Returns(Array.Empty<IDomainEvent>());
 
         _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
->>>>>>> 8a6158be (fix(api): stabilize rule validation and workflow logging)
         _loggerMock = new Mock<ILogger<MoveValidationDomainService>>();
         _service = new MoveValidationDomainService(_dbContext, _loggerMock.Object);
     }
@@ -384,34 +370,6 @@ public class MoveValidationDomainServiceTests : IDisposable
 
     private async Task SeedRuleSpecAsync(Guid gameId, string version, List<RuleAtom> rules)
     {
-<<<<<<< HEAD
-        var ruleSpecEntity = new RuleSpecEntity
-        {
-            Id = Guid.NewGuid(),
-            GameId = gameId,
-            Version = version,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _dbContext.RuleSpecs.Add(ruleSpecEntity);
-
-        // Add RuleAtomEntity objects
-        var atomEntities = rules.Select((rule, index) => new RuleAtomEntity
-        {
-            Id = Guid.NewGuid(),
-            RuleSpecId = ruleSpecEntity.Id,
-            Key = rule.id,
-            Text = rule.text,
-            Section = rule.section,
-            PageNumber = int.TryParse(rule.page, out var pageNum) ? pageNum : null,
-            LineNumber = int.TryParse(rule.line, out var lineNum) ? lineNum : null,
-            SortOrder = index
-        });
-
-        _dbContext.RuleAtoms.AddRange(atomEntities);
-        await _dbContext.SaveChangesAsync();
-    }
-=======
         var ruleSpecEntity = new RuleSpecEntity
         {
             Id = Guid.NewGuid(),
@@ -447,7 +405,6 @@ public class MoveValidationDomainServiceTests : IDisposable
 
         return int.TryParse(value, out var parsed) ? parsed : null;
     }
->>>>>>> 8a6158be (fix(api): stabilize rule validation and workflow logging)
 
     #endregion
 

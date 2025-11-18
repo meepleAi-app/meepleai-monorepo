@@ -374,10 +374,8 @@ export function PdfViewerModal({
 
                   <div className="flex justify-center" style={{ minHeight: loading ? 0 : 'auto' }}>
                     <Document
-                      file={{
-                        url: pdfUrl,
-                        withCredentials: true
-                      }}
+                      file={pdfUrl}
+                      options={{ withCredentials: true }}
                       onLoadSuccess={onDocumentLoadSuccess}
                       onLoadError={onDocumentLoadError}
                       loading=""

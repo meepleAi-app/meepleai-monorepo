@@ -129,7 +129,7 @@ jobs:
         run: pnpm exec playwright install-deps chromium
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: nextjs-build-${{ github.sha }}
           path: .
@@ -196,7 +196,7 @@ jobs:
         run: pnpm install
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: nextjs-build-${{ github.sha }}
           path: .
@@ -274,7 +274,7 @@ jobs:
           node-version: 20
 
       - name: Download PR Lighthouse Results
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci-pr

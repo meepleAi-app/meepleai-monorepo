@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeSwitcher } from '../ThemeSwitcher';
+import { ThemeSwitcher } from '../layout/ThemeSwitcher';
 import { useTheme } from 'next-themes';
 
 jest.mock('next-themes', () => ({

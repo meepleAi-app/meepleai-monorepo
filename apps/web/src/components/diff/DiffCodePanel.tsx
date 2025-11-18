@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { DiffLine, CollapsibleSection } from '../../lib/diffProcessor';
+import { DiffLine, CollapsibleSection } from '@/lib/diffProcessor';
 import { DiffCodeBlock } from './DiffCodeBlock';
 import { DiffLineNumberGutter } from './DiffLineNumberGutter';
 import { CollapsibleUnchangedSection } from './CollapsibleUnchangedSection';

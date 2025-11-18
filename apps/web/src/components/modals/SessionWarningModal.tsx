@@ -29,8 +29,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import { AccessibleModal } from './accessible/AccessibleModal';
-import { AccessibleButton } from './accessible/AccessibleButton';
+import { AccessibleModal } from '../accessible/AccessibleModal';
+import { AccessibleButton } from '../accessible/AccessibleButton';
 
 export interface SessionWarningModalProps {
   /** Minutes remaining until session expires */

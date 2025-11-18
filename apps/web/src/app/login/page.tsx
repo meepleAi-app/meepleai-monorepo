@@ -22,7 +22,7 @@ export default function LoginPage() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const reason = searchParams.get('reason');
+  const reason = searchParams?.get('reason') ?? null;
   const [showAuthModal, setShowAuthModal] = useState(true);
 
   const isSessionExpired = reason === 'session_expired';

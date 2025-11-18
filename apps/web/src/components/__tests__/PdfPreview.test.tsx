@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { PdfPreview } from '../PdfPreview';
+import { PdfPreview } from '../pdf/PdfPreview';
 import '@testing-library/jest-dom';
 
 // Mock react-pdf

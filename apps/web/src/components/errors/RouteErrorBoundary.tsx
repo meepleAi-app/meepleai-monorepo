@@ -15,8 +15,8 @@
 import React, { ReactNode } from 'react';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ErrorDisplay } from './ErrorDisplay';
-import { categorizeError } from '../lib/errorUtils';
-import { logger } from '../lib/logger';
+import { categorizeError } from '@/lib/errorUtils';
+import { logger } from '@/lib/logger';
 
 interface RouteErrorBoundaryProps {
   /**

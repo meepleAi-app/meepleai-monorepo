@@ -15,7 +15,7 @@ import { Message as MessageType } from '@/types';
 import { useChatStore } from '@/store/chat/store';
 import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
-import { FollowUpQuestions } from '../FollowUpQuestions';
+import { FollowUpQuestions } from './FollowUpQuestions';
 import { CitationList } from '../citations'; // #859
 
 interface MessageProps {

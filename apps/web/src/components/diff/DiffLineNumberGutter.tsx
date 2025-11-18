@@ -1,5 +1,5 @@
 import React from 'react';
-import { DiffLine, CollapsibleSection } from '../../lib/diffProcessor';
+import { DiffLine, CollapsibleSection } from '@/lib/diffProcessor';
 
 export interface DiffLineNumberGutterProps {
   lines: DiffLine[];

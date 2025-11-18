@@ -51,7 +51,7 @@ interface GameNotes {
 export default function GameDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const id = params.id as string;
+  const id = params?.id as string | undefined;
   const gameId = typeof id === 'string' ? id : null;
 
   // State
@@ -191,11 +191,6 @@ export default function GameDetailPage() {
   }
 
   return (
-    <>
-      <Head>
-        <title>{game.title} | MeepleAI</title>
-      </Head>
-
       <div className="container mx-auto p-6 max-w-6xl">
         {/* Header */}
         <div className="mb-6">
@@ -582,6 +577,5 @@ export default function GameDetailPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </>
   );
 }

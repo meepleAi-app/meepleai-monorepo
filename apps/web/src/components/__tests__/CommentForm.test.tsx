@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CommentForm } from "../CommentForm";
+import { CommentForm } from "../comments/CommentForm";
 
 describe("CommentForm", () => {
   let user: ReturnType<typeof userEvent.setup>;

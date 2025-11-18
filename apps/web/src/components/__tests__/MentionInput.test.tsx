@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MentionInput } from '../MentionInput';
+import { MentionInput } from '../chat/MentionInput';
 import { api, type UserSearchResult } from '@/lib/api';
 
 // Mock the API module

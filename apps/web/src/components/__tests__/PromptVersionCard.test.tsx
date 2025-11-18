@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PromptVersionCard from '../PromptVersionCard';
+import PromptVersionCard from '../prompt/PromptVersionCard';
 
 // Mock Next.js Link component
 jest.mock('next/link', () => ({

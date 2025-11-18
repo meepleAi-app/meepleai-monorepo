@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { ProcessedDiff, CollapsibleSection } from '../../lib/diffProcessor';
+import { ProcessedDiff, CollapsibleSection } from '@/lib/diffProcessor';
 import { DiffCodePanel } from './DiffCodePanel';
 
 export interface SideBySideDiffViewProps {

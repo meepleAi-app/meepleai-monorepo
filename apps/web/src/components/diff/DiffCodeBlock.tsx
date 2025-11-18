@@ -1,5 +1,5 @@
 import React from 'react';
-import { DiffLine } from '../../lib/diffProcessor';
+import { DiffLine } from '@/lib/diffProcessor';
 import { PrismHighlighter } from './PrismHighlighter';
 
 export interface DiffCodeBlockProps {

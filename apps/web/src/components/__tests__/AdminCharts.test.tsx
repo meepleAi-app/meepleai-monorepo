@@ -4,7 +4,7 @@ import {
   LatencyDistributionChart,
   RequestsTimeSeriesChart,
   FeedbackChart
-} from '../AdminCharts';
+} from '../admin/AdminCharts';
 
 // Mock recharts components to avoid rendering issues in tests
 jest.mock('recharts', () => ({

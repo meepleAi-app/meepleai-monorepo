@@ -1,4 +1,4 @@
 // Barrel exports for admin module
-export { AdminCharts } from './AdminCharts';
-export { CategoryConfigTab } from './CategoryConfigTab';
-export { FeatureFlagsTab } from './FeatureFlagsTab';
+export { EndpointDistributionChart, LatencyDistributionChart, RequestsTimeSeriesChart, FeedbackChart } from './AdminCharts';
+export { default as CategoryConfigTab } from './CategoryConfigTab';
+export { default as FeatureFlagsTab } from './FeatureFlagsTab';

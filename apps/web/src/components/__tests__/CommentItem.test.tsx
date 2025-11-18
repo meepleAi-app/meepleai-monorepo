@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { CommentItem } from '../CommentItem';
+import { CommentItem } from '../comments/CommentItem';
 import type { RuleSpecComment } from '../../lib/api';
 
 describe('CommentItem', () => {

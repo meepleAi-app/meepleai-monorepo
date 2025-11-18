@@ -12,7 +12,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ExportChatModal } from '../../components/ExportChatModal';
+import { ExportChatModal } from '../../components/modals/ExportChatModal';
 import * as chatActions from '@/actions/chat';
 import type { ExportFormat } from '@/lib/api';
 

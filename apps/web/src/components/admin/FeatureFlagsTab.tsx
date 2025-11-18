@@ -11,7 +11,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "@/components/layout";
-import { api, SystemConfigurationDto } from "../../lib/api";
+import { api, SystemConfigurationDto } from "@/lib/api";
 import { Switch } from "@/components/ui/switch";
 
 interface FeatureFlagsTabProps {

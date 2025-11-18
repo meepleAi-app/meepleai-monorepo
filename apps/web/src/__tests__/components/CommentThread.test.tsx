@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { CommentThread } from '../../components/CommentThread';
+import { CommentThread } from '../../components/comments/CommentThread';
 import { api, RuleSpecComment } from '@/lib/api';
 
 // Mock API with new modular structure (FE-IMP-005)

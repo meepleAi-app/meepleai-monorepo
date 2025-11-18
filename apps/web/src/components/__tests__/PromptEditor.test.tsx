@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PromptEditor from '../PromptEditor';
+import PromptEditor from '../prompt/PromptEditor';
 
 // Mock Monaco Editor
 jest.mock('@monaco-editor/react', () => ({

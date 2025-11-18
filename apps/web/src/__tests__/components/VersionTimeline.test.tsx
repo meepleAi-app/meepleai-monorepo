@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { VersionTimeline } from '../../components/VersionTimeline';
+import { VersionTimeline } from '../../components/versioning/VersionTimeline';
 
 // Mock next/navigation (App Router)
 jest.mock('next/navigation', () => ({

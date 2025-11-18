@@ -15,7 +15,7 @@
 
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SessionWarningModal } from '../SessionWarningModal';
+import { SessionWarningModal } from '../modals/SessionWarningModal';
 
 // Mock AccessibleModal and AccessibleButton
 jest.mock('../accessible/AccessibleModal', () => ({

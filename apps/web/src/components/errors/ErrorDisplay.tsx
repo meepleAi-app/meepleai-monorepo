@@ -5,8 +5,8 @@
  */
 
 import { type CSSProperties, useState, useEffect } from 'react';
-import { type CategorizedError, getErrorIcon, getErrorTitle } from '../lib/errorUtils';
-import { showErrorToast, shouldShowToast } from '../lib/toastUtils';
+import { type CategorizedError, getErrorIcon, getErrorTitle } from '@/lib/errorUtils';
+import { showErrorToast, shouldShowToast } from '@/lib/toastUtils';
 
 interface ErrorDisplayProps {
   error: CategorizedError;

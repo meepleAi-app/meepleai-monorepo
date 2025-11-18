@@ -20,7 +20,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AccessibleModal } from './accessible/AccessibleModal';
+import { AccessibleModal } from '../accessible/AccessibleModal';
 import {
   Form,
   FormControl,

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { CommentThread } from '../CommentThread';
+import { CommentThread } from '../comments/CommentThread';
 import { api } from '../../lib/api';
 
 jest.mock('../../lib/api', () => ({

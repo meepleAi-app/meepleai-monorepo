@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { SimpleErrorMessage, type SimpleErrorMessageProps } from '../SimpleErrorMessage';
+import { SimpleErrorMessage, type SimpleErrorMessageProps } from '../errors/SimpleErrorMessage';
 
 describe('SimpleErrorMessage', () => {
   describe('Rendering', () => {

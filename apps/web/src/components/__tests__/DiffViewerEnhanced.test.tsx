@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { DiffViewerEnhanced } from '../DiffViewerEnhanced';
+import { DiffViewerEnhanced } from '../diff/DiffViewerEnhanced';
 
 // Mock child components
-jest.mock('../DiffSummary', () => ({
+jest.mock('../diff/DiffSummary', () => ({
   DiffSummary: ({ summary }: any) => (
     <div data-testid="diff-summary">
       {summary.added} added, {summary.modified} modified, {summary.deleted} deleted
@@ -11,7 +11,7 @@ jest.mock('../DiffSummary', () => ({
   ),
 }));
 
-jest.mock('../ChangeItem', () => ({
+jest.mock('../versioning/ChangeItem', () => ({
   ChangeItem: ({ change }: any) => (
     <div data-testid="change-item" data-type={change.type}>
       {change.type}

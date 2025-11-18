@@ -13,9 +13,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 export default function OAuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const success = searchParams.get('success');
-  const error = searchParams.get('error');
-  const isNewUser = searchParams.get('new');
+  const success = searchParams?.get('success') ?? null;
+  const error = searchParams?.get('error') ?? null;
+  const isNewUser = searchParams?.get('new') ?? null;
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
 
   useEffect(() => {

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { SearchFilters } from '../SearchFilters';
+import { SearchFilters } from '../search/SearchFilters';
 import type { SearchFilters as SearchFiltersType, Game, Agent } from '@/types';
 
 // Mock data

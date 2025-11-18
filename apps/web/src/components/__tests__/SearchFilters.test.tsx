@@ -16,8 +16,32 @@ const mockGames: Game[] = [
 ];
 
 const mockAgents: Agent[] = [
-  { id: 'agent-1', gameId: 'game-1', name: 'Chess Master', kind: 'Expert', createdAt: '2024-01-01' },
-  { id: 'agent-2', gameId: 'game-2', name: 'Go Sensei', kind: 'Expert', createdAt: '2024-01-02' },
+  {
+    id: 'agent-1',
+    name: 'Chess Master',
+    type: 'Expert',
+    strategyName: 'RagStrategy',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2024-01-01',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: true,
+  },
+  {
+    id: 'agent-2',
+    name: 'Go Sensei',
+    type: 'Expert',
+    strategyName: 'RagStrategy',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2024-01-02',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: true,
+  },
 ];
 
 describe('SearchFilters', () => {

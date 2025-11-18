@@ -487,13 +487,11 @@ describe('Chat Test Utilities', () => {
         });
       });
 
-      it('should link agent to overridden game', () => {
+      it('should handle agent name override', () => {
         const env = setupFullChatEnvironment({
-          game: { id: 'game-2', name: 'Catan' },
           agent: { name: 'Catan Helper' },
         });
 
-        expect(env.agent.gameId).toBe('game-2');
         expect(env.agent.name).toBe('Catan Helper');
       });
 

@@ -14,6 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { AgentSelector } from '../../../components/chat/AgentSelector';
 import { renderWithChatStore, resetChatStore, updateChatStoreState } from '@/__tests__/utils/zustand-test-utils';
 import { useChatStore } from '@/store/chat/store';
+import type { Agent } from '@/types/domain';
 
 // Mock SkeletonLoader component
 jest.mock('../../../components/loading/SkeletonLoader', () => ({
@@ -23,6 +24,22 @@ jest.mock('../../../components/loading/SkeletonLoader', () => ({
     </div>
   ),
 }));
+
+// Helper function to create mock agents (Issue #868)
+function createMockAgent(overrides: Partial<Agent> & { id: string; name: string }): Agent {
+  return {
+    type: 'qa',
+    strategyName: 'RagStrategy',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: true,
+    ...overrides,
+  };
+}
 
 describe('AgentSelector Component', () => {
   beforeEach(() => {
@@ -167,9 +184,9 @@ describe('AgentSelector Component', () => {
     it('renders list of available agents', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-3', gameId: 'game-1', name: 'Risk Strategist', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        createMockAgent({ id: 'agent-1', name: 'Chess Expert' }),
+        createMockAgent({ id: 'agent-2', name: 'Catan Helper', type: 'setup' }),
+        createMockAgent({ id: 'agent-3', name: 'Risk Strategist' }),
       ];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
@@ -188,7 +205,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('includes placeholder option when agents exist', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -199,8 +216,8 @@ describe('AgentSelector Component', () => {
     it('renders correct number of options (agents + placeholder)', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
+        createMockAgent({ id: 'agent-1', name: 'Chess Expert' }),
+        createMockAgent({ id: 'agent-2', name: 'Catan Helper', type: 'setup' }),
       ];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
@@ -219,9 +236,9 @@ describe('AgentSelector Component', () => {
     it('renders agents in the order provided', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', gameId: 'game-1', name: 'Zzz Agent', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-2', gameId: 'game-1', name: 'Aaa Agent', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-3', gameId: 'game-1', name: 'Mmm Agent', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
+        createMockAgent({ id: 'agent-1', name: 'Zzz Agent' }),
+        createMockAgent({ id: 'agent-2', name: 'Aaa Agent', type: 'setup' }),
+        createMockAgent({ id: 'agent-3', name: 'Mmm Agent' }),
       ];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
@@ -241,7 +258,7 @@ describe('AgentSelector Component', () => {
     it('uses agent.id as option value', async () => {
       const user = userEvent.setup();
       const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent');
-      const agents = [{ id: 'agent-123', gameId: 'game-1', name: 'Test Agent', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-123', name: 'Test Agent' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -264,7 +281,7 @@ describe('AgentSelector Component', () => {
     it('calls selectAgent when an agent is selected', async () => {
       const user = userEvent.setup();
       const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent');
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -280,7 +297,7 @@ describe('AgentSelector Component', () => {
 
     it('does not call selectAgent when empty option is selected', () => {
       const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent');
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents, selectedAgentId: 'agent-1' }
       });
@@ -294,8 +311,8 @@ describe('AgentSelector Component', () => {
       const user = userEvent.setup();
       const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent');
       const agents = [
-        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
+        createMockAgent({ id: 'agent-1', name: 'Chess Expert' }),
+        createMockAgent({ id: 'agent-2', name: 'Catan Helper', type: 'setup' }),
       ];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
@@ -324,7 +341,7 @@ describe('AgentSelector Component', () => {
     it('uses void operator for async selectAgent call', async () => {
       const user = userEvent.setup();
       const selectAgentSpy = jest.spyOn(useChatStore.getState(), 'selectAgent').mockImplementation(() => Promise.resolve());
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -344,8 +361,8 @@ describe('AgentSelector Component', () => {
   describe('Selected Agent State', () => {
     it('displays currently selected agent', () => {
       const agents = [
-        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
+        createMockAgent({ id: 'agent-1', name: 'Chess Expert' }),
+        createMockAgent({ id: 'agent-2', name: 'Catan Helper', type: 'setup' }),
       ];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents, selectedAgentId: 'agent-2' }
@@ -356,7 +373,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('displays empty value when no agent is selected', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents, selectedAgentId: null }
       });
@@ -365,7 +382,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('handles undefined selectedAgentId', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents, selectedAgentId: undefined }
       });
@@ -375,8 +392,8 @@ describe('AgentSelector Component', () => {
 
     it('updates value when selectedAgentId changes', async () => {
       const agents = [
-        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
+        createMockAgent({ id: 'agent-1', name: 'Chess Expert' }),
+        createMockAgent({ id: 'agent-2', name: 'Catan Helper', type: 'setup' }),
       ];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents, selectedAgentId: 'agent-1' }
@@ -412,7 +429,7 @@ describe('AgentSelector Component', () => {
 
       // Update to loaded state
       updateChatStoreState({
-        agents: [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }],
+        agents: [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })],
         loading: { agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false },
       });
 
@@ -425,7 +442,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('disables select when no game is selected', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: null, agents }
       });
@@ -435,7 +452,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('sets aria-busy when loading', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: {
           selectedGameId: 'game-1',
@@ -449,7 +466,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('changes cursor when disabled', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: {
           selectedGameId: 'game-1',
@@ -479,7 +496,7 @@ describe('AgentSelector Component', () => {
    */
   describe('Accessibility', () => {
     it('has proper label association', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -493,7 +510,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('has correct aria-busy attribute', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: {
           selectedGameId: 'game-1',
@@ -516,7 +533,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('does not have title attribute when game is selected', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -526,7 +543,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('uses semantic select element', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -550,8 +567,8 @@ describe('AgentSelector Component', () => {
     it('handles agents with special characters in names', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', gameId: 'game-1', name: "Chess Expert: Beginner's Guide", kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-2', gameId: 'game-1', name: 'Catan Helper (Advanced)', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
+        createMockAgent({ id: 'agent-1', name: "Chess Expert: Beginner's Guide" }),
+        createMockAgent({ id: 'agent-2', name: 'Catan Helper (Advanced)', type: 'setup' }),
       ];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
@@ -569,7 +586,7 @@ describe('AgentSelector Component', () => {
     it('handles very long agent names', async () => {
       const user = userEvent.setup();
       const longName = 'A'.repeat(100);
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: longName, kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: longName })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -594,7 +611,7 @@ describe('AgentSelector Component', () => {
       expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
 
       // Load agents
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       updateChatStoreState({
         agents,
         loading: { agents: false, chats: false, messages: false, sending: false, creating: false, updating: false, deleting: false, games: false }
@@ -615,7 +632,7 @@ describe('AgentSelector Component', () => {
       expect(screen.getByText('Seleziona prima un gioco')).toBeInTheDocument();
 
       // Select game
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       updateChatStoreState({ selectedGameId: 'game-1', agents });
 
       await waitFor(() => {
@@ -634,8 +651,8 @@ describe('AgentSelector Component', () => {
     it('handles agents with duplicate names (different IDs)', async () => {
       const user = userEvent.setup();
       const agents = [
-        { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'agent-2', gameId: 'game-1', name: 'Chess Expert', kind: 'setup', createdAt: '2024-01-01T00:00:00Z' },
+        createMockAgent({ id: 'agent-1', name: 'Chess Expert' }),
+        createMockAgent({ id: 'agent-2', name: 'Chess Expert', type: 'setup' }),
       ];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
@@ -652,7 +669,7 @@ describe('AgentSelector Component', () => {
 
     it('handles single agent in list', async () => {
       const user = userEvent.setup();
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -668,13 +685,9 @@ describe('AgentSelector Component', () => {
 
     it('handles large number of agents', async () => {
       const user = userEvent.setup();
-      const agents = Array.from({ length: 100 }, (_, i) => ({
-        id: `agent-${i}`,
-        gameId: 'game-1',
-        name: `Agent ${i}`,
-        kind: 'qa',
-        createdAt: '2024-01-01T00:00:00Z',
-      }));
+      const agents = Array.from({ length: 100 }, (_, i) =>
+        createMockAgent({ id: `agent-${i}`, name: `Agent ${i}` })
+      );
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -689,7 +702,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('handles game selection change clearing agents', async () => {
-      const agents1 = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents1 = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents: agents1, selectedAgentId: 'agent-1' }
       });
@@ -708,7 +721,7 @@ describe('AgentSelector Component', () => {
    */
   describe('Styling', () => {
     it('applies correct container margin', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       const { container } = renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -719,7 +732,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('applies correct label styling', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -733,7 +746,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('applies correct select styling', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });
@@ -745,7 +758,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('changes cursor style based on loading state', async () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: {
           selectedGameId: 'game-1',
@@ -769,7 +782,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('renders with appropriate styling when enabled', () => {
-      const agents = [{ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2024-01-01T00:00:00Z' }];
+      const agents = [createMockAgent({ id: 'agent-1', name: 'Chess Expert' })];
       renderWithChatStore(<AgentSelector />, {
         initialState: { selectedGameId: 'game-1', agents }
       });

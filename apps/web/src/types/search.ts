@@ -55,12 +55,11 @@ export interface GameSearchResult extends BaseSearchResult {
 
 /**
  * Agent search result
+ * Issue #868: Agents are global (no gameId)
  */
 export interface AgentSearchResult extends BaseSearchResult {
   type: 'agent';
   agent: Agent;
-  gameId: string;
-  gameName?: string;
 }
 
 /**

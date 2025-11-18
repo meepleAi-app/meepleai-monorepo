@@ -44,29 +44,47 @@ jobs:
               ref: pr.head.sha
             });
 
-            // Check if all required checks passed
-            const allStatusesPassed = statuses.state === 'success' || statuses.statuses.length === 0;
-            const allChecksPassed = checkRuns.check_runs.every(
-              check => check.conclusion === 'success' || check.conclusion === 'skipped' || check.conclusion === null
-            );
+            // Check if statuses exist and if so, they must all pass
+            const hasStatuses = statuses.statuses.length > 0;
+            const statusesPassed = hasStatuses ? statuses.state === 'success' : true;
+
+            // Check if check runs exist and if so, they must all pass
+            const hasCheckRuns = checkRuns.check_runs.length > 0;
+            const checkRunsPassed = hasCheckRuns
+              ? checkRuns.check_runs.every(check =>
+                  check.conclusion === 'success' ||
+                  check.conclusion === 'skipped' ||
+                  check.conclusion === null
+                )
+              : true;
 
             // Some checks might still be pending
             const hasPendingChecks = checkRuns.check_runs.some(
               check => check.status === 'in_progress' || check.status === 'queued'
             );
 
-            console.log(`Status state: ${statuses.state}`);
-            console.log(`All statuses passed: ${allStatusesPassed}`);
-            console.log(`All checks passed: ${allChecksPassed}`);
+            // At least one type of check must exist
+            const hasAnyChecks = hasStatuses || hasCheckRuns;
+
+            console.log(`Has statuses: ${hasStatuses}, Statuses passed: ${statusesPassed}`);
+            console.log(`Has check runs: ${hasCheckRuns}, Check runs passed: ${checkRunsPassed}`);
+            console.log(`Has any checks: ${hasAnyChecks}`);
             console.log(`Has pending checks: ${hasPendingChecks}`);
+            console.log(`Status state: ${statuses.state}`);
+            console.log(`Check runs details:`, checkRuns.check_runs.map(c => ({
+              name: c.name,
+              status: c.status,
+              conclusion: c.conclusion
+            })));
 
             // Only auto-merge if:
-            // 1. All checks are complete (not pending)
-            // 2. All checks passed
-            // 3. PR is from Dependabot
-            // 4. PR has automerge label
+            // 1. At least one type of check exists (statuses or check runs)
+            // 2. All existing checks are complete (not pending)
+            // 3. All existing checks passed (AND logic - both must pass if both exist)
+            // 4. PR is from Dependabot
+            // 5. PR has automerge label
 
-            const shouldMerge = !hasPendingChecks && (allStatusesPassed || allChecksPassed);
+            const shouldMerge = !hasPendingChecks && statusesPassed && checkRunsPassed && hasAnyChecks;
             core.setOutput('should_merge', shouldMerge);
             core.setOutput('has_pending', hasPendingChecks);
 

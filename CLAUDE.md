@@ -63,11 +63,11 @@ docs/                Architecture, ADRs, guides
 | **Backend** | `dotnet build && dotnet test` | xUnit+Testcontainers |
 | | `dotnet ef migrations add <Name> --project src/Api` | Auto-applied |
 | **Frontend** | `pnpm dev` / `pnpm build` / `pnpm test` | Jest 90%+ |
-| **Docker** | `docker compose up -d` | Full stack (15 services) |
+| **Docker** | `docker compose up -d` | Full stack (16 services) |
 
 **Services**:
 - **Core**: meepleai-postgres:5432, meepleai-qdrant:6333, meepleai-redis:6379
-- **AI/ML**: meepleai-ollama:11434, meepleai-embedding:8000, meepleai-unstructured:8001, meepleai-smoldocling:8002
+- **AI/ML**: meepleai-ollama:11434, meepleai-ollama-pull (init), meepleai-embedding:8000, meepleai-unstructured:8001, meepleai-smoldocling:8002
 - **Observability**: meepleai-seq:8081, meepleai-jaeger:16686, meepleai-prometheus:9090, meepleai-alertmanager:9093, meepleai-grafana:3001
 - **Workflow**: meepleai-n8n:5678
 - **App**: meepleai-api:8080, meepleai-web:3000
@@ -308,16 +308,16 @@ npm run test:sessions       # Sessions endpoint test
 
 ## DDD Migration Status
 
-**100% Complete** (2025-11-16):
+**100% Complete** (2025-11-18):
 - ✅ 7/7 contexts migrated to CQRS (ALL at 100%)
-- ✅ 96+ CQRS handlers operational (including 3 streaming handlers + 8 agent handlers + 13 RuleSpec comment/diff handlers)
-- ✅ 5,180 lines legacy code removed (+146 from Issue #1191: OAuth callback service method)
+- ✅ **224 CQRS handlers operational** (96 command + 87 query + 41 event, including 3 streaming handlers)
+- ✅ 5,387 lines legacy code removed (Services: 3,710 lines | Error handling: 1,677 lines)
 - ✅ 83+ endpoints migrated to MediatR (OAuth callback fully CQRS-compliant)
 - ✅ Zero build errors
 - ✅ Streaming RAG/QA/Setup migrated to IAsyncEnumerable pattern
 - ✅ Agent services (Chess, Feedback, FollowUp) migrated to CQRS (#1188)
 - ✅ RuleSpec Comment/Diff services migrated to CQRS (#1189)
-- ✅ **Domain Events**: 40 events + 39 handlers + integration events (#1190)
+- ✅ **Domain Events**: 41 events + 40 handlers + integration events (#1190)
 - ✅ OAuth callback legacy code removed (#1191)
 
 **Contexts**: All 7 contexts at 100% - Authentication (OAuth fully CQRS-compliant), GameManagement, KnowledgeBase, DocumentProcessing, WorkflowIntegration, SystemConfiguration, Administration
@@ -423,7 +423,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 
 ## CI/CD
 
-**GitHub Actions** (5 workflows optimized):
+**GitHub Actions** (7 workflows optimized):
 - **`ci.yml`**: Main CI pipeline (~14min, 38% faster since 2025-11-09)
   - Web: Lint → Typecheck → Unit Tests (90%+) → E2E Tests → Accessibility
   - API: Build → Unit & Integration Tests (90%+) → Quality Tests (RAG evaluation)
@@ -432,6 +432,8 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 - **`migration-guard.yml`**: EF Core migration validation (prevents deletion)
 - **`lighthouse-ci.yml`**: Performance monitoring (Core Web Vitals, Lighthouse CI)
 - **`storybook-deploy.yml`**: Storybook build + deploy (Vercel, Chromatic)
+- **`k6-performance.yml`**: k6 performance testing (8 scenarios: RAG, Chat, Games, Sessions, DB, Redis, WebSocket) ⭐ NEW
+- **`dependabot-automerge.yml`**: Automated dependency updates ⭐ NEW
 
 **Security**:
 - CodeQL SAST (C#, JS/TS)
@@ -460,18 +462,18 @@ bash tools/cleanup-caches.sh                # Run
 ## Phase Status
 
 **Current**: Alpha (pre-production, DDD refactoring COMPLETE)
-**DDD**: **99% complete** (7/7 contexts, 72+ handlers, 60+ endpoints, 2,070 lines removed)
-**Next**: Final polish (1%) → Beta testing (2-4 weeks) → Production
+**DDD**: **100% complete** (7/7 contexts, 224 handlers, 83+ endpoints, 5,387 lines removed)
+**Next**: Beta testing (2-4 weeks) → Production
 **Target**: 10,000 MAU by Phase 4, >99.5% uptime SLA
 
 ---
 
-**Version**: 1.0-rc (DDD 99%, k6 Performance Suite)
+**Version**: 1.0-rc (DDD 100%, k6 Performance Suite, 162 docs)
 **Last Updated**: 2025-11-18
 **Last Verified**: 2025-11-18 (against codebase)
 **Owner**: Engineering Lead
 
 ---
 
-**Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Docker services and ports updated to reflect full observability stack (15 services total).
+**Note**: For complete documentation index see [docs/INDEX.md](docs/INDEX.md). Full observability stack with 16 Docker services operational.
 

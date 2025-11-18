@@ -8,8 +8,10 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Services.Pdf;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PdfIndexingErrorCode = Api.BoundedContexts.DocumentProcessing.Application.DTOs.PdfIndexingErrorCode;
 
 namespace Api.Routing;
@@ -173,6 +175,57 @@ public static class PdfEndpoints
 
             return Results.Json(pdf);
         });
+
+        // BGAI-074: Download/view PDF file
+        group.MapGet("/pdfs/{pdfId:guid}/download", async (Guid pdfId, HttpContext context, MeepleAiDbContext db, IBlobStorageService blobStorageService, ILogger<Program> logger, CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            // Get PDF metadata from database
+            var pdf = await db.PdfDocuments
+                .Where(p => p.Id == pdfId)
+                .Select(p => new { p.Id, p.GameId, p.FileName, p.FilePath, p.ContentType, p.UploadedByUserId })
+                .FirstOrDefaultAsync(ct);
+
+            if (pdf == null)
+            {
+                logger.LogWarning("PDF {PdfId} not found for download", pdfId);
+                return Results.NotFound(new { error = "PDF not found" });
+            }
+
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+            }
+
+            // Authorization: User can only download their own PDFs unless admin
+            bool isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+            bool isOwner = pdf.UploadedByUserId == userId;
+
+            if (!isAdmin && !isOwner)
+            {
+                logger.LogWarning("User {UserId} denied access to download PDF {PdfId} (owner: {OwnerId})",
+                    session.User.Id, pdfId, pdf.UploadedByUserId);
+                return Results.Forbid();
+            }
+
+            // Retrieve file from blob storage
+            var fileStream = await blobStorageService.RetrieveAsync(pdf.Id.ToString("N"), pdf.GameId.ToString(), ct);
+
+            if (fileStream == null)
+            {
+                logger.LogError("PDF file not found in storage for {PdfId} at path {FilePath}", pdfId, pdf.FilePath);
+                return Results.NotFound(new { error = "PDF file not found in storage" });
+            }
+
+            logger.LogInformation("User {UserId} downloading PDF {PdfId}", session.User.Id, pdfId);
+
+            // Return file as inline (viewable in browser) with proper content type
+            return Results.Stream(fileStream, contentType: pdf.ContentType ?? "application/pdf", fileDownloadName: pdf.FileName, enableRangeProcessing: true);
+        })
+        .RequireAuthorization()
+        .WithName("DownloadPdf");
 
         // SEC-02: Delete PDF with Row-Level Security
         group.MapDelete("/pdf/{pdfId:guid}", async (Guid pdfId, HttpContext context, AuditService auditService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>

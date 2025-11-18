@@ -1,11 +1,12 @@
 /**
- * CitationList - Collection of citations display (Issue #859)
+ * CitationList - Collection of citations display (Issue #859, BGAI-074)
  *
  * Renders a list of PDF citations with:
  * - Header label
  * - Empty state handling
  * - Collapsible UI for better UX
  * - Grid layout for multiple citations
+ * - Click to jump to PDF page (BGAI-074)
  *
  * Usage: Display citations under assistant messages in chat
  */
@@ -20,13 +21,15 @@ interface CitationListProps {
   showRelevanceScores?: boolean;
   collapsible?: boolean;
   className?: string;
+  onCitationClick?: (citation: Citation) => void;
 }
 
 export const CitationList = React.memo(function CitationList({
   citations,
   showRelevanceScores = false,
   collapsible = false,
-  className
+  className,
+  onCitationClick
 }: CitationListProps) {
   // Always start expanded (collapsible only affects toggle ability)
   const [isExpanded, setIsExpanded] = useState(true);
@@ -78,6 +81,7 @@ export const CitationList = React.memo(function CitationList({
               key={`${citation.documentId}-${citation.pageNumber}-${index}`}
               citation={citation}
               showRelevanceScore={showRelevanceScores}
+              onClick={onCitationClick}
             />
           ))}
         </div>

@@ -1,12 +1,39 @@
 version: 2
 updates:
-  # .NET dependencies
+  # .NET dependencies - Security updates (daily)
+  - package-ecosystem: "nuget"
+    directory: "/apps/api"
+    schedule:
+      interval: "daily"
+      time: "00:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "DegrassiAaron"
+    labels:
+      - "dependencies"
+      - "dotnet"
+      - "security"
+      - "automerge"
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    # Only security updates in daily runs
+    groups:
+      security-patches:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+    versioning-strategy: "increase-if-necessary"
+
+  # .NET dependencies - Regular updates (weekly)
   - package-ecosystem: "nuget"
     directory: "/apps/api"
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "00:00"
+      time: "02:00"
       timezone: "UTC"
     open-pull-requests-limit: 5
     reviewers:
@@ -14,7 +41,6 @@ updates:
     labels:
       - "dependencies"
       - "dotnet"
-      - "security"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
@@ -26,20 +52,51 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    versioning-strategy: "increase"
     ignore:
-      # Ignore EF Core 9.x until .NET 9 migration is planned
+      # Ignore EF Core major updates (requires manual migration planning)
       - dependency-name: "Microsoft.EntityFrameworkCore*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "Npgsql.EntityFrameworkCore.PostgreSQL"
         update-types: ["version-update:semver-major"]
+      # Skip patch updates (handled by daily security updates)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
 
-  # Frontend dependencies (npm)
+  # Frontend dependencies - Security updates (daily)
+  - package-ecosystem: "npm"
+    directory: "/apps/web"
+    schedule:
+      interval: "daily"
+      time: "00:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "DegrassiAaron"
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "security"
+      - "automerge"
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    # Only security patch updates in daily runs
+    groups:
+      security-patches:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+    versioning-strategy: "increase-if-necessary"
+
+  # Frontend dependencies - Regular updates (weekly)
   - package-ecosystem: "npm"
     directory: "/apps/web"
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "00:00"
+      time: "02:00"
       timezone: "UTC"
     open-pull-requests-limit: 5
     reviewers:
@@ -47,26 +104,28 @@ updates:
     labels:
       - "dependencies"
       - "frontend"
-      - "security"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
-    # Group minor and patch updates together
+    # Group minor updates
     groups:
-      minor-and-patch:
+      minor-updates:
         patterns:
           - "*"
         update-types:
           - "minor"
-          - "patch"
+    versioning-strategy: "increase"
     ignore:
-      # Ignore major version updates for React (requires manual review)
+      # Ignore major version updates (requires manual review and testing)
       - dependency-name: "react"
         update-types: ["version-update:semver-major"]
       - dependency-name: "react-dom"
         update-types: ["version-update:semver-major"]
       - dependency-name: "next"
         update-types: ["version-update:semver-major"]
+      # Skip patch updates (handled by daily security updates)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"

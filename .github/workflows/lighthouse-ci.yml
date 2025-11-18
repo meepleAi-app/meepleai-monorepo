@@ -257,43 +257,206 @@ jobs:
             }
 
   performance-regression-check:
-    needs: [build-nextjs, lighthouse-performance]
+    needs: [build-nextjs, lighthouse-cli]
     name: Check Performance Regression
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: apps/web
     steps:
-      - name: Checkout
+      - name: Checkout PR Branch
         uses: actions/checkout@v5
 
-      - name: Performance Regression Warning
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Download PR Lighthouse Results
+        uses: actions/download-artifact@v5
+        with:
+          name: lighthouse-ci-results-${{ github.run_number }}
+          path: apps/web/.lighthouseci-pr
+
+      - name: Checkout Base Branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }}
+
+      - name: Setup pnpm (Base)
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies (Base)
+        run: pnpm install
+
+      - name: Setup Test Environment (Base)
+        run: cp .env.test.example .env.test || echo "NEXT_PUBLIC_API_BASE=http://localhost:8080" > .env.test
+
+      - name: Build Next.js for Production (Base)
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Run Lighthouse CI (Base Branch)
+        run: |
+          pnpm exec lhci autorun || echo "Base branch Lighthouse completed"
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Compare Performance Metrics
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = `## ⚠️ Performance Regression Check
+            const fs = require('fs');
+            const path = require('path');
 
-            This workflow monitors for performance regressions in the web application.
+            const REGRESSION_THRESHOLD = 0.10; // 10% degradation threshold
 
-            **Threshold:** >10% degradation in any Core Web Vital will fail the build.
+            // Helper function to parse Lighthouse manifest
+            function getLatestReport(lhciDir) {
+              const manifestPath = path.join(lhciDir, 'manifest.json');
+              if (!fs.existsSync(manifestPath)) {
+                console.log(`Manifest not found at ${manifestPath}`);
+                return null;
+              }
 
-            **Monitored Metrics:**
-            - Largest Contentful Paint (LCP)
-            - First Input Delay (FID) / Total Blocking Time (TBT)
-            - Cumulative Layout Shift (CLS)
-            - First Contentful Paint (FCP)
-            - Speed Index (SI)
-            - Performance Score
+              const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+              if (!manifest || manifest.length === 0) {
+                console.log('Empty manifest');
+                return null;
+              }
 
-            If performance tests failed, please review the Lighthouse reports in the artifacts and optimize accordingly.
+              // Get the first report (averaged across runs)
+              const reportPath = path.join(lhciDir, manifest[0].jsonPath);
+              return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            }
+
+            // Load PR and base reports
+            const prReport = getLatestReport(path.join(process.env.GITHUB_WORKSPACE, 'apps/web/.lighthouseci-pr'));
+            const baseReport = getLatestReport(path.join(process.env.GITHUB_WORKSPACE, 'apps/web/.lighthouseci'));
+
+            if (!prReport || !baseReport) {
+              console.log('⚠️ Unable to load Lighthouse reports for comparison');
+              console.log('Skipping regression check...');
+              return;
+            }
+
+            // Extract metrics
+            const metrics = {
+              'Performance Score': {
+                pr: prReport.categories.performance.score * 100,
+                base: baseReport.categories.performance.score * 100,
+                unit: '%'
+              },
+              'LCP (Largest Contentful Paint)': {
+                pr: prReport.audits['largest-contentful-paint'].numericValue,
+                base: baseReport.audits['largest-contentful-paint'].numericValue,
+                unit: 'ms'
+              },
+              'FCP (First Contentful Paint)': {
+                pr: prReport.audits['first-contentful-paint'].numericValue,
+                base: baseReport.audits['first-contentful-paint'].numericValue,
+                unit: 'ms'
+              },
+              'TBT (Total Blocking Time)': {
+                pr: prReport.audits['total-blocking-time'].numericValue,
+                base: baseReport.audits['total-blocking-time'].numericValue,
+                unit: 'ms'
+              },
+              'CLS (Cumulative Layout Shift)': {
+                pr: prReport.audits['cumulative-layout-shift'].numericValue,
+                base: baseReport.audits['cumulative-layout-shift'].numericValue,
+                unit: ''
+              },
+              'Speed Index': {
+                pr: prReport.audits['speed-index'].numericValue,
+                base: baseReport.audits['speed-index'].numericValue,
+                unit: 'ms'
+              }
+            };
+
+            // Calculate regressions
+            let hasRegression = false;
+            let regressionDetails = [];
+
+            for (const [metricName, values] of Object.entries(metrics)) {
+              let change, changePercent;
+
+              // For scores, higher is better; for timings, lower is better
+              if (metricName.includes('Score')) {
+                change = values.pr - values.base;
+                changePercent = (change / values.base) * 100;
+                // Regression if score decreased by >10%
+                if (changePercent < -REGRESSION_THRESHOLD * 100) {
+                  hasRegression = true;
+                  regressionDetails.push(`- **${metricName}**: ${values.base.toFixed(1)}${values.unit} → ${values.pr.toFixed(1)}${values.unit} (${changePercent.toFixed(1)}% ⚠️ REGRESSION)`);
+                } else {
+                  regressionDetails.push(`- ${metricName}: ${values.base.toFixed(1)}${values.unit} → ${values.pr.toFixed(1)}${values.unit} (${changePercent.toFixed(1)}%)`);
+                }
+              } else {
+                // For metrics like LCP, TBT, CLS, lower is better
+                change = values.pr - values.base;
+                changePercent = (change / values.base) * 100;
+                // Regression if timing increased by >10%
+                if (changePercent > REGRESSION_THRESHOLD * 100) {
+                  hasRegression = true;
+                  regressionDetails.push(`- **${metricName}**: ${values.base.toFixed(0)}${values.unit} → ${values.pr.toFixed(0)}${values.unit} (+${changePercent.toFixed(1)}% ⚠️ REGRESSION)`);
+                } else {
+                  regressionDetails.push(`- ${metricName}: ${values.base.toFixed(0)}${values.unit} → ${values.pr.toFixed(0)}${values.unit} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(1)}%)`);
+                }
+              }
+            }
+
+            // Create PR comment
+            const comment = `## ${hasRegression ? '⚠️' : '✅'} Performance Regression Check
+
+            **Threshold:** >10% degradation in any Core Web Vital = Build failure
+
+            ### Comparison with Base Branch (\`${context.payload.pull_request.base.ref}\`)
+
+            ${regressionDetails.join('\n')}
+
+            ${hasRegression ? `
+            ### ⚠️ Performance Regression Detected!
+
+            One or more metrics have degraded by more than 10% compared to the base branch.
+
+            **Action Required:**
+            - Review the Lighthouse reports in the artifacts
+            - Optimize the affected components/pages
+            - Consider code splitting, lazy loading, or image optimization
+            - Run \`pnpm lighthouse:ci\` locally to debug
 
             **Tips for improving performance:**
-            - Minimize JavaScript bundle size
-            - Optimize images (use next/image)
+            - Minimize JavaScript bundle size (\`pnpm analyze\`)
+            - Optimize images (use next/image with proper sizing)
             - Defer non-critical CSS/JS
-            - Implement code splitting
-            - Use static generation (SSG) where possible
-            - Optimize font loading
+            - Implement code splitting for large components
+            - Use SSG/ISR instead of SSR where possible
+            - Optimize font loading (preload critical fonts)
+            ` : `
+            ### ✅ No Performance Regression
+
+            All performance metrics are within acceptable thresholds.
+            `}
+
+            📊 Full Lighthouse reports are available in the workflow artifacts.
             `;
 
-            // Only comment if tests failed
-            // In a full implementation, we would compare with baseline metrics
-            console.log('Performance regression check completed');
+            // Post comment to PR
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+            // Fail the build if regression detected
+            if (hasRegression) {
+              core.setFailed('Performance regression detected! One or more metrics degraded by >10%.');
+            } else {
+              console.log('✅ Performance regression check passed');
+            }

@@ -9,6 +9,7 @@ services:
       POSTGRES_DB: meepleai_prod
     volumes:
       - pgdata-prod:/var/lib/postgresql/data
+      - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       interval: 10s
       timeout: 5s
@@ -107,6 +108,8 @@ services:
       - '--web.enable-lifecycle'
       - '--storage.tsdb.retention.size=50GB'
     volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus-prod:/prometheus
     deploy:
       resources:

@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { Card } from "@/components/ui/card";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export default function FeaturesSection() {
+  const { t } = useTranslation();
   const { ref: featuresRef, inView: featuresInView } = useInView({
     triggerOnce: true,
     threshold: [0.1, 0.5, 0.9],
@@ -11,21 +13,18 @@ export default function FeaturesSection() {
   const features = [
     {
       icon: "📤",
-      title: "1. Upload",
-      description:
-        "Upload any PDF rulebook. Our AI automatically extracts and indexes the content for lightning-fast search.",
+      title: `1. ${t('home.features.upload.title')}`,
+      description: t('home.features.upload.description'),
     },
     {
       icon: "💬",
-      title: "2. Ask",
-      description:
-        "Ask questions in natural language. No need to search through pages—just ask like you're talking to an expert.",
+      title: `2. ${t('home.features.ask.title')}`,
+      description: t('home.features.ask.description'),
     },
     {
       icon: "⚡",
-      title: "3. Play",
-      description:
-        "Get instant answers with exact sources. Every answer includes page numbers and rule sections for verification.",
+      title: `3. ${t('home.features.play.title')}`,
+      description: t('home.features.play.description'),
     },
   ];
 
@@ -42,10 +41,7 @@ export default function FeaturesSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-5xl font-bold mb-4">How It Works</h2>
-          <p className="text-xl text-slate-50">
-            Three simple steps to never misunderstand rules again
-          </p>
+          <h2 className="text-5xl font-bold mb-4">{t('home.features.title')}</h2>
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-8">

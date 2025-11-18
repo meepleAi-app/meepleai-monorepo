@@ -50,9 +50,10 @@ describe('Locales Configuration', () => {
       expect(itMessages.auth.login.title).toBeDefined();
     });
 
-    it('should have English placeholder', () => {
+    it('should have English translations', () => {
       expect(messages[LOCALES.EN]).toBeDefined();
-      expect(messages[LOCALES.EN]).toEqual({});
+      expect(messages[LOCALES.EN]).not.toEqual({});
+      expect(Object.keys(messages[LOCALES.EN] as object).length).toBeGreaterThan(0);
     });
   });
 

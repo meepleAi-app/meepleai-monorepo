@@ -43,10 +43,17 @@ export const messages: Record<Locale, Messages | Record<string, unknown>> = {
 
 /**
  * Get messages for a specific locale
- * Falls back to default locale if not found
+ * Falls back to default locale if not found or empty
  */
 export function getMessages(locale: Locale): Messages | Record<string, unknown> {
-  return messages[locale] || messages[DEFAULT_LOCALE];
+  const localeMessages = messages[locale];
+
+  // Fallback to default locale if messages don't exist or are empty
+  if (!localeMessages || Object.keys(localeMessages).length === 0) {
+    return messages[DEFAULT_LOCALE];
+  }
+
+  return localeMessages;
 }
 
 /**

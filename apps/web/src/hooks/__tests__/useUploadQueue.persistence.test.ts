@@ -29,6 +29,7 @@ global.fetch = jest.fn();
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useUploadQueue } from '../useUploadQueue';
 import { uploadQueueStore } from '../../stores/UploadQueueStore';
+import type { UploadQueueState } from '../../workers/uploadQueue.worker';
 
 // Mock localStorage
 const localStorageMock: { [key: string]: string } = {};

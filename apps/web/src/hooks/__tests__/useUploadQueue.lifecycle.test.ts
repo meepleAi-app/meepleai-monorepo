@@ -14,9 +14,8 @@ import {
 // Mock Worker globally
 let mockWorkerInstance: MockUploadWorker;
 global.Worker = jest.fn((scriptURL: string | URL, options?: any) => {
-  if (!mockWorkerInstance) {
-    mockWorkerInstance = new MockUploadWorker({ uploadDelay: 10, autoUpload: true });
-  }
+  // Always create a fresh instance to properly test worker restarts
+  mockWorkerInstance = new MockUploadWorker({ uploadDelay: 10, autoUpload: true });
   return mockWorkerInstance as any;
 }) as any;
 

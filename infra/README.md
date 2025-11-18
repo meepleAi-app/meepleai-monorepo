@@ -8,11 +8,13 @@
 
 ```
 infra/
-├── docker-compose.yml              # Main production stack (15 services)
+├── docker-compose.yml              # Base service definitions
 ├── docker-compose.dev.yml          # Development override
 ├── docker-compose.infisical.yml    # Infisical secrets management
+├── compose.test.yml                # Test/CI environment (NEW)
+├── compose.staging.yml             # Staging environment (NEW)
+├── compose.prod.yml                # Production environment (NEW)
 ├── prometheus.yml                  # Prometheus configuration
-├── prometheus-rules.yml            # Alert rules
 ├── alertmanager.yml                # Alert routing configuration
 ├── grafana-datasources.yml         # Grafana data sources
 ├── grafana-dashboards.yml          # Grafana dashboard config
@@ -25,8 +27,15 @@ infra/
 ├── n8n/                            # n8n workflow definitions
 │   ├── templates/                  # Workflow templates
 │   └── workflows/                  # Production workflows
-├── prometheus/                     # Prometheus configurations
-│   └── alerts/                     # Alert rule files
+├── prometheus/                     # Prometheus configurations (NEW)
+│   └── alerts/                     # Modular alert rule files (NEW)
+│       ├── api-performance.yml     # API metrics & alerts
+│       ├── database-health.yml     # PostgreSQL alerts
+│       ├── cache-performance.yml   # Redis alerts
+│       ├── vector-search.yml       # Qdrant alerts
+│       ├── infrastructure.yml      # Memory, CPU, resources
+│       ├── quality-metrics.yml     # AI quality monitoring
+│       └── pdf-processing.yml      # PDF pipeline alerts
 ├── scripts/                        # Infrastructure utility scripts
 └── secrets/                        # Secret templates (gitignored)
 ```
@@ -35,21 +44,11 @@ infra/
 
 ## 🚀 Quick Start
 
-### Start Full Stack (Production Mode)
+### Multi-Environment Support (NEW)
 
-```bash
-cd infra
-docker compose up -d
-```
+MeepleAI infrastructure supports multiple environments with hierarchical compose files:
 
-**Services started** (15 total):
-- **Core**: postgres, qdrant, redis
-- **AI/ML**: ollama, embedding, unstructured, smoldocling
-- **Observability**: seq, jaeger, prometheus, alertmanager, grafana
-- **Workflow**: n8n
-- **App**: api, web
-
-### Start Development Stack
+#### Development
 
 ```bash
 cd infra
@@ -60,6 +59,46 @@ Development mode includes:
 - Hot reload enabled
 - Debug ports exposed
 - Verbose logging
+- Simpler authentication
+
+#### Test/CI
+
+```bash
+cd infra
+docker compose -f docker-compose.yml -f compose.test.yml up
+```
+
+Test mode optimizations:
+- In-memory storage (PostgreSQL, Redis)
+- Minimal observability (use `--profile observability` if needed)
+- Fast startup for CI pipelines
+- No auto-restart
+
+#### Staging
+
+```bash
+cd infra
+docker compose -f docker-compose.yml -f compose.staging.yml up -d
+```
+
+Staging includes:
+- Production-like configuration
+- Full observability stack
+- 60-day metrics retention
+- Logging with rotation
+
+#### Production
+
+```bash
+cd infra
+docker compose -f docker-compose.yml -f compose.prod.yml up -d
+```
+
+Production features:
+- Resource limits and reservations
+- 90-day metrics retention
+- Enhanced security
+- High availability settings
 
 ### Start with Infisical (Secrets Management)
 
@@ -113,15 +152,31 @@ docker compose -f docker-compose.yml -f docker-compose.infisical.yml up -d
 
 ### Docker Compose
 
-- **docker-compose.yml**: Base production configuration
+- **docker-compose.yml**: Base service definitions
   - All 15 services defined
-  - Production-ready settings
-  - Resource limits set
+  - Environment-agnostic configuration
+  - Health checks configured
 
 - **docker-compose.dev.yml**: Development overrides
   - Hot reload volumes
   - Debug ports exposed
   - Verbose logging enabled
+
+- **compose.test.yml**: Test/CI environment (NEW)
+  - In-memory storage for speed
+  - Minimal observability stack
+  - Optimized for CI pipelines
+
+- **compose.staging.yml**: Staging environment (NEW)
+  - Production-like settings
+  - Full observability enabled
+  - Longer metrics retention (60d)
+
+- **compose.prod.yml**: Production environment (NEW)
+  - Resource limits and reservations
+  - Enhanced security settings
+  - 90-day metrics retention
+  - High availability configuration
 
 - **docker-compose.infisical.yml**: Secrets management
   - Infisical integration
@@ -133,13 +188,22 @@ docker compose -f docker-compose.yml -f docker-compose.infisical.yml up -d
 - **prometheus.yml**: Prometheus scrape configuration
   - Scrape intervals (15s default)
   - Service discovery
-  - Relabeling rules
+  - Modular alert rules loading
 
-- **prometheus-rules.yml**: Alert rules (40+ rules)
-  - High error rate (>5%)
-  - High latency (>2s P95)
-  - RAG quality degradation
-  - Service health checks
+- **prometheus/alerts/** (NEW - Modular Organization):
+  - **api-performance.yml**: API errors, response times, request rates
+  - **database-health.yml**: PostgreSQL availability and performance
+  - **cache-performance.yml**: Redis health monitoring
+  - **vector-search.yml**: Qdrant vector database alerts
+  - **infrastructure.yml**: Memory, CPU, and resource alerts
+  - **quality-metrics.yml**: AI quality and confidence monitoring
+  - **pdf-processing.yml**: PDF extraction pipeline alerts
+
+  Benefits:
+  - 40+ alert rules organized by category
+  - Easier navigation and maintenance
+  - Cleaner PR diffs
+  - Modular enable/disable by category
 
 - **alertmanager.yml**: Alert routing
   - Email notifications

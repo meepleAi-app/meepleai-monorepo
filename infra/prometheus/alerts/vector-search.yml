@@ -1,0 +1,24 @@
+# Qdrant Vector Database Monitoring Rules
+# Tracks vector database availability for RAG operations
+
+groups:
+  - name: qdrant_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: Qdrant vector DB is down
+      - alert: QdrantDown
+        expr: |
+          up{job="qdrant"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: dependency
+          component: vector-db
+        annotations:
+          summary: "Qdrant vector database is unreachable"
+          description: |
+            The API cannot connect to Qdrant.
+            RAG operations and semantic search are failing.
+            Check Qdrant container health at http://localhost:6333/healthz
+          runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"

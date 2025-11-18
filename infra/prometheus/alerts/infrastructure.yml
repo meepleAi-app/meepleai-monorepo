@@ -1,0 +1,24 @@
+# Infrastructure Resource Monitoring Rules
+# Tracks memory, CPU, and system resources
+
+groups:
+  - name: infrastructure_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          process_working_set_bytes / process_memory_limit_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: resources
+          component: infrastructure
+        annotations:
+          summary: "API memory usage is high"
+          description: |
+            Memory usage: {{ $value | humanizePercentage }}.
+            The API may be approaching memory limits.
+            Check for memory leaks or increase container resources.
+          dashboard_url: "http://localhost:3001/d/infrastructure"

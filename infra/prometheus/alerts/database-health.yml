@@ -1,0 +1,26 @@
+# PostgreSQL Database Health Monitoring Rules
+# Tracks database availability, connections, and query performance
+
+groups:
+  - name: postgres_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: All database connections are down
+      - alert: DatabaseDown
+        expr: |
+          up{job="meepleai-api"} == 0
+          OR
+          (pg_up{} == 0)
+        for: 1m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: dependency
+          component: database
+        annotations:
+          summary: "PostgreSQL database is unreachable"
+          description: |
+            The API cannot connect to PostgreSQL database.
+            All API operations are likely failing.
+            Check database health and network connectivity.
+          runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"

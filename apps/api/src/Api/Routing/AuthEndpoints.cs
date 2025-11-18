@@ -24,6 +24,8 @@ using GetSessionStatusQuery = Api.BoundedContexts.Authentication.Application.Que
 using ExtendSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.ExtendSessionCommand;
 using RevokeSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand;
 using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
+using LoginWithApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginWithApiKeyCommand;
+using LogoutApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutApiKeyCommand;
 
 namespace Api.Routing;
 
@@ -156,6 +158,82 @@ public static class AuthEndpoints
             removeSessionCookie(context);
             return Results.Json(new { ok = true });
         });
+
+        // API Key Login - Sets secure httpOnly cookie for browser-based API key auth
+        group.MapPost("/auth/apikey/login", async (
+            ApiKeyLoginPayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(payload.ApiKey))
+            {
+                logger.LogWarning("API key login failed: API key is empty");
+                return Results.BadRequest(new { error = "API key is required" });
+            }
+
+            var command = new LoginWithApiKeyCommand(ApiKey: payload.ApiKey);
+
+            logger.LogInformation("API key login attempt");
+            var result = await mediator.Send(command, ct);
+
+            // Set httpOnly cookie with API key (secure, XSS-protected)
+            CookieHelpers.WriteApiKeyCookie(context, payload.ApiKey);
+
+            logger.LogInformation("User {UserId} logged in with API key {ApiKeyId}", result.User.Id, result.ApiKeyId);
+
+            // Map to legacy format for backward compatibility
+            var legacyUser = new AuthUser(
+                Id: result.User.Id.ToString(),
+                Email: result.User.Email,
+                DisplayName: result.User.DisplayName,
+                Role: result.User.Role);
+
+            return Results.Json(new { user = legacyUser, message = result.Message });
+        })
+        .WithName("LoginWithApiKey")
+        .WithTags("Authentication", "API Keys")
+        .WithSummary("Login with API key and set httpOnly cookie")
+        .WithDescription(@"Authenticates user with API key and stores it in a secure httpOnly cookie.
+This provides XSS protection for browser-based API key authentication.
+
+**Security Benefits**:
+- API key stored in httpOnly cookie (not accessible to JavaScript)
+- Prevents XSS attacks from stealing API keys
+- Automatic inclusion in requests (no manual header management)
+
+**Priority**: Cookie > Header. Once set, the cookie takes priority over X-API-Key header.
+
+**Use Case**: Secure API key usage in browser contexts (e.g., web admin panels, testing UIs).")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+
+        // API Key Logout - Removes httpOnly cookie
+        group.MapPost("/auth/apikey/logout", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var command = new LogoutApiKeyCommand();
+            var result = await mediator.Send(command, ct);
+
+            CookieHelpers.RemoveApiKeyCookie(context);
+            logger.LogInformation("API key cookie removed");
+
+            return Results.Json(new { ok = true, message = result.Message });
+        })
+        .WithName("LogoutApiKey")
+        .WithTags("Authentication", "API Keys")
+        .WithSummary("Logout API key authentication by removing httpOnly cookie")
+        .WithDescription(@"Removes the API key httpOnly cookie, logging out the user from API key authentication.
+
+After logout, requests will fall back to session cookie authentication if available.
+
+**Note**: This only removes the cookie. To revoke the API key entirely, use the API key management endpoints.")
+        .Produces(200);
 
         // Get current user (AUTH-01: Supports both cookie and API key auth)
         // Priority: API key > Cookie session

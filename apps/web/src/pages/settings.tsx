@@ -86,11 +86,17 @@ export default function SettingsPage() {
   const [linkedAccounts, setLinkedAccounts] = useState<OAuthAccount[]>([]);
   const [unlinking, setUnlinking] = useState<string | null>(null);
 
+  // API Key authentication state
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [apiKeyAuthenticated, setApiKeyAuthenticated] = useState(false);
+
   // Load initial data
   useEffect(() => {
     loadProfile();
     load2FAStatus();
     loadOAuthAccounts();
+    checkApiKeyAuthentication();
   }, []);
 
   const loadProfile = async () => {
@@ -308,6 +314,68 @@ export default function SettingsPage() {
 
   const isLinked = (providerId: string) =>
     linkedAccounts.some((a) => a.provider === providerId);
+
+  // API Key authentication handlers
+  const checkApiKeyAuthentication = async () => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+      const res = await fetch(`${apiBase}/api/v1/auth/me`, {
+        credentials: 'include',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Check if authenticated via API key (backend adds AuthSource claim)
+        setApiKeyAuthenticated(data?.user?.authSource === 'cookie');
+      }
+    } catch (error) {
+      console.error('Failed to check API key authentication:', error);
+    }
+  };
+
+  const handleApiKeyLogin = async () => {
+    if (!apiKeyInput.trim()) {
+      setError('Please enter an API key');
+      return;
+    }
+
+    setApiKeyLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await api.auth.loginWithApiKey(apiKeyInput);
+      setApiKeyAuthenticated(true);
+      setApiKeyInput(''); // Clear input for security
+      setSuccess('API key authenticated successfully. Secure cookie has been set.');
+    } catch (error: any) {
+      console.error('API key login error:', error);
+      setError(error?.message || 'Failed to authenticate with API key');
+      setApiKeyAuthenticated(false);
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
+
+  const handleApiKeyLogout = async () => {
+    if (!confirm('Remove API key authentication? You will fall back to session authentication.')) {
+      return;
+    }
+
+    setApiKeyLoading(true);
+    setError(null);
+
+    try {
+      await api.auth.logoutApiKey();
+      setApiKeyAuthenticated(false);
+      setSuccess('API key authentication removed');
+    } catch (error: any) {
+      console.error('API key logout error:', error);
+      setError(error?.message || 'Failed to remove API key authentication');
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
 
   if (loading && !profile) {
     return (
@@ -797,17 +865,66 @@ export default function SettingsPage() {
             <TabsContent value="advanced" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>API Keys</CardTitle>
+                  <CardTitle>API Key Authentication</CardTitle>
                   <CardDescription>
-                    Manage your API keys for programmatic access
+                    Use API keys securely in your browser with httpOnly cookies
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Alert>
-                    <AlertDescription>
-                      API key management coming soon
-                    </AlertDescription>
-                  </Alert>
+                <CardContent className="space-y-4">
+                  {apiKeyAuthenticated ? (
+                    <div className="space-y-4">
+                      <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                        <AlertDescription className="text-green-800 dark:text-green-200">
+                          ✓ API key authentication active. Your API key is stored in a secure httpOnly cookie.
+                        </AlertDescription>
+                      </Alert>
+                      <Button
+                        variant="outline"
+                        onClick={handleApiKeyLogout}
+                        disabled={apiKeyLoading}
+                      >
+                        {apiKeyLoading ? 'Removing...' : 'Remove API Key Authentication'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <Alert>
+                        <AlertDescription>
+                          <div className="space-y-2">
+                            <p className="font-medium">Secure API Key Storage</p>
+                            <ul className="text-sm space-y-1 ml-4 list-disc">
+                              <li>API keys are stored in httpOnly cookies (XSS protected)</li>
+                              <li>Not accessible to JavaScript (prevents theft)</li>
+                              <li>Automatically included in all requests</li>
+                              <li>Use this for testing or admin panels</li>
+                            </ul>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="api-key-input">API Key</Label>
+                        <Input
+                          id="api-key-input"
+                          type="password"
+                          placeholder="mpl_live_xxxxxxxxxxxxxxxx"
+                          value={apiKeyInput}
+                          onChange={(e) => setApiKeyInput(e.target.value)}
+                          disabled={apiKeyLoading}
+                        />
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Your API key will be validated and stored in a secure cookie.
+                        </p>
+                      </div>
+
+                      <Button
+                        onClick={handleApiKeyLogin}
+                        disabled={apiKeyLoading || !apiKeyInput.trim()}
+                      >
+                        {apiKeyLoading ? 'Authenticating...' : 'Login with API Key'}
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

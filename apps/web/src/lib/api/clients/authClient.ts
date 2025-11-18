@@ -53,6 +53,23 @@ export interface ChangePasswordRequest {
  */
 export function createAuthClient({ httpClient }: CreateAuthClientParams) {
   return {
+    // ========== API Key Authentication ==========
+
+    /**
+     * Login with API key (sets secure httpOnly cookie)
+     * This provides XSS protection for browser-based API key authentication.
+     */
+    async loginWithApiKey(apiKey: string): Promise<{ user: any; message: string }> {
+      return httpClient.post('/api/v1/auth/apikey/login', { apiKey });
+    },
+
+    /**
+     * Logout API key authentication (removes httpOnly cookie)
+     */
+    async logoutApiKey(): Promise<{ ok: boolean; message: string }> {
+      return httpClient.post('/api/v1/auth/apikey/logout', {});
+    },
+
     // ========== Session Management ==========
 
     /**

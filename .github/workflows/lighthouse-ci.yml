@@ -132,7 +132,7 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           name: nextjs-build-${{ github.sha }}
-          path: apps/web/
+          path: .
 
       - name: Run Lighthouse Performance Tests (Playwright)
         run: pnpm test:e2e e2e/performance.spec.ts
@@ -199,7 +199,7 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           name: nextjs-build-${{ github.sha }}
-          path: apps/web/
+          path: .
 
       - name: Run Lighthouse CI
         run: |

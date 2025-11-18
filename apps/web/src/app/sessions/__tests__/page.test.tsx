@@ -531,8 +531,9 @@ describe('ActiveSessionsPage', () => {
 
       render(<ActiveSessionsPage />);
 
+      // categorizeError() transforms unknown errors into generic message
       await waitFor(() => {
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
+        expect(screen.getByText('An unexpected error occurred. Please try again.')).toBeInTheDocument();
       });
     });
 
@@ -553,8 +554,9 @@ describe('ActiveSessionsPage', () => {
         const pauseButton = within(session1Row).getByRole('button', { name: /pause/i });
         await user.click(pauseButton);
 
+        // categorizeError() transforms unknown errors into generic message
         await waitFor(() => {
-          expect(screen.getByText('Failed to pause session')).toBeInTheDocument();
+          expect(screen.getByText('An unexpected error occurred. Please try again.')).toBeInTheDocument();
         });
       }
     });

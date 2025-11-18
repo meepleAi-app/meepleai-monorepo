@@ -20,7 +20,7 @@ export type SessionStatusResponse = z.infer<typeof SessionStatusResponseSchema>;
 export const UserSessionInfoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
-  email: z.string().email(),
+  userEmail: z.string().email(), // Backend uses UserEmail, not Email (see AuthContracts.SessionInfo)
   createdAt: z.string().datetime(),
   expiresAt: z.string().datetime(),
   lastSeenAt: z.string().datetime().nullable(),

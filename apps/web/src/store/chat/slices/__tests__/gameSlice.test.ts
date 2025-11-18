@@ -23,6 +23,7 @@ import { Game, Agent } from '@/types';
 jest.mock('@/lib/api');
 
 import { api } from '@/lib/api';
+import { createMockAgent } from '@/__tests__/fixtures/common-fixtures';
 
 const mockApi = api as jest.Mocked<typeof api>;
 
@@ -152,32 +153,8 @@ describe('gameSlice', () => {
   describe('setAgents', () => {
     it('should set agents to provided array', () => {
       const mockAgents: Agent[] = [
-        {
-          id: 'agent-1',
-          name: 'Chess Master',
-          type: 'expert',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-01',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
-        {
-          id: 'agent-2',
-          name: 'Feedback Helper',
-          type: 'feedback',
-          strategyName: 'FeedbackStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-02',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'expert', createdAt: '2024-01-01' }),
+        createMockAgent({ id: 'agent-2', name: 'Feedback Helper', type: 'feedback', createdAt: '2024-01-02' }),
       ];
 
       store.getState().setAgents(mockAgents);
@@ -187,34 +164,10 @@ describe('gameSlice', () => {
 
     it('should replace existing agents', () => {
       const initialAgents: Agent[] = [
-        {
-          id: 'agent-1',
-          name: 'Chess Master',
-          type: 'expert',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-01',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'expert', createdAt: '2024-01-01' }),
       ];
       const newAgents: Agent[] = [
-        {
-          id: 'agent-2',
-          name: 'Agricola Helper',
-          type: 'general',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-02',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-2', name: 'Agricola Helper', type: 'general', createdAt: '2024-01-02' }),
       ];
 
       store.getState().setAgents(initialAgents);
@@ -226,19 +179,7 @@ describe('gameSlice', () => {
 
     it('should handle empty array', () => {
       const mockAgents: Agent[] = [
-        {
-          id: 'agent-1',
-          name: 'Chess Master',
-          type: 'expert',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-01',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'expert', createdAt: '2024-01-01' }),
       ];
 
       store.getState().setAgents(mockAgents);
@@ -375,32 +316,8 @@ describe('gameSlice', () => {
   describe('loadAgents', () => {
     it('should load agents successfully from API using agentsClient', async () => {
       const mockAgents: Agent[] = [
-        {
-          id: 'agent-1',
-          name: 'Chess Master',
-          type: 'expert',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-01',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
-        {
-          id: 'agent-2',
-          name: 'Feedback Helper',
-          type: 'feedback',
-          strategyName: 'FeedbackStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-02',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'expert', createdAt: '2024-01-01' }),
+        createMockAgent({ id: 'agent-2', name: 'Feedback Helper', type: 'feedback', createdAt: '2024-01-02' }),
       ];
 
       // Mock api.agents.getAvailable() for Issue #868
@@ -417,19 +334,7 @@ describe('gameSlice', () => {
 
     it('should set loading state to true before API call', async () => {
       const mockAgents: Agent[] = [
-        {
-          id: 'agent-1',
-          name: 'Chess Master',
-          type: 'expert',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-01',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'expert', createdAt: '2024-01-01' }),
       ];
 
       let loadingDuringCall = false;
@@ -448,19 +353,7 @@ describe('gameSlice', () => {
 
     it('should set loading state to false after successful API call', async () => {
       const mockAgents: Agent[] = [
-        {
-          id: 'agent-1',
-          name: 'Chess Master',
-          type: 'expert',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-01',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'expert', createdAt: '2024-01-01' }),
       ];
 
       mockApi.agents = {
@@ -474,19 +367,7 @@ describe('gameSlice', () => {
 
     it('should clear previous error on successful load', async () => {
       const mockAgents: Agent[] = [
-        {
-          id: 'agent-1',
-          name: 'Chess Master',
-          type: 'expert',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-01',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'expert', createdAt: '2024-01-01' }),
       ];
 
       // Set initial error
@@ -551,19 +432,7 @@ describe('gameSlice', () => {
     it('should reset agents to empty array on error', async () => {
       // Set initial agents
       const initialAgents: Agent[] = [
-        {
-          id: 'agent-1',
-          name: 'Chess Master',
-          type: 'expert',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-01',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'expert', createdAt: '2024-01-01' }),
       ];
       store.getState().setAgents(initialAgents);
 
@@ -578,47 +447,11 @@ describe('gameSlice', () => {
     });
 
     it('should load global agents (not tied to specific games)', async () => {
-      // Issue #868: Agents are global
+      // Issue #868: Agents are global, so they can be from different games
       const globalAgents: Agent[] = [
-        {
-          id: 'agent-1',
-          name: 'Chess Master',
-          type: 'expert',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-01',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
-        {
-          id: 'agent-2',
-          name: 'Agricola Helper',
-          type: 'general',
-          strategyName: 'RagStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-02',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
-        {
-          id: 'agent-3',
-          name: 'Chess Beginner',
-          type: 'qa',
-          strategyName: 'QaStrategy',
-          strategyParameters: {},
-          isActive: true,
-          createdAt: '2024-01-03',
-          lastInvokedAt: null,
-          invocationCount: 0,
-          isRecentlyUsed: false,
-          isIdle: true,
-        },
+        createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'expert', createdAt: '2024-01-01' }),
+        createMockAgent({ id: 'agent-2', name: 'Agricola Helper', type: 'general', createdAt: '2024-01-02' }),
+        createMockAgent({ id: 'agent-3', name: 'Chess Beginner', type: 'qa', createdAt: '2024-01-03' }),
       ];
 
       mockApi.agents = {

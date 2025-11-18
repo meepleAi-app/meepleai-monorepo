@@ -74,19 +74,17 @@ describe('Chat Test Utilities', () => {
         });
       });
 
-      it('should create two mock agents for same game', () => {
+      it('should create two mock agents (Issue #868: global agents)', () => {
         const testData = createChatTestData();
 
         expect(testData.mockAgents).toHaveLength(2);
         expect(testData.mockAgents[0]).toMatchObject({
           id: 'agent-1',
-          gameId: 'game-1',
           name: 'Chess Expert',
           type: 'qa',
         });
         expect(testData.mockAgents[1]).toMatchObject({
           id: 'agent-2',
-          gameId: 'game-1',
           name: 'Chess Helper',
           type: 'qa',
         });
@@ -487,12 +485,15 @@ describe('Chat Test Utilities', () => {
         });
       });
 
-      it('should handle agent name override', () => {
+      it('should create agent with overridden properties (Issue #868: agents are global)', () => {
         const env = setupFullChatEnvironment({
+          game: { id: 'game-2', name: 'Catan' },
           agent: { name: 'Catan Helper' },
         });
 
+        // Issue #868: Agents no longer have gameId (they're global)
         expect(env.agent.name).toBe('Catan Helper');
+        expect(env.agent.type).toBe('qa'); // Default type
       });
 
       it('should handle agent type override', () => {

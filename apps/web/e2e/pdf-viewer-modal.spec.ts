@@ -437,9 +437,9 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
     });
 
     test('has proper ARIA labels for zoom controls', async ({ page }) => {
-      await expect(page.getByLabelText('Zoom in')).toBeVisible();
-      await expect(page.getByLabelText('Zoom out')).toBeVisible();
-      await expect(page.getByLabelText('Zoom 100%')).toBeVisible();
+      await expect(page.getByLabel('Zoom in')).toBeVisible();
+      await expect(page.getByLabel('Zoom out')).toBeVisible();
+      await expect(page.getByLabel('Zoom 100%')).toBeVisible();
     });
 
     test('citation card has button role when clickable', async ({ page }) => {

@@ -110,6 +110,7 @@ public class MoveValidationDomainService
         CancellationToken cancellationToken)
     {
         var query = _dbContext.RuleSpecs
+            .Include(r => r.Atoms)
             .Where(r => r.GameId == gameId);
 
         if (!string.IsNullOrWhiteSpace(version))
@@ -126,9 +127,17 @@ public class MoveValidationDomainService
             return null;
         }
 
-        // Convert entity to domain model
-        var rules = System.Text.Json.JsonSerializer.Deserialize<List<RuleAtom>>(
-            ruleSpecEntity.RulesJson ?? "[]") ?? new List<RuleAtom>();
+        // Convert entity to domain model - map from RuleAtomEntity collection
+        var rules = ruleSpecEntity.Atoms
+            .OrderBy(a => a.SortOrder)
+            .Select(a => new RuleAtom(
+                id: a.Key,
+                text: a.Text,
+                section: a.Section,
+                page: a.PageNumber?.ToString(),
+                line: a.LineNumber?.ToString()
+            ))
+            .ToList();
 
         return new RuleSpec(
             ruleSpecEntity.GameId.ToString(),

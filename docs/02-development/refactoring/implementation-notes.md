@@ -186,7 +186,7 @@ services:
     },
     "Ollama": {
       "Enabled": true,
-      "BaseUrl": "http://ollama:11434",
+      "BaseUrl": "http://meepleai-ollama:11434",
       "Models": {
         "Primary": "mistral:7b-instruct-v0.3-q4_K_M",
         "Validation": "llama3.1:8b-instruct-q4_K_M",
@@ -515,7 +515,7 @@ BoundedContexts/KnowledgeBase/
 OPENROUTER_API_KEY=<get from https://openrouter.ai>
 
 # Ollama (if running locally for free fallback)
-OLLAMA_BASE_URL=http://ollama:11434
+OLLAMA_BASE_URL=http://meepleai-ollama:11434
 
 # Feature Flags (ConfigurationService)
 FEATURES_MULTI_MODEL_VALIDATION=true

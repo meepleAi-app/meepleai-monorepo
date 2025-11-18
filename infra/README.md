@@ -341,11 +341,11 @@ Contains templates for:
 docker compose logs -f
 
 # Specific service
-docker compose logs -f api
-docker compose logs -f web
+docker compose logs -f meepleai-api
+docker compose logs -f meepleai-web
 
 # Last 100 lines
-docker compose logs --tail=100 api
+docker compose logs --tail=100 meepleai-api
 ```
 
 ### Restart Services
@@ -355,8 +355,8 @@ docker compose logs --tail=100 api
 docker compose restart
 
 # Specific service
-docker compose restart api
-docker compose restart postgres
+docker compose restart meepleai-api
+docker compose restart meepleai-postgres
 ```
 
 ### Stop Stack
@@ -373,10 +373,10 @@ docker compose down -v
 
 ```bash
 # Scale API to 3 replicas
-docker compose up -d --scale api=3
+docker compose up -d --scale meepleai-api=3
 
 # Scale web to 2 replicas
-docker compose up -d --scale web=2
+docker compose up -d --scale meepleai-web=2
 ```
 
 ### Update Images
@@ -430,20 +430,20 @@ docker network inspect infra_default
 
 ```bash
 # Check PostgreSQL logs
-docker compose logs postgres
+docker compose logs meepleai-postgres
 
 # Connect to database
-docker compose exec postgres psql -U meeple -d meepleai
+docker compose exec meepleai-postgres psql -U meeple -d meepleai
 
 # Check connections
-docker compose exec postgres psql -U meeple -c "SELECT * FROM pg_stat_activity;"
+docker compose exec meepleai-postgres psql -U meeple -c "SELECT * FROM pg_stat_activity;"
 ```
 
 ### Qdrant Issues
 
 ```bash
 # Check Qdrant logs
-docker compose logs qdrant
+docker compose logs meepleai-qdrant
 
 # Check collections
 curl http://localhost:6333/collections
@@ -456,13 +456,13 @@ curl http://localhost:6333/cluster
 
 ```bash
 # Connect to Redis CLI
-docker compose exec redis redis-cli
+docker compose exec meepleai-redis meepleai-redis-cli
 
 # Check memory usage
-docker compose exec redis redis-cli INFO memory
+docker compose exec meepleai-redis meepleai-redis-cli INFO memory
 
 # Monitor commands
-docker compose exec redis redis-cli MONITOR
+docker compose exec meepleai-redis meepleai-redis-cli MONITOR
 ```
 
 ### Prometheus/Grafana Issues
@@ -472,13 +472,13 @@ docker compose exec redis redis-cli MONITOR
 curl http://localhost:9090/api/v1/targets | jq
 
 # Check Prometheus config
-docker compose exec prometheus promtool check config /etc/prometheus/prometheus.yml
+docker compose exec meepleai-prometheus promtool check config /etc/meepleai-prometheus/meepleai-prometheus.yml
 
 # Reload Prometheus config
 curl -X POST http://localhost:9090/-/reload
 
 # Check Grafana logs
-docker compose logs grafana
+docker compose logs meepleai-grafana
 ```
 
 ---

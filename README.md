@@ -120,7 +120,7 @@ apps/api/src/Api/BoundedContexts/
 3. **Start infrastructure services**
    ```bash
    cd infra
-   docker compose up -d postgres qdrant redis n8n
+   docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redis meepleai-n8n
    ```
 
 4. **Run the API**
@@ -254,10 +254,10 @@ pnpm typecheck
 docker compose up -d
 
 # View logs
-docker compose logs -f api
+docker compose logs -f meepleai-api
 
 # Restart service
-docker compose restart api
+docker compose restart meepleai-api
 
 # Stop all services
 docker compose down
@@ -284,8 +284,8 @@ cp infra/env/n8n.env.dev.example infra/env/n8n.env.dev
 
 **Required Configuration**:
 - `OPENROUTER_API_KEY` - OpenRouter API key for embeddings/LLM
-- `QDRANT_URL` - Qdrant endpoint (default: http://qdrant:6333)
-- `REDIS_URL` - Redis endpoint (default: redis:6379)
+- `QDRANT_URL` - Qdrant endpoint (default: http://meepleai-qdrant:6333)
+- `REDIS_URL` - Redis endpoint (default: meepleai-redis:6379)
 - `ConnectionStrings__Postgres` - **REQUIRED** PostgreSQL connection string (application will fail to start if not configured)
   ```bash
   # Example

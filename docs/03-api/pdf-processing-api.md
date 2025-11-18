@@ -875,11 +875,11 @@ echo "Batch upload complete!"
 curl http://localhost:8001/health
 
 # Check Docker container
-docker compose ps unstructured-service
-docker compose logs unstructured-service --tail=50
+docker compose ps meepleai-unstructured
+docker compose logs meepleai-unstructured --tail=50
 
 # Restart if needed
-docker compose restart unstructured-service
+docker compose restart meepleai-unstructured
 ```
 
 **Root Causes**:

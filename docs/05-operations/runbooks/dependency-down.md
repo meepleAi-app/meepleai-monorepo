@@ -109,17 +109,17 @@ Look for:
 
 **PostgreSQL**:
 ```bash
-docker compose logs postgres --tail 100
+docker compose logs meepleai-postgres --tail 100
 ```
 
 **Redis**:
 ```bash
-docker compose logs redis --tail 100
+docker compose logs meepleai-redis --tail 100
 ```
 
 **Qdrant**:
 ```bash
-docker compose logs qdrant --tail 100
+docker compose logs meepleai-qdrant --tail 100
 ```
 
 **Look for**:
@@ -132,7 +132,7 @@ docker compose logs qdrant --tail 100
 ### 4. Check API Logs (1 minute)
 
 ```bash
-docker compose logs api --tail 100 | grep -i "postgres\|redis\|qdrant"
+docker compose logs meepleai-api --tail 100 | grep -i "meepleai-postgres\|meepleai-redis\|meepleai-qdrant"
 ```
 
 **Look for**:
@@ -145,21 +145,21 @@ docker compose logs api --tail 100 | grep -i "postgres\|redis\|qdrant"
 **PostgreSQL**:
 ```bash
 # Test connection
-docker compose exec postgres psql -U meeple -d meepleai -c "SELECT 1;"
+docker compose exec meepleai-postgres psql -U meeple -d meepleai -c "SELECT 1;"
 # Should return: 1
 
 # Check database exists
-docker compose exec postgres psql -U meeple -l
+docker compose exec meepleai-postgres psql -U meeple -l
 ```
 
 **Redis**:
 ```bash
 # Test connection
-docker compose exec redis redis-cli ping
+docker compose exec meepleai-redis meepleai-redis-cli ping
 # Should return: PONG
 
 # Check memory usage
-docker compose exec redis redis-cli info memory | grep used_memory_human
+docker compose exec meepleai-redis meepleai-redis-cli info memory | grep used_memory_human
 ```
 
 **Qdrant**:
@@ -185,7 +185,7 @@ curl http://localhost:6333/collections
 ```bash
 # Option A: Restart container
 docker compose restart <service>
-# Example: docker compose restart postgres
+# Example: docker compose restart meepleai-postgres
 
 # Wait 30 seconds for health check
 docker compose ps
@@ -312,9 +312,9 @@ docker network ls
 docker network inspect meepleai
 
 # Test connectivity from API container
-docker compose exec api ping postgres
-docker compose exec api nc -zv redis 6379
-docker compose exec api nc -zv qdrant 6333
+docker compose exec meepleai-api ping meepleai-postgres
+docker compose exec meepleai-api nc -zv meepleai-redis 6379
+docker compose exec meepleai-api nc -zv meepleai-qdrant 6333
 ```
 
 **Fix**:
@@ -345,7 +345,7 @@ sudo iptables -L -n | grep DOCKER
 **Fix - PostgreSQL**:
 ```bash
 # Option A: Try auto-recovery
-docker compose restart postgres
+docker compose restart meepleai-postgres
 # PostgreSQL has built-in recovery
 
 # Option B: Restore from backup
@@ -354,12 +354,12 @@ docker compose down
 docker volume rm meepleai_pgdata
 docker volume create meepleai_pgdata
 # Copy backup data to volume
-docker compose up -d postgres
+docker compose up -d meepleai-postgres
 
 # Option C: Rebuild database
 # DESTRUCTIVE: Lose all data
 docker compose down -v  # Deletes volumes
-docker compose up -d postgres
+docker compose up -d meepleai-postgres
 # Run migrations
 cd apps/api/src/Api
 dotnet ef database update
@@ -371,23 +371,23 @@ dotnet ef database update
 docker compose down
 docker volume inspect meepleai_redisdata
 # Find mountpoint, delete dump.rdb
-docker compose up -d redis
+docker compose up -d meepleai-redis
 
 # Option B: Recreate volume
 docker compose down
 docker volume rm meepleai_redisdata
-docker compose up -d redis
+docker compose up -d meepleai-redis
 # Cache will rebuild automatically
 ```
 
 **Fix - Qdrant**:
 ```bash
 # Option A: Restart and let Qdrant recover
-docker compose restart qdrant
+docker compose restart meepleai-qdrant
 
 # Option B: Recreate collection
 # Log into Qdrant container
-docker compose exec qdrant sh
+docker compose exec meepleai-qdrant sh
 # Delete corrupted collection
 curl -X DELETE http://localhost:6333/collections/<collection_name>
 # Re-index documents from API
@@ -586,7 +586,7 @@ Escalate if:
 1. **PostgreSQL backups**:
    ```bash
    # Daily backup script
-   docker compose exec postgres pg_dump -U meeple meepleai > backup_$(date +%Y%m%d).sql
+   docker compose exec meepleai-postgres pg_dump -U meeple meepleai > backup_$(date +%Y%m%d).sql
 
    # Or use continuous archiving (WAL archiving)
    ```
@@ -609,7 +609,7 @@ Escalate if:
 
 ```bash
 # Stop service
-docker compose stop postgres
+docker compose stop meepleai-postgres
 
 # Wait for alert (should fire within 1-2 minutes)
 # Follow runbook steps to investigate
@@ -618,7 +618,7 @@ docker compose stop postgres
 curl http://localhost:9093
 
 # Restart service
-docker compose start postgres
+docker compose start meepleai-postgres
 
 # Verify recovery
 curl http://localhost:8080/health/ready
@@ -627,17 +627,17 @@ curl http://localhost:8080/health/ready
 ### Simulate Redis Down
 
 ```bash
-docker compose stop redis
+docker compose stop meepleai-redis
 # Follow investigation steps
-docker compose start redis
+docker compose start meepleai-redis
 ```
 
 ### Simulate Qdrant Down
 
 ```bash
-docker compose stop qdrant
+docker compose stop meepleai-qdrant
 # Follow investigation steps
-docker compose start qdrant
+docker compose start meepleai-qdrant
 ```
 
 ## Post-Incident
@@ -674,3 +674,4 @@ docker compose start qdrant
 ## Changelog
 
 - **2025-10-16**: Initial version
+

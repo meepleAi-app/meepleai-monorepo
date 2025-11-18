@@ -2,7 +2,7 @@
 # Production-like environment for pre-release testing
 
 services:
-  postgres:
+  meepleai-postgres:
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
@@ -15,21 +15,21 @@ services:
       timeout: 5s
       retries: 10
 
-  redis:
+  meepleai-redis:
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redisdata-staging:/data
 
-  qdrant:
+  meepleai-qdrant:
     restart: unless-stopped
     volumes:
       - qdrantdata-staging:/qdrant/storage
 
-  api:
+  meepleai-api:
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
-      ConnectionStrings__Postgres: "Host=postgres;Database=meepleai_staging;Username=meepleai;Password_File=/run/secrets/postgres-password"
+      ConnectionStrings__Postgres: "Host=meepleai-postgres;Database=meepleai_staging;Username=meepleai;Password_File=/run/secrets/postgres-password"
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -37,7 +37,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  web:
+  meepleai-web:
     environment:
       NODE_ENV: staging
       NEXT_PUBLIC_API_BASE: ${STAGING_API_URL}
@@ -49,10 +49,10 @@ services:
         max-file: "3"
 
   # Full observability stack enabled
-  grafana:
+  meepleai-grafana:
     restart: unless-stopped
 
-  prometheus:
+  meepleai-prometheus:
     restart: unless-stopped
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -62,10 +62,10 @@ services:
     volumes:
       - prometheus-staging:/prometheus
 
-  jaeger:
+  meepleai-jaeger:
     restart: unless-stopped
 
-  seq:
+  meepleai-seq:
     restart: unless-stopped
     environment:
       - ACCEPT_EULA=Y
@@ -73,7 +73,7 @@ services:
     volumes:
       - seqdata-staging:/data
 
-  alertmanager:
+  meepleai-alertmanager:
     restart: unless-stopped
 
 volumes:
@@ -83,3 +83,5 @@ volumes:
   redisdata-staging:
   seqdata-staging:
   prometheus-staging:
+
+

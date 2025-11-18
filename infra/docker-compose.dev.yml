@@ -11,7 +11,7 @@ services:
   # ============================================================================
   # Infrastructure Services (from docker-compose.yml)
   # ============================================================================
-  postgres:
+  meepleai-postgres:
     image: postgres:16.4-alpine3.20
     restart: unless-stopped
     environment:
@@ -31,7 +31,7 @@ services:
     networks:
       - meepleai
 
-  qdrant:
+  meepleai-qdrant:
     image: qdrant/qdrant:v1.12.4
     restart: unless-stopped
     ports:
@@ -48,7 +48,7 @@ services:
     networks:
       - meepleai
 
-  redis:
+  meepleai-redis:
     image: redis:7.4.1-alpine3.20
     restart: unless-stopped
     ports:
@@ -61,7 +61,7 @@ services:
     networks:
       - meepleai
 
-  ollama:
+  meepleai-ollama:
     image: ollama/ollama:latest
     restart: unless-stopped
     ports:
@@ -77,23 +77,31 @@ services:
     networks:
       - meepleai
 
-  ollama-pull:
+  meepleai-ollama-pull:
     image: curlimages/curl:latest
-    container_name: ollama-pull
+    container_name: meepleai-ollama-pull
     depends_on:
-      ollama:
+      meepleai-ollama:
         condition: service_healthy
     restart: "no"
     command: >
       sh -c '
         echo "Pulling nomic-embed-text model..." &&
-        curl -X POST http://ollama:11434/api/pull -d "{\"name\":\"nomic-embed-text\"}" &&
-        echo "Model pull initiated!"
+        for attempt in 1 2 3 4 5; do
+          if curl -sS -X POST http://meepleai-ollama:11434/api/pull -d "{\"name\":\"nomic-embed-text\"}"; then
+            echo "Model pull initiated!" &&
+            exit 0
+          fi
+          echo "Attempt ${attempt} failed, retrying in 10s..." &&
+          sleep 10
+        done &&
+        echo "Failed to pull nomic-embed-text after 5 attempts" >&2 &&
+        exit 1
       '
     networks:
       - meepleai
 
-  embedding-service:
+  meepleai-embedding:
     build:
       context: ../apps/embedding-service
       dockerfile: ./Dockerfile
@@ -110,7 +118,7 @@ services:
       - meepleai
 
   # BGAI-001-v2: Unstructured PDF extraction service (Stage 1)
-  unstructured-service:
+  meepleai-unstructured:
     build:
       context: ../apps/unstructured-service
       dockerfile: ./Dockerfile
@@ -142,7 +150,7 @@ services:
       - meepleai
 
   # BGAI-005: SmolDocling VLM service (Stage 2 - complex layouts fallback)
-  smoldocling-service:
+  meepleai-smoldocling:
     build:
       context: ../apps/smoldocling-service
       dockerfile: ./Dockerfile
@@ -178,7 +186,7 @@ services:
     networks:
       - meepleai
 
-  seq:
+  meepleai-seq:
     image: datalust/seq:2025.1
     restart: unless-stopped
     environment:
@@ -191,7 +199,7 @@ services:
     networks:
       - meepleai
 
-  jaeger:
+  meepleai-jaeger:
     image: jaegertracing/all-in-one:1.74.0
     restart: unless-stopped
     environment:
@@ -211,7 +219,7 @@ services:
     networks:
       - meepleai
 
-  prometheus:
+  meepleai-prometheus:
     image: prom/prometheus:v3.7.0
     restart: unless-stopped
     command:
@@ -233,7 +241,7 @@ services:
     networks:
       - meepleai
 
-  alertmanager:
+  meepleai-alertmanager:
     image: prom/alertmanager:v0.27.0
     restart: unless-stopped
     command:
@@ -255,7 +263,7 @@ services:
     networks:
       - meepleai
 
-  grafana:
+  meepleai-grafana:
     image: grafana/grafana:11.4.0
     restart: unless-stopped
     environment:
@@ -271,8 +279,8 @@ services:
     ports:
       - "3001:3000"
     depends_on:
-      - prometheus
-      - jaeger
+      - meepleai-prometheus
+      - meepleai-jaeger
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
       interval: 10s
@@ -282,7 +290,7 @@ services:
     networks:
       - meepleai
 
-  n8n:
+  meepleai-n8n:
     image: n8nio/n8n:1.114.4
     restart: unless-stopped
     env_file:
@@ -290,7 +298,7 @@ services:
     ports:
       - "5678:5678"
     depends_on:
-      postgres:
+      meepleai-postgres:
         condition: service_healthy
     networks:
       - meepleai
@@ -298,7 +306,7 @@ services:
   # ============================================================================
   # Application Services
   # ============================================================================
-  api:
+  meepleai-api:
     build:
       context: ../apps/api
       dockerfile: ./src/Api/Dockerfile
@@ -308,13 +316,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD:-meeplepass}
-      QDRANT_URL: http://qdrant:6333
-      REDIS_URL: redis:6379
-      OLLAMA_URL: http://ollama:11434
+      ConnectionStrings__Postgres: Host=meepleai-postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD:-meeplepass}
+      QDRANT_URL: http://meepleai-qdrant:6333
+      REDIS_URL: meepleai-redis:6379
+      OLLAMA_URL: http://meepleai-ollama:11434
       EMBEDDING_PROVIDER: ollama
       EMBEDDING_MODEL: nomic-embed-text
-      LOCAL_EMBEDDING_URL: http://embedding-service:8000
+      LOCAL_EMBEDDING_URL: http://meepleai-embedding:8000
       EMBEDDING_FALLBACK_ENABLED: "true"
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
@@ -322,13 +330,13 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      postgres:
+      meepleai-postgres:
         condition: service_healthy
-      qdrant:
+      meepleai-qdrant:
         condition: service_started
-      redis:
+      meepleai-redis:
         condition: service_healthy
-      ollama:
+      meepleai-ollama:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl --fail http://localhost:8080/ || exit 1"]
@@ -339,7 +347,7 @@ services:
     networks:
       - meepleai
 
-  web:
+  meepleai-web:
     build:
       context: ../apps/web
       dockerfile: ./Dockerfile
@@ -349,7 +357,7 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      api:
+      meepleai-api:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
@@ -410,7 +418,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      N8N_BASE_URL: ${N8N_BASE_URL:-http://n8n:5678}
+      N8N_BASE_URL: ${N8N_BASE_URL:-http://meepleai-n8n:5678}
       N8N_API_KEY: ${N8N_API_KEY:-}
     stdin_open: true
     tty: true
@@ -594,7 +602,7 @@ services:
     container_name: mcp-knowledge-graph
     restart: unless-stopped
     environment:
-      KG_QDRANT_URL: http://qdrant:6333
+      KG_QDRANT_URL: http://meepleai-qdrant:6333
       KG_COLLECTION: knowledge_graph
     stdin_open: true
     tty: true
@@ -644,3 +652,10 @@ volumes:
 networks:
   meepleai:
     driver: bridge
+
+
+
+
+
+
+

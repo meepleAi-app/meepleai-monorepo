@@ -14,7 +14,7 @@ global:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['alertmanager:9093']
+        - targets: ['meepleai-alertmanager:9093']
       timeout: 10s
       api_version: v2
 
@@ -37,7 +37,7 @@ scrape_configs:
     scrape_interval: 10s  # More frequent scraping for API metrics
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['api:8080']
+      - targets: ['meepleai-api:8080']
         labels:
           service: 'meepleai-api'
           component: 'backend'
@@ -45,7 +45,7 @@ scrape_configs:
   # Scrape Jaeger metrics (optional - Jaeger exposes Prometheus metrics)
   - job_name: 'jaeger'
     static_configs:
-      - targets: ['jaeger:14269']
+      - targets: ['meepleai-jaeger:14269']
         labels:
           service: 'jaeger'
           component: 'tracing'
@@ -53,7 +53,7 @@ scrape_configs:
   # Scrape Grafana metrics (optional)
   - job_name: 'grafana'
     static_configs:
-      - targets: ['grafana:3000']
+      - targets: ['meepleai-grafana:3000']
         labels:
           service: 'grafana'
           component: 'visualization'
@@ -61,7 +61,7 @@ scrape_configs:
   # OPS-05: Scrape Alertmanager metrics
   - job_name: 'alertmanager'
     static_configs:
-      - targets: ['alertmanager:9093']
+      - targets: ['meepleai-alertmanager:9093']
         labels:
           service: 'alertmanager'
           component: 'alerting'

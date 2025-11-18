@@ -578,13 +578,13 @@ PASS: ☐ Configuration management funzionante
    - Qdrant: Healthy ✓
    - Overall: Healthy ✓
 
-3. Simula problema: docker compose stop redis
+3. Simula problema: docker compose stop meepleai-redis
 4. Refresh /admin/health
 5. ✅ VERIFICA:
    - Redis: Unhealthy ✗
    - Overall: Degraded ⚠️
 
-6. Riavvia: docker compose start redis
+6. Riavvia: docker compose start meepleai-redis
 7. Refresh → ✅ VERIFICA: Tutto Healthy
 
 8. Naviga a /admin/stats
@@ -987,14 +987,14 @@ PASS: ☐ Disconnessione gestita gracefully
 #### Scenario 1.3: Timeout Streaming
 ```
 1. Simula risposta lenta:
-   - Ferma servizio Qdrant: docker compose stop qdrant
+   - Ferma servizio meepleai-qdrant: docker compose stop meepleai-qdrant
 2. Apri chat, invia domanda: "Test timeout"
 3. ✅ VERIFICA:
    - Dopo max 30 secondi: messaggio di timeout
    - NO connessione appesa indefinitamente
    - Errore user-friendly (non stack trace)
 
-4. Riavvia Qdrant: docker compose start qdrant
+4. Riavvia meepleai-qdrant: docker compose start meepleai-qdrant
 5. Retry domanda
 6. ✅ VERIFICA:
    - Sistema si riprende automaticamente
@@ -1636,3 +1636,4 @@ Date: [Data]
 **Versione**: 1.0
 **Prossimo Update**: Dopo Checkpoint 1
 **Owner**: QA Team
+

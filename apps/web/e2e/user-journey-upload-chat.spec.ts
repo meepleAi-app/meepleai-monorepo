@@ -13,7 +13,7 @@ import { test, expect } from '@playwright/test';
  *
  * Prerequisites:
  * - Backend API running: cd apps/api/src/Api && dotnet run
- * - Required services: cd infra && docker compose up postgres qdrant redis
+ * - Required services: cd infra && docker compose up meepleai-postgres meepleai-qdrant meepleai-redis
  * - Frontend dev server: cd apps/web && pnpm dev
  * - PDF file exists: data/Test-EN-LIBELLUD_HARMONIES_RULES_EN.pdf
  * - Demo user exists in DB: user@meepleai.dev / Demo123!

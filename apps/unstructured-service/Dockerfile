@@ -27,6 +27,10 @@ ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download required NLTK datasets to avoid runtime races
+ENV NLTK_DATA=/root/nltk_data
+RUN python -m nltk.downloader punkt punkt_tab averaged_perceptron_tagger
+
 # Copy application code
 COPY src/ ./src/
 

@@ -229,10 +229,10 @@ nano api.env.dev  # oppure code api.env.dev per VS Code
 
 **Configurazione `api.env.dev`** (parametri principali):
 
-> **⚠️ IMPORTANTE**: Se esegui l'API in Docker Compose, sostituisci `localhost` con i nomi dei servizi Docker:
+> **⚠️ IMPORTANTE**: Se esegui l'meepleai-api in Docker Compose, sostituisci `localhost` con i nomi dei servizi Docker:
 > - `localhost` → `postgres` (database)
-> - `localhost:6333` → `http://qdrant:6333` (vector DB)
-> - `localhost:6379` → `redis:6379` (cache)
+> - `localhost:6333` → `http://meepleai-qdrant:6333` (vector DB)
+> - `localhost:6379` → `meepleai-redis:6379` (cache)
 > - `localhost:8081` → `http://seq:5341` (logging - porta ingestion)
 > - `localhost:8001` → `http://unstructured:8001` (PDF processing)
 > - `localhost:8002` → `http://smoldocling:8002` (PDF processing)
@@ -241,14 +241,14 @@ nano api.env.dev  # oppure code api.env.dev per VS Code
 # ============================================
 # DATABASE
 # ============================================
-# Se API in Docker: Host=postgres
+# Se API in Docker: Host=meepleai-postgres
 # Se API fuori Docker: Host=localhost
 CONNECTIONSTRINGS__POSTGRES=Host=localhost;Port=5432;Database=meepleai;Username=meepleai_user;Password=meepleai_dev_password
 
 # ============================================
 # SERVIZI ESTERNI
 # ============================================
-# Se API in Docker: http://qdrant:6333 e redis:6379
+# Se API in Docker: http://meepleai-qdrant:6333 e meepleai-redis:6379
 # Se API fuori Docker: http://localhost:6333 e localhost:6379
 QDRANT_URL=http://localhost:6333
 REDIS_URL=localhost:6379
@@ -393,7 +393,7 @@ Per sviluppo leggero, avvia solo i servizi essenziali:
 cd infra
 
 # Avvia solo i servizi core
-docker compose up -d postgres qdrant redis seq
+docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redis meepleai-seq
 
 # Verifica
 docker compose ps
@@ -403,7 +403,7 @@ docker compose ps
 
 ```bash
 # PostgreSQL
-docker compose logs postgres | tail -20
+docker compose logs meepleai-postgres | tail -20
 # Cerca: "database system is ready to accept connections"
 
 # Qdrant
@@ -411,7 +411,7 @@ curl http://localhost:6333/healthz
 # Output atteso: {"title":"healthz","version":"1.x.x"}
 
 # Redis
-docker compose exec redis redis-cli ping
+docker compose exec meepleai-redis meepleai-redis-cli ping
 # Output atteso: PONG
 
 # Seq
@@ -430,10 +430,10 @@ curl http://localhost:11434/api/tags
 ```bash
 # Dalla root
 cd infra
-docker compose up -d api
+docker compose up -d meepleai-api
 
 # Verifica logs
-docker compose logs -f api
+docker compose logs -f meepleai-api
 ```
 
 **Opzione 2: Direttamente con dotnet** (raccomandato per sviluppo):
@@ -819,7 +819,7 @@ git pull origin main
 
 # Avvia servizi core
 cd infra
-docker compose up -d postgres qdrant redis seq
+docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redis meepleai-seq
 
 # Avvia API (in un terminale)
 cd apps/api/src/Api
@@ -931,13 +931,13 @@ Npgsql.NpgsqlException: Connection refused at localhost:5432
 **Soluzione**:
 ```bash
 # Verifica che PostgreSQL sia running
-docker compose ps postgres
+docker compose ps meepleai-postgres
 
 # Se non è running, avvialo
-docker compose up -d postgres
+docker compose up -d meepleai-postgres
 
 # Verifica logs
-docker compose logs postgres
+docker compose logs meepleai-postgres
 
 # Assicurati che la porta 5432 non sia occupata
 lsof -i :5432  # macOS/Linux
@@ -948,13 +948,13 @@ netstat -ano | findstr :5432  # Windows
 
 **Sintomo**:
 ```
-HttpRequestException: No such host is known (qdrant:6333)
+HttpRequestException: No such host is known (meepleai-qdrant:6333)
 ```
 
 **Soluzione**:
 ```bash
 # Avvia Qdrant
-docker compose up -d qdrant
+docker compose up -d meepleai-qdrant
 
 # Verifica health
 curl http://localhost:6333/healthz
@@ -962,7 +962,7 @@ curl http://localhost:6333/healthz
 # Se usi Docker, assicurati che API sia nella stessa rete
 # Modifica api.env.dev:
 QDRANT_URL=http://localhost:6333  # se API gira fuori Docker
-QDRANT_URL=http://qdrant:6333     # se API gira in Docker
+QDRANT_URL=http://meepleai-qdrant:6333     # se API gira in Docker
 ```
 
 #### 3. Frontend non si connette all'API
@@ -1000,9 +1000,9 @@ dotnet ef database update PreviousMigration
 dotnet ef database update
 
 # Opzione 2: Reset database (ATTENZIONE: perdi dati)
-docker compose down postgres
+docker compose down meepleai-postgres
 docker volume rm infra_postgres-data
-docker compose up -d postgres
+docker compose up -d meepleai-postgres
 dotnet ef database update
 ```
 
@@ -1110,7 +1110,7 @@ docker exec -it ollama ollama list
 **Soluzione**:
 ```bash
 # Verifica che Seq sia running
-docker compose ps seq
+docker compose ps meepleai-seq
 
 # Verifica SEQ_URL in api.env.dev
 grep SEQ_URL infra/env/api.env.dev
@@ -1126,11 +1126,11 @@ grep SEQ_URL infra/env/api.env.dev
 ```bash
 # Logs API
 cd infra
-docker compose logs -f api
+docker compose logs -f meepleai-api
 
 # Logs specifico servizio
-docker compose logs -f postgres
-docker compose logs -f qdrant
+docker compose logs -f meepleai-postgres
+docker compose logs -f meepleai-qdrant
 
 # Logs tutte le risorse
 docker compose logs --tail=100
@@ -1305,3 +1305,5 @@ pnpm install
 ---
 
 **Buon Sviluppo! 🎲🤖**
+
+

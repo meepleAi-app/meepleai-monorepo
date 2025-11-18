@@ -17,7 +17,7 @@ try {
 } catch {
     Write-Host "[FAIL] Ollama is not reachable at $OllamaUrl" -ForegroundColor Red
     Write-Host "  Make sure Ollama is running:" -ForegroundColor Gray
-    Write-Host "    - Docker: cd infra && docker compose up ollama" -ForegroundColor Gray
+    Write-Host "    - Docker: cd infra && docker compose up meepleai-ollama" -ForegroundColor Gray
     Write-Host "    - Local: ollama serve" -ForegroundColor Gray
     exit 1
 }

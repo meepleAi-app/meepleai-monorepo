@@ -115,7 +115,7 @@ Response (session token)
 
 ```bash
 # 1. Start infrastructure (from project root)
-cd infra && docker compose up -d postgres qdrant redis
+cd infra && docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redis
 
 # 2. Run API
 cd apps/api/src/Api
@@ -550,7 +550,7 @@ SELECT * FROM "ApiKeys" WHERE "UserId" = 'xxx';
 curl http://localhost:6333/healthz
 
 # Restart Qdrant
-docker compose restart qdrant
+docker compose restart meepleai-qdrant
 
 # Check collections
 curl http://localhost:6333/collections
@@ -568,7 +568,7 @@ docker build -t meepleai-api:latest -f src/Api/Dockerfile .
 
 # Run container
 docker run -p 8080:8080 \
-  -e ConnectionStrings__Postgres="Host=postgres;Database=meepleai;..." \
+  -e ConnectionStrings__Postgres="Host=meepleai-postgres;Database=meepleai;..." \
   -e OPENROUTER_API_KEY="sk-or-***" \
   meepleai-api:latest
 ```
@@ -608,3 +608,4 @@ See [Deployment Guide](../../docs/05-operations/deployment/board-game-ai-deploym
 **Maintainer**: Backend Team
 **Current Phase**: Alpha (DDD 99% complete)
 **Test Coverage**: 90%+
+

@@ -43,7 +43,7 @@ USER node
 
 # Environment variables (will be overridden at runtime)
 ENV NODE_ENV=production \
-    N8N_API_URL=http://n8n:5678/api/v1 \
+    N8N_API_URL=http://meepleai-n8n:5678/api/v1 \
     N8N_API_TIMEOUT=30000
 
 # Health check

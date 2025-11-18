@@ -31,7 +31,7 @@ Server MCP per gestione e automazione workflow n8n.
 Nel file `docker/mcp/.env`:
 
 ```bash
-N8N_API_URL=http://n8n:5678/api/v1
+N8N_API_URL=http://meepleai-n8n:5678/api/v1
 N8N_API_KEY=n8n_api_your_key_here
 N8N_WEBHOOK_URL=http://localhost:5678/webhook
 ```
@@ -88,7 +88,7 @@ Aggiungi al file di configurazione (`claude_desktop_config.json`):
         "meepleai/mcp-n8n:latest"
       ],
       "env": {
-        "N8N_API_URL": "http://n8n:5678/api/v1",
+        "N8N_API_URL": "http://meepleai-n8n:5678/api/v1",
         "N8N_API_KEY": "n8n_api_your_key_here"
       }
     }

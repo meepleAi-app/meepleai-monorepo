@@ -61,13 +61,13 @@ curl http://localhost:8001/health
 ```bash
 # From project root
 cd infra
-docker compose up unstructured-service
+docker compose up meepleai-unstructured
 
 # Check logs
-docker compose logs -f unstructured-service
+docker compose logs -f meepleai-unstructured
 
 # Stop service
-docker compose down unstructured-service
+docker compose down meepleai-unstructured
 ```
 
 ---

@@ -240,7 +240,7 @@ curl http://localhost:8080/health
 - Qdrant service down
 - LLM service timeout
 - Database connection failed
-- Check logs: `docker compose logs api -f`
+- Check logs: `docker compose logs meepleai-api -f`
 
 ---
 
@@ -288,10 +288,10 @@ dotnet ef database update
 docker compose ps
 
 # Start missing services
-docker compose up -d postgres qdrant redis
+docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redis
 
 # Check API logs
-docker compose logs api -f
+docker compose logs meepleai-api -f
 ```
 
 ### Issue: "Search returns empty results"
@@ -415,7 +415,7 @@ Run the collection and verify:
 
 ### If Tests Fail ❌
 1. Review failed test assertion
-2. Check API logs: `docker compose logs api -f`
+2. Check meepleai-api logs: `docker compose logs meepleai-api -f`
 3. Debug handler code
 4. Fix issue
 5. Re-run tests

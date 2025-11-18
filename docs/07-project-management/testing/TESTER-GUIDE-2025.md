@@ -464,7 +464,7 @@ PASS: ☐ Configuration management OK
    - Overall: Healthy ✓
 
 3. Simula problema:
-   docker compose stop redis
+   docker compose stop meepleai-redis
 
 4. Refresh /admin/health
 5. ✅ VERIFICA:
@@ -472,7 +472,7 @@ PASS: ☐ Configuration management OK
    - Overall: Degraded ⚠️
 
 6. Riavvia:
-   docker compose start redis
+   docker compose start meepleai-redis
    ✅ VERIFICA: Tutto Healthy
 
 PASS: ☐ Health monitoring OK
@@ -774,7 +774,7 @@ PASS: ☐ Disconnessione gestita gracefully
 #### Scenario C0.1.3: Timeout Streaming
 ```
 1. Simula risposta lenta:
-   docker compose stop qdrant
+   docker compose stop meepleai-qdrant
 
 2. Apri /chat, invia domanda: "Test timeout"
 3. ✅ VERIFICA:
@@ -784,7 +784,7 @@ PASS: ☐ Disconnessione gestita gracefully
    - NO stack trace nel UI
 
 4. Riavvia Qdrant:
-   docker compose start qdrant
+   docker compose start meepleai-qdrant
 
 5. Retry domanda
 6. ✅ VERIFICA:
@@ -798,7 +798,7 @@ PASS: ☐ Timeout gestito con fallback graceful
 ```
 1. Apri /chat, inizia streaming
 2. DURANTE streaming (dopo 3-5s):
-   - Termina backend: docker compose stop api
+   - Termina backend: docker compose stop meepleai-api
    - OPPURE: Ctrl+C su terminale dotnet run
 
 3. ✅ VERIFICA frontend:
@@ -808,7 +808,7 @@ PASS: ☐ Timeout gestito con fallback graceful
    - NO crash applicazione frontend
 
 4. Riavvia backend:
-   docker compose start api
+   docker compose start meepleai-api
 
 5. Click "Riprova"
 6. ✅ VERIFICA:
@@ -2201,3 +2201,4 @@ PASS: ☐ Alert rules operative
 **Owner**: QA Team & Engineering Lead
 
 **Feedback**: Segnalare miglioramenti o scenari mancanti a engineering@meepleai.dev
+

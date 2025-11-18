@@ -180,7 +180,7 @@ wait_for_postgres() {
     fi
 
     while [ $attempt -lt $max_attempts ]; do
-        if docker compose -f "$INFRA_DIR/docker-compose.yml" exec -T postgres pg_isready -U postgres > /dev/null 2>&1; then
+        if docker compose -f "$INFRA_DIR/docker-compose.yml" exec -T meepleai-postgres pg_isready -U postgres > /dev/null 2>&1; then
             echo -e "${GREEN}✓ PostgreSQL is ready!${NC}"
             return 0
         fi
@@ -242,7 +242,7 @@ echo -e "${MAGENTA}═══ Step 3: Start Docker Services ═══${NC}"
 echo ""
 
 execute "Start core Docker services (postgres, qdrant, redis, seq)" \
-    "cd '$INFRA_DIR' && docker compose up -d postgres qdrant redis seq"
+    "cd '$INFRA_DIR' && docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redis meepleai-seq"
 
 if [ "$DRY_RUN" = false ]; then
     sleep 3  # Give services time to initialize
@@ -419,3 +419,4 @@ else
         echo -e "${YELLOW}✓ Dry run complete. Use without --dry-run to execute.${NC}"
     fi
 fi
+

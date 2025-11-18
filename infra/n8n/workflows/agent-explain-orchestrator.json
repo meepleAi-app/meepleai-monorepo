@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "url": "={{$env.MEEPLEAI_API_URL || 'http://api:8080'}}/agents/explain",
+        "url": "={{$env.MEEPLEAI_API_URL || 'http://meepleai-api:8080'}}/agents/explain",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,

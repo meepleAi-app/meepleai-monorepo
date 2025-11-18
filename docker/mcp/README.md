@@ -179,7 +179,7 @@ Aggiungi i server MCP al file di configurazione:
         "--memory", "512m",
         "--user", "1000:1000",
         "--network", "mcp-network",
-        "-e", "QDRANT_URL=http://qdrant:6333",
+        "-e", "QDRANT_URL=http://meepleai-qdrant:6333",
         "-e", "OPENROUTER_API_KEY",
         "meepleai/mcp-knowledge-graph:latest"
       ],

@@ -194,7 +194,7 @@ Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "1. Import workflow: infra/n8n/workflows/agent-explain-orchestrator.json" -ForegroundColor White
 Write-Host "2. Set environment variable in n8n: N8N_SERVICE_SESSION=$sessionToken" -ForegroundColor White
-Write-Host "3. Test webhook: POST http://n8n:5678/webhook/explain" -ForegroundColor White
+Write-Host "3. Test webhook: POST http://meepleai-n8n:5678/webhook/explain" -ForegroundColor White
 Write-Host ""
 Write-Host "Configuration file: $OutputFile" -ForegroundColor Gray
 Write-Host ""

@@ -12,7 +12,7 @@ const API_BASE = 'http://localhost:8080';
  *
  * To run these tests locally:
  * 1. Start the backend API: `cd apps/api/src/Api && dotnet run`
- * 2. Start required services: `cd infra && docker compose up postgres redis qdrant`
+ * 2. Start required services: `cd infra && docker compose up meepleai-postgres meepleai-redis meepleai-qdrant`
  * 3. Run tests: `pnpm test:e2e demo-user-login.spec.ts`
  *
  * Why not mock? The login flow involves:

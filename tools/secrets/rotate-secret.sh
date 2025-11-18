@@ -74,22 +74,22 @@ echo "Service restart commands:"
 
 case "$SECRET_NAME" in
     postgres-password)
-        echo "  docker compose restart postgres api n8n"
+        echo "  docker compose restart meepleai-postgres meepleai-api meepleai-n8n"
         ;;
     openrouter-api-key)
-        echo "  docker compose restart api"
+        echo "  docker compose restart meepleai-api"
         ;;
     n8n-encryption-key|n8n-basic-auth-password)
-        echo "  docker compose restart n8n"
+        echo "  docker compose restart meepleai-n8n"
         ;;
     gmail-app-password)
-        echo "  docker compose restart alertmanager"
+        echo "  docker compose restart meepleai-alertmanager"
         ;;
     grafana-admin-password)
-        echo "  docker compose restart grafana"
+        echo "  docker compose restart meepleai-grafana"
         ;;
     initial-admin-password)
-        echo "  docker compose restart api"
+        echo "  docker compose restart meepleai-api"
         ;;
     *)
         echo "  docker compose restart <affected-service>"
@@ -102,3 +102,4 @@ echo ""
 echo "Backup location: $BACKUP_FILE"
 echo -e "${YELLOW}⚠️  Remember to delete backup after verifying rotation: rm $BACKUP_FILE${NC}"
 echo ""
+

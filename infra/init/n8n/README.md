@@ -100,10 +100,10 @@ This directory contains n8n workflow definitions for MeepleAI agent webhooks. Th
 ## Setup Instructions
 
 ### 1. Start n8n
-Ensure n8n is running via Docker Compose:
+Ensure meepleai-n8n is running via Docker Compose:
 ```bash
 cd infra
-docker compose up -d n8n
+docker compose up -d meepleai-n8n
 ```
 
 n8n will be available at: http://localhost:5678
@@ -179,13 +179,13 @@ All workflows log the following information:
 
 ### Workflow Not Responding
 1. Check if workflow is activated in n8n UI
-2. Verify n8n container is running: `docker compose ps n8n`
-3. Check n8n logs: `docker compose logs n8n`
+2. Verify meepleai-n8n container is running: `docker compose ps meepleai-n8n`
+3. Check meepleai-n8n logs: `docker compose logs meepleai-n8n`
 
 ### API Connection Errors
-1. Ensure backend API is running: `docker compose ps api`
-2. Verify network connectivity: `docker compose exec n8n ping api`
-3. Check API health: `docker compose exec n8n curl http://api:8080/`
+1. Ensure backend meepleai-api is running: `docker compose ps meepleai-api`
+2. Verify network connectivity: `docker compose exec meepleai-n8n ping meepleai-api`
+3. Check meepleai-api health: `docker compose exec meepleai-n8n curl http://meepleai-api:8080/`
 
 ### Request ID Not Generated
 The workflow generates a request ID using either:
@@ -205,3 +205,4 @@ The workflow generates a request ID using either:
 - Each workflow includes a `versionId` field
 - Update the version when making significant changes
 - Document changes in the workflow's meta description
+

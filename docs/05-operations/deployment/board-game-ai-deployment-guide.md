@@ -49,13 +49,13 @@ vim infra/env/.env.dev
 OPENROUTER_API_KEY=sk-or-v1-...
 
 # Database
-POSTGRES_URL=postgresql://meepleai:secret@postgres:5432/meepleai
+POSTGRES_URL=postgresql://meepleai:secret@meepleai-postgres:5432/meepleai
 POSTGRES_USER=meepleai
 POSTGRES_PASSWORD=secret
 POSTGRES_DB=meepleai
 
 # Redis
-REDIS_URL=redis://redis:6379
+REDIS_URL=redis://meepleai-redis:6379
 
 # Weaviate
 WEAVIATE_URL=http://weaviate:8080
@@ -80,7 +80,7 @@ docker compose up -d
 docker compose ps
 
 # View logs
-docker compose logs -f api
+docker compose logs -f meepleai-api
 ```
 
 **4. Verify Services**:
@@ -97,7 +97,7 @@ open http://localhost:3000
 curl http://localhost:8080/v1/.well-known/ready
 
 # PostgreSQL
-docker compose exec postgres psql -U meepleai -d meepleai -c "SELECT version();"
+docker compose exec meepleai-postgres psql -U meepleai -d meepleai -c "SELECT version();"
 ```
 
 ---
@@ -867,3 +867,4 @@ spec:
 - **Next Review**: 2025-04-15
 - **Maintainer**: DevOps Team
 - **Status**: APPROVED for Phase 1-2
+

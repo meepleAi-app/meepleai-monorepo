@@ -945,7 +945,7 @@ docker run --rm -v $(pwd)/infra/prometheus/alerts:/alerts prom/prometheus:latest
   promtool check rules /alerts/*.yml
 
 # Load in Prometheus
-docker compose restart prometheus
+docker compose restart meepleai-prometheus
 # Check http://localhost:9090/rules
 ```
 

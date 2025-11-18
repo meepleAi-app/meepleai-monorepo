@@ -138,7 +138,7 @@ pnpm dev
 
 # Backend API (required for full functionality)
 cd ../../infra
-docker compose up postgres qdrant redis
+docker compose up meepleai-postgres meepleai-qdrant meepleai-redis
 cd ../apps/api/src/Api
 dotnet run
 # → http://localhost:8080
@@ -368,3 +368,4 @@ pnpm test
 
 **Maintained by**: Frontend Team
 **Review Frequency**: Monthly or on major architecture changes
+

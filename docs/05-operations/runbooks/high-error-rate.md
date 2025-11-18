@@ -90,10 +90,10 @@ curl http://localhost:8080/health | jq '.version'
 **Database (PostgreSQL)**:
 ```bash
 # Check status
-docker compose ps postgres
+docker compose ps meepleai-postgres
 
 # Check logs (last 50 lines)
-docker compose logs postgres --tail 50
+docker compose logs meepleai-postgres --tail 50
 
 # Check connection from API
 curl http://localhost:8080/health | jq '.checks.postgres'
@@ -102,26 +102,26 @@ curl http://localhost:8080/health | jq '.checks.postgres'
 **Cache (Redis)**:
 ```bash
 # Check status
-docker compose ps redis
+docker compose ps meepleai-redis
 
 # Test connection
-docker compose exec redis redis-cli ping
+docker compose exec meepleai-redis meepleai-redis-cli ping
 # Should return: PONG
 
 # Check logs
-docker compose logs redis --tail 50
+docker compose logs meepleai-redis --tail 50
 ```
 
 **Vector DB (Qdrant)**:
 ```bash
 # Check status
-docker compose ps qdrant
+docker compose ps meepleai-qdrant
 
 # Check health endpoint
 curl http://localhost:6333/healthz
 
 # Check logs
-docker compose logs qdrant --tail 50
+docker compose logs meepleai-qdrant --tail 50
 ```
 
 **Dashboard check**:
@@ -212,7 +212,7 @@ git push
 
 # Option C: Rollback Docker image (if available)
 docker compose down
-docker compose up -d --force-recreate api
+docker compose up -d --force-recreate meepleai-api
 ```json
 **Resolution time**: 5-10 minutes
 
@@ -226,10 +226,10 @@ docker compose up -d --force-recreate api
 **Fix**:
 ```bash
 # Option A: Restart API (releases connections)
-docker compose restart api
+docker compose restart meepleai-api
 
 # Option B: Restart database (if corrupted)
-docker compose restart postgres
+docker compose restart meepleai-postgres
 
 # Option C: Increase connection pool size (if recurring)
 # Edit appsettings.json or environment variable:
@@ -253,15 +253,15 @@ docker compose restart postgres
 **Fix**:
 ```bash
 # Restart affected service
-docker compose restart qdrant
-docker compose restart redis
+docker compose restart meepleai-qdrant
+docker compose restart meepleai-redis
 
 # Check if service is actually down
 docker compose ps
 
 # Check service logs for crash reason
-docker compose logs qdrant --tail 100
-docker compose logs redis --tail 100
+docker compose logs meepleai-qdrant --tail 100
+docker compose logs meepleai-redis --tail 100
 
 # Nuclear option: restart all services
 docker compose down
@@ -289,7 +289,7 @@ dotnet ef database update
 dotnet ef database update <PreviousMigrationName>
 
 # Restart API
-docker compose restart api
+docker compose restart meepleai-api
 ```json
 **Resolution time**: 5-10 minutes
 
@@ -303,7 +303,7 @@ docker compose restart api
 **Immediate fix**:
 ```bash
 # Restart API to free memory
-docker compose restart api
+docker compose restart meepleai-api
 ```json
 **Long-term investigation**:
 - Check for memory leaks in code
@@ -342,7 +342,7 @@ docker service scale meepleai_api=3
 
 1. **Restart API** (if safe to do so):
    ```bash
-   docker compose restart api
+   docker compose restart meepleai-api
    ```
    Wait 30 seconds for health check to pass.
 
@@ -484,3 +484,4 @@ done
 ## Changelog
 
 - **2025-10-16**: Initial version
+

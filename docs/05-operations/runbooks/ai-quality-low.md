@@ -109,7 +109,7 @@ curl http://localhost:6333/collections/meepleai-documents | jq .
 # Expected: "status": "green", "points_count" > 0
 
 # 3. Check embedding service logs
-docker compose logs api | grep -i "embedding"
+docker compose logs meepleai-api | grep -i "embedding"
 
 # 4. Test vector search manually
 curl -X POST http://localhost:8080/api/v1/rag/search \
@@ -121,12 +121,12 @@ curl -X POST http://localhost:8080/api/v1/rag/search \
 **Resolution Actions**:
 - **Qdrant down**: Restart Qdrant container
   ```bash
-  cd infra && docker compose restart qdrant
+  cd infra && docker compose restart meepleai-qdrant
   ```
 - **Embedding service failing**: Check OpenRouter API key and quota
   ```bash
   # Check API logs for OpenRouter errors
-  docker compose logs api | grep -i "openrouter"
+  docker compose logs meepleai-api | grep -i "openrouter"
   ```
 - **Poor index quality**: Re-index PDFs
   ```bash
@@ -152,7 +152,7 @@ curl https://openrouter.ai/api/v1/models \
 # Expected: 200 OK with model list
 
 # 2. Check LLM service logs for errors
-docker compose logs api | grep -i "llm\|openrouter"
+docker compose logs meepleai-api | grep -i "llm\|openrouter"
 
 # 3. Check token usage metrics
 open http://localhost:3001/d/ai-rag-operations
@@ -183,7 +183,7 @@ curl -X POST http://localhost:8080/api/v1/agents/qa \
 **Diagnostic Steps**:
 ```bash
 # 1. Check citation extraction logs
-docker compose logs api | grep -i "citation"
+docker compose logs meepleai-api | grep -i "citation"
 
 # 2. Verify PDF metadata in database
 # (Use database query tool to check pdf_documents table)
@@ -225,14 +225,14 @@ git log --oneline -n 10
 # Look for recent changes to quality scoring, RAG, or LLM code
 
 # 4. Check error logs
-docker compose logs api | grep -E "ERROR|CRITICAL" | tail -50
+docker compose logs meepleai-api | grep -E "ERROR|CRITICAL" | tail -50
 ```
 
 **Resolution Actions**:
 - **Recent deployment issue**: Rollback to previous version
   ```bash
   git checkout <previous-commit>
-  cd infra && docker compose up --build -d api
+  cd infra && docker compose up --build -d meepleai-api
   ```
 - **Dependency failures**: Restart all services
   ```bash
@@ -253,7 +253,7 @@ docker compose logs api | grep -E "ERROR|CRITICAL" | tail -50
 **Diagnostic Steps**:
 ```bash
 # 1. Check if AI endpoints are receiving traffic
-docker compose logs api | grep -E "POST /api/v1/agents" | tail -20
+docker compose logs meepleai-api | grep -E "POST /meepleai-api/v1/agents" | tail -20
 
 # 2. Check Prometheus scraping
 curl http://localhost:8080/metrics | grep meepleai_quality
@@ -290,10 +290,10 @@ curl -s http://localhost:9090/api/v1/query \
 ### Restart Affected Services
 ```bash
 # RAG issues → Restart Qdrant
-cd infra && docker compose restart qdrant
+cd infra && docker compose restart meepleai-qdrant
 
 # LLM issues → Restart API (if config changes needed)
-cd infra && docker compose restart api
+cd infra && docker compose restart meepleai-api
 
 # All issues → Full restart
 cd infra && docker compose restart
@@ -361,3 +361,4 @@ curl -X POST http://localhost:8080/api/v1/agents/qa \
 **Last Updated**: 2025-10-25 (AI-11.2 implementation)
 **Maintained By**: MeepleAI Engineering Team
 **Feedback**: Submit improvements via GitHub issues
+

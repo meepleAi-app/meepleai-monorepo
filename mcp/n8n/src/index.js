@@ -13,7 +13,7 @@ dotenv.config();
 
 // Initialize n8n API client
 const n8nClient = axios.create({
-  baseURL: process.env.N8N_API_URL || 'http://n8n:5678/api/v1',
+  baseURL: process.env.N8N_API_URL || 'http://meepleai-n8n:5678/api/v1',
   timeout: parseInt(process.env.N8N_API_TIMEOUT) || 30000,
   headers: {
     'X-N8N-API-KEY': process.env.N8N_API_KEY,

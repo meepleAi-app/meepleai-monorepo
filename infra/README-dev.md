@@ -55,23 +55,23 @@ docker ps --filter "name=mcp-"
 ### Infrastruttura (11 servizi)
 | Servizio | Porta | Descrizione |
 |----------|-------|-------------|
-| postgres | 5432 | Database PostgreSQL |
-| qdrant | 6333, 6334 | Vector database |
-| redis | 6379 | Cache |
-| ollama | 11434 | Embedding models |
-| embedding-service | 8000 | Local embeddings |
-| seq | 5341, 8081 | Log aggregation |
-| jaeger | 16686, 4318 | Distributed tracing |
-| prometheus | 9090 | Metrics |
-| alertmanager | 9093 | Alerting |
-| grafana | 3001 | Dashboards |
-| n8n | 5678 | Workflow automation |
+| meepleai-postgres | 5432 | Database PostgreSQL |
+| meepleai-qdrant | 6333, 6334 | Vector database |
+| meepleai-redis | 6379 | Cache |
+| meepleai-ollama | 11434 | Embedding models |
+| meepleai-embedding | 8000 | Local embeddings |
+| meepleai-seq | 5341, 8081 | Log aggregation |
+| meepleai-jaeger | 16686, 4318 | Distributed tracing |
+| meepleai-prometheus | 9090 | Metrics |
+| meepleai-alertmanager | 9093 | Alerting |
+| meepleai-grafana | 3001 | Dashboards |
+| meepleai-n8n | 5678 | Workflow automation |
 
 ### Applicazioni (2 servizi)
 | Servizio | Porta | URL | Descrizione |
 |----------|-------|-----|-------------|
-| api | 8080 | http://localhost:8080 | ASP.NET Core API |
-| web | 3000 | http://localhost:3000 | Next.js frontend |
+| meepleai-api | 8080 | http://localhost:8080 | ASP.NET Core API |
+| meepleai-web | 3000 | http://localhost:3000 | Next.js frontend |
 
 ### MCP Servers (8 servizi)
 | Servizio | Container | Descrizione | API Key Required |
@@ -188,7 +188,7 @@ Prova comando:
 docker compose -f docker-compose.dev.yml build mcp-github mcp-magic mcp-sequential
 
 # Rebuild solo app services
-docker compose -f docker-compose.dev.yml build api web
+docker compose -f docker-compose.dev.yml build meepleai-api meepleai-web
 ```
 
 ### Restart Servizi
@@ -198,7 +198,7 @@ docker compose -f docker-compose.dev.yml build api web
 docker compose -f docker-compose.dev.yml restart
 
 # Restart solo MCP servers
-docker compose -f docker-compose.dev.yml restart mcp-github mcp-magic mcp-sequential mcp-playwright mcp-memory mcp-n8n mcp-claude-context mcp-knowledge-graph
+docker compose -f docker-compose.dev.yml restart mcp-github mcp-magic mcp-sequential mcp-playwright mcp-memory mcp-meepleai-n8n mcp-claude-context mcp-knowledge-graph
 ```
 
 ### Log Debugging
@@ -319,7 +319,7 @@ kill -9 <PID>
 
 ```bash
 # Start stack minimo
-docker compose -f docker-compose.dev.yml up -d postgres redis qdrant api mcp-magic
+docker compose -f docker-compose.dev.yml up -d meepleai-postgres meepleai-redis meepleai-qdrant meepleai-api mcp-magic
 
 # Sviluppo locale Next.js (fuori Docker)
 cd ../apps/web
@@ -333,7 +333,7 @@ pnpm dev
 
 ```bash
 # Start infra + MCP
-docker compose -f docker-compose.dev.yml up -d postgres redis qdrant mcp-github mcp-sequential
+docker compose -f docker-compose.dev.yml up -d meepleai-postgres meepleai-redis meepleai-qdrant mcp-github mcp-sequential
 
 # Sviluppo locale .NET (fuori Docker)
 cd ../apps/api/src/Api
@@ -378,3 +378,4 @@ docker compose -f docker-compose.dev.yml up -d
 
 **Versione**: 1.0
 **Ultimo aggiornamento**: 2025-11-11
+

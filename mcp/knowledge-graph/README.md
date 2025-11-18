@@ -21,7 +21,7 @@ docker run -i --rm \
   --memory 512m \
   --user $(id -u):$(id -g) \
   --network mcp-network \
-  -e QDRANT_URL=http://qdrant:6333 \
+  -e QDRANT_URL=http://meepleai-qdrant:6333 \
   -e QDRANT_COLLECTION=knowledge_graph \
   -e OPENROUTER_API_KEY=${OPENROUTER_API_KEY} \
   meepleai/mcp-knowledge-graph:latest

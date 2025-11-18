@@ -7,9 +7,8 @@ services:
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: meepleai_prod
-    volumes:
-      - pgdata-prod:/var/lib/postgresql/data
-      - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    # Note: Volumes inherited from base (docker-compose.yml)
+    # Using base volume names to avoid duplicate mount conflicts during overlay merge
     healthcheck:
       interval: 10s
       timeout: 5s
@@ -40,8 +39,8 @@ services:
 
   qdrant:
     restart: always
-    volumes:
-      - qdrantdata-prod:/qdrant/storage
+    # Note: Volumes inherited from base (docker-compose.yml)
+    # Using base volume name (qdrantdata) to avoid duplicate mount conflicts during overlay merge
     deploy:
       resources:
         limits:
@@ -107,10 +106,8 @@ services:
       - '--storage.tsdb.retention.time=90d'  # 90 days retention for production
       - '--web.enable-lifecycle'
       - '--storage.tsdb.retention.size=50GB'
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./prometheus/alerts:/etc/prometheus/alerts:ro
-      - prometheus-prod:/prometheus
+    # Note: Config volumes inherited from base, data volume (prometheusdata) also inherited
+    # Removed duplicate prometheus-prod volume to avoid mount conflicts during overlay merge
     deploy:
       resources:
         limits:
@@ -131,8 +128,8 @@ services:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_ADMINPASSWORDHASH=${SEQ_PASSWORD_HASH}
       - SEQ_CACHE_SYSTEMRAMTARGET=0.5
-    volumes:
-      - seqdata-prod:/data
+    # Note: Volumes inherited from base (docker-compose.yml)
+    # Using base volume name (seqdata) to avoid duplicate mount conflicts during overlay merge
     deploy:
       resources:
         limits:
@@ -148,11 +145,9 @@ services:
           memory: 512M
 
 volumes:
-  pgdata-prod:
-  redisdata-prod:
-  qdrantdata-prod:
-  prometheus-prod:
-  seqdata-prod:
+  # Note: Most data volumes inherited from base (pgdata, qdrantdata, prometheusdata, seqdata, etc.)
+  # Only defining volumes here that are unique to production and not in the base
+  redisdata-prod:  # Redis has no volume in base, so this is production-specific
 
 secrets:
   grafana-admin-password:

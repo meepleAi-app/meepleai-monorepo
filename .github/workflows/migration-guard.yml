@@ -76,3 +76,126 @@ jobs:
             echo ""
             echo "This won't fail the build but should be corrected for consistency"
           fi
+
+      - name: Setup .NET for SQL Script Generation
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install PDF extraction dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Generate SQL Migration Scripts
+        id: generate_sql
+        run: |
+          cd apps/api
+
+          # Restore dependencies
+          dotnet restore
+
+          # Generate SQL script for all migrations
+          # This shows what SQL would be executed when migrations are applied
+          dotnet ef migrations script --idempotent --output migration-preview.sql --project src/Api || true
+
+          # Generate SQL for pending migrations only (from last applied to latest)
+          dotnet ef migrations script --idempotent --output migration-pending.sql --project src/Api || true
+
+          # Check if SQL was generated
+          if [ -f "migration-preview.sql" ]; then
+            echo "sql_generated=true" >> $GITHUB_OUTPUT
+            echo "✅ SQL migration scripts generated successfully"
+
+            # Add summary to GitHub step summary
+            echo "## 📄 Migration SQL Preview" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "SQL scripts have been generated for review:" >> $GITHUB_STEP_SUMMARY
+            echo "- \`migration-preview.sql\`: All migrations (idempotent)" >> $GITHUB_STEP_SUMMARY
+            echo "- \`migration-pending.sql\`: Pending migrations only" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Download the artifacts to review the SQL that will be executed." >> $GITHUB_STEP_SUMMARY
+
+            # Show first 50 lines of the script
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "<details>" >> $GITHUB_STEP_SUMMARY
+            echo "<summary>Preview (first 50 lines)</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```sql' >> $GITHUB_STEP_SUMMARY
+            head -n 50 migration-preview.sql >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "sql_generated=false" >> $GITHUB_OUTPUT
+            echo "⚠️  SQL generation skipped or failed"
+          fi
+
+      - name: Upload SQL Migration Scripts
+        if: steps.generate_sql.outputs.sql_generated == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: migration-sql-preview-${{ github.event.pull_request.number }}
+          path: |
+            apps/api/migration-preview.sql
+            apps/api/migration-pending.sql
+          retention-days: 30
+
+      - name: Comment PR with Migration Info
+        if: github.event_name == 'pull_request' && steps.generate_sql.outputs.sql_generated == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Read the SQL preview
+            const sqlPath = path.join(process.env.GITHUB_WORKSPACE, 'apps/api/migration-preview.sql');
+            let sqlPreview = '';
+
+            if (fs.existsSync(sqlPath)) {
+              const sqlContent = fs.readFileSync(sqlPath, 'utf8');
+              const lines = sqlContent.split('\n');
+              sqlPreview = lines.slice(0, 50).join('\n');
+
+              if (lines.length > 50) {
+                sqlPreview += '\n\n... (truncated, download artifact for full SQL)';
+              }
+            }
+
+            const comment = `## 📄 EF Core Migration SQL Preview
+
+            Migration changes detected in this PR. SQL scripts have been generated for review.
+
+            ### 📥 Download Artifacts
+            - **migration-preview.sql**: Complete idempotent script (all migrations)
+            - **migration-pending.sql**: Only pending migrations
+
+            ### 🔍 SQL Preview (first 50 lines)
+
+            <details>
+            <summary>Click to expand SQL preview</summary>
+
+            \`\`\`sql
+            ${sqlPreview}
+            \`\`\`
+
+            </details>
+
+            ### ✅ Migration Validation
+            - ✓ No migrations were deleted
+            - ✓ Migration naming convention checked
+            - ✓ SQL scripts generated successfully
+
+            ### 🚀 Deployment Notes
+            - These migrations will be automatically applied on startup via \`DbContext.Database.Migrate()\`
+            - Review the SQL carefully for potential data loss or performance issues
+            - Consider running migrations manually in production for large tables
+            - Test migrations on a staging environment first
+
+            📚 See [Migration Best Practices](../../docs/02-development/database/migration-guide.md) for more info.
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

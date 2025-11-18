@@ -252,18 +252,70 @@ jobs:
           dotnet add src/Api package SecurityCodeScan.VS2019 --version 5.6.7
 
       - name: Build with Security Analysis
+        id: security_build
         run: |
+          # Build with security analysis, capture output
           dotnet build --configuration Release /p:TreatWarningsAsErrors=false > security-scan.log 2>&1 || true
 
-          # Check for security warnings
-          if grep -i "warning.*security" security-scan.log; then
-            echo "## .NET Security Warnings Found" >> $GITHUB_STEP_SUMMARY
-            grep -i "warning.*security" security-scan.log >> $GITHUB_STEP_SUMMARY
+          # Check for HIGH severity security warnings (SCS prefix)
+          set +e  # Don't exit on grep failure
+          HIGH_SEVERITY=$(grep -E "warning (SCS0[0-9]{3}|CA[0-9]{4}):" security-scan.log || true)
+          set -e
+
+          # Display full log
+          cat security-scan.log
+
+          # Check for security warnings and categorize
+          if grep -qi "warning.*security" security-scan.log || grep -qi "warning SCS" security-scan.log; then
+            echo "## ⚠️ .NET Security Warnings Found" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Count warnings
+            SECURITY_WARNINGS=$(grep -ic "warning.*security\|warning SCS" security-scan.log || echo "0")
+            echo "**Total Security Warnings:** $SECURITY_WARNINGS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Show warnings in summary
+            echo "<details>" >> $GITHUB_STEP_SUMMARY
+            echo "<summary>Security Warning Details</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            grep -i "warning.*security\|warning SCS" security-scan.log >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+
+            # Set output for later check
+            echo "has_warnings=true" >> $GITHUB_OUTPUT
+            echo "warning_count=$SECURITY_WARNINGS" >> $GITHUB_OUTPUT
+
+            # Check for HIGH severity issues
+            if [ -n "$HIGH_SEVERITY" ]; then
+              echo "has_high_severity=true" >> $GITHUB_OUTPUT
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### 🚨 HIGH Severity Issues Detected" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "$HIGH_SEVERITY" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            else
+              echo "has_high_severity=false" >> $GITHUB_OUTPUT
+            fi
           else
             echo "✅ No security warnings found in .NET code" >> $GITHUB_STEP_SUMMARY
+            echo "has_warnings=false" >> $GITHUB_OUTPUT
+            echo "has_high_severity=false" >> $GITHUB_OUTPUT
           fi
 
-          cat security-scan.log
+      - name: Fail on High Severity Security Issues
+        if: steps.security_build.outputs.has_high_severity == 'true'
+        run: |
+          echo "::error::Build contains HIGH severity security warnings that must be fixed before merging"
+          echo ""
+          echo "Security warnings found:"
+          grep -E "warning (SCS0[0-9]{3}|CA[0-9]{4}):" security-scan.log || true
+          echo ""
+          echo "Please review and fix these security issues before merging."
+          echo "See https://security-code-scan.github.io/ for remediation guidance."
+          exit 1
 
       - name: Upload Security Scan Report
         uses: actions/upload-artifact@v5

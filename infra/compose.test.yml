@@ -5,6 +5,7 @@ services:
   # Core Services - Optimized for Speed
   postgres:
     restart: "no"
+    volumes: []  # Clear base volumes before using tmpfs
     tmpfs:
       - /var/lib/postgresql/data  # In-memory for speed in CI
     environment:
@@ -16,6 +17,7 @@ services:
 
   redis:
     restart: "no"
+    volumes: []  # Clear base volumes before using tmpfs
     tmpfs:
       - /data  # In-memory for speed
 

@@ -166,10 +166,12 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
                 confidence: overallConfidence.Value
             );
 
-            // Run validation pipeline (standard mode: 3 layers)
-            var validation = await _validationPipeline.ValidateResponseAsync(
+            // Run validation pipeline (multi-model mode: all 5 layers)
+            var validation = await _validationPipeline.ValidateWithMultiModelAsync(
                 qaResponse,
                 query.GameId.ToString(),
+                systemPrompt,
+                userPrompt,
                 query.Language,
                 cancellationToken);
 

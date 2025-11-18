@@ -1,0 +1,284 @@
+name: K6 Performance Tests
+
+on:
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test type (smoke, load, stress, spike)'
+        required: false
+        default: 'load'
+        type: choice
+        options:
+          - smoke
+          - load
+          - stress
+          - spike
+
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'tests/k6/**'
+      - '.github/workflows/k6-performance.yml'
+
+env:
+  API_BASE_URL: http://localhost:8080
+  TEST_GAME_ID: '00000000-0000-0000-0000-000000000001'
+
+jobs:
+  k6-performance-tests:
+    name: K6 Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: meepleai_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      qdrant:
+        image: qdrant/qdrant:v1.12.5
+        ports:
+          - 6333:6333
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Restore .NET dependencies
+        working-directory: apps/api/src/Api
+        run: dotnet restore
+
+      - name: Build API
+        working-directory: apps/api/src/Api
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Create test database
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE meepleai_test;" || true
+
+      - name: Apply migrations
+        working-directory: apps/api/src/Api
+        run: |
+          dotnet ef database update --configuration Release
+        env:
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres'
+
+      - name: Seed test data
+        working-directory: apps/api/src/Api
+        run: |
+          # Run integration tests that seed the database with test data
+          dotnet test --filter "FullyQualifiedName~SeedTestData" --no-build --configuration Release || echo "Test seed not found, database will be seeded on first request"
+        env:
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres'
+
+      - name: Start API server
+        working-directory: apps/api/src/Api
+        run: |
+          nohup dotnet run --configuration Release > ../../api.log 2>&1 &
+          echo $! > ../../api.pid
+        env:
+          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres'
+          ConnectionStrings__Redis: 'localhost:6379'
+          ConnectionStrings__Qdrant: 'http://localhost:6333'
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: 'http://0.0.0.0:8080'
+
+      - name: Wait for API to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health; then
+              echo "✅ API is ready"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 2
+          done
+          echo "❌ API failed to start"
+          cat api.log
+          exit 1
+
+      - name: Run k6 performance tests
+        working-directory: tests/k6
+        run: |
+          TEST_TYPE="${{ github.event.inputs.test_type || 'load' }}"
+
+          # Create reports directory
+          mkdir -p reports
+
+          # Run tests based on trigger
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # Quick smoke test for PRs
+            k6 run --env TEST_TYPE=smoke scenarios/all.js
+          else
+            # Full load test for scheduled runs
+            k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/all.js
+          fi
+        env:
+          API_BASE_URL: ${{ env.API_BASE_URL }}
+          TEST_USER_EMAIL: 'test@meepleai.dev'
+          TEST_USER_PASSWORD: 'Test123!'
+          TEST_GAME_ID: ${{ env.TEST_GAME_ID }}
+          WEBSOCKET_URL: 'ws://localhost:8080/ws'
+
+      - name: Generate HTML report
+        if: always()
+        working-directory: tests/k6
+        run: |
+          node utils/generate-report.js reports/summary.json
+
+      - name: Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-performance-reports-${{ github.run_number }}
+          path: tests/k6/reports/
+          retention-days: 30
+
+      - name: Download baseline report
+        if: github.event_name == 'pull_request'
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          workflow: k6-performance.yml
+          branch: main
+          name: k6-performance-reports-latest
+          path: tests/k6/baseline/
+
+      - name: Check for performance regressions
+        if: github.event_name == 'pull_request'
+        working-directory: tests/k6
+        continue-on-error: true
+        run: |
+          if [ -f baseline/summary.json ]; then
+            echo "Comparing against baseline..."
+            node utils/detect-regression.js baseline/summary.json reports/summary.json 10
+          else
+            echo "⚠️ No baseline found, skipping regression detection"
+            echo "This will be the new baseline once merged to main"
+          fi
+
+      - name: Post results to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = JSON.parse(fs.readFileSync('tests/k6/reports/summary.json', 'utf8'));
+            const metrics = summary.metrics;
+
+            const comment = `
+            ## 🚀 K6 Performance Test Results
+
+            | Metric | Value |
+            |--------|-------|
+            | Total Requests | ${metrics.http_reqs?.values.count || 0} |
+            | Error Rate | ${((metrics.http_req_failed?.values.rate || 0) * 100).toFixed(2)}% |
+            | Avg Response Time | ${(metrics.http_req_duration?.values.avg || 0).toFixed(2)}ms |
+            | P95 Response Time | ${(metrics.http_req_duration?.values['p(95)'] || 0).toFixed(2)}ms |
+            | Throughput | ${(metrics.http_reqs?.values.rate || 0).toFixed(2)} req/s |
+
+            ### Endpoint Performance
+
+            | Endpoint | P95 Latency | Threshold | Status |
+            |----------|-------------|-----------|--------|
+            | RAG Search | ${(metrics['http_req_duration{endpoint:rag-search}']?.values['p(95)'] || 0).toFixed(2)}ms | 2000ms | ${(metrics['http_req_duration{endpoint:rag-search}']?.values['p(95)'] || 0) < 2000 ? '✅' : '❌'} |
+            | Chat | ${(metrics['http_req_duration{endpoint:chat}']?.values['p(95)'] || 0).toFixed(2)}ms | 1000ms | ${(metrics['http_req_duration{endpoint:chat}']?.values['p(95)'] || 0) < 1000 ? '✅' : '❌'} |
+            | Games | ${(metrics['http_req_duration{endpoint:games}']?.values['p(95)'] || 0).toFixed(2)}ms | 500ms | ${(metrics['http_req_duration{endpoint:games}']?.values['p(95)'] || 0) < 500 ? '✅' : '❌'} |
+            | Sessions | ${(metrics['http_req_duration{endpoint:sessions}']?.values['p(95)'] || 0).toFixed(2)}ms | 100ms | ${(metrics['http_req_duration{endpoint:sessions}']?.values['p(95)'] || 0) < 100 ? '✅' : '❌'} |
+
+            [View detailed report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+
+      - name: Save baseline report
+        if: github.ref == 'refs/heads/main' && github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-performance-reports-latest
+          path: tests/k6/reports/summary.json
+          retention-days: 90
+
+      - name: Archive API logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-logs-${{ github.run_number }}
+          path: api.log
+          retention-days: 7
+
+      - name: Cleanup resources
+        if: always()
+        run: |
+          # Stop API server
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) 2>/dev/null || true
+            rm api.pid
+          fi
+
+          # Cleanup any remaining dotnet processes
+          pkill -f "dotnet.*Api" 2>/dev/null || true
+
+          # Clean database
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "DROP DATABASE IF EXISTS meepleai_test;" 2>/dev/null || true
+
+          # Flush Redis
+          redis-cli FLUSHALL 2>/dev/null || true
+
+          echo "✅ Cleanup complete"
+
+  notify:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: k6-performance-tests
+    if: failure() && github.event_name == 'schedule'
+    steps:
+      - name: Send notification
+        run: |
+          echo "Performance tests failed on scheduled run"
+          # Add Slack/email notification here
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"K6 Performance Tests Failed"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}

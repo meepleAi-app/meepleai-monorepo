@@ -1,0 +1,20 @@
+# K6 Test Reports
+reports/
+*.json
+*.html
+
+# Environment configuration (use env.example.json as template)
+config/env.json
+
+# Node modules (if using npm scripts)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

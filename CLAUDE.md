@@ -225,7 +225,7 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 
 ## Testing
 
-**Strategy**: Test Pyramid (70% unit, 20% integration, 5% quality, 5% E2E)
+**Strategy**: Test Pyramid (70% unit, 20% integration, 5% quality, 5% E2E) + Performance Tests (k6)
 **Coverage**: 90%+ enforced (frontend 90.03%, backend 90%+)
 
 **Test Pyramid**:
@@ -247,10 +247,21 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 **Stack**:
 - Backend: xUnit + Moq + Testcontainers (Postgres, Qdrant, Unstructured, SmolDocling, Redis)
 - Frontend: Jest + React Testing Library + Playwright + Lighthouse CI
+- Performance: k6 load testing (API endpoints, database, Redis, WebSocket)
 - CI: GitHub Actions (~14min, optimized)
 
 **Tests**: 4,033 frontend + 189 backend + 30 E2E = 4,252 total
 - New: 27 infrastructure tests (RedisOAuthStateStore: 13, RedisBackgroundTaskOrchestrator: 14)
+
+**Performance Testing** (Issue #873 - k6):
+- **RAG Search**: <2s P95, 1000 req/s target
+- **Chat Messaging**: <1s P95, 500 req/s target
+- **Game Search**: <500ms P95, 2000 req/s target
+- **Session Updates**: <100ms P95, 1000 req/s target
+- **Database Stress**: Concurrent query handling
+- **Redis Cache**: Hit rate >80%, <50ms P95
+- **WebSocket**: 1000+ concurrent connections
+- **Nightly CI**: Automated benchmarking + regression detection
 
 **Quality Tests** (5-Metric Framework):
 - **Accuracy**: ≥80% on golden dataset (1000 Q&A pairs)
@@ -281,6 +292,16 @@ dotnet test --filter "FullyQualifiedName~RagEvaluationIntegrationTests"
 
 # E2E Tests (5%)
 pnpm test:e2e               # User journey scenarios
+
+# Performance Tests (k6)
+cd tests/k6
+npm run test:smoke          # Quick smoke test
+npm run test:load           # Full load test
+npm run test:stress         # Stress test
+npm run test:rag-search     # RAG endpoint test
+npm run test:chat           # Chat endpoint test
+npm run test:games          # Games endpoint test
+npm run test:sessions       # Sessions endpoint test
 ```
 
 ---
@@ -445,9 +466,9 @@ bash tools/cleanup-caches.sh                # Run
 
 ---
 
-**Version**: 1.0-rc (DDD 99%)
-**Last Updated**: 2025-11-15
-**Last Verified**: 2025-11-15 (against codebase)
+**Version**: 1.0-rc (DDD 99%, k6 Performance Suite)
+**Last Updated**: 2025-11-18
+**Last Verified**: 2025-11-18 (against codebase)
 **Owner**: Engineering Lead
 
 ---

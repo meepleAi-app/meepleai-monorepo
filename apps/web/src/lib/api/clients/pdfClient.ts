@@ -2,10 +2,10 @@
  * PDF Client (FE-IMP-005)
  *
  * Modular client for DocumentProcessing bounded context.
- * Covers: PDF processing progress, cancellation
+ * Covers: PDF processing progress, cancellation, download
  */
 
-import type { HttpClient } from '../core/httpClient';
+import { getApiBase, type HttpClient } from '../core/httpClient';
 import {
   ProcessingProgressSchema,
   type ProcessingProgress,
@@ -39,6 +39,16 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
      */
     async cancelProcessing(pdfId: string): Promise<void> {
       return httpClient.delete(`/api/v1/pdfs/${encodeURIComponent(pdfId)}/processing`);
+    },
+
+    /**
+     * Get PDF file download URL (BGAI-074)
+     * @param pdfId PDF document ID (GUID format)
+     * @returns URL to download/view the PDF file
+     */
+    getPdfDownloadUrl(pdfId: string): string {
+      const baseUrl = getApiBase();
+      return `${baseUrl}/api/v1/pdfs/${encodeURIComponent(pdfId)}/download`;
     },
   };
 }

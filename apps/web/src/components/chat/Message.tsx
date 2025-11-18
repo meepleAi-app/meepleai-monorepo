@@ -7,16 +7,19 @@
  * - Inline message editing
  * - Message timestamps
  * - Edited badge
+ * - Citations with PDF viewer (BGAI-074)
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Message as MessageType } from '@/types';
+import { Message as MessageType, Citation } from '@/types';
 import { useChatStore } from '@/store/chat/store';
 import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
 import { FollowUpQuestions } from './FollowUpQuestions';
 import { CitationList } from '../citations'; // #859
+import { PdfViewerModal } from '../pdf/PdfViewerModal'; // BGAI-074
+import { api } from '@/lib/api';
 
 interface MessageProps {
   message: MessageType;
@@ -41,6 +44,10 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
   // Don't show actions for deleted or optimistic messages
   const showActions = !isDeleted && !isEditing && !isOptimistic;
 
+  // BGAI-074: PDF viewer state
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+
   // CHAT-02: Handle follow-up question click
   const handleFollowUpClick = (question: string) => {
     setInputValue(question);
@@ -49,6 +56,12 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
     if (inputElement) {
       inputElement.focus();
     }
+  };
+
+  // BGAI-074: Handle citation click to open PDF viewer
+  const handleCitationClick = (citation: Citation) => {
+    setSelectedCitation(citation);
+    setPdfViewerOpen(true);
   };
 
   return (
@@ -141,8 +154,20 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
             citations={message.citations}
             showRelevanceScores={false}
             collapsible={true}
+            onCitationClick={handleCitationClick}
           />
         </div>
+      )}
+
+      {/* BGAI-074: PDF Viewer Modal */}
+      {selectedCitation && (
+        <PdfViewerModal
+          open={pdfViewerOpen}
+          onOpenChange={setPdfViewerOpen}
+          pdfUrl={api.pdf.getPdfDownloadUrl(selectedCitation.documentId)}
+          initialPage={selectedCitation.pageNumber}
+          documentName={`PDF - Page ${selectedCitation.pageNumber}`}
+        />
       )}
 
       {/* Timestamp */}

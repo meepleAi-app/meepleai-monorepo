@@ -1,11 +1,12 @@
 /**
- * CitationCard - Individual PDF citation display (Issue #859)
+ * CitationCard - Individual PDF citation display (Issue #859, BGAI-074)
  *
  * Displays a single citation from RAG response with:
  * - Page number badge
  * - Snippet text preview
  * - Relevance score indicator (optional)
  * - Subtle card styling for visual separation
+ * - Click to jump to PDF page (BGAI-074)
  *
  * Uses Shadcn/UI Card component for consistent design.
  */
@@ -19,25 +20,46 @@ interface CitationCardProps {
   citation: Citation;
   showRelevanceScore?: boolean;
   className?: string;
+  onClick?: (citation: Citation) => void;
 }
 
 export const CitationCard = React.memo(function CitationCard({
   citation,
   showRelevanceScore = false,
-  className
+  className,
+  onClick
 }: CitationCardProps) {
   const { pageNumber, snippet, relevanceScore } = citation;
 
   // Format relevance score as percentage
   const scorePercentage = Math.round(relevanceScore * 100);
 
+  const handleClick = () => {
+    onClick?.(citation);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick?.(citation);
+    }
+  };
+
+  const isClickable = !!onClick;
+
   return (
     <Card
       className={cn(
         "border-l-4 border-l-blue-500 bg-gray-50 hover:bg-gray-100 transition-colors",
+        isClickable && "cursor-pointer hover:shadow-md active:shadow-sm",
         className
       )}
       data-testid="citation-card"
+      onClick={isClickable ? handleClick : undefined}
+      onKeyDown={isClickable ? handleKeyDown : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      role={isClickable ? 'button' : undefined}
+      aria-label={isClickable ? `View citation from page ${pageNumber}` : undefined}
     >
       <CardContent className="p-3">
         <div className="flex items-start justify-between gap-2 mb-2">
@@ -48,6 +70,7 @@ export const CitationCard = React.memo(function CitationCard({
             aria-label={`Page ${pageNumber}`}
           >
             Pag. {pageNumber}
+            {isClickable && <span className="ml-1">📄</span>}
           </span>
 
           {/* Relevance Score (optional) */}
@@ -70,6 +93,12 @@ export const CitationCard = React.memo(function CitationCard({
         >
           "{snippet}"
         </p>
+
+        {isClickable && (
+          <p className="text-xs text-blue-600 mt-2">
+            Clicca per visualizzare nel PDF
+          </p>
+        )}
       </CardContent>
     </Card>
   );

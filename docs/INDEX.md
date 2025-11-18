@@ -157,22 +157,25 @@
 **Purpose**: Planning, roadmap, team organization, sprint tracking
 
 #### Subdirectories
-- **[planning/](./07-project-management/planning/)** - Implementation plans (10 files)
+- **[planning/](./07-project-management/planning/)** - Implementation plans (8 files)
   - [Backend Implementation Plan](./07-project-management/planning/backend-implementation-plan.md)
   - [Frontend Implementation Plan](./07-project-management/planning/frontend-implementation-plan.md)
-  - [Executive Summary Roadmap](./07-project-management/planning/executive-summary-development-roadmap.md)
   - [Issue Status Tracker](./07-project-management/planning/issue-status-tracker.md)
   - [Manual Issue Creation Guide](./07-project-management/planning/manual-issue-creation-guide.md)
   - [Sprint 5 Integration Tests Plan](./07-project-management/planning/sprint-5-integration-tests-plan.md)
-  - _...and 4 more planning docs_
+  - _...and 3 more planning docs_
 
-- **[roadmap/](./07-project-management/roadmap/)** - Strategic roadmap (8 files)
-  - [Strategic Roadmap](./07-project-management/roadmap/board-game-ai-strategic-roadmap.md) (50 pages) ⭐
-  - [Master Roadmap 2025](./07-project-management/roadmap/master-roadmap-2025.md)
+- **[roadmap/](./07-project-management/roadmap/)** - Strategic roadmap ⭐
+  - **[ROADMAP.md](./07-project-management/roadmap/ROADMAP.md)** - **CONSOLIDATED MASTER ROADMAP** (v5.0 - 2025-11-18) ⭐⭐⭐
+    - Consolidates all previous roadmap files (visual, executive, next-30-issues, master)
+    - Real-time status from 160+ GitHub commits (Nov 2025)
+    - Phase 1A: ~60% complete, 8-10 weeks to MVP launch
+    - TIER 0-1: 100% complete, TIER 2: 85% complete
+  - [Strategic Roadmap](./07-project-management/roadmap/board-game-ai-strategic-roadmap.md) (50 pages, comprehensive)
   - [Code Quality Roadmap 2025](./07-project-management/roadmap/ROADMAP-CODE-QUALITY-2025.md) (11-week plan)
   - [Frontend Roadmap 2025](./07-project-management/roadmap/frontend-roadmap-2025.md)
   - [Quick Reference: Top 10 Issues](./07-project-management/roadmap/quick-reference-top-10-issues.md)
-  - _...and 3 more roadmap docs_
+  - _Note: Previous roadmap files (master-roadmap-2025.md, visual-roadmap.md, etc.) archived/consolidated_
 
 - **[organization/](./07-project-management/organization/)** - Team & execution (7 files)
   - [Team Organization](./07-project-management/organization/team-organization.md) ⭐ - Team structure, roles, onboarding

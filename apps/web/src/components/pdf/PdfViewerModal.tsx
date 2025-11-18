@@ -12,9 +12,10 @@
  * Usage: Display PDF when user clicks citation to jump to specific page
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { List } from 'react-window';
+// @ts-ignore - react-window types are incomplete for List component
+import { FixedSizeList } from 'react-window';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -194,7 +195,7 @@ export function PdfViewerModal({
     goToPage(page);
   }, [goToPage]);
 
-  const renderThumbnail = useCallback((props: { index: number; style: React.CSSProperties }) => {
+  const renderThumbnail = useCallback((props: { index: number; style: React.CSSProperties }): React.ReactElement => {
     const { index, style } = props;
     const pageNumber = index + 1;
     const isActive = pageNumber === currentPage;
@@ -212,10 +213,7 @@ export function PdfViewerModal({
           )}
         >
           <Document
-            file={{
-              url: pdfUrl,
-              withCredentials: true
-            }}
+            file={pdfUrl}
             onLoadError={() => {}}
           >
             <Page
@@ -343,15 +341,15 @@ export function PdfViewerModal({
                   role="navigation"
                   aria-label="Page thumbnails"
                 >
-                  <List<{}>
+                  <FixedSizeList
                     ref={thumbnailListRef}
                     height={window.innerHeight - 200}
                     itemCount={numPages}
                     itemSize={THUMBNAIL_HEIGHT + 16}
                     width={THUMBNAIL_WIDTH + 32}
                   >
-                    {renderThumbnail}
-                  </List>
+                    {renderThumbnail as any}
+                  </FixedSizeList>
                 </div>
               )}
 
@@ -375,7 +373,6 @@ export function PdfViewerModal({
                   <div className="flex justify-center" style={{ minHeight: loading ? 0 : 'auto' }}>
                     <Document
                       file={pdfUrl}
-                      options={{ withCredentials: true }}
                       onLoadSuccess={onDocumentLoadSuccess}
                       onLoadError={onDocumentLoadError}
                       loading=""

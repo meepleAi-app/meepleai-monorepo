@@ -24,6 +24,7 @@ import { createGameSlice } from '@/store/chat/slices/gameSlice';
 import { createChatSlice } from '@/store/chat/slices/chatSlice';
 import { createMessagesSlice } from '@/store/chat/slices/messagesSlice';
 import { createUISlice } from '@/store/chat/slices/uiSlice';
+import { createMockAgent } from '@/__tests__/fixtures/common-fixtures';
 
 // ============================================================================
 // Test Store Creation
@@ -202,19 +203,12 @@ export function createFullChatState(): Partial<ChatStore> {
     ],
 
     agents: [
-      {
+      createMockAgent({
         id: agentId,
         name: 'QA Agent',
         type: 'qa',
-        strategyName: 'RagStrategy',
-        strategyParameters: {},
-        isActive: true,
         createdAt: new Date().toISOString(),
-        lastInvokedAt: null,
-        invocationCount: 0,
-        isRecentlyUsed: false,
-        isIdle: true,
-      },
+      }),
     ],
 
     chatsByGame: {

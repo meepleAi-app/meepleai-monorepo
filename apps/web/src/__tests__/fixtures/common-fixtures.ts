@@ -296,12 +296,12 @@ export const createMockRuleSpec = (overrides?: Partial<MockRuleSpec>): MockRuleS
 // =============================================================================
 
 /**
- * Agent type matching backend (Issue #868: global agents)
+ * Agent type matching backend (Issue #868: Agents are global, not per-game)
  */
 export type MockAgent = {
   id: string;
   name: string;
-  type: string;
+  type: string; // e.g., 'qa', 'explain', 'setup'
   strategyName: string;
   strategyParameters: Record<string, any>;
   isActive: boolean;
@@ -338,11 +338,10 @@ export type MockChat = {
 };
 
 /**
- * Creates a mock agent (Issue #868: global agents)
+ * Creates a mock agent (Issue #868: Agents are global, not per-game)
  *
  * @example
  * const agent = createMockAgent({
- *   id: 'agent-1',
  *   name: 'Chess Expert',
  *   type: 'qa'
  * });
@@ -351,13 +350,13 @@ export const createMockAgent = (overrides?: Partial<MockAgent>): MockAgent => ({
   id: overrides?.id || 'agent-1',
   name: overrides?.name || 'Test Agent',
   type: overrides?.type || 'qa',
-  strategyName: overrides?.strategyName || 'RagStrategy',
+  strategyName: overrides?.strategyName || 'DefaultStrategy',
   strategyParameters: overrides?.strategyParameters || {},
   isActive: overrides?.isActive !== undefined ? overrides.isActive : true,
-  createdAt: overrides?.createdAt || '2024-01-01T00:00:00Z',
+  createdAt: overrides?.createdAt || new Date().toISOString(),
   lastInvokedAt: overrides?.lastInvokedAt !== undefined ? overrides.lastInvokedAt : null,
-  invocationCount: overrides?.invocationCount || 0,
-  isRecentlyUsed: overrides?.isRecentlyUsed || false,
+  invocationCount: overrides?.invocationCount !== undefined ? overrides.invocationCount : 0,
+  isRecentlyUsed: overrides?.isRecentlyUsed !== undefined ? overrides.isRecentlyUsed : false,
   isIdle: overrides?.isIdle !== undefined ? overrides.isIdle : true,
 });
 

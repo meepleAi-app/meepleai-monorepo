@@ -104,15 +104,16 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
     results.push(result);
   });
 
-  // Index agents (Issue #868: global agents, no gameId)
+  // Index agents
   sources.agents?.forEach((agent) => {
     const result: AgentSearchResult = {
       id: agent.id,
       type: 'agent',
       title: agent.name,
-      subtitle: `${agent.type} Agent`,
+      subtitle: `${agent.type} Agent (${agent.strategyName})`, // Issue #868: Use type and strategyName
       timestamp: new Date(agent.createdAt),
       agent,
+      gameId: undefined, // Issue #868: Agents are global, not tied to games
       relevanceScore: 0,
     };
     results.push(result);
@@ -138,7 +139,8 @@ function applyFilters(results: SearchResult[], filters?: SearchFilters): SearchR
       const gameId =
         result.type === 'message' ? result.gameId :
         result.type === 'chat' ? result.gameId :
-        undefined; // Agents are global (no gameId)
+        result.type === 'agent' ? result.gameId :
+        undefined;
       if (gameId !== filters.gameId) return false;
     }
 

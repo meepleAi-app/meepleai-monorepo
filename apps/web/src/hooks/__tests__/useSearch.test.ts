@@ -6,6 +6,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useSearch } from '../useSearch';
 import type { Game, Agent, Message, ChatThread } from '@/types';
+import { createMockAgent } from '@/__tests__/fixtures/common-fixtures';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -35,32 +36,8 @@ const mockGames: Game[] = [
 ];
 
 const mockAgents: Agent[] = [
-  {
-    id: 'agent-1',
-    name: 'Chess Master',
-    type: 'Expert',
-    strategyName: 'RagStrategy',
-    strategyParameters: {},
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    lastInvokedAt: null,
-    invocationCount: 0,
-    isRecentlyUsed: false,
-    isIdle: true
-  },
-  {
-    id: 'agent-2',
-    name: 'Go Sensei',
-    type: 'Expert',
-    strategyName: 'RagStrategy',
-    strategyParameters: {},
-    isActive: true,
-    createdAt: '2024-01-02T00:00:00Z',
-    lastInvokedAt: null,
-    invocationCount: 0,
-    isRecentlyUsed: false,
-    isIdle: true
-  },
+  createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'Expert', createdAt: '2024-01-01T00:00:00Z' }),
+  createMockAgent({ id: 'agent-2', name: 'Go Sensei', type: 'Expert', createdAt: '2024-01-02T00:00:00Z' }),
 ];
 
 const mockMessages: Message[] = [

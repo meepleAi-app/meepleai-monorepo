@@ -7,6 +7,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SearchFilters } from '../search/SearchFilters';
 import type { SearchFilters as SearchFiltersType, Game, Agent } from '@/types';
+import { createMockAgent } from '@/__tests__/fixtures/common-fixtures';
 
 // Mock data
 const mockGames: Game[] = [
@@ -16,32 +17,8 @@ const mockGames: Game[] = [
 ];
 
 const mockAgents: Agent[] = [
-  {
-    id: 'agent-1',
-    name: 'Chess Master',
-    type: 'Expert',
-    strategyName: 'RagStrategy',
-    strategyParameters: {},
-    isActive: true,
-    createdAt: '2024-01-01',
-    lastInvokedAt: null,
-    invocationCount: 0,
-    isRecentlyUsed: false,
-    isIdle: true,
-  },
-  {
-    id: 'agent-2',
-    name: 'Go Sensei',
-    type: 'Expert',
-    strategyName: 'RagStrategy',
-    strategyParameters: {},
-    isActive: true,
-    createdAt: '2024-01-02',
-    lastInvokedAt: null,
-    invocationCount: 0,
-    isRecentlyUsed: false,
-    isIdle: true,
-  },
+  createMockAgent({ id: 'agent-1', name: 'Chess Master', type: 'Expert', createdAt: '2024-01-01' }),
+  createMockAgent({ id: 'agent-2', name: 'Go Sensei', type: 'Expert', createdAt: '2024-01-02' }),
 ];
 
 describe('SearchFilters', () => {

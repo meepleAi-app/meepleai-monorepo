@@ -18,7 +18,9 @@ public class GameSessionBuilder
     private string? _notes;
     private bool _shouldStart;
     private bool _shouldComplete;
+    private bool _shouldAbandon;
     private string? _winnerName;
+    private int? _durationMinutes;
 
     public GameSessionBuilder WithId(Guid id)
     {
@@ -81,6 +83,43 @@ public class GameSessionBuilder
     }
 
     /// <summary>
+    /// Sets session to completed status.
+    /// </summary>
+    public GameSessionBuilder WithCompletedStatus()
+    {
+        _shouldComplete = true;
+        _winnerName = _winnerName ?? "Player 1";
+        return this;
+    }
+
+    /// <summary>
+    /// Sets session to abandoned status.
+    /// </summary>
+    public GameSessionBuilder WithAbandonedStatus()
+    {
+        _shouldAbandon = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the winner name for completed sessions.
+    /// </summary>
+    public GameSessionBuilder WithWinner(string? winnerName)
+    {
+        _winnerName = winnerName;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the session duration in minutes.
+    /// </summary>
+    public GameSessionBuilder WithDuration(int durationMinutes)
+    {
+        _durationMinutes = durationMinutes;
+        return this;
+    }
+
+    /// <summary>
     /// Creates a session with 4 players (typical board game scenario).
     /// </summary>
     public GameSessionBuilder WithFourPlayers()
@@ -120,6 +159,31 @@ public class GameSessionBuilder
                 session.Start(); // Must start before completing
             }
             session.Complete(_winnerName);
+        }
+
+        if (_shouldAbandon)
+        {
+            if (!_shouldStart)
+            {
+                session.Start(); // Must start before abandoning
+            }
+            session.Abandon();
+        }
+
+        // Apply duration if specified (using reflection to set private StartedAt/CompletedAt)
+        if (_durationMinutes.HasValue)
+        {
+            var now = DateTime.UtcNow;
+            var startedAt = now.AddMinutes(-_durationMinutes.Value);
+
+            var startedAtProp = typeof(GameSession).GetProperty("StartedAt");
+            startedAtProp?.SetValue(session, startedAt);
+
+            if (_shouldComplete || _shouldAbandon)
+            {
+                var completedAtProp = typeof(GameSession).GetProperty("CompletedAt");
+                completedAtProp?.SetValue(session, now);
+            }
         }
 
         return session;

@@ -48,3 +48,23 @@ public record SessionPlayerRequest(
 public record CompleteSessionRequest(
     string? WinnerName = null
 );
+
+/// <summary>
+/// DTO for aggregated session statistics.
+/// </summary>
+public record SessionStatsDto(
+    int TotalSessions,
+    int CompletedSessions,
+    int AbandonedSessions,
+    int AverageDurationMinutes,
+    List<PlayerWinStatsDto> TopPlayers
+);
+
+/// <summary>
+/// DTO for player win statistics.
+/// </summary>
+public record PlayerWinStatsDto(
+    string PlayerName,
+    int WinCount,
+    decimal WinRate
+);

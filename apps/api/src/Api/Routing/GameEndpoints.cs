@@ -396,6 +396,40 @@ public static class GameEndpoints
             return Results.Ok(result);
         });
 
+        // Get session statistics (aggregated stats with filters)
+        group.MapGet("/sessions/statistics", async (
+            [FromQuery] Guid? gameId,
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromQuery] int topPlayersLimit,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            // Auth check
+            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
+            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
+
+            if (!hasSession && !hasApiKey)
+            {
+                return Results.Unauthorized();
+            }
+
+            // Default topPlayersLimit to 5 if not specified or invalid
+            if (topPlayersLimit <= 0)
+                topPlayersLimit = 5;
+
+            var query = new GetSessionStatsQuery(
+                GameId: gameId,
+                StartDate: startDate,
+                EndDate: endDate,
+                TopPlayersLimit: topPlayersLimit
+            );
+
+            var result = await mediator.Send(query, ct);
+            return Results.Ok(result);
+        });
+
         return group;
     }
 }

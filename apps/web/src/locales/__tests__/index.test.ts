@@ -11,20 +11,20 @@ describe('i18n locales', () => {
     expect(Object.keys(itMessages).length).toBeGreaterThan(0);
   });
 
-  it('should fallback to Italian messages when English locale is empty', () => {
+  it('should return English messages for English locale', () => {
     const enMessages = getMessages(LOCALES.EN);
-    const itMessages = getMessages(LOCALES.IT);
-
-    // English messages should fallback to Italian since EN is empty
-    expect(enMessages).toBe(itMessages);
+    expect(enMessages).toBeDefined();
     expect(Object.keys(enMessages).length).toBeGreaterThan(0);
   });
 
-  it('should fallback to default locale for empty messages', () => {
-    const emptyLocaleMessages = getMessages(LOCALES.EN);
-    const defaultMessages = messages[DEFAULT_LOCALE];
+  it('should have separate message catalogs for Italian and English', () => {
+    const enMessages = getMessages(LOCALES.EN);
+    const itMessages = getMessages(LOCALES.IT);
 
-    expect(emptyLocaleMessages).toBe(defaultMessages);
+    // English and Italian should have their own catalogs
+    expect(enMessages).not.toBe(itMessages);
+    expect(Object.keys(enMessages).length).toBeGreaterThan(0);
+    expect(Object.keys(itMessages).length).toBeGreaterThan(0);
   });
 
   it('should have Italian as default locale', () => {

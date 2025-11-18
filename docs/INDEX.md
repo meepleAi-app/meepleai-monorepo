@@ -1,8 +1,9 @@
 # MeepleAI Documentation Index
 
 **Project**: Italian Board Game Rules AI Assistant
-**Version**: 2.0
-**Last Updated**: 2025-11-15
+**Version**: 2.1
+**Last Updated**: 2025-11-18
+**Total Documentation**: 162 markdown files (~850 pages, 88,505 lines)
 
 ---
 

@@ -33,7 +33,8 @@ import {
   type UserProfile,
   type UserPreferences,
   type TotpSetupResponse,
-  type TwoFactorStatusDto
+  type TwoFactorStatusDto,
+  type UserSessionInfo
 } from '@/lib/api';
 
 // OAuth provider configuration
@@ -92,12 +93,18 @@ export default function SettingsPage() {
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
   const [apiKeyAuthenticated, setApiKeyAuthenticated] = useState(false);
 
+  // Active sessions state
+  const [sessions, setSessions] = useState<UserSessionInfo[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+
   // Load initial data
   useEffect(() => {
     loadProfile();
     load2FAStatus();
     loadOAuthAccounts();
     checkApiKeyAuthentication();
+    loadUserSessions();
   }, []);
 
   const loadProfile = async () => {
@@ -376,6 +383,66 @@ export default function SettingsPage() {
     } finally {
       setApiKeyLoading(false);
     }
+  };
+
+  // Active sessions handlers
+  const loadUserSessions = async () => {
+    try {
+      setSessionsLoading(true);
+      const userSessions = await api.auth.getUserSessions();
+      setSessions(userSessions);
+    } catch (error) {
+      console.error('Failed to load user sessions:', error);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    if (!confirm('Revoke this session? The device using this session will be logged out.')) {
+      return;
+    }
+
+    setRevokingSessionId(sessionId);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await api.auth.revokeSession(sessionId);
+      setSuccess('Session revoked successfully');
+      // Reload sessions list
+      await loadUserSessions();
+    } catch (error: any) {
+      console.error('Failed to revoke session:', error);
+      setError(error?.message || 'Failed to revoke session');
+    } finally {
+      setRevokingSessionId(null);
+    }
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  const getDeviceInfo = (userAgent: string | null) => {
+    if (!userAgent) return 'Unknown device';
+
+    // Simple device detection
+    if (userAgent.includes('Mobile')) return 'Mobile device';
+    if (userAgent.includes('Tablet')) return 'Tablet';
+    if (userAgent.includes('Windows')) return 'Windows PC';
+    if (userAgent.includes('Mac')) return 'Mac';
+    if (userAgent.includes('Linux')) return 'Linux';
+
+    return 'Unknown device';
+  };
+
+  const isCurrentSession = (session: UserSessionInfo) => {
+    // Simple heuristic: the most recently seen session is likely the current one
+    const now = new Date();
+    const lastSeen = session.lastSeenAt ? new Date(session.lastSeenAt) : new Date(session.createdAt);
+    const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
+    return diffMinutes < 5; // Consider sessions active within last 5 minutes as "current"
   };
 
   if (loading && !profile) {
@@ -928,15 +995,100 @@ export default function SettingsPage() {
                 <CardHeader>
                   <CardTitle>Active Sessions</CardTitle>
                   <CardDescription>
-                    View and manage your active login sessions
+                    View and manage your active login sessions across all devices
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Alert>
-                    <AlertDescription>
-                      Session management coming soon
-                    </AlertDescription>
-                  </Alert>
+                  {sessionsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                    </div>
+                  ) : sessions.length === 0 ? (
+                    <Alert>
+                      <AlertDescription>
+                        No active sessions found
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="space-y-4">
+                      {sessions.map((session) => {
+                        const isCurrent = isCurrentSession(session);
+                        const isRevoking = revokingSessionId === session.id;
+
+                        return (
+                          <div
+                            key={session.id}
+                            className="flex items-start justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
+                          >
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <div className="font-medium text-slate-900 dark:text-white">
+                                  {getDeviceInfo(session.userAgent)}
+                                </div>
+                                {isCurrent && (
+                                  <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded">
+                                    Current Session
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                                <div>
+                                  <span className="font-medium">IP Address:</span>{' '}
+                                  {session.ipAddress || 'Unknown'}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Created:</span>{' '}
+                                  {formatDateTime(session.createdAt)}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Last Seen:</span>{' '}
+                                  {session.lastSeenAt
+                                    ? formatDateTime(session.lastSeenAt)
+                                    : 'Never'}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Expires:</span>{' '}
+                                  {formatDateTime(session.expiresAt)}
+                                </div>
+                                {session.userAgent && (
+                                  <details className="mt-2">
+                                    <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                                      Show user agent
+                                    </summary>
+                                    <div className="mt-1 p-2 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono break-all">
+                                      {session.userAgent}
+                                    </div>
+                                  </details>
+                                )}
+                              </div>
+                            </div>
+
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleRevokeSession(session.id)}
+                              disabled={isRevoking || isCurrent}
+                              className="ml-4"
+                            >
+                              {isRevoking ? 'Revoking...' : 'Revoke'}
+                            </Button>
+                          </div>
+                        );
+                      })}
+
+                      <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={loadUserSessions}
+                          disabled={sessionsLoading}
+                        >
+                          {sessionsLoading ? 'Refreshing...' : 'Refresh Sessions'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

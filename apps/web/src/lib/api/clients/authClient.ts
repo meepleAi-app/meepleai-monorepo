@@ -8,6 +8,8 @@
 import type { HttpClient } from '../core/httpClient';
 import {
   SessionStatusResponseSchema,
+  UserSessionInfoSchema,
+  RevokeSessionResponseSchema,
   TotpSetupResponseSchema,
   TwoFactorStatusDtoSchema,
   Enable2FAResultSchema,
@@ -17,6 +19,8 @@ import {
   ChangePasswordResponseSchema,
   UserPreferencesSchema,
   type SessionStatusResponse,
+  type UserSessionInfo,
+  type RevokeSessionResponse,
   type TotpSetupResponse,
   type TwoFactorStatusDto,
   type Enable2FAResult,
@@ -90,6 +94,29 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
         '/api/v1/auth/session/extend',
         {},
         SessionStatusResponseSchema
+      );
+    },
+
+    /**
+     * Get all active sessions for current user
+     */
+    async getUserSessions(): Promise<UserSessionInfo[]> {
+      const response = await httpClient.get(
+        '/api/v1/users/me/sessions',
+        UserSessionInfoSchema.array()
+      );
+      return response || [];
+    },
+
+    /**
+     * Revoke a specific session
+     * @param sessionId Session ID (GUID format)
+     */
+    async revokeSession(sessionId: string): Promise<RevokeSessionResponse> {
+      return httpClient.post(
+        `/api/v1/auth/sessions/${encodeURIComponent(sessionId)}/revoke`,
+        {},
+        RevokeSessionResponseSchema
       );
     },
 

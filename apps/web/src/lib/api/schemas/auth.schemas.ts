@@ -17,6 +17,27 @@ export const SessionStatusResponseSchema = z.object({
 
 export type SessionStatusResponse = z.infer<typeof SessionStatusResponseSchema>;
 
+export const UserSessionInfoSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  email: z.string().email(),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime().nullable(),
+  revokedAt: z.string().datetime().nullable(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
+});
+
+export type UserSessionInfo = z.infer<typeof UserSessionInfoSchema>;
+
+export const RevokeSessionResponseSchema = z.object({
+  ok: z.boolean(),
+  message: z.string(),
+});
+
+export type RevokeSessionResponse = z.infer<typeof RevokeSessionResponseSchema>;
+
 // ========== Two-Factor Authentication ==========
 
 export const TotpSetupResponseSchema = z.object({

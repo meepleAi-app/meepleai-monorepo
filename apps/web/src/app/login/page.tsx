@@ -9,11 +9,11 @@
  * Note (FE-IMP-005): Client-side only - AuthModal uses TanStack Query
  */
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthModal } from '@/components/auth';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [mounted, setMounted] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(true);
 
@@ -24,7 +24,6 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reason = searchParams?.get('reason') ?? null;
-  const [showAuthModal, setShowAuthModal] = useState(true);
 
   const isSessionExpired = reason === 'session_expired';
 
@@ -49,5 +48,19 @@ export default function LoginPage() {
         showDemoCredentials={true}
       />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+          Caricamento login...
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

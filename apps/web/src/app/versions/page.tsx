@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -84,7 +84,7 @@ type RuleSpecDiff = {
   changes: RuleAtomChange[];
 };
 
-export default function VersionHistory() {
+function VersionHistoryContent() {
   const searchParams = useSearchParams();
   const gameId = searchParams?.get('gameId') ?? null;
 
@@ -455,5 +455,19 @@ export default function VersionHistory() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function VersionHistory() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+          Caricamento cronologia versioni...
+        </div>
+      }
+    >
+      <VersionHistoryContent />
+    </Suspense>
   );
 }

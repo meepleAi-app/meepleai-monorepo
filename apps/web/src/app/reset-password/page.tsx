@@ -22,7 +22,7 @@
  * - PUT /api/v1/auth/password-reset/confirm - Confirm new password
  */
 
-import { useEffect, useState, FormEvent } from "react";
+import { Suspense, useEffect, useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -53,6 +53,20 @@ interface PasswordValidation {
   hasNumber: boolean;
   isValid: boolean;
   strength: PasswordStrength;
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+          Caricamento reset password...
+        </div>
+      }
+    >
+      <ResetPasswordPageContent />
+    </Suspense>
+  );
 }
 
 // Password validation utility
@@ -126,7 +140,7 @@ const PasswordStrengthIndicator = ({ strength }: { strength: PasswordStrength })
   );
 };
 
-export default function ResetPasswordPage() {
+function ResetPasswordPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token') ?? null;

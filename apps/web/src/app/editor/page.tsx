@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -42,7 +42,7 @@ type HistoryEntry = {
 
 type ViewMode = "rich" | "json";
 
-export default function RuleSpecEditor() {
+function RuleSpecEditorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const gameId = searchParams?.get('gameId') ?? null;
@@ -522,6 +522,20 @@ export default function RuleSpecEditor() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function RuleSpecEditor() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+          Caricamento editor...
+        </div>
+      }
+    >
+      <RuleSpecEditorContent />
+    </Suspense>
   );
 }
 

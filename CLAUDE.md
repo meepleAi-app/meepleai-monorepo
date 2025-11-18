@@ -41,6 +41,7 @@ apps/api/
     Application/      Commands, Queries, Handlers (MediatR)
     Infrastructure/   Repositories, adapters
   Infrastructure/     EF Core DbContext, entities
+    BackgroundTasks/  IBackgroundTaskOrchestrator (Redis-backed)
   Routing/           HTTP endpoints (use IMediator, NOT services)
 apps/web/
   pages/             Routes (SSR/SSG)
@@ -102,6 +103,23 @@ docs/                Architecture, ADRs, guides
 - Query expansion + RRF (15-25% recall boost)
 - Connection pools (PG: 10-100, Redis: 3 retries)
 - Brotli/Gzip (60-80% compression)
+
+### Background Task Orchestration
+- **IBackgroundTaskOrchestrator**: Redis-backed distributed coordination
+  - Immediate, delayed, and recurring task scheduling
+  - Task status tracking (Scheduled, Running, Completed, Failed, Cancelled)
+  - Task cancellation with CancellationToken propagation
+  - Distributed locking for cross-server coordination
+- **RedisBackgroundTaskOrchestrator**: Production implementation
+  - Redis key pattern: `meepleai:tasks:status:{taskId}`, `meepleai:tasks:lock:{lockKey}`
+  - Task status TTL: 24 hours
+  - Lua scripts for atomic lock operations
+  - Graceful error handling and logging
+- **OAuth State Storage**: Migrated to Redis (IOAuthStateStore)
+  - Redis key pattern: `meepleai:oauth:state:{state}`
+  - Automatic expiration via TTL (10 minutes)
+  - Single-use CSRF tokens (atomic validation + removal)
+  - Distributed-safe (works across multiple servers)
 
 ### Observability
 - **Health**: `/health` (ready/live), checks PG/Redis/Qdrant
@@ -223,11 +241,12 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 ```
 
 **Stack**:
-- Backend: xUnit + Moq + Testcontainers (Postgres, Qdrant, Unstructured, SmolDocling)
+- Backend: xUnit + Moq + Testcontainers (Postgres, Qdrant, Unstructured, SmolDocling, Redis)
 - Frontend: Jest + React Testing Library + Playwright + Lighthouse CI
 - CI: GitHub Actions (~14min, optimized)
 
-**Tests**: 4,033 frontend + 162 backend + 30 E2E = 4,225 total
+**Tests**: 4,033 frontend + 189 backend + 30 E2E = 4,252 total
+- New: 27 infrastructure tests (RedisOAuthStateStore: 13, RedisBackgroundTaskOrchestrator: 14)
 
 **Quality Tests** (5-Metric Framework):
 - **Accuracy**: ≥80% on golden dataset (1000 Q&A pairs)

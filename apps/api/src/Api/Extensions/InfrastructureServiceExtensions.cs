@@ -4,6 +4,7 @@ using StackExchange.Redis;
 using Polly;
 using Polly.Extensions.Http;
 using Api.Infrastructure;
+using Api.Infrastructure.BackgroundTasks;
 using Api.Services;
 using Api.Configuration;
 using Api.Models;
@@ -269,8 +270,12 @@ public static class InfrastructureServiceExtensions
 
     private static IServiceCollection AddBackgroundServices(this IServiceCollection services)
     {
-        // Background task execution
+        // Background task execution (fire-and-forget)
         services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
+
+        // Background task orchestration with distributed coordination (Redis)
+        services.AddSingleton<IBackgroundTaskOrchestrator, RedisBackgroundTaskOrchestrator>();
+
         return services;
     }
 }

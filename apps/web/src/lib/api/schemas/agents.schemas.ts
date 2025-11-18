@@ -16,7 +16,7 @@ export const AgentDtoSchema = z.object({
   name: z.string(),
   type: z.string(),
   strategyName: z.string(),
-  strategyParameters: z.record(z.any()),
+  strategyParameters: z.record(z.string(), z.any()),
   isActive: z.boolean(),
   createdAt: z.string().datetime(),
   lastInvokedAt: z.string().datetime().nullable(),
@@ -48,10 +48,10 @@ export const AgentResponseDtoSchema = z.object({
       snippet: z.string(),
       score: z.number(),
       pageNumber: z.number().int().nullable(),
-      metadata: z.record(z.any()).nullable(),
+      metadata: z.record(z.string(), z.any()).nullable(),
     })
   ),
-  metadata: z.record(z.any()).nullable(),
+  metadata: z.record(z.string(), z.any()).nullable(),
 });
 
 export type AgentResponseDto = z.infer<typeof AgentResponseDtoSchema>;
@@ -86,7 +86,7 @@ export const CreateAgentRequestSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   type: z.string().min(1, 'Type is required'),
   strategyName: z.string().min(1, 'Strategy name is required'),
-  strategyParameters: z.record(z.any()).optional(),
+  strategyParameters: z.record(z.string(), z.any()).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -97,7 +97,7 @@ export type CreateAgentRequest = z.infer<typeof CreateAgentRequestSchema>;
  */
 export const ConfigureAgentRequestSchema = z.object({
   strategyName: z.string().min(1, 'Strategy name is required'),
-  strategyParameters: z.record(z.any()).optional(),
+  strategyParameters: z.record(z.string(), z.any()).optional(),
 });
 
 export type ConfigureAgentRequest = z.infer<typeof ConfigureAgentRequestSchema>;

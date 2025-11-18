@@ -21,19 +21,7 @@ import { IntlProvider } from '@/components/providers/IntlProvider';
 import { api } from '@/lib/api';
 import { KeyboardShortcutsHelp } from '@/components/layout';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useState, ReactNode } from 'react';
-
-// Enable axe-core accessibility checks in development (UI-05)
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  // @ts-ignore - dynamic import
-  import('@axe-core/react').then((axe) => {
-    const React = require('react');
-    const ReactDOM = require('react-dom');
-    axe.default(React, ReactDOM, 1000);
-  }).catch(() => {
-    // Silently fail if axe-core fails to load
-  });
-}
+import { useState, useEffect, ReactNode } from 'react';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -46,6 +34,20 @@ function AppContent({ children }: { children: ReactNode }) {
   // Issue #1100: Keyboard shortcuts system
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+
+  // Enable axe-core accessibility checks in development (UI-05, Issue #841)
+  // Moved to useEffect to avoid page crashes during Playwright tests
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      import('@axe-core/react').then((axe) => {
+        const React = require('react');
+        const ReactDOM = require('react-dom');
+        axe.default(React, ReactDOM, 1000);
+      }).catch(() => {
+        // Silently fail if axe-core fails to load
+      });
+    }
+  }, []);
 
   // Global keyboard shortcuts
   useGlobalKeyboardShortcuts({

@@ -49,7 +49,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _scheduledTasks.TryAdd(taskId, cts);
 
-        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token), cts.Token);
+        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false), cts.Token);
     }
 
     public async Task ScheduleDelayedAsync(
@@ -82,7 +82,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
                 await Task.Delay(delay, cts.Token);
                 if (!cts.Token.IsCancellationRequested)
                 {
-                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token);
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false);
                 }
             }
             catch (OperationCanceledException)
@@ -122,7 +122,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             {
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token);
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: true);
 
                     if (!cts.Token.IsCancellationRequested)
                     {
@@ -134,6 +134,11 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             {
                 // Task was cancelled during execution or delay - cleanup handled by CancelAsync
                 _logger.LogInformation("Recurring task {TaskId} ({TaskName}) was cancelled", taskId, taskName);
+            }
+            finally
+            {
+                // Remove from scheduled tasks when recurring loop exits
+                _scheduledTasks.TryRemove(taskId, out _);
             }
         }, cts.Token);
     }
@@ -251,10 +256,15 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         string taskId,
         string taskName,
         Func<CancellationToken, Task> taskFactory,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool isRecurring)
     {
-        // Remove from scheduled tasks as we're now executing
-        _scheduledTasks.TryRemove(taskId, out _);
+        // For one-time tasks, remove from scheduled tasks as we're now executing
+        // For recurring tasks, keep in scheduled tasks so they can be cancelled between iterations
+        if (!isRecurring)
+        {
+            _scheduledTasks.TryRemove(taskId, out _);
+        }
 
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _runningTasks.TryAdd(taskId, cts);

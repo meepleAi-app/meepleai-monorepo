@@ -26,7 +26,7 @@ import {
  *
  * @example
  * ```tsx
- * import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+ * import { ThemeSwitcher } from '@/components/layout';
  *
  * export default function Navigation() {
  *   return (
@@ -144,7 +144,7 @@ export function ThemeSwitcher() {
  *
  * @example
  * ```tsx
- * import { ThemeProvider } from '@/components/ThemeSwitcher';
+ * import { ThemeProvider } from '@/components/layout';
  *
  * export default function App({ Component, pageProps }) {
  *   return (

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { api } from "@/lib/api";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
 import { LoadingButton } from "@/components/loading/LoadingButton";
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { EndpointDistributionChart, LatencyDistributionChart, RequestsTimeSeriesChart, FeedbackChart } from "@/components/AdminCharts";
+import { EndpointDistributionChart, LatencyDistributionChart, RequestsTimeSeriesChart, FeedbackChart } from "@/components/admin";
 import { cn } from "@/lib/utils";
 
 type AiRequest = {

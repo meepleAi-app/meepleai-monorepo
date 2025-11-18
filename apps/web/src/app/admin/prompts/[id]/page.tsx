@@ -4,9 +4,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import PromptVersionCard from "@/components/PromptVersionCard";
+import PromptVersionCard from "@/components/prompt";
 import { cn } from "@/lib/utils";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
 
 type PromptTemplate = {

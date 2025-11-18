@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { ErrorDisplay } from '@/components/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 

@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { toast } from "@/components/Toast";
+import { toast } from "@/components/layout";
 import { api, SystemConfigurationDto, UpdateConfigurationRequest } from "../../lib/api";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";

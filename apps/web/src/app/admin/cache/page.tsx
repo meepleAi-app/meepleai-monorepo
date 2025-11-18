@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, CacheStats } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
 
 type Game = {

@@ -147,6 +147,36 @@ public class GameSessionDomainTests
     }
 
     [Fact]
+    public void GameSession_Complete_WithTooLongWinnerName_ThrowsValidationException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        session.Start();
+        var longName = new string('A', 51); // 51 characters exceeds the 50 character limit
+
+        // Act & Assert
+        var exception = Assert.Throws<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => session.Complete(longName));
+        Assert.Contains("Winner name cannot exceed 50 characters", exception.Message);
+    }
+
+    [Fact]
+    public void GameSession_Complete_WithExactly50CharWinnerName_Succeeds()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        session.Start();
+        var maxLengthName = new string('A', 50); // Exactly 50 characters
+
+        // Act
+        session.Complete(maxLengthName);
+
+        // Assert
+        Assert.Equal(SessionStatus.Completed, session.Status);
+        Assert.Equal(maxLengthName, session.WinnerName);
+    }
+
+    [Fact]
     public void GameSession_Abandon_SetsStatusAndTimestamp()
     {
         // Arrange

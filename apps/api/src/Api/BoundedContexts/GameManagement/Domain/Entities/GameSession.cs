@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
+using Api.SharedKernel.Domain.Exceptions;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 
@@ -106,9 +107,21 @@ public sealed class GameSession : AggregateRoot<Guid>
         if (Status != SessionStatus.InProgress && Status != SessionStatus.Paused)
             throw new InvalidOperationException($"Cannot complete session in {Status} status. Session must be InProgress or Paused.");
 
+        // Validate winner name length (consistent with SessionPlayer validation)
+        if (winnerName != null)
+        {
+            var trimmed = winnerName.Trim();
+            if (trimmed.Length > 50)
+                throw new ValidationException("Winner name cannot exceed 50 characters");
+            WinnerName = trimmed;
+        }
+        else
+        {
+            WinnerName = null;
+        }
+
         Status = SessionStatus.Completed;
         CompletedAt = DateTime.UtcNow;
-        WinnerName = winnerName?.Trim();
 
         AddDomainEvent(new GameSessionCompletedEvent(Id, GameId, DateTime.UtcNow, Duration));
     }

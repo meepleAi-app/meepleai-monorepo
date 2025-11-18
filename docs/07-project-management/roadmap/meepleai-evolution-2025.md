@@ -602,7 +602,7 @@ dotnet test --filter "Category=MultiModel"
 ### 🎨 PHASE 1C - Frontend Sprint 5 (PARALLEL)
 ```bash
 # Issue #868: Agent Selection UI
-cd apps/web/pages
+cd apps/web/src/app
 # Implement agent selection interface
 
 # Issue #869: Move Validation Integration

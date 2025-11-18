@@ -146,7 +146,7 @@ pnpm test  # Should pass (90%+ coverage)
 apps/api/src/Api/BoundedContexts/DocumentProcessing/  # PDF processing (existing)
 apps/api/src/Api/BoundedContexts/KnowledgeBase/      # RAG pipeline (existing)
 apps/api/src/Api/Services/RagService.cs              # Extend with multi-model validation
-apps/web/src/pages/                                  # Frontend pages (add board-game-ai/)
+apps/web/src/app/                                    # Frontend App Router routes (board-game-ai/, chat/, etc.)
 ```
 
 **You're Ready!** Attend Sprint 1 Planning (Jan 23) with setup complete.

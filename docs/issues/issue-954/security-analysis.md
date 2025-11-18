@@ -260,7 +260,7 @@ catch (Exception ex)
 
 ### 7. ⚠️ P1 (HIGH) - Cross-Site Scripting (XSS)
 
-**File:** `apps/web/src/pages/editor.tsx:530`
+**File:** `apps/web/src/app/editor/page.tsx:530`
 **Severity:** WARNING
 **CWE:** CWE-79
 **Status:** ⏳ **PENDING REMEDIATION**

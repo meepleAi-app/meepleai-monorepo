@@ -38,7 +38,7 @@ This guide documents the migration from React Context to Zustand for the MeepleA
 
 **Before (React Context):**
 ```
-_app.tsx
+AppProviders (src/app/providers.tsx)
   └─ ThemeProvider
       └─ AuthProvider
           └─ chat.tsx
@@ -50,7 +50,7 @@ _app.tsx
 
 **After (Zustand):**
 ```
-_app.tsx
+AppProviders (src/app/providers.tsx)
   └─ ThemeProvider
       └─ AuthProvider
           └─ chat.tsx

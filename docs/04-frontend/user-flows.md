@@ -10,7 +10,7 @@
 ## Flussi per utenti anonimi
 
 ### 1. Registrazione nuovo account
-1. Apre `pages/index.tsx` con il form di registrazione/login.
+1. Apre `src/app/page.tsx` con il form di registrazione/login (App Router landing page).
 2. Compila i campi richiesti (nome, email, password) e seleziona eventuale ruolo.
 3. Invia il form → `POST /auth/register`.
 4. Riceve conferma e sessione autenticata (cookie HttpOnly).

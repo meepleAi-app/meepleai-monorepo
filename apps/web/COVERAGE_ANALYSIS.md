@@ -68,7 +68,6 @@ Test utility files were being included in coverage calculations:
 collectCoverageFrom: [
   'src/**/*.{js,jsx,ts,tsx}',
   '!src/**/*.d.ts',
-  '!src/**/_app.tsx',
   '!src/**/_document.tsx',
   '!src/**/__tests__/fixtures/**',
   '!src/**/__tests__/utils/**',          // Exclude all test utils
@@ -99,9 +98,9 @@ testPathIgnorePatterns: [
 
 Based on commit `b782f9c` analysis:
 
-1. **src/pages/games/index.tsx** (0% coverage, 92 lines)
-   - Main games list page
-   - Needs integration tests with QueryClient
+1. **src/app/games/page.tsx** (0% coverage, 92 lines)
+   - Main games list App Router route
+   - Needs integration tests with QueryClient + route segment metadata
 
 2. **src/contexts/ColorSchemeContext.tsx** (0% coverage, 70 lines)
    - Theme management provider
@@ -139,7 +138,7 @@ Based on commit `b782f9c` analysis:
 ### Phase 2: Add Missing Tests (Medium Priority)
 After Phase 1 stabilization:
 1. **ColorSchemeContext** (~2 hours)
-2. **pages/games/index.tsx** (~3 hours)
+2. **app/games/page.tsx** (~3 hours)
 3. **ProcessingProgress** (~2 hours)
 4. **UploadQueueStore** (~3 hours)
 

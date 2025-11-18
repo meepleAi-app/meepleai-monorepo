@@ -262,7 +262,7 @@ From original requirements:
 ### Modified (3 files)
 - `apps/web/package.json` (added zustand, zundo, immer)
 - `apps/web/pnpm-lock.yaml` (lockfile)
-- `apps/web/src/pages/chat.tsx` (provider update)
+- `apps/web/src/app/chat/page.tsx` (App Router provider wiring)
 - `apps/web/src/hooks/useChatOptimistic.ts` (Zustand migration)
 
 ### To Be Removed (After Manual Verification)

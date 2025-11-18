@@ -248,8 +248,8 @@ public class ExampleService
 ```
 apps/web/
   src/
-    pages/            # Next.js routes
-    lib/              # Utilities, API client
+    app/              # Next.js App Router routes + layouts
+    lib/              # Utilities, modular API client
     components/       # Reusable components (if needed)
     __tests__/        # Jest tests
   e2e/                # Playwright E2E tests

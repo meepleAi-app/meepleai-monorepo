@@ -237,7 +237,7 @@ describe('ChatProvider', () => {
 ```typescript
 // apps/web/__tests__/pages/chat.test.tsx
 import { render, screen, waitFor } from '@testing-library/react';
-import ChatPage from '@/pages/chat';
+import ChatPage from '@/components/pages/ChatPage';
 import * as api from '@/lib/api';
 
 jest.mock('@/lib/api');
@@ -827,6 +827,7 @@ public async Task ValidateApiKeyAsync_WithExpiredKey_ReturnsNull() { }
 
 ```typescript
 // apps/web/__tests__/pages/chat.test.tsx
+import ChatPage from '@/components/pages/ChatPage';
 import * as api from '@/lib/api';
 
 jest.mock('@/lib/api');
@@ -851,10 +852,10 @@ it('fetches chat messages on mount', async () => {
 
 ```typescript
 // apps/web/__tests__/pages/editor.test.tsx
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
-jest.mock('next/router', () => ({
-  useRouter: jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(),
 }));
 
 it('redirects to list page after save', async () => {

@@ -349,7 +349,7 @@ dotnet test
 **Note**: All C# CodeQL issues are resolved. The only remaining security issue is in TypeScript/JavaScript:
 
 ### ⏳ P1 (HIGH) - Frontend Issue
-- **SECURITY-01**: XSS in `apps/web/src/pages/editor.tsx:530`
+- **SECURITY-01**: XSS in `apps/web/src/app/editor/page.tsx:530`
 - **Language**: TypeScript/JavaScript (NOT C#)
 - **Estimated Time**: 6-7 hours
 - **Solution**: Add DOMPurify sanitization

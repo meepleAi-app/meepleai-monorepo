@@ -199,7 +199,7 @@ Analyzed **1,316+ reported security issues** from GitHub Code Scanning across al
 - ⏳ **XSS in editor.tsx:530** (6-7 hours) - **TOP PRIORITY**
   - Add DOMPurify sanitization
   - Install: `pnpm add dompurify @types/dompurify`
-  - File: `apps/web/src/pages/editor.tsx`
+  - File: `apps/web/src/app/editor/page.tsx`
 
 ---
 
@@ -392,7 +392,7 @@ cd apps/web && pnpm test
 
 1. ✅ **Review audit report** - DONE
 2. ⏳ **Fix XSS vulnerability** (P1) - 6-7 hours - **HIGHEST PRIORITY**
-   - File: `apps/web/src/pages/editor.tsx:530`
+   - File: `apps/web/src/app/editor/page.tsx:530`
    - Action: Add DOMPurify sanitization
    - Install: `pnpm add dompurify @types/dompurify`
 

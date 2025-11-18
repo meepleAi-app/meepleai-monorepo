@@ -219,7 +219,7 @@ pnpm add @vercel/analytics
 ```
 
 ```typescript
-// pages/_app.tsx
+// src/app/providers.tsx
 import { Analytics } from '@vercel/analytics/react';
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -270,7 +270,7 @@ getTTFB(sendToAnalytics);
 ```
 
 ```typescript
-// pages/_app.tsx
+// src/app/layout.tsx (Next.js App Router)
 import { useReportWebVitals } from 'next/web-vitals';
 
 export function reportWebVitals(metric: NextWebVitalsMetric) {
@@ -401,7 +401,7 @@ import Image from 'next/image';
 ### 3. Font Optimization
 
 ```typescript
-// pages/_app.tsx
+// src/app/layout.tsx
 import { Inter } from 'next/font/google';
 
 const inter = Inter({

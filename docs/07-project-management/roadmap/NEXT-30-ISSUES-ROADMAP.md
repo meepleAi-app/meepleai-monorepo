@@ -402,7 +402,7 @@
 **Area**: Frontend | **Category**: Localization | **Effort**: 1 week | **Week**: 14-15
 
 **Description**: Full Italian language support
-- next-i18next integration
+- React Intl integration (App Router)
 - Translation of all strings
 - Language switcher
 

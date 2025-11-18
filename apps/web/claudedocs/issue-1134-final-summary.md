@@ -63,7 +63,7 @@ TOTAL         |   91.09 |    94.6 | 68/79 | ✅
 
 ### New Files (7)
 ```
-apps/web/src/pages/sessions/
+apps/web/src/app/sessions/
 ├── index.tsx                                    (379 lines)
 ├── history.tsx                                  (421 lines)
 └── [id].tsx                                     (390 lines)

@@ -499,7 +499,7 @@ All interactive elements must be keyboard accessible:
 
 ### 1. Import Design Tokens
 
-In your `_app.tsx` or root layout:
+In `src/app/layout.tsx` (App Router root):
 
 ```tsx
 import '@/styles/design-tokens.css';

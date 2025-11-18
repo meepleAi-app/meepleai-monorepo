@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Backend services live in `apps/api/src/Api`, split by feature folders with cross-cutting plumbing wired through `Program.cs` and `Infrastructure/`. API-focused xUnit suites are under `apps/api/tests`. The Next.js frontend resides in `apps/web/src`, where routes live in `pages/`, shared utilities in `lib/`, React components under `components/`, and Jest specs in `__tests__/`; browser automation sits in `apps/web/e2e`. Operational collateral is grouped into `infra/` for Docker + environment assets, `docs/` for deep architecture notes, and `tools/` for helper scripts.
+Backend services live in `apps/api/src/Api`, split by feature folders with cross-cutting plumbing wired through `Program.cs` and `Infrastructure/`. API-focused xUnit suites are under `apps/api/tests`. The Next.js frontend resides in `apps/web/src`, where routes live in `app/` (App Router), shared utilities in `lib/`, React components under `components/`, and Jest specs in `__tests__/`; browser automation sits in `apps/web/e2e`. Operational collateral is grouped into `infra/` for Docker + environment assets, `docs/` for deep architecture notes, and `tools/` for helper scripts.
 
 ## Build, Test, and Development Commands
 - `cd apps/api && dotnet build` compiles backend services; append `dotnet test /p:CollectCoverage=true` to validate and gather coverage.

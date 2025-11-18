@@ -27,6 +27,14 @@ public class TwoFactorDisableRequest
 }
 
 /// <summary>
+/// Admin request to disable two-factor authentication for a locked-out user
+/// </summary>
+public class AdminDisable2FARequest
+{
+    public string TargetUserId { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// Response for login when 2FA is required
 /// </summary>
 public class LoginWith2FaResponse

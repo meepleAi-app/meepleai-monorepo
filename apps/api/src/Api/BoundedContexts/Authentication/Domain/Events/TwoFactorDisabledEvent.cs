@@ -13,10 +13,18 @@ public sealed class TwoFactorDisabledEvent : DomainEventBase
     public Guid UserId { get; }
 
     /// <summary>
+    /// Gets a value indicating whether this was an admin override (for locked-out users).
+    /// </summary>
+    public bool WasAdminOverride { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="TwoFactorDisabledEvent"/> class.
     /// </summary>
-    public TwoFactorDisabledEvent(Guid userId)
+    /// <param name="userId">The ID of the user who disabled 2FA.</param>
+    /// <param name="wasAdminOverride">Whether this was an admin override operation.</param>
+    public TwoFactorDisabledEvent(Guid userId, bool wasAdminOverride = false)
     {
         UserId = userId;
+        WasAdminOverride = wasAdminOverride;
     }
 }

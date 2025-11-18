@@ -28,6 +28,7 @@ import {
   createPdfClient,
   createConfigClient,
   createBggClient,
+  createAgentsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -35,6 +36,7 @@ import {
   type PdfClient,
   type ConfigClient,
   type BggClient,
+  type AgentsClient,
 } from './clients';
 
 // Re-export client-specific types for consumer convenience
@@ -129,6 +131,9 @@ export interface ApiClient {
   /** BoardGameGeek API integration */
   bgg: BggClient;
 
+  /** AI Agents Management & Invocation (Issue #868) */
+  agents: AgentsClient;
+
   /**
    * @deprecated Use feature-specific clients instead (auth, games, sessions, etc.)
    * Direct HTTP methods for endpoints not yet migrated to modular clients
@@ -207,6 +212,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     pdf: createPdfClient({ httpClient }),
     config: createConfigClient({ httpClient }),
     bgg: createBggClient({ httpClient }),
+    agents: createAgentsClient({ httpClient }),
 
     // Deprecated HTTP helpers for backward compatibility
     get: <T>(path: string) => httpClient.get<T>(path),

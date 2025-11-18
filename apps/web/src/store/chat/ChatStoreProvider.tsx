@@ -36,12 +36,10 @@ export function ChatStoreProvider({ children }: PropsWithChildren) {
     void loadGames();
   }, [loadGames]);
 
-  // Load agents when game changes
+  // Load agents on mount (Issue #868: Agents are global, not per-game)
   useEffect(() => {
-    if (selectedGameId) {
-      void loadAgents(selectedGameId);
-    }
-  }, [selectedGameId, loadAgents]);
+    void loadAgents();
+  }, [loadAgents]);
 
   // Load chats when game changes
   useEffect(() => {

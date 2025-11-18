@@ -168,16 +168,6 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       );
       return response ?? [];
     },
-
-    /**
-     * Get all agents for a specific game
-     * @param gameId Game ID
-     */
-    async getAgents(gameId: string): Promise<Array<{ id: string; gameId: string; name: string; kind: string; createdAt: string }> | null> {
-      return httpClient.get<Array<{ id: string; gameId: string; name: string; kind: string; createdAt: string }>>(
-        `/api/v1/games/${gameId}/agents`
-      );
-    },
   };
 }
 

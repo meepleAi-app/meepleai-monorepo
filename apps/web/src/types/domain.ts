@@ -13,14 +13,22 @@ export interface Game {
 }
 
 /**
- * Agent entity (AI assistant for a specific game)
+ * Agent entity (AI assistant with knowledge retrieval capabilities)
+ * Issue #868: Updated to match backend AgentDto structure
+ * Agents are global and not tied to specific games
  */
 export interface Agent {
   id: string;
-  gameId: string;
   name: string;
-  kind: string;
+  type: string;
+  strategyName: string;
+  strategyParameters: Record<string, any>;
+  isActive: boolean;
   createdAt: string;
+  lastInvokedAt: string | null;
+  invocationCount: number;
+  isRecentlyUsed: boolean;
+  isIdle: boolean;
 }
 
 /**

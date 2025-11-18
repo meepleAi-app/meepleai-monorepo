@@ -60,6 +60,10 @@ export default function RuleSpecEditor() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
+  // Undo/Redo state
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
   // Debounced content for auto-save (2 second delay)
   const debouncedContent = useDebounce(viewMode === "rich" ? richContent : jsonContent, 2000);
 
@@ -87,10 +91,6 @@ export default function RuleSpecEditor() {
       SAFE_FOR_TEMPLATES: true
     });
   }, [richContent]);
-
-  // Undo/Redo state
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   const initializeHistory = useCallback((content: string) => {
     const entry: HistoryEntry = { content, timestamp: Date.now() };

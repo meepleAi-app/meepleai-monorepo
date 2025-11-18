@@ -415,9 +415,11 @@ public static class GameEndpoints
                 return Results.Unauthorized();
             }
 
-            // Default topPlayersLimit to 5 if not specified or invalid
+            // Default topPlayersLimit to 5 if not specified or invalid, cap at 100 for performance
             if (topPlayersLimit <= 0)
                 topPlayersLimit = 5;
+            if (topPlayersLimit > 100)
+                topPlayersLimit = 100;
 
             var query = new GetSessionStatsQuery(
                 GameId: gameId,

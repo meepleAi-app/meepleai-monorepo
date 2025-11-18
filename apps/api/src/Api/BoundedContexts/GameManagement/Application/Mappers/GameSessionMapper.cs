@@ -29,7 +29,7 @@ public static class GameSessionMapper
             Players: playerDtos,
             WinnerName: session.WinnerName,
             Notes: session.Notes,
-            DurationMinutes: (int)session.Duration.TotalMinutes
+            DurationMinutes: (int)Math.Round(session.Duration.TotalMinutes)
         );
     }
 }

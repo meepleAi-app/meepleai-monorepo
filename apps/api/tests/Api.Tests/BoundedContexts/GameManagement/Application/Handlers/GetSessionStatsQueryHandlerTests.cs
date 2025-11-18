@@ -279,9 +279,11 @@ public class GetSessionStatsQueryHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(3, result.CompletedSessions);
-        // Note: The current implementation treats "Alice", "alice", and " Alice " as different players
-        // This test documents current behavior. If normalization is needed, update the handler.
-        Assert.True(result.TopPlayers.Count >= 1);
+        // Case-insensitive aggregation: "Alice", "alice", and " Alice " should be treated as the same player
+        Assert.Single(result.TopPlayers);
+        Assert.Equal("Alice", result.TopPlayers[0].PlayerName); // First occurrence casing preserved
+        Assert.Equal(3, result.TopPlayers[0].WinCount);
+        Assert.Equal(100.00m, result.TopPlayers[0].WinRate); // 3/3 * 100 = 100%
     }
 
     #endregion

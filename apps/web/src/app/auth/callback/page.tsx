@@ -7,10 +7,10 @@
  * Shows loading state and redirects based on success/error.
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function OAuthCallbackPage() {
+function OAuthCallbackPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const success = searchParams?.get('success') ?? null;
@@ -100,5 +100,19 @@ export default function OAuthCallbackPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function OAuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+          Caricamento callback OAuth...
+        </div>
+      }
+    >
+      <OAuthCallbackPageContent />
+    </Suspense>
   );
 }

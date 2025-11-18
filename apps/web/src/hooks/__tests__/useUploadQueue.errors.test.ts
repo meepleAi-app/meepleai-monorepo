@@ -48,6 +48,8 @@ global.localStorage = {
 };
 
 describe('useUploadQueue - Error Handling & Message Protocol', () => {
+  let mockWorker: MockUploadWorker;
+
   beforeEach(() => {
     jest.clearAllMocks();
     Object.keys(localStorageMock).forEach(key => delete localStorageMock[key]);
@@ -62,11 +64,13 @@ describe('useUploadQueue - Error Handling & Message Protocol', () => {
     });
 
     uploadQueueStore.clearAll();
+    mockWorker = mockWorkerInstance;
     return new Promise(resolve => setTimeout(resolve, 10));
   });
 
   afterEach(() => {
     uploadQueueStore.clearAll();
+    mockWorker = mockWorkerInstance;
   });
 
   // ==========================================================================

@@ -339,35 +339,36 @@ describe('gameSlice', () => {
   });
 
   // ============================================================================
-  // loadAgents Action Tests
+  // loadAgents Action Tests (Issue #868: Global Agents)
   // ============================================================================
 
   describe('loadAgents', () => {
-    const gameId = 'game-123';
-
-    it('should load agents successfully from API', async () => {
+    it('should load agents successfully from API using agentsClient', async () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: gameId,
+          gameId: 'game-1',
           name: 'Chess Master',
           kind: 'expert',
           createdAt: '2024-01-01',
         },
         {
           id: 'agent-2',
-          gameId: gameId,
+          gameId: 'game-2',
           name: 'Feedback Helper',
           kind: 'feedback',
           createdAt: '2024-01-02',
         },
       ];
 
-      mockApi.get.mockResolvedValueOnce(mockAgents);
+      // Mock api.agents.getAvailable() for Issue #868
+      mockApi.agents = {
+        getAvailable: jest.fn().mockResolvedValueOnce(mockAgents),
+      } as any;
 
-      await store.getState().loadAgents(gameId);
+      await store.getState().loadAgents();
 
-      expect(mockApi.get).toHaveBeenCalledWith(`/api/v1/games/${gameId}/agents`);
+      expect(mockApi.agents.getAvailable).toHaveBeenCalled();
       expect(store.getState().agents).toEqual(mockAgents);
       expect(store.getState().error).toBeNull();
     });
@@ -376,7 +377,7 @@ describe('gameSlice', () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: gameId,
+          gameId: 'game-1',
           name: 'Chess Master',
           kind: 'expert',
           createdAt: '2024-01-01',
@@ -385,12 +386,14 @@ describe('gameSlice', () => {
 
       let loadingDuringCall = false;
 
-      mockApi.get.mockImplementation(async () => {
-        loadingDuringCall = store.getState().loading.agents;
-        return mockAgents;
-      });
+      mockApi.agents = {
+        getAvailable: jest.fn().mockImplementation(async () => {
+          loadingDuringCall = store.getState().loading.agents;
+          return mockAgents;
+        }),
+      } as any;
 
-      await store.getState().loadAgents(gameId);
+      await store.getState().loadAgents();
 
       expect(loadingDuringCall).toBe(true);
     });
@@ -399,16 +402,18 @@ describe('gameSlice', () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: gameId,
+          gameId: 'game-1',
           name: 'Chess Master',
           kind: 'expert',
           createdAt: '2024-01-01',
         },
       ];
 
-      mockApi.get.mockResolvedValueOnce(mockAgents);
+      mockApi.agents = {
+        getAvailable: jest.fn().mockResolvedValueOnce(mockAgents),
+      } as any;
 
-      await store.getState().loadAgents(gameId);
+      await store.getState().loadAgents();
 
       expect(store.getState().loading.agents).toBe(false);
     });
@@ -417,7 +422,7 @@ describe('gameSlice', () => {
       const mockAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: gameId,
+          gameId: 'game-1',
           name: 'Chess Master',
           kind: 'expert',
           createdAt: '2024-01-01',
@@ -428,26 +433,32 @@ describe('gameSlice', () => {
       store.getState().setError('Previous error');
       expect(store.getState().error).toBe('Previous error');
 
-      mockApi.get.mockResolvedValueOnce(mockAgents);
+      mockApi.agents = {
+        getAvailable: jest.fn().mockResolvedValueOnce(mockAgents),
+      } as any;
 
-      await store.getState().loadAgents(gameId);
+      await store.getState().loadAgents();
 
       expect(store.getState().error).toBeNull();
     });
 
     it('should handle empty agents array from API', async () => {
-      mockApi.get.mockResolvedValueOnce([]);
+      mockApi.agents = {
+        getAvailable: jest.fn().mockResolvedValueOnce([]),
+      } as any;
 
-      await store.getState().loadAgents(gameId);
+      await store.getState().loadAgents();
 
       expect(store.getState().agents).toEqual([]);
       expect(store.getState().error).toBeNull();
     });
 
     it('should handle null response from API', async () => {
-      mockApi.get.mockResolvedValueOnce(null);
+      mockApi.agents = {
+        getAvailable: jest.fn().mockResolvedValueOnce(null),
+      } as any;
 
-      await store.getState().loadAgents(gameId);
+      await store.getState().loadAgents();
 
       expect(store.getState().agents).toEqual([]);
       expect(store.getState().error).toBeNull();
@@ -455,9 +466,11 @@ describe('gameSlice', () => {
 
     it('should handle API error and set error state', async () => {
       const mockError = new Error('Network error');
-      mockApi.get.mockRejectedValueOnce(mockError);
+      mockApi.agents = {
+        getAvailable: jest.fn().mockRejectedValueOnce(mockError),
+      } as any;
 
-      await store.getState().loadAgents(gameId);
+      await store.getState().loadAgents();
 
       expect(store.getState().agents).toEqual([]);
       expect(store.getState().error).toBe('Errore nel caricamento degli agenti');
@@ -466,9 +479,11 @@ describe('gameSlice', () => {
 
     it('should set loading state to false after API error', async () => {
       const mockError = new Error('Network error');
-      mockApi.get.mockRejectedValueOnce(mockError);
+      mockApi.agents = {
+        getAvailable: jest.fn().mockRejectedValueOnce(mockError),
+      } as any;
 
-      await store.getState().loadAgents(gameId);
+      await store.getState().loadAgents();
 
       expect(store.getState().loading.agents).toBe(false);
     });
@@ -478,7 +493,7 @@ describe('gameSlice', () => {
       const initialAgents: Agent[] = [
         {
           id: 'agent-1',
-          gameId: gameId,
+          gameId: 'game-1',
           name: 'Chess Master',
           kind: 'expert',
           createdAt: '2024-01-01',
@@ -487,15 +502,18 @@ describe('gameSlice', () => {
       store.getState().setAgents(initialAgents);
 
       const mockError = new Error('Network error');
-      mockApi.get.mockRejectedValueOnce(mockError);
+      mockApi.agents = {
+        getAvailable: jest.fn().mockRejectedValueOnce(mockError),
+      } as any;
 
-      await store.getState().loadAgents(gameId);
+      await store.getState().loadAgents();
 
       expect(store.getState().agents).toEqual([]);
     });
 
-    it('should handle different gameIds correctly', async () => {
-      const game1Agents: Agent[] = [
+    it('should load global agents (not tied to specific games)', async () => {
+      // Issue #868: Agents are global, so they can be from different games
+      const globalAgents: Agent[] = [
         {
           id: 'agent-1',
           gameId: 'game-1',
@@ -503,8 +521,6 @@ describe('gameSlice', () => {
           kind: 'expert',
           createdAt: '2024-01-01',
         },
-      ];
-      const game2Agents: Agent[] = [
         {
           id: 'agent-2',
           gameId: 'game-2',
@@ -512,19 +528,25 @@ describe('gameSlice', () => {
           kind: 'general',
           createdAt: '2024-01-02',
         },
+        {
+          id: 'agent-3',
+          gameId: 'game-1',
+          name: 'Chess Beginner',
+          kind: 'qa',
+          createdAt: '2024-01-03',
+        },
       ];
 
-      mockApi.get.mockResolvedValueOnce(game1Agents);
-      await store.getState().loadAgents('game-1');
-      expect(store.getState().agents).toEqual(game1Agents);
+      mockApi.agents = {
+        getAvailable: jest.fn().mockResolvedValueOnce(globalAgents),
+      } as any;
 
-      mockApi.get.mockResolvedValueOnce(game2Agents);
-      await store.getState().loadAgents('game-2');
-      expect(store.getState().agents).toEqual(game2Agents);
+      await store.getState().loadAgents();
 
-      expect(mockApi.get).toHaveBeenCalledTimes(2);
-      expect(mockApi.get).toHaveBeenNthCalledWith(1, '/api/v1/games/game-1/agents');
-      expect(mockApi.get).toHaveBeenNthCalledWith(2, '/api/v1/games/game-2/agents');
+      expect(store.getState().agents).toEqual(globalAgents);
+      expect(mockApi.agents.getAvailable).toHaveBeenCalledTimes(1);
+      // Verify it's called without parameters (global agents)
+      expect(mockApi.agents.getAvailable).toHaveBeenCalledWith();
     });
   });
 

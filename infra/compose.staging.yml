@@ -7,8 +7,9 @@ services:
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: meepleai_staging
-    # Note: Volumes inherited from base (docker-compose.yml)
-    # Using base volume names to avoid duplicate mount conflicts during overlay merge
+    volumes:
+      - pgdata-staging:/var/lib/postgresql/data
+      - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       interval: 10s
       timeout: 5s
@@ -22,8 +23,8 @@ services:
 
   qdrant:
     restart: unless-stopped
-    # Note: Volumes inherited from base (docker-compose.yml)
-    # Using base volume name (qdrantdata) to avoid duplicate mount conflicts during overlay merge
+    volumes:
+      - qdrantdata-staging:/qdrant/storage
 
   api:
     environment:
@@ -76,6 +77,9 @@ services:
     restart: unless-stopped
 
 volumes:
-  # Note: Most data volumes inherited from base (pgdata, qdrantdata, prometheusdata, seqdata, etc.)
-  # Only defining volumes here that are unique to staging and not in the base
-  redisdata-staging:  # Redis has no volume in base, so this is staging-specific
+  # Staging-specific data volumes for stateful services
+  pgdata-staging:
+  qdrantdata-staging:
+  redisdata-staging:
+  seqdata-staging:
+  prometheus-staging:

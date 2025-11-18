@@ -68,7 +68,40 @@ apps/api/src/Api/BoundedContexts/
 - Node.js 20+ with pnpm 9
 - Git
 
-### Development Setup
+### 🤖 Automated Setup (Recommended)
+
+**Quick Start** - For rapid development setup without tests:
+```bash
+./quick-start.sh
+```
+
+**Full Setup** - Complete environment with tests:
+```bash
+./tools/setup-test-environment.sh
+```
+
+**Available Options:**
+- `--dry-run` - Preview commands without executing
+- `--skip-cleanup` - Skip Docker and build cleanup
+- `--skip-frontend` - Backend only
+- `--skip-tests` - Skip test execution
+- `--full` - Run complete test suite including E2E
+- `--help` - Show all options
+
+**What it does:**
+1. ✅ Stops and cleans Docker containers/volumes
+2. ✅ Cleans build artifacts (.NET, Next.js)
+3. ✅ Starts Docker services (PostgreSQL, Qdrant, Redis, Seq)
+4. ✅ Builds and starts API with auto-migrations
+5. ✅ Starts frontend dev server
+6. ✅ Runs test suite (optional)
+7. ✅ Creates demo users (admin/editor/user@meepleai.dev, password: Demo123!)
+
+**See [tools/README-setup-script.md](tools/README-setup-script.md) for complete documentation.**
+
+---
+
+### Manual Development Setup
 
 1. **Clone the repository**
    ```bash

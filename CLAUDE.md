@@ -56,6 +56,9 @@ docs/                Architecture, ADRs, guides
 
 | Area | Command | Notes |
 |------|---------|-------|
+| **Quick Start** | `./quick-start.sh` | Automated setup (no tests, ~2min) |
+| | `./tools/setup-test-environment.sh` | Full setup with tests (~5min) |
+| | `./tools/setup-test-environment.sh --full` | Complete suite + E2E (~12min) |
 | **Backend** | `dotnet build && dotnet test` | xUnit+Testcontainers |
 | | `dotnet ef migrations add <Name> --project src/Api` | Auto-applied |
 | **Frontend** | `pnpm dev` / `pnpm build` / `pnpm test` | Jest 90%+ |

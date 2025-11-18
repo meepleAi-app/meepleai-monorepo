@@ -149,7 +149,7 @@ jobs:
           fi
 
       - name: Upload .NET Vulnerability Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dotnet-vulnerability-report
           path: apps/api/vulnerability-report.txt
@@ -206,7 +206,7 @@ jobs:
           fi
 
       - name: Upload Frontend Vulnerability Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: frontend-vulnerability-report
           path: |
@@ -318,7 +318,7 @@ jobs:
           exit 1
 
       - name: Upload Security Scan Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dotnet-security-scan-report
           path: apps/api/security-scan.log
@@ -378,7 +378,7 @@ jobs:
         if: always()
 
       - name: Upload Semgrep Reports
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: semgrep-security-reports
           path: |

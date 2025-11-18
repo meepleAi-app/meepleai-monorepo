@@ -59,13 +59,15 @@ export const createGameSlice: StateCreator<
     }
   },
 
-  loadAgents: async (gameId) => {
+  loadAgents: async () => {
     const { setLoading, setError } = get();
     setLoading('agents', true);
     setError(null);
 
     try {
-      const response = await api.games.getAgents(gameId);
+      // Issue #868: Load available (active) agents using agentsClient
+      // Agents are global and not tied to specific games
+      const response = await api.agents.getAvailable();
       set((state) => {
         state.agents = response ?? [];
       });

@@ -58,7 +58,7 @@ export interface GameActions {
   setGames: (games: Game[]) => void;
   setAgents: (agents: Agent[]) => void;
   loadGames: () => Promise<void>;
-  loadAgents: (gameId: string) => Promise<void>;
+  loadAgents: () => Promise<void>; // Issue #868: Agents are global, not per-game
 }
 
 export type GameSlice = GameState & GameActions;

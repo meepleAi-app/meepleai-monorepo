@@ -18,3 +18,6 @@ export * from './pdf.schemas';
 
 // System Configuration schemas
 export * from './config.schemas';
+
+// Agent schemas (Issue #868)
+export * from './agents.schemas';

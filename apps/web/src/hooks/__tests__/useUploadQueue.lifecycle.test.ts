@@ -47,7 +47,6 @@ global.localStorage = {
 };
 
 describe('useUploadQueue - Worker Lifecycle & Observability', () => {
-  let mockWorker: MockUploadWorker;
   beforeEach(() => {
     jest.clearAllMocks();
     Object.keys(localStorageMock).forEach(key => delete localStorageMock[key]);
@@ -62,13 +61,11 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
     });
 
     uploadQueueStore.clearAll();
-    mockWorker = mockWorkerInstance;
     return new Promise(resolve => setTimeout(resolve, 10));
   });
 
   afterEach(() => {
     uploadQueueStore.clearAll();
-    mockWorker = mockWorkerInstance;
   });
 
   // ==========================================================================
@@ -104,7 +101,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       });
 
       act(() => {
-        mockWorker.simulateCrash();
+        mockWorkerInstance.simulateCrash();
       });
 
       // Wait for error to be detected
@@ -125,7 +122,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       });
 
       act(() => {
-        mockWorker.simulateCrash();
+        mockWorkerInstance.simulateCrash();
       });
 
       // Wait for restart attempt
@@ -147,7 +144,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const queueLengthBefore = result.current.queue.length;
 
       act(() => {
-        mockWorker.simulateCrash();
+        mockWorkerInstance.simulateCrash();
       });
 
       // Wait for error to be detected
@@ -168,7 +165,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       // Simulate 4 crashes
       for (let i = 0; i < 4; i++) {
         act(() => {
-          mockWorker.simulateCrash();
+          mockWorkerInstance.simulateCrash();
           // Timer removed - using real async
         });
       }
@@ -319,7 +316,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
 
       for (let i = 0; i < 3; i++) {
         act(() => {
-          mockWorker.simulateCrash();
+          mockWorkerInstance.simulateCrash();
         });
         await new Promise(resolve => setTimeout(resolve, 100));
       }
@@ -340,7 +337,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const statsBefore = result.current.getStats();
 
       act(() => {
-        mockWorker.simulateCrash();
+        mockWorkerInstance.simulateCrash();
       });
 
       // Wait for restart attempt
@@ -363,7 +360,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       });
 
       act(() => {
-        mockWorker.simulateCrash();
+        mockWorkerInstance.simulateCrash();
       });
 
       // Wait for restart attempt
@@ -384,7 +381,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       unmount();
 
       // File data should be cleaned up
-      expect(mockWorker.getFileDataCacheSize()).toBe(0);
+      expect(mockWorkerInstance.getFileDataCacheSize()).toBe(0);
     });
 
     it('should handle SSR (no worker on server)', () => {
@@ -448,7 +445,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
   describe('File Buffering', () => {
     it('should buffer files when worker not ready', async () => {
       // Create hook before worker ready
-      mockWorker.setAutoUpload(false);
+      mockWorkerInstance.setAutoUpload(false);
 
       const { result } = renderHook(() => useUploadQueue());
 
@@ -509,7 +506,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       });
 
       act(() => {
-        mockWorker.simulateCrash();
+        mockWorkerInstance.simulateCrash();
       });
 
       await act(async () => {
@@ -687,7 +684,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       });
 
       act(() => {
-        mockWorker.simulateCrash();
+        mockWorkerInstance.simulateCrash();
       });
 
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });

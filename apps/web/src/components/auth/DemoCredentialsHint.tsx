@@ -58,18 +58,6 @@ export function DemoCredentialsHint({
   onCredentialClick,
   variant = 'default'
 }: DemoCredentialsHintProps) {
-  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
-
-  const handleCopy = async (text: string, email: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedEmail(email);
-      setTimeout(() => setCopiedEmail(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
-    }
-  };
-
   if (variant === 'compact') {
     return (
       <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
@@ -101,9 +89,6 @@ export function DemoCredentialsHint({
               <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                 Quick Test Access
               </p>
-              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                Use these demo accounts to explore MeepleAI features:
-              </p>
             </div>
           </div>
 
@@ -129,57 +114,16 @@ export function DemoCredentialsHint({
                 </div>
 
                 <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs bg-slate-100 dark:bg-slate-900 px-2 py-1.5 rounded">
-                      {cred.email}
-                    </code>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleCopy(cred.email, cred.email)}
-                      className="h-7 px-2"
-                      aria-label={`Copy ${cred.role} email`}
-                    >
-                      {copiedEmail === cred.email ? (
-                        <span className="text-xs text-green-600">✓</span>
-                      ) : (
-                        <span className="text-xs">📋</span>
-                      )}
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs bg-slate-100 dark:bg-slate-900 px-2 py-1.5 rounded">
-                      {cred.password}
-                    </code>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleCopy(cred.password, cred.email + '-pwd')}
-                      className="h-7 px-2"
-                      aria-label={`Copy ${cred.role} password`}
-                    >
-                      {copiedEmail === cred.email + '-pwd' ? (
-                        <span className="text-xs text-green-600">✓</span>
-                      ) : (
-                        <span className="text-xs">📋</span>
-                      )}
-                    </Button>
-                  </div>
+                  <code className="block text-xs bg-slate-100 dark:bg-slate-900 px-2 py-1.5 rounded">
+                    {cred.email}
+                  </code>
+                  <code className="block text-xs bg-slate-100 dark:bg-slate-900 px-2 py-1.5 rounded">
+                    {cred.password}
+                  </code>
                 </div>
-
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  {cred.description}
-                </p>
               </div>
             ))}
           </div>
-
-          <p className="text-xs text-slate-500 dark:text-slate-500 italic">
-            Note: Demo accounts are for testing only and reset daily.
-          </p>
         </div>
       </CardContent>
     </Card>

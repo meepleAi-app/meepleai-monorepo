@@ -136,47 +136,90 @@ const meta = {
 
 ## Deploy
 
-### Vercel (Recommended for Next.js)
-```bash
-# Automatic deployment on PR merge
-# Storybook will be built and deployed to:
-# https://<your-app>-storybook.vercel.app
+### Chromatic (Visual Testing - Configured ✅)
+Chromatic is **fully configured** and ready to use for visual regression testing.
 
-# Manual deploy:
-vercel --prod storybook-static/
+#### Quick Start
+```bash
+# Local testing (requires CHROMATIC_PROJECT_TOKEN env var)
+pnpm chromatic
+
+# CI/CD (automatic via GitHub Actions)
+# Runs on every PR to main branch
 ```
 
-### Chromatic (Visual Testing)
+#### Configuration
+- **Package**: `chromatic@^13.3.4` installed
+- **Config**: `chromatic.config.json` with optimized settings
+- **Addon**: `@chromatic-com/storybook@^4.1.3` in Storybook
+- **Workflow**: `.github/workflows/storybook-deploy.yml`
+
+#### Features Enabled
+- ✅ **Visual regression testing**: Automatic screenshot comparison
+- ✅ **UI review**: Collaborate on component changes
+- ✅ **PR comments**: Automatic Storybook preview links
+- ✅ **Auto-accept on main**: Changes on main branch auto-approved
+- ✅ **Smart diffs**: Only changed components tested (`onlyChanged: true`)
+- ✅ **Dependabot skip**: Skips visual tests for dependency updates
+
+#### Setup Requirements
+1. **Create Chromatic account**: Visit [chromatic.com](https://www.chromatic.com/)
+2. **Get project token**: Create new project → Copy token
+3. **Add to GitHub Secrets**: Settings → Secrets → `CHROMATIC_PROJECT_TOKEN`
+4. **Update config**: Set `projectId` in `chromatic.config.json`
+
+#### Local Usage
 ```bash
-# Install Chromatic
-pnpm add -D chromatic
+# Set token (one-time)
+export CHROMATIC_PROJECT_TOKEN=<your-token>
 
-# Deploy + visual regression testing
-npx chromatic --project-token=<YOUR_TOKEN>
+# Run visual tests
+pnpm chromatic
 
-# CI/CD integration
-# Add CHROMATIC_PROJECT_TOKEN to GitHub Secrets
+# CI mode (exits immediately after upload)
+pnpm chromatic:ci
+```
+
+#### CI/CD Workflow
+The GitHub Actions workflow automatically:
+1. Builds Storybook on component changes
+2. Uploads to Chromatic for visual testing
+3. Posts PR comment with preview link
+4. Blocks merge if visual regressions detected (configurable)
+
+### Vercel (Alternative for Static Hosting)
+```bash
+# Manual deploy of static Storybook
+vercel --prod storybook-static/
 ```
 
 ## CI/CD Integration
 
-### GitHub Actions (Suggested Workflow)
+### GitHub Actions (Fully Configured ✅)
+The workflow is already set up in `.github/workflows/storybook-deploy.yml`:
+
+**Triggers**:
+- Push to `main` branch
+- Pull requests to `main`
+- Changes in: `apps/web/src/components/**`, `apps/web/.storybook/**`, `apps/web/package.json`
+
+**Jobs**:
+1. ✅ Install dependencies (pnpm)
+2. ✅ Build Storybook
+3. ✅ Upload to Chromatic (with visual testing)
+4. ✅ Post PR comment with preview link
+
+**Configuration**:
 ```yaml
-name: Storybook CI
-
-on: [push, pull_request]
-
-jobs:
-  storybook:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - run: pnpm install
-      - run: pnpm build-storybook
-      - uses: chromaui/action@v1
-        with:
-          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+# .github/workflows/storybook-deploy.yml
+- uses: chromaui/action@v13
+  with:
+    projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+    workingDir: apps/web
+    buildScriptName: build-storybook
+    onlyChanged: true
+    exitZeroOnChanges: true
+    exitOnceUploaded: true
 ```
 
 ## Troubleshooting

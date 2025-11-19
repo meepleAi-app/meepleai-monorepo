@@ -66,6 +66,8 @@ docs/                Architecture, ADRs, guides
 | | `./tools/run-backend-coverage-docker.sh` | Code coverage (Docker, no .NET SDK) |
 | **Frontend** | `pnpm dev` / `pnpm build` / `pnpm test` | Jest 90%+ |
 | | `./tools/run-frontend-coverage.sh --open` | Code coverage with HTML report |
+| | `pnpm storybook` | Component dev (localhost:6006) |
+| | `pnpm chromatic` | Visual regression testing (Chromatic) |
 | **Docker** | `docker compose up -d` | Full stack (16 services) |
 
 **Services**:
@@ -102,6 +104,17 @@ docs/                Architecture, ADRs, guides
   - Advanced: API key authentication (fully functional), sessions, account deletion (placeholders)
 - **Profile** (`/profile`): Deprecated, redirects to `/settings`
 - **UI**: Shadcn/UI components (Tabs, Label, Alert, Separator, Card, Input, Select, Switch)
+
+### Storybook & Chromatic (Visual Testing)
+- **Storybook 10.0.8**: 32 components, ~150 story variants, localhost:6006
+- **Chromatic 13.3.4**: Visual regression testing (fully configured)
+  - Auto-deployment on PR (GitHub Actions)
+  - Smart diffs (only changed components)
+  - Auto-accept on main branch
+  - Dependabot skip
+- **Coverage**: 22 Shadcn/UI + 10 custom components
+- **Features**: Dark mode, A11y testing, auto-documentation
+- **Docs**: `apps/web/STORYBOOK.md`, `apps/web/.storybook/CHROMATIC.md`
 
 ### Performance (PERF-05 to PERF-11)
 - HybridCache L1+L2 (5min TTL)
@@ -478,9 +491,9 @@ bash tools/cleanup-caches.sh                # Run
 
 ---
 
-**Version**: 1.0-rc (DDD 100%, k6 Performance Suite, 160+ docs)
+**Version**: 1.0-rc (DDD 100%, k6 Performance Suite, Chromatic Visual Testing, 160+ docs)
 **Last Updated**: 2025-11-19
-**Last Verified**: 2025-11-19 (docs consolidated & reorganized)
+**Last Verified**: 2025-11-19 (Chromatic integration complete)
 **Owner**: Engineering Lead
 
 ---

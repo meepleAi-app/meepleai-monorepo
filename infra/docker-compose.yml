@@ -91,7 +91,7 @@ services:
             echo "Model pull initiated!" &&
             exit 0
           fi
-          echo "Attempt ${attempt} failed, retrying in 10s..." &&
+          echo "Attempt $${attempt} failed, retrying in 10s..." &&
           sleep 10
         done &&
         echo "Failed to pull nomic-embed-text after 5 attempts" >&2 &&
@@ -406,7 +406,7 @@ services:
       meepleai-ollama:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:5080/ || exit 1"]
+      test: ["CMD-SHELL", "curl --fail http://localhost:8080/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12

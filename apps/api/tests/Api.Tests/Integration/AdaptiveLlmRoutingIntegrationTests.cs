@@ -79,7 +79,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         _mockCostLogRepository = new Mock<ILlmCostLogRepository>();
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
         // Setup mock cost log repository to always succeed
         _mockCostLogRepository
@@ -96,13 +96,13 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());
 
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _loggerFactory?.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     #region Test 1: Ollama Primary Success

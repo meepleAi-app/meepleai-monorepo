@@ -1,0 +1,47 @@
+{
+  "sequential": {
+    "container": "mcp-sequential",
+    "command": ["python", "/app/server.py"],
+    "description": "Pensiero sequenziale step-by-step"
+  },
+  "memory-bank": {
+    "container": "mcp-memory",
+    "command": ["python", "/app/src/server.py"],
+    "description": "Memoria persistente e recall veloce"
+  },
+  "claude-context": {
+    "container": "mcp-claude-context",
+    "command": ["python", "/app/server.py"],
+    "description": "Gestione e ricerca dei contesti salvati"
+  },
+  "knowledge-graph": {
+    "container": "mcp-knowledge-graph",
+    "command": ["python", "/app/server.py"],
+    "description": "Grafo di conoscenza e analisi delle relazioni"
+  },
+  "magic": {
+    "container": "mcp-magic",
+    "command": ["python", "/app/server.py"],
+    "description": "Trasformazioni/analisi/generazione AI-powered (OpenRouter/OpenAI)",
+    "env": {}
+  },
+  "playwright": {
+    "container": "mcp-playwright",
+    "command": ["python", "/app/server.py"],
+    "description": "Automazione browser e scraping",
+    "env": {
+      "PLAYWRIGHT_BROWSERS_PATH": "/ms-playwright"
+    }
+  },
+  "github-project-manager": {
+    "container": "mcp-github",
+    "command": ["node", "src/index.js"],
+    "description": "Gestione progetto GitHub (issue/PR/review)"
+  },
+  "n8n-manager": {
+    "container": "mcp-n8n",
+    "command": ["node", "src/index.js"],
+    "description": "Gestione workflows n8n",
+    "env": {}
+  }
+}

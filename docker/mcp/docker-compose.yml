@@ -99,7 +99,7 @@ services:
     memswap_limit: 1024m
     # user: "1000:1000"  # Using default 'node' user from image
     environment:
-      - PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
     tmpfs:
       - /tmp:rw,size=512m,mode=1777
     networks:

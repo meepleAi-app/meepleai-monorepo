@@ -214,7 +214,10 @@ export function PdfViewerModal({
           )}
         >
           <Document
-            file={pdfUrl}
+            file={{
+              url: pdfUrl,
+              withCredentials: true
+            }}
             onLoadError={() => {}}
           >
             <Page
@@ -369,7 +372,10 @@ export function PdfViewerModal({
 
                   <div className="flex justify-center" style={{ minHeight: loading ? 0 : 'auto' }}>
                     <Document
-                      file={pdfUrl}
+                      file={{
+                        url: pdfUrl,
+                        withCredentials: true
+                      }}
                       onLoadSuccess={onDocumentLoadSuccess}
                       onLoadError={onDocumentLoadError}
                       loading=""

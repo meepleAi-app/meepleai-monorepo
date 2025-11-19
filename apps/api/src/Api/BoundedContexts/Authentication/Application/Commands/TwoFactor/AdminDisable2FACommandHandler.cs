@@ -62,6 +62,9 @@ public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FAComm
             // Disable 2FA with admin override flag (domain method will raise TwoFactorDisabledEvent)
             targetUser.Disable2FA(wasAdminOverride: true);
 
+            // Persist the updated user state via repository
+            await _userRepository.UpdateAsync(targetUser, cancellationToken);
+
             // Save changes (event handler will send email notification)
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

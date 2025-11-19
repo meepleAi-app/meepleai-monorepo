@@ -11,7 +11,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
 
 /**
  * Sets up mock authentication routes

@@ -293,7 +293,7 @@ jobs:
         run: pnpm install
 
       - name: Setup Test Environment (Base)
-        run: cp .env.test.example .env.test || echo "NEXT_PUBLIC_API_BASE=http://localhost:8080" > .env.test
+        run: cp .env.test.example .env.test || echo "NEXT_PUBLIC_API_BASE=http://localhost:5080" > .env.test
 
       - name: Build Next.js for Production (Base)
         run: pnpm build

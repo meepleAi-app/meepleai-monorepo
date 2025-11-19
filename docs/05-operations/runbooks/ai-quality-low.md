@@ -112,7 +112,7 @@ curl http://localhost:6333/collections/meepleai-documents | jq .
 docker compose logs meepleai-api | grep -i "embedding"
 
 # 4. Test vector search manually
-curl -X POST http://localhost:8080/api/v1/rag/search \
+curl -X POST http://localhost:5080/api/v1/rag/search \
   -H "Content-Type: application/json" \
   -d '{"query":"How do I win in Chess?","gameId":"<chess-game-id>","topK":5}'
 # Expected: 200 OK with relevant results
@@ -159,7 +159,7 @@ open http://localhost:3001/d/ai-rag-operations
 # Panel: "AI Tokens Used"
 
 # 4. Test LLM directly (manual QA request)
-curl -X POST http://localhost:8080/api/v1/agents/qa \
+curl -X POST http://localhost:5080/api/v1/agents/qa \
   -H "Content-Type: application/json" \
   -H "Cookie: session=<your-session-cookie>" \
   -d '{"gameId":"<game-id>","query":"Test question"}'
@@ -189,7 +189,7 @@ docker compose logs meepleai-api | grep -i "citation"
 # (Use database query tool to check pdf_documents table)
 
 # 3. Test full QA flow with citations
-curl -X POST http://localhost:8080/api/v1/agents/qa \
+curl -X POST http://localhost:5080/api/v1/agents/qa \
   -H "Content-Type: application/json" \
   -H "Cookie: session=<your-session-cookie>" \
   -d '{"gameId":"<game-id>","query":"Test with citations"}'
@@ -214,7 +214,7 @@ curl -X POST http://localhost:8080/api/v1/agents/qa \
 **Diagnostic Steps**:
 ```bash
 # 1. Check all health endpoints
-curl http://localhost:8080/health/ready | jq .
+curl http://localhost:5080/health/ready | jq .
 # Check status of: Postgres, Redis, Qdrant
 
 # 2. Check resource usage
@@ -256,7 +256,7 @@ docker compose logs meepleai-api | grep -E "ERROR|CRITICAL" | tail -50
 docker compose logs meepleai-api | grep -E "POST /meepleai-api/v1/agents" | tail -20
 
 # 2. Check Prometheus scraping
-curl http://localhost:8080/metrics | grep meepleai_quality
+curl http://localhost:5080/metrics | grep meepleai_quality
 # Expected: meepleai_quality_score_bucket, meepleai_quality_low_quality_responses_total
 
 # 3. Check Prometheus targets
@@ -302,7 +302,7 @@ cd infra && docker compose restart
 ### Generate Test Traffic for Debugging
 ```bash
 # Send test QA request
-curl -X POST http://localhost:8080/api/v1/agents/qa \
+curl -X POST http://localhost:5080/api/v1/agents/qa \
   -H "Content-Type: application/json" \
   -H "Cookie: session=<session-cookie>" \
   -d '{

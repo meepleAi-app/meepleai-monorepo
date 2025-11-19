@@ -470,7 +470,7 @@ dotnet run  # Porta 8080
 
 # Frontend worktree (consuma API)
 cd D:/Repositories/meepleai-monorepo-frontend
-pnpm dev  # Porta 3000, chiama http://localhost:8080
+pnpm dev  # Porta 3000, chiama http://localhost:5080
 
 # Test integrazione end-to-end
 # Frontend vede dati backend in real-time!
@@ -674,7 +674,7 @@ pnpm dev  # Verify frontend starts on :3000
 
 # 5. Test integration
 # Browser: http://localhost:3000 (frontend)
-# API: http://localhost:8080/health (backend)
+# API: http://localhost:5080/health (backend)
 
 # ✅ Setup completo! Pronto per Settimana 1.
 ```

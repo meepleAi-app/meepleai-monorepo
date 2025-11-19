@@ -67,7 +67,7 @@ describe('usePdfs', () => {
 
       expect(result.current.pdfs).toEqual(mockPdfs);
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/games/game-1/pdfs',
+        'http://localhost:5080/api/v1/games/game-1/pdfs',
         { credentials: 'include' }
       );
     });
@@ -168,7 +168,7 @@ describe('usePdfs', () => {
       });
 
       expect(global.fetch).toHaveBeenLastCalledWith(
-        'http://localhost:8080/api/v1/games/game-2/pdfs',
+        'http://localhost:5080/api/v1/games/game-2/pdfs',
         { credentials: 'include' }
       );
     });
@@ -310,7 +310,7 @@ describe('usePdfs', () => {
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          'http://localhost:8080/api/v1/games/game-1/pdfs',
+          'http://localhost:5080/api/v1/games/game-1/pdfs',
           { credentials: 'include' }
         );
       });

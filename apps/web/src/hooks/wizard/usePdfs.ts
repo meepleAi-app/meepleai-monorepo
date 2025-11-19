@@ -29,7 +29,7 @@ export function usePdfs(gameId: string | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
 
   const fetchPdfs = useCallback(async () => {
     if (!gameId) {

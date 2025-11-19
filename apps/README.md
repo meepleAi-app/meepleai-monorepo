@@ -75,8 +75,8 @@ apps/
 ```bash
 cd apps/api/src/Api
 dotnet run
-# API: http://localhost:8080
-# Swagger: http://localhost:8080/swagger
+# API: http://localhost:5080
+# Swagger: http://localhost:5080/swagger
 ```
 
 ---
@@ -297,7 +297,7 @@ cd infra
 docker compose up -d
 
 # All services start:
-# - api: http://localhost:8080
+# - api: http://localhost:5080
 # - web: http://localhost:3000
 # - embedding: http://localhost:8000
 # - unstructured: http://localhost:8001
@@ -378,7 +378,7 @@ cd apps/web && pnpm test:e2e
 
 ```bash
 # API
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 
 # Web (Next.js internal)
 curl http://localhost:3000/api/health
@@ -432,7 +432,7 @@ SMOLDOCLING_SERVICE_URL=http://smoldocling:8002
 
 **Web** (`.env.local`):
 ```bash
-NEXT_PUBLIC_API_BASE=http://localhost:8080
+NEXT_PUBLIC_API_BASE=http://localhost:5080
 ```
 
 **Embedding Service** (`apps/embedding-service/.env`):

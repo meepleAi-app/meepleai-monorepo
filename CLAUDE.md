@@ -349,7 +349,7 @@ npm run test:sessions       # Sessions endpoint test
 - `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` (bootstrap)
 
 **Web**:
-- `NEXT_PUBLIC_API_BASE=http://localhost:8080`
+- `NEXT_PUBLIC_API_BASE=http://localhost:5080`
 
 **Never commit** `.env.dev/local/prod`
 
@@ -417,7 +417,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | Auth issues | Check cookies, sessions table |
 | CI failures | Verify Docker/Linux, env vars |
 
-**Health Check**: `curl http://localhost:8080/health`
+**Health Check**: `curl http://localhost:5080/health`
 
 ---
 

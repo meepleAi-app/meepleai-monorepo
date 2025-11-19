@@ -71,7 +71,7 @@ INITIAL_ADMIN_PASSWORD=Admin123!
 
 **Via API**:
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/users \
+curl -X POST http://localhost:5080/api/v1/admin/users \
   -H "Content-Type: application/json" \
   -H "Cookie: your-admin-session" \
   -d '{
@@ -132,7 +132,7 @@ VALUES (
 
 **API Health**:
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 ```
 
 **Expected Response**:
@@ -211,7 +211,7 @@ curl http://localhost:5678/healthz
 
 **API**:
 ```bash
-curl http://localhost:8080/api/v1/admin/users \
+curl http://localhost:5080/api/v1/admin/users \
   -H "Cookie: your-admin-session"
 ```
 
@@ -247,7 +247,7 @@ GROUP BY u.id;
 
 **API**:
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/users \
+curl -X POST http://localhost:5080/api/v1/admin/users \
   -H "Content-Type: application/json" \
   -H "Cookie: your-admin-session" \
   -d '{
@@ -272,7 +272,7 @@ UPDATE users SET is_active = false WHERE id = 123;
 
 **Reset password** (generate reset token):
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/users/123/reset-password \
+curl -X POST http://localhost:5080/api/v1/admin/users/123/reset-password \
   -H "Cookie: your-admin-session"
 ```
 
@@ -346,7 +346,7 @@ DELETE FROM sessions WHERE user_id = 123;
 
 **Enable/Disable Features**:
 ```bash
-curl -X PUT http://localhost:8080/api/v1/admin/config/features/enable-2fa \
+curl -X PUT http://localhost:5080/api/v1/admin/config/features/enable-2fa \
   -H "Content-Type: application/json" \
   -H "Cookie: your-admin-session" \
   -d '{"value": true}'
@@ -354,7 +354,7 @@ curl -X PUT http://localhost:8080/api/v1/admin/config/features/enable-2fa \
 
 **Update Rate Limits**:
 ```bash
-curl -X PUT http://localhost:8080/api/v1/admin/config/ratelimit/requests-per-minute \
+curl -X PUT http://localhost:5080/api/v1/admin/config/ratelimit/requests-per-minute \
   -H "Content-Type: application/json" \
   -H "Cookie: your-admin-session" \
   -d '{"value": 100}'
@@ -362,7 +362,7 @@ curl -X PUT http://localhost:8080/api/v1/admin/config/ratelimit/requests-per-min
 
 **Configure AI Models**:
 ```bash
-curl -X PUT http://localhost:8080/api/v1/admin/config/ai/primary-model \
+curl -X PUT http://localhost:5080/api/v1/admin/config/ai/primary-model \
   -H "Content-Type: application/json" \
   -H "Cookie: your-admin-session" \
   -d '{"value": "anthropic/claude-3.5-sonnet"}'
@@ -372,14 +372,14 @@ curl -X PUT http://localhost:8080/api/v1/admin/config/ai/primary-model \
 
 **Export all settings**:
 ```bash
-curl http://localhost:8080/api/v1/admin/config/export \
+curl http://localhost:5080/api/v1/admin/config/export \
   -H "Cookie: your-admin-session" \
   > config-backup-$(date +%Y%m%d).json
 ```
 
 **Import settings**:
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/config/import \
+curl -X POST http://localhost:5080/api/v1/admin/config/import \
   -H "Content-Type: application/json" \
   -H "Cookie: your-admin-session" \
   -d @config-backup-20251115.json
@@ -389,7 +389,7 @@ curl -X POST http://localhost:8080/api/v1/admin/config/import \
 
 **Via API**:
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/config/rollback/version-123 \
+curl -X POST http://localhost:5080/api/v1/admin/config/rollback/version-123 \
   -H "Cookie: your-admin-session"
 ```
 
@@ -549,7 +549,7 @@ resources:
 ```bash
 # Run daily at 9 AM
 #!/bin/bash
-curl -f http://localhost:8080/health || echo "API health check failed" | mail -s "MeepleAI Alert" admin@meepleai.dev
+curl -f http://localhost:5080/health || echo "API health check failed" | mail -s "MeepleAI Alert" admin@meepleai.dev
 ```
 
 **Review Logs**:
@@ -800,7 +800,7 @@ docker compose logs postgres
 docker compose ps
 
 # Check health
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 ```
 
 **Common causes**:
@@ -913,7 +913,7 @@ docker compose logs postgres
 docker compose restart postgres
 
 # Verify connection
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 
 # If still failing, check credentials
 cat infra/env/.env.dev | grep Postgres
@@ -954,7 +954,7 @@ docker compose logs api | grep ERROR
 docker compose restart api
 
 # Monitor recovery
-watch curl http://localhost:8080/health
+watch curl http://localhost:5080/health
 ```
 
 **Prevention**:

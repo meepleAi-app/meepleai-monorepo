@@ -143,7 +143,7 @@ docker compose -f docker-compose.yml -f docker-compose.infisical.yml up -d
 | Service | Port | Description | Access URL |
 |---------|------|-------------|------------|
 | **n8n** | 5678 | Workflow automation | http://localhost:5678 |
-| **api** | 8080 | ASP.NET Core API | http://localhost:8080 |
+| **api** | 8080 | ASP.NET Core API | http://localhost:5080 |
 | **web** | 3000 | Next.js frontend | http://localhost:3000 |
 
 ---
@@ -396,7 +396,7 @@ docker compose up -d --build
 
 ```bash
 # API health
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 
 # Qdrant health
 curl http://localhost:6333/healthz

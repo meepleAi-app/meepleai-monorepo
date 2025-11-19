@@ -458,10 +458,10 @@ public Dictionary<string, (string circuitState, string latencyStats)> GetMonitor
 
 ```bash
 # Overall API health
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 
 # LLM provider health
-curl http://localhost:8080/api/v1/admin/llm-health
+curl http://localhost:5080/api/v1/admin/llm-health
 ```
 
 ### Metrics (OpenTelemetry)

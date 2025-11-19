@@ -9,7 +9,7 @@ interface OAuthButtonsProps {
  * Exported for testing purposes
  */
 export function buildOAuthUrl(provider: 'google' | 'discord' | 'github'): string {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
   return `${apiBase}/api/v1/auth/oauth/${provider}/login`;
 }
 

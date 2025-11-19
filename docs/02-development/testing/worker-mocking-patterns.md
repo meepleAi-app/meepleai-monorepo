@@ -46,7 +46,7 @@ import { MockUploadWorker } from '../../__tests__/helpers/uploadQueueMocks';
 const mockWorker = new MockUploadWorker({
   uploadDelay: 10,     // ms delay for upload simulation
   autoUpload: true,    // Automatically start uploads when files added
-  apiBase: 'http://localhost:8080'
+  apiBase: 'http://localhost:5080'
 });
 
 // Configure error simulation

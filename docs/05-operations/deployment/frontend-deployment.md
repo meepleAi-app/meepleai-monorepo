@@ -145,7 +145,7 @@ spec:
 
 | Variable | Development | Production | Description |
 |----------|-------------|------------|-------------|
-| `NEXT_PUBLIC_API_BASE` | `http://localhost:8080` | `https://api.meepleai.dev` | Backend API URL |
+| `NEXT_PUBLIC_API_BASE` | `http://localhost:5080` | `https://api.meepleai.dev` | Backend API URL |
 | `NEXT_PUBLIC_ENVIRONMENT` | `development` | `production` | Environment name |
 | `NEXT_PUBLIC_SENTRY_DSN` | (optional) | (required) | Error tracking |
 | `NEXT_PUBLIC_ANALYTICS_ID` | (optional) | (required) | Vercel Analytics |

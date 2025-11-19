@@ -18,7 +18,7 @@
 #
 # Usage:
 #   docker compose -f docker-compose.infisical.yml up -d
-#   Access UI: http://localhost:8080
+#   Access UI: http://localhost:5080
 #
 # Documentation:
 # - Setup: https://infisical.com/docs/self-hosting/deployment-options/docker-compose
@@ -37,7 +37,7 @@ services:
     environment:
       # Core Configuration
       - NODE_ENV=production
-      - SITE_URL=http://localhost:8080
+      - SITE_URL=http://localhost:5080
 
       # Database Connection (Infisical's own DB)
       - DB_CONNECTION_URI=postgresql://infisical:${INFISICAL_DB_PASSWORD:-infisical_password}@infisical-db:5432/infisical
@@ -76,7 +76,7 @@ services:
       - infisical-network
 
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/status"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5080/api/status"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -196,7 +196,7 @@ volumes:
 #    docker compose -f infra/docker-compose.infisical.yml up -d
 #
 # 5. Access UI:
-#    http://localhost:8080
+#    http://localhost:5080
 #
 # 6. Initial Setup (First Login):
 #    - Create admin account
@@ -275,7 +275,7 @@ volumes:
 #   docker compose -f infra/docker-compose.infisical.yml ps
 #
 # Check Infisical health:
-#   curl http://localhost:8080/api/status
+#   curl http://localhost:5080/api/status
 #
 # Check logs:
 #   docker compose -f infra/docker-compose.infisical.yml logs -f infisical

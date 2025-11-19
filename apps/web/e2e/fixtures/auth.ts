@@ -1,6 +1,6 @@
 import { test as base, Page, Route } from '@playwright/test';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:5080';
 
 /**
  * Setup mock auth routes for testing (based on authenticated.spec.ts pattern)

@@ -110,7 +110,7 @@ gh issue view 890  # Check for deferral comment
 - [ ] Clone/update repo: `git pull origin main`
 - [ ] Review CLAUDE.md + board-game-ai-IMPLEMENTATION-NOTES.md
 - [ ] Setup local env: `cd infra && docker compose up -d`
-- [ ] Verify services healthy: `curl http://localhost:8080/health`
+- [ ] Verify services healthy: `curl http://localhost:5080/health`
 - [ ] Run existing tests: `cd apps/api && dotnet test`
 
 **10. Kickoff Sprint 1** (Jan 27, 2025):

@@ -70,7 +70,7 @@ docker ps --filter "name=mcp-"
 ### Applicazioni (2 servizi)
 | Servizio | Porta | URL | Descrizione |
 |----------|-------|-----|-------------|
-| meepleai-api | 8080 | http://localhost:8080 | ASP.NET Core API |
+| meepleai-api | 8080 | http://localhost:5080 | ASP.NET Core API |
 | meepleai-web | 3000 | http://localhost:3000 | Next.js frontend |
 
 ### MCP Servers (8 servizi)
@@ -134,7 +134,7 @@ docker exec -it $(docker ps -qf "name=redis") redis-cli ping
 curl http://localhost:6333/health
 
 # API
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 
 # Web
 curl http://localhost:3000
@@ -350,7 +350,7 @@ dotnet run
 docker compose -f docker-compose.dev.yml up -d
 
 # Access services
-# API: http://localhost:8080
+# API: http://localhost:5080
 # Web: http://localhost:3000
 # Grafana: http://localhost:3001 (admin/admin)
 # Seq: http://localhost:8081

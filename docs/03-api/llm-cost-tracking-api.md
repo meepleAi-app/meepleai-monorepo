@@ -70,15 +70,15 @@ LLM Request → HybridLlmService
 **Example**:
 ```bash
 # Last 30 days (default)
-curl -H "Cookie: session_id=..." http://localhost:8080/admin/llm-costs/report
+curl -H "Cookie: session_id=..." http://localhost:5080/admin/llm-costs/report
 
 # Specific date range
 curl -H "Cookie: session_id=..." \
-  "http://localhost:8080/admin/llm-costs/report?startDate=2025-11-01&endDate=2025-11-12"
+  "http://localhost:5080/admin/llm-costs/report?startDate=2025-11-01&endDate=2025-11-12"
 
 # User-specific costs
 curl -H "Cookie: session_id=..." \
-  "http://localhost:8080/admin/llm-costs/report?userId=550e8400-e29b-41d4-a716-446655440000"
+  "http://localhost:5080/admin/llm-costs/report?userId=550e8400-e29b-41d4-a716-446655440000"
 ```
 
 ---
@@ -115,11 +115,11 @@ curl -H "Cookie: session_id=..." \
 **Example**:
 ```bash
 # Today (default)
-curl -H "Cookie: session_id=..." http://localhost:8080/admin/llm-costs/daily
+curl -H "Cookie: session_id=..." http://localhost:5080/admin/llm-costs/daily
 
 # Specific date
 curl -H "Cookie: session_id=..." \
-  "http://localhost:8080/admin/llm-costs/daily?date=2025-11-10"
+  "http://localhost:5080/admin/llm-costs/daily?date=2025-11-10"
 ```
 
 ---
@@ -150,7 +150,7 @@ curl -H "Cookie: session_id=..." \
 ```bash
 curl -X POST \
   -H "Cookie: session_id=..." \
-  http://localhost:8080/admin/llm-costs/check-alerts
+  http://localhost:5080/admin/llm-costs/check-alerts
 ```
 
 ---
@@ -288,7 +288,7 @@ MONTH_START=$(date +"%Y-%m-01")
 TODAY=$(date +"%Y-%m-%d")
 
 curl -H "Cookie: session_id=admin-session" \
-  "http://localhost:8080/admin/llm-costs/report?startDate=$MONTH_START&endDate=$TODAY" \
+  "http://localhost:5080/admin/llm-costs/report?startDate=$MONTH_START&endDate=$TODAY" \
   | jq '.totalCost'
 ```
 
@@ -297,7 +297,7 @@ curl -H "Cookie: session_id=admin-session" \
 #!/bin/bash
 # Check if today exceeded $100 threshold
 curl -H "Cookie: session_id=admin-session" \
-  "http://localhost:8080/admin/llm-costs/daily" \
+  "http://localhost:5080/admin/llm-costs/daily" \
   | jq '.exceedsThreshold, .totalCost'
 ```
 
@@ -307,7 +307,7 @@ curl -H "Cookie: session_id=admin-session" \
 # Run threshold checks manually
 curl -X POST \
   -H "Cookie: session_id=admin-session" \
-  http://localhost:8080/admin/llm-costs/check-alerts
+  http://localhost:5080/admin/llm-costs/check-alerts
 ```
 
 ---

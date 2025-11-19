@@ -111,7 +111,7 @@ test.describe.skip('Visual Debug Demo', () => {
     console.log('✅ Mock Auth Approach - No Portal Issues');
 
     // Setup mock auth (like fixtures/auth.ts does)
-    await page.route('http://localhost:8080/api/v1/auth/me', async (route) => {
+    await page.route('http://localhost:5080/api/v1/auth/me', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -196,7 +196,7 @@ test.describe('Automated Visual Checks', () => {
 
   test('verify portal absent on authenticated pages', async ({ page }) => {
     // Setup mock auth
-    await page.route('http://localhost:8080/api/v1/auth/me', async (route) => {
+    await page.route('http://localhost:5080/api/v1/auth/me', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

@@ -117,7 +117,7 @@ nano .env.local
 ```
 
 ```env
-NEXT_PUBLIC_API_BASE=http://localhost:8080
+NEXT_PUBLIC_API_BASE=http://localhost:5080
 ```
 
 ### 4. Start Backend (API)
@@ -130,8 +130,8 @@ dotnet build
 dotnet run
 ```
 
-**API Available**: `http://localhost:8080`
-**Health Check**: `curl http://localhost:8080/health`
+**API Available**: `http://localhost:5080`
+**Health Check**: `curl http://localhost:5080/health`
 
 ### 5. Start Frontend (Web)
 
@@ -148,7 +148,7 @@ pnpm dev
 
 **Check API**:
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 # Expected: {"status": "Healthy", ...}
 ```
 
@@ -560,7 +560,7 @@ See [Architecture Patterns](#architecture-patterns) above.
 
 **API Key Auth**:
 ```bash
-curl http://localhost:8080/api/v1/games \
+curl http://localhost:5080/api/v1/games \
   -H "X-API-Key: mpl_dev_YOUR_KEY"
 ```
 
@@ -817,7 +817,7 @@ docker compose logs -f postgres
 
 **API Health**:
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 ```
 
 **Database Connection**:

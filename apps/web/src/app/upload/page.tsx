@@ -74,7 +74,7 @@ export default function UploadPage({
   const [retryingPdfId, setRetryingPdfId] = useState<string | null>(null);
   const [autoAdvanceTriggered, setAutoAdvanceTriggered] = useState(false);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
 
   // Authorization check (case-insensitive)
   const isUnauthorizedRole = authUser && !AUTHORIZED_ROLES.has(authUser.role.toLowerCase());

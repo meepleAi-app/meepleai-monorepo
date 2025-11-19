@@ -124,7 +124,7 @@ echo "OPENROUTER_API_KEY=your_key_here" >> env/.env.dev
 docker compose up -d
 
 # Verify health
-curl http://localhost:8080/health  # API
+curl http://localhost:5080/health  # API
 curl http://localhost:6333/health  # Qdrant
 curl http://localhost:11434/api/tags  # Ollama models
 ```

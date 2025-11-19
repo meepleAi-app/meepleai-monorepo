@@ -24,7 +24,7 @@ Postman collection for testing KnowledgeBase bounded context DDD implementation.
 
 1. Click environment dropdown (top right)
 2. Select **Local Development**
-3. Verify `baseUrl` is `http://localhost:8080`
+3. Verify `baseUrl` is `http://localhost:5080`
 
 ### 3. Start API Server
 
@@ -36,7 +36,7 @@ dotnet run
 Wait for:
 ```
 info: Microsoft.Hosting.Lifetime[14]
-      Now listening on: http://localhost:8080
+      Now listening on: http://localhost:5080
 ```
 
 ### 4. Run Setup Requests (IMPORTANT)
@@ -169,7 +169,7 @@ info: Microsoft.Hosting.Lifetime[14]
 **Verify Prerequisites**:
 ```bash
 # Check if demo users exist
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 
 # Check if games exist (requires login first)
 # Use Postman Setup requests

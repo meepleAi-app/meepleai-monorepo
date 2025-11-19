@@ -230,7 +230,7 @@ curl -X POST /api/v1/files/upload \
 
 #### CORS Testing
 ```bash
-curl -X POST http://localhost:8080/api/v1/chat \
+curl -X POST http://localhost:5080/api/v1/chat \
   -H "Origin: https://evil.com" \
   -H "Cookie: meeple_session=..." \
   --include

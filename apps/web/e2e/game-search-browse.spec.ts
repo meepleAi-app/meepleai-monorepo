@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { GamePage } from './pages/game/GamePage';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:5080';
 
 /**
  * E2E Tests for Game Search & Browse (Issue #843 Phase 3)

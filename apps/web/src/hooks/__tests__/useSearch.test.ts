@@ -130,8 +130,12 @@ describe('useSearch', () => {
 
     expect(searchResults).toBeDefined();
     searchResults.forEach((result: any) => {
-      if (result.type === 'message' || result.type === 'chat' || result.type === 'agent') {
+      if (result.type === 'message' || result.type === 'chat') {
         expect(result.gameId).toBe('game-1');
+      }
+      // Agents are global and should be included regardless of game filter
+      if (result.type === 'agent') {
+        expect(result.gameId).toBeUndefined();
       }
     });
   });

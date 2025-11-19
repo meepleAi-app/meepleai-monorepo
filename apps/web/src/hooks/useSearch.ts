@@ -134,12 +134,11 @@ function applyFilters(results: SearchResult[], filters?: SearchFilters): SearchR
       if (!filters.types.includes(result.type)) return false;
     }
 
-    // Filter by game
-    if (filters.gameId) {
+    // Filter by game (agents are global and always included)
+    if (filters.gameId && result.type !== 'agent') {
       const gameId =
         result.type === 'message' ? result.gameId :
         result.type === 'chat' ? result.gameId :
-        result.type === 'agent' ? result.gameId :
         undefined;
       if (gameId !== filters.gameId) return false;
     }

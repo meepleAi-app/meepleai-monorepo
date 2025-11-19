@@ -161,7 +161,7 @@ public static class ObservabilityServiceExtensions
                 Type = SecuritySchemeType.ApiKey,
                 In = ParameterLocation.Header,
                 Name = "Authorization",
-                Description = "API key authentication via header. Use Authorization: ApiKey <key>. Format: mpl_live_{40_random_chars} or mpl_test_{40_random_chars}"
+                Description = "API key authentication via Authorization: ApiKey <key> header. Browser clients can also rely on the secure meeple_apikey cookie issued during API key login."
             });
 
             // Cookie Security Scheme (existing session-based auth)

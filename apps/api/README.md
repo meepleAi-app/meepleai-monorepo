@@ -175,7 +175,7 @@ dotnet ef migrations remove --project src/Api
 ### Authentication (Dual + 2FA)
 
 - **Cookie Auth**: Session-based (httpOnly, secure)
-- **API Key Auth**: `mpl_{env}_{base64}` format, PBKDF2 (210k iterations). Send as `Authorization: ApiKey <value>`—API key cookies have been removed.
+- **API Key Auth**: `mpl_{env}_{base64}` format, PBKDF2 (210k iterations). Browser logins issue a secure `meeple_apikey` cookie automatically; scripts can send `Authorization: ApiKey <value>`.
 - **OAuth**: Google/Discord/GitHub, token encryption (DataProtection)
 - **2FA**: TOTP + backup codes, temporary sessions (5 min)
 

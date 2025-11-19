@@ -42,6 +42,8 @@ public static class AuthEndpoints
         var writeSessionCookie = CookieHelpers.WriteSessionCookie;
         var removeSessionCookie = CookieHelpers.RemoveSessionCookie;
         var getSessionCookieName = CookieHelpers.GetSessionCookieName;
+        var writeApiKeyCookie = CookieHelpers.WriteApiKeyCookie;
+        var removeApiKeyCookie = CookieHelpers.RemoveApiKeyCookie;
 
         // User registration (DDD/CQRS)
         group.MapPost("/auth/register", async (RegisterPayload payload, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
@@ -160,7 +162,7 @@ public static class AuthEndpoints
             return Results.Json(new { ok = true });
         });
 
-        // API Key Login - Validates API key credentials without issuing cookies
+        // API Key Login - Validates API key credentials and stores them in a secure cookie
         group.MapPost("/auth/apikey/login", async (
             ApiKeyLoginPayload payload,
             HttpContext context,
@@ -179,7 +181,8 @@ public static class AuthEndpoints
             logger.LogInformation("API key login attempt");
             var result = await mediator.Send(command, ct);
 
-            logger.LogInformation("User {UserId} validated API key {ApiKeyId}", result.User.Id, result.ApiKeyId);
+            writeApiKeyCookie(context, payload.ApiKey);
+            logger.LogInformation("User {UserId} validated API key {ApiKeyId} and cookie issued", result.User.Id, result.ApiKeyId);
 
             // Map to legacy format for backward compatibility
             var legacyUser = new AuthUser(
@@ -191,19 +194,19 @@ public static class AuthEndpoints
             return Results.Json(new
             {
                 user = legacyUser,
-                message = "API key verified. Include it via the Authorization header on subsequent requests."
+                message = "API key verified. You can keep using the secure cookie or send Authorization: ApiKey <value> on API calls."
             });
         })
         .WithName("LoginWithApiKey")
         .WithTags("Authentication", "API Keys")
         .WithSummary("Validate an API key")
-        .WithDescription(@"Authenticates an API key and returns the associated profile.
-Clients must store the key securely and send it via the `Authorization: ApiKey {key}` header.")
+        .WithDescription(@"Authenticates an API key, stores it inside an httpOnly cookie for browsers, and returns the associated profile.
+Clients can also store the key securely and send it via the `Authorization: ApiKey {key}` header.")
         .Produces(200)
         .Produces(400)
         .Produces(401);
 
-        // API Key Logout - Clears legacy cookies for backwards compatibility
+        // API Key Logout - Removes the httpOnly cookie
         group.MapPost("/auth/apikey/logout", async (
             HttpContext context,
             IMediator mediator,
@@ -213,14 +216,15 @@ Clients must store the key securely and send it via the `Authorization: ApiKey {
             var command = new LogoutApiKeyCommand();
             var result = await mediator.Send(command, ct);
 
-            logger.LogInformation("API key logout acknowledged");
+            removeApiKeyCookie(context);
+            logger.LogInformation("API key cookie removed");
 
             return Results.Json(new { ok = true, message = result.Message });
         })
         .WithName("LogoutApiKey")
         .WithTags("Authentication", "API Keys")
-        .WithSummary("Acknowledge API key logout")
-        .WithDescription("Signals the client to discard the API key; combine with the key management endpoints to revoke it permanently.")
+        .WithSummary("Logout API key authentication by removing httpOnly cookie")
+        .WithDescription("Removes the secure API key cookie so browsers no longer send it automatically. Use key management endpoints to revoke the key entirely.")
         .Produces(200);
 
         // Get current user (AUTH-01: Supports both cookie and API key auth)

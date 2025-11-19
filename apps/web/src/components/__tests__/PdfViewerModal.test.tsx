@@ -53,9 +53,9 @@ jest.mock('react-window', () => {
   const React = require('react');
 
   const MockList = ({ listRef, rowCount, rowHeight, defaultHeight, rowComponent, rowProps }: any) => {
-    // Expose scrollToRow method (matches ListImperativeAPI)
+    // Expose scrollToItem method (matches react-window List API)
     React.useImperativeHandle(listRef, () => ({
-      scrollToRow: jest.fn(),
+      scrollToItem: jest.fn(),
       get element() { return null; }
     }));
 

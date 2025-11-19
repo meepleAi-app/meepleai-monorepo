@@ -56,6 +56,7 @@ public static class AuthenticationServiceExtensions
     {
         // CODE-QUALITY: Centralized password hashing service (PBKDF2-HMAC-SHA256)
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
+        services.AddSingleton<ApiKeyCookieService>();
 
         // Core authentication - MIGRATED TO DDD/CQRS
         // AuthService removed - all auth operations now use MediatR handlers in BoundedContexts.Authentication

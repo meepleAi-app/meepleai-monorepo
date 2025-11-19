@@ -26,7 +26,8 @@ public class ApiKeyAuthenticationMiddleware
 
     public async Task InvokeAsync(
         HttpContext context,
-        ApiKeyAuthenticationService apiKeyService)
+        ApiKeyAuthenticationService apiKeyService,
+        ApiKeyCookieService apiKeyCookieService)
     {
         // Only process /api/* paths (skip health checks, swagger, etc.)
         if (!context.Request.Path.StartsWithSegments("/api"))
@@ -41,10 +42,14 @@ public class ApiKeyAuthenticationMiddleware
         // Priority 1: httpOnly cookie (highest protection for browsers)
         if (context.Request.Cookies.TryGetValue(ApiKeyCookieName, out var cookieApiKey))
         {
-            if (!string.IsNullOrWhiteSpace(cookieApiKey))
+            if (apiKeyCookieService.TryUnprotect(cookieApiKey, out var unprotected))
             {
-                apiKey = cookieApiKey;
+                apiKey = unprotected;
                 source = "cookie";
+            }
+            else
+            {
+                _logger.LogWarning("Discarding invalid API key cookie");
             }
         }
 

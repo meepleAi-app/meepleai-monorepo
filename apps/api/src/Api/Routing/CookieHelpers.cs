@@ -138,9 +138,7 @@ public static class CookieHelpers
 
     private static CookieOptions BuildApiKeyCookieOptions(HttpContext context)
     {
-        // Use same security settings as session cookies
         var configuration = GetSessionCookieConfiguration(context);
-
         var isHttps = context.Request.IsHttps;
 
         if (!isHttps && configuration.UseForwardedProto &&
@@ -157,28 +155,13 @@ public static class CookieHelpers
         }
 
         var secure = configuration.Secure ?? isHttps;
-        var secureForced = false;
-
-        if (!secure && !configuration.Secure.HasValue)
-        {
-            secure = true;
-            secureForced = true;
-        }
-
-        var sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
-
-        if (secureForced && sameSite != SameSiteMode.None)
-        {
-            sameSite = SameSiteMode.None;
-        }
-
         var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
 
         var options = new CookieOptions
         {
-            HttpOnly = true, // CRITICAL: Prevents JavaScript access (XSS protection)
+            HttpOnly = true,
             Secure = secure,
-            SameSite = sameSite,
+            SameSite = SameSiteMode.Strict,
             Path = path
         };
 

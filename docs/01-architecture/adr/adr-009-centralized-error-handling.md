@@ -1,7 +1,8 @@
-# ADR-004: Centralized Error Handling with Middleware
+# ADR-009: Centralized Error Handling with Middleware
 
 **Status**: Implemented
 **Date**: 2025-11-16
+**Supersedes**: Previous numbering as ADR-004-centralized-error-handling
 **Issue**: [#1194](https://github.com/meepleai/meepleai-monorepo/issues/1194)
 **Deciders**: Engineering Team
 

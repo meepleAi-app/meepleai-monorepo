@@ -239,7 +239,7 @@ export function PdfViewerModal({
         </div>
       </div>
     );
-  }, [currentPage, fileConfig, handleThumbnailClick]);
+  }, [currentPage, handleThumbnailClick]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

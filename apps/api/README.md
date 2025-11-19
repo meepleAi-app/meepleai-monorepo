@@ -490,13 +490,13 @@ GET /health/live  → Liveness probe (app running)
 - **[Architecture Overview](../../docs/01-architecture/overview/system-architecture.md)** - System architecture
 - **[API Specification](../../docs/03-api/board-game-ai-api-specification.md)** - API docs
 - **[DDD Quick Reference](../../docs/01-architecture/ddd/quick-reference.md)** - DDD patterns
-- **[Testing Guide](../../docs/02-development/testing/testing-guide.md)** - Testing standards
+- **[Testing Guide](../../docs/02-development/testing/core/testing-guide.md)** - Testing standards
 
 ### Architecture Decision Records (ADRs)
 
 - **[ADR-001: Hybrid RAG](../../docs/01-architecture/adr/adr-001-hybrid-rag.md)** - Vector + Keyword search
 - **[ADR-003b: Unstructured PDF](../../docs/01-architecture/adr/adr-003b-unstructured-pdf.md)** - 3-stage PDF pipeline
-- **[ADR-004b: Hybrid LLM](../../docs/01-architecture/adr/adr-004b-hybrid-llm.md)** - Multi-model generation
+- **[ADR-007: Hybrid LLM](../../docs/01-architecture/adr/adr-007-hybrid-llm.md)** - Multi-model generation
 
 ---
 

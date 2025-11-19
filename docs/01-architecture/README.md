@@ -17,7 +17,7 @@
 │   ├── adr-003-pdf-processing.md
 │   ├── adr-003b-unstructured-pdf.md ⭐
 │   ├── adr-004-ai-agents.md
-│   └── adr-004b-hybrid-llm.md
+│   └── adr-007-hybrid-llm.md
 ├── diagrams/                     # Architecture diagrams (Mermaid)
 │   ├── bounded-contexts-interactions.md
 │   ├── cqrs-mediatr-flow.md
@@ -125,7 +125,7 @@
 | [ADR-003](./adr/adr-003-pdf-processing.md) | PDF Processing Pipeline (3-stage fallback) | Superseded by 003b | Optional |
 | [ADR-003b](./adr/adr-003b-unstructured-pdf.md) | Unstructured PDF Extraction (Production) | Accepted | ⭐ Essential |
 | [ADR-004](./adr/adr-004-ai-agents.md) | AI Agents Bounded Context | Accepted | Optional |
-| [ADR-004b](./adr/adr-004b-hybrid-llm.md) | Hybrid LLM Architecture (Multi-model consensus) | Accepted | Recommended |
+| [ADR-007](./adr/adr-007-hybrid-llm.md) | Hybrid LLM Architecture (Multi-model consensus) | Accepted | Recommended |
 
 **Key ADRs Explained**:
 
@@ -155,7 +155,7 @@
 
 ---
 
-#### ADR-004b: Hybrid LLM
+#### ADR-007: Hybrid LLM
 **Problem**: Single LLM prone to hallucinations, biases
 
 **Solution**: Multi-model consensus:

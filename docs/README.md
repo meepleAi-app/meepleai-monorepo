@@ -2,7 +2,7 @@
 
 **Welcome to the MeepleAI documentation!** This directory contains comprehensive documentation for the MeepleAI monorepo, organized by audience and purpose.
 
-> **Quick Links**: [Getting Started](./00-getting-started/quick-start.md) | [Architecture Overview](./01-architecture/overview/system-architecture.md) | [API Docs](./03-api/board-game-ai-api-specification.md) | [Testing Guide](./02-development/testing/testing-guide.md)
+> **Quick Links**: [Getting Started](./00-getting-started/quick-start.md) | [Architecture Overview](./01-architecture/overview/system-architecture.md) | [API Docs](./03-api/board-game-ai-api-specification.md) | [Testing Guide](./02-development/testing/core/testing-guide.md)
 
 ---
 
@@ -42,7 +42,7 @@ docs/
 - **Setup**: [Quick Start](./00-getting-started/quick-start.md), [🇮🇹 Guida Setup Locale](./00-getting-started/guida-setup-locale.md)
 - **Architecture**: [System Architecture](./01-architecture/overview/system-architecture.md), [Architecture Diagrams](./01-architecture/diagrams/)
 - **API**: [API Specification](./03-api/board-game-ai-api-specification.md)
-- **Testing**: [Testing Guide](./02-development/testing/testing-guide.md), [Testing Strategy](./02-development/testing/testing-strategy.md)
+- **Testing**: [Testing Guide](./02-development/testing/core/testing-guide.md), [Testing Strategy](./02-development/testing/testing-strategy.md)
 - **Guides**: [LLM Integration](./02-development/guides/llm-integration.md), [Unstructured Setup](./02-development/guides/unstructured-setup.md)
 - **Refactoring**: [DDD Status](./02-development/refactoring/legacy-code-dashboard.md), [DDD Quick Reference](./01-architecture/ddd/quick-reference.md)
 
@@ -103,7 +103,7 @@ docs/
 | [ADR-003](./01-architecture/adr/adr-003-pdf-processing.md) | PDF Processing Pipeline (3-stage fallback) |
 | [ADR-003b](./01-architecture/adr/adr-003b-unstructured-pdf.md) | Unstructured PDF Extraction |
 | [ADR-004](./01-architecture/adr/adr-004-ai-agents.md) | AI Agents Bounded Context |
-| [ADR-004b](./01-architecture/adr/adr-004b-hybrid-llm.md) | Hybrid LLM Architecture |
+| [ADR-007](./01-architecture/adr/adr-007-hybrid-llm.md) | Hybrid LLM Architecture |
 
 #### Diagrams
 | Diagram | Description |
@@ -152,7 +152,7 @@ docs/
 #### Testing
 | Document | Description |
 |----------|-------------|
-| [Testing Guide](./02-development/testing/testing-guide.md) | Comprehensive test writing guide (60+ pages) |
+| [Testing Guide](./02-development/testing/core/testing-guide.md) | Comprehensive test writing guide (60+ pages) |
 | [Testing Strategy](./02-development/testing/testing-strategy.md) | Complete testing strategy (30 pages) |
 | [Testing Quick Reference](./02-development/testing/testing-quick-reference.md) | Quick reference for testing patterns |
 | [Integration Tests Performance](./02-development/testing/integration-tests-performance-guide.md) | Optimize integration tests for 4-11x speedup (80+ pages) |

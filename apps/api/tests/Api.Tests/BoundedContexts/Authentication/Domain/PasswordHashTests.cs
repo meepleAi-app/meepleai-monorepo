@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
+using System;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain;
@@ -18,7 +19,7 @@ public class PasswordHashTests
         // Assert
         Assert.NotNull(hash);
         Assert.NotNull(hash.Value);
-        Assert.Contains(":", hash.Value);
+        Assert.StartsWith("v1.", hash.Value, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -70,4 +71,5 @@ public class PasswordHashTests
         // Assert
         Assert.Equal("[REDACTED]", stringValue);
     }
+
 }

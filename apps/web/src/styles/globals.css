@@ -161,10 +161,10 @@
   --popover-foreground: 240 10% 3.9%;
   --primary: 221 83% 53%;           /* #0070f3 - Brand blue */
   --primary-foreground: 210 40% 98%;
-  --secondary: 142 76% 36%;         /* #34a853 - Brand green */
+  --secondary: 142 76% 29%;         /* #1c7a34 - WCAG AA compliant green (contrast 4.5:1) */
   --secondary-foreground: 210 40% 98%;
   --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
+  --muted-foreground: 240 5% 40%;   /* #5a5a66 - WCAG AA compliant (contrast 4.6:1) */
   --accent: 36 100% 50%;            /* #ff9800 - Brand orange */
   --accent-foreground: 240 5.9% 10%;
   --destructive: 0 84.2% 60.2%;

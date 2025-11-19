@@ -14,6 +14,7 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   globalTeardown: '<rootDir>/jest.teardown.js',
   testEnvironment: 'jest-environment-jsdom',
+  coverageProvider: 'v8', // Fix babel-plugin-istanbul schema error (test-exclude@6.0.0)
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

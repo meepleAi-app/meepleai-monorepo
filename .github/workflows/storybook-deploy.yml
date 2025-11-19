@@ -45,25 +45,6 @@ jobs:
       - name: Build Storybook
         run: pnpm build-storybook --quiet
 
-      - name: Deploy to Vercel (Production)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_STORYBOOK_PROJECT_ID }}
-          working-directory: apps/web/storybook-static
-          vercel-args: '--prod'
-
-      - name: Deploy to Vercel (Preview)
-        if: github.event_name == 'pull_request'
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_STORYBOOK_PROJECT_ID }}
-          working-directory: apps/web/storybook-static
-
       - name: Publish to Chromatic
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         uses: chromaui/action@v13
@@ -82,10 +63,9 @@ jobs:
           script: |
             const comment = `## 📚 Storybook Preview Ready!
 
-            **Vercel Preview**: Deployment in progress...
             **Chromatic**: Visual testing complete
 
-            Check the Chromatic and Vercel deployment status above for links.`;
+            Check the Chromatic deployment status above for the Storybook preview link.`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

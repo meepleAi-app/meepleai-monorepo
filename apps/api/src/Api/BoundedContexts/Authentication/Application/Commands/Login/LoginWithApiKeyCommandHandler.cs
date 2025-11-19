@@ -7,8 +7,8 @@ using Api.SharedKernel.Domain.Exceptions;
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
 /// <summary>
-/// Handles API key login and sets secure httpOnly cookie for browser-based API key authentication.
-/// This allows users to securely authenticate with API keys without storing them in localStorage.
+/// Handles API key validation and returns the associated user profile.
+/// Browser clients must store API keys outside of cookies (e.g., secure storage) and send them via headers.
 /// </summary>
 public class LoginWithApiKeyCommandHandler : ICommandHandler<LoginWithApiKeyCommand, ApiKeyLoginResponse>
 {
@@ -53,12 +53,10 @@ public class LoginWithApiKeyCommandHandler : ICommandHandler<LoginWithApiKeyComm
             TwoFactorEnabledAt: user.TwoFactorEnabledAt
         );
 
-        // The actual cookie setting happens in the endpoint using CookieHelpers.WriteApiKeyCookie()
-        // We return the validation result here
         return new ApiKeyLoginResponse(
             User: userDto,
             ApiKeyId: validationResult.ApiKeyId!,
-            Message: "API key authenticated successfully. Cookie has been set."
+            Message: "API key authenticated successfully."
         );
     }
 }

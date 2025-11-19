@@ -561,7 +561,7 @@ See [Architecture Patterns](#architecture-patterns) above.
 **API Key Auth**:
 ```bash
 curl http://localhost:5080/api/v1/games \
-  -H "X-API-Key: mpl_dev_YOUR_KEY"
+  -H "Authorization: ApiKey mpl_dev_YOUR_KEY"
 ```
 
 **Priority**: API Key > Cookie

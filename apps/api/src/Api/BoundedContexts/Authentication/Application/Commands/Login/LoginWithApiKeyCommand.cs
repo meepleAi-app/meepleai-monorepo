@@ -4,8 +4,8 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
 /// <summary>
-/// Command to authenticate a user with API key and set httpOnly cookie.
-/// This provides a secure way to use API keys in browser contexts.
+/// Command to validate an API key and return the associated profile.
+/// Clients are responsible for storing the API key securely (e.g., Authorization header).
 /// </summary>
 public record LoginWithApiKeyCommand(
     string ApiKey
@@ -13,7 +13,7 @@ public record LoginWithApiKeyCommand(
 
 /// <summary>
 /// Response for API key login containing user information.
-/// The API key is stored in a secure httpOnly cookie, not in the response body.
+/// The API key is not returned in responses. Clients should persist it on their side.
 /// </summary>
 public record ApiKeyLoginResponse(
     UserDto User,

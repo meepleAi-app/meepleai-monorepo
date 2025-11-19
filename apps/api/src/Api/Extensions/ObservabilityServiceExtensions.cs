@@ -160,8 +160,8 @@ public static class ObservabilityServiceExtensions
             {
                 Type = SecuritySchemeType.ApiKey,
                 In = ParameterLocation.Header,
-                Name = "X-API-Key",
-                Description = "API key authentication. Format: mpl_live_{40_random_chars} or mpl_test_{40_random_chars}"
+                Name = "Authorization",
+                Description = "API key authentication via header. Use Authorization: ApiKey <key>. Format: mpl_live_{40_random_chars} or mpl_test_{40_random_chars}"
             });
 
             // Cookie Security Scheme (existing session-based auth)

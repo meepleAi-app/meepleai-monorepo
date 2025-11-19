@@ -335,7 +335,7 @@ For advanced users and developers.
 **REST API**:
 ```bash
 curl https://api.meepleai.dev/api/v1/chat \
-  -H "X-API-Key: mpl_prod_YOUR_KEY_HERE" \
+  -H "Authorization: ApiKey mpl_prod_YOUR_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{"question": "How does trading work in Catan?", "gameId": 123}'
 ```

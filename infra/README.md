@@ -2,6 +2,33 @@
 
 **Infrastructure as Code** - Docker Compose, monitoring, secrets management, and observability stack configuration.
 
+## Compose Stack Overview
+
+- `docker-compose.yml` è la base con tutti i servizi; si usa sempre come primo file.
+- I file `docker-compose.dev.yml`, `compose.test.yml`, `compose.staging.yml`, `compose.prod.yml` sono overlay che sovrascrivono/estendono la base per il relativo ambiente (mount locali in dev, volumi persistenti e immagini pre-build in staging/prod, storage in-memory in test).
+- File speciali come `docker-compose.infisical.yml` abilitano integrazioni opzionali (es. gestione segreti).
+
+Esempi:
+
+```bash
+# Sviluppo (stack completo con override dev)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# Staging (overlay dedicato)
+docker compose -f docker-compose.yml -f compose.staging.yml up -d
+
+# Produzione (usa immagini pubblicate e volumi persistenti)
+docker compose -f docker-compose.yml -f compose.prod.yml up -d
+```
+
+Per forzare la ricompilazione dei container (testare l’ultima versione) eseguire:
+
+```bash
+docker compose build --no-cache            # ricompila tutto
+docker compose build --no-cache meepleai-api  # ricompila solo il servizio indicato
+docker compose up -d                       # riavvia con le nuove immagini
+```
+
 ---
 
 ## 📁 Directory Structure

@@ -60,7 +60,8 @@ public class ApiKeyAuthenticationService
             .Where(k =>
                 k.IsActive &&
                 (k.ExpiresAt == null || k.ExpiresAt > now) &&
-                k.RevokedAt == null)
+                k.RevokedAt == null &&
+                k.KeyPrefix == displayPrefix)
             .ToListAsync(ct);
 
         // Find key by verifying hash (need to extract salt from stored hash)
@@ -124,7 +125,10 @@ public class ApiKeyAuthenticationService
             throw new ArgumentException("Environment must be 'live' or 'test'", nameof(environment));
 
         // Verify user exists
-        var user = await _db.Users.FindAsync([userId], ct);
+        if (!Guid.TryParse(userId, out var userGuid))
+            throw new ArgumentException("User ID must be a valid GUID", nameof(userId));
+
+        var user = await _db.Users.FindAsync([userGuid], ct);
         if (user == null)
             throw new InvalidOperationException($"User not found: {userId}");
 
@@ -174,7 +178,13 @@ public class ApiKeyAuthenticationService
     /// <param name="ct">Cancellation token</param>
     public async Task<bool> RevokeApiKeyAsync(string keyId, string revokedByUserId, CancellationToken ct = default)
     {
-        var apiKey = await _db.ApiKeys.FindAsync([keyId], ct);
+        if (!Guid.TryParse(keyId, out var keyGuid))
+        {
+            _logger.LogWarning("API key revocation failed: invalid key format {KeyId}", keyId);
+            return false;
+        }
+
+        var apiKey = await _db.ApiKeys.FindAsync([keyGuid], ct);
         if (apiKey == null)
         {
             _logger.LogWarning("API key revocation failed: key not found. KeyId: {KeyId}", keyId);

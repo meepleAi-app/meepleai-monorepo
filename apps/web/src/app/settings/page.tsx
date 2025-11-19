@@ -36,6 +36,7 @@ import {
   type TwoFactorStatusDto,
   type UserSessionInfo
 } from '@/lib/api';
+import { hasStoredApiKey } from '@/lib/api/core/apiKeyStore';
 
 // OAuth provider configuration
 const OAUTH_PROVIDERS = [
@@ -91,7 +92,7 @@ export default function SettingsPage() {
   // API Key authentication state
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
-  const [apiKeyAuthenticated, setApiKeyAuthenticated] = useState(false);
+  const [apiKeyAuthenticated, setApiKeyAuthenticated] = useState<boolean>(() => hasStoredApiKey());
 
   // Active sessions state
   const [sessions, setSessions] = useState<UserSessionInfo[]>([]);
@@ -103,7 +104,7 @@ export default function SettingsPage() {
     loadProfile();
     load2FAStatus();
     loadOAuthAccounts();
-    checkApiKeyAuthentication();
+    setApiKeyAuthenticated(hasStoredApiKey());
     loadUserSessions();
   }, []);
 
@@ -324,23 +325,6 @@ export default function SettingsPage() {
     linkedAccounts.some((a) => a.provider === providerId);
 
   // API Key authentication handlers
-  const checkApiKeyAuthentication = async () => {
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
-      const res = await fetch(`${apiBase}/api/v1/auth/me`, {
-        credentials: 'include',
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        // Check if authenticated via API key (backend adds AuthSource claim)
-        setApiKeyAuthenticated(data?.user?.authSource === 'cookie');
-      }
-    } catch (error) {
-      console.error('Failed to check API key authentication:', error);
-    }
-  };
-
   const handleApiKeyLogin = async () => {
     if (!apiKeyInput.trim()) {
       setError('Please enter an API key');
@@ -355,7 +339,7 @@ export default function SettingsPage() {
       await api.auth.loginWithApiKey(apiKeyInput);
       setApiKeyAuthenticated(true);
       setApiKeyInput(''); // Clear input for security
-      setSuccess('API key authenticated successfully. Secure cookie has been set.');
+      setSuccess('API key stored for this browser session.');
     } catch (error: any) {
       console.error('API key login error:', error);
       setError(error?.message || 'Failed to authenticate with API key');
@@ -366,7 +350,7 @@ export default function SettingsPage() {
   };
 
   const handleApiKeyLogout = async () => {
-    if (!confirm('Remove API key authentication? You will fall back to session authentication.')) {
+    if (!confirm('Remove the stored API key for this browser session?')) {
       return;
     }
 
@@ -376,7 +360,7 @@ export default function SettingsPage() {
     try {
       await api.auth.logoutApiKey();
       setApiKeyAuthenticated(false);
-      setSuccess('API key authentication removed');
+      setSuccess('API key removed from this session');
     } catch (error: any) {
       console.error('API key logout error:', error);
       setError(error?.message || 'Failed to remove API key authentication');
@@ -930,7 +914,7 @@ export default function SettingsPage() {
                 <CardHeader>
                   <CardTitle>API Key Authentication</CardTitle>
                   <CardDescription>
-                    Use API keys securely in your browser with httpOnly cookies
+                    Store an API key for this browser session. We send it via the Authorization header on every request.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -938,7 +922,7 @@ export default function SettingsPage() {
                     <div className="space-y-4">
                       <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
                         <AlertDescription className="text-green-800 dark:text-green-200">
-                          ✓ API key authentication active. Your API key is stored in a secure httpOnly cookie.
+                          ✓ API key authentication active. Requests now include <code>Authorization: ApiKey ****</code>.
                         </AlertDescription>
                       </Alert>
                       <Button
@@ -954,12 +938,12 @@ export default function SettingsPage() {
                       <Alert>
                         <AlertDescription>
                           <div className="space-y-2">
-                            <p className="font-medium">Secure API Key Storage</p>
+                            <p className="font-medium">Session-Scoped API Key Storage</p>
                             <ul className="text-sm space-y-1 ml-4 list-disc">
-                              <li>API keys are stored in httpOnly cookies (XSS protected)</li>
-                              <li>Not accessible to JavaScript (prevents theft)</li>
-                              <li>Automatically included in all requests</li>
-                              <li>Use this for testing or admin panels</li>
+                              <li>The key lives in sessionStorage (cleared on tab/browser close)</li>
+                              <li>Automatically added to the <code>Authorization</code> header</li>
+                              <li>No cookies or localStorage usage</li>
+                              <li>Great for testing admin tools or short-lived sessions</li>
                             </ul>
                           </div>
                         </AlertDescription>
@@ -976,7 +960,7 @@ export default function SettingsPage() {
                           disabled={apiKeyLoading}
                         />
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Your API key will be validated and stored in a secure cookie.
+                          Your API key will be validated and stored for this browser session only.
                         </p>
                       </div>
 

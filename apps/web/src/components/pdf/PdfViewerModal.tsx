@@ -63,6 +63,9 @@ export function PdfViewerModal({
   const mainCanvasRef = useRef<HTMLDivElement>(null);
   const thumbnailListRef = useRef<any>(null);
 
+  // Memoize file config to prevent unnecessary PDF reloads (BGAI-074)
+  const fileConfig = usePdfFileConfig(pdfUrl);
+
   // Reset to initial page when modal opens or initialPage changes
   useEffect(() => {
     if (open) {
@@ -234,7 +237,7 @@ export function PdfViewerModal({
         </div>
       </div>
     );
-  }, [currentPage, pdfUrl, handleThumbnailClick]);
+  }, [currentPage, fileConfig, handleThumbnailClick]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -38,7 +38,8 @@ export class HttpClient {
 
   constructor(config?: Partial<HttpClientConfig>) {
     this.baseUrl = config?.baseUrl || getApiBase();
-    this.fetchImpl = config?.fetchImpl || fetch;
+    // Bind fetch to prevent "Illegal invocation" error (client-side only)
+    this.fetchImpl = config?.fetchImpl || (typeof window !== 'undefined' ? fetch.bind(window) : fetch);
   }
 
   /**

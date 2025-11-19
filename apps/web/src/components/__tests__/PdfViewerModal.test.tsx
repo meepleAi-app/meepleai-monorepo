@@ -52,35 +52,35 @@ jest.mock('react-pdf', () => {
 jest.mock('react-window', () => {
   const React = require('react');
 
-  const MockList = React.forwardRef(({ children, itemCount, itemSize, height, width }: any, ref: any) => {
-    // Expose scrollToItem method
-    React.useImperativeHandle(ref, () => ({
-      scrollToItem: jest.fn()
+  const MockList = ({ listRef, rowCount, rowHeight, defaultHeight, rowComponent, rowProps }: any) => {
+    // Expose scrollToRow method (matches ListImperativeAPI)
+    React.useImperativeHandle(listRef, () => ({
+      scrollToRow: jest.fn(),
+      get element() { return null; }
     }));
 
     return (
       <div
-        ref={ref}
         data-testid="thumbnail-list"
-        data-item-count={itemCount}
-        data-item-size={itemSize}
-        data-height={height}
-        data-width={width}
+        data-item-count={rowCount}
+        data-item-size={rowHeight}
+        data-height={defaultHeight}
       >
-        {Array.from({ length: itemCount }).map((_, index) => {
+        {Array.from({ length: rowCount }).map((_, index) => {
           return (
             <div key={index}>
-              {typeof children === 'function' ? children({ index, style: {} }) : children}
+              {rowComponent({ index, style: {} })}
             </div>
           );
         })}
       </div>
     );
-  });
+  };
   MockList.displayName = 'MockList';
 
   return {
-    List: MockList
+    List: MockList,
+    useListRef: () => React.useRef(null)
   };
 });
 

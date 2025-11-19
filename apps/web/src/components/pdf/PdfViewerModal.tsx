@@ -14,6 +14,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { List, type ListImperativeAPI } from 'react-window';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -60,7 +61,7 @@ export function PdfViewerModal({
   const [showThumbnails, setShowThumbnails] = useState(true);
 
   const mainCanvasRef = useRef<HTMLDivElement>(null);
-  const thumbnailListRef = useRef<HTMLDivElement>(null);
+  const thumbnailListRef = useRef<ListImperativeAPI | null>(null);
 
   // Reset to initial page when modal opens or initialPage changes
   useEffect(() => {
@@ -149,11 +150,8 @@ export function PdfViewerModal({
     if (numPages && page >= 1 && page <= numPages) {
       setCurrentPage(page);
       // Scroll thumbnail into view
-      if (thumbnailListRef.current && showThumbnails) {
-        const thumbnail = thumbnailListRef.current.querySelector(`[data-testid="thumbnail-${page}"]`);
-        if (thumbnail) {
-          thumbnail.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }
+      if (showThumbnails) {
+        thumbnailListRef.current?.scrollToRow?.({ index: page - 1, align: 'center' });
       }
     }
   }, [numPages, showThumbnails]);
@@ -197,13 +195,13 @@ export function PdfViewerModal({
     goToPage(page);
   }, [goToPage]);
 
-  const renderThumbnail = useCallback((pageNumber: number): React.ReactElement => {
+  const renderThumbnail = useCallback((props: { index: number; style: React.CSSProperties }): React.ReactElement => {
+    const pageNumber = props.index + 1;
     const isActive = pageNumber === currentPage;
 
     return (
       <div
-        key={pageNumber}
-        style={{ padding: '8px', cursor: 'pointer' }}
+        style={{ ...props.style, padding: '8px', cursor: 'pointer' }}
         onClick={() => handleThumbnailClick(pageNumber)}
         data-testid={`thumbnail-${pageNumber}`}
       >
@@ -337,19 +335,22 @@ export function PdfViewerModal({
               {/* Thumbnail sidebar */}
               {showThumbnails && numPages && (
                 <div
-                  ref={thumbnailListRef}
                   data-testid="thumbnail-sidebar"
                   className={cn(
-                    "border-gray-300 bg-white overflow-y-auto",
+                    "border-gray-300 bg-white overflow-hidden",
                     isMobile ? "w-full absolute z-10 h-full" : `w-[${THUMBNAIL_WIDTH + 32}px] relative z-[1] border-r`
                   )}
                   role="navigation"
                   aria-label="Page thumbnails"
-                  style={{ maxHeight: isMobile ? '100%' : `${window.innerHeight - 200}px` }}
                 >
-                  {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) =>
-                    renderThumbnail(pageNumber)
-                  )}
+                  <List<{}>
+                    listRef={thumbnailListRef}
+                    defaultHeight={window.innerHeight - 200}
+                    rowCount={numPages}
+                    rowHeight={THUMBNAIL_HEIGHT + 16}
+                    rowComponent={renderThumbnail}
+                    rowProps={{} as any}
+                  />
                 </div>
               )}
 

@@ -53,6 +53,48 @@ Questa guida raccoglie problemi comuni riscontrati nel sistema MeepleAI, con le 
 
 ---
 
+## PDF Processing
+
+### PDF File Too Large Error
+
+**Sintomo**: Error message `"PDF size (X MB) exceeds maximum allowed (Y MB)"`
+
+**Root Cause**: The PDF file size exceeds the configured maximum file size limit. This is a defense-in-depth security measure implemented at the orchestrator level (BGAI-088).
+
+**Default Limit**: 100 MB (104,857,600 bytes)
+
+**Soluzione**:
+
+1. **Reduce PDF file size**:
+   - Compress images within the PDF
+   - Remove unnecessary pages
+   - Use PDF optimization tools
+
+2. **Increase the limit** (if authorized):
+
+   Update `appsettings.json` or environment configuration:
+
+   ```json
+   {
+     "PdfProcessing": {
+       "MaxFileSizeBytes": 209715200  // 200 MB (200 * 1024 * 1024)
+     }
+   }
+   ```
+
+3. **Split large PDFs**:
+   - Process PDFs in smaller chunks
+   - Split multi-rulebook PDFs into individual games
+
+**Prevenzione**:
+- Security: Increasing the limit may expose the system to memory exhaustion attacks
+- Monitoring: Monitor memory usage if increasing the limit above 100 MB
+- Validation: This error can occur at two levels (HTTP layer + Orchestrator layer)
+
+**Riferimenti**: Issue #1113 (BGAI-088), [PDF Processing Architecture](../../01-architecture/adr/adr-003-pdf-processing.md)
+
+---
+
 ## Database (PostgreSQL)
 
 ### Migration: Relation Does Not Exist

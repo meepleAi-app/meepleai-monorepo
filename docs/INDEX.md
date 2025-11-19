@@ -1,9 +1,10 @@
 # MeepleAI Documentation Index
 
 **Project**: Italian Board Game Rules AI Assistant
-**Version**: 2.1
+**Version**: 2.2
 **Last Updated**: 2025-11-19
-**Total Documentation**: 163 markdown files (~900 pages, 91,000+ lines)
+**Total Documentation**: 160+ markdown files (~900 pages, 91,000+ lines)
+**Status**: ✅ Consolidated & Reorganized (2025-11-19)
 
 ---
 
@@ -13,7 +14,7 @@
 1. [Quick Start](./00-getting-started/quick-start.md) - Get up and running in 15 minutes
 2. [System Architecture](./01-architecture/overview/system-architecture.md) - Understand the technical design
 3. [API Specification](./03-api/board-game-ai-api-specification.md) - Learn the API
-4. [Testing Strategy](./02-development/testing/testing-strategy.md) ⭐ **MANDATORY** - Test pyramid (70/20/5/5), 5-metric framework, quality gates
+4. [Testing Strategy](./02-development/testing/core/testing-strategy.md) ⭐ **MANDATORY** - Test pyramid (70/20/5/5), 5-metric framework, quality gates
 5. [Deployment Guide](./05-operations/deployment/board-game-ai-deployment-guide.md) - Deploy to production
 
 **Find docs by role** → See [README.md](./README.md#-finding-documentation) for role-based navigation
@@ -40,15 +41,17 @@
   - [System Architecture](./01-architecture/overview/system-architecture.md) (60+ pages)
   - [Consolidation Strategy](./01-architecture/overview/consolidation-strategy.md)
 
-- **[adr/](./01-architecture/adr/)** - Architecture Decision Records (8 ADRs)
+- **[adr/](./01-architecture/adr/)** - Architecture Decision Records (9 ADRs)
   - [ADR-001: Hybrid RAG](./01-architecture/adr/adr-001-hybrid-rag.md)
   - [ADR-002: Multilingual Embedding](./01-architecture/adr/adr-002-multilingual-embedding.md)
   - [ADR-003: PDF Processing](./01-architecture/adr/adr-003-pdf-processing.md)
   - [ADR-003b: Unstructured PDF](./01-architecture/adr/adr-003b-unstructured-pdf.md)
   - [ADR-004: AI Agents](./01-architecture/adr/adr-004-ai-agents.md)
-  - [ADR-004b: Hybrid LLM](./01-architecture/adr/adr-004b-hybrid-llm.md)
   - [ADR-005: Cosine Similarity Consensus](./01-architecture/adr/adr-005-cosine-similarity-consensus.md)
   - [ADR-006: Multi-Layer Validation](./01-architecture/adr/adr-006-multi-layer-validation.md)
+  - [ADR-007: Hybrid LLM](./01-architecture/adr/adr-007-hybrid-llm.md)
+  - [ADR-008: Streaming CQRS](./01-architecture/adr/adr-008-streaming-cqrs-migration.md)
+  - [ADR-009: Centralized Error Handling](./01-architecture/adr/adr-009-centralized-error-handling.md)
 
 - **[diagrams/](./01-architecture/diagrams/)** - Architecture diagrams (Mermaid)
   - [Bounded Contexts Interactions](./01-architecture/diagrams/bounded-contexts-interactions.md)
@@ -80,23 +83,35 @@
   - [Migration Management](./02-development/guides/migration-management.md)
   - [PDF Processing Guide](./02-development/guides/pdf-processing-guide.md) ⭐
 
-- **[refactoring/](./02-development/refactoring/)** - DDD migration docs (5 files)
-  - [Legacy Code Inventory](./02-development/refactoring/legacy-code-inventory.md) (150+ pages)
-  - [Legacy Code Dashboard](./02-development/refactoring/legacy-code-dashboard.md)
+- **[refactoring/](./02-development/refactoring/)** - DDD migration docs (4 files)
+  - [Legacy Code Dashboard](./02-development/refactoring/legacy-code-dashboard.md) - ✅ DDD 100% Complete
   - [Implementation Notes](./02-development/refactoring/implementation-notes.md)
   - [Migration Edit 05 Frontend](./02-development/refactoring/migration-edit05-frontend.md)
   - [Next Steps](./02-development/refactoring/next-steps.md)
 
-- **[testing/](./02-development/testing/)** - Testing documentation (9 files)
-  - [Testing Strategy](./02-development/testing/testing-strategy.md) ⭐⭐ **START HERE** - Test pyramid (70/20/5/5), 5-metric quality framework, golden dataset (30 pages)
-  - [Testing Guide](./02-development/testing/testing-guide.md) ⭐ - Comprehensive test writing guide (60+ pages)
-  - [Integration Tests Performance Guide](./02-development/testing/integration-tests-performance-guide.md) ⭐ NEW - Optimize integration tests for 4-11x speedup (80+ pages)
-  - [Integration Tests Quick Reference](./02-development/testing/integration-tests-quick-reference.md) - Quick cheat sheet for performant integration tests
-  - [Testing Specialized](./02-development/testing/testing-specialized.md) - Manual, accessibility, concurrency, API testing
-  - [Testing Quick Reference](./02-development/testing/testing-quick-reference.md) - Pattern lookup
-  - [Testing React 19 Patterns](./02-development/testing/testing-react-19-patterns.md) - React 19 specific patterns
-  - [Testing Checkpoint Guide](./02-development/testing/testing-checkpoint-guide.md) (Italian) - Checkpoint verification guide
-  - [Manual Testing Guide](./02-development/testing/manual-testing-guide.md) (Italian) - Full QA procedures
+- **[testing/](./02-development/testing/)** - Testing documentation (organized by category)
+  - [README](./02-development/testing/README.md) ⭐ **START HERE** - Testing documentation overview & navigation
+  - **[core/](./02-development/testing/core/)** - Main testing guides (4 files)
+    - [Testing Strategy](./02-development/testing/core/testing-strategy.md) - Test pyramid (70/20/5/5), 5-metric framework
+    - [Testing Guide](./02-development/testing/core/testing-guide.md) - Comprehensive guide (60+ pages)
+    - [Testing Quick Reference](./02-development/testing/core/testing-quick-reference.md) - Pattern lookup
+    - [Testing Checkpoint Guide](./02-development/testing/core/testing-checkpoint-guide.md) - Checkpoint verification
+  - **[backend/](./02-development/testing/backend/)** - Backend testing (2 files)
+    - [Backend Code Coverage](./02-development/testing/backend/backend-code-coverage.md)
+    - [Integration Tests Quick Reference](./02-development/testing/backend/integration-tests-quick-reference.md)
+  - **[frontend/](./02-development/testing/frontend/)** - Frontend testing (3 files)
+    - [Testing React 19 Patterns](./02-development/testing/frontend/testing-react-19-patterns.md)
+    - [Worker Mocking Patterns](./02-development/testing/frontend/worker-mocking-patterns.md)
+    - [Code Coverage](./02-development/testing/frontend/code-coverage.md)
+  - **[performance/](./02-development/testing/performance/)** - Performance testing (3 files)
+    - [k6 Performance Testing](./02-development/testing/performance/k6-performance-testing.md)
+    - [Performance Testing Guide](./02-development/testing/performance/performance-testing-guide.md)
+    - [Integration Tests Performance](./02-development/testing/performance/integration-tests-performance-guide.md)
+  - **[specialized/](./02-development/testing/specialized/)** - Specialized testing (4 files)
+    - [Testing Specialized](./02-development/testing/specialized/testing-specialized.md)
+    - [Manual Testing Guide](./02-development/testing/specialized/manual-testing-guide.md)
+    - [BGAI-031 Validation Coverage](./02-development/testing/specialized/bgai-031-validation-test-coverage.md)
+    - [BGAI-039 Accuracy Baseline](./02-development/testing/specialized/bgai-039-validation-accuracy-baseline.md)
 
 ### [03 - API](./03-api/)
 **Audience**: API consumers, frontend developers, integrators
@@ -179,11 +194,10 @@
   - [Quick Reference: Top 10 Issues](./07-project-management/roadmap/quick-reference-top-10-issues.md)
   - _Note: Previous roadmap files (master-roadmap-2025.md, visual-roadmap.md, etc.) archived/consolidated_
 
-- **[organization/](./07-project-management/organization/)** - Team & execution (7 files)
+- **[organization/](./07-project-management/organization/)** - Team & execution (6 files)
   - [Team Organization](./07-project-management/organization/team-organization.md) ⭐ - Team structure, roles, onboarding
   - [Execution Calendar](./07-project-management/organization/board-game-ai-execution-calendar.md)
   - [Sprint Overview](./07-project-management/organization/board-game-ai-sprint-overview.md)
-  - [Onboarding Guide](./07-project-management/organization/onboarding_guide.md)
   - [Solo Developer Execution Plan](./07-project-management/organization/solo-developer-execution-plan.md)
   - [Project Prioritization 2025](./07-project-management/organization/project-prioritization-2025.md)
   - [README](./07-project-management/organization/README.md)
@@ -232,6 +246,16 @@
 - **[completion-reports/](./archive/completion-reports/)** - Completed sprint/phase reports
   - [Phase 1a Completion Report](./archive/completion-reports/phase-1a-completion-report.md)
   - [Sprint 4 Reports](./archive/completion-reports/sprint-4/)
+  - [Issue 841 Completion Report](./archive/completion-reports/issue-841-completion-report.md)
+  - [Issue 1089 Implementation](./archive/completion-reports/issue-1089-implementation.md)
+  - [Issue 1134 Session Management UI](./archive/completion-reports/issue-1134-session-management-ui.md)
+  - [Issue 1191 OAuth Callback CQRS](./archive/completion-reports/issue-1191-oauth-callback-cqrs.md)
+  - [Issue 733 Security Fix](./archive/completion-reports/issue-733-security-fix.md)
+
+- **Legacy Code Inventory** - Historical DDD migration documentation
+  - [Legacy Code Inventory](./archive/legacy-code-inventory.md) (150+ pages)
+  - [Legacy Service Coupling Remaining](./archive/legacy-service-coupling-remaining.md)
+  - [Consolidation Report 2025-11-18](./archive/CONSOLIDATION-REPORT-2025-11-18.md)
 
 - **[bgai-implementations/](./archive/bgai-implementations/)** - BGAI implementation research (6 files)
   - [BGAI-016: Ollama Quality Findings](./archive/bgai-implementations/bgai-016-ollama-quality-findings.md)
@@ -241,14 +265,13 @@
   - [BGAI-026: Cost Tracking](./archive/bgai-implementations/bgai-026-cost-tracking.md)
   - [BGAI-030: Multilingual Patterns](./archive/bgai-implementations/bgai-030-multilingual-patterns.md)
 
-### [issues/](./issues/)
-**Purpose**: Issue-specific documentation, fix reports, implementation summaries
+### [code-reviews/](./code-reviews/)
+**Purpose**: Consolidated code review documentation
 
-- **[issue-733/](./issues/issue-733/)** - Sensitive Info Exposure Fix
-- **[issue-954/](./issues/issue-954/)** - Security Analysis (954 issues)
-- **[issue-1089/](./issues/issue-1089/)** - Implementation Summary
-- **[issue-1134/](./issues/issue-1134/)** - Session Management UI
-- **[issue-1191/](./issues/issue-1191/)** - OAuth Callback CQRS Migration
+- [Backend Consolidated](./code-reviews/BACKEND-CONSOLIDATED.md) - Backend code review guidelines
+- [Frontend Consolidated](./code-reviews/FRONTEND-CONSOLIDATED.md) - Frontend code review guidelines
+- [Infrastructure Consolidated](./code-reviews/INFRASTRUCTURE-CONSOLIDATED.md) - Infrastructure code review guidelines
+- [PDF Processing Checklist](./code-reviews/pdf-processing-checklist.md) - PDF processing code review checklist
 
 ---
 

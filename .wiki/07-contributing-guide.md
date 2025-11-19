@@ -120,7 +120,7 @@ pnpm dev
 **5. Verify Setup**:
 ```bash
 # API health check
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 
 # Frontend
 curl http://localhost:3000

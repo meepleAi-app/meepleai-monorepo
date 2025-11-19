@@ -461,8 +461,8 @@ curl http://localhost:5678/workflows
 2. **Smoke tests** after deployment:
    ```bash
    # Test critical endpoints
-   curl -f http://localhost:8080/api/v1/games
-   curl -f http://localhost:8080/api/v1/health
+   curl -f http://localhost:5080/api/v1/games
+   curl -f http://localhost:5080/api/v1/health
    ```
 
 3. **Monitor deployment**:
@@ -559,7 +559,7 @@ Escalate if:
 # Trigger 10 errors/sec for 2 minutes
 
 for i in {1..120}; do
-  curl -X POST http://localhost:8080/api/v1/test-error
+  curl -X POST http://localhost:5080/api/v1/test-error
   sleep 1
 done
 ```

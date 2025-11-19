@@ -246,7 +246,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 docker compose ps
 
 # Check API health
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 
 # Check logs
 docker compose logs -f api
@@ -273,7 +273,7 @@ services:
       - qdrant
       - redis
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -893,7 +893,7 @@ kubectl patch service api -n meepleai -p '{"spec":{"selector":{"version":"green"
 **API Health Endpoint**: `/health`
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 ```
 
 **Response**:
@@ -1161,7 +1161,7 @@ docker compose logs api
 kubectl logs deployment/api -n meepleai
 
 # Check health
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 ```
 
 **"Database connection failed"**:

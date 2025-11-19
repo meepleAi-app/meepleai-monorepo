@@ -31,7 +31,7 @@ describe("api", () => {
     const result = await api.get<typeof data>("/games");
 
     expect(result).toEqual(data);
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/games", {
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:5080/games", {
       method: "GET",
       credentials: "include"
     });
@@ -43,7 +43,7 @@ describe("api", () => {
     const result = await api.get("/games");
 
     expect(result).toBeNull();
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/games", {
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:5080/games", {
       method: "GET",
       credentials: "include"
     });
@@ -61,7 +61,7 @@ describe("api", () => {
 
     await api.post("/games", payload);
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/games", {
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:5080/games", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -81,7 +81,7 @@ describe("api", () => {
 
     await api.put("/games", payload);
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/games", {
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:5080/games", {
       method: "PUT",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -105,25 +105,25 @@ describe("api", () => {
     it('returns fallback when env is empty string', () => {
       process.env.NEXT_PUBLIC_API_BASE = '';
       const { getApiBase } = require('../api');
-      expect(getApiBase()).toBe('http://localhost:8080');
+      expect(getApiBase()).toBe('http://localhost:5080');
     });
 
     it('returns fallback when env is literal "undefined" string', () => {
       process.env.NEXT_PUBLIC_API_BASE = 'undefined';
       const { getApiBase } = require('../api');
-      expect(getApiBase()).toBe('http://localhost:8080');
+      expect(getApiBase()).toBe('http://localhost:5080');
     });
 
     it('returns fallback when env is literal "null" string', () => {
       process.env.NEXT_PUBLIC_API_BASE = 'null';
       const { getApiBase } = require('../api');
-      expect(getApiBase()).toBe('http://localhost:8080');
+      expect(getApiBase()).toBe('http://localhost:5080');
     });
 
     it('returns fallback when env is whitespace only', () => {
       process.env.NEXT_PUBLIC_API_BASE = '   ';
       const { getApiBase } = require('../api');
-      expect(getApiBase()).toBe('http://localhost:8080');
+      expect(getApiBase()).toBe('http://localhost:5080');
     });
 
     it('returns env value when valid URL is provided', () => {
@@ -138,7 +138,7 @@ describe("api", () => {
 
     await api.post("/games");
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/games", {
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:5080/games", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -164,7 +164,7 @@ describe("api", () => {
 
       await api.delete("/games/123");
 
-      expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/games/123", {
+      expect(fetchMock).toHaveBeenCalledWith("http://localhost:5080/games/123", {
         method: "DELETE",
         credentials: "include"
       });
@@ -203,7 +203,7 @@ describe("api", () => {
 
         expect(result).toEqual(sessionData);
         expect(fetchMock).toHaveBeenCalledWith(
-          "http://localhost:8080/api/v1/auth/session/status",
+          "http://localhost:5080/api/v1/auth/session/status",
           {
             method: "GET",
             credentials: "include"
@@ -241,7 +241,7 @@ describe("api", () => {
 
         expect(result).toEqual(sessionData);
         expect(fetchMock).toHaveBeenCalledWith(
-          "http://localhost:8080/api/v1/auth/session/extend",
+          "http://localhost:5080/api/v1/auth/session/extend",
           {
             method: "POST",
             credentials: "include",
@@ -298,7 +298,7 @@ describe("api", () => {
 
         expect(result).toEqual(commentsData);
         expect(fetchMock).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=true`,
+          `http://localhost:5080/api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=true`,
           {
             method: "GET",
             credentials: "include"
@@ -352,7 +352,7 @@ describe("api", () => {
 
         expect(result).toEqual(createdComment);
         expect(fetchMock).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/games/${gameId}/rulespec/versions/${version}/comments`,
+          `http://localhost:5080/api/v1/games/${gameId}/rulespec/versions/${version}/comments`,
           {
             method: "POST",
             credentials: "include",
@@ -440,7 +440,7 @@ describe("api", () => {
 
         expect(result).toEqual(updatedComment);
         expect(fetchMock).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/games/${gameId}/rulespec/comments/${commentId}`,
+          `http://localhost:5080/api/v1/games/${gameId}/rulespec/comments/${commentId}`,
           {
             method: "PUT",
             credentials: "include",
@@ -480,7 +480,7 @@ describe("api", () => {
         await api.chat.deleteRuleSpecComment(gameId, commentId);
 
         expect(fetchMock).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/games/${gameId}/rulespec/comments/${commentId}`,
+          `http://localhost:5080/api/v1/games/${gameId}/rulespec/comments/${commentId}`,
           {
             method: "DELETE",
             credentials: "include"

@@ -37,7 +37,7 @@ Standardizing Markdown files...
 Genera documentazione API da OpenAPI/Swagger spec.
 
 **Prerequisiti**:
-- API deve essere in esecuzione in development mode (`http://localhost:8080`)
+- API deve essere in esecuzione in development mode (`http://localhost:5080`)
 - Swagger endpoint disponibile a `/swagger/v1/swagger.json`
 
 **Uso**:
@@ -56,12 +56,12 @@ node tools/generate-api-docs.js
 - `docs/api-reference.md` - Documentazione Markdown generata
 
 **Variabili d'ambiente**:
-- `API_BASE_URL` - URL base dell'API (default: `http://localhost:8080`)
+- `API_BASE_URL` - URL base dell'API (default: `http://localhost:5080`)
 
 **Esempio**:
 
 ```bash
-API_BASE_URL=http://localhost:8080 node tools/generate-api-docs.js
+API_BASE_URL=http://localhost:5080 node tools/generate-api-docs.js
 ```
 
 ### 3. Ricerca Documentazione
@@ -408,7 +408,7 @@ dotnet run
 Verifica che l'API risponda:
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 ```
 
 ## Riferimenti

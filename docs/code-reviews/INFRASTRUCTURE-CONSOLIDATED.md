@@ -912,7 +912,7 @@ export const options = {
 };
 
 export default function () {
-  const res = http.post('http://localhost:8080/api/v1/search', JSON.stringify({
+  const res = http.post('http://localhost:5080/api/v1/search', JSON.stringify({
     query: 'What are the rules?',
     gameId: '123',
   }), {

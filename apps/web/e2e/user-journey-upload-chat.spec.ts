@@ -21,7 +21,7 @@ import { test, expect } from '@playwright/test';
  * Note: This is a REAL INTEGRATION test - uses actual backend APIs
  */
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:5080';
 
 /**
  * Helper to authenticate via API and get session cookie

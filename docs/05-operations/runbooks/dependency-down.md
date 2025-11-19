@@ -205,7 +205,7 @@ docker compose up -d
 docker compose ps <service>
 
 # Health check should pass
-curl http://localhost:8080/health/ready
+curl http://localhost:5080/health/ready
 ```json
 **Resolution time**: 1-2 minutes
 
@@ -478,10 +478,10 @@ docker compose up -d
    docker compose ps
 
    # API health check passes
-   curl http://localhost:8080/health/ready
+   curl http://localhost:5080/health/ready
 
    # Test affected feature
-   curl http://localhost:8080/api/v1/games
+   curl http://localhost:5080/api/v1/games
    ```
 
 ### Medium-term (< 1 hour)
@@ -621,7 +621,7 @@ curl http://localhost:9093
 docker compose start meepleai-postgres
 
 # Verify recovery
-curl http://localhost:8080/health/ready
+curl http://localhost:5080/health/ready
 ```
 
 ### Simulate Redis Down

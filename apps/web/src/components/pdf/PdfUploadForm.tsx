@@ -106,7 +106,7 @@ export function PdfUploadForm({
   const [retryCount, setRetryCount] = useState(0);
   const [retryMessage, setRetryMessage] = useState<string | null>(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];

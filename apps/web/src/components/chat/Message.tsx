@@ -19,11 +19,11 @@ import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
 import { FollowUpQuestions } from './FollowUpQuestions';
 import { CitationList } from '../citations'; // #859
+import type { PdfViewerModalProps } from '../pdf/PdfViewerModal'; // BGAI-074
 import { api } from '@/lib/api';
 
-// Dynamically import PDF viewer to avoid SSR issues with DOMMatrix
-const PdfViewerModal = dynamic(
-  () => import('../pdf/PdfViewerModal').then(mod => ({ default: mod.PdfViewerModal })),
+const PdfViewerModal = dynamic<PdfViewerModalProps>(
+  () => import('../pdf/PdfViewerModal').then(mod => mod.PdfViewerModal),
   { ssr: false }
 );
 

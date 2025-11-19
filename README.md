@@ -138,7 +138,7 @@ apps/api/src/Api/BoundedContexts/
 
 6. **Access the applications**
    - Web: http://localhost:3000
-   - API: http://localhost:8080
+   - API: http://localhost:5080
    - n8n: http://localhost:5678
 
 **Security Note**: All secrets are managed via Docker Secrets (Issue #708). See [`docs/guide/secrets-management.md`](./docs/guide/secrets-management.md) for rotation and advanced management.

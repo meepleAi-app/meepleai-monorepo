@@ -188,7 +188,7 @@ cd D:/Repositories/meepleai-monorepo/apps/api
 dotnet ef database update
 
 # 2. Attiva via Admin UI
-# Vai a: http://localhost:8080/admin/prompts
+# Vai a: http://localhost:5080/admin/prompts
 # Trova "rag-system-prompt"
 # Attiva nuova versione creata dalla migration
 
@@ -779,7 +779,7 @@ cd D:/Repositories/meepleai-monorepo/apps/api
 dotnet ef database update
 
 # Test in staging environment
-curl -X POST http://localhost:8080/api/v1/rag/search \
+curl -X POST http://localhost:5080/api/v1/rag/search \
   -H "Content-Type: application/json" \
   -d '{"gameId": "catan", "query": "How do I win?"}'
 ```

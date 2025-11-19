@@ -23,7 +23,7 @@ import {
   clearCapturedEmails,
 } from './fixtures/email';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:5080';
 
 // Test user data
 const TEST_USER = {

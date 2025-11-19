@@ -13,14 +13,14 @@ import { check, sleep } from 'k6';
  */
 export function loadConfig() {
   const defaultConfig = {
-    apiBaseUrl: __ENV.API_BASE_URL || 'http://localhost:8080',
+    apiBaseUrl: __ENV.API_BASE_URL || 'http://localhost:5080',
     testUser: {
       email: __ENV.TEST_USER_EMAIL || 'test@meepleai.dev',
       password: __ENV.TEST_USER_PASSWORD || 'Test123!',
     },
     testGameId: __ENV.TEST_GAME_ID || '00000000-0000-0000-0000-000000000001',
     reportDir: __ENV.REPORT_DIR || './reports',
-    websocketUrl: __ENV.WEBSOCKET_URL || 'ws://localhost:8080/ws',
+    websocketUrl: __ENV.WEBSOCKET_URL || 'ws://localhost:5080/ws',
   };
 
   // Note: k6 doesn't support file loading at runtime reliably

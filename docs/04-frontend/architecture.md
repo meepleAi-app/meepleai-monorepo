@@ -245,7 +245,7 @@ The frontend API client mirrors the backend's **7 Bounded Contexts** with corres
 // lib/api.ts - Centralized API client
 
 export class ApiClient {
-  private baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+  private baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
 
   // Authentication Context
   async login(credentials: LoginRequest): Promise<LoginResponse> {

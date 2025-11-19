@@ -31,17 +31,17 @@ describe('getApiBase', () => {
 
   it('should return localhost when env not set', () => {
     delete process.env.NEXT_PUBLIC_API_BASE;
-    expect(getApiBase()).toBe('http://localhost:8080');
+    expect(getApiBase()).toBe('http://localhost:5080');
   });
 
   it('should return localhost when env is undefined string', () => {
     process.env.NEXT_PUBLIC_API_BASE = 'undefined';
-    expect(getApiBase()).toBe('http://localhost:8080');
+    expect(getApiBase()).toBe('http://localhost:5080');
   });
 
   it('should return localhost when env is null string', () => {
     process.env.NEXT_PUBLIC_API_BASE = 'null';
-    expect(getApiBase()).toBe('http://localhost:8080');
+    expect(getApiBase()).toBe('http://localhost:5080');
   });
 
   it('should trim whitespace from env variable', () => {
@@ -58,7 +58,7 @@ describe('HttpClient', () => {
 
   beforeEach(() => {
     mockFetch = jest.fn();
-    client = new HttpClient({ baseUrl: 'http://localhost:8080', fetchImpl: mockFetch });
+    client = new HttpClient({ baseUrl: 'http://localhost:5080', fetchImpl: mockFetch });
 
     // Mock browser storage
     mockLocalStorage = {};
@@ -105,7 +105,7 @@ describe('HttpClient', () => {
       await client.get('/api/v1/test');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/test',
+        'http://localhost:5080/api/v1/test',
         expect.objectContaining({
           method: 'GET',
           credentials: 'include',
@@ -186,7 +186,7 @@ describe('HttpClient', () => {
       await client.post('/api/v1/test', { key: 'value' });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/test',
+        'http://localhost:5080/api/v1/test',
         expect.objectContaining({
           method: 'POST',
           credentials: 'include',
@@ -269,7 +269,7 @@ describe('HttpClient', () => {
       await client.put('/api/v1/test', { key: 'updated' });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/test',
+        'http://localhost:5080/api/v1/test',
         expect.objectContaining({
           method: 'PUT',
           credentials: 'include',
@@ -321,7 +321,7 @@ describe('HttpClient', () => {
       await client.delete('/api/v1/test');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/test',
+        'http://localhost:5080/api/v1/test',
         expect.objectContaining({
           method: 'DELETE',
           credentials: 'include',

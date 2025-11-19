@@ -28,13 +28,13 @@
 
 ```bash
 # Login first
-curl -X POST http://localhost:8080/api/v1/auth/login \
+curl -X POST http://localhost:5080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@meepleai.dev","password":"Demo123!"}' \
   -c cookies.txt
 
 # Use cookie for subsequent requests
-curl http://localhost:8080/api/v1/ingest/pdf \
+curl http://localhost:5080/api/v1/ingest/pdf \
   -b cookies.txt \
   -F "file=@rulebook.pdf" \
   -F "gameId=<guid>"
@@ -43,7 +43,7 @@ curl http://localhost:8080/api/v1/ingest/pdf \
 ### API Key
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/ingest/pdf \
+curl -X POST http://localhost:5080/api/v1/ingest/pdf \
   -H "X-API-Key: mpl_prod_<base64-key>" \
   -F "file=@rulebook.pdf" \
   -F "gameId=<guid>"
@@ -59,7 +59,7 @@ curl -X POST http://localhost:8080/api/v1/ingest/pdf \
 
 ```http
 POST /api/v1/ingest/pdf HTTP/1.1
-Host: localhost:8080
+Host: localhost:5080
 Cookie: meepleai-session=<session-token>
 Content-Type: multipart/form-data; boundary=----FormBoundary
 
@@ -148,7 +148,7 @@ HTTP/1.1 403 Forbidden
 
 ```http
 GET /api/v1/pdfs/abc-123-def/text HTTP/1.1
-Host: localhost:8080
+Host: localhost:5080
 Cookie: meepleai-session=<session-token>
 ```
 
@@ -221,7 +221,7 @@ HTTP/1.1 200 OK
 
 ```http
 GET /api/v1/pdfs/abc-123-def/progress HTTP/1.1
-Host: localhost:8080
+Host: localhost:5080
 Cookie: meepleai-session=<session-token>
 ```
 
@@ -280,7 +280,7 @@ HTTP/1.1 403 Forbidden
 
 ```http
 POST /api/v1/ingest/pdf/abc-123-def/index HTTP/1.1
-Host: localhost:8080
+Host: localhost:5080
 Cookie: meepleai-session=<session-token>
 ```
 
@@ -366,7 +366,7 @@ Content-Type: application/json
 
 ```http
 GET /api/v1/games/550e8400-e29b-41d4-a716-446655440000/pdfs HTTP/1.1
-Host: localhost:8080
+Host: localhost:5080
 Cookie: meepleai-session=<session-token>
 ```
 
@@ -425,7 +425,7 @@ Content-Type: application/json
 
 ```http
 DELETE /api/v1/pdf/abc-123-def HTTP/1.1
-Host: localhost:8080
+Host: localhost:5080
 Cookie: meepleai-session=<session-token>
 ```
 
@@ -475,7 +475,7 @@ HTTP/1.1 403 Forbidden
 
 ```http
 DELETE /api/v1/pdfs/abc-123-def/processing HTTP/1.1
-Host: localhost:8080
+Host: localhost:5080
 Cookie: meepleai-session=<session-token>
 ```
 
@@ -515,7 +515,7 @@ Content-Type: application/json
 
 ```http
 POST /api/v1/ingest/pdf/abc-123-def/rulespec HTTP/1.1
-Host: localhost:8080
+Host: localhost:5080
 Cookie: meepleai-session=<session-token>
 ```
 
@@ -638,7 +638,7 @@ X-RateLimit-Reset: 1699564800
 **Recommendation**: Check if PDF exists before upload:
 ```bash
 # Check existing PDFs for game
-curl http://localhost:8080/api/v1/games/{gameId}/pdfs
+curl http://localhost:5080/api/v1/games/{gameId}/pdfs
 
 # If duplicate found, use existing document ID
 ```
@@ -726,7 +726,7 @@ interface ProcessingProgress {
 #!/bin/bash
 
 # 1. Upload PDF
-RESPONSE=$(curl -s -X POST http://localhost:8080/api/v1/ingest/pdf \
+RESPONSE=$(curl -s -X POST http://localhost:5080/api/v1/ingest/pdf \
   -b cookies.txt \
   -F "file=@catan-it.pdf" \
   -F "gameId=550e8400-e29b-41d4-a716-446655440000")
@@ -737,7 +737,7 @@ echo "Uploaded: $DOC_ID"
 
 # 2. Poll for processing completion (max 2 minutes)
 for i in {1..24}; do
-  PROGRESS=$(curl -s http://localhost:8080/api/v1/pdfs/$DOC_ID/progress -b cookies.txt)
+  PROGRESS=$(curl -s http://localhost:5080/api/v1/pdfs/$DOC_ID/progress -b cookies.txt)
 
   if [ "$PROGRESS" == "null" ]; then
     echo "Processing complete!"
@@ -752,7 +752,7 @@ for i in {1..24}; do
 done
 
 # 3. Verify extraction
-TEXT=$(curl -s http://localhost:8080/api/v1/pdfs/$DOC_ID/text -b cookies.txt)
+TEXT=$(curl -s http://localhost:5080/api/v1/pdfs/$DOC_ID/text -b cookies.txt)
 STATUS=$(echo $TEXT | jq -r '.processingStatus')
 CHARS=$(echo $TEXT | jq -r '.characterCount')
 
@@ -764,12 +764,12 @@ else
 fi
 
 # 4. Index for search
-INDEX_RESULT=$(curl -s -X POST http://localhost:8080/api/v1/ingest/pdf/$DOC_ID/index -b cookies.txt)
+INDEX_RESULT=$(curl -s -X POST http://localhost:5080/api/v1/ingest/pdf/$DOC_ID/index -b cookies.txt)
 CHUNKS=$(echo $INDEX_RESULT | jq -r '.chunkCount')
 echo "Indexed: $CHUNKS chunks"
 
 # 5. Test search
-curl -s "http://localhost:8080/api/v1/search?q=costruire+strade&gameId=550e8400-e29b-41d4-a716-446655440000" \
+curl -s "http://localhost:5080/api/v1/search?q=costruire+strade&gameId=550e8400-e29b-41d4-a716-446655440000" \
   -b cookies.txt | jq '.results[] | {text: .text, page: .page, score: .score}'
 ```
 
@@ -785,7 +785,7 @@ PDF_DIR="./rulebooks"
 for pdf in $PDF_DIR/*.pdf; do
   echo "Uploading: $pdf"
 
-  RESPONSE=$(curl -s -X POST http://localhost:8080/api/v1/ingest/pdf \
+  RESPONSE=$(curl -s -X POST http://localhost:5080/api/v1/ingest/pdf \
     -b cookies.txt \
     -F "file=@$pdf" \
     -F "gameId=$GAME_ID")
@@ -894,7 +894,7 @@ docker compose restart meepleai-unstructured
 **Debug**:
 ```bash
 # Check extracted text quality
-curl http://localhost:8080/api/v1/pdfs/{id}/text | jq '.characterCount, .pageCount'
+curl http://localhost:5080/api/v1/pdfs/{id}/text | jq '.characterCount, .pageCount'
 
 # Calculate chars/page (should be ≥500 for quality 0.80)
 # If chars/page < 500: PDF is low quality (scanned at low DPI?)
@@ -913,7 +913,7 @@ curl http://localhost:8080/api/v1/pdfs/{id}/text | jq '.characterCount, .pageCou
 **Debug**:
 ```bash
 # Check extracted text length
-curl http://localhost:8080/api/v1/pdfs/{id}/text | jq '.extractedText | length'
+curl http://localhost:5080/api/v1/pdfs/{id}/text | jq '.extractedText | length'
 
 # If length < 100: Text too short for chunking
 ```

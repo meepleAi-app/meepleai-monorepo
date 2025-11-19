@@ -182,13 +182,13 @@ onSessionCreated={(session) => {
 Test all session endpoints:
 ```bash
 # Active sessions
-curl http://localhost:8080/api/v1/sessions/active
+curl http://localhost:5080/api/v1/sessions/active
 
 # History
-curl "http://localhost:8080/api/v1/sessions/history?limit=20"
+curl "http://localhost:5080/api/v1/sessions/history?limit=20"
 
 # Details
-curl http://localhost:8080/api/v1/sessions/{id}
+curl http://localhost:5080/api/v1/sessions/{id}
 ```
 
 ---

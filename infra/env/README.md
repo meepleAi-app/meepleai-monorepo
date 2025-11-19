@@ -55,7 +55,7 @@ Below you’ll find the variables that require manual input and how to obtain ea
 |-----|-------------|-----------|
 | `EMBEDDING_PROVIDER` | `ollama` for the local container or `openai` for cloud embeddings | Leave `ollama` for local dev |
 | `OLLAMA_URL` / `EMBEDDING_MODEL` | Endpoint + model for embeddings | Default `http://meepleai-ollama:11434` / `nomic-embed-text` |
-| `JWT_ISSUER` | Token issuer used by the API | Usually `http://localhost:8080` |
+| `JWT_ISSUER` | Token issuer used by the API | Usually `http://localhost:5080` |
 | `ALLOW_ORIGIN` | Allowed origin for CORS | `http://localhost:3000` when running Next.js locally |
 | `SEQ_URL` | Seq ingestion URL | `http://meepleai-seq:5341` inside Docker; use `http://localhost:5341` when hitting the container from host |
 | `INITIAL_ADMIN_EMAIL` | Email for the bootstrap admin account | Any address you control (default `admin@meepleai.dev`) |
@@ -73,7 +73,7 @@ Used by CI/CD jobs. Copy the file content into your pipeline variables (e.g., Gi
 ## 2. `web.env.dev` / `web.env.ci.example`
 | Key | Description | How to set |
 |-----|-------------|-----------|
-| `NEXT_PUBLIC_API_BASE` | URL the Next.js app calls | `http://localhost:8080` (dev server); `http://meepleai-api:8080` inside Docker |
+| `NEXT_PUBLIC_API_BASE` | URL the Next.js app calls | `http://localhost:5080` (dev server); `http://meepleai-api:8080` inside Docker |
 | `NEXT_PUBLIC_TENANT_ID` | Logical tenant label | `dev`, `ci`, etc. |
 
 These values are safe to commit if you want shared defaults; the file is gitignored so you can customize per developer.

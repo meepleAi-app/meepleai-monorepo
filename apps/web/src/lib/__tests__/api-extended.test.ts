@@ -70,7 +70,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         const result = await api.chat.createCommentReply(commentId, request);
 
         expect(fetch).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/rulespec/comments/${commentId}/replies`,
+          `http://localhost:5080/api/v1/rulespec/comments/${commentId}/replies`,
           {
             method: 'POST',
             credentials: 'include',
@@ -105,7 +105,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         await api.chat.resolveComment(commentId);
 
         expect(fetch).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/rulespec/comments/${commentId}/resolve`,
+          `http://localhost:5080/api/v1/rulespec/comments/${commentId}/resolve`,
           {
             method: 'POST',
             credentials: 'include',
@@ -139,7 +139,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         await api.chat.unresolveComment(commentId);
 
         expect(fetch).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/rulespec/comments/${commentId}/unresolve`,
+          `http://localhost:5080/api/v1/rulespec/comments/${commentId}/unresolve`,
           {
             method: 'POST',
             credentials: 'include',
@@ -186,7 +186,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         const result = await api.chat.getCacheStats();
 
         expect(fetch).toHaveBeenCalledWith(
-          'http://localhost:8080/api/v1/admin/cache/stats',
+          'http://localhost:5080/api/v1/admin/cache/stats',
           {
             method: 'GET',
             credentials: 'include'
@@ -210,7 +210,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         const result = await api.chat.getCacheStats('chess');
 
         expect(fetch).toHaveBeenCalledWith(
-          'http://localhost:8080/api/v1/admin/cache/stats?gameId=chess',
+          'http://localhost:5080/api/v1/admin/cache/stats?gameId=chess',
           {
             method: 'GET',
             credentials: 'include'
@@ -246,7 +246,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         await api.chat.invalidateGameCache('chess');
 
         expect(fetch).toHaveBeenCalledWith(
-          'http://localhost:8080/api/v1/admin/cache/games/chess',
+          'http://localhost:5080/api/v1/admin/cache/games/chess',
           {
             method: 'DELETE',
             credentials: 'include'
@@ -281,7 +281,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         await api.chat.invalidateCacheByTag('rag-responses');
 
         expect(fetch).toHaveBeenCalledWith(
-          'http://localhost:8080/api/v1/admin/cache/tags/rag-responses',
+          'http://localhost:5080/api/v1/admin/cache/tags/rag-responses',
           {
             method: 'DELETE',
             credentials: 'include'
@@ -328,7 +328,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         const result = await api.pdf.getProcessingProgress('pdf-123');
 
         expect(fetch).toHaveBeenCalledWith(
-          'http://localhost:8080/api/v1/pdfs/pdf-123/progress',
+          'http://localhost:5080/api/v1/pdfs/pdf-123/progress',
           {
             method: 'GET',
             credentials: 'include'
@@ -372,7 +372,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         await api.pdf.cancelProcessing('pdf-123');
 
         expect(fetch).toHaveBeenCalledWith(
-          'http://localhost:8080/api/v1/pdfs/pdf-123/processing',
+          'http://localhost:5080/api/v1/pdfs/pdf-123/processing',
           {
             method: 'DELETE',
             credentials: 'include'
@@ -430,7 +430,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         await api.chat.exportChat(chatId, request);
 
         expect(fetch).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/chats/${chatId}/export`,
+          `http://localhost:5080/api/v1/chats/${chatId}/export`,
           {
             method: 'POST',
             credentials: 'include',
@@ -551,7 +551,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         const result = await api.chat.updateMessage(chatId, messageId, 'Updated content');
 
         expect(fetch).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/chats/${chatId}/messages/${messageId}`,
+          `http://localhost:5080/api/v1/chats/${chatId}/messages/${messageId}`,
           {
             method: 'PUT',
             credentials: 'include',
@@ -596,7 +596,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         await api.chat.deleteMessage(chatId, messageId);
 
         expect(fetch).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/chats/${chatId}/messages/${messageId}`,
+          `http://localhost:5080/api/v1/chats/${chatId}/messages/${messageId}`,
           {
             method: 'DELETE',
             credentials: 'include'

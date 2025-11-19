@@ -22,7 +22,7 @@ type TestResult = {
   latencyMs: number | null;
 };
 
-export const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+export const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5080";
 
 export default function N8nWorkflowManagement() {
   const [configs, setConfigs] = useState<N8nConfig[]>([]);

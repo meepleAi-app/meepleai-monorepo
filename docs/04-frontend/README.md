@@ -141,7 +141,7 @@ cd ../../infra
 docker compose up meepleai-postgres meepleai-qdrant meepleai-redis
 cd ../apps/api/src/Api
 dotnet run
-# → http://localhost:8080
+# → http://localhost:5080
 ```
 
 ### Available Scripts

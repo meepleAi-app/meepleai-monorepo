@@ -127,14 +127,14 @@ describe('MockApiRouter', () => {
   });
 
   describe('Given full URL with protocol and host', () => {
-    describe('When URL includes http://localhost:8080', () => {
+    describe('When URL includes http://localhost:5080', () => {
       it('Then matches route pattern correctly', async () => {
         const router = new MockApiRouter();
         const mockData = { success: true };
 
         router.get('/auth/me', () => createJsonResponse(mockData));
 
-        const response = await router.handle('http://localhost:8080/auth/me');
+        const response = await router.handle('http://localhost:5080/auth/me');
         const data = await response.json();
 
         expect(data).toEqual(mockData);
@@ -232,11 +232,11 @@ describe('MockApiRouter', () => {
 
         const mockFetch = jest.fn(router.toMockImplementation());
 
-        const response = await mockFetch('http://localhost:8080/auth/me');
+        const response = await mockFetch('http://localhost:5080/auth/me');
         const data = await response.json();
 
         expect(data).toEqual(mockData);
-        expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/auth/me');
+        expect(mockFetch).toHaveBeenCalledWith('http://localhost:5080/auth/me');
       });
     });
 

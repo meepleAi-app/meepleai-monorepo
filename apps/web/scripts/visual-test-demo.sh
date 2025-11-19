@@ -18,7 +18,7 @@ echo
 
 # Check if backend is running
 echo -e "${YELLOW}📡 Checking if backend API is running...${NC}"
-if curl -s http://localhost:8080/health > /dev/null 2>&1; then
+if curl -s http://localhost:5080/health > /dev/null 2>&1; then
   echo -e "${GREEN}✅ Backend is running${NC}"
 else
   echo -e "${RED}❌ Backend is NOT running${NC}"

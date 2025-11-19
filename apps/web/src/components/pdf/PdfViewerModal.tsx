@@ -12,9 +12,9 @@
  * Usage: Display PDF when user clicks citation to jump to specific page
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { List, type ListImperativeAPI } from 'react-window';
+import { List } from 'react-window';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -28,7 +28,7 @@ if (typeof window !== 'undefined') {
   pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 }
 
-interface PdfViewerModalProps {
+export interface PdfViewerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pdfUrl: string;
@@ -61,7 +61,7 @@ export function PdfViewerModal({
   const [showThumbnails, setShowThumbnails] = useState(true);
 
   const mainCanvasRef = useRef<HTMLDivElement>(null);
-  const thumbnailListRef = useRef<ListImperativeAPI | null>(null);
+  const thumbnailListRef = useRef<any>(null);
 
   // Reset to initial page when modal opens or initialPage changes
   useEffect(() => {
@@ -149,9 +149,8 @@ export function PdfViewerModal({
   const goToPage = useCallback((page: number) => {
     if (numPages && page >= 1 && page <= numPages) {
       setCurrentPage(page);
-      // Scroll thumbnail into view
-      if (showThumbnails) {
-        thumbnailListRef.current?.scrollToRow?.({ index: page - 1, align: 'center' });
+      if (thumbnailListRef.current && showThumbnails && typeof thumbnailListRef.current.scrollToItem === 'function') {
+        thumbnailListRef.current.scrollToItem(page - 1, 'center');
       }
     }
   }, [numPages, showThumbnails]);
@@ -195,13 +194,14 @@ export function PdfViewerModal({
     goToPage(page);
   }, [goToPage]);
 
-  const renderThumbnail = useCallback((props: { index: number; style: React.CSSProperties }): React.ReactElement => {
-    const pageNumber = props.index + 1;
+  const renderThumbnail = useCallback((props: { index: number; style: React.CSSProperties }) => {
+    const { index, style } = props;
+    const pageNumber = index + 1;
     const isActive = pageNumber === currentPage;
 
     return (
       <div
-        style={{ ...props.style, padding: '8px', cursor: 'pointer' }}
+        style={{ ...style, padding: '8px', cursor: 'pointer' }}
         onClick={() => handleThumbnailClick(pageNumber)}
         data-testid={`thumbnail-${pageNumber}`}
       >
@@ -212,10 +212,8 @@ export function PdfViewerModal({
           )}
         >
           <Document
-            file={{
-              url: pdfUrl,
-              withCredentials: true
-            }}
+            file={pdfUrl}
+            options={{ withCredentials: true }}
             onLoadError={() => {}}
           >
             <Page
@@ -345,11 +343,12 @@ export function PdfViewerModal({
                 >
                   <List<{}>
                     listRef={thumbnailListRef}
-                    defaultHeight={window.innerHeight - 200}
+                    defaultHeight={isMobile ? window.innerHeight - 120 : window.innerHeight - 200}
                     rowCount={numPages}
                     rowHeight={THUMBNAIL_HEIGHT + 16}
                     rowComponent={renderThumbnail}
-                    rowProps={{} as any}
+                    rowProps={{}}
+                    style={{ width: THUMBNAIL_WIDTH + 32 }}
                   />
                 </div>
               )}
@@ -373,10 +372,8 @@ export function PdfViewerModal({
 
                   <div className="flex justify-center" style={{ minHeight: loading ? 0 : 'auto' }}>
                     <Document
-                      file={{
-                        url: pdfUrl,
-                        withCredentials: true
-                      }}
+                      file={pdfUrl}
+                      options={{ withCredentials: true }}
                       onLoadSuccess={onDocumentLoadSuccess}
                       onLoadError={onDocumentLoadError}
                       loading=""

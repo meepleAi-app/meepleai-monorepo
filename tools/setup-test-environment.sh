@@ -266,9 +266,9 @@ if [ "$DRY_RUN" = false ]; then
     echo -e "${GREEN}✓ API started (PID: $API_PID)${NC}"
 
     # Wait for API health check
-    wait_for_service "API" "http://localhost:8080/health" 60
+    wait_for_service "API" "http://localhost:5080/health" 60
 else
-    echo -e "${YELLOW}[DRY RUN] Would build and start API at localhost:8080${NC}"
+    echo -e "${YELLOW}[DRY RUN] Would build and start API at localhost:5080${NC}"
 fi
 echo ""
 
@@ -390,8 +390,8 @@ else
         echo ""
         echo -e "${CYAN}📍 Service URLs:${NC}"
         echo -e "  ${GREEN}Frontend:${NC}      http://localhost:3000"
-        echo -e "  ${GREEN}API:${NC}           http://localhost:8080"
-        echo -e "  ${GREEN}Health Check:${NC}  http://localhost:8080/health"
+        echo -e "  ${GREEN}API:${NC}           http://localhost:5080"
+        echo -e "  ${GREEN}Health Check:${NC}  http://localhost:5080/health"
         echo -e "  ${GREEN}Seq (Logs):${NC}    http://localhost:8081"
         echo -e "  ${GREEN}Qdrant:${NC}        http://localhost:6333/dashboard"
         echo ""

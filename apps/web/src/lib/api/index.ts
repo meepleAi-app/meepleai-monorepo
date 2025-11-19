@@ -96,7 +96,7 @@ export * from './types';
  */
 export interface ApiClientConfig {
   /**
-   * Base URL for API (defaults to NEXT_PUBLIC_API_BASE or localhost:8080)
+   * Base URL for API (defaults to NEXT_PUBLIC_API_BASE or localhost:5080)
    */
   baseUrl?: string;
 

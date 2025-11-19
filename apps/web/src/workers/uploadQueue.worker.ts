@@ -93,7 +93,7 @@ const _STORAGE_KEY = 'meepleai-upload-queue';
 const BROADCAST_CHANNEL = 'meepleai-upload-queue-sync';
 const TAB_ID = `tab-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 const API_BASE = self.location.origin.includes('localhost')
-  ? 'http://localhost:8080'
+  ? 'http://localhost:5080'
   : self.location.origin;
 
 const state: UploadQueueState = {

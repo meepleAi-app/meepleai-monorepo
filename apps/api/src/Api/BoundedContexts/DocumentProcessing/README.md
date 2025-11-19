@@ -324,7 +324,7 @@ curl http://localhost:6333/healthz # Qdrant
 
 ```bash
 # 1. Upload PDF
-curl -X POST http://localhost:8080/api/v1/ingest/pdf \
+curl -X POST http://localhost:5080/api/v1/ingest/pdf \
   -H "Cookie: meepleai-session=<your-session-cookie>" \
   -F "file=@docs/test-pdfs/catan-it.pdf" \
   -F "gameId=<game-guid>"
@@ -332,13 +332,13 @@ curl -X POST http://localhost:8080/api/v1/ingest/pdf \
 # Response: { "documentId": "abc-123-def", "fileName": "catan-it.pdf" }
 
 # 2. Check processing progress
-curl http://localhost:8080/api/v1/pdfs/abc-123-def/progress
+curl http://localhost:5080/api/v1/pdfs/abc-123-def/progress
 
 # 3. View extracted text
-curl http://localhost:8080/api/v1/pdfs/abc-123-def/text
+curl http://localhost:5080/api/v1/pdfs/abc-123-def/text
 
 # 4. Index for semantic search
-curl -X POST http://localhost:8080/api/v1/ingest/pdf/abc-123-def/index \
+curl -X POST http://localhost:5080/api/v1/ingest/pdf/abc-123-def/index \
   -H "Cookie: meepleai-session=<your-session-cookie>"
 
 # Response: { "success": true, "chunkCount": 42, "indexedAt": "..." }
@@ -351,7 +351,7 @@ curl -X POST http://localhost:8080/api/v1/ingest/pdf/abc-123-def/index \
 curl http://localhost:6333/collections/meepleai-rules
 
 # Query vectors
-curl http://localhost:8080/api/v1/search?q=costruire+strade&gameId=<game-guid>
+curl http://localhost:5080/api/v1/search?q=costruire+strade&gameId=<game-guid>
 ```
 
 ---

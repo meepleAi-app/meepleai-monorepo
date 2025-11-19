@@ -105,7 +105,7 @@ Each context chunk includes a [Page X] reference.
         import httpx
 
         response = httpx.post(
-            "http://localhost:8080/api/v1/internal/embeddings",
+            "http://localhost:5080/api/v1/internal/embeddings",
             json={"text": text}
         )
         return response.json()["embedding"]

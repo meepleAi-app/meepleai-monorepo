@@ -2,7 +2,7 @@ import { test, expect, Page, Route } from '@playwright/test';
 import { Buffer } from 'buffer';
 import { getTextMatcher, t } from './fixtures/i18n';
 
-const apiBase = 'http://localhost:8080';
+const apiBase = 'http://localhost:5080';
 
 async function setupAuthRoutes(page: Page) {
   let authenticated = false;

@@ -4,7 +4,7 @@
 
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ApiBaseUrl = "http://localhost:8080",
+    [string]$ApiBaseUrl = "http://localhost:5080",
 
     [Parameter(Mandatory=$false)]
     [string]$ServiceEmail = "n8n-service@meepleai.dev",

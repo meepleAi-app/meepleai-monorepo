@@ -301,7 +301,7 @@ public async Task OptimisticConcurrencyHandlesConflicts()
 1. Import collection: `docs/postman/MeepleAI.postman_collection.json`
 2. Import environment: `docs/postman/MeepleAI-Local.postman_environment.json`
 3. Set environment variables:
-   - `API_BASE_URL`: `http://localhost:8080`
+   - `API_BASE_URL`: `http://localhost:5080`
    - `ADMIN_EMAIL`: `admin@meepleai.dev`
    - `ADMIN_PASSWORD`: `Demo123!`
 

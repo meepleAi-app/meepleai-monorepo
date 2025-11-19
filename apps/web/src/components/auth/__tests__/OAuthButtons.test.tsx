@@ -24,7 +24,7 @@ describe('buildOAuthUrl', () => {
 
       const url = buildOAuthUrl('google');
 
-      expect(url).toBe('http://localhost:8080/api/v1/auth/oauth/google/login');
+      expect(url).toBe('http://localhost:5080/api/v1/auth/oauth/google/login');
     });
 
     it('builds correct URL for Discord provider with default API base', () => {
@@ -32,7 +32,7 @@ describe('buildOAuthUrl', () => {
 
       const url = buildOAuthUrl('discord');
 
-      expect(url).toBe('http://localhost:8080/api/v1/auth/oauth/discord/login');
+      expect(url).toBe('http://localhost:5080/api/v1/auth/oauth/discord/login');
     });
 
     it('builds correct URL for GitHub provider with default API base', () => {
@@ -40,7 +40,7 @@ describe('buildOAuthUrl', () => {
 
       const url = buildOAuthUrl('github');
 
-      expect(url).toBe('http://localhost:8080/api/v1/auth/oauth/github/login');
+      expect(url).toBe('http://localhost:5080/api/v1/auth/oauth/github/login');
     });
 
     it('uses custom API base from environment variable', () => {
@@ -72,7 +72,7 @@ describe('buildOAuthUrl', () => {
 
       const url = buildOAuthUrl('google');
 
-      expect(url).toBe('http://localhost:8080/api/v1/auth/oauth/google/login');
+      expect(url).toBe('http://localhost:5080/api/v1/auth/oauth/google/login');
     });
   });
 });

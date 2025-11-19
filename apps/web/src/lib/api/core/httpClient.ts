@@ -26,7 +26,7 @@ export function getApiBase(): string {
   if (envBase && envBase !== 'undefined' && envBase !== 'null') {
     return envBase;
   }
-  return 'http://localhost:8080';
+  return 'http://localhost:5080';
 }
 
 /**

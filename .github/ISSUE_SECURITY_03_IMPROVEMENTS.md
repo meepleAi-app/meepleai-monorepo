@@ -286,7 +286,7 @@ _logger.LogSessionCacheMiss(tokenHash.Substring(0, 4));
 
 ```bash
 # Test 1: Verify allowed headers
-curl -X OPTIONS http://localhost:8080/api/v1/games \
+curl -X OPTIONS http://localhost:5080/api/v1/games \
   -H "Origin: http://localhost:3000" \
   -H "Access-Control-Request-Method: GET" \
   -H "Access-Control-Request-Headers: Content-Type,X-Custom-Header" \
@@ -295,7 +295,7 @@ curl -X OPTIONS http://localhost:8080/api/v1/games \
 # Expected: Access-Control-Allow-Headers should list specific headers
 
 # Test 2: Verify credentials support
-curl -X GET http://localhost:8080/api/v1/users/me \
+curl -X GET http://localhost:5080/api/v1/users/me \
   -H "Origin: http://localhost:3000" \
   -H "Cookie: meeple_session=..." \
   --include

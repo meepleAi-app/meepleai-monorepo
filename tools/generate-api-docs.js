@@ -4,7 +4,7 @@
  * Genera documentazione API da OpenAPI spec
  *
  * Prerequisiti:
- * - API deve essere in esecuzione in development mode (http://localhost:8080)
+ * - API deve essere in esecuzione in development mode (http://localhost:5080)
  * - npm install -g @redocly/cli (opzionale, per Redoc HTML)
  *
  * Output:
@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5080';
 const SPEC_PATH = '/swagger/v1/swagger.json';
 const OUTPUT_JSON = path.join(__dirname, '../docs/api-reference.json');
 const OUTPUT_MD = path.join(__dirname, '../docs/api-reference.md');
@@ -223,7 +223,7 @@ async function main() {
     console.error(err.message);
 
     if (err.code === 'ECONNREFUSED') {
-      console.error('\nMake sure the API is running in development mode at http://localhost:8080');
+      console.error('\nMake sure the API is running in development mode at http://localhost:5080');
       console.error('Run: cd apps/api/src/Api && dotnet run');
     }
 

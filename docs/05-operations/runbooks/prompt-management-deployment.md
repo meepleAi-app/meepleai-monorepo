@@ -70,14 +70,14 @@ dotnet test  # Verify 88% pass rate (15/17 tests)
 docker compose -f infra/docker-compose.yml up -d --build meepleai-api
 
 # Verify health
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 # Expected: {"status": "Healthy"}
 ```
 
 **Smoke Test**:
 ```bash
 # Test prompt retrieval (should fallback to config while flag disabled)
-curl http://localhost:8080/api/v1/chat/qa \
+curl http://localhost:5080/api/v1/chat/qa \
   -d '{"gameId": "...", "query": "How many players?"}' \
   -H "Content-Type: application/json"
 
@@ -148,7 +148,7 @@ export Features__PromptDatabase="false"
 docker compose restart meepleai-api
 
 # 2. Verify rollback
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 # Services should use config prompts (hardcoded fallback)
 
 # 3. Notify team
@@ -340,7 +340,7 @@ docker compose logs meepleai-api | grep "Evaluation"
 ### Running an Evaluation
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/prompts/{templateId}/versions/{versionId}/evaluate \
+curl -X POST http://localhost:5080/api/v1/admin/prompts/{templateId}/versions/{versionId}/evaluate \
   -H "Content-Type: application/json" \
   -H "Cookie: session=..." \
   -d '{
@@ -352,7 +352,7 @@ curl -X POST http://localhost:8080/api/v1/admin/prompts/{templateId}/versions/{v
 ### Comparing Two Versions
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/prompts/{templateId}/compare \
+curl -X POST http://localhost:5080/api/v1/admin/prompts/{templateId}/compare \
   -H "Content-Type: application/json" \
   -d '{
     "baselineVersionId": "v1",

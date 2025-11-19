@@ -94,7 +94,7 @@ curl http://localhost:8000/health
 open http://localhost:3000
 
 # Weaviate
-curl http://localhost:8080/v1/.well-known/ready
+curl http://localhost:5080/v1/.well-known/ready
 
 # PostgreSQL
 docker compose exec meepleai-postgres psql -U meepleai -d meepleai -c "SELECT version();"

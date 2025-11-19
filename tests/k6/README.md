@@ -153,7 +153,7 @@ Edit `config/env.json`:
 
 ```json
 {
-  "apiBaseUrl": "http://localhost:8080",
+  "apiBaseUrl": "http://localhost:5080",
   "testUser": {
     "email": "test@meepleai.dev",
     "password": "Test123!"
@@ -197,7 +197,7 @@ GitHub Actions workflow runs nightly at 2 AM UTC:
 ## Troubleshooting
 
 ### "Connection refused"
-- Ensure API is running: `curl http://localhost:8080/health`
+- Ensure API is running: `curl http://localhost:5080/health`
 - Check `config/env.json` has correct `apiBaseUrl`
 
 ### "Authentication failed"

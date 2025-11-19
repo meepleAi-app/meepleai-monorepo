@@ -71,7 +71,7 @@ sum by (exception_type) (rate(meepleai_api_errors_total[5m]))
 git log --oneline -10
 
 # Check deployed version (if available)
-curl http://localhost:8080/health | jq '.version'
+curl http://localhost:5080/health | jq '.version'
 ```
 
 **Recent configuration changes?**
@@ -96,7 +96,7 @@ docker compose ps meepleai-postgres
 docker compose logs meepleai-postgres --tail 50
 
 # Check connection from API
-curl http://localhost:8080/health | jq '.checks.postgres'
+curl http://localhost:5080/health | jq '.checks.postgres'
 ```
 
 **Cache (Redis)**:
@@ -463,7 +463,7 @@ http://localhost:8082
 ```bash
 # Trigger multiple errors (requires test endpoint)
 for i in {1..100}; do
-  curl -X POST http://localhost:8080/api/v1/test-error &
+  curl -X POST http://localhost:5080/api/v1/test-error &
 done
 
 # Wait 2 minutes for alert to fire

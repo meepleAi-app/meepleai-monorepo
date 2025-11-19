@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Load Docker Secrets into environment variables
 # SEC-708: Docker Secrets support for services that don't natively support _FILE pattern
 #

@@ -46,12 +46,12 @@ pnpm dev
 - ✅ n8n: porta 5678 (http://localhost:5678)
 - ✅ Seq: porta 8081 (http://localhost:8081)
 - ✅ Jaeger: porta 16686 (http://localhost:16686)
-- ✅ API Backend: porta 8080 (http://localhost:8080/health)
+- ✅ API Backend: porta 8080 (http://localhost:5080/health)
 - ✅ Frontend Next.js: porta 3000 (http://localhost:3000)
 
 **Verifica Health**:
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:5080/health
 ```
 
 **Risultato Atteso**:
@@ -178,7 +178,7 @@ curl http://localhost:8080/health
 
 **API Endpoint**:
 ```bash
-curl -X GET http://localhost:8080/api/v1/games \
+curl -X GET http://localhost:5080/api/v1/games \
   -H "Cookie: MeepleAI.Session={SESSION_TOKEN}"
 ```
 
@@ -241,7 +241,7 @@ curl -X GET http://localhost:8080/api/v1/games \
 
 **API Endpoint**:
 ```bash
-curl -X POST http://localhost:8080/api/v1/sessions \
+curl -X POST http://localhost:5080/api/v1/sessions \
   -H "Content-Type: application/json" \
   -H "Cookie: MeepleAI.Session={SESSION_TOKEN}" \
   -d '{
@@ -839,7 +839,7 @@ DELETE FROM configuration WHERE key = 'RAG.Validation.MinConfidence';
 
 **Azione**:
 ```bash
-curl -X GET http://localhost:8080/api/v1/games \
+curl -X GET http://localhost:5080/api/v1/games \
   -H "Authorization: Bearer mpl_dev_abc123def456..."
 ```
 
@@ -851,12 +851,12 @@ curl -X GET http://localhost:8080/api/v1/games \
 **Test Scope**:
 ```bash
 # Scope consentito: read:games
-curl -X GET http://localhost:8080/api/v1/games \
+curl -X GET http://localhost:5080/api/v1/games \
   -H "Authorization: Bearer {API_KEY}"
 # ✅ 200 OK
 
 # Scope NON consentito: write:games (non selezionato)
-curl -X POST http://localhost:8080/api/v1/games \
+curl -X POST http://localhost:5080/api/v1/games \
   -H "Authorization: Bearer {API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{"title": "New Game", ...}'
@@ -879,7 +879,7 @@ curl -X POST http://localhost:8080/api/v1/games \
 
 **Verifica**:
 ```bash
-curl -X GET http://localhost:8080/api/v1/games \
+curl -X GET http://localhost:5080/api/v1/games \
   -H "Authorization: Bearer {REVOKED_KEY}"
 # ❌ 401 Unauthorized: "API key has been revoked"
 ```
@@ -1106,7 +1106,7 @@ redis-cli
 **Test**:
 1. Simula 50 richieste simultanee:
    ```bash
-   seq 1 50 | xargs -P50 -I{} curl http://localhost:8080/api/v1/games
+   seq 1 50 | xargs -P50 -I{} curl http://localhost:5080/api/v1/games
    ```
 
 **Risultato Atteso**:
@@ -1119,7 +1119,7 @@ redis-cli
 
 **Test**:
 ```bash
-curl -H "Accept-Encoding: br" http://localhost:8080/api/v1/games -v
+curl -H "Accept-Encoding: br" http://localhost:5080/api/v1/games -v
 ```
 
 **Risultato Atteso**:
@@ -1136,7 +1136,7 @@ curl -H "Accept-Encoding: br" http://localhost:8080/api/v1/games -v
 **Test**:
 ```bash
 # Benchmark
-time curl http://localhost:8080/api/v1/games
+time curl http://localhost:5080/api/v1/games
 # Tempo atteso: <200ms per 100 giochi
 ```
 
@@ -1148,7 +1148,7 @@ time curl http://localhost:8080/api/v1/games
 
 **Test**:
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
+curl -X POST http://localhost:5080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@meepleai.dev'' OR ''1''=''1",
@@ -1177,7 +1177,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 **Test**:
 ```bash
-curl -X GET http://localhost:8080/api/v1/games \
+curl -X GET http://localhost:5080/api/v1/games \
   -H "Origin: http://malicious-site.com"
 ```
 
@@ -1191,7 +1191,7 @@ curl -X GET http://localhost:8080/api/v1/games \
 **Test**:
 ```bash
 for i in {1..100}; do
-  curl -X POST http://localhost:8080/api/v1/auth/login \
+  curl -X POST http://localhost:5080/api/v1/auth/login \
     -H "Content-Type: application/json" \
     -d '{"email":"test@test.com","password":"wrong"}'
 done
@@ -1224,7 +1224,7 @@ done
 
 **Test**:
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
+curl -X POST http://localhost:5080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "weak@test.com",
@@ -1254,7 +1254,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 ```bash
 for i in {1..100}; do
   curl -H "Authorization: Bearer mpl_dev_wrong_key" \
-    http://localhost:8080/api/v1/games
+    http://localhost:5080/api/v1/games
 done
 ```
 

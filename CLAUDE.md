@@ -62,7 +62,10 @@ docs/                Architecture, ADRs, guides
 | | `./tools/setup-test-environment.sh --full` | Complete suite + E2E (~12min) |
 | **Backend** | `dotnet build && dotnet test` | xUnit+Testcontainers |
 | | `dotnet ef migrations add <Name> --project src/Api` | Auto-applied |
+| | `./tools/run-backend-coverage.sh --html --open` | Code coverage with HTML report |
+| | `./tools/run-backend-coverage-docker.sh` | Code coverage (Docker, no .NET SDK) |
 | **Frontend** | `pnpm dev` / `pnpm build` / `pnpm test` | Jest 90%+ |
+| | `./tools/run-frontend-coverage.sh --open` | Code coverage with HTML report |
 | **Docker** | `docker compose up -d` | Full stack (16 services) |
 
 **Services**:
@@ -302,6 +305,11 @@ npm run test:rag-search     # RAG endpoint test
 npm run test:chat           # Chat endpoint test
 npm run test:games          # Games endpoint test
 npm run test:sessions       # Sessions endpoint test
+
+# Code Coverage
+./tools/run-backend-coverage.sh --html --open    # Backend coverage with HTML report (requires .NET SDK)
+./tools/run-backend-coverage-docker.sh           # Backend coverage using Docker (no .NET SDK needed)
+./tools/run-frontend-coverage.sh --open          # Frontend coverage with HTML report (requires pnpm)
 ```
 
 ---
@@ -402,6 +410,8 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **Security** | `SECURITY.md`, `docs/06-security/code-scanning-remediation-summary.md` |
 | **OAuth Security** | `docs/06-security/oauth-security.md` |
 | **Testing** | `docs/02-development/testing/testing-guide.md` |
+| **Backend Code Coverage** | `docs/02-development/testing/backend-code-coverage.md`, `tools/README-COVERAGE.md` |
+| **Frontend Code Coverage** | `docs/04-frontend/testing/code-coverage.md`, `tools/README-FRONTEND-COVERAGE.md` |
 | **Shadcn/UI** | `docs/04-frontend/shadcn-ui-installation.md` |
 | **AI Provider Config** | `docs/03-api/ai-provider-configuration.md`, `docs/02-development/ai-provider-integration.md` |
 

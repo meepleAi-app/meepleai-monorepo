@@ -2,8 +2,8 @@
 
 **Project**: Italian Board Game Rules AI Assistant
 **Version**: 2.1
-**Last Updated**: 2025-11-18
-**Total Documentation**: 162 markdown files (~850 pages, 88,505 lines)
+**Last Updated**: 2025-11-19
+**Total Documentation**: 163 markdown files (~900 pages, 91,000+ lines)
 
 ---
 
@@ -71,11 +71,12 @@
 **Purpose**: Development guides, testing, refactoring, implementation notes
 
 #### Subdirectories
-- **[guides/](./02-development/guides/)** - Technical guides (6 files)
+- **[guides/](./02-development/guides/)** - Technical guides (7 files)
   - [AI Agents Guide](./02-development/guides/ai-agents-guide.md)
   - [Codebase Maintenance](./02-development/guides/codebase-maintenance.md)
   - [Dependency Management](./02-development/guides/dependency-management.md)
   - [LLM Integration Guide](./02-development/guides/llm-integration-guide.md)
+  - [Local Debugging Guide](./02-development/guides/local-debugging-guide.md) ⭐ NEW - VSCode debugging for backend (.NET), frontend (Next.js), and full-stack
   - [Migration Management](./02-development/guides/migration-management.md)
   - [PDF Processing Guide](./02-development/guides/pdf-processing-guide.md) ⭐
 

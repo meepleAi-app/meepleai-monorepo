@@ -64,7 +64,7 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Validate API key and store it for header-based auth
      */
     async loginWithApiKey(apiKey: string): Promise<{ user: any; message: string }> {
-      const response = await httpClient.post('/api/v1/auth/apikey/login', { apiKey });
+      const response = await httpClient.post<{ user: any; message: string }>('/api/v1/auth/apikey/login', { apiKey });
       setStoredApiKey(apiKey.trim());
       return response;
     },
@@ -73,7 +73,7 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Logout API key authentication (clears stored key)
      */
     async logoutApiKey(): Promise<{ ok: boolean; message: string }> {
-      const response = await httpClient.post('/api/v1/auth/apikey/logout', {});
+      const response = await httpClient.post<{ ok: boolean; message: string }>('/api/v1/auth/apikey/logout', {});
       clearStoredApiKey();
       return response;
     },

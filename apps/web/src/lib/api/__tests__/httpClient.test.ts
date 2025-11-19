@@ -91,11 +91,9 @@ describe('HttpClient', () => {
       writable: true,
     });
     if (typeof URL.createObjectURL !== 'function') {
-      // @ts-expect-error - JSDOM does not implement these helpers
       URL.createObjectURL = () => 'blob:mock';
     }
     if (typeof URL.revokeObjectURL !== 'function') {
-      // @ts-expect-error - JSDOM does not implement these helpers
       URL.revokeObjectURL = () => {};
     }
 

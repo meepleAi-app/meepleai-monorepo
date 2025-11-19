@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Configuration;
+using Api.Services;
 using Api.Services.LlmClients;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -94,7 +95,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Guid.NewGuid());
+            .Returns(Task.CompletedTask);
 
         return ValueTask.CompletedTask;
     }
@@ -590,7 +591,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                     Models = ["openai/gpt-4o-mini"]
                 }
             },
-            FallbackChain = fallbackChain ?? new[] { "Ollama", "OpenRouter" }
+            FallbackChain = fallbackChain?.ToList() ?? new List<string> { "Ollama", "OpenRouter" }
         });
     }
 

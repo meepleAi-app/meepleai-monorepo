@@ -167,6 +167,7 @@ public static class AuthEndpoints
             ApiKeyLoginPayload payload,
             HttpContext context,
             IMediator mediator,
+            ApiKeyCookieService apiKeyCookieService,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -181,7 +182,8 @@ public static class AuthEndpoints
             logger.LogInformation("API key login attempt");
             var result = await mediator.Send(command, ct);
 
-            writeApiKeyCookie(context, payload.ApiKey);
+            var protectedApiKey = apiKeyCookieService.Protect(payload.ApiKey);
+            writeApiKeyCookie(context, protectedApiKey);
             logger.LogInformation("User {UserId} validated API key {ApiKeyId} and cookie issued", result.User.Id, result.ApiKeyId);
 
             // Map to legacy format for backward compatibility

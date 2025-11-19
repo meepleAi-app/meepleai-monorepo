@@ -150,9 +150,49 @@ if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
 
 // Setup browser API polyfills for test environment (issue #463)
 // See test-utils/browser-polyfills.ts for implementation details
-import('./src/test-utils/browser-polyfills').then(({ setupBrowserPolyfills }) => {
+// Using Promise.all to ensure proper async handling in Jest
+Promise.all([
+  import('./src/test-utils/browser-polyfills')
+]).then(([{ setupBrowserPolyfills }]) => {
   setupBrowserPolyfills();
 });
+
+// Mock Worker API for Jest (Issue #1301 - UploadQueueStore lazy init tests)
+// jsdom does not provide Worker constructor, so we mock it globally
+if (typeof global.Worker === 'undefined') {
+  global.Worker = class Worker {
+    constructor(scriptURL) {
+      this.scriptURL = scriptURL;
+      this.onmessage = null;
+      this.onerror = null;
+      this.onmessageerror = null;
+    }
+
+    postMessage(message) {
+      // Mock implementation - tests will override with jest.spyOn()
+    }
+
+    terminate() {
+      // Mock implementation
+    }
+
+    addEventListener(type, listener) {
+      if (type === 'message') {
+        this.onmessage = listener;
+      } else if (type === 'error') {
+        this.onerror = listener;
+      }
+    }
+
+    removeEventListener(type, listener) {
+      if (type === 'message' && this.onmessage === listener) {
+        this.onmessage = null;
+      } else if (type === 'error' && this.onerror === listener) {
+        this.onerror = null;
+      }
+    }
+  };
+}
 
 // Mock ReadableStream for SSE streaming tests
 if (typeof global.ReadableStream === 'undefined') {

@@ -1,7 +1,10 @@
 FROM mcr.microsoft.com/playwright/python:v1.49.0-jammy
 WORKDIR /app
 RUN pip install --no-cache-dir mcp>=0.5.0 playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN mkdir -p ${PLAYWRIGHT_BROWSERS_PATH} && \
+    PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH} playwright install chromium
 COPY --chown=1000:1000 mcp/playwright/ ./
 USER 1000
-# Keep container alive - MCP servers are meant to be accessed via stdio
+# Keep container alive - MCP servers sono accessibili via stdio
 CMD ["tail", "-f", "/dev/null"]

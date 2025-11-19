@@ -103,6 +103,28 @@ Aggiungi i server MCP al file di configurazione di Claude Desktop:
 }
 ```
 
+## Utilizzo da Codex CLI
+
+Per lavorare headless con Codex/CLI abbiamo aggiunto un piccolo client Python che conversa con i server MCP via `docker exec` usando lo stesso protocollo JSON-RPC.
+
+```bash
+# Elenca server, container e comando usato
+python3 tools/mcp/mcp_cli.py servers --verbose
+
+# Visualizza i tools esposti
+python3 tools/mcp/mcp_cli.py list sequential
+
+# Esempi di invocazione
+python3 tools/mcp/mcp_cli.py call sequential sequential_start --args '{"task":"Definisci piano release"}'
+python3 tools/mcp/mcp_cli.py call memory-bank memory_recall --args-file .tmp/memory-query.json
+```
+
+- La tabella server→container→comando è in `mcp/servers.config.json`: aggiungi lì i nuovi servizi.
+- Ogni sessione invia automaticamente `initialize` + `notifications/initialized`, poi inoltra `tools/list`/`tools/call` e stampa per default solo i blocchi di tipo `text`.
+- Usa `--debug-json` per loggare le risposte raw o `--args-file -` per leggere gli arguments da `stdin`.
+
+Prerequisiti: container MCP già avviati con `docker compose -f docker/mcp/docker-compose.yml up -d` e variabili in `.env` valorizzate per i servizi che parlano con API esterne (GitHub, n8n, Magic/OpenRouter, ecc.).
+
 ## Configurazione Avanzata
 
 ### Variabili d'Ambiente

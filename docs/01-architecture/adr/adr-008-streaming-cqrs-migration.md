@@ -1,7 +1,8 @@
-# ADR-004: Streaming Query Handlers with IAsyncEnumerable
+# ADR-008: Streaming Query Handlers with IAsyncEnumerable
 
 **Status**: ✅ Accepted
 **Date**: 2025-11-15
+**Supersedes**: Previous numbering as ADR-004-streaming-cqrs-migration
 **Issue**: [#1186](https://github.com/meepleai/monorepo/issues/1186)
 **Context**: KnowledgeBase Bounded Context
 **Supersedes**: Direct service injection pattern for streaming operations

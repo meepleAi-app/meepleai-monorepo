@@ -317,7 +317,7 @@ public class AdminDisable2FACommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert - Check that domain event was raised
-        var domainEvents = targetUser.GetDomainEvents();
+        var domainEvents = targetUser.DomainEvents;
         Assert.Single(domainEvents);
         var twoFactorEvent = domainEvents.First() as Api.BoundedContexts.Authentication.Domain.Events.TwoFactorDisabledEvent;
         Assert.NotNull(twoFactorEvent);

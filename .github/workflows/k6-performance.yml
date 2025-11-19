@@ -165,7 +165,7 @@ jobs:
 
       - name: Upload performance reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: k6-performance-reports-${{ github.run_number }}
           path: tests/k6/reports/

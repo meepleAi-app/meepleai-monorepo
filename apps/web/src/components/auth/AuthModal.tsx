@@ -58,7 +58,7 @@ export function AuthModal({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultMode);
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'demo'>(defaultMode);
 
   // Reset tab when modal opens/closes or default mode changes
   useEffect(() => {
@@ -84,15 +84,21 @@ export function AuthModal({
 
   // Handle tab change
   const handleTabChange = (value: string) => {
-    setActiveTab(value as 'login' | 'register');
+    setActiveTab(value as 'login' | 'register' | 'demo');
   };
 
   return (
     <AccessibleModal
       isOpen={isOpen}
       onClose={onClose}
-      title={activeTab === 'login' ? t('auth.login.signInTo') : t('auth.login.createAccount')}
-      description={t('auth.login.signInDescription')}
+      title={
+        activeTab === 'login'
+          ? t('auth.login.signInTo')
+          : activeTab === 'register'
+          ? t('auth.login.createAccount')
+          : 'Demo Accounts'
+      }
+      description={activeTab === 'demo' ? 'Quick access for testing' : t('auth.login.signInDescription')}
       size="md"
     >
       <div className="space-y-6">
@@ -120,9 +126,10 @@ export function AuthModal({
 
         {/* Auth Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="login">{t('navigation.login')}</TabsTrigger>
             <TabsTrigger value="register">{t('navigation.register')}</TabsTrigger>
+            <TabsTrigger value="demo">Demo</TabsTrigger>
           </TabsList>
 
           {/* Login Tab */}
@@ -139,31 +146,18 @@ export function AuthModal({
               onSuccess={handleAuthSuccess}
             />
           </TabsContent>
-        </Tabs>
 
-        {/* OAuth Buttons (includes "Or continue with" separator) */}
-        <OAuthButtons />
-
-        {/* Demo Credentials */}
-        {showDemoCredentials && (
-          <>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-200 dark:border-slate-700" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white dark:bg-slate-900 px-2 text-slate-500 dark:text-slate-400">
-                  {t('auth.login.forTesting')}
-                </span>
-              </div>
-            </div>
-
+          {/* Demo Tab */}
+          <TabsContent value="demo" className="space-y-4 mt-4">
             <DemoCredentialsHint
               onCredentialClick={handleDemoCredentialClick}
               variant="default"
             />
-          </>
-        )}
+          </TabsContent>
+        </Tabs>
+
+        {/* OAuth Buttons (includes "Or continue with" separator) - Only show for login/register tabs */}
+        {activeTab !== 'demo' && <OAuthButtons />}
       </div>
     </AccessibleModal>
   );

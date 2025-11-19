@@ -64,7 +64,10 @@ export function PdfViewerModal({
   const thumbnailListRef = useRef<any>(null);
 
   // Memoize file config to prevent unnecessary PDF reloads (BGAI-074)
-  const fileConfig = usePdfFileConfig(pdfUrl);
+  const fileConfig = useMemo(() => ({
+    url: pdfUrl,
+    withCredentials: true,
+  }), [pdfUrl]);
 
   // Reset to initial page when modal opens or initialPage changes
   useEffect(() => {
@@ -215,8 +218,7 @@ export function PdfViewerModal({
           )}
         >
           <Document
-            file={pdfUrl}
-            options={{ withCredentials: true }}
+            file={fileConfig}
             onLoadError={() => {}}
           >
             <Page
@@ -375,8 +377,7 @@ export function PdfViewerModal({
 
                   <div className="flex justify-center" style={{ minHeight: loading ? 0 : 'auto' }}>
                     <Document
-                      file={pdfUrl}
-                      options={{ withCredentials: true }}
+                      file={fileConfig}
                       onLoadSuccess={onDocumentLoadSuccess}
                       onLoadError={onDocumentLoadError}
                       loading=""

@@ -340,13 +340,11 @@ NEXT_PUBLIC_ENABLE_2FA=true
 ```typescript
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
 
-// Dual authentication: Cookie + API Key
 const headers = {
   'Content-Type': 'application/json',
-  ...(apiKey && { 'X-API-Key': apiKey })
+  ...(apiKey && { Authorization: `ApiKey ${apiKey}` }),
 };
 
-// Include credentials for cookie auth
 fetch(url, { credentials: 'include', headers });
 ```
 

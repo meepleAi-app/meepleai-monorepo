@@ -36,9 +36,9 @@ public class ApiKeyQuotaEnforcementMiddleware
             return;
         }
 
-        // Skip quota enforcement if no API key is present
-        if (!context.Request.Headers.TryGetValue("X-API-Key", out var apiKeyHeader) ||
-            string.IsNullOrWhiteSpace(apiKeyHeader))
+        // Skip quota enforcement if request is not authenticated via API key
+        var authType = context.User.FindFirst("AuthType")?.Value;
+        if (!string.Equals(authType, "ApiKey", StringComparison.OrdinalIgnoreCase))
         {
             await _next(context);
             return;

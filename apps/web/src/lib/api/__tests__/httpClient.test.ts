@@ -6,6 +6,7 @@
 
 import { z } from 'zod';
 import { HttpClient, getApiBase, downloadFile } from '../core/httpClient';
+import { setStoredApiKey, clearStoredApiKey } from '../core/apiKeyStore';
 import {
   UnauthorizedError,
   NotFoundError,
@@ -80,9 +81,23 @@ describe('HttpClient', () => {
         setItem: jest.fn((key: string, value: string) => {
           mockSessionStorage[key] = value;
         }),
+        removeItem: jest.fn((key: string) => {
+          delete mockSessionStorage[key];
+        }),
+        clear: jest.fn(() => {
+          mockSessionStorage = {};
+        }),
       },
       writable: true,
     });
+    if (typeof URL.createObjectURL !== 'function') {
+      // @ts-expect-error - JSDOM does not implement these helpers
+      URL.createObjectURL = () => 'blob:mock';
+    }
+    if (typeof URL.revokeObjectURL !== 'function') {
+      // @ts-expect-error - JSDOM does not implement these helpers
+      URL.revokeObjectURL = () => {};
+    }
 
     // Mock crypto.randomUUID
     Object.defineProperty(global, 'crypto', {
@@ -158,9 +173,29 @@ describe('HttpClient', () => {
       );
     });
 
-    // REMOVED: API keys are no longer stored in localStorage (security improvement)
-    // API keys are now stored in secure httpOnly cookies set by the backend
-    // See: /api/v1/auth/apikey/login endpoint
+    it('should include Authorization header when an API key is stored', async () => {
+      setStoredApiKey('mpl_test_demo');
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+        headers: new Headers(),
+      });
+
+      await client.get('/api/v1/test');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:5080/api/v1/test',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'ApiKey mpl_test_demo',
+          }),
+        })
+      );
+
+      clearStoredApiKey();
+    });
 
     it('should throw error for non-401 failures', async () => {
       mockFetch.mockResolvedValueOnce({

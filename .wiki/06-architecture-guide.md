@@ -851,7 +851,10 @@ var apiKey = $"mpl_{environment}_{Convert.ToBase64String(RandomNumberGenerator.G
 var keyHash = HashApiKey(apiKey);  // PBKDF2, 210k iterations
 
 // Validate on request
-var apiKey = Request.Headers["X-API-Key"];
+var authorization = Request.Headers["Authorization"].FirstOrDefault();
+var apiKey = authorization?.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase) == true
+    ? authorization.Substring("ApiKey ".Length)
+    : null;
 var keyHash = HashApiKey(apiKey);
 var key = await _apiKeyRepository.GetByHashAsync(keyHash);
 ```

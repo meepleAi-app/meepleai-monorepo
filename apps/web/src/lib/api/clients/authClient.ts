@@ -6,6 +6,7 @@
  */
 
 import type { HttpClient } from '../core/httpClient';
+import { setStoredApiKey, clearStoredApiKey } from '../core/apiKeyStore';
 import {
   SessionStatusResponseSchema,
   UserSessionInfoSchema,
@@ -60,18 +61,21 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
     // ========== API Key Authentication ==========
 
     /**
-     * Login with API key (sets secure httpOnly cookie)
-     * This provides XSS protection for browser-based API key authentication.
+     * Validate API key and store it for header-based auth
      */
     async loginWithApiKey(apiKey: string): Promise<{ user: any; message: string }> {
-      return httpClient.post('/api/v1/auth/apikey/login', { apiKey });
+      const response = await httpClient.post('/api/v1/auth/apikey/login', { apiKey });
+      setStoredApiKey(apiKey.trim());
+      return response;
     },
 
     /**
-     * Logout API key authentication (removes httpOnly cookie)
+     * Logout API key authentication (clears stored key)
      */
     async logoutApiKey(): Promise<{ ok: boolean; message: string }> {
-      return httpClient.post('/api/v1/auth/apikey/logout', {});
+      const response = await httpClient.post('/api/v1/auth/apikey/logout', {});
+      clearStoredApiKey();
+      return response;
     },
 
     // ========== Session Management ==========

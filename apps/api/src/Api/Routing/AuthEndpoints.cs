@@ -160,7 +160,7 @@ public static class AuthEndpoints
             return Results.Json(new { ok = true });
         });
 
-        // API Key Login - Sets secure httpOnly cookie for browser-based API key auth
+        // API Key Login - Validates API key credentials without issuing cookies
         group.MapPost("/auth/apikey/login", async (
             ApiKeyLoginPayload payload,
             HttpContext context,
@@ -179,10 +179,7 @@ public static class AuthEndpoints
             logger.LogInformation("API key login attempt");
             var result = await mediator.Send(command, ct);
 
-            // Set httpOnly cookie with API key (secure, XSS-protected)
-            CookieHelpers.WriteApiKeyCookie(context, payload.ApiKey);
-
-            logger.LogInformation("User {UserId} logged in with API key {ApiKeyId}", result.User.Id, result.ApiKeyId);
+            logger.LogInformation("User {UserId} validated API key {ApiKeyId}", result.User.Id, result.ApiKeyId);
 
             // Map to legacy format for backward compatibility
             var legacyUser = new AuthUser(
@@ -191,27 +188,22 @@ public static class AuthEndpoints
                 DisplayName: result.User.DisplayName,
                 Role: result.User.Role);
 
-            return Results.Json(new { user = legacyUser, message = result.Message });
+            return Results.Json(new
+            {
+                user = legacyUser,
+                message = "API key verified. Include it via the Authorization header on subsequent requests."
+            });
         })
         .WithName("LoginWithApiKey")
         .WithTags("Authentication", "API Keys")
-        .WithSummary("Login with API key and set httpOnly cookie")
-        .WithDescription(@"Authenticates user with API key and stores it in a secure httpOnly cookie.
-This provides XSS protection for browser-based API key authentication.
-
-**Security Benefits**:
-- API key stored in httpOnly cookie (not accessible to JavaScript)
-- Prevents XSS attacks from stealing API keys
-- Automatic inclusion in requests (no manual header management)
-
-**Priority**: Cookie > Header. Once set, the cookie takes priority over X-API-Key header.
-
-**Use Case**: Secure API key usage in browser contexts (e.g., web admin panels, testing UIs).")
+        .WithSummary("Validate an API key")
+        .WithDescription(@"Authenticates an API key and returns the associated profile.
+Clients must store the key securely and send it via the `Authorization: ApiKey {key}` header.")
         .Produces(200)
         .Produces(400)
         .Produces(401);
 
-        // API Key Logout - Removes httpOnly cookie
+        // API Key Logout - Clears legacy cookies for backwards compatibility
         group.MapPost("/auth/apikey/logout", async (
             HttpContext context,
             IMediator mediator,
@@ -221,19 +213,14 @@ This provides XSS protection for browser-based API key authentication.
             var command = new LogoutApiKeyCommand();
             var result = await mediator.Send(command, ct);
 
-            CookieHelpers.RemoveApiKeyCookie(context);
-            logger.LogInformation("API key cookie removed");
+            logger.LogInformation("API key logout acknowledged");
 
             return Results.Json(new { ok = true, message = result.Message });
         })
         .WithName("LogoutApiKey")
         .WithTags("Authentication", "API Keys")
-        .WithSummary("Logout API key authentication by removing httpOnly cookie")
-        .WithDescription(@"Removes the API key httpOnly cookie, logging out the user from API key authentication.
-
-After logout, requests will fall back to session cookie authentication if available.
-
-**Note**: This only removes the cookie. To revoke the API key entirely, use the API key management endpoints.")
+        .WithSummary("Acknowledge API key logout")
+        .WithDescription("Signals the client to discard the API key; combine with the key management endpoints to revoke it permanently.")
         .Produces(200);
 
         // Get current user (AUTH-01: Supports both cookie and API key auth)

@@ -195,8 +195,8 @@ export function ErrorDisplay({
   const detailsButtonStyle: CSSProperties = {
     ...buttonStyle,
     backgroundColor: 'transparent',
-    color: '#1976d2',
-    border: '1px solid #1976d2'
+    color: '#1565c0',
+    border: '1px solid #1565c0'
   };
 
   const technicalDetailsStyle: CSSProperties = {

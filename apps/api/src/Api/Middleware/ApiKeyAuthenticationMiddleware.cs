@@ -4,14 +4,15 @@ using Api.Services;
 namespace Api.Middleware;
 
 /// <summary>
-/// Middleware that authenticates requests using API keys from the Authorization header (or legacy X-API-Key header).
+/// Middleware that authenticates requests using API keys from the secure cookie, Authorization header, or legacy X-API-Key header.
 /// Runs before authorization middleware and sets up ClaimsPrincipal for API key-based requests.
 /// Falls through to cookie authentication if no API key is provided.
 /// </summary>
 public class ApiKeyAuthenticationMiddleware
 {
-    private const string ApiKeyHeaderName = "Authorization";
+    private const string AuthorizationHeaderName = "Authorization";
     private const string LegacyApiKeyHeaderName = "X-API-Key";
+    private const string ApiKeyCookieName = "meeple_apikey";
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiKeyAuthenticationMiddleware> _logger;
 
@@ -37,8 +38,18 @@ public class ApiKeyAuthenticationMiddleware
         string? apiKey = null;
         string source = "none";
 
-        // Priority 1: Authorization header (ApiKey scheme)
-        if (context.Request.Headers.TryGetValue(ApiKeyHeaderName, out var authValues))
+        // Priority 1: httpOnly cookie (highest protection for browsers)
+        if (context.Request.Cookies.TryGetValue(ApiKeyCookieName, out var cookieApiKey))
+        {
+            if (!string.IsNullOrWhiteSpace(cookieApiKey))
+            {
+                apiKey = cookieApiKey;
+                source = "cookie";
+            }
+        }
+
+        // Priority 2: Authorization header (ApiKey scheme)
+        if (apiKey == null && context.Request.Headers.TryGetValue(AuthorizationHeaderName, out var authValues))
         {
             var authValue = authValues.FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(authValue) && authValue.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase))
@@ -48,7 +59,7 @@ public class ApiKeyAuthenticationMiddleware
             }
         }
 
-        // Priority 2: Legacy X-API-Key header
+        // Priority 3: Legacy X-API-Key header
         if (apiKey == null && context.Request.Headers.TryGetValue(LegacyApiKeyHeaderName, out var apiKeyValues))
         {
             var headerApiKey = apiKeyValues.FirstOrDefault();

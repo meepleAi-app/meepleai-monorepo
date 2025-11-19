@@ -431,7 +431,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 - **`security-scan.yml`**: CodeQL (C#, JS/TS) + Dependency scanning + Semgrep + Secrets detection
 - **`migration-guard.yml`**: EF Core migration validation (prevents deletion)
 - **`lighthouse-ci.yml`**: Performance monitoring (Core Web Vitals, Lighthouse CI)
-- **`storybook-deploy.yml`**: Storybook build + deploy (Vercel, Chromatic)
+- **`storybook-deploy.yml`**: Storybook build + deploy (Chromatic)
 - **`k6-performance.yml`**: k6 performance testing (8 scenarios: RAG, Chat, Games, Sessions, DB, Redis, WebSocket) ⭐ NEW
 - **`dependabot-automerge.yml`**: Automated dependency updates ⭐ NEW
 

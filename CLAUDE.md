@@ -397,7 +397,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 
 ## Key Docs
 
-**See [docs/INDEX.md](docs/INDEX.md) for complete navigation** (115 docs, 800+ pages)
+**See [docs/INDEX.md](docs/INDEX.md) for complete navigation** (160+ docs, 900+ pages)
 
 | Doc | Path |
 |-----|------|
@@ -409,9 +409,9 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **ADR PDF Processing** | `docs/01-architecture/adr/adr-003b-unstructured-pdf.md` |
 | **Security** | `SECURITY.md`, `docs/06-security/code-scanning-remediation-summary.md` |
 | **OAuth Security** | `docs/06-security/oauth-security.md` |
-| **Testing** | `docs/02-development/testing/testing-guide.md` |
-| **Backend Code Coverage** | `docs/02-development/testing/backend-code-coverage.md`, `tools/README-COVERAGE.md` |
-| **Frontend Code Coverage** | `docs/04-frontend/testing/code-coverage.md`, `tools/README-FRONTEND-COVERAGE.md` |
+| **Testing** | `docs/02-development/testing/README.md`, `docs/02-development/testing/core/testing-guide.md` |
+| **Backend Code Coverage** | `docs/02-development/testing/backend/backend-code-coverage.md`, `tools/README-COVERAGE.md` |
+| **Frontend Code Coverage** | `docs/02-development/testing/frontend/code-coverage.md`, `tools/README-FRONTEND-COVERAGE.md` |
 | **Shadcn/UI** | `docs/04-frontend/shadcn-ui-installation.md` |
 | **AI Provider Config** | `docs/03-api/ai-provider-configuration.md`, `docs/02-development/ai-provider-integration.md` |
 
@@ -478,9 +478,9 @@ bash tools/cleanup-caches.sh                # Run
 
 ---
 
-**Version**: 1.0-rc (DDD 100%, k6 Performance Suite, 162 docs)
-**Last Updated**: 2025-11-18
-**Last Verified**: 2025-11-18 (against codebase)
+**Version**: 1.0-rc (DDD 100%, k6 Performance Suite, 160+ docs)
+**Last Updated**: 2025-11-19
+**Last Verified**: 2025-11-19 (docs consolidated & reorganized)
 **Owner**: Engineering Lead
 
 ---

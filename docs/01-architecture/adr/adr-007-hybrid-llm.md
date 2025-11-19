@@ -1,7 +1,8 @@
-# ADR-004: Hybrid LLM Architecture - Ollama + OpenRouter
+# ADR-007: Hybrid LLM Architecture - Ollama + OpenRouter
 
 **Status**: Accepted
 **Date**: 2025-11-12
+**Supersedes**: Previous numbering as ADR-004b
 **Issue**: #958 (BGAI-016)
 **Decision Makers**: Engineering Lead
 

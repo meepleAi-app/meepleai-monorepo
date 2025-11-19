@@ -1,5 +1,6 @@
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
+using System;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,6 +12,7 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 /// </summary>
 public sealed class PasswordHash : ValueObject
 {
+    private const string HashVersion = "v1";
     private const int SaltSize = 16; // 128 bits
     private const int HashSize = 32; // 256 bits
     private const int Iterations = 210_000; // OWASP recommendation for PBKDF2-SHA256
@@ -39,20 +41,7 @@ public sealed class PasswordHash : ValueObject
         if (plaintextPassword.Length < 8)
             throw new ValidationException(nameof(PasswordHash), "Password must be at least 8 characters");
 
-        // Generate random salt
-        var salt = RandomNumberGenerator.GetBytes(SaltSize);
-
-        // Derive key using PBKDF2
-        var hash = Rfc2898DeriveBytes.Pbkdf2(
-            password: Encoding.UTF8.GetBytes(plaintextPassword),
-            salt: salt,
-            iterations: Iterations,
-            hashAlgorithm: HashAlgorithmName.SHA256,
-            outputLength: HashSize
-        );
-
-        // Store as: salt:hash (both base64 encoded)
-        var storedHash = $"{Convert.ToBase64String(salt)}:{Convert.ToBase64String(hash)}";
+        var storedHash = CreateVersionedHash(plaintextPassword);
         return new PasswordHash(storedHash);
     }
 
@@ -72,32 +61,7 @@ public sealed class PasswordHash : ValueObject
         if (string.IsNullOrWhiteSpace(plaintextPassword))
             return false;
 
-        try
-        {
-            // Parse stored hash
-            var parts = Value.Split(':');
-            if (parts.Length != 2)
-                return false;
-
-            var salt = Convert.FromBase64String(parts[0]);
-            var storedHash = Convert.FromBase64String(parts[1]);
-
-            // Recompute hash with same salt
-            var computedHash = Rfc2898DeriveBytes.Pbkdf2(
-                password: Encoding.UTF8.GetBytes(plaintextPassword),
-                salt: salt,
-                iterations: Iterations,
-                hashAlgorithm: HashAlgorithmName.SHA256,
-                outputLength: HashSize
-            );
-
-            // Constant-time comparison (prevent timing attacks)
-            return CryptographicOperations.FixedTimeEquals(storedHash, computedHash);
-        }
-        catch
-        {
-            return false;
-        }
+        return VerifyVersionedHash(plaintextPassword);
     }
 
     protected override IEnumerable<object?> GetEqualityComponents()
@@ -108,4 +72,54 @@ public sealed class PasswordHash : ValueObject
     public override string ToString() => "[REDACTED]"; // Never expose hash value
 
     public static implicit operator string(PasswordHash hash) => hash.Value;
+
+    private static string CreateVersionedHash(string plaintextPassword)
+    {
+        var salt = RandomNumberGenerator.GetBytes(SaltSize);
+
+        var hash = Rfc2898DeriveBytes.Pbkdf2(
+            password: Encoding.UTF8.GetBytes(plaintextPassword),
+            salt: salt,
+            iterations: Iterations,
+            hashAlgorithm: HashAlgorithmName.SHA256,
+            outputLength: HashSize
+        );
+
+        return $"{HashVersion}.{Iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+    }
+
+    private bool VerifyVersionedHash(string plaintextPassword)
+    {
+        try
+        {
+            var parts = Value.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length != 4 || !parts[0].Equals(HashVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (!int.TryParse(parts[1], out var iterations))
+            {
+                return false;
+            }
+
+            var salt = Convert.FromBase64String(parts[2]);
+            var expectedHash = Convert.FromBase64String(parts[3]);
+
+            var computedHash = Rfc2898DeriveBytes.Pbkdf2(
+                password: Encoding.UTF8.GetBytes(plaintextPassword),
+                salt: salt,
+                iterations: iterations,
+                hashAlgorithm: HashAlgorithmName.SHA256,
+                outputLength: expectedHash.Length
+            );
+
+            return CryptographicOperations.FixedTimeEquals(expectedHash, computedHash);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
 }

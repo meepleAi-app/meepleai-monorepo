@@ -1,4 +1,6 @@
+using System;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Api.Services;
 
@@ -42,6 +44,7 @@ public interface IPasswordHashingService
 /// </summary>
 public class PasswordHashingService : IPasswordHashingService
 {
+    private const string HashVersion = "v1";
     private const int SaltSizeBytes = 16;
     private const int HashSizeBytes = 32;
 
@@ -58,15 +61,16 @@ public class PasswordHashingService : IPasswordHashingService
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(iterations, 0);
 
         var salt = RandomNumberGenerator.GetBytes(SaltSizeBytes);
+        // Use explicit UTF-8 encoding to match PasswordHash domain value object
         var hash = Rfc2898DeriveBytes.Pbkdf2(
-            secret,
-            salt,
-            iterations,
-            HashAlgorithmName.SHA256,
-            HashSizeBytes
+            password: Encoding.UTF8.GetBytes(secret),
+            salt: salt,
+            iterations: iterations,
+            hashAlgorithm: HashAlgorithmName.SHA256,
+            outputLength: HashSizeBytes
         );
 
-        return $"v1.{iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+        return $"{HashVersion}.{iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
     }
 
     /// <inheritdoc />
@@ -77,25 +81,13 @@ public class PasswordHashingService : IPasswordHashingService
 
         try
         {
-            var parts = storedHash.Split('.');
-            if (parts.Length != 4 || parts[0] != "v1")
+            if (TryParseVersionedHash(storedHash, out var iterations, out var salt, out var expected))
             {
-                return false;
+                var computed = ComputeHash(secret, salt, iterations, expected.Length);
+                return CryptographicOperations.FixedTimeEquals(computed, expected);
             }
 
-            var iterations = int.Parse(parts[1]);
-            var salt = Convert.FromBase64String(parts[2]);
-            var expected = Convert.FromBase64String(parts[3]);
-
-            var hash = Rfc2898DeriveBytes.Pbkdf2(
-                secret,
-                salt,
-                iterations,
-                HashAlgorithmName.SHA256,
-                expected.Length
-            );
-
-            return CryptographicOperations.FixedTimeEquals(hash, expected);
+            return false;
         }
         catch (FormatException)
         {
@@ -106,4 +98,46 @@ public class PasswordHashingService : IPasswordHashingService
             return false;
         }
     }
+
+    private static byte[] ComputeHash(string secret, byte[] salt, int iterations, int outputLength)
+    {
+        // Use explicit UTF-8 encoding to match PasswordHash domain value object
+        return Rfc2898DeriveBytes.Pbkdf2(
+            password: Encoding.UTF8.GetBytes(secret),
+            salt: salt,
+            iterations: iterations,
+            hashAlgorithm: HashAlgorithmName.SHA256,
+            outputLength: outputLength
+        );
+    }
+
+    private static bool TryParseVersionedHash(string storedHash, out int iterations, out byte[] salt, out byte[] expectedHash)
+    {
+        iterations = default;
+        salt = Array.Empty<byte>();
+        expectedHash = Array.Empty<byte>();
+
+        var parts = storedHash.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length != 4 || !parts[0].Equals(HashVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(parts[1], out iterations))
+        {
+            return false;
+        }
+
+        try
+        {
+            salt = Convert.FromBase64String(parts[2]);
+            expectedHash = Convert.FromBase64String(parts[3]);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
 }

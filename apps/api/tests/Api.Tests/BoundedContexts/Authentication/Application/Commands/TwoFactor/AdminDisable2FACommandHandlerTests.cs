@@ -70,6 +70,10 @@ public class AdminDisable2FACommandHandlerTests
         Assert.True(result.Success);
         Assert.Null(result.ErrorMessage);
         Assert.False(targetUser.IsTwoFactorEnabled); // 2FA should be disabled
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(targetUser, It.IsAny<CancellationToken>()),
+            Times.Once,
+            "Repository UpdateAsync must be called to persist 2FA state changes");
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -271,6 +275,9 @@ public class AdminDisable2FACommandHandlerTests
         // Assert - Admin can disable their own 2FA via this endpoint
         Assert.True(result.Success);
         Assert.False(adminUser.IsTwoFactorEnabled);
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(adminUser, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     #endregion
@@ -363,6 +370,9 @@ public class AdminDisable2FACommandHandlerTests
             Times.Once);
         _userRepositoryMock.Verify(
             r => r.GetByIdAsync(targetUserId, cancellationToken),
+            Times.Once);
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(targetUser, cancellationToken),
             Times.Once);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(cancellationToken),

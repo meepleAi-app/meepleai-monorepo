@@ -16,7 +16,7 @@ public abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEve
     where TEvent : IDomainEvent
 {
     private readonly MeepleAiDbContext _dbContext;
-    private readonly ILogger<DomainEventHandlerBase<TEvent>> _logger;
+    protected readonly ILogger<DomainEventHandlerBase<TEvent>> Logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DomainEventHandlerBase{TEvent}"/> class.
@@ -26,7 +26,7 @@ public abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEve
         ILogger<DomainEventHandlerBase<TEvent>> logger)
     {
         _dbContext = dbContext;
-        _logger = logger;
+        Logger = logger;
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEve
         try
         {
             // Log event
-            _logger.LogInformation(
+            Logger.LogInformation(
                 "Handling domain event {EventType} with ID {EventId} occurred at {OccurredAt}",
                 typeof(TEvent).Name,
                 notification.EventId,
@@ -49,14 +49,14 @@ public abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEve
             // Execute derived handler logic
             await HandleEventAsync(notification, cancellationToken);
 
-            _logger.LogInformation(
+            Logger.LogInformation(
                 "Successfully handled domain event {EventType} with ID {EventId}",
                 typeof(TEvent).Name,
                 notification.EventId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            Logger.LogError(
                 ex,
                 "Error handling domain event {EventType} with ID {EventId}: {Error}",
                 typeof(TEvent).Name,

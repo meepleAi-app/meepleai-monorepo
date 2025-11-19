@@ -60,13 +60,13 @@ export interface Theme {
 const defaultLight: ThemeColors = {
   primary: '221 83% 53%',           // Blue #0070f3
   primaryForeground: '210 40% 98%',
-  secondary: '142 76% 30%',         // Darker Green for WCAG AA contrast (was 36%)
+  secondary: '142 76% 29%',         // Darker Green for WCAG AA contrast (was 36%)
   secondaryForeground: '0 0% 100%', // Pure white for better contrast
 
   accent: '36 100% 50%',            // Orange #ff9800
   accentForeground: '240 5.9% 10%',
   muted: '240 4.8% 95.9%',
-  mutedForeground: '240 3.8% 46.1%',
+  mutedForeground: '240 5% 40%',
   destructive: '0 84.2% 60.2%',
   destructiveForeground: '0 0% 98%',
 };

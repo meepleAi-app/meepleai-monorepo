@@ -237,7 +237,7 @@
     --color-game-generic: 260 60% 50%;         /* Purple */
 
     /* Status colors */
-    --color-success: 142 76% 36%;              /* Green - reuse secondary */
+    --color-success: 142 76% 29%;              /* Green - reuse secondary */
     --color-warning: 36 100% 50%;              /* Orange - reuse accent */
     --color-error: 0 84.2% 60.2%;              /* Red - reuse destructive */
     --color-info: 221 83% 53%;                 /* Blue - reuse primary */

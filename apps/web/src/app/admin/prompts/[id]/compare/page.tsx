@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // Dynamically import Monaco DiffEditor to avoid SSR issues
 const DiffEditor = dynamic(
@@ -72,8 +73,8 @@ export default function CompareVersions() {
       } else if (result.length === 1) {
         setVersion1Id(result[0].id);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch versions");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to fetch versions"));
     } finally {
       setLoading(false);
     }

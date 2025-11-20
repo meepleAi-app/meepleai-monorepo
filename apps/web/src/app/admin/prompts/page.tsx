@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 type PromptTemplate = {
   id: string;
@@ -112,8 +113,8 @@ export default function AdminPrompts() {
 
       setTemplates(result.templates || []);
       setTotalPages(result.totalPages || 1);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch templates");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to fetch templates"));
       showToast("Failed to fetch templates", "error");
     } finally {
       setLoading(false);
@@ -181,8 +182,8 @@ export default function AdminPrompts() {
 
       closeModal();
       fetchTemplates();
-    } catch (err: any) {
-      showToast(err.message || "Operation failed", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Operation failed"), "error");
     } finally {
       setFormLoading(false);
     }
@@ -204,8 +205,8 @@ export default function AdminPrompts() {
       showToast("Template deleted successfully", "success");
       closeDeleteDialog();
       fetchTemplates();
-    } catch (err: any) {
-      showToast(err.message || "Delete failed", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Delete failed"), "error");
     }
   };
 

@@ -195,7 +195,7 @@ export function useChatStreaming(callbacks?: {
 
               if (eventMatch && dataMatch) {
                 const eventType = eventMatch[1] as StreamingEventType;
-                let eventData: any = null;
+                let eventData: unknown = null;
 
                 try {
                   eventData = JSON.parse(dataMatch[1]);

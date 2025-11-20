@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { ErrorDisplay } from '@/components/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 interface TemplateParameter {
   name: string;
@@ -112,9 +113,9 @@ const N8nTemplatesPage = () => {
 
       // Auto-dismiss success message after 5 seconds
       setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to import template:', err);
-      const errorMsg = err?.response?.data?.error || err?.message || 'Failed to import template';
+      const errorMsg = err?.response?.data?.error || getErrorMessage(err, 'Failed to import template');
       setError(`Import failed: ${errorMsg}`);
     } finally {
       setImporting(false);

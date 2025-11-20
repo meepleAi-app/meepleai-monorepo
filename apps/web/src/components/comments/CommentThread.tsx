@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type RuleSpecComment, type RuleSpecCommentsResponse } from "@/lib/api";
 import { CommentItem } from "./CommentItem";
 import { CommentForm } from "./CommentForm";
+import { getErrorMessage } from "@/lib/utils/errorHandler";
 
 interface CommentThreadProps {
   gameId: string;
@@ -36,9 +37,9 @@ export function CommentThread({
           : response.comments;
         setComments(filteredComments);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to load comments:", err);
-      setError(err?.message || "Impossibile caricare i commenti");
+      setError(getErrorMessage(err, "Impossibile caricare i commenti"));
     } finally {
       setIsLoading(false);
     }
@@ -59,9 +60,9 @@ export function CommentThread({
         commentText
       });
       await loadComments();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to create comment:", err);
-      setError(err?.message || "Impossibile creare il commento");
+      setError(getErrorMessage(err, "Impossibile creare il commento"));
     } finally {
       setIsSubmitting(false);
     }
@@ -76,9 +77,9 @@ export function CommentThread({
         commentText: newText
       });
       await loadComments();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to update comment:", err);
-      setError(err?.message || "Impossibile modificare il commento");
+      setError(getErrorMessage(err, "Impossibile modificare il commento"));
     } finally {
       setIsSubmitting(false);
     }
@@ -94,9 +95,9 @@ export function CommentThread({
     try {
       await api.chat.deleteRuleSpecComment(gameId, commentId);
       await loadComments();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to delete comment:", err);
-      setError(err?.message || "Impossibile eliminare il commento");
+      setError(getErrorMessage(err, "Impossibile eliminare il commento"));
     } finally {
       setIsSubmitting(false);
     }
@@ -111,9 +112,9 @@ export function CommentThread({
         commentText: replyText
       });
       await loadComments();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to create reply:", err);
-      setError(err?.message || "Impossibile creare la risposta");
+      setError(getErrorMessage(err, "Impossibile creare la risposta"));
     } finally {
       setIsSubmitting(false);
     }
@@ -126,9 +127,9 @@ export function CommentThread({
     try {
       await api.chat.resolveComment(commentId);
       await loadComments();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to resolve comment:", err);
-      setError(err?.message || "Impossibile risolvere il commento");
+      setError(getErrorMessage(err, "Impossibile risolvere il commento"));
     } finally {
       setIsSubmitting(false);
     }
@@ -141,9 +142,9 @@ export function CommentThread({
     try {
       await api.chat.unresolveComment(commentId);
       await loadComments();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to unresolve comment:", err);
-      setError(err?.message || "Impossibile riaprire il commento");
+      setError(getErrorMessage(err, "Impossibile riaprire il commento"));
     } finally {
       setIsSubmitting(false);
     }

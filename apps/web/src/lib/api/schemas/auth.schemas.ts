@@ -110,6 +110,15 @@ export const UserPreferencesSchema = z.object({
 
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
 
+// ========== API Key Authentication ==========
+
+export const ApiKeyLoginResponseSchema = z.object({
+  user: UserProfileSchema,
+  message: z.string(),
+});
+
+export type ApiKeyLoginResponse = z.infer<typeof ApiKeyLoginResponseSchema>;
+
 // ========== User Search (Admin) ==========
 
 export const UserSearchResultSchema = z.object({

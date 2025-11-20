@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
 import { LoadingButton } from "@/components/loading/LoadingButton";
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // Types
 type DashboardMetrics = {
@@ -90,8 +91,8 @@ export default function AnalyticsDashboard() {
 
       setStats(data);
       setLastUpdate(new Date());
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to load analytics data";
+    } catch (err) {
+      const errorMessage = getErrorMessage(err, "Failed to load analytics data");
       setError(errorMessage);
       addToast("error", errorMessage);
     } finally {
@@ -149,8 +150,8 @@ export default function AnalyticsDashboard() {
       document.body.removeChild(a);
 
       addToast("success", `Analytics exported as ${format.toUpperCase()}`);
-    } catch (err: any) {
-      addToast("error", err.message || "Export failed");
+    } catch (err) {
+      addToast("error", getErrorMessage(err, "Export failed"));
     }
   };
 

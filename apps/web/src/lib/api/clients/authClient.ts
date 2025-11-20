@@ -19,6 +19,7 @@ import {
   UpdateProfileResponseSchema,
   ChangePasswordResponseSchema,
   UserPreferencesSchema,
+  ApiKeyLoginResponseSchema,
   type SessionStatusResponse,
   type UserSessionInfo,
   type RevokeSessionResponse,
@@ -30,6 +31,7 @@ import {
   type UpdateProfileResponse,
   type ChangePasswordResponse,
   type UserPreferences,
+  type ApiKeyLoginResponse,
 } from '../schemas';
 
 export interface CreateAuthClientParams {
@@ -63,8 +65,8 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
     /**
      * Validate API key and store it for header-based auth
      */
-    async loginWithApiKey(apiKey: string): Promise<{ user: any; message: string }> {
-      const response = await httpClient.post<{ user: any; message: string }>('/api/v1/auth/apikey/login', { apiKey });
+    async loginWithApiKey(apiKey: string): Promise<ApiKeyLoginResponse> {
+      const response = await httpClient.post('/api/v1/auth/apikey/login', { apiKey }, ApiKeyLoginResponseSchema);
       setStoredApiKey(apiKey.trim());
       return response;
     },

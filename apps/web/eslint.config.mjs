@@ -120,8 +120,8 @@ export default [
       // TypeScript rules
       // Temporarily relaxed for alpha phase - will be re-enabled incrementally
       "@typescript-eslint/no-unused-vars": "off",
-      // Temporarily relaxed for alpha phase - will be re-enabled incrementally
-      "@typescript-eslint/no-explicit-any": "off",
+      // TS-001: Enforce type safety - no explicit any types (Issue #1431)
+      "@typescript-eslint/no-explicit-any": "error",
       "no-unused-vars": "off", // Use @typescript-eslint/no-unused-vars instead
       "no-undef": "off", // TypeScript handles this better than ESLint
 

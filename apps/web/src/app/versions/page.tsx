@@ -8,6 +8,7 @@ import { CommentThread } from "@/components/comments";
 import { DiffViewerEnhanced } from "@/components/diff";
 import { VersionTimeline, VersionTimelineFilters } from "@/components/versioning";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/utils/errorHandler";
 
 type AuthUser = {
   id: string;
@@ -130,9 +131,9 @@ function VersionHistoryContent() {
           setSelectedToVersion(historyData.versions[0].version);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setErrorMessage(err?.message || "Impossibile caricare lo storico versioni.");
+      setErrorMessage(getErrorMessage(err, "Impossibile caricare lo storico versioni."));
     } finally {
       setIsLoadingHistory(false);
     }
@@ -165,9 +166,9 @@ function VersionHistoryContent() {
       if (diffData) {
         setDiff(diffData);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setErrorMessage(err?.message || "Impossibile caricare il diff.");
+      setErrorMessage(getErrorMessage(err, "Impossibile caricare il diff."));
     } finally {
       setIsLoadingDiff(false);
     }
@@ -212,9 +213,9 @@ function VersionHistoryContent() {
 
       // Reload history
       await loadHistory(gameId);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setErrorMessage(err?.message || "Impossibile ripristinare la versione");
+      setErrorMessage(getErrorMessage(err, "Impossibile ripristinare la versione"));
     } finally {
       setIsRestoring(false);
     }

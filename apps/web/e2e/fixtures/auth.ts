@@ -6,7 +6,7 @@ const API_BASE = 'http://localhost:5080';
  * Setup mock auth routes for testing (based on authenticated.spec.ts pattern)
  * This is more reliable than trying to use real login which has UI/timing issues
  */
-async function setupMockAuth(page: Page, role: 'Admin' | 'Editor' | 'User' = 'Admin', email: string = 'admin@meepleai.dev') {
+export async function setupMockAuth(page: Page, role: 'Admin' | 'Editor' | 'User' = 'Admin', email: string = 'admin@meepleai.dev') {
   const userResponse = {
     user: {
       id: `${role.toLowerCase()}-test-id`,
@@ -41,7 +41,7 @@ async function setupMockAuth(page: Page, role: 'Admin' | 'Editor' | 'User' = 'Ad
 /**
  * Setup mock games API routes (similar to pdf-preview.spec.ts pattern)
  */
-async function setupGamesRoutes(page: Page) {
+export async function setupGamesRoutes(page: Page) {
   const games = [
     {
       id: 'chess',

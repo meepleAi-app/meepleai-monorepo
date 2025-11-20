@@ -120,7 +120,7 @@ export default function HomePage() {
             <h1 className="text-5xl md:text-7xl font-extrabold leading-tight gradient-text-accessible">
               {t('home.hero.title')}
             </h1>
-            <p className="text-xl text-slate-50 leading-relaxed">
+            <p className="text-xl text-white/95 leading-relaxed max-w-2xl drop-shadow-lg">
               {t('home.hero.subtitle')}
             </p>
             <div className="flex flex-wrap gap-4">
@@ -130,7 +130,7 @@ export default function HomePage() {
               >
                 <Button
                   onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
-                  className="text-lg"
+                  className="text-lg shadow-[0_15px_45px_rgba(14,116,244,0.35)] focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   data-testid="hero-get-started"
                 >
                   {authUser ? t('home.hero.cta.goToChat') : t('home.hero.cta.getStarted')}
@@ -143,7 +143,7 @@ export default function HomePage() {
                 >
                   <Button
                     variant="outline"
-                    className="text-lg"
+                    className="text-lg border-white/70 text-white hover:bg-white hover:text-slate-900 focus-visible:ring-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                     onClick={handleTryDemo}
                     data-testid="hero-try-demo"
                   >
@@ -157,7 +157,7 @@ export default function HomePage() {
               >
                 <Button
                   variant="outline"
-                  className="text-lg"
+                  className="text-lg border-white/70 text-white hover:bg-white hover:text-slate-900 focus-visible:ring-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   asChild
                 >
                   <a href="#features">

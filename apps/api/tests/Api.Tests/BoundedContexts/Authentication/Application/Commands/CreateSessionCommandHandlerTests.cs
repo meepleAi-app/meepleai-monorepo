@@ -199,7 +199,7 @@ public class CreateSessionCommandHandlerTests
         Assert.Equal(user.Id, result.User.Id);
         Assert.Equal("test@example.com", result.User.Email);
         Assert.Equal(user.DisplayName, result.User.DisplayName);
-        Assert.Equal("user", result.User.Role);
+        Assert.Equal(Role.User.Value, result.User.Role);
         Assert.False(result.User.IsTwoFactorEnabled);
         Assert.Null(result.User.TwoFactorEnabledAt);
     }

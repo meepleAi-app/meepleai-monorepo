@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 
@@ -46,7 +47,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = "user"
+            Role = Role.User.Value
         };
 
         var sessionId = Guid.NewGuid();
@@ -88,7 +89,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
             Email = "owner@example.com",
             DisplayName = "Owner",
             PasswordHash = "hash",
-            Role = "user"
+            Role = Role.User.Value
         };
 
         var sessionId = Guid.NewGuid();
@@ -129,7 +130,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
             Email = "owner@example.com",
             DisplayName = "Owner",
             PasswordHash = "hash",
-            Role = "user"
+            Role = Role.User.Value
         };
 
         var sessionId = Guid.NewGuid();

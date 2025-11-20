@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Microsoft.Extensions.Logging;
@@ -92,11 +93,11 @@ public class SearchUsersQueryHandlerTests
         };
 
         _userRepositoryMock
-            .Setup(r => r.SearchAsync("admin", It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync(Role.Admin.Value, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
         var query = new SearchUsersQuery(
-            SearchQuery: "admin",
+            SearchQuery: Role.Admin.Value,
             MaxResults: 10);
 
         // Act
@@ -119,11 +120,11 @@ public class SearchUsersQueryHandlerTests
         };
 
         _userRepositoryMock
-            .Setup(r => r.SearchAsync("user", 2, It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync(Role.User.Value, 2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(users.Take(2).ToList());
 
         var query = new SearchUsersQuery(
-            SearchQuery: "user",
+            SearchQuery: Role.User.Value,
             MaxResults: 2);
 
         // Act
@@ -132,7 +133,7 @@ public class SearchUsersQueryHandlerTests
         // Assert
         Assert.Equal(2, result.Count);
         _userRepositoryMock.Verify(
-            r => r.SearchAsync("user", 2, It.IsAny<CancellationToken>()),
+            r => r.SearchAsync(Role.User.Value, 2, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

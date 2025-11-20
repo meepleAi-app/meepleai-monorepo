@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -47,7 +48,7 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: "admin");
+            NewRole: Role.Admin.Value);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -55,7 +56,7 @@ public class ChangeUserRoleCommandHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(userId.ToString(), result.Id);
-        Assert.Equal("admin", result.Role);
+        Assert.Equal(Role.Admin.Value, result.Role);
         Assert.Equal("user@example.com", result.Email);
 
         _unitOfWorkMock.Verify(
@@ -79,13 +80,13 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: "editor");
+            NewRole: Role.Editor.Value);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("editor", result.Role);
+        Assert.Equal(Role.Editor.Value, result.Role);
     }
 
     [Fact]
@@ -105,13 +106,13 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: "user");
+            NewRole: Role.User.Value);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("user", result.Role);
+        Assert.Equal(Role.User.Value, result.Role);
     }
 
     [Fact]
@@ -130,13 +131,13 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: "user");
+            NewRole: Role.User.Value);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("user", result.Role);
+        Assert.Equal(Role.User.Value, result.Role);
     }
 
     #endregion
@@ -155,7 +156,7 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: "admin");
+            NewRole: Role.Admin.Value);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
@@ -185,13 +186,13 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: "admin"); // Same role
+            NewRole: Role.Admin.Value); // Same role
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert - Should still save (idempotent operation)
-        Assert.Equal("admin", result.Role);
+        Assert.Equal(Role.Admin.Value, result.Role);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -220,7 +221,7 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: "editor");
+            NewRole: Role.Editor.Value);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -229,7 +230,7 @@ public class ChangeUserRoleCommandHandlerTests
         Assert.Equal(userId.ToString(), result.Id);
         Assert.Equal("test@example.com", result.Email);
         Assert.Equal("Test User", result.DisplayName);
-        Assert.Equal("editor", result.Role);
+        Assert.Equal(Role.Editor.Value, result.Role);
         Assert.Equal(originalCreatedAt, result.CreatedAt);
     }
 
@@ -252,7 +253,7 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: "admin");
+            NewRole: Role.Admin.Value);
 
         var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;

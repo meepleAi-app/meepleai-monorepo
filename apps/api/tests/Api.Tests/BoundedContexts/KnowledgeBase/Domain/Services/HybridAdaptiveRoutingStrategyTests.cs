@@ -172,7 +172,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Assert
         Assert.NotNull(decision.Reason);
-        Assert.Contains("user", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(Role.User.Value, decision.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.True(
             decision.Reason.Contains("Traffic split") || decision.Reason.Contains("Cost-optimized"),
             "Reason should explain routing logic");

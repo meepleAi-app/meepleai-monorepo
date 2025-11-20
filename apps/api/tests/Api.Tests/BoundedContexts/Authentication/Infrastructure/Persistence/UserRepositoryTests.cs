@@ -285,7 +285,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.NotNull(persisted);
         Assert.Equal("newuser@example.com", persisted.Email);
-        Assert.Equal("user", persisted.Role);
+        Assert.Equal(Role.User.Value, persisted.Role);
     }
 
     [Fact]
@@ -335,7 +335,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.NotNull(updated);
         Assert.Equal("Updated Name", updated.DisplayName);
-        Assert.Equal("admin", updated.Role);
+        Assert.Equal(Role.Admin.Value, updated.Role);
     }
 
     [Fact]

@@ -115,7 +115,7 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             null,
             null,
-            "Admin"
+            Role.Admin.Value
         );
 
         _mockUserRepository
@@ -218,7 +218,7 @@ public class UpdateUserCommandHandlerTests
             userId.ToString(),
             "new@example.com",
             "New Name",
-            "Editor"
+            Role.Editor.Value
         );
 
         _mockUserRepository

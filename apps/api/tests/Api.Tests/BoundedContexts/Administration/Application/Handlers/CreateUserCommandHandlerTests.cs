@@ -40,7 +40,7 @@ public class CreateUserCommandHandlerTests
             "newuser@example.com",
             "SecurePassword123!",
             "Test User",
-            "user"
+            Role.User.Value
         );
 
         _mockUserRepository
@@ -54,7 +54,7 @@ public class CreateUserCommandHandlerTests
         Assert.NotNull(result);
         Assert.Equal("newuser@example.com", result.Email);
         Assert.Equal("Test User", result.DisplayName);
-        Assert.Equal("user", result.Role);
+        Assert.Equal(Role.User.Value, result.Role);
         _mockUserRepository.Verify(
             r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -71,7 +71,7 @@ public class CreateUserCommandHandlerTests
             "admin@example.com",
             "SecurePassword123!",
             "Admin User",
-            "admin"
+            Role.Admin.Value
         );
 
         _mockUserRepository
@@ -83,9 +83,9 @@ public class CreateUserCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("admin", result.Role);
+        Assert.Equal(Role.Admin.Value, result.Role);
         _mockUserRepository.Verify(
-            r => r.AddAsync(It.Is<User>(u => u.Role.Value == "admin"), It.IsAny<CancellationToken>()),
+            r => r.AddAsync(It.Is<User>(u => u.Role.Value == Role.Admin.Value), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -97,7 +97,7 @@ public class CreateUserCommandHandlerTests
             "existing@example.com",
             "SecurePassword123!",
             "Test User",
-            "user"
+            Role.User.Value
         );
 
         var existingUser = new User(
@@ -134,7 +134,7 @@ public class CreateUserCommandHandlerTests
             "editor@example.com",
             "SecurePassword123!",
             "Editor User",
-            "editor"
+            Role.Editor.Value
         );
 
         _mockUserRepository
@@ -145,7 +145,7 @@ public class CreateUserCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("editor", result.Role);
+        Assert.Equal(Role.Editor.Value, result.Role);
         Assert.Null(result.LastSeenAt); // New users have no sessions yet
     }
 
@@ -157,7 +157,7 @@ public class CreateUserCommandHandlerTests
             "user@example.com",
             "SecurePassword123!",
             "  Test User  ", // Whitespace to be trimmed
-            "user"
+            Role.User.Value
         );
 
         User? capturedUser = null;

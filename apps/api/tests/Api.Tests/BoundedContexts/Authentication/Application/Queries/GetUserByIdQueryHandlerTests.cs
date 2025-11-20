@@ -43,7 +43,7 @@ public class GetUserByIdQueryHandlerTests
         Assert.Equal(user.Id, result.Id);
         Assert.Equal("user@example.com", result.Email);
         Assert.Equal(user.DisplayName, result.DisplayName);
-        Assert.Equal("user", result.Role);
+        Assert.Equal(Role.User.Value, result.Role);
         Assert.False(result.IsTwoFactorEnabled);
         Assert.Null(result.TwoFactorEnabledAt);
 
@@ -73,7 +73,7 @@ public class GetUserByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("admin", result.Role);
+        Assert.Equal(Role.Admin.Value, result.Role);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class GetUserByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("editor", result.Role);
+        Assert.Equal(Role.Editor.Value, result.Role);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public class GetUserByIdQueryHandlerTests
         Assert.Equal(user.Id, result.Id);
         Assert.Equal("test@example.com", result.Email);
         Assert.Equal(user.DisplayName, result.DisplayName);
-        Assert.Equal("user", result.Role);
+        Assert.Equal(Role.User.Value, result.Role);
         Assert.Equal(user.CreatedAt, result.CreatedAt);
         Assert.False(result.IsTwoFactorEnabled);
         Assert.Null(result.TwoFactorEnabledAt);

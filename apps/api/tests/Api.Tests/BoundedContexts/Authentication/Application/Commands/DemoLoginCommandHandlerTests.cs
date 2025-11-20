@@ -163,7 +163,7 @@ public class DemoLoginCommandHandlerTests
         Assert.Equal(user.Id, result.User.Id);
         Assert.Equal("admin@meepleai.dev", result.User.Email);
         Assert.Equal(user.DisplayName, result.User.DisplayName);
-        Assert.Equal("admin", result.User.Role);
+        Assert.Equal(Role.Admin.Value, result.User.Role);
     }
 
     #endregion

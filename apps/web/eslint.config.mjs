@@ -244,8 +244,9 @@ export default [
   {
     files: ["src/app/admin/**/*.{ts,tsx}"],
     rules: {
-      "@typescript-eslint/no-explicit-any": "off", // Relaxed type checking for internal admin tools
-      "react-hooks/rules-of-hooks": "off", // Disabled for admin tools (internal use only)
+      // React Hooks relaxed for internal admin tools (conditional rendering with early returns)
+      "react-hooks/rules-of-hooks": "off",
+      // Note: @typescript-eslint/no-explicit-any remains enforced (error) for type safety
     },
   },
 ];

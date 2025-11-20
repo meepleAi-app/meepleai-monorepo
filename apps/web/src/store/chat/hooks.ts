@@ -28,8 +28,7 @@ const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
   store.use = {} as WithSelectors<typeof _store>['use'];
 
   for (const k of Object.keys(store.getState())) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (store.use as any)[k] = () => store((s) => s[k as keyof typeof s]);
+    (store.use as Record<string, () => unknown>)[k] = () => store((s) => s[k as keyof typeof s]);
   }
 
   return store;

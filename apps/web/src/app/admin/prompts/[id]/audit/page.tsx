@@ -16,7 +16,7 @@ type PromptAuditLog = {
   userId: string;
   userEmail: string;
   timestamp: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 };
 
 export default function AuditLog() {

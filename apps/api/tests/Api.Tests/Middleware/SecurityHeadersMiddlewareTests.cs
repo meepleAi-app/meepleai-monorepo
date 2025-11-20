@@ -24,6 +24,9 @@ public class SecurityHeadersMiddlewareTests
         _loggerMock = new Mock<ILogger<SecurityHeadersMiddleware>>();
         _environmentMock = new Mock<IHostEnvironment>();
 
+        // Default environment for tests that don't explicitly set it
+        _environmentMock.Setup(e => e.EnvironmentName).Returns("Development");
+
         // Default options with all headers enabled
         _options = new SecurityHeadersOptions
         {
@@ -447,8 +450,6 @@ public class SecurityHeadersMiddlewareTests
 
     private SecurityHeadersMiddleware CreateMiddleware(SecurityHeadersOptions options)
     {
-        _environmentMock.Setup(e => e.EnvironmentName).Returns("Development");
-
         return new SecurityHeadersMiddleware(
             next: (context) => Task.CompletedTask,
             _loggerMock.Object,

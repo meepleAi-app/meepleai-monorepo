@@ -7,7 +7,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
-import { api, ChatThreadDto, CreateChatThreadRequest, AddMessageRequest } from '@/lib/api';
+import { api, ChatThreadDto, ChatMessageResponse, CreateChatThreadRequest, AddMessageRequest } from '@/lib/api';
 
 /**
  * Query key factory for chat queries
@@ -132,17 +132,18 @@ export function useAddMessage(): UseMutationResult<
 /**
  * Mutation hook to edit a message
  *
- * @returns UseMutationResult for editing message
+ * @returns UseMutationResult with the updated message (ChatMessageResponse)
+ *          Note: Invalidates the chat thread query to trigger a full refetch
  */
 export function useEditMessage(): UseMutationResult<
-  ChatThreadDto,
+  ChatMessageResponse,
   Error,
   { chatId: string; messageId: string; content: string }
 > {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ chatId, messageId, content }): Promise<ChatThreadDto> => {
+    mutationFn: async ({ chatId, messageId, content }): Promise<ChatMessageResponse> => {
       return api.chat.updateMessage(chatId, messageId, content);
     },
     onSuccess: (_, variables) => {

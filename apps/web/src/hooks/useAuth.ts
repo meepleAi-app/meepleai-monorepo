@@ -38,11 +38,16 @@ export interface LoginData {
   password: string;
 }
 
+export interface DemoLoginData {
+  email: string;
+}
+
 export interface UseAuthReturn {
   user: AuthUser | null;
   loading: boolean;
   error: string;
   login: (data: LoginData) => Promise<AuthUser>;
+  demoLogin: (data: DemoLoginData) => Promise<AuthUser>;
   register: (data: RegisterData) => Promise<AuthUser>;
   logout: () => Promise<void>;
   loadCurrentUser: () => Promise<void>;
@@ -106,6 +111,39 @@ export function useAuth(): UseAuthReturn {
         : err instanceof Error
           ? err.message
           : 'Login failed. Please check your credentials.';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Demo login with email only (no password required)
+   * Only works for users marked as demo accounts
+   * Returns user on success, throws on failure
+   */
+  const demoLogin = useCallback(async (data: DemoLoginData): Promise<AuthUser> => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await api.post<AuthResponse>('/api/v1/auth/demo-login', {
+        email: data.email,
+      });
+
+      if (!res?.user) {
+        throw new Error('Demo login response missing user data');
+      }
+
+      setUser(res.user);
+      return res.user;
+    } catch (err) {
+      const errorMessage = isApiError(err)
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : 'Demo login failed. Please check the email address.';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -191,6 +229,7 @@ export function useAuth(): UseAuthReturn {
     loading,
     error,
     login,
+    demoLogin,
     register,
     logout,
     loadCurrentUser,

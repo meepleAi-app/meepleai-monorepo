@@ -35,11 +35,9 @@ const TestimonialsSection = dynamic(() => import("@/components/landing/Testimoni
 
 export default function HomePage() {
   const router = useRouter();
-  const { user: authUser, logout } = useAuth();
+  const { user: authUser, logout, demoLogin } = useAuth();
   const { t } = useTranslation();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [demoEmail, setDemoEmail] = useState("");
-  const [demoPassword, setDemoPassword] = useState("");
 
   // Consolidated Intersection Observer with multiple thresholds
   const { ref: heroRef, inView: heroInView } = useInView({
@@ -47,11 +45,16 @@ export default function HomePage() {
     threshold: [0.1, 0.5, 0.9],
   });
 
-  // Handler for "Try Demo" button
-  const handleTryDemo = () => {
-    setDemoEmail("user@meepleai.dev");
-    setDemoPassword("Demo123!");
-    setShowAuthModal(true);
+  // Handler for "Try Demo" button - uses demo login endpoint
+  const handleTryDemo = async () => {
+    try {
+      const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL || "user@meepleai.dev";
+      await demoLogin({ email: demoEmail });
+      router.push("/chat");
+    } catch (error) {
+      console.error("Demo login failed:", error);
+      // Optionally show an error toast/notification
+    }
   };
 
   return (
@@ -290,7 +293,7 @@ export default function HomePage() {
               <p>admin@meepleai.dev</p>
               <p>editor@meepleai.dev</p>
               <p>user@meepleai.dev</p>
-              <p className="font-mono">Password: Demo123!</p>
+              <p className="text-xs italic">Click &quot;Try Demo&quot; for instant access</p>
             </div>
           </div>
         </div>
@@ -305,13 +308,9 @@ export default function HomePage() {
         isOpen={showAuthModal}
         onClose={() => {
           setShowAuthModal(false);
-          setDemoEmail("");
-          setDemoPassword("");
         }}
         defaultMode="login"
         showDemoCredentials={!authUser}
-        initialEmail={demoEmail}
-        initialPassword={demoPassword}
       />
     </div>
   );

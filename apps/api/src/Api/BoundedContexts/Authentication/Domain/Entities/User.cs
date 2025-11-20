@@ -16,6 +16,7 @@ public sealed class User : AggregateRoot<Guid>
     public PasswordHash PasswordHash { get; private set; }
     public Role Role { get; private set; }
     public DateTime CreatedAt { get; private set; }
+    public bool IsDemoAccount { get; private set; }
 
     // 2FA properties (DDD Value Objects)
     public TotpSecret? TotpSecret { get; private set; }
@@ -90,6 +91,15 @@ public sealed class User : AggregateRoot<Guid>
     {
         PasswordHash = newPasswordHash;
         AddDomainEvent(new PasswordResetEvent(Id));
+    }
+
+    /// <summary>
+    /// Marks this user as a demo account.
+    /// Demo accounts can authenticate without password validation for demonstration purposes.
+    /// </summary>
+    public void MarkAsDemoAccount()
+    {
+        IsDemoAccount = true;
     }
 
     /// <summary>

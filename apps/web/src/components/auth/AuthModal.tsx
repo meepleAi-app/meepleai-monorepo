@@ -20,10 +20,12 @@ import { AccessibleModal } from '@/components/accessible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
-import { DemoCredentialsHint } from './DemoCredentialsHint';
+import { DemoCredentialsHint, type DemoCredential } from './DemoCredentialsHint';
 import OAuthButtons from './OAuthButtons';
+import { Spinner } from '@/components/loading/Spinner';
 import { useQueryClient } from '@/hooks/queries';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useAuth } from '@/hooks/useAuth';
 import type { AuthUser } from '@/types';
 
 // ============================================================================
@@ -58,7 +60,10 @@ export function AuthModal({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const { demoLogin } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'demo'>(defaultMode);
+  const [demoLoginLoading, setDemoLoginLoading] = useState(false);
+  const [demoLoginError, setDemoLoginError] = useState<string>('');
 
   // Reset tab when modal opens/closes or default mode changes
   useEffect(() => {
@@ -77,9 +82,20 @@ export function AuthModal({
     await router.push('/chat');
   };
 
-  // Handle demo credential click
-  const handleDemoCredentialClick = (_credential: unknown) => {
-    setActiveTab('login');
+  // Handle demo credential click - use passwordless demo login
+  const handleDemoCredentialClick = async (credential: DemoCredential) => {
+    setDemoLoginLoading(true);
+    setDemoLoginError('');
+
+    try {
+      const user = await demoLogin({ email: credential.email });
+      await handleAuthSuccess(user);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Demo login failed';
+      setDemoLoginError(errorMessage);
+    } finally {
+      setDemoLoginLoading(false);
+    }
   };
 
   // Handle tab change
@@ -149,10 +165,26 @@ export function AuthModal({
 
           {/* Demo Tab */}
           <TabsContent value="demo" className="space-y-4 mt-4">
-            <DemoCredentialsHint
-              onCredentialClick={handleDemoCredentialClick}
-              variant="default"
-            />
+            {demoLoginError && (
+              <div
+                className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
+                role="alert"
+              >
+                <p className="text-sm text-red-800 dark:text-red-200">{demoLoginError}</p>
+              </div>
+            )}
+
+            {demoLoginLoading ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                <Spinner size="lg" className="text-primary" />
+                <p className="text-sm text-slate-600 dark:text-slate-400">Logging in...</p>
+              </div>
+            ) : (
+              <DemoCredentialsHint
+                onCredentialClick={handleDemoCredentialClick}
+                variant="default"
+              />
+            )}
           </TabsContent>
         </Tabs>
 

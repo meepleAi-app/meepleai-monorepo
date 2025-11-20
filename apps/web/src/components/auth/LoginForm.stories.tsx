@@ -113,11 +113,11 @@ const InteractiveFormComponent = () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Simulate validation (demo credentials)
-    if (data.email === 'demo@meepleai.dev' && data.password === 'Demo123!') {
+    // Simulate validation (test credentials for Storybook only)
+    if (data.email === 'demo@meepleai.dev' && data.password === 'TestPassword123!') {
       setSuccessMessage(`Successfully logged in as ${data.email}!`);
     } else {
-      setError('Invalid email or password. Try: demo@meepleai.dev / Demo123!');
+      setError('Invalid email or password. Try: demo@meepleai.dev / TestPassword123!');
     }
 
     setIsLoading(false);
@@ -128,7 +128,7 @@ const InteractiveFormComponent = () => {
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold">Sign In</h2>
         <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-          Try: demo@meepleai.dev / Demo123!
+          Try: demo@meepleai.dev / TestPassword123!
         </p>
       </div>
 
@@ -170,7 +170,7 @@ const FullPageLoginComponent = () => {
 
     if (data.email !== 'demo@meepleai.dev') {
       setError('Account not found. Please check your email or create a new account.');
-    } else if (data.password !== 'Demo123!') {
+    } else if (data.password !== 'TestPassword123!') {
       setError('Incorrect password. Please try again.');
     }
 

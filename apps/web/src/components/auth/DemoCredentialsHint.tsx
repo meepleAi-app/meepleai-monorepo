@@ -16,7 +16,6 @@ import { Card, CardContent } from '@/components/ui/card';
 export interface DemoCredential {
   role: string;
   email: string;
-  password: string;
   description: string;
 }
 
@@ -33,19 +32,16 @@ const DEMO_CREDENTIALS: DemoCredential[] = [
   {
     role: 'Admin',
     email: 'admin@meepleai.dev',
-    password: 'Demo123!',
     description: 'Full system access for testing admin features'
   },
   {
     role: 'Editor',
     email: 'editor@meepleai.dev',
-    password: 'Demo123!',
     description: 'Content editing and game management access'
   },
   {
     role: 'User',
     email: 'user@meepleai.dev',
-    password: 'Demo123!',
     description: 'Standard user access for testing user features'
   }
 ];
@@ -61,18 +57,18 @@ export function DemoCredentialsHint({
   if (variant === 'compact') {
     return (
       <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
-        <p className="font-medium">Demo Credentials:</p>
+        <p className="font-medium">Demo Accounts:</p>
         {DEMO_CREDENTIALS.map((cred) => (
           <div key={cred.email} className="flex items-center gap-2">
+            <span className="text-xs font-medium">{cred.role}:</span>
             <code className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
               {cred.email}
             </code>
-            <span className="text-xs text-slate-500">•</span>
-            <code className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-              {cred.password}
-            </code>
           </div>
         ))}
+        <p className="text-xs text-slate-500 mt-2">
+          Click &quot;Try Demo&quot; for instant passwordless access
+        </p>
       </div>
     );
   }
@@ -114,12 +110,15 @@ export function DemoCredentialsHint({
                 </div>
 
                 <div className="space-y-1.5">
-                  <code className="block text-xs bg-slate-100 dark:bg-slate-900 px-2 py-1.5 rounded">
-                    {cred.email}
-                  </code>
-                  <code className="block text-xs bg-slate-100 dark:bg-slate-900 px-2 py-1.5 rounded">
-                    {cred.password}
-                  </code>
+                  <div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Email:</p>
+                    <code className="block text-xs bg-slate-100 dark:bg-slate-900 px-2 py-1.5 rounded">
+                      {cred.email}
+                    </code>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                    No password required - instant access
+                  </p>
                 </div>
               </div>
             ))}

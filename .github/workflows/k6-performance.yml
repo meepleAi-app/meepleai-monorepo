@@ -24,9 +24,21 @@ on:
       - 'tests/k6/**'
       - '.github/workflows/k6-performance.yml'
 
+# Explicit permissions (Least Privilege Principle - Issue #1455)
+# https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+permissions:
+  contents: read        # Required: Checkout code
+  pull-requests: write  # Required: Comment on PRs with performance test results
+  actions: read         # Required: Download baseline artifacts from previous workflow runs
+  checks: write         # Required: Report k6 test results
+
 env:
   API_BASE_URL: http://localhost:5080
   TEST_GAME_ID: '00000000-0000-0000-0000-000000000001'
+  # Database credentials - use secrets in CI, fallback to defaults for local runs
+  TEST_POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
+  TEST_POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}
+  TEST_DB_NAME: meepleai_test
 
 jobs:
   k6-performance-tests:
@@ -38,8 +50,8 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
@@ -91,14 +103,14 @@ jobs:
 
       - name: Create test database
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE meepleai_test;" || true
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -c "CREATE DATABASE meepleai_test;" || true
 
       - name: Apply migrations
         working-directory: apps/api/src/Api
         run: |
           dotnet ef database update --configuration Release
         env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres'
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
 
       - name: Seed test data
         working-directory: apps/api/src/Api
@@ -106,7 +118,7 @@ jobs:
           # Run integration tests that seed the database with test data
           dotnet test --filter "FullyQualifiedName~SeedTestData" --no-build --configuration Release || echo "Test seed not found, database will be seeded on first request"
         env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres'
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
 
       - name: Start API server
         working-directory: apps/api/src/Api
@@ -114,7 +126,7 @@ jobs:
           nohup dotnet run --configuration Release > ../../api.log 2>&1 &
           echo $! > ../../api.pid
         env:
-          ConnectionStrings__Postgres: 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres'
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
           ConnectionStrings__Redis: 'localhost:6379'
           ConnectionStrings__Qdrant: 'http://localhost:6333'
           ASPNETCORE_ENVIRONMENT: Development
@@ -283,7 +295,7 @@ jobs:
           pkill -f "dotnet.*Api" 2>/dev/null || true
 
           # Clean database
-          PGPASSWORD=postgres psql -h localhost -U postgres -c "DROP DATABASE IF EXISTS meepleai_test;" 2>/dev/null || true
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -c "DROP DATABASE IF EXISTS meepleai_test;" 2>/dev/null || true
 
           # Flush Redis
           redis-cli FLUSHALL 2>/dev/null || true

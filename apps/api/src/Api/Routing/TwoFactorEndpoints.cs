@@ -79,8 +79,9 @@ public static class TwoFactorEndpoints
             logger.LogInformation("2FA enabled for user {UserId}", userId);
             return Results.Ok(new
             {
-                message = "Two-factor authentication enabled successfully",
-                backupCodes = result.BackupCodes // Return backup codes for user to save
+                Success = true,
+                BackupCodes = result.BackupCodes, // Return backup codes for user to save
+                ErrorMessage = (string?)null
             });
         })
         .RequireAuthorization()

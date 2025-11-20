@@ -170,8 +170,9 @@ describe('AuthClient', () => {
           ok: true,
           status: 200,
           json: async () => ({
-            message: '2FA enabled successfully',
-            backupCodes: ['12345678', '23456789'],
+            Success: true,
+            BackupCodes: ['12345678', '23456789'],
+            ErrorMessage: null,
           }),
           headers: new Headers(),
         });
@@ -190,22 +191,6 @@ describe('AuthClient', () => {
             body: JSON.stringify({ code: '123456' }),
           })
         );
-      });
-
-      it('should handle 204 No Content response', async () => {
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          status: 204,
-          headers: new Headers(),
-        });
-
-        const result = await authClient.enable2FA('123456');
-
-        expect(result).toEqual({
-          Success: true,
-          BackupCodes: null,
-          ErrorMessage: null,
-        });
       });
     });
 

@@ -157,17 +157,11 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Enable 2FA with verification code
      */
     async enable2FA(code: string): Promise<Enable2FAResult> {
-      const response = await httpClient.post<{ message: string; backupCodes?: string[] }>(
+      return httpClient.post(
         '/api/v1/auth/2fa/enable',
-        { code }
+        { code },
+        Enable2FAResultSchema
       );
-
-      // Backend returns 204 No Content or { message, backupCodes }
-      return {
-        Success: true,
-        BackupCodes: response?.backupCodes || null,
-        ErrorMessage: null,
-      };
     },
 
     /**

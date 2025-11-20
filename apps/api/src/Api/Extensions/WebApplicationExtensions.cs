@@ -19,6 +19,9 @@ public static class WebApplicationExtensions
             app.UseForwardedHeaders();
         }
 
+        // Issue #1447: Security headers (must be before CORS to ensure headers on all responses including preflight)
+        app.UseSecurityHeaders();
+
         // CORS
         app.UseCors("web");
 

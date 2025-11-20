@@ -92,6 +92,15 @@ For comprehensive security information, including:
 ### Infrastructure Security
 
 - **HTTPS-only** in production
+- **Security Headers** (Issue #1447) - 7 critical HTTP headers for OWASP compliance:
+  - `Content-Security-Policy`: XSS and injection attack prevention
+  - `Strict-Transport-Security`: HTTPS enforcement (production only)
+  - `X-Frame-Options`: Clickjacking protection
+  - `X-Content-Type-Options`: MIME sniffing prevention
+  - `X-XSS-Protection`: Browser XSS filter (legacy support)
+  - `Referrer-Policy`: Referrer information control
+  - `Permissions-Policy`: Browser feature restrictions
+  - See [Security Headers Documentation](./docs/06-security/security-headers.md)
 - **CORS protection** with allowlist origins and header whitelist
   - Whitelisted headers: `Content-Type`, `Authorization`, `X-Correlation-ID`, `X-API-Key`
   - Non-whitelisted headers are rejected (Issue #1448)

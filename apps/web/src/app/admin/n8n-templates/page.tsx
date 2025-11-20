@@ -115,7 +115,7 @@ const N8nTemplatesPage = () => {
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
       console.error('Failed to import template:', err);
-      const errorMsg = err?.response?.data?.error || getErrorMessage(err, 'Failed to import template');
+      const errorMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || getErrorMessage(err, 'Failed to import template');
       setError(`Import failed: ${errorMsg}`);
     } finally {
       setImporting(false);

@@ -26,7 +26,7 @@
 import itMessages from '../../src/locales/it.json';
 import enMessages from '../../src/locales/en.json';
 
-type NestedMessages = Record<string, string | NestedMessages>;
+type NestedMessages = Record<string, string | Record<string, unknown>>;
 
 const SUPPORTED_LANGUAGES = ['it', 'en'] as const;
 type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];

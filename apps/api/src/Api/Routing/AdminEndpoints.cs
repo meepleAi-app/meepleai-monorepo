@@ -10,11 +10,12 @@ using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.Configuration;
+using Api.Extensions;
+using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
-using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -1892,9 +1893,11 @@ public static class AdminEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (string.IsNullOrWhiteSpace(q))
+            // Issue #1445: Use centralized query validation
+            var queryError = QueryValidator.ValidateQuery(q);
+            if (queryError != null)
             {
-                return Results.BadRequest(new { error = "Query parameter 'q' is required" });
+                return Results.BadRequest(new { error = queryError });
             }
 
             logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, q);

@@ -47,16 +47,12 @@ public class HybridSearchService : IHybridSearchService
         float keywordWeight = 0.3f,
         CancellationToken cancellationToken = default)
     {
-        // Security: Validate query length to prevent DoS attacks
-        if (query?.Length > 2000)
+        // Issue #1445: Use centralized query validation
+        var queryError = QueryValidator.ValidateQuery(query);
+        if (queryError != null)
         {
-            _logger.LogWarning("Query exceeds maximum length: {Length} characters", query.Length);
-            throw new ArgumentException("Query exceeds maximum length of 2000 characters", nameof(query));
-        }
-
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            _logger.LogWarning("Empty query provided to HybridSearchService");
+            _logger.LogWarning("Invalid query provided to HybridSearchService: {Error}", queryError);
+            // Return empty results for invalid queries (maintains existing behavior)
             return new List<HybridSearchResult>();
         }
 

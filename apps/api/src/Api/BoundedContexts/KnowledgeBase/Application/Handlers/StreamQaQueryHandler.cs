@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Helpers;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
@@ -61,10 +62,12 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
         StreamQaQuery query,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(query.Query))
+        // Issue #1445: Use centralized query validation
+        var queryError = QueryValidator.ValidateQuery(query.Query);
+        if (queryError != null)
         {
             yield return CreateEvent(StreamingEventType.Error,
-                new StreamingError("Please provide a question.", "EMPTY_QUERY"));
+                new StreamingError(queryError, "INVALID_QUERY"));
             yield break;
         }
 

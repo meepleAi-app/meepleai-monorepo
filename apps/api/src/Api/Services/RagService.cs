@@ -86,9 +86,10 @@ public class RagService : IRagService
         var stopwatch = Stopwatch.StartNew();
         var success = false;
 
-        if (string.IsNullOrWhiteSpace(query))
+        var queryError = QueryValidator.ValidateQuery(query);
+        if (queryError != null)
         {
-            return new QaResponse("Please provide a question.", Array.Empty<Snippet>());
+            return new QaResponse(queryError, Array.Empty<Snippet>());
         }
 
         // AI-05: Check cache first (unless bypassed)
@@ -546,9 +547,10 @@ public class RagService : IRagService
         var stopwatch = Stopwatch.StartNew();
         var success = false;
 
-        if (string.IsNullOrWhiteSpace(query))
+        var queryError = QueryValidator.ValidateQuery(query);
+        if (queryError != null)
         {
-            return new QaResponse("Please provide a question.", Array.Empty<Snippet>());
+            return new QaResponse(queryError, Array.Empty<Snippet>());
         }
 
         // AI-05: Check cache first (unless bypassed)
@@ -718,9 +720,10 @@ public class RagService : IRagService
         var stopwatch = Stopwatch.StartNew();
         var success = false;
 
-        if (string.IsNullOrWhiteSpace(query))
+        var queryError = QueryValidator.ValidateQuery(query);
+        if (queryError != null)
         {
-            return new QaResponse("Please provide a question.", Array.Empty<Snippet>());
+            return new QaResponse(queryError, Array.Empty<Snippet>());
         }
 
         if (string.IsNullOrWhiteSpace(customSystemPrompt))

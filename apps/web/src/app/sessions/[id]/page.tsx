@@ -157,21 +157,6 @@ export default function SessionDetailsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Handle missing ID
-  if (!id) {
-    return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden p-8">
-          <h1 className="text-2xl font-bold mb-4">Invalid Session ID</h1>
-          <p className="text-muted-foreground mb-4">No session ID provided.</p>
-          <Button onClick={() => router.push('/sessions')}>
-            Back to Sessions
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   /**
    * Fetch session details from API
    */
@@ -208,6 +193,21 @@ export default function SessionDetailsPage() {
       fetchSession();
     }
   }, [id]);
+
+  // Handle missing ID (after hooks)
+  if (!id) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden p-8">
+          <h1 className="text-2xl font-bold mb-4">Invalid Session ID</h1>
+          <p className="text-muted-foreground mb-4">No session ID provided.</p>
+          <Button onClick={() => router.push('/sessions')}>
+            Back to Sessions
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   /**
    * Handle pause session action

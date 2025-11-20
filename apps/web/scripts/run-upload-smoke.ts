@@ -14,7 +14,7 @@
  * 4. Error handling: Worker crash recovery
  */
 
-/* eslint-disable no-console */
+ 
 
 console.log(`
 ╔════════════════════════════════════════════════════════════════╗

@@ -7,7 +7,7 @@
  * Usage: npx ts-node scripts/run-accessibility-audit.ts
  */
 
-/* eslint-disable no-console */
+ 
 
 import { chromium, Browser, Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';

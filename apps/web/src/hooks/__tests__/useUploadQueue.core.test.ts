@@ -382,7 +382,7 @@ describe('useUploadQueue - Core Functionality', () => {
         await result.current.addFiles([file], 'game-123', 'en');
       });
 
-      let progressValues: number[] = [];
+      const progressValues: number[] = [];
 
       // Capture progress updates through waitFor
       await waitFor(() => {
@@ -415,7 +415,7 @@ describe('useUploadQueue - Core Functionality', () => {
 
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
-      let statuses: string[] = [];
+      const statuses: string[] = [];
 
       await act(async () => {
         await result.current.addFiles([file], 'game-123', 'en');

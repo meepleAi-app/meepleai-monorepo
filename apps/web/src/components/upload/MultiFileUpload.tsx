@@ -4,7 +4,7 @@
  */
 
 import { type DragEvent, type ChangeEvent, useCallback, useRef, useState } from 'react';
-import { useUploadQueue } from '@/hooks/useUploadQueue';
+import { useUploadQueue, type UploadQueueItem } from '@/hooks/useUploadQueue';
 import { UploadQueue } from './UploadQueue';
 import { UploadSummary } from './UploadSummary';
 import { Button } from '@/components/ui/button';
@@ -18,11 +18,11 @@ interface MultiFileUploadProps {
   autoUpload?: boolean; // Auto-start uploads when files added (default: true)
   onUploadComplete?: () => void;
   // Test observability hooks
-  onUploadStart?: (item: any) => void;
-  onUploadSuccess?: (item: any) => void;
-  onUploadError?: (item: any, error: string) => void;
-  onQueueAdd?: (items: any[]) => void;
-  onRetry?: (item: any, attempt: number, error: Error) => void;
+  onUploadStart?: (item: UploadQueueItem) => void;
+  onUploadSuccess?: (item: UploadQueueItem) => void;
+  onUploadError?: (item: UploadQueueItem, error: string) => void;
+  onQueueAdd?: (items: UploadQueueItem[]) => void;
+  onRetry?: (item: UploadQueueItem, attempt: number, error: Error) => void;
 }
 
 const MAX_PDF_SIZE_BYTES = 104857600; // 100 MB

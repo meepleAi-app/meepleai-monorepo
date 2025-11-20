@@ -135,14 +135,14 @@ export function useAddMessage(): UseMutationResult<
  * @returns UseMutationResult for editing message
  */
 export function useEditMessage(): UseMutationResult<
-  any,
+  ChatThreadDto,
   Error,
   { chatId: string; messageId: string; content: string }
 > {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ chatId, messageId, content }) => {
+    mutationFn: async ({ chatId, messageId, content }): Promise<ChatThreadDto> => {
       return api.chat.updateMessage(chatId, messageId, content);
     },
     onSuccess: (_, variables) => {

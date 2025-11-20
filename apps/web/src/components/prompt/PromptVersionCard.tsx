@@ -10,7 +10,7 @@ interface PromptVersionCardProps {
     templateId: string;
     versionNumber: number;
     content: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     isActive: boolean;
     createdById: string;
     createdByEmail: string;

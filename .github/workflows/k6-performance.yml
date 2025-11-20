@@ -171,15 +171,36 @@ jobs:
           path: tests/k6/reports/
           retention-days: 30
 
-      - name: Download baseline report
+      - name: Get latest main workflow run
         if: github.event_name == 'pull_request'
-        uses: dawidd6/action-download-artifact@v11
+        id: get-baseline-run
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'k6-performance.yml',
+              branch: 'main',
+              status: 'success',
+              per_page: 1
+            });
+            if (runs.data.workflow_runs.length > 0) {
+              core.setOutput('run-id', runs.data.workflow_runs[0].id);
+              core.setOutput('found', 'true');
+            } else {
+              core.setOutput('found', 'false');
+            }
+
+      - name: Download baseline report
+        if: github.event_name == 'pull_request' && steps.get-baseline-run.outputs.found == 'true'
+        uses: actions/download-artifact@v6
         continue-on-error: true
         with:
-          workflow: k6-performance.yml
-          branch: main
           name: k6-performance-reports-latest
           path: tests/k6/baseline/
+          run-id: ${{ steps.get-baseline-run.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check for performance regressions
         if: github.event_name == 'pull_request'

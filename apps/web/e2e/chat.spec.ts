@@ -1,23 +1,38 @@
 import { test, expect } from '@playwright/test';
-import { getTextMatcher, t } from './fixtures/i18n';
+import { ChatPage } from './pages/chat/ChatPage';
+import { HomePage } from './pages/home/HomePage';
 
-test.describe('Chat Page', () => {
-  test('should require authentication', async ({ page }) => {
-    await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
+test.describe('Chat Page Access Control', () => {
+  test('redirects unauthenticated visitors to login modal', async ({ page }) => {
+    const chatPage = new ChatPage(page);
+    await chatPage.goto();
 
-    // Should show login required message
-    await expect(page.getByRole('heading', { name: getTextMatcher('chat.loginRequired') })).toBeVisible();
-    await expect(page.getByText(getTextMatcher('chat.loginRequiredMessage'))).toBeVisible();
+    const variant = await chatPage.assertLoginRequired();
 
-    // Should have login link
-    await expect(page.getByRole('link', { name: getTextMatcher('chat.goToLogin') })).toBeVisible();
+    if (variant === 'modal') {
+      await expect(page).toHaveURL(/\/login/);
+    } else {
+      await expect(page).toHaveURL(/\/chat/);
+      await expect(page.getByRole('link', { name: /login/i })).toBeVisible();
+    }
   });
 
-  test('should have return to home link', async ({ page }) => {
-    await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
+  test('allows returning home by closing the login modal', async ({ page }) => {
+    const chatPage = new ChatPage(page);
+    await chatPage.goto();
+    const variant = await chatPage.assertLoginRequired();
 
-    await expect(page.getByRole('link', { name: getTextMatcher('setup.backToHome') })).toBeVisible();
+    if (variant === 'modal') {
+      await page.getByLabel(/close dialog/i).click();
+    } else {
+      await chatPage.goToLoginFromGate();
+      await page.waitForURL(/\/login/);
+      await page.getByLabel(/close dialog/i).click();
+    }
+
+    await page.waitForURL((url) => url.pathname === '/', { timeout: 10000 });
+    const homePage = new HomePage(page);
+    await homePage.assertHeroLoaded();
+    await homePage.assertBrandLinkVisible();
   });
 });

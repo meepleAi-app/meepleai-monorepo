@@ -1,6 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '../base/BasePage';
 import { IChatPage, ChatSource } from '../../types/pom-interfaces';
+import { getTextMatcher } from '../../fixtures/i18n';
 
 /**
  * ChatPage - Chat interface interactions
@@ -28,21 +29,21 @@ export class ChatPage extends BasePage implements IChatPage {
    * Chat page heading
    */
   private get chatHeading(): Locator {
-    return this.page.getByRole('heading', { name: /meepleai chat/i });
+    return this.page.getByRole('heading', { name: getTextMatcher('chat.title') });
   }
 
   /**
    * Question input field
    */
   private get questionInput(): Locator {
-    return this.page.getByPlaceholder(/fai una domanda|ask a question/i);
+    return this.page.getByPlaceholder(getTextMatcher('chat.placeholder'));
   }
 
   /**
    * Send button
    */
   private get sendButton(): Locator {
-    return this.page.getByRole('button', { name: /invia|send/i });
+    return this.page.getByRole('button', { name: getTextMatcher('chat.send') });
   }
 
   /**
@@ -60,10 +61,36 @@ export class ChatPage extends BasePage implements IChatPage {
   }
 
   /**
-   * Login required message (shown when not authenticated)
+   * Login modal heading shown after middleware redirect
    */
-  private get loginRequiredMessage(): Locator {
-    return this.page.getByRole('heading', { name: /login required/i });
+  private get loginModalHeading(): Locator {
+    return this.page.getByRole('heading', { name: getTextMatcher('auth.login.signInTo') });
+  }
+
+  /**
+   * Login and register tabs inside the auth modal
+   */
+  private get loginTab(): Locator {
+    return this.page.getByRole('tab', { name: getTextMatcher('navigation.login') });
+  }
+
+  private get registerTab(): Locator {
+    return this.page.getByRole('tab', { name: getTextMatcher('navigation.register') });
+  }
+
+  /**
+   * Inline unauthenticated state
+   */
+  private get unauthenticatedHeading(): Locator {
+    return this.page.getByRole('heading', { name: getTextMatcher('chat.loginRequired') });
+  }
+
+  private get unauthenticatedMessage(): Locator {
+    return this.page.getByText(getTextMatcher('chat.loginRequiredMessage'));
+  }
+
+  private get goToLoginLink(): Locator {
+    return this.page.getByRole('link', { name: getTextMatcher('chat.goToLogin') });
   }
 
   /**
@@ -361,9 +388,29 @@ export class ChatPage extends BasePage implements IChatPage {
 
   /**
    * Assert login required message is shown (unauthenticated state)
+   * @returns Which guard variant was displayed
    */
-  async assertLoginRequired(): Promise<void> {
-    await this.waitForElement(this.loginRequiredMessage);
+  async assertLoginRequired(): Promise<'modal' | 'inline'> {
+    await this.page.waitForLoadState('networkidle');
+
+    if (this.page.url().includes('/login')) {
+      await this.waitForElement(this.loginModalHeading);
+      await expect(this.loginTab).toHaveAttribute('aria-selected', 'true');
+      await expect(this.registerTab).toBeVisible();
+      return 'modal';
+    }
+
+    await this.waitForElement(this.unauthenticatedHeading);
+    await expect(this.unauthenticatedMessage).toBeVisible();
+    await expect(this.goToLoginLink).toBeVisible();
+    return 'inline';
+  }
+
+  /**
+   * Clicks "Go to Login" in the inline auth gate
+   */
+  async goToLoginFromGate(): Promise<void> {
+    await this.click(this.goToLoginLink);
   }
 
   /**

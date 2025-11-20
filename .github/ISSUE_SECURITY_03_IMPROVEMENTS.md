@@ -297,7 +297,7 @@ curl -X OPTIONS http://localhost:5080/api/v1/games \
 # Test 2: Verify credentials support
 curl -X GET http://localhost:5080/api/v1/users/me \
   -H "Origin: http://localhost:3000" \
-  -H "Cookie: meeple_session=..." \
+  -H "Cookie: meepleai_session=..." \
   --include
 
 # Expected: Access-Control-Allow-Credentials: true

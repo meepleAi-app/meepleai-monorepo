@@ -6,7 +6,7 @@ Indagine completata sul blocco dei test Postman/Newman. Il 20 novembre 2025 tutt
 
 1. **Lettura manuale del body** in `POST /api/v1/auth/login`, che invocava `context.Request.ReadFromJsonAsync<LoginPayload>` e consumava lo stream.
 2. **Rate limiter fail-open**: il `RateLimitingMiddleware` racchiudeva `_next(context)` in un `try/catch`, rieseguendo l'endpoint dopo ogni eccezione e tentando di rileggere il body vuoto.
-3. **Disallineamento risposta/cookie**: il payload `AuthResponse` serializzava `User`/`ExpiresAt` in PascalCase e il cookie di default era `meeple_session`, mentre la documentazione/Postman verificavano `jsonData.user` e `meepleai_session`.
+3. **Disallineamento risposta/cookie**: il payload `AuthResponse` serializzava `User`/`ExpiresAt` in PascalCase e il cookie non corrispondeva a quello atteso da Postman (`meepleai_session`).
 
 **Fix applicati** (20 nov 2025, 12:52-12:58 UTC):
 - Ripristinato il binding automatico `[FromBody] LoginPayload`.
@@ -56,7 +56,7 @@ Microsoft.AspNetCore.Http.BadHttpRequestException: Failed to read parameter "Log
 - **Fix**: il `try/catch` ora avvolge solo la chiamata a `rateLimiter.CheckRateLimitAsync`; `_next(context)` sta fuori.
 
 ### Finding 3: Risposta/cookie disallineati (High)
-- **Evidenza**: Postman cerca `jsonData.user` e `meepleai_session`; la risposta serializzava `User` e il cookie default era `meeple_session` → asserzioni fallite anche con login riuscito.
+- **Evidenza**: Postman cerca `jsonData.user` e il cookie `meepleai_session`, ma la risposta forniva proprietà in PascalCase e non impostava correttamente quel cookie → asserzioni fallite anche con login riuscito.
 - **Fix**: `[JsonPropertyName]` su `AuthResponse` + `SessionCookieConfiguration.Name = "meepleai_session"` + aggiornamento middleware Next.js e doc legacy.
 
 ## Recommended Fix Actions

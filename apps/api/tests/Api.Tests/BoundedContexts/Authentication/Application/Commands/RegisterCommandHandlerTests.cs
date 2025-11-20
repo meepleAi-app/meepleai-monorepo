@@ -64,7 +64,7 @@ public class RegisterCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("admin", result.User.Role);
+        Assert.Equal(Role.Admin.Value, result.User.Role);
         Assert.Equal("admin@example.com", result.User.Email);
         Assert.Equal("Admin User", result.User.DisplayName);
         Assert.NotNull(result.SessionToken);
@@ -101,7 +101,7 @@ public class RegisterCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("user", result.User.Role);
+        Assert.Equal(Role.User.Value, result.User.Role);
         Assert.Equal("user@example.com", result.User.Email);
         Assert.Equal("Regular User", result.User.DisplayName);
         Assert.False(result.User.IsTwoFactorEnabled);
@@ -120,7 +120,7 @@ public class RegisterCommandHandlerTests
             Email: "admin@example.com",
             Password: "SecurePassword123!",
             DisplayName: "Admin User",
-            Role: "admin",
+            Role: Role.Admin.Value,
             IpAddress: "127.0.0.1",
             UserAgent: "TestAgent"
         );
@@ -137,7 +137,7 @@ public class RegisterCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("admin", result.User.Role);
+        Assert.Equal(Role.Admin.Value, result.User.Role);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class RegisterCommandHandlerTests
             Email: "user@example.com",
             Password: "SecurePassword123!",
             DisplayName: "User",
-            Role: "user",
+            Role: Role.User.Value,
             IpAddress: "127.0.0.1",
             UserAgent: "TestAgent"
         );
@@ -165,7 +165,7 @@ public class RegisterCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("user", result.User.Role);
+        Assert.Equal(Role.User.Value, result.User.Role);
     }
 
     [Fact]
@@ -332,7 +332,7 @@ public class RegisterCommandHandlerTests
             Email: "malicious@example.com",
             Password: "SecurePassword123!",
             DisplayName: "Malicious User",
-            Role: "admin",
+            Role: Role.Admin.Value,
             IpAddress: "127.0.0.1",
             UserAgent: "TestAgent"
         );
@@ -364,7 +364,7 @@ public class RegisterCommandHandlerTests
             Email: "malicious@example.com",
             Password: "SecurePassword123!",
             DisplayName: "Malicious User",
-            Role: "editor",
+            Role: Role.Editor.Value,
             IpAddress: "127.0.0.1",
             UserAgent: "TestAgent"
         );
@@ -393,7 +393,7 @@ public class RegisterCommandHandlerTests
             Email: "user@example.com",
             Password: "SecurePassword123!",
             DisplayName: "Regular User",
-            Role: "user",
+            Role: Role.User.Value,
             IpAddress: "127.0.0.1",
             UserAgent: "TestAgent"
         );
@@ -410,7 +410,7 @@ public class RegisterCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("user", result.User.Role);
+        Assert.Equal(Role.User.Value, result.User.Role);
     }
 
     #endregion
@@ -561,7 +561,7 @@ public class RegisterCommandHandlerTests
         Assert.NotEqual(Guid.Empty, result.User.Id);
         Assert.Equal("test@example.com", result.User.Email);
         Assert.Equal("Test User", result.User.DisplayName);
-        Assert.Equal("user", result.User.Role);
+        Assert.Equal(Role.User.Value, result.User.Role);
         Assert.False(result.User.IsTwoFactorEnabled);
         Assert.Null(result.User.TwoFactorEnabledAt);
         Assert.True(result.User.CreatedAt <= DateTime.UtcNow);
@@ -625,7 +625,7 @@ public class RegisterCommandHandlerTests
 
         _userRepositoryMock
             .Setup(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
-            .Callback(() => callOrder.Add("user"));
+            .Callback(() => callOrder.Add(Role.User.Value));
 
         _sessionRepositoryMock
             .Setup(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()))
@@ -636,7 +636,7 @@ public class RegisterCommandHandlerTests
 
         // Assert
         Assert.Equal(2, callOrder.Count);
-        Assert.Equal("user", callOrder[0]);
+        Assert.Equal(Role.User.Value, callOrder[0]);
         Assert.Equal("session", callOrder[1]);
     }
 

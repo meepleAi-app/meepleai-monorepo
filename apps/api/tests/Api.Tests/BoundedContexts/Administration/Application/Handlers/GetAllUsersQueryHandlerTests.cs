@@ -4,6 +4,7 @@ using Api.Infrastructure;
 using Api.Tests.Helpers;
 using Moq;
 using Xunit;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -83,10 +84,10 @@ public class GetAllUsersQueryHandlerTests
         var query = new GetAllUsersQuery(
             Page: 1,
             Limit: 20,
-            RoleFilter: "admin");
+            RoleFilter: Role.Admin.Value);
 
         // Assert
-        Assert.Equal("admin", query.RoleFilter);
+        Assert.Equal(Role.Admin.Value, query.RoleFilter);
     }
 
     [Fact]
@@ -112,7 +113,7 @@ public class GetAllUsersQueryHandlerTests
             Page: 2,
             Limit: 50,
             SearchTerm: "test",
-            RoleFilter: "editor",
+            RoleFilter: Role.Editor.Value,
             SortBy: "displayname",
             SortOrder: "asc");
 
@@ -120,7 +121,7 @@ public class GetAllUsersQueryHandlerTests
         Assert.Equal(2, query.Page);
         Assert.Equal(50, query.Limit);
         Assert.Equal("test", query.SearchTerm);
-        Assert.Equal("editor", query.RoleFilter);
+        Assert.Equal(Role.Editor.Value, query.RoleFilter);
         Assert.Equal("displayname", query.SortBy);
         Assert.Equal("asc", query.SortOrder);
     }

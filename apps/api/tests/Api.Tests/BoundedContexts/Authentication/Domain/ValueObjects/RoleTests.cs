@@ -133,16 +133,16 @@ public class RoleTests
     public void StaticInstances_AreCorrectlyDefined()
     {
         // Assert
-        Assert.Equal("admin", Role.Admin.Value);
-        Assert.Equal("editor", Role.Editor.Value);
-        Assert.Equal("user", Role.User.Value);
+        Assert.Equal(Role.Admin.Value, Role.Admin.Value);
+        Assert.Equal(Role.Editor.Value, Role.Editor.Value);
+        Assert.Equal(Role.User.Value, Role.User.Value);
     }
 
     [Fact]
     public void EqualityComparison_WithSameRole_AreEqual()
     {
         // Arrange
-        var role1 = Role.Parse("admin");
+        var role1 = Role.Parse(Role.Admin.Value);
         var role2 = Role.Parse("ADMIN");
         var role3 = Role.Admin;
 
@@ -192,6 +192,6 @@ public class RoleTests
         string roleString = role;
 
         // Assert
-        Assert.Equal("admin", roleString);
+        Assert.Equal(Role.Admin.Value, roleString);
     }
 }

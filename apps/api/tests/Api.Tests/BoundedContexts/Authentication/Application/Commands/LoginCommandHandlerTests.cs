@@ -70,7 +70,7 @@ public class LoginCommandHandlerTests
         Assert.NotNull(result.User);
         Assert.NotNull(result.SessionToken);
         Assert.Equal("user@example.com", result.User.Email);
-        Assert.Equal("user", result.User.Role);
+        Assert.Equal(Role.User.Value, result.User.Role);
 
         _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -386,7 +386,7 @@ public class LoginCommandHandlerTests
         Assert.Equal(user.Id, result.User.Id);
         Assert.Equal("user@example.com", result.User.Email);
         Assert.Equal(user.DisplayName, result.User.DisplayName);
-        Assert.Equal("user", result.User.Role);
+        Assert.Equal(Role.User.Value, result.User.Role);
         Assert.False(result.User.IsTwoFactorEnabled);
         Assert.Null(result.User.TwoFactorEnabledAt);
     }

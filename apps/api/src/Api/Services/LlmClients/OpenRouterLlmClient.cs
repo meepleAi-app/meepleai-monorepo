@@ -95,76 +95,89 @@ public class OpenRouterLlmClient : ILlmClient
             };
 
             var json = JsonSerializer.Serialize(request);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
 
             _logger.LogInformation("Generating OpenRouter completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
 
-            using var response = await _httpClient.PostAsync("chat/completions", content, ct);
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
-
-            if (!response.IsSuccessStatusCode)
+            HttpResponseMessage? response = null;
+            try
             {
-                _logger.LogError("OpenRouter API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
-                return LlmCompletionResult.CreateFailure($"OpenRouter API error: {response.StatusCode}");
+                response = await _httpClient.SendAsync(httpRequest, ct);
+                var responseBody = await response.Content.ReadAsStringAsync(ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("OpenRouter API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
+                    var statusCode = (int)response.StatusCode;
+                    return LlmCompletionResult.CreateFailure($"OpenRouter API error: {statusCode} ({response.StatusCode})");
+                }
+
+                var chatResponse = JsonSerializer.Deserialize<OpenRouterChatResponse>(responseBody);
+
+                if (chatResponse?.Choices == null || chatResponse.Choices.Count == 0)
+                {
+                    return LlmCompletionResult.CreateFailure("No response returned from OpenRouter");
+                }
+
+                var assistantMessage = chatResponse.Choices[0].Message?.Content ?? string.Empty;
+
+                var usage = chatResponse.Usage != null
+                    ? new LlmUsage(
+                        chatResponse.Usage.PromptTokens,
+                        chatResponse.Usage.CompletionTokens,
+                        chatResponse.Usage.TotalTokens)
+                    : LlmUsage.Empty;
+
+                // ISSUE-960: Calculate cost for this request
+                var costCalculation = _costCalculator.CalculateCost(
+                    model,
+                    ProviderName,
+                    usage.PromptTokens,
+                    usage.CompletionTokens);
+
+                var cost = new LlmCost
+                {
+                    InputCost = costCalculation.InputCost,
+                    OutputCost = costCalculation.OutputCost,
+                    ModelId = model,
+                    Provider = ProviderName
+                };
+
+                var metadata = new Dictionary<string, string>
+                {
+                    ["provider"] = "OpenRouter",
+                    ["cost_usd"] = cost.TotalCost.ToString("F6")
+                };
+
+                if (!string.IsNullOrWhiteSpace(chatResponse.Id))
+                {
+                    metadata["response_id"] = chatResponse.Id;
+                }
+
+                if (!string.IsNullOrWhiteSpace(chatResponse.Model))
+                {
+                    metadata["model"] = chatResponse.Model;
+                }
+
+                var finishReason = chatResponse.Choices[0].FinishReason;
+                if (!string.IsNullOrWhiteSpace(finishReason))
+                {
+                    metadata["finish_reason"] = finishReason;
+                }
+
+                _logger.LogInformation("Successfully generated OpenRouter completion (cost: ${Cost:F6})", cost.TotalCost);
+
+                return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
             }
-
-            var chatResponse = JsonSerializer.Deserialize<OpenRouterChatResponse>(responseBody);
-
-            if (chatResponse?.Choices == null || chatResponse.Choices.Count == 0)
+            finally
             {
-                return LlmCompletionResult.CreateFailure("No response returned from OpenRouter");
+                response?.Dispose();
+                httpRequest.Dispose();
             }
-
-            var assistantMessage = chatResponse.Choices[0].Message?.Content ?? string.Empty;
-
-            var usage = chatResponse.Usage != null
-                ? new LlmUsage(
-                    chatResponse.Usage.PromptTokens,
-                    chatResponse.Usage.CompletionTokens,
-                    chatResponse.Usage.TotalTokens)
-                : LlmUsage.Empty;
-
-            // ISSUE-960: Calculate cost for this request
-            var costCalculation = _costCalculator.CalculateCost(
-                model,
-                ProviderName,
-                usage.PromptTokens,
-                usage.CompletionTokens);
-
-            var cost = new LlmCost
-            {
-                InputCost = costCalculation.InputCost,
-                OutputCost = costCalculation.OutputCost,
-                ModelId = model,
-                Provider = ProviderName
-            };
-
-            var metadata = new Dictionary<string, string>
-            {
-                ["provider"] = "OpenRouter",
-                ["cost_usd"] = cost.TotalCost.ToString("F6")
-            };
-
-            if (!string.IsNullOrWhiteSpace(chatResponse.Id))
-            {
-                metadata["response_id"] = chatResponse.Id;
-            }
-
-            if (!string.IsNullOrWhiteSpace(chatResponse.Model))
-            {
-                metadata["model"] = chatResponse.Model;
-            }
-
-            var finishReason = chatResponse.Choices[0].FinishReason;
-            if (!string.IsNullOrWhiteSpace(finishReason))
-            {
-                metadata["finish_reason"] = finishReason;
-            }
-
-            _logger.LogInformation("Successfully generated OpenRouter completion (cost: ${Cost:F6})", cost.TotalCost);
-
-            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
         }
         catch (TaskCanceledException ex)
         {

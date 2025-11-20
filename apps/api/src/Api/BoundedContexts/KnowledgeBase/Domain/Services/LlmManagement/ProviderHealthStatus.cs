@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 
 /// <summary>
@@ -49,23 +51,11 @@ public sealed class ProviderHealthStatus
                 LastSuccessAt = DateTime.UtcNow;
                 ConsecutiveFailures = 0;
                 ConsecutiveSuccesses++;
-
-                // Healthy: 3+ consecutive successes OR success rate > 80%
-                if (ConsecutiveSuccesses >= 3 || SuccessRate > 80)
-                    Status = HealthStatus.Healthy;
-                else if (SuccessRate > 50)
-                    Status = HealthStatus.Degraded;
             }
             else
             {
                 ConsecutiveSuccesses = 0;
                 ConsecutiveFailures++;
-
-                // Unhealthy: 3+ consecutive failures OR success rate < 20%
-                if (ConsecutiveFailures >= 3 || SuccessRate < 20)
-                    Status = HealthStatus.Unhealthy;
-                else if (SuccessRate < 50)
-                    Status = HealthStatus.Degraded;
             }
 
             // Update history
@@ -80,6 +70,44 @@ public sealed class ProviderHealthStatus
             SuccessRate = _healthCheckHistory.Count > 0
                 ? (successCount * 100.0) / _healthCheckHistory.Count
                 : 100.0;
+
+            UpdateStatus(success);
+        }
+    }
+
+    private void UpdateStatus(bool lastCheckSuccess)
+    {
+        if (lastCheckSuccess)
+        {
+            // Healthy: 3+ consecutive successes OR success rate > 80%
+            if (ConsecutiveSuccesses >= 3 || SuccessRate > 80)
+            {
+                Status = HealthStatus.Healthy;
+            }
+            else if (SuccessRate > 50 || ConsecutiveSuccesses > 0)
+            {
+                Status = HealthStatus.Degraded;
+            }
+            else
+            {
+                Status = HealthStatus.Unknown;
+            }
+        }
+        else
+        {
+            // Unhealthy: 3+ consecutive failures OR success rate < 20%
+            if (ConsecutiveFailures >= 3 || SuccessRate < 20)
+            {
+                Status = HealthStatus.Unhealthy;
+            }
+            else if (SuccessRate < 50 || ConsecutiveFailures > 0)
+            {
+                Status = HealthStatus.Degraded;
+            }
+            else
+            {
+                Status = HealthStatus.Unknown;
+            }
         }
     }
 

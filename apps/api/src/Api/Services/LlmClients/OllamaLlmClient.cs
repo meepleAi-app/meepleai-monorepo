@@ -93,70 +93,83 @@ public class OllamaLlmClient : ILlmClient
             };
 
             var json = JsonSerializer.Serialize(request);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/chat")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
 
             _logger.LogInformation("Generating Ollama completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
 
-            // Ollama endpoint: /api/chat
-            using var response = await _httpClient.PostAsync("api/chat", content, ct);
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
-
-            if (!response.IsSuccessStatusCode)
+            HttpResponseMessage? response = null;
+            try
             {
-                _logger.LogError("Ollama API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
-                return LlmCompletionResult.CreateFailure($"Ollama API error: {response.StatusCode}");
+                // Ollama endpoint: /api/chat
+                response = await _httpClient.SendAsync(httpRequest, ct);
+                var responseBody = await response.Content.ReadAsStringAsync(ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Ollama API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
+                    var statusCode = (int)response.StatusCode;
+                    return LlmCompletionResult.CreateFailure($"Ollama API error: {statusCode} ({response.StatusCode})");
+                }
+
+                var chatResponse = JsonSerializer.Deserialize<OllamaChatResponse>(responseBody);
+
+                if (chatResponse?.Message == null)
+                {
+                    return LlmCompletionResult.CreateFailure("No response returned from Ollama");
+                }
+
+                var assistantMessage = chatResponse.Message.Content ?? string.Empty;
+
+                // Ollama doesn't provide detailed token counts in chat API (only in generate API)
+                // Use estimated token counts: ~0.75 tokens per word
+                var estimatedPromptTokens = EstimateTokenCount(systemPrompt + userPrompt);
+                var estimatedCompletionTokens = EstimateTokenCount(assistantMessage);
+
+                var usage = new LlmUsage(
+                    estimatedPromptTokens,
+                    estimatedCompletionTokens,
+                    estimatedPromptTokens + estimatedCompletionTokens);
+
+                // ISSUE-960: Calculate cost for Ollama (always $0 - self-hosted)
+                var costCalculation = _costCalculator.CalculateCost(
+                    model,
+                    ProviderName,
+                    usage.PromptTokens,
+                    usage.CompletionTokens);
+
+                var cost = new LlmCost
+                {
+                    InputCost = costCalculation.InputCost,  // Will be $0 for Ollama
+                    OutputCost = costCalculation.OutputCost,
+                    ModelId = model,
+                    Provider = ProviderName
+                };
+
+                var metadata = new Dictionary<string, string>
+                {
+                    ["model"] = chatResponse.Model ?? model,
+                    ["provider"] = "Ollama",
+                    ["cost_usd"] = "0.000000"  // Free - self-hosted
+                };
+
+                if (!string.IsNullOrWhiteSpace(chatResponse.DoneReason))
+                {
+                    metadata["finish_reason"] = chatResponse.DoneReason;
+                }
+
+                _logger.LogInformation("Successfully generated Ollama completion (cost: $0 - self-hosted)");
+
+                return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
             }
-
-            var chatResponse = JsonSerializer.Deserialize<OllamaChatResponse>(responseBody);
-
-            if (chatResponse?.Message == null)
+            finally
             {
-                return LlmCompletionResult.CreateFailure("No response returned from Ollama");
+                response?.Dispose();
+                httpRequest.Dispose();
             }
-
-            var assistantMessage = chatResponse.Message.Content ?? string.Empty;
-
-            // Ollama doesn't provide detailed token counts in chat API (only in generate API)
-            // Use estimated token counts: ~0.75 tokens per word
-            var estimatedPromptTokens = EstimateTokenCount(systemPrompt + userPrompt);
-            var estimatedCompletionTokens = EstimateTokenCount(assistantMessage);
-
-            var usage = new LlmUsage(
-                estimatedPromptTokens,
-                estimatedCompletionTokens,
-                estimatedPromptTokens + estimatedCompletionTokens);
-
-            // ISSUE-960: Calculate cost for Ollama (always $0 - self-hosted)
-            var costCalculation = _costCalculator.CalculateCost(
-                model,
-                ProviderName,
-                usage.PromptTokens,
-                usage.CompletionTokens);
-
-            var cost = new LlmCost
-            {
-                InputCost = costCalculation.InputCost,  // Will be $0 for Ollama
-                OutputCost = costCalculation.OutputCost,
-                ModelId = model,
-                Provider = ProviderName
-            };
-
-            var metadata = new Dictionary<string, string>
-            {
-                ["model"] = chatResponse.Model ?? model,
-                ["provider"] = "Ollama",
-                ["cost_usd"] = "0.000000"  // Free - self-hosted
-            };
-
-            if (!string.IsNullOrWhiteSpace(chatResponse.DoneReason))
-            {
-                metadata["finish_reason"] = chatResponse.DoneReason;
-            }
-
-            _logger.LogInformation("Successfully generated Ollama completion (cost: $0 - self-hosted)");
-
-            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
         }
         catch (TaskCanceledException ex)
         {
@@ -296,17 +309,17 @@ public class OllamaLlmClient : ILlmClient
                     continue;
                 }
 
+                var delta = chunk?.Message?.Content;
+                if (!string.IsNullOrEmpty(delta))
+                {
+                    yield return delta;
+                }
+
                 // Ollama sends done=true when stream is complete
                 if (chunk?.Done == true)
                 {
                     _logger.LogInformation("Ollama streaming completion finished");
                     break;
-                }
-
-                var delta = chunk?.Message?.Content;
-                if (!string.IsNullOrEmpty(delta))
-                {
-                    yield return delta;
                 }
             }
         }

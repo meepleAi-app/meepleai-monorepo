@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Authentication.Domain.Entities;
@@ -131,24 +132,21 @@ public class HybridLlmService : ILlmService
             return LlmCompletionResult.CreateFailure("No user prompt provided");
         }
 
-        // ISSUE-962: Route with circuit breaker awareness
+        // ISSUE-962: Route with circuit breaker awareness and support fallback retries
         var decision = _routingStrategy.SelectProvider(user);
         var client = GetClientWithCircuitBreaker(decision.ProviderName);
 
-        // P1: If fallback provider used, update decision to match actual provider
         if (client == null)
         {
             _logger.LogError(
                 "No available provider found (circuit breakers may be open), using first client as fallback");
             client = _clients.First();
 
-            // P1 FIX: Create decision specifically for fallback provider
             var originalProvider = decision.ProviderName;
             decision = new LlmRoutingDecision(
                 ProviderName: client.ProviderName,
                 ModelId: GetDefaultModelForProvider(client.ProviderName),
-                Reason: $"Emergency fallback from {originalProvider} (all providers unavailable)"
-            );
+                Reason: $"Emergency fallback from {originalProvider} (all providers unavailable)");
 
             _logger.LogWarning(
                 "Created emergency fallback decision: {Provider} ({Model})",
@@ -156,114 +154,74 @@ public class HybridLlmService : ILlmService
         }
         else if (client.ProviderName != decision.ProviderName)
         {
-            // P1: Fallback provider was selected - update decision to match
             _logger.LogWarning(
                 "Primary provider {Primary} unavailable, using fallback {Fallback}",
                 decision.ProviderName, client.ProviderName);
 
-            // Get new decision for the actual provider being used
-            var fallbackUser = user; // Preserve user context
-            // Create a decision that matches the fallback provider
             decision = new LlmRoutingDecision(
                 ProviderName: client.ProviderName,
                 ModelId: GetDefaultModelForProvider(client.ProviderName),
-                Reason: $"Fallback from {decision.ProviderName} (circuit open or unhealthy)"
-            );
+                Reason: $"Fallback from {decision.ProviderName} (circuit open or unhealthy)");
         }
 
-        _logger.LogInformation(
-            "Generating completion via {Provider} ({Model}) - Reason: {Reason}",
-            client.ProviderName, decision.ModelId, decision.Reason);
+        var attemptedProviders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        LlmCompletionResult? lastFailure = null;
 
-        // ISSUE-962: Track latency and circuit breaker state
-        var stopwatch = Stopwatch.StartNew();
-
-        try
+        while (client != null && attemptedProviders.Add(client.ProviderName))
         {
-            var result = await client.GenerateCompletionAsync(
-                decision.ModelId,
-                systemPrompt,
-                userPrompt,
-                DefaultTemperature,
-                DefaultMaxTokens,
-                ct);
+            _logger.LogInformation(
+                "Generating completion via {Provider} ({Model}) - Reason: {Reason}",
+                client.ProviderName, decision.ModelId, decision.Reason);
 
-            stopwatch.Stop();
-
-            // ISSUE-962: Record success metrics
-            RecordSuccess(client.ProviderName, stopwatch.ElapsedMilliseconds);
-
-            // Add routing metadata
-            if (result.Success && result.Metadata is Dictionary<string, string> metadata)
-            {
-                metadata["routing_decision"] = decision.Reason;
-                metadata["selected_provider"] = client.ProviderName;
-                metadata["selected_model"] = decision.ModelId;
-                metadata["latency_ms"] = stopwatch.ElapsedMilliseconds.ToString();
-                metadata["circuit_state"] = GetCircuitState(client.ProviderName);
-            }
-
+            var attemptStopwatch = Stopwatch.StartNew();
             try
             {
-                await _costLogRepository.LogCostAsync(
-                    user?.Id,
-                    user?.Role.Value ?? "Anonymous",
-                    new LlmCostCalculation
-                    {
-                        ModelId = result.Cost.ModelId,
-                        Provider = result.Cost.Provider,
-                        PromptTokens = result.Usage.PromptTokens,
-                        CompletionTokens = result.Usage.CompletionTokens,
-                        InputCost = result.Cost.InputCost,
-                        OutputCost = result.Cost.OutputCost
-                    },
-                    endpoint: "completion",
-                    success: result.Success,
-                    errorMessage: result.ErrorMessage,
-                    latencyMs: (int)stopwatch.ElapsedMilliseconds,
-                    ipAddress: null, // Not available here - would come from HTTP context
-                    userAgent: null,
-                    ct: ct);
+                var result = await client.GenerateCompletionAsync(
+                    decision.ModelId,
+                    systemPrompt,
+                    userPrompt,
+                    DefaultTemperature,
+                    DefaultMaxTokens,
+                    ct);
+
+                attemptStopwatch.Stop();
+
+                if (result.Success)
+                {
+                    RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
+                    AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
+                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, ct);
+                    return result;
+                }
+
+                RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
+                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, ct);
+                lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
-            catch (Exception logEx)
+            catch (Exception ex)
             {
-                _logger.LogWarning(logEx, "Failed to log LLM cost");
+                attemptStopwatch.Stop();
+                RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
+
+                _logger.LogError(ex,
+                    "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
+                    client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
+
+                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, ct);
+                lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
-            return result;
+            client = GetNextFallbackClient(client.ProviderName, attemptedProviders, out decision);
+
+            if (client == null)
+            {
+                _logger.LogWarning(
+                    "No additional fallback providers available after failures: {Providers}",
+                    string.Join(", ", attemptedProviders));
+            }
         }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
 
-            // ISSUE-962: Record failure metrics
-            RecordFailure(client.ProviderName, stopwatch.ElapsedMilliseconds);
-
-            _logger.LogError(ex,
-                "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
-                client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
-
-            try
-            {
-                await _costLogRepository.LogCostAsync(
-                    user?.Id,
-                    user?.Role.Value ?? "Anonymous",
-                    LlmCostCalculation.Empty,
-                    endpoint: "completion",
-                    success: false,
-                    errorMessage: ex.Message,
-                    latencyMs: (int)stopwatch.ElapsedMilliseconds,
-                    ipAddress: null,
-                    userAgent: null,
-                    ct: ct);
-            }
-            catch (Exception logEx)
-            {
-                _logger.LogWarning(logEx, "Failed to log LLM error cost");
-            }
-
-            return LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
-        }
+        return lastFailure ?? LlmCompletionResult.CreateFailure("Provider error: No providers available");
     }
 
     #endregion
@@ -518,6 +476,132 @@ public class HybridLlmService : ILlmService
         }
     }
 
+    private void AddRoutingMetadata(
+        LlmCompletionResult result,
+        LlmRoutingDecision decision,
+        ILlmClient client,
+        long latencyMs)
+    {
+        if (result.Metadata is Dictionary<string, string> metadata)
+        {
+            metadata["routing_decision"] = decision.Reason;
+            metadata["selected_provider"] = client.ProviderName;
+            metadata["selected_model"] = decision.ModelId;
+            metadata["latency_ms"] = latencyMs.ToString();
+            metadata["circuit_state"] = GetCircuitState(client.ProviderName);
+        }
+    }
+
+    private async Task LogCostAsync(
+        LlmCompletionResult result,
+        User? user,
+        long latencyMs,
+        CancellationToken ct)
+    {
+        try
+        {
+            await _costLogRepository.LogCostAsync(
+                user?.Id,
+                user?.Role.Value ?? "Anonymous",
+                new LlmCostCalculation
+                {
+                    ModelId = result.Cost.ModelId,
+                    Provider = result.Cost.Provider,
+                    PromptTokens = result.Usage.PromptTokens,
+                    CompletionTokens = result.Usage.CompletionTokens,
+                    InputCost = result.Cost.InputCost,
+                    OutputCost = result.Cost.OutputCost
+                },
+                endpoint: "completion",
+                success: true,
+                errorMessage: null,
+                latencyMs: (int)latencyMs,
+                ipAddress: null,
+                userAgent: null,
+                ct: ct);
+        }
+        catch (Exception logEx)
+        {
+            _logger.LogWarning(logEx, "Failed to log LLM cost");
+        }
+    }
+
+    private async Task LogCostFailureAsync(
+        string? errorMessage,
+        User? user,
+        long latencyMs,
+        CancellationToken ct)
+    {
+        try
+        {
+            await _costLogRepository.LogCostAsync(
+                user?.Id,
+                user?.Role.Value ?? "Anonymous",
+                LlmCostCalculation.Empty,
+                endpoint: "completion",
+                success: false,
+                errorMessage: errorMessage,
+                latencyMs: (int)latencyMs,
+                ipAddress: null,
+                userAgent: null,
+                ct: ct);
+        }
+        catch (Exception logEx)
+        {
+            _logger.LogWarning(logEx, "Failed to log LLM error cost");
+        }
+    }
+
+    private ILlmClient? GetNextFallbackClient(
+        string failedProvider,
+        HashSet<string> attemptedProviders,
+        out LlmRoutingDecision decision)
+    {
+        var fallbackOrder = BuildFallbackOrder();
+
+        foreach (var providerName in fallbackOrder)
+        {
+            if (attemptedProviders.Contains(providerName))
+                continue;
+
+            var fallbackClient = GetClientWithCircuitBreaker(providerName);
+            if (fallbackClient != null)
+            {
+                decision = new LlmRoutingDecision(
+                    ProviderName: fallbackClient.ProviderName,
+                    ModelId: GetDefaultModelForProvider(fallbackClient.ProviderName),
+                    Reason: $"Fallback from {failedProvider}");
+                return fallbackClient;
+            }
+        }
+
+        decision = default!;
+        return null;
+    }
+
+    private List<string> BuildFallbackOrder()
+    {
+        var order = new List<string>();
+        var configuredFallback = _aiSettings.Value.FallbackChain?
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToList();
+
+        if (configuredFallback?.Any() == true)
+        {
+            order.AddRange(configuredFallback);
+        }
+
+        foreach (var client in _clients)
+        {
+            if (!order.Contains(client.ProviderName, StringComparer.OrdinalIgnoreCase))
+            {
+                order.Add(client.ProviderName);
+            }
+        }
+
+        return order;
+    }
+
     /// <summary>
     /// ISSUE-962: Record successful request (circuit breaker + latency)
     /// </summary>
@@ -562,6 +646,22 @@ public class HybridLlmService : ILlmService
                 "Request failure: {Provider} - Latency: {Latency}ms, Circuit: {CircuitState}",
                 providerName, latencyMs, breaker?.GetStatus() ?? "unknown");
         }
+    }
+
+    private static LlmCompletionResult NormalizeFailureResult(
+        LlmCompletionResult result,
+        string providerName)
+    {
+        var message = string.IsNullOrWhiteSpace(result.ErrorMessage)
+            ? $"{providerName} provider error"
+            : result.ErrorMessage;
+
+        if (!message.Contains("error", StringComparison.OrdinalIgnoreCase))
+        {
+            message = $"Provider error: {message}";
+        }
+
+        return result with { ErrorMessage = message };
     }
 
     /// <summary>

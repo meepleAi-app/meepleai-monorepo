@@ -142,7 +142,7 @@ function VersionHistoryContent() {
   // EDIT-06: Load timeline authors for filters
   const loadTimelineAuthors = useCallback(async (gId: string) => {
     try {
-      const response = await api.get<any>(`/api/v1/games/${gId}/rulespec/versions/timeline`);
+      const response = await api.get<{ authors?: string[] }>(`/api/v1/games/${gId}/rulespec/versions/timeline`);
       if (response && response.authors) {
         setTimelineAuthors(response.authors);
       }

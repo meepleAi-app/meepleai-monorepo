@@ -22,7 +22,7 @@ export interface Agent {
   name: string;
   type: string;
   strategyName: string;
-  strategyParameters: Record<string, any>;
+  strategyParameters: Record<string, unknown>;
   isActive: boolean;
   createdAt: string;
   lastInvokedAt: string | null;

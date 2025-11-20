@@ -36,7 +36,7 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
   const [showThumbnails, setShowThumbnails] = useState(true);
 
   const mainCanvasRef = useRef<HTMLDivElement>(null);
-  const thumbnailListRef = useRef<any>(null);
+  const thumbnailListRef = useRef<List<Record<string, never>> | null>(null);
   const fileUrl = useMemo(() => URL.createObjectURL(file), [file]);
 
   // Detect mobile viewport
@@ -343,13 +343,13 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
             role="navigation"
             aria-label="Page thumbnails"
           >
-            <List<{}>
+            <List<Record<string, never>>
               listRef={thumbnailListRef}
               defaultHeight={isMobile ? window.innerHeight - 120 : 600 - 60}
               rowCount={numPages}
               rowHeight={THUMBNAIL_HEIGHT + 16}
               rowComponent={renderThumbnail}
-              rowProps={{} as any}
+              rowProps={{}}
             />
           </div>
         )}

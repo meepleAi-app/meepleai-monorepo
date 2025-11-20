@@ -61,7 +61,7 @@ export function PdfViewerModal({
   const [showThumbnails, setShowThumbnails] = useState(true);
 
   const mainCanvasRef = useRef<HTMLDivElement>(null);
-  const thumbnailListRef = useRef<any>(null);
+  const thumbnailListRef = useRef<List<Record<string, never>> | null>(null);
 
   // Memoize file config to prevent unnecessary PDF reloads (BGAI-074)
   const fileConfig = useMemo(() => ({

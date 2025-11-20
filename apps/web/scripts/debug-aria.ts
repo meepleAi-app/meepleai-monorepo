@@ -2,7 +2,7 @@
  * Debug script to get detailed ARIA violation information
  */
 
-/* eslint-disable no-console */
+ 
 
 import { chromium } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';

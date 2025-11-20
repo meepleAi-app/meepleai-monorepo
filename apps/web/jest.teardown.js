@@ -5,7 +5,7 @@ import { execSync } from 'child_process';
 import { platform } from 'os';
 
 export default async function globalTeardown() {
-  // eslint-disable-next-line no-console
+   
   console.log('\n🧹 Running cleanup script to kill hanging test processes...');
 
   try {
@@ -20,10 +20,10 @@ export default async function globalTeardown() {
         cwd: __dirname
       });
 
-      // eslint-disable-next-line no-console
+       
       console.log('✅ Cleanup script completed');
     } else {
-      // eslint-disable-next-line no-console
+       
       console.log('ℹ️ Cleanup script skipped (Windows-only)');
     }
   } catch (error) {

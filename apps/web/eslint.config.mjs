@@ -21,38 +21,6 @@ export default [
     ],
   },
   js.configs.recommended,
-  // Configuration for Jest setup and test files
-  {
-    files: ["jest.setup.js", "jest.teardown.js", "**/*.test.{js,jsx,ts,tsx}", "**/__tests__/**/*.{js,jsx,ts,tsx}", "src/test-utils/**/*.{js,jsx,ts,tsx}"],
-    languageOptions: {
-      globals: {
-        jest: "readonly",
-        expect: "readonly",
-        test: "readonly",
-        describe: "readonly",
-        it: "readonly",
-        beforeEach: "readonly",
-        afterEach: "readonly",
-        beforeAll: "readonly",
-        afterAll: "readonly",
-        global: "readonly",
-        setTimeout: "readonly",
-        clearTimeout: "readonly",
-        setInterval: "readonly",
-        clearInterval: "readonly",
-      },
-    },
-    plugins: {
-      "@typescript-eslint": typescriptEslint,
-    },
-    rules: {
-      "no-console": "off",
-      "@typescript-eslint/no-unused-vars": "off",
-      "@typescript-eslint/no-explicit-any": "off",
-      "no-unused-vars": "off",
-      "no-undef": "off",
-    },
-  },
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
@@ -181,7 +149,46 @@ export default [
       },
     },
   },
-  // Configuration for E2E tests (Playwright) - Must come last to override TypeScript settings
+  // Configuration for Jest setup and test files - Must come after TypeScript config to override
+  {
+    files: [
+      "jest.setup.js",
+      "jest.teardown.js",
+      "**/*.test.{js,jsx,ts,tsx}",
+      "**/__tests__/**/*.{js,jsx,ts,tsx}",
+      "src/test-utils/**/*.{js,jsx,ts,tsx}",
+      "src/__tests__/**/*.{js,jsx,ts,tsx}",
+    ],
+    languageOptions: {
+      globals: {
+        jest: "readonly",
+        expect: "readonly",
+        test: "readonly",
+        describe: "readonly",
+        it: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        global: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": typescriptEslint,
+    },
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-unused-vars": "off",
+      "no-undef": "off",
+    },
+  },
+  // Configuration for E2E tests (Playwright) - Must come after TypeScript config to override
   {
     files: ["e2e/**/*.ts", "e2e/**/*.tsx"],
     languageOptions: {
@@ -214,6 +221,31 @@ export default [
       "react-hooks/rules-of-hooks": "off", // Disable for Playwright test.use()
       "no-unused-vars": "off",
       "no-undef": "off",
+    },
+  },
+  // Configuration for scripts - Must come after TypeScript config to override
+  {
+    files: ["scripts/**/*.{ts,tsx,js,jsx}"],
+    rules: {
+      "no-console": "off", // Allow console in scripts
+      "@typescript-eslint/no-explicit-any": "off", // Relaxed type checking for utility scripts
+    },
+  },
+  // Configuration for Storybook files - Must come after TypeScript config to override
+  {
+    files: ["**/*.stories.{ts,tsx,js,jsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off", // Relaxed type checking for Storybook stories
+      "react-hooks/rules-of-hooks": "off", // Storybook render functions can call hooks
+      "no-console": "off", // Allow console in Storybook stories for debugging
+    },
+  },
+  // Configuration for admin pages - Must come after TypeScript config to override
+  {
+    files: ["src/app/admin/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off", // Relaxed type checking for internal admin tools
+      "react-hooks/rules-of-hooks": "off", // Disabled for admin tools (internal use only)
     },
   },
 ];

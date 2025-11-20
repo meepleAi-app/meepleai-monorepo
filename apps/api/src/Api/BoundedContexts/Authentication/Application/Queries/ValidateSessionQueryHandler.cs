@@ -57,7 +57,8 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
 
         // Update last seen timestamp
         session.UpdateLastSeen();
-        await _sessionRepository.UpdateAsync(session, cancellationToken);
+        var lastSeenAt = session.LastSeenAt ?? _timeProvider.GetUtcNow().UtcDateTime;
+        await _sessionRepository.UpdateLastSeenAsync(session.Id, lastSeenAt, cancellationToken);
 
         // Get user information
         var user = await _userRepository.GetByIdAsync(session.UserId, cancellationToken);

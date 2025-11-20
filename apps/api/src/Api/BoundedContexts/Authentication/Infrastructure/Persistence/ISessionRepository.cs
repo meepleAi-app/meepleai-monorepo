@@ -40,6 +40,11 @@ public interface ISessionRepository
     Task UpdateAsync(Session session, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates the LastSeenAt timestamp for a session without tracking the entity.
+    /// </summary>
+    Task UpdateLastSeenAsync(Guid sessionId, DateTime lastSeenAt, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Revokes all sessions for a user.
     /// </summary>
     Task RevokeAllUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default);

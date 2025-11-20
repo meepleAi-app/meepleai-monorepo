@@ -51,6 +51,11 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
             return AuthenticateResult.NoResult();
         }
 
+        if (Context.Items.TryGetValue(nameof(ActiveSession), out var cached) && cached is ActiveSession cachedSession)
+        {
+            return AuthenticateResult.Success(CreateTicketFromActiveSession(cachedSession, Scheme.Name));
+        }
+
         // Try to get session cookie
         var cookieName = CookieHelpers.GetSessionCookieName(Context);
         if (!Context.Request.Cookies.TryGetValue(cookieName, out var token) || string.IsNullOrWhiteSpace(token))
@@ -126,5 +131,24 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
         // This is the correct behavior for API endpoints
         Response.StatusCode = StatusCodes.Status403Forbidden;
         return Task.CompletedTask;
+    }
+
+    private static AuthenticationTicket CreateTicketFromActiveSession(ActiveSession session, string schemeName)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, session.User.Id),
+            new(ClaimTypes.Email, session.User.Email),
+            new(ClaimTypes.Role, session.User.Role)
+        };
+
+        if (!string.IsNullOrWhiteSpace(session.User.DisplayName))
+        {
+            claims.Add(new Claim(ClaimTypes.Name, session.User.DisplayName));
+        }
+
+        var identity = new ClaimsIdentity(claims, schemeName);
+        var principal = new ClaimsPrincipal(identity);
+        return new AuthenticationTicket(principal, schemeName);
     }
 }

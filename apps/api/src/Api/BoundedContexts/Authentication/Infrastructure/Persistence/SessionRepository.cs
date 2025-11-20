@@ -82,6 +82,15 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         await Task.CompletedTask;
     }
 
+    public async Task UpdateLastSeenAsync(Guid sessionId, DateTime lastSeenAt, CancellationToken cancellationToken = default)
+    {
+        await DbContext.UserSessions
+            .Where(s => s.Id == sessionId)
+            .ExecuteUpdateAsync(setters =>
+                setters.SetProperty(s => s.LastSeenAt, lastSeenAt),
+                cancellationToken);
+    }
+
     public async Task RevokeAllUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;

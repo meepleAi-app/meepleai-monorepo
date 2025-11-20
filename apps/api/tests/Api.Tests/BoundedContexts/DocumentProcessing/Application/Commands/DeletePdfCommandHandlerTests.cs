@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
+using Api.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -19,7 +20,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 /// </summary>
 public class DeletePdfCommandHandlerTests
 {
-    private readonly Mock<MeepleAiDbContext> _dbContextMock;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
     private readonly Mock<IBlobStorageService> _blobStorageServiceMock;
     private readonly Mock<IAiResponseCacheService> _cacheServiceMock;
@@ -27,7 +28,7 @@ public class DeletePdfCommandHandlerTests
 
     public DeletePdfCommandHandlerTests()
     {
-        _dbContextMock = new Mock<MeepleAiDbContext>();
+        _dbContext = DbContextHelper.CreateInMemoryDbContext();
         _scopeFactoryMock = new Mock<IServiceScopeFactory>();
         _blobStorageServiceMock = new Mock<IBlobStorageService>();
         _cacheServiceMock = new Mock<IAiResponseCacheService>();
@@ -41,7 +42,7 @@ public class DeletePdfCommandHandlerTests
     {
         // Act
         var handler = new DeletePdfCommandHandler(
-            _dbContextMock.Object,
+            _dbContext,
             _scopeFactoryMock.Object,
             _blobStorageServiceMock.Object,
             _cacheServiceMock.Object,
@@ -72,7 +73,7 @@ public class DeletePdfCommandHandlerTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new DeletePdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 null!,
                 _blobStorageServiceMock.Object,
                 _cacheServiceMock.Object,
@@ -87,7 +88,7 @@ public class DeletePdfCommandHandlerTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new DeletePdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _scopeFactoryMock.Object,
                 null!,
                 _cacheServiceMock.Object,
@@ -102,7 +103,7 @@ public class DeletePdfCommandHandlerTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new DeletePdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _scopeFactoryMock.Object,
                 _blobStorageServiceMock.Object,
                 null!,
@@ -117,7 +118,7 @@ public class DeletePdfCommandHandlerTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new DeletePdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _scopeFactoryMock.Object,
                 _blobStorageServiceMock.Object,
                 _cacheServiceMock.Object,

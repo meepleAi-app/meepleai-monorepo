@@ -35,7 +35,7 @@ public class GetAllConfigsQueryHandlerTests
             new(Guid.NewGuid(), new ConfigKey("key3"), "value3", "bool", userId)
         };
 
-        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10);
+        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10, ActiveOnly: false);
 
         _mockConfigRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -92,7 +92,7 @@ public class GetAllConfigsQueryHandlerTests
             new(Guid.NewGuid(), new ConfigKey("db.port"), "5432", "int", userId, category: "Database")
         };
 
-        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10, Category: "Database");
+        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10, Category: "Database", ActiveOnly: false);
 
         _mockConfigRepository
             .Setup(r => r.GetByCategoryAsync("Database", It.IsAny<CancellationToken>()))
@@ -122,7 +122,7 @@ public class GetAllConfigsQueryHandlerTests
             new(Guid.NewGuid(), new ConfigKey("dev.key"), "value", "string", userId, environment: "Development")
         };
 
-        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10, Environment: "Production");
+        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10, Environment: "Production", ActiveOnly: false);
 
         _mockConfigRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -154,7 +154,7 @@ public class GetAllConfigsQueryHandlerTests
                 userId));
         }
 
-        var query = new GetAllConfigsQuery(Page: 2, PageSize: 10);
+        var query = new GetAllConfigsQuery(Page: 2, PageSize: 10, ActiveOnly: false);
 
         _mockConfigRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -175,7 +175,7 @@ public class GetAllConfigsQueryHandlerTests
     public async Task Handle_WithEmptyResult_ReturnsEmptyPage()
     {
         // Arrange
-        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10);
+        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10, ActiveOnly: false);
 
         _mockConfigRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -206,7 +206,8 @@ public class GetAllConfigsQueryHandlerTests
             Page: 1,
             PageSize: 10,
             Category: "Cache",
-            Environment: "Production");
+            Environment: "Production",
+            ActiveOnly: false);
 
         _mockConfigRepository
             .Setup(r => r.GetByCategoryAsync("Cache", It.IsAny<CancellationToken>()))
@@ -225,7 +226,7 @@ public class GetAllConfigsQueryHandlerTests
     public async Task Handle_WithCancellationToken_PassesTokenToRepository()
     {
         // Arrange
-        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10);
+        var query = new GetAllConfigsQuery(Page: 1, PageSize: 10, ActiveOnly: false);
         var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 

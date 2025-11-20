@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.Infrastructure;
 using Api.Services;
+using Api.Tests.Helpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -17,7 +18,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// </summary>
 public class IndexPdfCommandHandlerTests
 {
-    private readonly Mock<MeepleAiDbContext> _dbContextMock;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ITextChunkingService> _chunkingServiceMock;
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
     private readonly Mock<IQdrantService> _qdrantServiceMock;
@@ -25,7 +26,7 @@ public class IndexPdfCommandHandlerTests
 
     public IndexPdfCommandHandlerTests()
     {
-        _dbContextMock = new Mock<MeepleAiDbContext>();
+        _dbContext = DbContextHelper.CreateInMemoryDbContext();
         _chunkingServiceMock = new Mock<ITextChunkingService>();
         _embeddingServiceMock = new Mock<IEmbeddingService>();
         _qdrantServiceMock = new Mock<IQdrantService>();
@@ -39,7 +40,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Act
         var handler = new IndexPdfCommandHandler(
-            _dbContextMock.Object,
+            _dbContext,
             _chunkingServiceMock.Object,
             _embeddingServiceMock.Object,
             _qdrantServiceMock.Object,
@@ -57,7 +58,7 @@ public class IndexPdfCommandHandlerTests
 
         // Act
         var handler = new IndexPdfCommandHandler(
-            _dbContextMock.Object,
+            _dbContext,
             _chunkingServiceMock.Object,
             _embeddingServiceMock.Object,
             _qdrantServiceMock.Object,
@@ -73,7 +74,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Act
         var handler = new IndexPdfCommandHandler(
-            _dbContextMock.Object,
+            _dbContext,
             _chunkingServiceMock.Object,
             _embeddingServiceMock.Object,
             _qdrantServiceMock.Object,

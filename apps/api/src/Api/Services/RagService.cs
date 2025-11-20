@@ -243,7 +243,7 @@ public class RagService : IRagService
             "qa",
             activity,
             stopwatch,
-            GetQaErrorResponseFactories())
+            GetQaErrorResponseFactories());
     }
 
     /// <summary>
@@ -375,7 +375,7 @@ public class RagService : IRagService
             activity,
             stopwatch,
             GetExplainErrorResponseFactories(),
-            $"topic: {topic}")
+            $"topic: {topic}");
     }
 
     private ExplainResponse CreateEmptyExplainResponse(string message)
@@ -690,7 +690,7 @@ public class RagService : IRagService
             activity,
             stopwatch,
             GetQaErrorResponseFactories(),
-            $"mode: {searchMode}")
+            $"mode: {searchMode}");
     }
 
     /// <summary>
@@ -851,6 +851,6 @@ Instructions:
             "qa_custom_prompt",
             activity,
             stopwatch,
-            GetQaErrorResponseFactories())
+            GetQaErrorResponseFactories());
     }
 }

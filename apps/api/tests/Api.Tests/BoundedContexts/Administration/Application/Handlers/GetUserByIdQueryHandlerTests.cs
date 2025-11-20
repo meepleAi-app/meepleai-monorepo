@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -20,11 +21,7 @@ public class GetUserByIdQueryHandlerTests : IDisposable
 
     public GetUserByIdQueryHandlerTests()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
-            .Options;
-
-        _dbContext = new MeepleAiDbContext(options, new Mock<IMediator>().Object, new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>().Object);
+        _dbContext = DbContextHelper.CreateInMemoryDbContext($"TestDb_{Guid.NewGuid()}");
         _handler = new GetUserByIdQueryHandler(_dbContext);
     }
 

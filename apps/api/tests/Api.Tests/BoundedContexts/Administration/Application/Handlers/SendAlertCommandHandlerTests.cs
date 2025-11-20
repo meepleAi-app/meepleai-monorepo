@@ -14,12 +14,12 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class SendAlertCommandHandlerTests
 {
-    private readonly Mock<AlertingService> _mockAlertingService;
+    private readonly Mock<IAlertingService> _mockAlertingService;
     private readonly SendAlertCommandHandler _handler;
 
     public SendAlertCommandHandlerTests()
     {
-        _mockAlertingService = new Mock<AlertingService>();
+        _mockAlertingService = new Mock<IAlertingService>();
         _handler = new SendAlertCommandHandler(_mockAlertingService.Object);
     }
 

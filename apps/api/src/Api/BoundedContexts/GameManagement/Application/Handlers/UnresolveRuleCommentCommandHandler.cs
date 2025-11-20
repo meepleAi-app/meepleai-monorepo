@@ -22,9 +22,9 @@ public class UnresolveRuleCommentCommandHandler : IRequestHandler<UnresolveRuleC
         TimeProvider timeProvider,
         ILogger<UnresolveRuleCommentCommandHandler> logger)
     {
-        _dbContext = dbContext;
-        _timeProvider = timeProvider;
-        _logger = logger;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<RuleCommentDto> Handle(UnresolveRuleCommentCommand command, CancellationToken cancellationToken)

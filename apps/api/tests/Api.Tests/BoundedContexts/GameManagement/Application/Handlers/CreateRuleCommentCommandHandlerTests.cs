@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Tests.Helpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -17,12 +18,12 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// </summary>
 public class CreateRuleCommentCommandHandlerTests
 {
-    private readonly Mock<MeepleAiDbContext> _dbContextMock;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<TimeProvider> _timeProviderMock;
 
     public CreateRuleCommentCommandHandlerTests()
     {
-        _dbContextMock = new Mock<MeepleAiDbContext>();
+        _dbContext = DbContextHelper.CreateInMemoryDbContext();
         _timeProviderMock = new Mock<TimeProvider>();
         _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
     }
@@ -37,7 +38,7 @@ public class CreateRuleCommentCommandHandlerTests
 
         // Act
         var handler = new CreateRuleCommentCommandHandler(
-            _dbContextMock.Object,
+            _dbContext,
             _timeProviderMock.Object,
             loggerMock.Object);
 
@@ -68,7 +69,7 @@ public class CreateRuleCommentCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new CreateRuleCommentCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 null!,
                 loggerMock.Object));
     }
@@ -79,7 +80,7 @@ public class CreateRuleCommentCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new CreateRuleCommentCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _timeProviderMock.Object,
                 null!));
     }

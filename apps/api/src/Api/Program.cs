@@ -211,7 +211,16 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(configuredOrigins);
         }
 
-        policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+        // Issue #1448: Whitelist specific headers instead of AllowAnyHeader() for security
+        policy
+            .WithHeaders(
+                "Content-Type",
+                "Authorization",
+                "X-Correlation-ID",
+                "X-API-Key"
+            )
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 

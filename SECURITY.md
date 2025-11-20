@@ -92,7 +92,9 @@ For comprehensive security information, including:
 ### Infrastructure Security
 
 - **HTTPS-only** in production
-- **CORS protection** with allowlist origins
+- **CORS protection** with allowlist origins and header whitelist
+  - Whitelisted headers: `Content-Type`, `Authorization`, `X-Correlation-ID`, `X-API-Key`
+  - Non-whitelisted headers are rejected (Issue #1448)
 - **CSRF protection** via SameSite cookies
 - **SQL injection prevention** via parameterized queries (EF Core)
 - **Rate limiting** on API endpoints

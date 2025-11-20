@@ -87,4 +87,49 @@ public static class RagExceptionHandler
                     (additionalInfo != null ? $" - {additionalInfo}" : ""), gameId)
         };
     }
+
+    /// <summary>
+    /// Issue #1441: Centralized exception handling dispatcher that routes exceptions to appropriate handlers.
+    /// Eliminates duplicate catch blocks across RAG service methods.
+    /// </summary>
+    /// <typeparam name="TResponse">The response type to return</typeparam>
+    /// <param name="exception">The exception that occurred</param>
+    /// <param name="logger">Logger for recording the error</param>
+    /// <param name="context">Context description (e.g., "RAG query", "RAG explain")</param>
+    /// <param name="gameId">Game ID for metrics tagging</param>
+    /// <param name="operation">Operation name for metrics (e.g., "qa", "explain")</param>
+    /// <param name="activity">OpenTelemetry activity span for tracing</param>
+    /// <param name="stopwatch">Stopwatch for measuring duration</param>
+    /// <param name="errorResponseFactories">Dictionary mapping exception type names to error response factories</param>
+    /// <returns>Error response of type TResponse</returns>
+    public static TResponse HandleExceptionDispatch<TResponse>(
+        Exception exception,
+        ILogger logger,
+        string context,
+        string gameId,
+        string operation,
+        Activity? activity,
+        Stopwatch stopwatch,
+        Dictionary<string, Func<TResponse>> errorResponseFactories,
+        string? additionalInfo = null)
+    {
+        var exceptionTypeName = exception.GetType().Name;
+
+        // Get the appropriate error response factory, defaulting to generic Exception handler
+        var errorResponseFactory = errorResponseFactories.TryGetValue(exceptionTypeName, out var factory)
+            ? factory
+            : errorResponseFactories.GetValueOrDefault("Exception", errorResponseFactories.Values.First());
+
+        var logAction = GetLogAction(exceptionTypeName, context, gameId, additionalInfo);
+
+        return HandleException(
+            exception,
+            logger,
+            logAction,
+            gameId,
+            operation,
+            activity,
+            stopwatch,
+            errorResponseFactory);
+    }
 }

@@ -118,6 +118,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IQueryExpansionService, QueryExpansionService>();
         services.AddScoped<ISearchResultReranker, SearchResultReranker>();
         services.AddScoped<ICitationExtractorService, CitationExtractorService>();
+        services.AddScoped<IRagConfigurationProvider, RagConfigurationProvider>(); // Issue #1441: RAG configuration provider
 
         // RAG and search services
         services.AddScoped<IRagService, RagService>(); // AI-04: RAG service (now a facade over specialized sub-services)

@@ -1,3 +1,4 @@
+using Api.Helpers;
 using Api.Observability;
 using Api.Services.Qdrant;
 using Microsoft.Extensions.Configuration;
@@ -151,16 +152,13 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateSuccess(validChunks.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - must catch all exceptions to return structured IndexResult
-        // Vector indexing may fail due to network issues, Qdrant errors, or validation failures
+        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error indexing document chunks for PDF {PdfId}", pdfId);
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, $"indexing document chunks for PDF {pdfId}",
+                errorMessage => IndexResult.CreateFailure(errorMessage),
+                activity);
         }
 #pragma warning restore CA1031
     }
@@ -210,16 +208,13 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateSuccess(results);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - must catch all exceptions to return structured SearchResult
-        // Vector search may fail due to network issues, Qdrant errors, or invalid query parameters
+        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during search for game {GameId}", gameId);
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, $"vector search for game {gameId}",
+                errorMessage => SearchResult.CreateFailure(errorMessage),
+                activity);
         }
 #pragma warning restore CA1031
     }
@@ -237,12 +232,12 @@ public class QdrantService : IQdrantService
             return true;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - must catch all exceptions to return boolean status
-        // Vector deletion may fail due to network issues, Qdrant errors, or filter validation
+        // Issue #1444: Use centralized exception handling for Result pattern (boolean return)
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting vectors for PDF {PdfId}", pdfId);
-            return false;
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, $"deleting vectors for PDF {pdfId}",
+                _ => false);
         }
 #pragma warning restore CA1031
     }
@@ -276,12 +271,12 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateSuccess(chunks.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - must catch all exceptions to return structured IndexResult
-        // Vector indexing may fail due to network issues, Qdrant errors, or validation failures
+        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error indexing chunks with metadata");
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, "indexing chunks with metadata",
+                errorMessage => IndexResult.CreateFailure(errorMessage));
         }
 #pragma warning restore CA1031
     }
@@ -310,12 +305,12 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateSuccess(results);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - must catch all exceptions to return structured SearchResult
-        // Vector search may fail due to network issues, Qdrant errors, or invalid query parameters
+        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during search for category {Category}", category);
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, $"vector search for category {category}",
+                errorMessage => SearchResult.CreateFailure(errorMessage));
         }
 #pragma warning restore CA1031
     }
@@ -368,17 +363,13 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateSuccess(chunks.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - must catch all exceptions to return structured IndexResult
-        // Vector indexing with language metadata may fail due to network issues, Qdrant errors, or validation
+        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error indexing document chunks for PDF {PdfId} with language {Language}",
-                pdfId, language);
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, $"indexing document chunks for PDF {pdfId} with language {language}",
+                errorMessage => IndexResult.CreateFailure(errorMessage),
+                activity);
         }
 #pragma warning restore CA1031
     }
@@ -426,16 +417,13 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateSuccess(results);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - must catch all exceptions to return structured SearchResult
-        // Vector search with language filtering may fail due to network issues or Qdrant errors
+        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during search for game {GameId} and language {Language}", gameId, language);
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, $"vector search for game {gameId} and language {language}",
+                errorMessage => SearchResult.CreateFailure(errorMessage),
+                activity);
         }
 #pragma warning restore CA1031
     }
@@ -453,12 +441,12 @@ public class QdrantService : IQdrantService
             return true;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - must catch all exceptions to return boolean status
-        // Vector deletion by category may fail due to network issues, Qdrant errors, or filter validation
+        // Issue #1444: Use centralized exception handling for Result pattern (boolean return)
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting vectors for category {Category}", category);
-            return false;
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, $"deleting vectors for category {category}",
+                _ => false);
         }
 #pragma warning restore CA1031
     }

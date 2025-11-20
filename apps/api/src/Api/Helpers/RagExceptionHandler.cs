@@ -132,4 +132,97 @@ public static class RagExceptionHandler
             stopwatch,
             errorResponseFactory);
     }
+
+    /// <summary>
+    /// Issue #1444: Generic service exception handler for Result pattern.
+    /// Handles exceptions from service operations that return result objects with Success/ErrorMessage properties.
+    /// </summary>
+    /// <typeparam name="TResult">Result type that supports CreateFailure(string) static method</typeparam>
+    /// <param name="exception">The exception that occurred</param>
+    /// <param name="logger">Logger for recording the error</param>
+    /// <param name="context">Context description (e.g., "vector search", "embedding generation")</param>
+    /// <param name="failureFactory">Factory function to create failure result from error message</param>
+    /// <param name="activity">Optional OpenTelemetry activity span for tracing</param>
+    /// <param name="useUserFriendlyMessage">If true, uses user-friendly messages instead of technical details</param>
+    /// <returns>Failure result of type TResult</returns>
+    public static TResult HandleServiceException<TResult>(
+        Exception exception,
+        ILogger logger,
+        string context,
+        Func<string, TResult> failureFactory,
+        Activity? activity = null,
+        bool useUserFriendlyMessage = true)
+    {
+        // Log the error with context (always technical for diagnostics)
+        logger.LogError(exception, "Error during {Context}: {ErrorType} - {ErrorMessage}",
+            context, exception.GetType().Name, exception.Message);
+
+        // Record exception in trace span if available
+        if (activity != null)
+        {
+            activity.SetTag("success", false);
+            activity.SetTag("error.type", exception.GetType().Name);
+            activity.SetTag("error.message", exception.Message);
+            activity.SetStatus(ActivityStatusCode.Error, exception.Message);
+        }
+
+        // Generate user-facing error message
+        var userMessage = useUserFriendlyMessage
+            ? GetUserFriendlyMessage(exception, $"{context} failed: {exception.Message}")
+            : $"{context} failed: {exception.Message}";
+
+        // Return failure result with appropriate message
+        return failureFactory(userMessage);
+    }
+
+    /// <summary>
+    /// Issue #1444: Log and re-throw pattern for service boundaries.
+    /// Logs exception with context before re-throwing for upstream handling.
+    /// </summary>
+    /// <param name="exception">The exception to log and re-throw</param>
+    /// <param name="logger">Logger for recording the error</param>
+    /// <param name="context">Context description for logging</param>
+    /// <param name="additionalContext">Optional additional context data</param>
+    public static void LogAndRethrow(
+        Exception exception,
+        ILogger logger,
+        string context,
+        params object?[] additionalContext)
+    {
+        // Log with context before re-throwing
+        if (additionalContext.Length > 0)
+        {
+            logger.LogError(exception, $"Error during {context} - Additional context: {{@Context}}", additionalContext);
+        }
+        else
+        {
+            logger.LogError(exception, "Error during {Context}", context);
+        }
+
+        // Re-throw for upstream handling (use 'throw;' to preserve stack trace)
+        throw;
+    }
+
+    /// <summary>
+    /// Issue #1444: Get user-friendly error message based on exception type.
+    /// Maps technical exceptions to user-facing messages while preserving detailed logging.
+    /// </summary>
+    /// <param name="exception">The exception to map</param>
+    /// <param name="defaultMessage">Default message if no mapping exists</param>
+    /// <returns>User-friendly error message</returns>
+    public static string GetUserFriendlyMessage(Exception exception, string defaultMessage)
+    {
+        return exception switch
+        {
+            TaskCanceledException => "Request timed out. Please try again.",
+            TimeoutException => "Request timed out. Please try again.",
+            HttpRequestException httpEx => $"Network error: {(httpEx.StatusCode.HasValue ? $"HTTP {(int)httpEx.StatusCode}" : "Connection failed")}",
+            JsonException => "Invalid response format from service.",
+            InvalidOperationException invEx when invEx.Message.Contains("configuration", StringComparison.OrdinalIgnoreCase)
+                => "Configuration error. Please contact support.",
+            UnauthorizedAccessException => "Authentication failed. Please check your credentials.",
+            ArgumentException => "Invalid request parameters.",
+            _ => defaultMessage
+        };
+    }
 }

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.Helpers;
 
 namespace Api.Services;
 
@@ -159,33 +160,13 @@ public class EmbeddingService : IEmbeddingService
                 return await GenerateOpenAIEmbeddingsAsync(texts, ct);
             }
         }
-        catch (TaskCanceledException ex)
-        {
-            _logger.LogError(ex, "Embedding generation timed out");
-            return EmbeddingResult.CreateFailure("Request timed out");
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "HTTP request failed during embedding generation");
-            return EmbeddingResult.CreateFailure($"HTTP error: {ex.Message}");
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to deserialize embedding response");
-            return EmbeddingResult.CreateFailure("Invalid response format");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation during embedding generation");
-            return EmbeddingResult.CreateFailure($"Configuration error: {ex.Message}");
-        }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - external API calls with result pattern
-        // Returns domain result object instead of throwing. Callers check Success flag.
+        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during embedding generation");
-            return EmbeddingResult.CreateFailure($"Error: {ex.Message}");
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, "embedding generation",
+                errorMessage => EmbeddingResult.CreateFailure(errorMessage));
         }
 #pragma warning restore CA1031
     }
@@ -329,33 +310,13 @@ public class EmbeddingService : IEmbeddingService
                 return await GenerateOpenRouterEmbeddingAsync(texts, language, ct);
             }
         }
-        catch (TaskCanceledException ex)
-        {
-            _logger.LogError(ex, "Embedding generation timed out for language {Language}", language);
-            return EmbeddingResult.CreateFailure("Request timed out");
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "HTTP request failed during embedding generation for language {Language}", language);
-            return EmbeddingResult.CreateFailure($"HTTP error: {ex.Message}");
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to deserialize embedding response for language {Language}", language);
-            return EmbeddingResult.CreateFailure("Invalid response format");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation during embedding generation for language {Language}", language);
-            return EmbeddingResult.CreateFailure($"Configuration error: {ex.Message}");
-        }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - external API calls with result pattern
-        // Returns domain result object instead of throwing. Callers check Success flag.
+        // Issue #1444: Use centralized exception handling for Result pattern
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during embedding generation for language {Language}", language);
-            return EmbeddingResult.CreateFailure($"Error: {ex.Message}");
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, $"embedding generation for language {language}",
+                errorMessage => EmbeddingResult.CreateFailure(errorMessage));
         }
 #pragma warning restore CA1031
     }
@@ -414,28 +375,13 @@ public class EmbeddingService : IEmbeddingService
 
             return EmbeddingResult.CreateSuccess(embeddingResponse.Embeddings);
         }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogWarning(ex, "Local embedding service unavailable");
-            return EmbeddingResult.CreateFailure("Local service unavailable");
-        }
-        catch (TaskCanceledException ex)
-        {
-            _logger.LogWarning(ex, "Local embedding service request timed out");
-            return EmbeddingResult.CreateFailure("Local service timeout");
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to deserialize local embedding service response");
-            return EmbeddingResult.CreateFailure("Invalid local service response");
-        }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - external API calls with fallback chain
-        // Local service failures return result object to enable fallback to Ollama/OpenRouter.
+        // Issue #1444: Use centralized exception handling for Result pattern (fallback chain)
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error calling local embedding service");
-            return EmbeddingResult.CreateFailure($"Local service error: {ex.Message}");
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, "local embedding service",
+                errorMessage => EmbeddingResult.CreateFailure(errorMessage));
         }
 #pragma warning restore CA1031
     }

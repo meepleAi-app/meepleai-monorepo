@@ -22,6 +22,11 @@ namespace Api.Tests.Services;
 /// Tests establish performance baseline for RAG pipeline with HybridLlmService
 /// and verify P95 latency meets <3000ms target for all RAG methods.
 /// </summary>
+/// <remarks>
+/// CA5394 suppressed: Random.Shared is used for performance test latency simulation only,
+/// not for cryptographic purposes. This is safe and acceptable for test code.
+/// </remarks>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Random.Shared used for test latency simulation only, not cryptographic purposes")]
 public class RagServicePerformanceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;

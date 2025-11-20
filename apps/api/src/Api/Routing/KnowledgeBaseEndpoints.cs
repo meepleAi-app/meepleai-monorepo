@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
+using Api.Helpers;
 using Api.Infrastructure.Entities;
 using Api.Middleware;
 using Api.Models;
@@ -35,9 +36,11 @@ public static class KnowledgeBaseEndpoints
                 return Results.BadRequest(new { error = "Invalid gameId format" });
             }
 
-            if (string.IsNullOrWhiteSpace(req.query))
+            // Issue #1445: Use centralized query validation
+            var queryError = QueryValidator.ValidateQuery(req.query);
+            if (queryError != null)
             {
-                return Results.BadRequest(new { error = "Query is required" });
+                return Results.BadRequest(new { error = queryError });
             }
 
             logger.LogInformation(
@@ -89,9 +92,11 @@ public static class KnowledgeBaseEndpoints
                 return Results.BadRequest(new { error = "Invalid gameId format" });
             }
 
-            if (string.IsNullOrWhiteSpace(req.query))
+            // Issue #1445: Use centralized query validation
+            var queryError = QueryValidator.ValidateQuery(req.query);
+            if (queryError != null)
             {
-                return Results.BadRequest(new { error = "Query is required" });
+                return Results.BadRequest(new { error = queryError });
             }
 
             logger.LogInformation(

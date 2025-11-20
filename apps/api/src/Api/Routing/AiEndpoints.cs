@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Configuration;
 using Api.Extensions;
+using Api.Helpers;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
@@ -687,9 +688,11 @@ public static class AiEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (string.IsNullOrWhiteSpace(req.question))
+            // Issue #1445: Use centralized query validation
+            var queryError = QueryValidator.ValidateQuery(req.question);
+            if (queryError != null)
             {
-                return Results.BadRequest(new { error = "question is required" });
+                return Results.BadRequest(new { error = queryError });
             }
 
             var startTime = DateTime.UtcNow;
@@ -759,10 +762,11 @@ public static class AiEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            // Validate query parameter
-            if (string.IsNullOrWhiteSpace(q))
+            // Issue #1445: Use centralized query validation
+            var queryError = QueryValidator.ValidateQuery(q);
+            if (queryError != null)
             {
-                return Results.BadRequest(new { error = "Query parameter 'q' is required" });
+                return Results.BadRequest(new { error = queryError });
             }
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
@@ -852,9 +856,11 @@ public static class AiEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (string.IsNullOrWhiteSpace(q))
+            // Issue #1445: Use centralized query validation
+            var queryError = QueryValidator.ValidateQuery(q);
+            if (queryError != null)
             {
-                return Results.BadRequest(new { error = "Query parameter 'q' is required" });
+                return Results.BadRequest(new { error = queryError });
             }
 
             logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, q);

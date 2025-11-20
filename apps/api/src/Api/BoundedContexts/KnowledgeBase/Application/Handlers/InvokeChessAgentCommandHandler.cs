@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.Helpers;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -44,9 +45,11 @@ public sealed class InvokeChessAgentCommandHandler
         InvokeChessAgentCommand request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Question))
+        // Issue #1445: Use centralized query validation
+        var queryError = QueryValidator.ValidateQuery(request.Question);
+        if (queryError != null)
         {
-            return CreateEmptyResponse("Please provide a question.");
+            return CreateEmptyResponse(queryError);
         }
 
         try

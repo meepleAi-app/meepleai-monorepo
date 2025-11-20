@@ -34,16 +34,12 @@ public class KeywordSearchService : IKeywordSearchService
         List<string>? boostTerms = null,
         CancellationToken cancellationToken = default)
     {
-        // Security: Validate query length to prevent DoS attacks
-        if (query?.Length > 2000)
+        // Issue #1445: Use centralized query validation
+        var queryError = QueryValidator.ValidateQuery(query);
+        if (queryError != null)
         {
-            _logger.LogWarning("Query exceeds maximum length: {Length} characters", query.Length);
-            throw new ArgumentException("Query exceeds maximum length of 2000 characters", nameof(query));
-        }
-
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            _logger.LogWarning("Empty query provided to KeywordSearchService");
+            _logger.LogWarning("Invalid query provided to KeywordSearchService: {Error}", queryError);
+            // Return empty results for invalid queries (maintains existing behavior)
             return new List<KeywordSearchResult>();
         }
 
@@ -142,14 +138,11 @@ public class KeywordSearchService : IKeywordSearchService
         int limit = 10,
         CancellationToken cancellationToken = default)
     {
-        // Security: Validate query length
-        if (query?.Length > 2000)
+        // Issue #1445: Use centralized query validation
+        var queryError = QueryValidator.ValidateQuery(query);
+        if (queryError != null)
         {
-            throw new ArgumentException("Query exceeds maximum length of 2000 characters", nameof(query));
-        }
-
-        if (string.IsNullOrWhiteSpace(query))
-        {
+            // Return empty results for invalid queries (maintains existing behavior)
             return new List<KeywordDocumentResult>();
         }
 

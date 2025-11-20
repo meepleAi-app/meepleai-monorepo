@@ -77,7 +77,7 @@ public class OpenRouterLlmClientTests
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
+            .ReturnsAsync((HttpRequestMessage _, CancellationToken _) => new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.OK,
                 Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
@@ -248,7 +248,6 @@ public class OpenRouterLlmClientTests
     public async Task Test09_ConcurrentRequests_HandledCorrectly()
     {
         // Arrange
-        var mockHandler = new Mock<HttpMessageHandler>();
         var responseJson = JsonSerializer.Serialize(new
         {
             id = "gen-concurrent",
@@ -256,18 +255,13 @@ public class OpenRouterLlmClientTests
             usage = new { prompt_tokens = 5, completion_tokens = 3, total_tokens = 8 }
         });
 
-        mockHandler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
-            });
+        var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.OK,
+            Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
+        });
 
-        var client = CreateClient(mockHandler.Object);
+        var client = CreateClient(handler);
 
         // Act - 5 concurrent
         var tasks = Enumerable.Range(0, 5)
@@ -285,8 +279,8 @@ public class OpenRouterLlmClientTests
     private static OpenRouterLlmClient CreateClient(HttpMessageHandler? handler = null)
     {
         var mockHttpClientFactory = new Mock<IHttpClientFactory>();
-        var mockHandler = handler ?? new Mock<HttpMessageHandler>().Object;
-        var httpClient = new HttpClient(mockHandler)
+        var handlerInstance = handler ?? new Mock<HttpMessageHandler>().Object;
+        var httpClient = new HttpClient(handlerInstance)
         {
             BaseAddress = new Uri("https://openrouter.ai/api/v1/")
         };
@@ -321,5 +315,20 @@ public class OpenRouterLlmClientTests
         var logger = Mock.Of<ILogger<OpenRouterLlmClient>>();
 
         return new OpenRouterLlmClient(mockHttpClientFactory.Object, config, mockCostCalculator.Object, logger);
+    }
+
+    private sealed class StubHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> _responder;
+
+        public StubHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> responder)
+        {
+            _responder = responder;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_responder(request, cancellationToken));
+        }
     }
 }

@@ -70,7 +70,7 @@ public class OllamaLlmClientTests
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
+            .ReturnsAsync((HttpRequestMessage _, CancellationToken _) => new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.OK,
                 Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
@@ -243,7 +243,6 @@ public class OllamaLlmClientTests
     public async Task Test09_ConcurrentRequests_HandledCorrectly()
     {
         // Arrange
-        var mockHandler = new Mock<HttpMessageHandler>();
         var responseJson = JsonSerializer.Serialize(new
         {
             model = "llama3:8b",
@@ -251,18 +250,13 @@ public class OllamaLlmClientTests
             done = true
         });
 
-        mockHandler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
-            });
+        var handler = new StubHttpMessageHandler((_, _) => new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.OK,
+            Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
+        });
 
-        var client = CreateClient(mockHandler.Object);
+        var client = CreateClient(handler);
 
         // Act - 5 concurrent requests
         var tasks = Enumerable.Range(0, 5)
@@ -381,5 +375,20 @@ public class OllamaLlmClientTests
         var logger = Mock.Of<ILogger<OllamaLlmClient>>();
 
         return new OllamaLlmClient(mockHttpClientFactory.Object, config, mockCostCalculator.Object, logger);
+    }
+
+    private sealed class StubHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> _responder;
+
+        public StubHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> responder)
+        {
+            _responder = responder;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_responder(request, cancellationToken));
+        }
     }
 }

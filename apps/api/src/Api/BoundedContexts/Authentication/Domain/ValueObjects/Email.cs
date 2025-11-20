@@ -1,5 +1,5 @@
-using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Domain.Validation;
 using System.Text.RegularExpressions;
 
 namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -20,18 +20,16 @@ public sealed class Email : ValueObject
 
     public Email(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            throw new ValidationException(nameof(Email), "Email cannot be empty");
-
-        if (value.Length > 256)
-            throw new ValidationException(nameof(Email), "Email cannot exceed 256 characters");
-
-        var trimmedValue = value.Trim();
-        if (!EmailRegex.IsMatch(trimmedValue))
-            throw new ValidationException(nameof(Email), $"Invalid email format: {value}");
+        var validatedEmail = value
+            .NotNullOrWhiteSpace(nameof(Email), "Email cannot be empty")
+            .Then(e => e.Trim().MaxLength(256, nameof(Email), "Email cannot exceed 256 characters"))
+            .Then(e => e.Must(
+                email => EmailRegex.IsMatch(email),
+                $"Invalid email format: {value}"))
+            .ThrowIfFailure(nameof(Email));
 
         // Normalize to lowercase for consistency
-        Value = trimmedValue.ToLowerInvariant();
+        Value = validatedEmail.ToLowerInvariant();
     }
 
     protected override IEnumerable<object?> GetEqualityComponents()

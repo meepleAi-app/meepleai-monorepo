@@ -25,6 +25,9 @@ public class DeleteConfigurationCommandHandler : ICommandHandler<DeleteConfigura
         if (config == null)
             return false;
 
+        // Mark as deleted to raise domain event
+        config.MarkAsDeleted();
+
         await _configurationRepository.DeleteAsync(config, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

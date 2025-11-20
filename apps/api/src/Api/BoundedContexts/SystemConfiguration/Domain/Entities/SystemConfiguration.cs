@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SystemConfiguration.Domain.Events;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 using SystemConfigurationAggregate = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
@@ -58,6 +59,18 @@ public sealed class SystemConfiguration : AggregateRoot<Guid>
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
         CreatedByUserId = createdByUserId;
+
+        // Raise domain event
+        AddDomainEvent(new ConfigurationCreatedEvent(
+            configurationId: id,
+            key: key,
+            value: value,
+            valueType: valueType,
+            category: category,
+            environment: environment,
+            requiresRestart: requiresRestart,
+            createdByUserId: createdByUserId
+        ));
     }
 
     public void UpdateValue(string newValue, Guid updatedByUserId)
@@ -65,11 +78,22 @@ public sealed class SystemConfiguration : AggregateRoot<Guid>
         if (string.IsNullOrWhiteSpace(newValue))
             throw new ArgumentException("Value cannot be empty", nameof(newValue));
 
+        var previousValue = Value;
         PreviousValue = Value;
         Value = newValue;
         Version++;
         UpdatedAt = DateTime.UtcNow;
         UpdatedByUserId = updatedByUserId;
+
+        // Raise domain event
+        AddDomainEvent(new ConfigurationUpdatedEvent(
+            configurationId: Id,
+            key: Key,
+            previousValue: previousValue,
+            newValue: newValue,
+            version: Version,
+            updatedByUserId: updatedByUserId
+        ));
     }
 
     public void Activate()
@@ -79,6 +103,14 @@ public sealed class SystemConfiguration : AggregateRoot<Guid>
             IsActive = true;
             LastToggledAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
+
+            // Raise domain event
+            AddDomainEvent(new ConfigurationToggledEvent(
+                configurationId: Id,
+                key: Key,
+                isActive: true,
+                toggledByUserId: UpdatedByUserId ?? CreatedByUserId
+            ));
         }
     }
 
@@ -89,6 +121,14 @@ public sealed class SystemConfiguration : AggregateRoot<Guid>
             IsActive = false;
             LastToggledAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
+
+            // Raise domain event
+            AddDomainEvent(new ConfigurationToggledEvent(
+                configurationId: Id,
+                key: Key,
+                isActive: false,
+                toggledByUserId: UpdatedByUserId ?? CreatedByUserId
+            ));
         }
     }
 
@@ -97,11 +137,36 @@ public sealed class SystemConfiguration : AggregateRoot<Guid>
         if (string.IsNullOrEmpty(PreviousValue))
             throw new InvalidOperationException("No previous value to rollback to");
 
+        var currentValue = Value;
         var temp = Value;
         Value = PreviousValue;
         PreviousValue = temp;
         Version++;
         UpdatedAt = DateTime.UtcNow;
         UpdatedByUserId = rolledBackByUserId;
+
+        // Raise domain event (rollback is a type of update)
+        AddDomainEvent(new ConfigurationUpdatedEvent(
+            configurationId: Id,
+            key: Key,
+            previousValue: currentValue,
+            newValue: Value,
+            version: Version,
+            updatedByUserId: rolledBackByUserId
+        ));
+    }
+
+    /// <summary>
+    /// Marks the configuration for deletion and raises a domain event.
+    /// Call this before removing the entity from the repository.
+    /// </summary>
+    public void MarkAsDeleted()
+    {
+        AddDomainEvent(new ConfigurationDeletedEvent(
+            configurationId: Id,
+            key: Key,
+            category: Category,
+            environment: Environment
+        ));
     }
 }

@@ -1,18 +1,18 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
-using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
 /// <summary>
 /// Handles cache invalidation for configurations.
-/// Uses HybridCache for L1+L2 cache management.
+/// Uses IHybridCacheService for tag-based invalidation support.
 /// </summary>
 public class InvalidateCacheCommandHandler : ICommandHandler<InvalidateCacheCommand, Unit>
 {
-    private readonly HybridCache _cache;
+    private readonly IHybridCacheService _cache;
 
-    public InvalidateCacheCommandHandler(HybridCache cache)
+    public InvalidateCacheCommandHandler(IHybridCacheService cache)
     {
         _cache = cache;
     }
@@ -21,16 +21,18 @@ public class InvalidateCacheCommandHandler : ICommandHandler<InvalidateCacheComm
     {
         if (command.Key != null)
         {
-            // Invalidate specific key
-            var cacheKey = $"config:{command.Key}";
-            await _cache.RemoveAsync(cacheKey, cancellationToken);
+            // Invalidate specific key across all environments
+            var environments = new[] { "Development", "Staging", "Production", "All" };
+            foreach (var env in environments)
+            {
+                var cacheKey = $"config:{command.Key}:{env}";
+                await _cache.RemoveAsync(cacheKey, cancellationToken);
+            }
         }
         else
         {
-            // Note: HybridCache doesn't have RemoveByPrefix
-            // This is a limitation - full cache invalidation would require tracking all keys
-            // For now, we'll just log a warning
-            // In production, consider using a separate cache tag system
+            // Invalidate all configuration cache entries using tag-based invalidation
+            await _cache.RemoveByTagAsync("config:category:general", cancellationToken);
         }
 
         return default;

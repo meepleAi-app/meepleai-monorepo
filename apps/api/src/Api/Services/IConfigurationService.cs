@@ -36,8 +36,12 @@ public interface IConfigurationService
     /// </summary>
     /// <param name="key">Configuration key (e.g., "RateLimit:Admin:MaxTokens")</param>
     /// <param name="environment">Optional environment filter (defaults to current environment)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Configuration DTO or null if not found</returns>
-    Task<SystemConfigurationDto?> GetConfigurationByKeyAsync(string key, string? environment = null);
+    Task<SystemConfigurationDto?> GetConfigurationByKeyAsync(
+        string key,
+        string? environment = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get a typed configuration value by key.

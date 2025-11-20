@@ -34,6 +34,9 @@ namespace Api.Tests.Integration;
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL, transaction rollback between tests
 /// </remarks>
 [Collection("OAuth")]
+[Trait("Category", "Integration")]
+[Trait("Dependency", "PostgreSQL")]
+[Trait("BoundedContext", "Authentication")]
 public class OAuthIntegrationTests : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
@@ -154,6 +157,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
     public async Task OAuthCallback_NewUser_CreatesUserAndLinksAccount()
     {
         // Arrange
+        await ResetDatabaseAsync();
+
         var userId = Guid.NewGuid();
         var email = new Email(NewUserEmail);
 
@@ -210,6 +215,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
     public async Task OAuthCallback_ExistingUser_LinksAccount()
     {
         // Arrange
+        await ResetDatabaseAsync();
+
         var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
         var oauthAccountRepository = _serviceProvider!.GetRequiredService<IOAuthAccountRepository>();
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
@@ -267,6 +274,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
     public async Task UnlinkOAuthAccount_ValidProvider_RemovesAccount()
     {
         // Arrange
+        await ResetDatabaseAsync();
+
         var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
         var oauthAccountRepository = _serviceProvider!.GetRequiredService<IOAuthAccountRepository>();
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
@@ -344,6 +353,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
     public async Task UnlinkOAuthAccount_LastAuthMethod_Fails()
     {
         // Arrange
+        await ResetDatabaseAsync();
+
         var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
         var oauthAccountRepository = _serviceProvider!.GetRequiredService<IOAuthAccountRepository>();
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
@@ -405,6 +416,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
     public async Task GetLinkedOAuthAccounts_ReturnsAllAccounts()
     {
         // Arrange
+        await ResetDatabaseAsync();
+
         var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
         var oauthAccountRepository = _serviceProvider!.GetRequiredService<IOAuthAccountRepository>();
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
@@ -502,6 +515,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
     public async Task MultipleOAuthAccounts_UserManagement()
     {
         // Arrange
+        await ResetDatabaseAsync();
+
         var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
         var oauthAccountRepository = _serviceProvider!.GetRequiredService<IOAuthAccountRepository>();
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
@@ -618,6 +633,42 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         await userRepository.AddAsync(testUser, TestCancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
+    }
+
+    private async Task ResetDatabaseAsync()
+    {
+        // Clear all data from database tables to ensure test isolation
+        // This prevents test flakiness due to data contamination
+        var tableNames = await _dbContext!.Database
+            .SqlQueryRaw<string>(
+                @"SELECT tablename
+                  FROM pg_tables
+                  WHERE schemaname = 'public'
+                  AND tablename != '__EFMigrationsHistory'")
+            .ToListAsync(TestCancellationToken);
+
+        if (tableNames.Count > 0)
+        {
+            // Disable foreign key constraints temporarily for cleanup
+            await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'replica';", TestCancellationToken);
+
+            try
+            {
+                // Truncate all tables with CASCADE to handle FK dependencies
+                foreach (var tableName in tableNames)
+                {
+                    await _dbContext.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE \"{tableName}\" CASCADE;", TestCancellationToken);
+                }
+            }
+            finally
+            {
+                // Re-enable foreign key constraints
+                await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'origin';", TestCancellationToken);
+            }
+        }
+
+        // Recreate test data after reset
+        await CreateTestDataAsync();
     }
 
     #endregion

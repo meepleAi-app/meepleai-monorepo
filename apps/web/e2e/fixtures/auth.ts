@@ -3,6 +3,47 @@ import { test as base, Page, Route } from '@playwright/test';
 const API_BASE = 'http://localhost:5080';
 
 /**
+ * Authenticate via real backend API and get session cookie
+ * Use this for E2E tests that require real backend integration
+ *
+ * @param page - Playwright page object
+ * @param email - User email
+ * @param password - User password
+ * @returns true if authentication successful, false otherwise
+ */
+export async function authenticateViaAPI(
+  page: Page,
+  email: string,
+  password: string
+): Promise<boolean> {
+  try {
+    // Call login API directly
+    const response = await page.request.post(`${API_BASE}/api/v1/auth/login`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: {
+        email: email,
+        password: password,
+      },
+    });
+
+    if (response.ok()) {
+      console.log('✅ Authentication successful via API');
+      // Cookies should be automatically set by the response
+      return true;
+    } else {
+      const body = await response.text();
+      console.error('❌ Authentication failed:', response.status(), body);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Authentication error:', error);
+    return false;
+  }
+}
+
+/**
  * Setup mock auth routes for testing (based on authenticated.spec.ts pattern)
  * This is more reliable than trying to use real login which has UI/timing issues
  */

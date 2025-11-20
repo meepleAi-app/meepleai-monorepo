@@ -144,23 +144,23 @@ test.describe('Keyboard Navigation Tests', () => {
     await expect(page.getByRole('textbox', { name: 'Email' })).toBeVisible({ timeout: 3000 });
   });
 
-  test('should be able to close modal with ESC key', async ({ page }) => {
+  test.skip('should be able to close modal with ESC key', async ({ page }) => {
+    // Skipped until Fase 5 AccessibleModal implementation
+    // TODO: Enable when AccessibleModal is used in index.tsx
     await page.goto('/');
 
     // Open modal
     await page.click(`text=${t('home.getStartedButton')}`, { force: true });
     await page.waitForSelector('input[type="email"]', { state: 'visible' });
 
-    // Close with ESC (this will fail until AccessibleModal is used in index.tsx)
+    // Close with ESC
     await page.keyboard.press('Escape');
 
     // Modal should close (wait a bit for animation)
     await page.waitForTimeout(500);
 
-    // This test will fail until Fase 5 is implemented
-    // For now, just check if modal is still visible
-    const stillVisible = await page.isVisible('input[type="email"]');
-    console.log(`Modal still visible after ESC: ${stillVisible}`);
+    // Verify modal is closed
+    await expect(page.locator('input[type="email"]')).not.toBeVisible();
   });
 });
 
@@ -211,14 +211,14 @@ test.describe('Screen Reader - Semantic HTML', () => {
     expect(h1Text).toContain('AI');
   });
 
-  test('landing page should have main landmark', async ({ page }) => {
+  test.skip('landing page should have main landmark', async ({ page }) => {
+    // Skipped until Fase 5 adds skip link + main wrapper
+    // TODO: Enable when semantic HTML landmarks are added
     await page.goto('/');
 
     // Should have <main> element or role="main"
     const mainExists = await page.locator('main, [role="main"]').count();
-
-    // This might be 0 until we add skip link + main wrapper in Fase 5
-    console.log(`Main landmarks found: ${mainExists}`);
+    expect(mainExists).toBeGreaterThan(0);
   });
 
   test('forms should have proper labels', async ({ page }) => {

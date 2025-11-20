@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
+import { authenticateViaAPI } from './fixtures/auth';
 
 /**
  * Complete User Journey E2E Test: Upload → Chat with REAL RAG Integration
@@ -20,40 +22,6 @@ import { test, expect } from '@playwright/test';
  *
  * Note: This is a REAL INTEGRATION test - uses actual backend APIs
  */
-
-const API_BASE = 'http://localhost:5080';
-
-/**
- * Helper to authenticate via API and get session cookie
- * Uses real backend login endpoint
- */
-async function authenticateViaAPI(page: any, email: string, password: string): Promise<boolean> {
-  try {
-    // Call login API directly
-    const response = await page.request.post(`${API_BASE}/api/v1/auth/login`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: {
-        email: email,
-        password: password,
-      },
-    });
-
-    if (response.ok()) {
-      console.log('✅ Authentication successful via API');
-      // Cookies should be automatically set by the response
-      return true;
-    } else {
-      const body = await response.text();
-      console.error('❌ Authentication failed:', response.status(), body);
-      return false;
-    }
-  } catch (error) {
-    console.error('❌ Authentication error:', error);
-    return false;
-  }
-}
 
 test.describe('Complete User Journey: Real Backend Integration', () => {
   test.setTimeout(180000); // 3 minutes for real processing
@@ -139,7 +107,8 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
 
     await test.step('Upload HARMONIES PDF file', async () => {
       const fileInput = page.locator('input[type="file"]').first();
-      const pdfPath = 'D:\\Repositories\\meepleai-monorepo\\data\\Test-EN-LIBELLUD_HARMONIES_RULES_EN.pdf';
+      // Use relative path from project root (works on all OS)
+      const pdfPath = path.join(__dirname, '../../../data/Test-EN-LIBELLUD_HARMONIES_RULES_EN.pdf');
 
       // Upload the file
       await fileInput.setInputFiles(pdfPath);
@@ -162,15 +131,21 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       // Wait for processing indicators
       // Real backend processing can take 10-60 seconds
 
-      // Wait for success message or processing completion
-      await page.waitForTimeout(5000);
-
-      // Check for success indicators
-      const pageContent = await page.textContent('body');
-      console.log('Upload status:', pageContent?.substring(0, 500));
-
-      // Wait additional time for processing
-      await page.waitForTimeout(30000); // 30 seconds for RAG embedding creation
+      // Poll for processing completion indicator (with 60s max timeout)
+      try {
+        // Wait for success message or processing completion indicator
+        await page.waitForSelector('[data-testid="processing-complete"], text=/processing complete|elaborazione completata/i', {
+          timeout: 60000,
+          state: 'visible',
+        });
+        console.log('✓ PDF processing completed successfully');
+      } catch (error) {
+        // Fallback: check for any success indicators in page content
+        const pageContent = await page.textContent('body');
+        console.log('Upload status:', pageContent?.substring(0, 500));
+        // If no explicit indicator, wait a bit more for embeddings
+        await page.waitForTimeout(5000);
+      }
     });
 
     // ========================================================================

@@ -23,6 +23,10 @@ namespace Api.Tests.Integration;
 /// Hybrid approach: Tests 1-5 use fake extractors (fast), Test 6 uses Testcontainers (real performance)
 /// </remarks>
 [Collection("PdfPipeline")]
+[Trait("Category", "Integration")]
+[Trait("Category", "E2E")]
+[Trait("Dependency", "Testcontainers")]
+[Trait("BoundedContext", "DocumentProcessing")]
 public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
 {
     private readonly Action<string> _output;

@@ -25,7 +25,8 @@ test.describe('Chat Streaming (CHAT-01)', () => {
   test('should show streaming state when message is sent', async ({ userPage: page }) => {
     // Fill and submit message
     await page.fill('#message-input', 'How many players can play?');
-    await page.click('button[type="submit"]', { force: true });
+    // Wait for button to be clickable before submitting
+    await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
     // User message should appear immediately
     await expect(page.getByText('How many players can play?')).toBeVisible();
@@ -48,7 +49,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
     // Send message
     await page.fill('#message-input', 'What are the rules?');
-    await page.click('button[type="submit"]', { force: true });
+    await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
     // Wait for streaming to start
     await page.waitForTimeout(100);
@@ -90,7 +91,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
     // Send message
     await page.fill('#message-input', 'Tell me about the game');
-    await page.click('button[type="submit"]', { force: true });
+    await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
     // Wait a bit for streaming to start
     await page.waitForTimeout(200);
@@ -129,7 +130,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     });
 
     await page.fill('#message-input', 'Is this game fun?');
-    await page.click('button[type="submit"]', { force: true });
+    await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
     // Wait for response to appear
     await page.waitForTimeout(500);
@@ -158,7 +159,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     });
 
     await page.fill('#message-input', 'How do players move?');
-    await page.click('button[type="submit"]', { force: true });
+    await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
     // Wait for response
     await page.waitForTimeout(500);
@@ -185,7 +186,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     });
 
     await page.fill('#message-input', 'Cause an error');
-    await page.click('button[type="submit"]', { force: true });
+    await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
     // Should show error message
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
@@ -201,7 +202,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     });
 
     await page.fill('#message-input', 'Test query');
-    await page.click('button[type="submit"]', { force: true });
+    await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
     // Should show error
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
@@ -223,7 +224,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     });
 
     await page.fill('#message-input', 'Long query');
-    await page.click('button[type="submit"]', { force: true });
+    await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
     // Input should be disabled while streaming
     await expect(page.locator('#message-input')).toBeDisabled({ timeout: 500 });
@@ -293,7 +294,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     });
 
     await page.fill('#message-input', 'What is the goal?');
-    await page.click('button[type="submit"]', { force: true });
+    await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
     // Should show state update (might be brief)
     // We check if either a state message appears or the final answer

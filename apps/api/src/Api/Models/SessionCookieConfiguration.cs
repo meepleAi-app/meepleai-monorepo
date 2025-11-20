@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 
 public record SessionCookieConfiguration
 {
-    public string? Name { get; init; } = "meeple_session";
+    public string? Name { get; init; } = "meepleai_session";
 
     public string? Domain { get; init; }
 

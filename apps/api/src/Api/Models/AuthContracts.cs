@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Api.Models;
 
 public record RegisterPayload(
@@ -38,16 +40,18 @@ public record LoginCommand(
     string? UserAgent);
 
 public record AuthUser(
-    string Id,
-    string Email,
-    string? DisplayName,
-    string Role);
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("email")] string Email,
+    [property: JsonPropertyName("displayName")] string? DisplayName,
+    [property: JsonPropertyName("role")] string Role);
 
 public record AuthResult(AuthUser User, string SessionToken, DateTime ExpiresAt);
 
 public record ActiveSession(AuthUser User, DateTime ExpiresAt, DateTime? LastSeenAt);
 
-public record AuthResponse(AuthUser User, DateTime? ExpiresAt);
+public record AuthResponse(
+    [property: JsonPropertyName("user")] AuthUser User,
+    [property: JsonPropertyName("expiresAt")] DateTime? ExpiresAt);
 
 public record SessionInfo(
     string Id,

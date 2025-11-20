@@ -75,18 +75,8 @@ public static class AuthEndpoints
         });
 
         // User login with 2FA support (AUTH-07) - DDD CQRS
-        group.MapPost("/auth/login", async (HttpContext context, IMediator mediator, IConfigurationService configService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/auth/login", async ([FromBody] LoginPayload payload, HttpContext context, IMediator mediator, IConfigurationService configService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            // Manual deserialization to support both camelCase and PascalCase JSON
-            // ASP.NET Core 9.0 Minimal API auto-deserialization ignores ConfigureHttpJsonOptions
-            var jsonOptions = new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                AllowTrailingCommas = true,
-                PropertyNamingPolicy = null
-            };
-            var payload = await context.Request.ReadFromJsonAsync<LoginPayload>(jsonOptions, ct);
-
             if (payload == null)
             {
                 logger.LogWarning("Login failed: payload is null");

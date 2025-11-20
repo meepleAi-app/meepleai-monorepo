@@ -32,9 +32,10 @@ public class RagExceptionHandlerTests
     {
         // Arrange
         var exception = new HttpRequestException("Connection refused");
+        var expectedResponse = new QaResponse("Network error", Array.Empty<Snippet>());
         var errorFactories = new Dictionary<string, Func<QaResponse>>
         {
-            ["HttpRequestException"] = () => new QaResponse("Network error", Array.Empty<Snippet>()),
+            ["HttpRequestException"] = () => expectedResponse,
             ["Exception"] = () => new QaResponse("Unexpected error", Array.Empty<Snippet>())
         };
 
@@ -50,8 +51,8 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Equal("Network error", response.Answer);
-        Assert.Empty(response.Snippets);
+        Assert.Equal(expectedResponse.answer, response.answer);
+        Assert.Empty(response.snippets);
     }
 
     [Fact]
@@ -59,9 +60,10 @@ public class RagExceptionHandlerTests
     {
         // Arrange
         var exception = new TaskCanceledException("Operation timed out");
+        var expectedResponse = new QaResponse("Request timed out", Array.Empty<Snippet>());
         var errorFactories = new Dictionary<string, Func<QaResponse>>
         {
-            ["TaskCanceledException"] = () => new QaResponse("Request timed out", Array.Empty<Snippet>()),
+            ["TaskCanceledException"] = () => expectedResponse,
             ["Exception"] = () => new QaResponse("Unexpected error", Array.Empty<Snippet>())
         };
 
@@ -77,7 +79,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Contains("timed out", response.Answer, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(expectedResponse.answer, response.answer);
     }
 
     [Fact]
@@ -85,9 +87,10 @@ public class RagExceptionHandlerTests
     {
         // Arrange
         var exception = new InvalidOperationException("Invalid configuration");
+        var expectedResponse = new QaResponse("Configuration error", Array.Empty<Snippet>());
         var errorFactories = new Dictionary<string, Func<QaResponse>>
         {
-            ["InvalidOperationException"] = () => new QaResponse("Configuration error", Array.Empty<Snippet>()),
+            ["InvalidOperationException"] = () => expectedResponse,
             ["Exception"] = () => new QaResponse("Unexpected error", Array.Empty<Snippet>())
         };
 
@@ -103,7 +106,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Contains("Configuration error", response.Answer);
+        Assert.Contains(expectedResponse.answer, response.answer);
     }
 
     [Fact]
@@ -111,9 +114,10 @@ public class RagExceptionHandlerTests
     {
         // Arrange
         var exception = new DbUpdateException("Database error");
+        var expectedResponse = new QaResponse("Database error", Array.Empty<Snippet>());
         var errorFactories = new Dictionary<string, Func<QaResponse>>
         {
-            ["DbUpdateException"] = () => new QaResponse("Database error", Array.Empty<Snippet>()),
+            ["DbUpdateException"] = () => expectedResponse,
             ["Exception"] = () => new QaResponse("Unexpected error", Array.Empty<Snippet>())
         };
 
@@ -129,7 +133,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Contains("Database error", response.Answer);
+        Assert.Contains(expectedResponse.answer, response.answer);
     }
 
     [Fact]
@@ -137,10 +141,11 @@ public class RagExceptionHandlerTests
     {
         // Arrange
         var exception = new ArgumentException("Invalid argument");
+        var expectedResponse = new QaResponse("Unexpected error", Array.Empty<Snippet>());
         var errorFactories = new Dictionary<string, Func<QaResponse>>
         {
             ["HttpRequestException"] = () => new QaResponse("Network error", Array.Empty<Snippet>()),
-            ["Exception"] = () => new QaResponse("Unexpected error", Array.Empty<Snippet>())
+            ["Exception"] = () => expectedResponse
         };
 
         // Act
@@ -155,7 +160,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Equal("Unexpected error", response.Answer);
+        Assert.Equal(expectedResponse.answer, response.answer);
     }
 
     [Fact]
@@ -163,13 +168,14 @@ public class RagExceptionHandlerTests
     {
         // Arrange
         var exception = new HttpRequestException("Network error");
+        var expectedResponse = new ExplainResponse(
+            new ExplainOutline("", new List<string>()),
+            "Network error during explanation",
+            Array.Empty<Snippet>(),
+            0);
         var errorFactories = new Dictionary<string, Func<ExplainResponse>>
         {
-            ["HttpRequestException"] = () => new ExplainResponse(
-                new ExplainOutline("", new List<string>()),
-                "Network error during explanation",
-                Array.Empty<Snippet>(),
-                0),
+            ["HttpRequestException"] = () => expectedResponse,
             ["Exception"] = () => new ExplainResponse(
                 new ExplainOutline("", new List<string>()),
                 "Unexpected error",
@@ -189,7 +195,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Contains("Network error", response.Script);
+        Assert.Contains(expectedResponse.script, response.script);
     }
 
     [Fact]
@@ -387,9 +393,10 @@ public class RagExceptionHandlerTests
     {
         // Arrange
         var exception = new HttpRequestException("Test error");
+        var expectedResponse = new QaResponse("Network error", Array.Empty<Snippet>());
         var errorFactories = new Dictionary<string, Func<QaResponse>>
         {
-            ["HttpRequestException"] = () => new QaResponse("Network error", Array.Empty<Snippet>()),
+            ["HttpRequestException"] = () => expectedResponse,
             ["Exception"] = () => new QaResponse("Unexpected error", Array.Empty<Snippet>())
         };
 
@@ -405,6 +412,6 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Equal("Network error", response.Answer);
+        Assert.Equal(expectedResponse.answer, response.answer);
     }
 }

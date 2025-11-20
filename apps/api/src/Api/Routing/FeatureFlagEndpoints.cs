@@ -37,15 +37,15 @@ public static class FeatureFlagEndpoints
 
             return Results.Json(new
             {
-                featureFlags = result.Configurations.Select(c => new
+                featureFlags = result.Items.Select(c => new
                 {
                     key = c.Key,
                     enabled = c.IsActive && string.Equals(c.Value, "true", StringComparison.OrdinalIgnoreCase),
                     description = c.Description,
-                    lastModified = c.LastModified,
-                    modifiedBy = c.LastModifiedBy
+                    lastModified = c.UpdatedAt,
+                    version = c.Version
                 }),
-                totalCount = result.TotalCount
+                totalCount = result.Total
             });
         })
         .WithName("ListFeatureFlags")
@@ -84,8 +84,8 @@ public static class FeatureFlagEndpoints
                 enabled = isEnabled,
                 description = config.Description,
                 category = config.Category,
-                lastModified = config.LastModified,
-                modifiedBy = config.LastModifiedBy,
+                lastModified = config.UpdatedAt,
+                createdAt = config.CreatedAt,
                 version = config.Version
             });
         })

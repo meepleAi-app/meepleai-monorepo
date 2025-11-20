@@ -25,7 +25,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(10);
 
         var provider = new RagConfigurationProvider(
@@ -52,7 +52,7 @@ public class RagConfigurationProviderTests
             .Build();
 
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(15); // Database value should win
 
         var provider = new RagConfigurationProvider(
@@ -110,7 +110,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(150); // Invalid: > 50
 
         var provider = new RagConfigurationProvider(
@@ -130,7 +130,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(0); // Invalid: < 1
 
         var provider = new RagConfigurationProvider(
@@ -150,7 +150,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<double?>("RAG.MinScore"))
+        mockConfigService.Setup(x => x.GetValueAsync<double?>("RAG.MinScore", It.IsAny<double?>(), It.IsAny<string?>()))
             .ReturnsAsync(1.5); // Invalid: > 1.0
 
         var provider = new RagConfigurationProvider(
@@ -170,7 +170,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<double?>("RAG.MinScore"))
+        mockConfigService.Setup(x => x.GetValueAsync<double?>("RAG.MinScore", It.IsAny<double?>(), It.IsAny<string?>()))
             .ReturnsAsync(-0.5); // Invalid: < 0.0
 
         var provider = new RagConfigurationProvider(
@@ -198,7 +198,7 @@ public class RagConfigurationProviderTests
             .Build();
 
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.TopK", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null); // Database returns null
 
         var provider = new RagConfigurationProvider(
@@ -241,7 +241,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.RrfK"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.RrfK", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(60);
 
         var provider = new RagConfigurationProvider(
@@ -261,7 +261,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.RrfK"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.RrfK", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(150); // Invalid: > 100
 
         var provider = new RagConfigurationProvider(
@@ -280,7 +280,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.MaxQueryVariations"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.MaxQueryVariations", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(5);
 
         var provider = new RagConfigurationProvider(
@@ -300,7 +300,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.MaxQueryVariations"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.MaxQueryVariations", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(20); // Invalid: > 10
 
         var provider = new RagConfigurationProvider(
@@ -319,7 +319,7 @@ public class RagConfigurationProviderTests
     {
         // Arrange
         var mockConfigService = new Mock<IConfigurationService>();
-        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.UnknownKey"))
+        mockConfigService.Setup(x => x.GetValueAsync<int?>("RAG.UnknownKey", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(999);
 
         var provider = new RagConfigurationProvider(

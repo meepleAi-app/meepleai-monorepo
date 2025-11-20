@@ -30,6 +30,7 @@ import { api } from "@/lib/api";
 import { AccessibleFormInput, AccessibleButton } from "@/components/accessible";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getErrorMessage } from "@/lib/utils/errorHandler";
 
 // Type definitions
 type AuthUser = {
@@ -203,9 +204,9 @@ function ResetPasswordPageContent() {
         try {
           await api.get(`/api/v1/auth/password-reset/verify?token=${encodeURIComponent(token)}`);
           setTokenValid(true);
-        } catch (err: any) {
+        } catch (err) {
           setTokenValid(false);
-          setErrorMessage(err?.message || "Invalid or expired reset token.");
+          setErrorMessage(getErrorMessage(err, "Invalid or expired reset token."));
         } finally {
           setIsLoading(false);
         }
@@ -240,8 +241,8 @@ function ResetPasswordPageContent() {
     try {
       await api.post("/api/v1/auth/password-reset/request", { email });
       setRequestSuccess(true);
-    } catch (err: any) {
-      setErrorMessage(err?.message || "Failed to send reset email. Please try again.");
+    } catch (err) {
+      setErrorMessage(getErrorMessage(err, "Failed to send reset email. Please try again."));
     } finally {
       setIsLoading(false);
     }
@@ -304,8 +305,8 @@ function ResetPasswordPageContent() {
           void router.push("/");
         }, 2000);
       }
-    } catch (err: any) {
-      setErrorMessage(err?.message || "Failed to reset password. Please try again.");
+    } catch (err) {
+      setErrorMessage(getErrorMessage(err, "Failed to reset password. Please try again."));
       setIsLoading(false);
     }
   };

@@ -37,6 +37,7 @@ import {
   type UserSessionInfo
 } from '@/lib/api';
 import { hasStoredApiKey } from '@/lib/api/core/apiKeyStore';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // OAuth provider configuration
 const OAUTH_PROVIDERS = [
@@ -340,9 +341,9 @@ export default function SettingsPage() {
       setApiKeyAuthenticated(true);
       setApiKeyInput(''); // Clear input for security
       setSuccess('API key stored for this browser session.');
-    } catch (error: any) {
+    } catch (error) {
       console.error('API key login error:', error);
-      setError(error?.message || 'Failed to authenticate with API key');
+      setError(getErrorMessage(error, 'Failed to authenticate with API key'));
       setApiKeyAuthenticated(false);
     } finally {
       setApiKeyLoading(false);
@@ -361,9 +362,9 @@ export default function SettingsPage() {
       await api.auth.logoutApiKey();
       setApiKeyAuthenticated(false);
       setSuccess('API key removed from this session');
-    } catch (error: any) {
+    } catch (error) {
       console.error('API key logout error:', error);
-      setError(error?.message || 'Failed to remove API key authentication');
+      setError(getErrorMessage(error, 'Failed to remove API key authentication'));
     } finally {
       setApiKeyLoading(false);
     }
@@ -396,9 +397,9 @@ export default function SettingsPage() {
       setSuccess('Session revoked successfully');
       // Reload sessions list
       await loadUserSessions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to revoke session:', error);
-      setError(error?.message || 'Failed to revoke session');
+      setError(getErrorMessage(error, 'Failed to revoke session'));
     } finally {
       setRevokingSessionId(null);
     }

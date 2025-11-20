@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { PromptEditor } from "@/components/prompt";
 import { LoadingButton } from "@/components/loading/LoadingButton";
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 type ToastState = {
   show: boolean;
@@ -80,7 +81,7 @@ export default function NewPromptVersion() {
     setLoading(true);
 
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         content,
       };
 
@@ -106,8 +107,8 @@ export default function NewPromptVersion() {
       setTimeout(() => {
         router.push(`/admin/prompts/${id}`);
       }, 1000);
-    } catch (err: any) {
-      showToast(err.message || "Failed to create version", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to create version"), "error");
     } finally {
       setLoading(false);
     }

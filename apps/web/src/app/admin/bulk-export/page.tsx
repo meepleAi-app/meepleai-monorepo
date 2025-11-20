@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 type AuthUser = {
   id: string;
@@ -66,8 +67,8 @@ export default function BulkExport() {
       if (gamesData) {
         setGames(gamesData);
       }
-    } catch (err: any) {
-      setErrorMessage(err?.message || "Failed to load games.");
+    } catch (err) {
+      setErrorMessage(getErrorMessage(err, "Failed to load games."));
     } finally {
       setIsLoading(false);
     }
@@ -105,8 +106,8 @@ export default function BulkExport() {
       await api.chat.bulkExportRuleSpecs({ ruleSpecIds: Array.from(selectedGameIds) });
       setStatusMessage(`Successfully exported ${selectedGameIds.size} rule spec(s).`);
       setSelectedGameIds(new Set()); // Clear selection
-    } catch (err: any) {
-      setErrorMessage(err?.message || "Export failed.");
+    } catch (err) {
+      setErrorMessage(getErrorMessage(err, "Export failed."));
     } finally {
       setIsExporting(false);
     }

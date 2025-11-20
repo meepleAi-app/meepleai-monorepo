@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation'; // App Router
 import { api } from '@/lib/api';
 import { AuthUser } from '@/types/auth';
+import { isApiError } from '@/types/api';
 
 // ============================================================================
 // Types
@@ -99,8 +100,12 @@ export function useAuth(): UseAuthReturn {
 
       setUser(res.user);
       return res.user;
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Login failed. Please check your credentials.';
+    } catch (err) {
+      const errorMessage = isApiError(err)
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : 'Login failed. Please check your credentials.';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -132,8 +137,12 @@ export function useAuth(): UseAuthReturn {
 
       setUser(res.user);
       return res.user;
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Registration failed. Please try again.';
+    } catch (err) {
+      const errorMessage = isApiError(err)
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : 'Registration failed. Please try again.';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -153,7 +162,7 @@ export function useAuth(): UseAuthReturn {
       await api.post('/api/v1/auth/logout');
       setUser(null);
       await router.push('/');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Logout error:', err);
       // Clear user state even if API call fails
       setUser(null);

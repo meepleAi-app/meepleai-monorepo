@@ -8,6 +8,7 @@ import { PromptVersionCard } from "@/components/prompt";
 import { cn } from "@/lib/utils";
 import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 type PromptTemplate = {
   id: string;
@@ -88,8 +89,8 @@ export default function PromptTemplateDetail() {
 
       setTemplate(templateResult);
       setVersions(versionsResult);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch template");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to fetch template"));
       showToast("Failed to fetch template", "error");
     } finally {
       setLoading(false);
@@ -107,8 +108,8 @@ export default function PromptTemplateDetail() {
       await api.post(`/api/v1/admin/prompts/${id}/versions/${versionId}/activate`, {});
       showToast("Version activated successfully", "success");
       fetchTemplate();
-    } catch (err: any) {
-      showToast(err.message || "Failed to activate version", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to activate version"), "error");
     }
   };
 

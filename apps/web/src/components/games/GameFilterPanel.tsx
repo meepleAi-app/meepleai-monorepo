@@ -27,7 +27,7 @@ export function GameFilterPanel({
 }: GameFilterPanelProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
 
-  const handleFilterChange = useCallback((key: keyof GameFilters, value: any) => {
+  const handleFilterChange = useCallback((key: keyof GameFilters, value: GameFilters[keyof GameFilters]) => {
     onChange({ ...filters, [key]: value });
   }, [filters, onChange]);
 

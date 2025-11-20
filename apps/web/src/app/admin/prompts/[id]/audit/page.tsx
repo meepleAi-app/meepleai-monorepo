@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 type PromptAuditLog = {
   id: string;
@@ -68,8 +69,8 @@ export default function AuditLog() {
 
       setLogs(result.logs || []);
       setTotalPages(result.totalPages || 1);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch audit logs");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to fetch audit logs"));
     } finally {
       setLoading(false);
     }

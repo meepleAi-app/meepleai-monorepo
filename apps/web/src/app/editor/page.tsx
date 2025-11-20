@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { RichTextEditor, ViewModeToggle } from "@/components/editor";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/utils/errorHandler";
 
 type RuleAtom = {
   id: string;
@@ -129,9 +130,9 @@ function RuleSpecEditorContent() {
 
       setIsValid(true);
       setValidationError("");
-    } catch (err: any) {
+    } catch (err) {
       setIsValid(false);
-      setValidationError(err?.message || "JSON non valido");
+      setValidationError(getErrorMessage(err, "JSON non valido"));
     }
   }, []);
 
@@ -163,9 +164,9 @@ function RuleSpecEditorContent() {
         } else {
           setErrorMessage("RuleSpec non trovato per questo gioco.");
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error(err);
-        setErrorMessage(err?.message || "Impossibile caricare RuleSpec.");
+        setErrorMessage(getErrorMessage(err, "Impossibile caricare RuleSpec."));
       } finally {
         setIsLoading(false);
       }
@@ -210,7 +211,7 @@ function RuleSpecEditorContent() {
       
       // Clear success message after 3 seconds
       setTimeout(() => setStatusMessage(""), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Auto-save error:", err);
       // Don't show error for auto-save failures to avoid interrupting user
     } finally {
@@ -256,9 +257,9 @@ function RuleSpecEditorContent() {
       convertRichToJson(html);
       setIsValid(true);
       setValidationError("");
-    } catch (err: any) {
+    } catch (err) {
       setIsValid(false);
-      setValidationError(err?.message || "Impossibile convertire in JSON");
+      setValidationError(getErrorMessage(err, "Impossibile convertire in JSON"));
     }
   };
 
@@ -326,9 +327,9 @@ function RuleSpecEditorContent() {
       setRuleSpec(updated);
       setHasUnsavedChanges(false);
       setStatusMessage(`RuleSpec salvato con successo (versione ${updated.version})`);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setErrorMessage(err?.message || "Impossibile salvare RuleSpec");
+      setErrorMessage(getErrorMessage(err, "Impossibile salvare RuleSpec"));
     } finally {
       setIsSaving(false);
     }

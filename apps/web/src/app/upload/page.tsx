@@ -21,7 +21,7 @@ import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
 import { PdfTable } from '@/components/pdf/PdfTable';
 import { useWizard, type WizardStep } from '@/hooks/wizard/useWizard';
 import { useGames } from '@/hooks/wizard/useGames';
-import { usePdfs } from '@/hooks/wizard/usePdfs';
+import { usePdfs, type PdfDocument } from '@/hooks/wizard/usePdfs';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { LoadingButton } from '@/components/loading';
@@ -241,7 +241,7 @@ export default function UploadPage({
     setAutoAdvanceTriggered(false);
   }, [wizardDispatch]);
 
-  const handleRetryParsing = useCallback(async (pdf: any) => {
+  const handleRetryParsing = useCallback(async (pdf: PdfDocument) => {
     setRetryingPdfId(pdf.id);
     try {
       // Retry logic would go here
@@ -252,7 +252,7 @@ export default function UploadPage({
     }
   }, [refetchPdfs]);
 
-  const handleOpenLog = useCallback((pdf: any) => {
+  const handleOpenLog = useCallback((pdf: PdfDocument) => {
     if (pdf.logUrl) {
       window.open(pdf.logUrl, '_blank');
     }

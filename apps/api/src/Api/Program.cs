@@ -137,6 +137,9 @@ builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSe
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 
+// Issue #1447: Security headers middleware configuration
+builder.Services.AddSecurityHeaders(builder.Configuration);
+
 // BGAI-021 (Issue #963): AI provider configuration with startup validation
 builder.Services.Configure<AiProviderSettings>(builder.Configuration.GetSection(AiProviderSettings.SectionName));
 builder.Services.AddSingleton<IValidateOptions<AiProviderSettings>, AiProviderValidator>();

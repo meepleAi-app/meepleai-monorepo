@@ -6,6 +6,7 @@ using Api.SharedKernel.Application.Services;
 using Api.Models;
 using Api.Services;
 using Api.Services.Rag;
+using Api.Tests.Helpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -243,6 +244,9 @@ public class RagServicePerformanceTests : IDisposable
         var mockCitationExtractor = new Mock<ICitationExtractorService>();
         var mockLogger = new Mock<ILogger<RagService>>();
 
+        // Use shared test helper for config provider setup
+        var mockConfigProvider = RagTestHelpers.CreateDefaultConfigProvider().Object;
+
         return new RagService(
             _dbContext,
             mockEmbeddingService,
@@ -255,8 +259,7 @@ public class RagServicePerformanceTests : IDisposable
             mockQueryExpansion,
             mockReranker,
             mockCitationExtractor.Object,
-            configurationService: null,
-            configuration: null);
+            mockConfigProvider);
     }
 
     private IEmbeddingService CreateMockEmbeddingService()

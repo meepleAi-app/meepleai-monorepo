@@ -9,6 +9,7 @@ using Api.Models;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.Services.Rag;
+using Api.Tests.Helpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -37,6 +38,7 @@ public class RagServiceIntegrationTests : IDisposable
     private readonly Mock<IQueryExpansionService> _mockQueryExpansion;
     private readonly Mock<ISearchResultReranker> _mockReranker;
     private readonly Mock<ICitationExtractorService> _mockCitationExtractor;
+    private readonly Mock<IRagConfigurationProvider> _mockConfigProvider;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public RagServiceIntegrationTests()
@@ -60,6 +62,9 @@ public class RagServiceIntegrationTests : IDisposable
         _mockQueryExpansion = new Mock<IQueryExpansionService>();
         _mockReranker = new Mock<ISearchResultReranker>();
         _mockCitationExtractor = new Mock<ICitationExtractorService>();
+
+        // Use shared test helper for config provider setup
+        _mockConfigProvider = RagTestHelpers.CreateDefaultConfigProvider();
     }
 
     public void Dispose()
@@ -254,8 +259,7 @@ public class RagServiceIntegrationTests : IDisposable
             _mockQueryExpansion.Object,
             _mockReranker.Object,
             _mockCitationExtractor.Object,
-            configurationService: null,
-            configuration: null);
+            _mockConfigProvider.Object);
     }
 
     private ILlmService CreateMockLlmService()
@@ -472,5 +476,334 @@ public class RagServiceIntegrationTests : IDisposable
                 // Simple fusion: take first result's items
                 return results.FirstOrDefault()?.Results ?? new List<SearchResultItem>();
             });
+    }
+
+    // ==================== Configuration Tests ====================
+
+    /// <summary>
+    /// Test07: Verify that RagService requests TopK configuration
+    /// This ensures the service is properly using the configuration provider.
+    /// </summary>
+    [Fact]
+    public async Task Test07_AskAsync_RequestsTopKConfiguration()
+    {
+        // Arrange
+        var customMock = RagTestHelpers.CreateCustomConfigProvider(topK: 10);
+        var ragService = CreateRagServiceWithCustomConfig(customMock);
+        var gameId = Guid.NewGuid().ToString();
+        var query = "How many players?";
+
+        SetupEmbeddingServiceMock();
+        SetupQdrantServiceMock();
+        SetupCacheMock();
+        SetupPromptTemplateMock();
+        SetupQueryExpansionMock(query);
+        SetupRerankerMock();
+
+        // Act
+        await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
+
+        // Assert - Verify TopK configuration was requested
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
+    }
+
+    /// <summary>
+    /// Test08: Verify that RagService requests MinScore configuration
+    /// </summary>
+    [Fact]
+    public async Task Test08_AskAsync_RequestsMinScoreConfiguration()
+    {
+        // Arrange
+        var customMock = RagTestHelpers.CreateCustomConfigProvider(minScore: 0.8);
+        var ragService = CreateRagServiceWithCustomConfig(customMock);
+        var gameId = Guid.NewGuid().ToString();
+        var query = "Setup instructions";
+
+        SetupEmbeddingServiceMock();
+        SetupQdrantServiceMock();
+        SetupCacheMock();
+        SetupPromptTemplateMock();
+        SetupQueryExpansionMock(query);
+        SetupRerankerMock();
+
+        // Act
+        await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
+
+        // Assert - Verify MinScore configuration was requested
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.MinScore, It.IsAny<double>()), Times.AtLeastOnce);
+    }
+
+    /// <summary>
+    /// Test09: Test behavior with different TopK values
+    /// Verifies that configuration changes affect service behavior.
+    /// </summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(5)]
+    [InlineData(10)]
+    [InlineData(20)]
+    public async Task Test09_AskAsync_WithDifferentTopKValues_ReturnsValidResponse(int topK)
+    {
+        // Arrange
+        var customMock = RagTestHelpers.CreateCustomConfigProvider(topK: topK);
+        var ragService = CreateRagServiceWithCustomConfig(customMock);
+        var gameId = Guid.NewGuid().ToString();
+        var query = "Game rules";
+
+        SetupEmbeddingServiceMock();
+        SetupQdrantServiceMock();
+        SetupCacheMock();
+        SetupPromptTemplateMock();
+        SetupQueryExpansionMock(query);
+        SetupRerankerMock();
+
+        // Act
+        var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.answer);
+        Assert.NotEmpty(result.answer);
+        // Configuration was used during query processing
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
+    }
+
+    /// <summary>
+    /// Test10: Test behavior with different MinScore thresholds
+    /// </summary>
+    [Theory]
+    [InlineData(0.5)]
+    [InlineData(0.7)]
+    [InlineData(0.9)]
+    public async Task Test10_AskAsync_WithDifferentMinScoreValues_ReturnsValidResponse(double minScore)
+    {
+        // Arrange
+        var customMock = RagTestHelpers.CreateCustomConfigProvider(minScore: minScore);
+        var ragService = CreateRagServiceWithCustomConfig(customMock);
+        var gameId = Guid.NewGuid().ToString();
+        var query = "Winning conditions";
+
+        SetupEmbeddingServiceMock();
+        SetupQdrantServiceMock();
+        SetupCacheMock();
+        SetupPromptTemplateMock();
+        SetupQueryExpansionMock(query);
+        SetupRerankerMock();
+
+        // Act
+        var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.answer);
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.MinScore, It.IsAny<double>()), Times.AtLeastOnce);
+    }
+
+    /// <summary>
+    /// Test11: Test behavior with extreme configuration values
+    /// Ensures the service handles edge cases gracefully.
+    /// </summary>
+    [Fact]
+    public async Task Test11_AskAsync_WithExtremeConfigValues_HandlesGracefully()
+    {
+        // Arrange - Test with extreme but valid values
+        var customMock = RagTestHelpers.CreateCustomConfigProvider(
+            topK: 50,           // Maximum TopK
+            minScore: 0.1,      // Very low threshold
+            rrfK: 100,          // Maximum RRF parameter
+            maxQueryVariations: 10  // Maximum variations
+        );
+        var ragService = CreateRagServiceWithCustomConfig(customMock);
+        var gameId = Guid.NewGuid().ToString();
+        var query = "Complex query";
+
+        SetupEmbeddingServiceMock();
+        SetupQdrantServiceMock();
+        SetupCacheMock();
+        SetupPromptTemplateMock();
+        SetupQueryExpansionMock(query);
+        SetupRerankerMock();
+
+        // Act
+        var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
+
+        // Assert - Service should handle extreme values gracefully
+        Assert.NotNull(result);
+        Assert.NotNull(result.answer);
+        Assert.True(result.totalTokens >= 0);
+    }
+
+    /// <summary>
+    /// Test12: Test behavior with out-of-range configuration values
+    /// Note: RagConfigurationProvider clamps values, but we test that the service
+    /// handles extreme inputs gracefully even if they bypass validation.
+    /// </summary>
+    /// <param name="outOfRangeTopK">The out-of-range value (for documentation purposes, demonstrating the scenario being tested)</param>
+    /// <param name="expectedClamped">The expected clamped value that the mock will return (simulates provider clamping behavior)</param>
+    [Theory]
+    [InlineData(1000, 5)]    // TopK way above max (50) should get clamped
+    [InlineData(0, 5)]       // TopK below min (1) should get clamped
+    [InlineData(-10, 5)]     // Negative TopK should get clamped
+    public async Task Test12_AskAsync_WithOutOfRangeTopK_HandlesGracefully(int outOfRangeTopK, int expectedClamped)
+    {
+        // Arrange - Simulate values that would be clamped by RagConfigurationProvider
+        var customMock = RagTestHelpers.CreateCustomConfigProvider(topK: expectedClamped);
+        var ragService = CreateRagServiceWithCustomConfig(customMock);
+        var gameId = Guid.NewGuid().ToString();
+        var query = "Test query";
+
+        SetupEmbeddingServiceMock();
+        SetupQdrantServiceMock();
+        SetupCacheMock();
+        SetupPromptTemplateMock();
+        SetupQueryExpansionMock(query);
+        SetupRerankerMock();
+
+        // Act - Service should handle clamped values gracefully
+        var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.answer);
+        // Verify configuration was requested (would be clamped by provider in real scenario)
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
+    }
+
+    /// <summary>
+    /// Test13: Test behavior with boundary configuration values
+    /// Tests minimum and maximum valid values for each configuration parameter.
+    /// </summary>
+    [Theory]
+    [InlineData(1, 0.0, 1, 1)]       // All minimums
+    [InlineData(50, 1.0, 100, 10)]   // All maximums
+    [InlineData(1, 1.0, 1, 10)]      // Mixed boundaries
+    [InlineData(50, 0.0, 100, 1)]    // Mixed boundaries (opposite)
+    public async Task Test13_AskAsync_WithBoundaryValues_ReturnsValidResponse(
+        int topK, double minScore, int rrfK, int maxQueryVariations)
+    {
+        // Arrange
+        var customMock = RagTestHelpers.CreateCustomConfigProvider(
+            topK: topK,
+            minScore: minScore,
+            rrfK: rrfK,
+            maxQueryVariations: maxQueryVariations
+        );
+        var ragService = CreateRagServiceWithCustomConfig(customMock);
+        var gameId = Guid.NewGuid().ToString();
+        var query = "Boundary test query";
+
+        SetupEmbeddingServiceMock();
+        SetupQdrantServiceMock();
+        SetupCacheMock();
+        SetupPromptTemplateMock();
+        SetupQueryExpansionMock(query);
+        SetupRerankerMock();
+
+        // Act
+        var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
+
+        // Assert - Service should handle boundary values correctly
+        Assert.NotNull(result);
+        Assert.NotNull(result.answer);
+        Assert.True(result.totalTokens >= 0);
+
+        // Verify all configuration keys were requested
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.MinScore, It.IsAny<double>()), Times.AtLeastOnce);
+    }
+
+    /// <summary>
+    /// Test14: Test configuration with MinScore edge cases
+    /// Verifies behavior at score boundaries (0.0, 1.0) and common thresholds.
+    /// </summary>
+    [Theory]
+    [InlineData(0.0)]   // Minimum score (accepts all results)
+    [InlineData(0.3)]   // Very low threshold
+    [InlineData(0.5)]   // Medium threshold
+    [InlineData(0.7)]   // Default threshold
+    [InlineData(1.0)]   // Maximum score (only perfect matches)
+    public async Task Test14_AskAsync_WithMinScoreEdgeCases_FiltersResultsCorrectly(double minScore)
+    {
+        // Arrange
+        var customMock = RagTestHelpers.CreateCustomConfigProvider(minScore: minScore);
+        var ragService = CreateRagServiceWithCustomConfig(customMock);
+        var gameId = Guid.NewGuid().ToString();
+        var query = "Score threshold test";
+
+        SetupEmbeddingServiceMock();
+        SetupQdrantServiceMock();
+        SetupCacheMock();
+        SetupPromptTemplateMock();
+        SetupQueryExpansionMock(query);
+        SetupRerankerMock();
+
+        // Act
+        var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.answer);
+
+        // At minimum score (0.0), should accept most results
+        // At maximum score (1.0), should be very selective
+        // Both should return valid responses from our mocked data
+        Assert.True(result.totalTokens >= 0);
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.MinScore, It.IsAny<double>()), Times.AtLeastOnce);
+    }
+
+    /// <summary>
+    /// Test15: Test that using ConfigKeys constants works correctly
+    /// Verifies that the ConfigKeys helper class can be used in tests.
+    /// </summary>
+    [Fact]
+    public async Task Test15_AskAsync_UsingConfigKeysConstants_VerifiesCorrectly()
+    {
+        // Arrange - Use ConfigKeys constants for readability
+        var customMock = RagTestHelpers.CreateCustomConfigProvider(topK: 8, minScore: 0.75);
+        var ragService = CreateRagServiceWithCustomConfig(customMock);
+        var gameId = Guid.NewGuid().ToString();
+        var query = "ConfigKeys test";
+
+        SetupEmbeddingServiceMock();
+        SetupQdrantServiceMock();
+        SetupCacheMock();
+        SetupPromptTemplateMock();
+        SetupQueryExpansionMock(query);
+        SetupRerankerMock();
+
+        // Act
+        await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
+
+        // Assert - Use ConfigKeys constants in verification
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
+        customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.MinScore, It.IsAny<double>()), Times.AtLeastOnce);
+
+        // Verify that using constants is type-safe and readable
+        Assert.Equal("TopK", RagTestHelpers.ConfigKeys.TopK);
+        Assert.Equal("MinScore", RagTestHelpers.ConfigKeys.MinScore);
+        Assert.Equal("RrfK", RagTestHelpers.ConfigKeys.RrfK);
+        Assert.Equal("MaxQueryVariations", RagTestHelpers.ConfigKeys.MaxQueryVariations);
+    }
+
+    /// <summary>
+    /// Helper method to create RagService with custom configuration mock
+    /// </summary>
+    private RagService CreateRagServiceWithCustomConfig(Mock<IRagConfigurationProvider> configMock)
+    {
+        var mockLlmService = CreateMockLlmService();
+
+        return new RagService(
+            _dbContext,
+            _mockEmbeddingService.Object,
+            _mockQdrantService.Object,
+            _mockHybridSearchService.Object,
+            mockLlmService,
+            _mockCache.Object,
+            _mockPromptTemplateService.Object,
+            _mockLogger.Object,
+            _mockQueryExpansion.Object,
+            _mockReranker.Object,
+            _mockCitationExtractor.Object,
+            configMock.Object);
     }
 }

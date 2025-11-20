@@ -291,16 +291,50 @@ jobs:
             --reporter-htmlextra-export newman-report-kb.html \
             --bail
 
-      - name: Run Main API Tests (Critical Endpoints)
+      - name: Run DDD Bounded Context Tests (All Collections)
         continue-on-error: true
         run: |
-          newman run tests/postman/MeepleAI-API.postman_collection.json \
-            -e tests/postman/MeepleAI-Local.postman_environment.json \
+          # Health Check
+          newman run tests/postman/collections/01-health/HealthCheck.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
             -r cli,json,htmlextra \
-            --reporter-json-export newman-results-main.json \
-            --reporter-htmlextra-export newman-report-main.html \
-            --folder "Authentication" \
-            --folder "Games"
+            --reporter-json-export newman-results-health.json \
+            --reporter-htmlextra-export newman-report-health.html
+
+          # Authentication
+          newman run tests/postman/collections/02-authentication/Authentication.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-auth.json \
+            --reporter-htmlextra-export newman-report-auth.html
+
+          # Game Management
+          newman run tests/postman/collections/03-game-management/GameManagement.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-games.json \
+            --reporter-htmlextra-export newman-report-games.html
+
+          # Knowledge Base (DDD)
+          newman run tests/postman/collections/04-knowledge-base/KnowledgeBase.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-kb-ddd.json \
+            --reporter-htmlextra-export newman-report-kb-ddd.html
+
+          # Administration
+          newman run tests/postman/collections/05-administration/Administration.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-admin.json \
+            --reporter-htmlextra-export newman-report-admin.html
+
+          # BoardGameGeek
+          newman run tests/postman/collections/06-boardgamegeek/BoardGameGeek.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-bgg.json \
+            --reporter-htmlextra-export newman-report-bgg.html
 
       - name: Upload Newman Reports
         if: always()

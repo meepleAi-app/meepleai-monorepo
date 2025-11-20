@@ -108,9 +108,22 @@ postman/
 └── README.md
 
 tests/postman/
-├── MeepleAI-API.postman_collection.json               # 70+ tests
-├── MeepleAI-Local.postman_environment.json
-├── MeepleAI-Production.postman_environment.json
+├── collections/                                        # DDD Bounded Contexts
+│   ├── 01-health/
+│   │   └── HealthCheck.postman_collection.json
+│   ├── 02-authentication/
+│   │   └── Authentication.postman_collection.json
+│   ├── 03-game-management/
+│   │   └── GameManagement.postman_collection.json
+│   ├── 04-knowledge-base/
+│   │   └── KnowledgeBase.postman_collection.json
+│   ├── 05-administration/
+│   │   └── Administration.postman_collection.json
+│   └── 06-boardgamegeek/
+│       └── BoardGameGeek.postman_collection.json
+├── environments/
+│   ├── local.postman_environment.json
+│   └── production.postman_environment.json
 └── README.md
 ```
 
@@ -211,7 +224,7 @@ Tests run automatically on:
 **Best for**: Quick tests, QA team, API exploratory testing
 
 1. Open Postman Desktop
-2. Import collection: `tests/postman/MeepleAI-API.postman_collection.json`
+2. Import collection from `tests/postman/collections/` (choose appropriate bounded context)
 3. Add new request to appropriate folder
 4. Write tests in "Tests" tab (JavaScript):
 

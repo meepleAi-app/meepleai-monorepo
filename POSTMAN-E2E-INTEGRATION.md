@@ -147,8 +147,8 @@ pnpm test:e2e:full               # Smoke → UI E2E (raccomandato)
 3. ✅ **File Postman esistenti**:
    - `postman/KnowledgeBase-DDD-Tests.postman_collection.json` ✅
    - `postman/Local-Development.postman_environment.json` ✅
-   - `tests/postman/MeepleAI-API.postman_collection.json` ✅
-   - `tests/postman/MeepleAI-Local.postman_environment.json` ✅
+   - `tests/postman/collections/*/*.postman_collection.json` ✅ (7 bounded contexts)
+   - `tests/postman/environments/local.postman_environment.json` ✅
 4. ✅ **Test file TypeScript**:
    - `apps/web/e2e/api/postman-smoke.spec.ts` ✅
    - `apps/web/e2e/api/auth.api.spec.ts` ✅
@@ -200,8 +200,8 @@ pnpm test:e2e:full               # Should pass all tests
 ### Per QA/Tester
 
 **Usare Postman Desktop**:
-1. Import collection da `tests/postman/MeepleAI-API.postman_collection.json`
-2. Select environment `MeepleAI-Local`
+1. Import collections da `tests/postman/collections/` (DDD bounded contexts)
+2. Select environment `local` (from `tests/postman/environments/local.postman_environment.json`)
 3. Run collection (o singole requests)
 4. Export collection quando aggiungi nuovi test
 5. Commit & push → CI esegue automaticamente

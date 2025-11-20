@@ -565,7 +565,7 @@ curl -X POST /api/v1/files/upload \
 # CORS testing
 curl -X POST http://localhost:5080/api/v1/chat \
   -H "Origin: https://evil.com" \
-  -H "Cookie: meeple_session=..." \
+  -H "Cookie: meepleai_session=..." \
   --include
 ```
 

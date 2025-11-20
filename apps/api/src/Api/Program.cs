@@ -312,7 +312,20 @@ v1Api.MapGameEndpoints();
 v1Api.MapAiEndpoints();
 v1Api.MapPdfEndpoints();
 v1Api.MapRuleSpecEndpoints();
-v1Api.MapAdminEndpoints();
+
+// Issue #1439: Split AdminEndpoints into focused endpoint files
+v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
+v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
+v1Api.MapAlertEndpoints();             // Alert management
+v1Api.MapAuditEndpoints();             // Audit log retrieval & search
+v1Api.MapFeatureFlagEndpoints();       // Feature flag management
+v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
+v1Api.MapWorkflowEndpoints();          // n8n workflow integration
+v1Api.MapSessionEndpoints();           // Session management
+v1Api.MapApiKeyEndpoints();            // API key management
+v1Api.MapCacheEndpoints();             // Cache management
+v1Api.MapAdminUserEndpoints();         // User management
+v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
 
 // DDD-PHASE3: KnowledgeBase bounded context endpoints
 v1Api.MapKnowledgeBaseEndpoints();

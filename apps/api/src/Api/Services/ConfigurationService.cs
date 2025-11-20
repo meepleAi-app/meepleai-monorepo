@@ -82,7 +82,7 @@ public class ConfigurationService : IConfigurationService
                 // Use CQRS query to retrieve configuration with environment and active filters
                 var query = new GetConfigByKeyQuery(key, currentEnvironment, ActiveOnly: true);
                 var config = await _mediator.Send(query, cancel);
-                return config;
+                return config != null ? MapFromDto(config) : null;
             },
             tags: [CacheCategoryTagPrefix + "general"],
             expiration: DefaultCacheDuration,
@@ -110,10 +110,10 @@ public class ConfigurationService : IConfigurationService
     {
         var query = new GetAllConfigsQuery(category, environment, activeOnly, page, pageSize);
         var result = await _mediator.Send(query);
-        
+
         return new PagedResult<SystemConfigurationDto>(
-            Items: result.Configurations.ToList(),
-            Total: result.TotalCount,
+            Items: result.Items.Select(MapFromDto).ToList(),
+            Total: result.Total,
             Page: page,
             PageSize: pageSize
         );
@@ -122,7 +122,8 @@ public class ConfigurationService : IConfigurationService
     public async Task<SystemConfigurationDto?> GetConfigurationByIdAsync(Guid id)
     {
         var query = new GetConfigByIdQuery(id);
-        return await _mediator.Send(query);
+        var result = await _mediator.Send(query);
+        return result != null ? MapFromDto(result) : null;
     }
 
     public async Task<SystemConfigurationDto> CreateConfigurationAsync(CreateConfigurationRequest request, Guid userId)
@@ -137,7 +138,8 @@ public class ConfigurationService : IConfigurationService
             Environment: request.Environment,
             RequiresRestart: request.RequiresRestart
         );
-        return await _mediator.Send(command);
+        var result = await _mediator.Send(command);
+        return MapFromDto(result);
     }
 
     public async Task<SystemConfigurationDto?> UpdateConfigurationAsync(Guid id, UpdateConfigurationRequest request, Guid userId)
@@ -150,7 +152,8 @@ public class ConfigurationService : IConfigurationService
             NewValue: request.Value,
             UpdatedByUserId: userId
         );
-        return await _mediator.Send(command);
+        var result = await _mediator.Send(command);
+        return result != null ? MapFromDto(result) : null;
     }
 
     public async Task<bool> DeleteConfigurationAsync(Guid id)
@@ -162,7 +165,8 @@ public class ConfigurationService : IConfigurationService
     public async Task<SystemConfigurationDto?> ToggleConfigurationAsync(Guid id, bool isActive, Guid userId)
     {
         var command = new BoundedContexts.SystemConfiguration.Application.Commands.ToggleConfigurationCommand(id, isActive);
-        return await _mediator.Send(command);
+        var result = await _mediator.Send(command);
+        return result != null ? MapFromDto(result) : null;
     }
 
     public async Task<IReadOnlyList<SystemConfigurationDto>> BulkUpdateConfigurationsAsync(
@@ -175,7 +179,8 @@ public class ConfigurationService : IConfigurationService
         )).ToList();
 
         var command = new BoundedContexts.SystemConfiguration.Application.Commands.BulkUpdateConfigsCommand(updates, userId);
-        return await _mediator.Send(command);
+        var result = await _mediator.Send(command);
+        return result.Select(MapFromDto).ToList();
     }
 
     public async Task<ConfigurationValidationResult> ValidateConfigurationAsync(string key, string value, string valueType)
@@ -185,12 +190,12 @@ public class ConfigurationService : IConfigurationService
         return new ConfigurationValidationResult(result.IsValid, result.Errors);
     }
 
-    public async Task<ConfigurationExportDto> ExportConfigurationsAsync(string environment, bool activeOnly = true)
+    public async Task<Models.ConfigurationExportDto> ExportConfigurationsAsync(string environment, bool activeOnly = true)
     {
         var query = new ExportConfigsQuery(environment, activeOnly);
         var result = await _mediator.Send(query);
-        
-        return new ConfigurationExportDto(
+
+        return new Models.ConfigurationExportDto(
             Configurations: result.Configurations.Select(MapFromDto).ToList(),
             ExportedAt: result.ExportedAt,
             Environment: result.Environment
@@ -214,11 +219,11 @@ public class ConfigurationService : IConfigurationService
         return await _mediator.Send(command);
     }
 
-    public async Task<IReadOnlyList<ConfigurationHistoryDto>> GetConfigurationHistoryAsync(Guid configurationId, int limit = 20)
+    public async Task<IReadOnlyList<Models.ConfigurationHistoryDto>> GetConfigurationHistoryAsync(Guid configurationId, int limit = 20)
     {
         var query = new GetConfigHistoryQuery(configurationId, limit);
         var result = await _mediator.Send(query);
-        return result.Select(h => new ConfigurationHistoryDto(
+        return result.Select(h => new Models.ConfigurationHistoryDto(
             Id: h.Id,
             ConfigurationId: h.ConfigurationId,
             Key: h.Key,
@@ -234,7 +239,8 @@ public class ConfigurationService : IConfigurationService
     public async Task<SystemConfigurationDto?> RollbackConfigurationAsync(Guid configurationId, int toVersion, Guid userId)
     {
         var command = new BoundedContexts.SystemConfiguration.Application.Commands.RollbackConfigCommand(configurationId, toVersion, userId);
-        return await _mediator.Send(command);
+        var result = await _mediator.Send(command);
+        return result != null ? MapFromDto(result) : null;
     }
 
     public async Task<IReadOnlyList<string>> GetCategoriesAsync()

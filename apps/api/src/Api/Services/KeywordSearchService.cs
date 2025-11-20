@@ -1,3 +1,4 @@
+using Api.Helpers;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;

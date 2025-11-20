@@ -19,7 +19,7 @@ public class RrfFusionDomainService
     /// <param name="keywordResults">Results from keyword search</param>
     /// <param name="rrfK">RRF constant (default 60)</param>
     /// <returns>Fused and re-ranked results</returns>
-    public List<SearchResult> FuseResults(
+    public virtual List<SearchResult> FuseResults(
         List<SearchResult> vectorResults,
         List<SearchResult> keywordResults,
         int rrfK = DefaultRrfK)
@@ -106,7 +106,7 @@ public class RrfFusionDomainService
     /// <summary>
     /// Calculates raw RRF score for a result at given rank.
     /// </summary>
-    public double CalculateRrfScore(int rank, int rrfK = DefaultRrfK)
+    public virtual double CalculateRrfScore(int rank, int rrfK = DefaultRrfK)
     {
         if (rank <= 0)
             throw new ArgumentException("Rank must be positive", nameof(rank));

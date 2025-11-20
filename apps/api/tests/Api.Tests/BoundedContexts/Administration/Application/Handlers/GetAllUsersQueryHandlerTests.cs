@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
+using Api.Tests.Helpers;
 using Moq;
 using Xunit;
 
@@ -14,11 +15,11 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class GetAllUsersQueryHandlerTests
 {
-    private readonly Mock<MeepleAiDbContext> _dbContextMock;
+    private readonly MeepleAiDbContext _dbContext;
 
     public GetAllUsersQueryHandlerTests()
     {
-        _dbContextMock = new Mock<MeepleAiDbContext>();
+        _dbContext = DbContextHelper.CreateInMemoryDbContext();
     }
 
     #region Construction Tests
@@ -27,7 +28,7 @@ public class GetAllUsersQueryHandlerTests
     public void Constructor_WithValidDbContext_CreatesInstance()
     {
         // Act
-        var handler = new GetAllUsersQueryHandler(_dbContextMock.Object);
+        var handler = new GetAllUsersQueryHandler(_dbContext);
 
         // Assert
         Assert.NotNull(handler);

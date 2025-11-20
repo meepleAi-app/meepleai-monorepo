@@ -38,9 +38,9 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "newuser@example.com",
-            "Test User",
             "SecurePassword123!",
-            "User"
+            "Test User",
+            "user"
         );
 
         _mockUserRepository
@@ -54,7 +54,7 @@ public class CreateUserCommandHandlerTests
         Assert.NotNull(result);
         Assert.Equal("newuser@example.com", result.Email);
         Assert.Equal("Test User", result.DisplayName);
-        Assert.Equal("User", result.Role);
+        Assert.Equal("user", result.Role);
         _mockUserRepository.Verify(
             r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -69,9 +69,9 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "admin@example.com",
-            "Admin User",
             "SecurePassword123!",
-            "Admin"
+            "Admin User",
+            "admin"
         );
 
         _mockUserRepository
@@ -83,9 +83,9 @@ public class CreateUserCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Admin", result.Role);
+        Assert.Equal("admin", result.Role);
         _mockUserRepository.Verify(
-            r => r.AddAsync(It.Is<User>(u => u.Role.Value == "Admin"), It.IsAny<CancellationToken>()),
+            r => r.AddAsync(It.Is<User>(u => u.Role.Value == "admin"), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -95,9 +95,9 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "existing@example.com",
-            "Test User",
             "SecurePassword123!",
-            "User"
+            "Test User",
+            "user"
         );
 
         var existingUser = new User(
@@ -132,9 +132,9 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "editor@example.com",
-            "Editor User",
             "SecurePassword123!",
-            "Editor"
+            "Editor User",
+            "editor"
         );
 
         _mockUserRepository
@@ -145,7 +145,7 @@ public class CreateUserCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Editor", result.Role);
+        Assert.Equal("editor", result.Role);
         Assert.Null(result.LastSeenAt); // New users have no sessions yet
     }
 
@@ -155,9 +155,9 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "user@example.com",
-            "  Test User  ", // Whitespace to be trimmed
             "SecurePassword123!",
-            "User"
+            "  Test User  ", // Whitespace to be trimmed
+            "user"
         );
 
         User? capturedUser = null;

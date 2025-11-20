@@ -17,7 +17,7 @@ public class VectorSearchDomainService
     /// <param name="topK">Number of top results to return</param>
     /// <param name="minScore">Minimum relevance score threshold</param>
     /// <returns>Ranked search results</returns>
-    public List<SearchResult> Search(
+    public virtual List<SearchResult> Search(
         Vector queryVector,
         List<Embedding> candidateEmbeddings,
         int topK,
@@ -67,7 +67,7 @@ public class VectorSearchDomainService
     /// <summary>
     /// Filters search results by minimum score threshold.
     /// </summary>
-    public List<SearchResult> FilterByScore(List<SearchResult> results, double minScore)
+    public virtual List<SearchResult> FilterByScore(List<SearchResult> results, double minScore)
     {
         var threshold = new Confidence(minScore);
         return results.Where(r => r.RelevanceScore.Value >= threshold.Value).ToList();
@@ -76,7 +76,7 @@ public class VectorSearchDomainService
     /// <summary>
     /// Validates search parameters.
     /// </summary>
-    public void ValidateSearchParameters(int topK, double minScore)
+    public virtual void ValidateSearchParameters(int topK, double minScore)
     {
         if (topK <= 0 || topK > 100)
             throw new ArgumentException("TopK must be between 1 and 100", nameof(topK));

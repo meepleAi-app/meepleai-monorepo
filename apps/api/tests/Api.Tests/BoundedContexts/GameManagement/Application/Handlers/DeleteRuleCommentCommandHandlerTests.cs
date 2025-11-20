@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.Infrastructure;
+using Api.Tests.Helpers;
 using Moq;
 using Xunit;
 
@@ -15,11 +16,11 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// </summary>
 public class DeleteRuleCommentCommandHandlerTests
 {
-    private readonly Mock<MeepleAiDbContext> _dbContextMock;
+    private readonly MeepleAiDbContext _dbContext;
 
     public DeleteRuleCommentCommandHandlerTests()
     {
-        _dbContextMock = new Mock<MeepleAiDbContext>();
+        _dbContext = DbContextHelper.CreateInMemoryDbContext();
     }
 
     #region Construction Tests
@@ -32,7 +33,7 @@ public class DeleteRuleCommentCommandHandlerTests
 
         // Act
         var handler = new DeleteRuleCommentCommandHandler(
-            _dbContextMock.Object,
+            _dbContext,
             loggerMock.Object);
 
         // Assert
@@ -58,7 +59,7 @@ public class DeleteRuleCommentCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new DeleteRuleCommentCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 null!));
     }
 

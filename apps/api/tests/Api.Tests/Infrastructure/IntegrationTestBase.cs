@@ -57,6 +57,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
 
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
         using (var context = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object))
         {
             await context.Database.MigrateAsync();
@@ -96,6 +98,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
 
         var mockMediator = new Mock<IMediator>();
         MockEventCollector = new Mock<IDomainEventCollector>();
+        MockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
         DbContext = new MeepleAiDbContext(options, mockMediator.Object, MockEventCollector.Object);
         Repository = CreateRepository(DbContext);
     }
@@ -114,6 +118,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
 
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
         return new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
     }
 
@@ -150,6 +156,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
 
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
         await using (var tempContext = new MeepleAiDbContext(tempOptions, mockMediator.Object, mockEventCollector.Object))
         {
             // Get all table names dynamically from the database

@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
+using Api.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 /// </summary>
 public class UploadPdfCommandHandlerTests
 {
-    private readonly Mock<MeepleAiDbContext> _dbContextMock;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
     private readonly Mock<ILogger<UploadPdfCommandHandler>> _loggerMock;
     private readonly Mock<IPdfTextExtractor> _pdfTextExtractorMock;
@@ -31,7 +32,7 @@ public class UploadPdfCommandHandlerTests
 
     public UploadPdfCommandHandlerTests()
     {
-        _dbContextMock = new Mock<MeepleAiDbContext>();
+        _dbContext = DbContextHelper.CreateInMemoryDbContext();
         _scopeFactoryMock = new Mock<IServiceScopeFactory>();
         _loggerMock = new Mock<ILogger<UploadPdfCommandHandler>>();
         _pdfTextExtractorMock = new Mock<IPdfTextExtractor>();
@@ -48,7 +49,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Act
         var handler = new UploadPdfCommandHandler(
-            _dbContextMock.Object,
+            _dbContext,
             _scopeFactoryMock.Object,
             _loggerMock.Object,
             _pdfTextExtractorMock.Object,
@@ -83,7 +84,7 @@ public class UploadPdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 null!,
                 _loggerMock.Object,
                 _pdfTextExtractorMock.Object,
@@ -99,7 +100,7 @@ public class UploadPdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _scopeFactoryMock.Object,
                 null!,
                 _pdfTextExtractorMock.Object,
@@ -115,7 +116,7 @@ public class UploadPdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _scopeFactoryMock.Object,
                 _loggerMock.Object,
                 null!,
@@ -131,7 +132,7 @@ public class UploadPdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _scopeFactoryMock.Object,
                 _loggerMock.Object,
                 _pdfTextExtractorMock.Object,
@@ -147,7 +148,7 @@ public class UploadPdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _scopeFactoryMock.Object,
                 _loggerMock.Object,
                 _pdfTextExtractorMock.Object,
@@ -163,7 +164,7 @@ public class UploadPdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _scopeFactoryMock.Object,
                 _loggerMock.Object,
                 _pdfTextExtractorMock.Object,
@@ -179,7 +180,7 @@ public class UploadPdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContextMock.Object,
+                _dbContext,
                 _scopeFactoryMock.Object,
                 _loggerMock.Object,
                 _pdfTextExtractorMock.Object,

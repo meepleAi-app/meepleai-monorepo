@@ -28,6 +28,8 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
 
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
         _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         _handler = new GetRuleSpecsQueryHandler(_dbContext);
     }

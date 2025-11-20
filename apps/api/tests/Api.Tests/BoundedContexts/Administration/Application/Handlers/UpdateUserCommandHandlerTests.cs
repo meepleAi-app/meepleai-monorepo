@@ -127,7 +127,7 @@ public class UpdateUserCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Admin", result.Role);
+        Assert.Equal("admin", result.Role);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -235,7 +235,7 @@ public class UpdateUserCommandHandlerTests
         Assert.NotNull(result);
         Assert.Equal("new@example.com", result.Email);
         Assert.Equal("New Name", result.DisplayName);
-        Assert.Equal("Editor", result.Role);
+        Assert.Equal("editor", result.Role);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

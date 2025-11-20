@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure;
+using Api.Tests.Helpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -28,11 +29,11 @@ public class GetPdfTextQueryHandlerTests
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
         // Arrange
-        var dbContextMock = new Mock<MeepleAiDbContext>();
+        var dbContext = DbContextHelper.CreateInMemoryDbContext();
 
         // Act
         var handler = new GetPdfTextQueryHandler(
-            dbContextMock.Object,
+            dbContext,
             _loggerMock.Object);
 
         // Assert
@@ -53,12 +54,12 @@ public class GetPdfTextQueryHandlerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Arrange
-        var dbContextMock = new Mock<MeepleAiDbContext>();
+        var dbContext = DbContextHelper.CreateInMemoryDbContext();
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new GetPdfTextQueryHandler(
-                dbContextMock.Object,
+                dbContext,
                 null!));
     }
 

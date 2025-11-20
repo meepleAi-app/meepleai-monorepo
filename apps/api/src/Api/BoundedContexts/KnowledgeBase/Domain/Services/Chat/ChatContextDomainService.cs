@@ -19,7 +19,7 @@ public class ChatContextDomainService
     /// <param name="results">Search results to filter</param>
     /// <param name="gameId">Game ID from chat thread</param>
     /// <returns>Filtered results matching game context</returns>
-    public List<SearchResult> FilterByGameContext(
+    public virtual List<SearchResult> FilterByGameContext(
         List<SearchResult> results,
         Guid gameId)
     {
@@ -38,7 +38,7 @@ public class ChatContextDomainService
     /// </summary>
     /// <param name="thread">Chat thread with message history</param>
     /// <returns>Formatted chat history string for LLM context</returns>
-    public string BuildChatHistoryContext(ChatThread thread)
+    public virtual string BuildChatHistoryContext(ChatThread thread)
     {
         if (thread == null)
             throw new ArgumentNullException(nameof(thread));
@@ -78,7 +78,7 @@ public class ChatContextDomainService
     /// <summary>
     /// Validates that a game ID is present for context filtering.
     /// </summary>
-    public bool ValidateGameContext(Guid? gameId)
+    public virtual bool ValidateGameContext(Guid? gameId)
     {
         return gameId.HasValue && gameId.Value != Guid.Empty;
     }
@@ -88,7 +88,7 @@ public class ChatContextDomainService
     /// </summary>
     /// <param name="thread">Chat thread to evaluate</param>
     /// <returns>True if history should be included in context</returns>
-    public bool ShouldIncludeChatHistory(ChatThread thread)
+    public virtual bool ShouldIncludeChatHistory(ChatThread thread)
     {
         if (thread == null)
             return false;
@@ -103,7 +103,7 @@ public class ChatContextDomainService
     /// <param name="userQuestion">Original user question</param>
     /// <param name="chatHistoryContext">Formatted chat history</param>
     /// <returns>Enriched prompt with history context</returns>
-    public string EnrichPromptWithHistory(string userQuestion, string chatHistoryContext)
+    public virtual string EnrichPromptWithHistory(string userQuestion, string chatHistoryContext)
     {
         if (string.IsNullOrWhiteSpace(userQuestion))
             throw new ArgumentException("User question cannot be empty", nameof(userQuestion));

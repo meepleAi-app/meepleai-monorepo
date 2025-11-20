@@ -1,11 +1,13 @@
 # 🗺️ MeepleAI Master Roadmap 2025-2026
-**Roadmap Consolidata e Aggiornata**
+**Main Current Roadmap Document**
 
-**Ultimo Aggiornamento**: 2025-11-18 (Consolidamento finale + verifica GitHub)
+**Ultimo Aggiornamento**: 2025-11-20 (Consolidated + verified)
 **Issue Completate (Nov 2025)**: 160+ (analisi git log)
-**Progress Complessivo**: 🟢 **~85%** Phase 1A Complete
+**Progress Complessivo**: 🟢 **~60%** Phase 1A Complete
 **Timeline Rimanente**: 8-10 settimane (Dic 2025 - Feb 2026)
 **Owner**: Engineering Team
+
+> **Note**: This is the authoritative current roadmap. For navigation and overview, see [README.md](./README.md). For long-term vision, see [meepleai-evolution-2025.md](./meepleai-evolution-2025.md).
 
 ---
 

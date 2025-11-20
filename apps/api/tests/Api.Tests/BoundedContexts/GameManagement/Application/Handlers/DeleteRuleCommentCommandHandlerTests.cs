@@ -29,11 +29,12 @@ public class DeleteRuleCommentCommandHandlerTests
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
         // Arrange
+        var dbContext = DbContextHelper.CreateInMemoryDbContext();
         var loggerMock = new Mock<ILogger<DeleteRuleCommentCommandHandler>>();
 
         // Act
         var handler = new DeleteRuleCommentCommandHandler(
-            _dbContext,
+            dbContext,
             loggerMock.Object);
 
         // Assert
@@ -56,10 +57,13 @@ public class DeleteRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
+        // Arrange
+        var dbContext = DbContextHelper.CreateInMemoryDbContext();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new DeleteRuleCommentCommandHandler(
-                _dbContext,
+                dbContext,
                 null!));
     }
 

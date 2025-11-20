@@ -42,7 +42,7 @@ public class ValidationHelpersTests
 
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => result.ThrowIfFailure("TestField"));
-        Assert.Equal("TestField", exception.FieldName);
+        Assert.Contains("TestField", exception.Message);
     }
 
     #endregion

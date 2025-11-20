@@ -87,6 +87,7 @@ public class HybridSearchService : IHybridSearchService
             // Issue #1444: Use centralized exception handling (log and re-throw pattern)
             // Service entry point that coordinates vector and keyword searches
             RagExceptionHandler.LogAndRethrow(ex, _logger, "hybrid search", query, mode);
+            throw; // Unreachable, but required for compiler
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }

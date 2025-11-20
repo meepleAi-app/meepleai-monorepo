@@ -37,7 +37,8 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     private readonly IOptions<PdfProcessingOptions> _options;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    // Test PDF paths
+    // Test PDF paths (relative to bin/Debug/net9.0/)
+    // NOTE: Temporarily disabled until Docker images are built in CI
     private const string BarragePdfPath = "../../../../data/barrage_rulebook.pdf";
 
     public ThreeStagePdfPipelineE2ETests()

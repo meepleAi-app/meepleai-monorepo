@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Api.Observability;
 using Microsoft.Extensions.Logging;
 
@@ -200,7 +201,7 @@ public static class RagExceptionHandler
         }
 
         // Re-throw for upstream handling (use 'throw;' to preserve stack trace)
-        throw;
+        throw exception;
     }
 
     /// <summary>

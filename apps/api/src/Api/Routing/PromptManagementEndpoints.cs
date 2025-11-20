@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Extensions;
 using Api.Models;
+using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

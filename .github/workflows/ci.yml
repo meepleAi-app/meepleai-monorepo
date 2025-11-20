@@ -201,6 +201,121 @@ jobs:
           path: apps/web/playwright-report/
           retention-days: 7
 
+  ci-api-smoke:
+    needs: changes
+    name: API - Smoke Tests (Postman/Newman)
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when API/web files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') }}
+    defaults:
+      run:
+        working-directory: apps/web
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: meepleai
+          POSTGRES_PASSWORD: meepleai_dev_password
+          POSTGRES_DB: meepleai_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Newman globally
+        run: npm install -g newman newman-reporter-htmlextra
+
+      - name: Start API
+        working-directory: apps/api/src/Api
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ConnectionStrings__Postgres: "Host=localhost;Port=5432;Database=meepleai_dev;Username=meepleai;Password=meepleai_dev_password"
+        run: |
+          dotnet restore
+          dotnet build --no-restore
+          nohup dotnet run --no-build > api.log 2>&1 &
+          echo $! > api.pid
+
+      - name: Wait for API Health
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:5080/health; do sleep 2; done'
+
+      # Run Postman smoke tests via Newman
+      - name: Run KnowledgeBase API Tests (11 tests)
+        working-directory: .
+        run: |
+          newman run postman/KnowledgeBase-DDD-Tests.postman_collection.json \
+            -e postman/Local-Development.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-kb.json \
+            --reporter-htmlextra-export newman-report-kb.html \
+            --bail
+
+      - name: Run Main API Tests (Critical Endpoints)
+        working-directory: .
+        continue-on-error: true
+        run: |
+          newman run tests/postman/MeepleAI-API.postman_collection.json \
+            -e tests/postman/MeepleAI-Local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-main.json \
+            --reporter-htmlextra-export newman-report-main.html \
+            --folder "Authentication" \
+            --folder "Games"
+
+      - name: Upload Newman Reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: newman-reports-${{ github.run_number }}
+          path: |
+            newman-results-*.json
+            newman-report-*.html
+          retention-days: 30
+
+      - name: Upload API Logs
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: api-logs-${{ github.run_number }}
+          path: apps/api/src/Api/api.log
+          retention-days: 7
+
+      - name: Stop API
+        if: always()
+        working-directory: apps/api/src/Api
+        run: |
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) || true
+            rm api.pid
+          fi
+
   ci-web-a11y:
     needs: changes
     name: Web - Accessibility Tests (E2E)

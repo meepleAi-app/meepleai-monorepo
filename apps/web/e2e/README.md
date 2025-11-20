@@ -11,8 +11,15 @@
 ### Running Tests
 
 ```bash
-# All E2E tests
+# All E2E tests (UI)
 pnpm test:e2e
+
+# API Smoke Tests (Postman/Newman) - NEW! 🎉
+pnpm test:api:smoke              # Fast smoke test (~2min)
+pnpm test:e2e:api                # Playwright API tests
+
+# Combined (API smoke → UI E2E) - Recommended for pre-commit
+pnpm test:e2e:full
 
 # Specific test file
 pnpm test:e2e chat.spec.ts
@@ -23,6 +30,8 @@ pnpm test:e2e:ui
 # Generate coverage report
 pnpm test:e2e --coverage
 ```
+
+> **NEW**: API testing integration with Postman/Newman! See [e2e/api/README.md](./api/README.md) for details.
 
 ### Writing New Tests
 

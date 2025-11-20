@@ -1226,7 +1226,7 @@ public static class AdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var query = new GetConfigByKeyQuery(key);
+            var query = new GetConfigByKeyQuery(key, environment);
             var config = await mediator.Send(query, ct);
             return config != null ? Results.Json(config) : Results.NotFound();
         })

@@ -30,7 +30,8 @@ public class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsCommand,
         foreach (var item in command.Configurations)
         {
             var key = new ConfigKey(item.Key);
-            var existing = await _configurationRepository.GetByKeyAsync(key.Value, cancellationToken);
+            // Import should check for existing config with same key AND environment (active or inactive)
+            var existing = await _configurationRepository.GetByKeyAsync(key.Value, environment: item.Environment, activeOnly: false, cancellationToken);
 
             if (existing != null)
             {

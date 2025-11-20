@@ -34,11 +34,45 @@ public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task<SystemConfigurationAggregate?> GetByKeyAsync(string key, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Retrieves a configuration by key with environment-specific fallback.
+    /// </summary>
+    /// <param name="key">The configuration key to search for.</param>
+    /// <param name="environment">
+    /// Optional environment filter. If null or empty, returns configs from ANY environment (no filtering).
+    /// If specified, returns configs matching the exact environment OR environment="All",
+    /// with exact environment matches prioritized over "All".
+    /// </param>
+    /// <param name="activeOnly">If true, only returns active configurations. If false, returns all configs.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The configuration if found, otherwise null.</returns>
+    public async Task<SystemConfigurationAggregate?> GetByKeyAsync(string key, string? environment = null, bool activeOnly = true, CancellationToken cancellationToken = default)
     {
-        var entity = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+        var query = DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Key == key, cancellationToken);
+            .Where(c => c.Key == key);
+
+        // Filter by active status if requested
+        if (activeOnly)
+        {
+            query = query.Where(c => c.IsActive);
+        }
+
+        // Filter and order by environment if specified
+        if (!string.IsNullOrEmpty(environment))
+        {
+            // Filter: Match exact environment OR "All"
+            query = query.Where(c => c.Environment == environment || c.Environment == "All");
+
+            // Order: Prioritize environment-specific (0) over "All" (1)
+            // Add tiebreakers for consistent ordering when multiple configs match
+            query = query
+                .OrderBy(c => c.Environment == environment ? 0 : 1)
+                .ThenByDescending(c => c.UpdatedAt)
+                .ThenByDescending(c => c.Version);
+        }
+
+        var entity = await query.FirstOrDefaultAsync(cancellationToken);
 
         return entity != null ? MapToDomain(entity) : null;
     }

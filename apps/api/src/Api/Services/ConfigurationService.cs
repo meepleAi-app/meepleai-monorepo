@@ -79,8 +79,8 @@ public class ConfigurationService : IConfigurationService
             cacheKey,
             async cancel =>
             {
-                // Use CQRS query to retrieve configuration
-                var query = new GetConfigByKeyQuery(key);
+                // Use CQRS query to retrieve configuration with environment and active filters
+                var query = new GetConfigByKeyQuery(key, currentEnvironment, ActiveOnly: true);
                 var config = await _mediator.Send(query, cancel);
                 return config;
             },

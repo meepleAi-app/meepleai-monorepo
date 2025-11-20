@@ -20,7 +20,11 @@ public class GetConfigByKeyQueryHandler : IQueryHandler<GetConfigByKeyQuery, Con
 
     public async Task<ConfigurationDto?> Handle(GetConfigByKeyQuery query, CancellationToken cancellationToken)
     {
-        var config = await _configurationRepository.GetByKeyAsync(query.Key, cancellationToken);
+        var config = await _configurationRepository.GetByKeyAsync(
+            query.Key,
+            query.Environment,
+            query.ActiveOnly,
+            cancellationToken);
 
         if (config == null)
             return null;

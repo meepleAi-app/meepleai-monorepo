@@ -49,9 +49,9 @@ describe('useSessionCheck', () => {
   describe('Initial Check', () => {
     it('should perform initial session check on mount', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 60,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 60,
       });
 
       renderHook(() => useSessionCheck());
@@ -63,9 +63,9 @@ describe('useSessionCheck', () => {
 
     it('should set remainingMinutes from initial check', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 30,
+        ExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 30,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -90,9 +90,9 @@ describe('useSessionCheck', () => {
 
       act(() => {
         resolvePromise({
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 60,
+          ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 60,
         });
       });
 
@@ -116,9 +116,9 @@ describe('useSessionCheck', () => {
   describe('Near Expiry Detection', () => {
     it('should set isNearExpiry to true when remaining < 5 minutes', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 4 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 4,
+        ExpiresAt: new Date(Date.now() + 4 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 4,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -131,9 +131,9 @@ describe('useSessionCheck', () => {
 
     it('should set isNearExpiry to false when remaining >= 5 minutes', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 10,
+        ExpiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 10,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -146,9 +146,9 @@ describe('useSessionCheck', () => {
 
     it('should set isNearExpiry to true when remaining = 4 minutes', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 4 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 4,
+        ExpiresAt: new Date(Date.now() + 4 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 4,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -160,9 +160,9 @@ describe('useSessionCheck', () => {
 
     it('should set isNearExpiry to false when remaining = 5 minutes', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 5,
+        ExpiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 5,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -181,9 +181,9 @@ describe('useSessionCheck', () => {
 
     it('should detect expired session (0 minutes) and trigger redirect logic', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date().toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 0,
+        ExpiresAt: new Date().toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 0,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -201,9 +201,9 @@ describe('useSessionCheck', () => {
 
     it('should detect negative remaining time and trigger redirect logic', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() - 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: -1,
+        ExpiresAt: new Date(Date.now() - 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: -1,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -221,9 +221,9 @@ describe('useSessionCheck', () => {
 
     it('should not redirect when remaining > 0', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 1,
+        ExpiresAt: new Date(Date.now() + 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 1,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -239,9 +239,9 @@ describe('useSessionCheck', () => {
   describe('Periodic Polling', () => {
     it('should poll every 5 minutes', async () => {
       mockGetSessionStatus.mockResolvedValue({
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 60,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 60,
       });
 
       renderHook(() => useSessionCheck());
@@ -273,14 +273,14 @@ describe('useSessionCheck', () => {
     it('should update remainingMinutes after each poll', async () => {
       mockGetSessionStatus
         .mockResolvedValueOnce({
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 60,
+          ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 60,
         })
         .mockResolvedValueOnce({
-          expiresAt: new Date(Date.now() + 55 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 55,
+          ExpiresAt: new Date(Date.now() + 55 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 55,
         });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -300,9 +300,9 @@ describe('useSessionCheck', () => {
 
     it('should cleanup interval on unmount', async () => {
       mockGetSessionStatus.mockResolvedValue({
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 60,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 60,
       });
 
       const { unmount } = renderHook(() => useSessionCheck());
@@ -380,9 +380,9 @@ describe('useSessionCheck', () => {
       mockGetSessionStatus
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce({
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 60,
+          ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 60,
         });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -422,9 +422,9 @@ describe('useSessionCheck', () => {
   describe('Manual Check', () => {
     it('should provide checkNow function', async () => {
       mockGetSessionStatus.mockResolvedValue({
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 60,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 60,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -437,9 +437,9 @@ describe('useSessionCheck', () => {
 
     it('should trigger check when checkNow is called', async () => {
       mockGetSessionStatus.mockResolvedValue({
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 60,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 60,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -465,9 +465,9 @@ describe('useSessionCheck', () => {
 
       mockGetSessionStatus
         .mockResolvedValueOnce({
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 60,
+          ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 60,
         })
         .mockReturnValueOnce(promise);
 
@@ -485,9 +485,9 @@ describe('useSessionCheck', () => {
 
       act(() => {
         resolvePromise({
-          expiresAt: new Date(Date.now() + 55 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 55,
+          ExpiresAt: new Date(Date.now() + 55 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 55,
         });
       });
 
@@ -499,14 +499,14 @@ describe('useSessionCheck', () => {
     it('should update remainingMinutes after manual check', async () => {
       mockGetSessionStatus
         .mockResolvedValueOnce({
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 60,
+          ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 60,
         })
         .mockResolvedValueOnce({
-          expiresAt: new Date(Date.now() + 50 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 50,
+          ExpiresAt: new Date(Date.now() + 50 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 50,
         });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -526,9 +526,9 @@ describe('useSessionCheck', () => {
   describe('Edge Cases', () => {
     it('should handle very large remainingMinutes values', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 999999 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 999999,
+        ExpiresAt: new Date(Date.now() + 999999 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 999999,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -541,9 +541,9 @@ describe('useSessionCheck', () => {
 
     it('should handle session status with null lastSeenAt', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        lastSeenAt: null,
-        remainingMinutes: 60,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        LastSeenAt: null,
+        RemainingMinutes: 60,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -555,9 +555,9 @@ describe('useSessionCheck', () => {
 
     it('should handle rapid consecutive manual checks', async () => {
       mockGetSessionStatus.mockResolvedValue({
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 60,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 60,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -581,9 +581,9 @@ describe('useSessionCheck', () => {
     it('should handle transition from authenticated to unauthenticated', async () => {
       mockGetSessionStatus
         .mockResolvedValueOnce({
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 60,
+          ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 60,
         })
         .mockResolvedValueOnce(null);
 
@@ -606,14 +606,14 @@ describe('useSessionCheck', () => {
     it('should handle transition from far expiry to near expiry', async () => {
       mockGetSessionStatus
         .mockResolvedValueOnce({
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 10,
+          ExpiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 10,
         })
         .mockResolvedValueOnce({
-          expiresAt: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 3,
+          ExpiresAt: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
+          LastSeenAt: new Date().toISOString(),
+          RemainingMinutes: 3,
         });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -635,9 +635,9 @@ describe('useSessionCheck', () => {
   describe('Hook Return Values', () => {
     it('should return all expected properties', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 60,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 60,
       });
 
       const { result } = renderHook(() => useSessionCheck());
@@ -653,9 +653,9 @@ describe('useSessionCheck', () => {
 
     it('should have stable checkNow function reference', async () => {
       mockGetSessionStatus.mockResolvedValue({
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        lastSeenAt: new Date().toISOString(),
-        remainingMinutes: 60,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        LastSeenAt: new Date().toISOString(),
+        RemainingMinutes: 60,
       });
 
       const { result, rerender } = renderHook(() => useSessionCheck());

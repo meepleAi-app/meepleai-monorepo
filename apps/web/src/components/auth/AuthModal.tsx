@@ -35,7 +35,7 @@ import type { AuthUser } from '@/types';
 export interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultMode?: 'login' | 'register';
+  defaultMode?: 'login' | 'register' | 'demo';
   onSuccess?: (user: unknown) => void;
   showDemoCredentials?: boolean;
   sessionExpiredMessage?: boolean;

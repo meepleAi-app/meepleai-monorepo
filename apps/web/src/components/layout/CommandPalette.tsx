@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useSearch } from '@/hooks/useSearch';
 import { SearchFilters as SearchFiltersComponent } from '@/components/search/SearchFilters';
-import type { SearchResult, SearchFilters, Game, Agent, Message, Chat } from '@/types';
+import type { SearchResult, SearchFilters, Game, Agent, Message, ChatThread } from '@/types';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ interface CommandPaletteProps {
   onSelectResult?: (result: SearchResult) => void;
   dataSources: {
     messages?: Message[];
-    chats?: Chat[];
+    chats?: ChatThread[];
     games?: Game[];
     agents?: Agent[];
   };

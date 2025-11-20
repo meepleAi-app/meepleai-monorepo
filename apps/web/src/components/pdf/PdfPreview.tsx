@@ -36,7 +36,7 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
   const [showThumbnails, setShowThumbnails] = useState(true);
 
   const mainCanvasRef = useRef<HTMLDivElement>(null);
-  const thumbnailListRef = useRef<List<Record<string, never>> | null>(null);
+  const thumbnailListRef = useRef<any>(null);
   const fileUrl = useMemo(() => URL.createObjectURL(file), [file]);
 
   // Detect mobile viewport

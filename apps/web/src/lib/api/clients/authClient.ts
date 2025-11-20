@@ -164,9 +164,9 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
 
       // Backend returns 204 No Content or { message, backupCodes }
       return {
-        success: true,
-        backupCodes: response?.backupCodes || null,
-        errorMessage: null,
+        Success: true,
+        BackupCodes: response?.backupCodes || null,
+        ErrorMessage: null,
       };
     },
 
@@ -187,8 +187,8 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
       );
 
       return {
-        success: true,
-        errorMessage: null,
+        Success: true,
+        ErrorMessage: null,
       };
     },
 

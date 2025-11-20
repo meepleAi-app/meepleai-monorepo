@@ -1,337 +1,405 @@
 {
-  "common": {
-    "loading": "Loading...",
-    "error": "Error",
-    "success": "Success",
-    "cancel": "Cancel",
-    "save": "Save",
-    "delete": "Delete",
-    "edit": "Edit",
+  "accessibility": {
     "close": "Close",
-    "confirm": "Confirm",
-    "back": "Back",
-    "next": "Next",
-    "search": "Search",
-    "filter": "Filter",
-    "clear": "Clear",
-    "all": "All",
-    "none": "None",
-    "yes": "Yes",
-    "no": "No",
-    "ok": "OK",
-    "submit": "Submit",
-    "reset": "Reset",
-    "export": "Export",
-    "import": "Import",
-    "download": "Download",
-    "upload": "Upload",
-    "copy": "Copy",
-    "paste": "Paste",
-    "cut": "Cut",
-    "select": "Select",
-    "selectAll": "Select all",
-    "deselect": "Deselect",
-    "deselectAll": "Deselect all"
+    "errorOccurred": "An error occurred",
+    "loading": "Loading, please wait",
+    "menu": "Menu",
+    "openInNewTab": "Open in new tab",
+    "skipToMain": "Skip to main content"
   },
-  "navigation": {
-    "home": "Home",
+  "admin": {
+    "analytics": "Analytics",
+    "cache": "Cache",
+    "configuration": "Configuration",
     "games": "Games",
-    "chat": "Chat",
-    "upload": "Upload",
-    "settings": "Settings",
-    "profile": "Profile",
-    "admin": "Admin",
-    "login": "Login",
-    "logout": "Logout",
-    "register": "Sign Up"
+    "logs": "Logs",
+    "title": "Admin panel",
+    "users": {
+      "createUser": "Create User",
+      "deleteConfirm": "Are you sure you want to delete",
+      "deleteMultiple": "Delete Multiple Users",
+      "deleteSelected": "Delete Selected",
+      "deleteUser": "Delete User",
+      "displayName": "Display Name *",
+      "editUser": "Edit User",
+      "email": "Email *",
+      "management": "User Management",
+      "of": "of",
+      "page": "Page",
+      "password": "Password *",
+      "role": "Role *",
+      "saveChanges": "Save Changes",
+      "searchPlaceholder": "Search by email or name...",
+      "showing": "Showing",
+      "to": "to",
+      "users": "users",
+      "validationDisplayName": "Display name is required",
+      "validationEmail": "Valid email is required",
+      "validationPassword": "Password must be at least 8 characters"
+    },
+    "workflows": "Workflows"
   },
   "app": {
-    "title": "MeepleAI - AI Board Game Rules Assistant",
     "description": "Never argue about rules again. Get instant, accurate answers from any rulebook with AI-powered semantic search.",
-    "tagline": "Your intelligent board game assistant"
+    "tagline": "Your intelligent board game assistant",
+    "title": "MeepleAI - AI Board Game Rules Assistant"
   },
   "auth": {
     "login": {
-      "title": "Login",
-      "email": "Email",
-      "password": "Password",
-      "rememberMe": "Remember me",
-      "forgotPassword": "Forgot password?",
-      "submit": "Login",
-      "noAccount": "Don't have an account?",
-      "signUp": "Sign up",
-      "error": "Invalid credentials. Please try again.",
-      "success": "Successfully logged in!",
-      "loadingMessage": "Loading login...",
-      "signInTo": "Sign in to MeepleAI",
-      "createAccount": "Create your Account",
-      "signInDescription": "Sign in to the AI assistant for board game rules",
-      "sessionExpired": "Session Expired",
-      "sessionExpiredMessage": "Your session has expired. Please sign in again.",
-      "forTesting": "For Testing"
+      "signInTo": "Sign in to MeepleAI"
+    },
+    "oauth": {
+      "discord": "Continue with Discord",
+      "github": "Continue with GitHub",
+      "google": "Continue with Google",
+      "separator": "Or continue with"
     },
     "register": {
-      "title": "Sign Up",
-      "email": "Email",
-      "password": "Password",
       "confirmPassword": "Confirm password",
       "displayName": "Display name",
-      "submit": "Sign Up",
-      "hasAccount": "Already have an account?",
-      "signIn": "Login",
+      "email": "Email",
       "error": "Registration failed. Please try again.",
-      "success": "Registration complete! You can now login."
+      "hasAccount": "Already have an account?",
+      "password": "Password",
+      "signIn": "Login",
+      "submit": "Sign Up",
+      "success": "Registration complete! You can now login.",
+      "title": "Sign Up"
     },
     "resetPassword": {
-      "title": "Reset password",
       "email": "Email",
+      "error": "Unable to send reset link. Please try again.",
       "submit": "Send reset link",
       "success": "Reset link sent! Check your email.",
-      "error": "Unable to send reset link. Please try again."
+      "title": "Reset password"
     },
     "session": {
       "expired": "Your session has expired. Please login again.",
       "expiringSoon": "Your session will expire in {minutes} minutes.",
-      "stayLoggedIn": "Stay logged in",
-      "logOut": "Logout"
+      "logOut": "Logout",
+      "stayLoggedIn": "Stay logged in"
     },
     "twoFactor": {
-      "title": "Two-Factor Authentication",
+      "backupCode": "Use a backup code",
       "code": "Verification code",
-      "submit": "Verify",
       "error": "Invalid code. Please try again.",
-      "backupCode": "Use a backup code"
-    }
-  },
-  "games": {
-    "title": "My games",
-    "noGames": "No games found",
-    "addGame": "Add game",
-    "searchGames": "Search games...",
-    "filterByCategory": "Filter by category",
-    "sortBy": "Sort by",
-    "grid": "Grid",
-    "list": "List",
-    "details": {
-      "title": "Game details",
-      "players": "Players",
-      "duration": "Duration",
-      "difficulty": "Difficulty",
-      "category": "Category",
-      "designer": "Designer",
-      "publisher": "Publisher",
-      "yearPublished": "Year published",
-      "description": "Description",
-      "rules": "Rules"
+      "submit": "Verify",
+      "title": "Two-Factor Authentication"
     }
   },
   "chat": {
-    "title": "AI Chat",
-    "placeholder": "Ask something about the rules...",
-    "send": "Send",
-    "newChat": "New chat",
-    "history": "History",
+    "citation": "Citation",
     "clearHistory": "Clear history",
-    "noMessages": "No messages yet. Start a conversation!",
-    "thinking": "Thinking...",
+    "confidence": "Confidence",
     "error": "An error occurred. Please try again.",
+    "gameSelected": "Game selected: {gameName}",
+    "goToLogin": "Go to Login",
+    "history": "History",
+    "loginRequired": "Login required",
+    "loginRequiredMessage": "You must be logged in to use the chat",
+    "newChat": "New chat",
+    "noMessages": "No messages yet. Start a conversation!",
+    "page": "Page",
+    "placeholder": "Ask something about the rules...",
     "retry": "Retry",
     "selectGame": "Select a game",
-    "gameSelected": "Game selected: {gameName}",
-    "confidence": "Confidence",
+    "send": "Send",
     "sources": "Sources",
-    "page": "Page",
-    "citation": "Citation"
+    "thinking": "Thinking...",
+    "title": "AI Chat"
   },
-  "upload": {
-    "title": "Upload PDF rulebook",
-    "dragDrop": "Drag and drop PDF here, or click to select",
-    "selectFile": "Select file",
-    "uploading": "Uploading...",
-    "processing": "Processing...",
-    "success": "PDF uploaded and processed successfully!",
-    "error": "Upload error. Please try again.",
-    "validFormats": "Supported formats: PDF",
-    "maxSize": "Maximum size: {size}MB",
-    "requirements": {
-      "title": "Requirements",
-      "quality": "High quality PDF (not scans)",
-      "text": "Selectable text",
-      "pages": "Maximum {max} pages"
-    },
-    "metadata": {
-      "title": "Metadata",
-      "gameName": "Game name",
-      "language": "Language",
-      "version": "Rules version",
-      "notes": "Notes"
-    }
+  "common": {
+    "all": "All",
+    "back": "Back",
+    "cancel": "Cancel",
+    "clear": "Clear",
+    "close": "Close",
+    "confirm": "Confirm",
+    "copy": "Copy",
+    "cut": "Cut",
+    "delete": "Delete",
+    "deselect": "Deselect",
+    "deselectAll": "Deselect all",
+    "download": "Download",
+    "edit": "Edit",
+    "error": "Error",
+    "export": "Export",
+    "filter": "Filter",
+    "import": "Import",
+    "loading": "Loading...",
+    "loginRequired": "Login required to continue.",
+    "next": "Next",
+    "no": "No",
+    "none": "None",
+    "ok": "OK",
+    "paste": "Paste",
+    "permissionDenied": "Access denied. You do not have permission.",
+    "reset": "Reset",
+    "save": "Save",
+    "search": "Search",
+    "select": "Select",
+    "selectAll": "Select all",
+    "submit": "Submit",
+    "success": "Success",
+    "upload": "Upload",
+    "yes": "Yes"
   },
-  "settings": {
-    "title": "Settings",
-    "tabs": {
-      "profile": "Profile",
-      "preferences": "Preferences",
-      "privacy": "Privacy",
-      "advanced": "Advanced"
-    },
-    "profile": {
-      "title": "Profile information",
-      "displayName": "Display name",
-      "email": "Email",
-      "avatar": "Avatar",
-      "changePassword": "Change password",
-      "currentPassword": "Current password",
-      "newPassword": "New password",
-      "confirmPassword": "Confirm new password"
-    },
-    "preferences": {
-      "title": "Preferences",
-      "language": "Language",
-      "theme": "Theme",
-      "themeLight": "Light",
-      "themeDark": "Dark",
-      "themeSystem": "System",
-      "notifications": "Notifications",
-      "emailNotifications": "Email notifications",
-      "pushNotifications": "Push notifications"
-    },
-    "privacy": {
-      "title": "Privacy and security",
-      "twoFactor": "Two-factor authentication",
-      "enable2FA": "Enable 2FA",
-      "disable2FA": "Disable 2FA",
-      "backupCodes": "Backup codes",
-      "generateCodes": "Generate new codes",
-      "linkedAccounts": "Linked accounts",
-      "linkAccount": "Link account",
-      "unlinkAccount": "Unlink account"
-    },
-    "advanced": {
-      "title": "Advanced settings",
-      "apiKeys": "API Keys",
-      "generateKey": "Generate new key",
-      "revokeKey": "Revoke key",
-      "sessions": "Active sessions",
-      "terminateSession": "Terminate session",
-      "terminateAll": "Terminate all sessions",
-      "dataRetention": "Data retention",
-      "exportData": "Export my data",
-      "deleteAccount": "Delete account",
-      "dangerZone": "Danger zone"
-    }
+  "dates": {
+    "ago": "{time} ago",
+    "day": "day",
+    "days": "days",
+    "hour": "hour",
+    "hours": "hours",
+    "in": "in {time}",
+    "minute": "minute",
+    "minutes": "minutes",
+    "month": "month",
+    "months": "months",
+    "now": "Now",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "week": "week",
+    "weeks": "weeks",
+    "year": "year",
+    "years": "years",
+    "yesterday": "Yesterday"
   },
-  "admin": {
-    "title": "Admin panel",
-    "users": "Users",
-    "games": "Games",
-    "analytics": "Analytics",
-    "configuration": "Configuration",
-    "logs": "Logs",
-    "cache": "Cache",
-    "workflows": "Workflows"
+  "editor": {
+    "missingGameId": "Missing gameId query parameter.",
+    "notFound": "RuleSpec not found.",
+    "ruleCount": "Rules",
+    "save": "Save",
+    "validJson": "JSON looks valid"
   },
   "errors": {
+    "forbidden": "Access denied.",
     "generic": "An error occurred. Please try again later.",
     "network": "Network error. Check your connection.",
     "notFound": "Page not found.",
-    "unauthorized": "Unauthorized. Please login to continue.",
-    "forbidden": "Access denied.",
     "serverError": "Server error. Please try again later.",
+    "unauthorized": "Unauthorized. Please login to continue.",
     "validation": "Validation error. Check the form fields."
   },
-  "validation": {
-    "required": "This field is required",
-    "email": "Enter a valid email",
-    "minLength": "Must contain at least {min} characters",
-    "maxLength": "Cannot exceed {max} characters",
-    "passwordMatch": "Passwords do not match",
-    "invalidFormat": "Invalid format"
-  },
-  "dates": {
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "tomorrow": "Tomorrow",
-    "now": "Now",
-    "minute": "minute",
-    "minutes": "minutes",
-    "hour": "hour",
-    "hours": "hours",
-    "day": "day",
-    "days": "days",
-    "week": "week",
-    "weeks": "weeks",
-    "month": "month",
-    "months": "months",
-    "year": "year",
-    "years": "years",
-    "ago": "{time} ago",
-    "in": "in {time}"
-  },
-  "accessibility": {
-    "skipToMain": "Skip to main content",
-    "menu": "Menu",
-    "close": "Close",
-    "openInNewTab": "Open in new tab",
-    "loading": "Loading, please wait",
-    "errorOccurred": "An error occurred"
+  "games": {
+    "addGame": "Add game",
+    "details": {
+      "category": "Category",
+      "description": "Description",
+      "designer": "Designer",
+      "difficulty": "Difficulty",
+      "duration": "Duration",
+      "players": "Players",
+      "publisher": "Publisher",
+      "rules": "Rules",
+      "title": "Game details",
+      "yearPublished": "Year published"
+    },
+    "filterByCategory": "Filter by category",
+    "grid": "Grid",
+    "list": "List",
+    "noGames": "No games found",
+    "searchGames": "Search games...",
+    "sortBy": "Sort by",
+    "title": "My games"
   },
   "home": {
-    "hero": {
-      "title": "Your AI-Powered Board Game Rules Assistant",
-      "subtitle": "Never argue about rules again. Get instant, accurate answers from any rulebook with AI-powered semantic search.",
-      "cta": {
-        "getStarted": "Get Started Free",
-        "tryDemo": "Try Demo Account",
-        "seeHow": "See How It Works",
-        "goToChat": "Go to Chat",
-        "startChatting": "Start Chatting"
-      }
+    "cta": {
+      "subtitle": "Join board game enthusiasts using AI to understand rules better",
+      "title": "Ready to Stop Arguing About Rules?"
     },
     "features": {
-      "title": "How It Works",
-      "upload": {
-        "title": "Upload",
-        "description": "Upload your game rulebook PDF"
-      },
       "ask": {
-        "title": "Ask",
-        "description": "Ask questions about the rules"
+        "description": "Ask questions about the rules",
+        "title": "Ask"
       },
       "play": {
-        "title": "Play",
-        "description": "Get instant, accurate answers"
+        "description": "Get instant, accurate answers",
+        "title": "Play"
+      },
+      "title": "How It Works",
+      "upload": {
+        "description": "Upload your game rulebook PDF",
+        "title": "Upload"
       }
     },
     "footer": {
-      "tagline": "AI-powered board game rules assistance",
+      "copyright": "© 2025 MeepleAI. Open source project.",
+      "demoAccounts": "Demo Accounts",
       "product": "Product",
       "resources": "Resources",
-      "demoAccounts": "Demo Accounts",
-      "copyright": "© 2025 MeepleAI. Open source project."
+      "tagline": "AI-powered board game rules assistance"
     },
-    "cta": {
-      "title": "Ready to Stop Arguing About Rules?",
-      "subtitle": "Join board game enthusiasts using AI to understand rules better"
+    "getStartedButton": "Get Started",
+    "hero": {
+      "cta": {
+        "getStarted": "Get Started Free",
+        "goToChat": "Go to Chat",
+        "seeHow": "See How It Works",
+        "startChatting": "Start Chatting",
+        "tryDemo": "Try Demo Account"
+      },
+      "subtitle": "Never argue about rules again. Get instant, accurate answers from any rulebook with AI-powered semantic search.",
+      "title": "Your AI-Powered Board Game Rules Assistant"
     }
   },
-  "wizard": {
-    "steps": {
-      "upload": "Upload",
-      "parse": "Parse",
-      "review": "Review",
-      "publish": "Publish"
+  "nav": {
+    "home": "Home"
+  },
+  "navigation": {
+    "admin": "Admin",
+    "chat": "Chat",
+    "games": "Games",
+    "home": "Home",
+    "login": "Login",
+    "logout": "Logout",
+    "profile": "Profile",
+    "register": "Sign Up",
+    "settings": "Settings",
+    "upload": "Upload"
+  },
+  "settings": {
+    "advanced": {
+      "apiKeys": "API Keys",
+      "dangerZone": "Danger zone",
+      "dataRetention": "Data retention",
+      "deleteAccount": "Delete account",
+      "exportData": "Export my data",
+      "generateKey": "Generate new key",
+      "revokeKey": "Revoke key",
+      "sessions": "Active sessions",
+      "terminateAll": "Terminate all sessions",
+      "terminateSession": "Terminate session",
+      "title": "Advanced settings"
     },
-    "title": "PDF Import Wizard",
-    "description": "Upload, parse, review, and publish game rules",
+    "preferences": {
+      "emailNotifications": "Email notifications",
+      "language": "Language",
+      "notifications": "Notifications",
+      "pushNotifications": "Push notifications",
+      "theme": "Theme",
+      "themeDark": "Dark",
+      "themeLight": "Light",
+      "themeSystem": "System",
+      "title": "Preferences"
+    },
+    "privacy": {
+      "backupCodes": "Backup codes",
+      "disable2FA": "Disable 2FA",
+      "enable2FA": "Enable 2FA",
+      "generateCodes": "Generate new codes",
+      "linkAccount": "Link account",
+      "linkedAccounts": "Linked accounts",
+      "title": "Privacy and security",
+      "twoFactor": "Two-factor authentication",
+      "unlinkAccount": "Unlink account"
+    },
+    "profile": {
+      "avatar": "Avatar",
+      "changePassword": "Change password",
+      "confirmPassword": "Confirm new password",
+      "currentPassword": "Current password",
+      "displayName": "Display name",
+      "email": "Email",
+      "newPassword": "New password",
+      "title": "Profile information"
+    },
+    "tabs": {
+      "advanced": "Advanced",
+      "preferences": "Preferences",
+      "privacy": "Privacy",
+      "profile": "Profile"
+    },
+    "title": "Settings"
+  },
+  "setup": {
+    "aiConfidence": "AI Confidence:",
+    "backToHome": "← Back to Home",
+    "closeButton": "Close",
+    "estimatedTime": "Estimated setup time:",
+    "gameLabel": "Game:",
+    "generateButton": "Generate Setup Guide",
+    "generating": "Generating...",
+    "generatingMessage": "Generating your setup guide...",
+    "generatingSubMessage": "This may take a few moments",
+    "goToLogin": "Go to Login",
+    "heading": "Game Setup Guide",
+    "loginRequired": "Login Required",
+    "loginRequiredMessage": "You must be logged in to use the setup guide.",
+    "noGuideMessage": "Select a game and click \"Generate Setup Guide\"",
+    "noGuideYet": "No Setup Guide Yet",
+    "optional": "OPTIONAL",
+    "progress": "Progress:",
+    "readyToPlay": "Your game is ready to play",
+    "references": "References",
+    "resetProgress": "Reset Progress",
+    "selectGame": "Select Game",
+    "selectGamePlaceholder": "Select a game...",
+    "setupComplete": "Setup Complete!",
+    "viewButton": "View"
+  },
+  "timeline": {
+    "details": "Details",
+    "eventDetails": "Event Details",
+    "eventType": "Event Type",
+    "events": "Events",
+    "filters": "Filters",
+    "heading": "RAG Events Timeline",
+    "message": "Message",
+    "noEvents": "No events to display",
+    "ragSearch": "RAG Search",
+    "reset": "Reset",
+    "searchPlaceholder": "Search...",
+    "status": "Status"
+  },
+  "upload": {
+    "dragDrop": "Drag and drop PDF here, or click to select",
+    "error": "Upload error. Please try again.",
+    "maxSize": "Maximum size: {size}MB",
+    "metadata": {
+      "gameName": "Game name",
+      "language": "Language",
+      "notes": "Notes",
+      "title": "Metadata",
+      "version": "Rules version"
+    },
+    "processing": "Processing...",
+    "requirements": {
+      "pages": "Maximum {max} pages",
+      "quality": "High quality PDF (not scans)",
+      "text": "Selectable text",
+      "title": "Requirements"
+    },
+    "selectFile": "Select file",
+    "success": "PDF uploaded and processed successfully!",
+    "title": "Upload PDF rulebook",
+    "uploading": "Uploading...",
+    "validFormats": "Supported formats: PDF"
+  },
+  "validation": {
+    "email": "Enter a valid email",
+    "invalidFormat": "Invalid format",
+    "maxLength": "Cannot exceed {max} characters",
+    "minLength": "Must contain at least {min} characters",
+    "passwordMatch": "Passwords do not match",
+    "required": "This field is required"
+  },
+  "wizard": {
     "actions": {
       "confirmGame": "Confirm Game Selection",
+      "importAnother": "Import Another PDF",
       "parsePdf": "Parse PDF",
-      "publishRuleSpec": "Publish RuleSpec",
-      "importAnother": "Import Another PDF"
+      "publishRuleSpec": "Publish RuleSpec"
     },
+    "description": "Upload, parse, review, and publish game rules",
     "status": {
       "publishedSuccess": "Published Successfully!"
-    }
+    },
+    "steps": {
+      "parse": "Parse",
+      "publish": "Publish",
+      "review": "Review",
+      "upload": "Upload"
+    },
+    "title": "PDF Import Wizard"
   }
 }

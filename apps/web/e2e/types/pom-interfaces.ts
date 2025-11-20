@@ -440,9 +440,10 @@ export interface IChatPage extends IBasePage {
 
   // Assertions
   assertChatPageVisible(): Promise<void>;
-  assertLoginRequired(): Promise<void>;
+  assertLoginRequired(): Promise<'modal' | 'inline'>;
   assertAnswerContains(text: string): Promise<void>;
   assertCitationVisible(title: string): Promise<void>;
+  goToLoginFromGate(): Promise<void>;
 }
 
 export interface IUploadPage extends IBasePage {
@@ -517,6 +518,17 @@ export interface IGameListPage extends IBasePage {
   // Assertions
   assertGameVisible(gameName: string): Promise<void>;
   assertGameNotVisible(gameName: string): Promise<void>;
+}
+
+export interface IHomePage extends IBasePage {
+  assertHeroLoaded(): Promise<void>;
+  assertBrandLinkVisible(): Promise<void>;
+  assertPrimaryCtaVisible(): Promise<void>;
+  openAuthModal(): Promise<void>;
+  switchAuthTab(tab: 'login' | 'register'): Promise<void>;
+  assertRegistrationFormFields(): Promise<void>;
+  assertLoginFormFields(): Promise<void>;
+  assertFeaturesOverview(): Promise<void>;
 }
 
 export interface IUserManagementPage extends IBasePage {

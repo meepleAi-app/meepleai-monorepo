@@ -1,337 +1,405 @@
 {
-  "common": {
-    "loading": "Caricamento...",
-    "error": "Errore",
-    "success": "Successo",
-    "cancel": "Annulla",
-    "save": "Salva",
-    "delete": "Elimina",
-    "edit": "Modifica",
+  "accessibility": {
     "close": "Chiudi",
-    "confirm": "Conferma",
-    "back": "Indietro",
-    "next": "Avanti",
-    "search": "Cerca",
-    "filter": "Filtra",
-    "clear": "Cancella",
-    "all": "Tutti",
-    "none": "Nessuno",
-    "yes": "Sì",
-    "no": "No",
-    "ok": "OK",
-    "submit": "Invia",
-    "reset": "Reimposta",
-    "export": "Esporta",
-    "import": "Importa",
-    "download": "Scarica",
-    "upload": "Carica",
-    "copy": "Copia",
-    "paste": "Incolla",
-    "cut": "Taglia",
-    "select": "Seleziona",
-    "selectAll": "Seleziona tutto",
-    "deselect": "Deseleziona",
-    "deselectAll": "Deseleziona tutto"
+    "errorOccurred": "Si è verificato un errore",
+    "loading": "Caricamento in corso, attendere prego",
+    "menu": "Menu",
+    "openInNewTab": "Apri in una nuova scheda",
+    "skipToMain": "Salta al contenuto principale"
   },
-  "navigation": {
-    "home": "Home",
+  "admin": {
+    "analytics": "Analisi",
+    "cache": "Cache",
+    "configuration": "Configurazione",
     "games": "Giochi",
-    "chat": "Chat",
-    "upload": "Carica",
-    "settings": "Impostazioni",
-    "profile": "Profilo",
-    "admin": "Amministrazione",
-    "login": "Accedi",
-    "logout": "Esci",
-    "register": "Registrati"
+    "logs": "Log",
+    "title": "Pannello amministrazione",
+    "users": {
+      "createUser": "Crea Utente",
+      "deleteConfirm": "Sei sicuro di voler eliminare",
+      "deleteMultiple": "Elimina Più Utenti",
+      "deleteSelected": "Elimina Selezionati",
+      "deleteUser": "Elimina Utente",
+      "displayName": "Nome Visualizzato *",
+      "editUser": "Modifica Utente",
+      "email": "Email *",
+      "management": "Gestione Utenti",
+      "of": "di",
+      "page": "Pagina",
+      "password": "Password *",
+      "role": "Ruolo *",
+      "saveChanges": "Salva Modifiche",
+      "searchPlaceholder": "Cerca per email o nome...",
+      "showing": "Mostrando",
+      "to": "a",
+      "users": "utenti",
+      "validationDisplayName": "Nome visualizzato richiesto",
+      "validationEmail": "Email valida richiesta",
+      "validationPassword": "La password deve essere di almeno 8 caratteri"
+    },
+    "workflows": "Flussi di lavoro"
   },
   "app": {
-    "title": "MeepleAI - Assistente AI per Regolamenti di Giochi da Tavolo",
     "description": "Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.",
-    "tagline": "Il tuo assistente intelligente per i giochi da tavolo"
+    "tagline": "Il tuo assistente intelligente per i giochi da tavolo",
+    "title": "MeepleAI - Assistente AI per Regolamenti di Giochi da Tavolo"
   },
   "auth": {
     "login": {
-      "title": "Accedi",
-      "email": "Email",
-      "password": "Password",
-      "rememberMe": "Ricordami",
-      "forgotPassword": "Password dimenticata?",
-      "submit": "Accedi",
-      "noAccount": "Non hai un account?",
-      "signUp": "Registrati",
-      "error": "Credenziali non valide. Riprova.",
-      "success": "Accesso effettuato con successo!",
-      "loadingMessage": "Caricamento login...",
-      "signInTo": "Accedi a MeepleAI",
-      "createAccount": "Crea il tuo Account",
-      "signInDescription": "Accedi all'assistente AI per regolamenti di giochi da tavolo",
-      "sessionExpired": "Sessione Scaduta",
-      "sessionExpiredMessage": "La tua sessione è scaduta. Accedi nuovamente.",
-      "forTesting": "Per Test"
+      "signInTo": "Accedi a MeepleAI"
+    },
+    "oauth": {
+      "discord": "Continua con Discord",
+      "github": "Continua con GitHub",
+      "google": "Continua con Google",
+      "separator": "Oppure continua con"
     },
     "register": {
-      "title": "Registrati",
-      "email": "Email",
-      "password": "Password",
       "confirmPassword": "Conferma password",
       "displayName": "Nome visualizzato",
-      "submit": "Registrati",
-      "hasAccount": "Hai già un account?",
-      "signIn": "Accedi",
+      "email": "Email",
       "error": "Registrazione fallita. Riprova.",
-      "success": "Registrazione completata! Puoi ora accedere."
+      "hasAccount": "Hai già un account?",
+      "password": "Password",
+      "signIn": "Accedi",
+      "submit": "Registrati",
+      "success": "Registrazione completata! Puoi ora accedere.",
+      "title": "Registrati"
     },
     "resetPassword": {
-      "title": "Reimposta password",
       "email": "Email",
+      "error": "Impossibile inviare il link di reimpostazione. Riprova.",
       "submit": "Invia link di reimpostazione",
       "success": "Link di reimpostazione inviato! Controlla la tua email.",
-      "error": "Impossibile inviare il link di reimpostazione. Riprova."
+      "title": "Reimposta password"
     },
     "session": {
       "expired": "La tua sessione è scaduta. Accedi nuovamente.",
       "expiringSoon": "La tua sessione scadrà tra {minutes} minuti.",
-      "stayLoggedIn": "Rimani connesso",
-      "logOut": "Esci"
+      "logOut": "Esci",
+      "stayLoggedIn": "Rimani connesso"
     },
     "twoFactor": {
-      "title": "Autenticazione a due fattori",
+      "backupCode": "Usa un codice di backup",
       "code": "Codice di verifica",
-      "submit": "Verifica",
       "error": "Codice non valido. Riprova.",
-      "backupCode": "Usa un codice di backup"
-    }
-  },
-  "games": {
-    "title": "I miei giochi",
-    "noGames": "Nessun gioco trovato",
-    "addGame": "Aggiungi gioco",
-    "searchGames": "Cerca giochi...",
-    "filterByCategory": "Filtra per categoria",
-    "sortBy": "Ordina per",
-    "grid": "Griglia",
-    "list": "Lista",
-    "details": {
-      "title": "Dettagli gioco",
-      "players": "Giocatori",
-      "duration": "Durata",
-      "difficulty": "Difficoltà",
-      "category": "Categoria",
-      "designer": "Designer",
-      "publisher": "Editore",
-      "yearPublished": "Anno di pubblicazione",
-      "description": "Descrizione",
-      "rules": "Regolamento"
+      "submit": "Verifica",
+      "title": "Autenticazione a due fattori"
     }
   },
   "chat": {
-    "title": "Chat AI",
-    "placeholder": "Chiedi qualcosa sul regolamento...",
-    "send": "Invia",
-    "newChat": "Nuova chat",
-    "history": "Cronologia",
+    "citation": "Citazione",
     "clearHistory": "Cancella cronologia",
-    "noMessages": "Nessun messaggio ancora. Inizia una conversazione!",
-    "thinking": "Sto pensando...",
+    "confidence": "Confidenza",
     "error": "Si è verificato un errore. Riprova.",
+    "gameSelected": "Gioco selezionato: {gameName}",
+    "goToLogin": "Vai al Login",
+    "history": "Cronologia",
+    "loginRequired": "Accesso richiesto",
+    "loginRequiredMessage": "Devi effettuare l'accesso per utilizzare la chat",
+    "newChat": "Nuova chat",
+    "noMessages": "Nessun messaggio ancora. Inizia una conversazione!",
+    "page": "Pagina",
+    "placeholder": "Chiedi qualcosa sul regolamento...",
     "retry": "Riprova",
     "selectGame": "Seleziona un gioco",
-    "gameSelected": "Gioco selezionato: {gameName}",
-    "confidence": "Confidenza",
+    "send": "Invia",
     "sources": "Fonti",
-    "page": "Pagina",
-    "citation": "Citazione"
+    "thinking": "Sto pensando...",
+    "title": "Chat AI"
   },
-  "upload": {
-    "title": "Carica regolamento PDF",
-    "dragDrop": "Trascina e rilascia il PDF qui, oppure clicca per selezionare",
-    "selectFile": "Seleziona file",
-    "uploading": "Caricamento in corso...",
-    "processing": "Elaborazione in corso...",
-    "success": "PDF caricato ed elaborato con successo!",
-    "error": "Errore durante il caricamento. Riprova.",
-    "validFormats": "Formati supportati: PDF",
-    "maxSize": "Dimensione massima: {size}MB",
-    "requirements": {
-      "title": "Requisiti",
-      "quality": "PDF di alta qualità (non scansioni)",
-      "text": "Testo selezionabile",
-      "pages": "Massimo {max} pagine"
-    },
-    "metadata": {
-      "title": "Metadati",
-      "gameName": "Nome del gioco",
-      "language": "Lingua",
-      "version": "Versione regolamento",
-      "notes": "Note"
-    }
+  "common": {
+    "all": "Tutti",
+    "back": "Indietro",
+    "cancel": "Annulla",
+    "clear": "Cancella",
+    "close": "Chiudi",
+    "confirm": "Conferma",
+    "copy": "Copia",
+    "cut": "Taglia",
+    "delete": "Elimina",
+    "deselect": "Deseleziona",
+    "deselectAll": "Deseleziona tutto",
+    "download": "Scarica",
+    "edit": "Modifica",
+    "error": "Errore",
+    "export": "Esporta",
+    "filter": "Filtra",
+    "import": "Importa",
+    "loading": "Caricamento...",
+    "loginRequired": "Accesso richiesto per continuare.",
+    "next": "Avanti",
+    "no": "No",
+    "none": "Nessuno",
+    "ok": "OK",
+    "paste": "Incolla",
+    "permissionDenied": "Accesso negato. Non hai i permessi necessari.",
+    "reset": "Reimposta",
+    "save": "Salva",
+    "search": "Cerca",
+    "select": "Seleziona",
+    "selectAll": "Seleziona tutto",
+    "submit": "Invia",
+    "success": "Successo",
+    "upload": "Carica",
+    "yes": "Sì"
   },
-  "settings": {
-    "title": "Impostazioni",
-    "tabs": {
-      "profile": "Profilo",
-      "preferences": "Preferenze",
-      "privacy": "Privacy",
-      "advanced": "Avanzate"
-    },
-    "profile": {
-      "title": "Informazioni profilo",
-      "displayName": "Nome visualizzato",
-      "email": "Email",
-      "avatar": "Avatar",
-      "changePassword": "Cambia password",
-      "currentPassword": "Password attuale",
-      "newPassword": "Nuova password",
-      "confirmPassword": "Conferma nuova password"
-    },
-    "preferences": {
-      "title": "Preferenze",
-      "language": "Lingua",
-      "theme": "Tema",
-      "themeLight": "Chiaro",
-      "themeDark": "Scuro",
-      "themeSystem": "Sistema",
-      "notifications": "Notifiche",
-      "emailNotifications": "Notifiche email",
-      "pushNotifications": "Notifiche push"
-    },
-    "privacy": {
-      "title": "Privacy e sicurezza",
-      "twoFactor": "Autenticazione a due fattori",
-      "enable2FA": "Abilita 2FA",
-      "disable2FA": "Disabilita 2FA",
-      "backupCodes": "Codici di backup",
-      "generateCodes": "Genera nuovi codici",
-      "linkedAccounts": "Account collegati",
-      "linkAccount": "Collega account",
-      "unlinkAccount": "Scollega account"
-    },
-    "advanced": {
-      "title": "Impostazioni avanzate",
-      "apiKeys": "Chiavi API",
-      "generateKey": "Genera nuova chiave",
-      "revokeKey": "Revoca chiave",
-      "sessions": "Sessioni attive",
-      "terminateSession": "Termina sessione",
-      "terminateAll": "Termina tutte le sessioni",
-      "dataRetention": "Conservazione dati",
-      "exportData": "Esporta i miei dati",
-      "deleteAccount": "Elimina account",
-      "dangerZone": "Zona pericolosa"
-    }
+  "dates": {
+    "ago": "{time} fa",
+    "day": "giorno",
+    "days": "giorni",
+    "hour": "ora",
+    "hours": "ore",
+    "in": "tra {time}",
+    "minute": "minuto",
+    "minutes": "minuti",
+    "month": "mese",
+    "months": "mesi",
+    "now": "Ora",
+    "today": "Oggi",
+    "tomorrow": "Domani",
+    "week": "settimana",
+    "weeks": "settimane",
+    "year": "anno",
+    "years": "anni",
+    "yesterday": "Ieri"
   },
-  "admin": {
-    "title": "Pannello amministrazione",
-    "users": "Utenti",
-    "games": "Giochi",
-    "analytics": "Analisi",
-    "configuration": "Configurazione",
-    "logs": "Log",
-    "cache": "Cache",
-    "workflows": "Flussi di lavoro"
+  "editor": {
+    "missingGameId": "Parametro gameId mancante.",
+    "notFound": "RuleSpec non trovata.",
+    "ruleCount": "Regole",
+    "save": "Salva",
+    "validJson": "JSON valido"
   },
   "errors": {
+    "forbidden": "Accesso negato.",
     "generic": "Si è verificato un errore. Riprova più tardi.",
     "network": "Errore di rete. Controlla la tua connessione.",
     "notFound": "Pagina non trovata.",
-    "unauthorized": "Non autorizzato. Accedi per continuare.",
-    "forbidden": "Accesso negato.",
     "serverError": "Errore del server. Riprova più tardi.",
+    "unauthorized": "Non autorizzato. Accedi per continuare.",
     "validation": "Errore di validazione. Controlla i campi del modulo."
   },
-  "validation": {
-    "required": "Questo campo è obbligatorio",
-    "email": "Inserisci un'email valida",
-    "minLength": "Deve contenere almeno {min} caratteri",
-    "maxLength": "Non può superare {max} caratteri",
-    "passwordMatch": "Le password non coincidono",
-    "invalidFormat": "Formato non valido"
-  },
-  "dates": {
-    "today": "Oggi",
-    "yesterday": "Ieri",
-    "tomorrow": "Domani",
-    "now": "Ora",
-    "minute": "minuto",
-    "minutes": "minuti",
-    "hour": "ora",
-    "hours": "ore",
-    "day": "giorno",
-    "days": "giorni",
-    "week": "settimana",
-    "weeks": "settimane",
-    "month": "mese",
-    "months": "mesi",
-    "year": "anno",
-    "years": "anni",
-    "ago": "{time} fa",
-    "in": "tra {time}"
-  },
-  "accessibility": {
-    "skipToMain": "Salta al contenuto principale",
-    "menu": "Menu",
-    "close": "Chiudi",
-    "openInNewTab": "Apri in una nuova scheda",
-    "loading": "Caricamento in corso, attendere prego",
-    "errorOccurred": "Si è verificato un errore"
+  "games": {
+    "addGame": "Aggiungi gioco",
+    "details": {
+      "category": "Categoria",
+      "description": "Descrizione",
+      "designer": "Designer",
+      "difficulty": "Difficoltà",
+      "duration": "Durata",
+      "players": "Giocatori",
+      "publisher": "Editore",
+      "rules": "Regolamento",
+      "title": "Dettagli gioco",
+      "yearPublished": "Anno di pubblicazione"
+    },
+    "filterByCategory": "Filtra per categoria",
+    "grid": "Griglia",
+    "list": "Lista",
+    "noGames": "Nessun gioco trovato",
+    "searchGames": "Cerca giochi...",
+    "sortBy": "Ordina per",
+    "title": "I miei giochi"
   },
   "home": {
-    "hero": {
-      "title": "Il tuo Assistente AI per Regolamenti di Giochi da Tavolo",
-      "subtitle": "Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.",
-      "cta": {
-        "getStarted": "Inizia Gratis",
-        "tryDemo": "Prova Account Demo",
-        "seeHow": "Scopri Come Funziona",
-        "goToChat": "Vai alla Chat",
-        "startChatting": "Inizia a Chattare"
-      }
+    "cta": {
+      "subtitle": "Unisciti agli appassionati di giochi da tavolo che usano l'AI per comprendere meglio le regole",
+      "title": "Pronto a Non Discutere Più sulle Regole?"
     },
     "features": {
-      "title": "Come Funziona",
-      "upload": {
-        "title": "Carica",
-        "description": "Carica il PDF del regolamento del tuo gioco"
-      },
       "ask": {
-        "title": "Chiedi",
-        "description": "Fai domande sulle regole"
+        "description": "Fai domande sulle regole",
+        "title": "Chiedi"
       },
       "play": {
-        "title": "Gioca",
-        "description": "Ottieni risposte istantanee e accurate"
+        "description": "Ottieni risposte istantanee e accurate",
+        "title": "Gioca"
+      },
+      "title": "Come Funziona",
+      "upload": {
+        "description": "Carica il PDF del regolamento del tuo gioco",
+        "title": "Carica"
       }
     },
     "footer": {
-      "tagline": "Assistenza AI per regolamenti di giochi da tavolo",
+      "copyright": "© 2025 MeepleAI. Progetto open source.",
+      "demoAccounts": "Account Demo",
       "product": "Prodotto",
       "resources": "Risorse",
-      "demoAccounts": "Account Demo",
-      "copyright": "© 2025 MeepleAI. Progetto open source."
+      "tagline": "Assistenza AI per regolamenti di giochi da tavolo"
     },
-    "cta": {
-      "title": "Pronto a Non Discutere Più sulle Regole?",
-      "subtitle": "Unisciti agli appassionati di giochi da tavolo che usano l'AI per comprendere meglio le regole"
+    "getStartedButton": "Inizia",
+    "hero": {
+      "cta": {
+        "getStarted": "Inizia Gratis",
+        "goToChat": "Vai alla Chat",
+        "seeHow": "Scopri Come Funziona",
+        "startChatting": "Inizia a Chattare",
+        "tryDemo": "Prova Account Demo"
+      },
+      "subtitle": "Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.",
+      "title": "Il tuo Assistente AI per Regolamenti di Giochi da Tavolo"
     }
   },
-  "wizard": {
-    "steps": {
-      "upload": "Carica",
-      "parse": "Elabora",
-      "review": "Rivedi",
-      "publish": "Pubblica"
+  "nav": {
+    "home": "Home"
+  },
+  "navigation": {
+    "admin": "Amministrazione",
+    "chat": "Chat",
+    "games": "Giochi",
+    "home": "Home",
+    "login": "Accedi",
+    "logout": "Esci",
+    "profile": "Profilo",
+    "register": "Registrati",
+    "settings": "Impostazioni",
+    "upload": "Carica"
+  },
+  "settings": {
+    "advanced": {
+      "apiKeys": "Chiavi API",
+      "dangerZone": "Zona pericolosa",
+      "dataRetention": "Conservazione dati",
+      "deleteAccount": "Elimina account",
+      "exportData": "Esporta i miei dati",
+      "generateKey": "Genera nuova chiave",
+      "revokeKey": "Revoca chiave",
+      "sessions": "Sessioni attive",
+      "terminateAll": "Termina tutte le sessioni",
+      "terminateSession": "Termina sessione",
+      "title": "Impostazioni avanzate"
     },
-    "title": "Wizard Importazione PDF",
-    "description": "Carica, elabora, rivedi e pubblica regolamenti di gioco",
+    "preferences": {
+      "emailNotifications": "Notifiche email",
+      "language": "Lingua",
+      "notifications": "Notifiche",
+      "pushNotifications": "Notifiche push",
+      "theme": "Tema",
+      "themeDark": "Scuro",
+      "themeLight": "Chiaro",
+      "themeSystem": "Sistema",
+      "title": "Preferenze"
+    },
+    "privacy": {
+      "backupCodes": "Codici di backup",
+      "disable2FA": "Disabilita 2FA",
+      "enable2FA": "Abilita 2FA",
+      "generateCodes": "Genera nuovi codici",
+      "linkAccount": "Collega account",
+      "linkedAccounts": "Account collegati",
+      "title": "Privacy e sicurezza",
+      "twoFactor": "Autenticazione a due fattori",
+      "unlinkAccount": "Scollega account"
+    },
+    "profile": {
+      "avatar": "Avatar",
+      "changePassword": "Cambia password",
+      "confirmPassword": "Conferma nuova password",
+      "currentPassword": "Password attuale",
+      "displayName": "Nome visualizzato",
+      "email": "Email",
+      "newPassword": "Nuova password",
+      "title": "Informazioni profilo"
+    },
+    "tabs": {
+      "advanced": "Avanzate",
+      "preferences": "Preferenze",
+      "privacy": "Privacy",
+      "profile": "Profilo"
+    },
+    "title": "Impostazioni"
+  },
+  "setup": {
+    "aiConfidence": "Confidenza AI:",
+    "backToHome": "← Torna alla Home",
+    "closeButton": "Chiudi",
+    "estimatedTime": "Tempo stimato di setup:",
+    "gameLabel": "Gioco:",
+    "generateButton": "Genera Guida Setup",
+    "generating": "Generazione...",
+    "generatingMessage": "Generazione della guida di setup...",
+    "generatingSubMessage": "Potrebbe richiedere alcuni istanti",
+    "goToLogin": "Vai al Login",
+    "heading": "Guida Setup Gioco",
+    "loginRequired": "Accesso Richiesto",
+    "loginRequiredMessage": "Devi effettuare l'accesso per usare la guida di setup.",
+    "noGuideMessage": "Seleziona un gioco e clicca \"Genera Guida Setup\"",
+    "noGuideYet": "Nessuna Guida di Setup",
+    "optional": "OPZIONALE",
+    "progress": "Progresso:",
+    "readyToPlay": "Il tuo gioco è pronto per giocare",
+    "references": "Riferimenti",
+    "resetProgress": "Reimposta Progresso",
+    "selectGame": "Seleziona Gioco",
+    "selectGamePlaceholder": "Seleziona un gioco...",
+    "setupComplete": "Setup Completato!",
+    "viewButton": "Visualizza"
+  },
+  "timeline": {
+    "details": "Dettagli",
+    "eventDetails": "Dettagli Evento",
+    "eventType": "Tipo Evento",
+    "events": "Eventi",
+    "filters": "Filtri",
+    "heading": "Timeline Eventi RAG",
+    "message": "Messaggio",
+    "noEvents": "Nessun evento da visualizzare",
+    "ragSearch": "Ricerca RAG",
+    "reset": "Reimposta",
+    "searchPlaceholder": "Cerca...",
+    "status": "Stato"
+  },
+  "upload": {
+    "dragDrop": "Trascina e rilascia il PDF qui, oppure clicca per selezionare",
+    "error": "Errore durante il caricamento. Riprova.",
+    "maxSize": "Dimensione massima: {size}MB",
+    "metadata": {
+      "gameName": "Nome del gioco",
+      "language": "Lingua",
+      "notes": "Note",
+      "title": "Metadati",
+      "version": "Versione regolamento"
+    },
+    "processing": "Elaborazione in corso...",
+    "requirements": {
+      "pages": "Massimo {max} pagine",
+      "quality": "PDF di alta qualità (non scansioni)",
+      "text": "Testo selezionabile",
+      "title": "Requisiti"
+    },
+    "selectFile": "Seleziona file",
+    "success": "PDF caricato ed elaborato con successo!",
+    "title": "Carica regolamento PDF",
+    "uploading": "Caricamento in corso...",
+    "validFormats": "Formati supportati: PDF"
+  },
+  "validation": {
+    "email": "Inserisci un'email valida",
+    "invalidFormat": "Formato non valido",
+    "maxLength": "Non può superare {max} caratteri",
+    "minLength": "Deve contenere almeno {min} caratteri",
+    "passwordMatch": "Le password non coincidono",
+    "required": "Questo campo è obbligatorio"
+  },
+  "wizard": {
     "actions": {
       "confirmGame": "Conferma Selezione Gioco",
+      "importAnother": "Importa un Altro PDF",
       "parsePdf": "Elabora PDF",
-      "publishRuleSpec": "Pubblica RuleSpec",
-      "importAnother": "Importa un Altro PDF"
+      "publishRuleSpec": "Pubblica RuleSpec"
     },
+    "description": "Carica, elabora, rivedi e pubblica regolamenti di gioco",
     "status": {
       "publishedSuccess": "Pubblicato con Successo!"
-    }
+    },
+    "steps": {
+      "parse": "Elabora",
+      "publish": "Pubblica",
+      "review": "Rivedi",
+      "upload": "Carica"
+    },
+    "title": "Wizard Importazione PDF"
   }
 }

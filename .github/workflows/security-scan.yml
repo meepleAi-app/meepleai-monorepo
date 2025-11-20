@@ -246,10 +246,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Install Security Code Scan Analyzer
-        run: |
-          # Add SecurityCodeScan.VS2019 analyzer to the project
-          dotnet add src/Api package SecurityCodeScan.VS2019 --version 5.6.7
+      # Issue #1455: SecurityCodeScan.VS2019 removed (deprecated, last update 2021)
+      # Modern analyzers now in Api.csproj: NetAnalyzers, SonarAnalyzer, Meziantou.Analyzer
 
       - name: Build with Security Analysis
         id: security_build
@@ -412,4 +410,4 @@ jobs:
           echo "✅ SAST: CodeQL + Semgrep" >> $GITHUB_STEP_SUMMARY
           echo "✅ Secrets Detection: Semgrep" >> $GITHUB_STEP_SUMMARY
           echo "✅ Dependency Scanning: .NET + npm" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Code Analysis: SecurityCodeScan + NetAnalyzers" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Code Analysis: NetAnalyzers + SonarAnalyzer + Meziantou.Analyzer" >> $GITHUB_STEP_SUMMARY

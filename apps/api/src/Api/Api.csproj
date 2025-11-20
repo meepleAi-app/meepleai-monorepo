@@ -55,13 +55,20 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.14.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.13.1-beta.1" />
   </ItemGroup>
-  <!-- Security analyzers -->
+  <!-- Security analyzers (Issue #1455: Modern analyzers replacing deprecated SecurityCodeScan) -->
   <ItemGroup>
-    <PackageReference Include="SecurityCodeScan.VS2019" Version="5.6.7">
+    <!-- Microsoft official .NET security analyzers -->
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.100">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.100">
+    <!-- SonarAnalyzer for comprehensive security and code quality rules -->
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.4.0.108396">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- Meziantou Analyzer for additional best practices and security checks -->
+    <PackageReference Include="Meziantou.Analyzer" Version="2.0.183">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

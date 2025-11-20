@@ -169,7 +169,7 @@ public static class ObservabilityServiceExtensions
             {
                 Type = SecuritySchemeType.ApiKey,
                 In = ParameterLocation.Cookie,
-                Name = "meeple_session",
+                Name = "meepleai_session",
                 Description = "Cookie-based session authentication for web clients"
             });
 

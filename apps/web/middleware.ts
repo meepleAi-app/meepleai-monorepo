@@ -43,9 +43,9 @@ const PUBLIC_AUTH_ROUTES = ['/login', '/register'];
 
 /**
  * Session cookie name used by the backend API
- * This matches the cookie name set in CookieHelpers.cs (default: "meeple_session")
+ * This matches the cookie name set in CookieHelpers.cs (default: "meepleai_session")
  */
-const SESSION_COOKIE_NAME = 'meeple_session';
+const SESSION_COOKIE_NAME = 'meepleai_session';
 
 // ============================================================================
 // Middleware Function

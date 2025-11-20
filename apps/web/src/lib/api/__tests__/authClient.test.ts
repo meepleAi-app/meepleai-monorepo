@@ -32,9 +32,9 @@ describe('AuthClient', () => {
     describe('getSessionStatus', () => {
       it('should get current session status', async () => {
         const mockResponse: SessionStatusResponse = {
-          expiresAt: '2025-11-17T12:00:00Z',
-          lastSeenAt: '2025-11-17T11:00:00Z',
-          remainingMinutes: 30,
+          ExpiresAt: '2025-11-17T12:00:00Z',
+          LastSeenAt: '2025-11-17T11:00:00Z',
+          RemainingMinutes: 30,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -69,9 +69,9 @@ describe('AuthClient', () => {
     describe('extendSession', () => {
       it('should extend current session', async () => {
         const mockResponse: SessionStatusResponse = {
-          expiresAt: '2025-11-17T13:00:00Z',
-          lastSeenAt: '2025-11-17T11:00:00Z',
-          remainingMinutes: 60,
+          ExpiresAt: '2025-11-17T13:00:00Z',
+          LastSeenAt: '2025-11-17T11:00:00Z',
+          RemainingMinutes: 60,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -96,9 +96,9 @@ describe('AuthClient', () => {
     describe('getTwoFactorStatus', () => {
       it('should get 2FA status', async () => {
         const mockResponse: TwoFactorStatusDto = {
-          isEnabled: true,
-          enabledAt: '2025-11-01T10:00:00Z',
-          unusedBackupCodesCount: 8,
+          IsEnabled: true,
+          EnabledAt: '2025-11-01T10:00:00Z',
+          UnusedBackupCodesCount: 8,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -133,9 +133,9 @@ describe('AuthClient', () => {
     describe('setup2FA', () => {
       it('should setup 2FA and return QR code + backup codes', async () => {
         const mockResponse: TotpSetupResponse = {
-          secret: 'JBSWY3DPEHPK3PXP',
-          qrCodeUri: 'otpauth://totp/MeepleAI:user@example.com?secret=JBSWY3DPEHPK3PXP',
-          backupCodes: [
+          Secret: 'JBSWY3DPEHPK3PXP',
+          QrCodeUrl: 'otpauth://totp/MeepleAI:user@example.com?secret=JBSWY3DPEHPK3PXP',
+          BackupCodes: [
             '12345678',
             '23456789',
             '34567890',
@@ -179,9 +179,9 @@ describe('AuthClient', () => {
         const result = await authClient.enable2FA('123456');
 
         expect(result).toEqual({
-          success: true,
-          backupCodes: ['12345678', '23456789'],
-          errorMessage: null,
+          Success: true,
+          BackupCodes: ['12345678', '23456789'],
+          ErrorMessage: null,
         });
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining('/api/v1/auth/2fa/enable'),
@@ -202,9 +202,9 @@ describe('AuthClient', () => {
         const result = await authClient.enable2FA('123456');
 
         expect(result).toEqual({
-          success: true,
-          backupCodes: null,
-          errorMessage: null,
+          Success: true,
+          BackupCodes: null,
+          ErrorMessage: null,
         });
       });
     });
@@ -241,8 +241,8 @@ describe('AuthClient', () => {
         const result = await authClient.disable2FA('password123', '123456');
 
         expect(result).toEqual({
-          success: true,
-          errorMessage: null,
+          Success: true,
+          ErrorMessage: null,
         });
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining('/api/v1/auth/2fa/disable'),
@@ -262,13 +262,13 @@ describe('AuthClient', () => {
     describe('getProfile', () => {
       it('should get current user profile', async () => {
         const mockResponse: UserProfile = {
-          id: '123e4567-e89b-12d3-a456-426614174000',
-          email: 'user@meepleai.dev',
-          displayName: 'Test User',
-          role: 'User',
-          createdAt: '2025-01-01T00:00:00Z',
-          isTwoFactorEnabled: true,
-          twoFactorEnabledAt: '2025-11-01T10:00:00Z',
+          Id: '123e4567-e89b-12d3-a456-426614174000',
+          Email: 'user@meepleai.dev',
+          DisplayName: 'Test User',
+          Role: 'User',
+          CreatedAt: '2025-01-01T00:00:00Z',
+          IsTwoFactorEnabled: true,
+          TwoFactorEnabledAt: '2025-11-01T10:00:00Z',
         };
 
         mockFetch.mockResolvedValueOnce({

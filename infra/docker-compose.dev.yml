@@ -12,24 +12,11 @@ services:
   # Infrastructure Services (from docker-compose.yml)
   # ============================================================================
   meepleai-postgres:
-    image: postgres:16.4-alpine3.20
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      POSTGRES_PASSWORD_FILE:  # Override to unset (dev uses direct password)
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meeplepass}
-      POSTGRES_DB: ${POSTGRES_DB:-meepleai}
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    networks:
-      - meepleai
 
   meepleai-qdrant:
     image: qdrant/qdrant:v1.12.4
@@ -264,13 +251,9 @@ services:
       - meepleai
 
   meepleai-grafana:
-    image: grafana/grafana:11.4.0
-    restart: unless-stopped
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD__FILE:  # Override to unset (dev uses direct password)
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_ROOT_URL: "http://localhost:3001"
     volumes:
       - grafanadata:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
@@ -307,26 +290,12 @@ services:
   # Application Services
   # ============================================================================
   meepleai-api:
-    build:
-      context: ../apps/api
-      dockerfile: ./src/Api/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ./env/api.env.dev
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=meepleai-postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD:-meeplepass}
-      QDRANT_URL: http://meepleai-qdrant:6333
-      REDIS_URL: meepleai-redis:6379
-      OLLAMA_URL: http://meepleai-ollama:11434
-      EMBEDDING_PROVIDER: ollama
-      EMBEDDING_MODEL: nomic-embed-text
-      LOCAL_EMBEDDING_URL: http://meepleai-embedding:8000
-      EMBEDDING_FALLBACK_ENABLED: "true"
-      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      POSTGRES_PASSWORD_FILE:  # Override to unset (dev uses connection string)
+      OPENROUTER_API_KEY_FILE:  # Override to unset (dev uses env var from api.env.dev)
+      INITIAL_ADMIN_PASSWORD_FILE:  # Override to unset (dev uses direct password)
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
-      INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-System Admin}
     ports:
       - "8080:8080"
     depends_on:
@@ -423,7 +392,7 @@ services:
     stdin_open: true
     tty: true
     depends_on:
-      - n8n
+      - meepleai-n8n
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -607,7 +576,7 @@ services:
     stdin_open: true
     tty: true
     depends_on:
-      - qdrant
+      - meepleai-qdrant
     security_opt:
       - no-new-privileges:true
     cap_drop:

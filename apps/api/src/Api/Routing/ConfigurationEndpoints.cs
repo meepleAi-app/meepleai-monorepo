@@ -61,12 +61,13 @@ public static class ConfigurationEndpoints
             HttpContext context,
             IMediator mediator,
             string? environment = null,
+            bool activeOnly = false,
             CancellationToken ct = default) =>
         {
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var query = new GetConfigByKeyQuery(key, environment);
+            var query = new GetConfigByKeyQuery(key, environment, activeOnly);
             var config = await mediator.Send(query, ct);
             return config != null ? Results.Json(config) : Results.NotFound();
         })

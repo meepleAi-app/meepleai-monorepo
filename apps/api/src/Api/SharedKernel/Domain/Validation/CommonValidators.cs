@@ -185,8 +185,18 @@ public static class CommonValidators
 
     #region File Validation
 
+    // Cross-platform invalid filename characters (union of Windows and Unix restrictions)
+    // Windows: \ / : * ? " < > | (plus control chars)
+    // Unix: / and \0 (null character)
+    // We use the union to ensure consistent validation across all platforms
+    private static readonly char[] CrossPlatformInvalidFileNameChars = new[]
+    {
+        '\\', '/', ':', '*', '?', '"', '<', '>', '|', '\0'
+    };
+
     /// <summary>
-    /// Validates that a file name has a valid format.
+    /// Validates that a file name has a valid format (cross-platform compatible).
+    /// Uses a union of Windows and Unix invalid characters to ensure consistent validation.
     /// </summary>
     /// <param name="value">The file name to validate.</param>
     /// <param name="parameterName">The name of the parameter being validated.</param>
@@ -203,8 +213,8 @@ public static class CommonValidators
             return notEmptyResult;
         }
 
-        var invalidChars = Path.GetInvalidFileNameChars();
-        if (value.Any(ch => invalidChars.Contains(ch)))
+        // Use cross-platform character set for consistent validation
+        if (value.Any(ch => CrossPlatformInvalidFileNameChars.Contains(ch)))
         {
             return Result<string>.Failure(Error.Validation(
                 message ?? $"{parameterName} contains invalid characters"));

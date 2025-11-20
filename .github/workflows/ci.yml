@@ -207,9 +207,6 @@ jobs:
     runs-on: ubuntu-latest
     # Run on schedule/workflow_dispatch, or when API/web files changed in push/PR
     if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') }}
-    defaults:
-      run:
-        working-directory: apps/web
     services:
       postgres:
         image: postgres:16-alpine
@@ -224,6 +221,20 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        ports:
+          - 6333:6333
+          - 6334:6334
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 6379:6379
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -246,6 +257,7 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Install dependencies
+        working-directory: apps/web
         run: pnpm install
 
       - name: Install Newman globally
@@ -256,6 +268,9 @@ jobs:
         env:
           ASPNETCORE_ENVIRONMENT: Development
           ConnectionStrings__Postgres: "Host=localhost;Port=5432;Database=meepleai_dev;Username=meepleai;Password=meepleai_dev_password"
+          QDRANT_URL: "http://localhost:6333"
+          REDIS_URL: "localhost:6379"
+          OPENROUTER_API_KEY: "test-key-for-ci"
         run: |
           dotnet restore
           dotnet build --no-restore
@@ -268,7 +283,6 @@ jobs:
 
       # Run Postman smoke tests via Newman
       - name: Run KnowledgeBase API Tests (11 tests)
-        working-directory: .
         run: |
           newman run postman/KnowledgeBase-DDD-Tests.postman_collection.json \
             -e postman/Local-Development.postman_environment.json \
@@ -278,7 +292,6 @@ jobs:
             --bail
 
       - name: Run Main API Tests (Critical Endpoints)
-        working-directory: .
         continue-on-error: true
         run: |
           newman run tests/postman/MeepleAI-API.postman_collection.json \

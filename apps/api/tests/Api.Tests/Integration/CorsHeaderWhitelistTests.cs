@@ -67,7 +67,7 @@ public class CorsTestFactory : WebApplicationFactory<Program>
 
             // Ensure domain event collector is registered (required by DbContext in Testing environment)
             // InfrastructureServiceExtensions.AddDatabaseServices only registers this in non-Testing environments (line 73)
-            services.AddScoped<Api.Infrastructure.IDomainEventCollector, Api.Infrastructure.DomainEventCollector>();
+            services.AddScoped<IDomainEventCollector, DomainEventCollector>();
         });
     }
 

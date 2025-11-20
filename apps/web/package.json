@@ -11,7 +11,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "posttest:coverage": "node -e \"try { require('child_process').execSync('powershell.exe -ExecutionPolicy Bypass -File ../../tools/cleanup-test-processes.ps1', { stdio: 'inherit' }); } catch (e) { console.log('Cleanup skipped (Windows-only)'); }\"",
-    "test:e2e": "dotenv -e .env.test -- playwright test",
+    "test:e2e": "tsx scripts/run-e2e-with-dev-server.ts",
     "test:e2e:ui": "dotenv -e .env.test -- playwright test --ui",
     "test:e2e:report": "playwright show-report",
     "test:e2e:login": "dotenv -e .env.test -- tsx scripts/run-login-e2e.ts",

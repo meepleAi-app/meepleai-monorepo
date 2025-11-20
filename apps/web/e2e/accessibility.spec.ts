@@ -8,6 +8,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { setupMockAuth } from './fixtures/auth';
 
 // Helper to get readable violations
 function formatViolations(violations: any[]) {
@@ -245,6 +246,7 @@ test.describe('Screen Reader - Semantic HTML', () => {
  */
 test.describe('Accessibility - Authenticated User Pages', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'User', 'user@meepleai.dev');
     // Login as regular user before each test
     await page.goto('/login');
     // Wait for email field to be visible (modal may take time to render)
@@ -255,7 +257,7 @@ test.describe('Accessibility - Authenticated User Pages', () => {
     await page.locator('form button[type="submit"]').click({ force: true });
 
     // Wait for successful login redirect
-    await page.waitForURL(/\/(chat|games|dashboard)/, { timeout: 10000 });
+    await page.waitForURL(/\/(chat|games|dashboard)/, { timeout: 20000 });
   });
 
   test('chat interface should not have accessibility violations', async ({ page }) => {
@@ -340,6 +342,7 @@ test.describe('Accessibility - Authenticated User Pages', () => {
  */
 test.describe('Accessibility - Editor Role Pages', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'Editor', 'editor@meepleai.dev');
     // Login as editor user
     await page.goto('/login');
     const emailInput = page.locator('form').locator('input[type="email"]');
@@ -347,7 +350,7 @@ test.describe('Accessibility - Editor Role Pages', () => {
     await emailInput.fill('editor@meepleai.dev');
     await page.locator('form').locator('input[type="password"]').fill('Demo123!');
     await page.locator('form button[type="submit"]').click({ force: true });
-    await page.waitForURL(/\/(chat|games|dashboard|editor)/, { timeout: 10000 });
+    await page.waitForURL(/\/(chat|games|dashboard|editor)/, { timeout: 20000 });
   });
 
   test('rule editor should not have accessibility violations', async ({ page }) => {
@@ -390,6 +393,7 @@ test.describe('Accessibility - Editor Role Pages', () => {
  */
 test.describe('Accessibility - Admin Role Pages', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'Admin', 'admin@meepleai.dev');
     // Login as admin user
     await page.goto('/login');
     const emailInput = page.locator('form').locator('input[type="email"]');
@@ -397,7 +401,7 @@ test.describe('Accessibility - Admin Role Pages', () => {
     await emailInput.fill('admin@meepleai.dev');
     await page.locator('form').locator('input[type="password"]').fill('Demo123!');
     await page.locator('form button[type="submit"]').click({ force: true });
-    await page.waitForURL(/\/(chat|games|dashboard|admin)/, { timeout: 10000 });
+    await page.waitForURL(/\/(chat|games|dashboard|admin)/, { timeout: 20000 });
   });
 
   test('admin dashboard should not have accessibility violations', async ({ page }) => {

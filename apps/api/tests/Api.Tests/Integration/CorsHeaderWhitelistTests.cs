@@ -1,8 +1,89 @@
+using Api.Infrastructure;
+using Api.Services;
+using Api.SharedKernel.Application.Services;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Moq;
+using StackExchange.Redis;
 using System.Net;
 using Xunit;
 
 namespace Api.Tests.Integration;
+
+/// <summary>
+/// Custom WebApplicationFactory for CORS tests that runs in Testing environment
+/// without requiring external dependencies (Postgres, Redis, Qdrant).
+/// </summary>
+/// <remarks>
+/// This factory configures the test host to:
+/// 1. Run in "Testing" environment (skips Postgres/Qdrant initialization in InfrastructureServiceExtensions.cs:38)
+/// 2. Replace DbContext with EF Core InMemory provider (no database required)
+/// 3. Mock external services (Redis, Qdrant, Embedding) that aren't used by CORS tests
+/// 4. Maintain correct service lifetimes matching production configuration
+/// </remarks>
+public class CorsTestFactory : WebApplicationFactory<Program>
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Testing");
+
+        builder.ConfigureServices(services =>
+        {
+            // Remove existing DbContext registration (originally uses Postgres)
+            services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
+            services.RemoveAll(typeof(MeepleAiDbContext));
+
+            // Add in-memory database for testing (no Postgres container required)
+            // Note: InMemory provider has limitations (no FK constraints, different transaction behavior)
+            // but is sufficient for CORS tests that don't access the database
+            services.AddDbContext<MeepleAiDbContext>(options =>
+            {
+                options.UseInMemoryDatabase("CorsTestDb");
+            });
+
+            // Replace Redis with mock (used by HybridCache, SessionCache, BackgroundTaskOrchestrator)
+            // Singleton lifetime matches production IConnectionMultiplexer registration
+            services.RemoveAll(typeof(IConnectionMultiplexer));
+            var mockRedis = new Mock<IConnectionMultiplexer>();
+            var mockDatabase = new Mock<IDatabase>();
+            mockRedis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
+                .Returns(mockDatabase.Object);
+            services.AddSingleton(mockRedis.Object);
+
+            // Replace vector/embedding services (used by RagService, HybridSearchService, DocumentProcessing)
+            // Scoped lifetime matches production registration (ApplicationServiceExtensions.cs:68,70)
+            services.RemoveAll(typeof(IQdrantService));
+            services.RemoveAll(typeof(IEmbeddingService));
+            services.AddScoped<IQdrantService>(_ => Mock.Of<IQdrantService>());
+            services.AddScoped<IEmbeddingService>(_ => Mock.Of<IEmbeddingService>());
+
+            // Replace HybridCache service (used for L1/L2 caching throughout application)
+            // Scoped lifetime matches typical cache service pattern
+            services.RemoveAll(typeof(IHybridCacheService));
+            services.AddScoped<IHybridCacheService>(_ => Mock.Of<IHybridCacheService>());
+
+            // Ensure domain event collector is registered (required by DbContext in Testing environment)
+            // InfrastructureServiceExtensions.AddDatabaseServices only registers this in non-Testing environments (line 73)
+            services.AddScoped<Api.Infrastructure.IDomainEventCollector, Api.Infrastructure.DomainEventCollector>();
+        });
+    }
+
+    /// <summary>
+    /// Cleanup resources when factory is disposed.
+    /// </summary>
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            // Base class handles cleanup of test server and services
+            // Mocks are transient and will be garbage collected
+        }
+        base.Dispose(disposing);
+    }
+}
 
 /// <summary>
 /// Integration tests for CORS header whitelist configuration (Issue #1448).
@@ -16,12 +97,12 @@ namespace Api.Tests.Integration;
 /// 4. Multiple headers can be requested simultaneously
 /// 5. Header names are case-insensitive
 ///
-/// Pattern: AAA (Arrange-Act-Assert), WebApplicationFactory for in-memory HTTP testing
+/// Pattern: AAA (Arrange-Act-Assert), Custom WebApplicationFactory with Testing environment
 /// </remarks>
 [Collection("CORS")]
-public class CorsHeaderWhitelistTests : IClassFixture<WebApplicationFactory<Program>>
+public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly CorsTestFactory _factory;
     private readonly HttpClient _client;
 
     // Whitelisted headers (Issue #1448)
@@ -42,7 +123,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<WebApplicationFactory<Prog
         "X-Internal-Secret"
     };
 
-    public CorsHeaderWhitelistTests(WebApplicationFactory<Program> factory)
+    public CorsHeaderWhitelistTests(CorsTestFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();

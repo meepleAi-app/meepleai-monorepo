@@ -96,6 +96,50 @@ public class DemoLoginCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_CreatesDemoSessionWith1HourLifetime()
+    {
+        // Arrange
+        var user = CreateDemoUser("user@meepleai.dev");
+
+        var command = new DemoLoginCommand(
+            Email: "user@meepleai.dev",
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        Session? capturedSession = null;
+        _sessionRepositoryMock
+            .Setup(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()))
+            .Callback<Session, CancellationToken>((session, _) => capturedSession = session);
+
+        // Act
+        var beforeExecution = DateTime.UtcNow;
+        await _handler.Handle(command, CancellationToken.None);
+        var afterExecution = DateTime.UtcNow;
+
+        // Assert
+        Assert.NotNull(capturedSession);
+
+        // Demo sessions should have 1-hour lifetime (not 30-day default)
+        var expectedExpiration = beforeExecution.AddHours(1);
+        var maxExpectedExpiration = afterExecution.AddHours(1);
+
+        Assert.True(capturedSession.ExpiresAt >= expectedExpiration,
+            $"Session expires at {capturedSession.ExpiresAt:O} but should be >= {expectedExpiration:O}");
+        Assert.True(capturedSession.ExpiresAt <= maxExpectedExpiration,
+            $"Session expires at {capturedSession.ExpiresAt:O} but should be <= {maxExpectedExpiration:O}");
+
+        // Verify it's NOT the default 30-day lifetime
+        var defaultExpiration = afterExecution.AddDays(30);
+        Assert.True(capturedSession.ExpiresAt < defaultExpiration.AddDays(-28),
+            "Demo session should not have 30-day default lifetime");
+    }
+
+    [Fact]
     public async Task Handle_MapsDtoCorrectly()
     {
         // Arrange

@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands;
 /// <summary>
 /// Handles demo user login without password validation.
 /// Only works for users marked as demo accounts (IsDemoAccount = true).
-/// Security: Demo accounts should have shorter session TTLs in production.
+/// Security: Demo sessions are limited to 1 hour (vs 30 days for regular sessions).
 /// </summary>
 public class DemoLoginCommandHandler : ICommandHandler<DemoLoginCommand, LoginResponse>
 {
@@ -45,13 +45,15 @@ public class DemoLoginCommandHandler : ICommandHandler<DemoLoginCommand, LoginRe
         // Note: 2FA is intentionally bypassed for demo accounts to simplify demonstration
         // In production, consider whether demo accounts should support 2FA
 
-        // Create session
+        // Create session with 1-hour lifetime (demo sessions are short-lived for security)
         var sessionId = Guid.NewGuid();
         var sessionToken = SessionToken.Generate();
+        var demoSessionLifetime = TimeSpan.FromHours(1);
         var session = new Session(
             id: sessionId,
             userId: user.Id,
             token: sessionToken,
+            lifetime: demoSessionLifetime,
             ipAddress: command.IpAddress,
             userAgent: command.UserAgent
         );

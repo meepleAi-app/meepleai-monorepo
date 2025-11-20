@@ -1,0 +1,505 @@
+{
+  "info": {
+    "_postman_id": "authentication-collection",
+    "name": "MeepleAI - Authentication",
+    "description": "Authentication bounded context endpoints for MeepleAI API.\n\n**Includes**:\n- User registration and login\n- Session management\n- API key authentication\n- OAuth 2.0 (Google, Discord, GitHub)\n- Two-Factor Authentication (TOTP)\n- Backup codes\n\n**Architecture**: CQRS/MediatR with Authentication bounded context\n\n**Base URL**: `{{base_url}}/api/v1/auth`\n\n**Version**: 1.0.0\n**Last Updated**: 2025-11-20",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script for authentication tests",
+          "pm.environment.set('timestamp', new Date().toISOString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "console.log('Response time:', pm.response.responseTime, 'ms');"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "User Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains user data', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user).to.exist;",
+                  "    pm.expect(jsonData.user.email).to.exist;",
+                  "    pm.expect(jsonData.user.id).to.exist;",
+                  "    ",
+                  "    // Save user ID for later use",
+                  "    pm.environment.set('user_id', jsonData.user.id);",
+                  "});",
+                  "",
+                  "pm.test('Session cookie is set', function() {",
+                  "    pm.expect(pm.cookies.has('meepleai_session')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test-{{$timestamp}}@example.com\",\n  \"password\": \"TestPassword123!\",\n  \"displayName\": \"Test User\",\n  \"role\": \"User\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Register a new user account. Creates session and sets httpOnly cookie.\n\n**Command**: RegisterCommand\n**Handler**: RegisterCommandHandler\n**Context**: Authentication"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains user data', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user).to.exist;",
+                  "    pm.expect(jsonData.user.email).to.eql('user@meepleai.dev');",
+                  "});",
+                  "",
+                  "pm.test('Session cookie is set', function() {",
+                  "    pm.expect(pm.cookies.has('meepleai_session')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@meepleai.dev\",\n  \"password\": \"Demo123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Login with email/password. Supports 2FA (returns `requiresTwoFactor: true` if enabled).\n\n**Command**: LoginCommand\n**Handler**: LoginCommandHandler\n**Context**: Authentication\n\n**Demo users**:\n- user@meepleai.dev (User role)\n- editor@meepleai.dev (Editor role)\n- admin@meepleai.dev (Admin role)\n**Password**: Demo123!"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User is authenticated', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user).to.exist;",
+                  "    pm.expect(jsonData.user.email).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Get current authenticated user. Supports both cookie and API key authentication.\n\n**Query**: GetCurrentUserQuery\n**Handler**: GetCurrentUserQueryHandler\n**Context**: Authentication"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is ok', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Logout current user. Revokes session and removes cookie.\n\n**Command**: LogoutCommand\n**Handler**: LogoutCommandHandler\n**Context**: Authentication"
+          },
+          "response": []
+        }
+      ],
+      "description": "Basic authentication operations (register, login, logout)"
+    },
+    {
+      "name": "Session Management",
+      "item": [
+        {
+          "name": "Get Session Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Session info is returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.expiresAt).to.exist;",
+                  "    pm.expect(jsonData.remainingMinutes).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/session/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "session", "status"]
+            },
+            "description": "Get current session status and expiration time.\n\n**Query**: GetSessionStatusQuery\n**Handler**: GetSessionStatusQueryHandler\n**Context**: Authentication"
+          },
+          "response": []
+        },
+        {
+          "name": "Extend Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('New expiration is returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.expiresAt).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/session/extend",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "session", "extend"]
+            },
+            "description": "Extend current session by default duration (30 days).\n\n**Command**: ExtendSessionCommand\n**Handler**: ExtendSessionCommandHandler\n**Context**: Authentication"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Sessions array is returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/me/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "me", "sessions"]
+            },
+            "description": "Get all active sessions for current user.\n\n**Query**: GetUserSessionsQuery\n**Handler**: GetUserSessionsQueryHandler\n**Context**: Authentication"
+          },
+          "response": []
+        }
+      ],
+      "description": "Session lifecycle management"
+    },
+    {
+      "name": "API Key Authentication",
+      "item": [
+        {
+          "name": "API Key Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User data is returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user).to.exist;",
+                  "    pm.expect(jsonData.user.email).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apiKey\": \"{{api_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/apikey/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "apikey", "login"]
+            },
+            "description": "Validate API key credentials. Returns user profile. Use `Authorization: ApiKey {key}` header for subsequent requests.\n\n**Format**: `mpl_{env}_{base64}`\n**Hashing**: PBKDF2 (210k iterations)\n\n**Command**: LoginWithApiKeyCommand\n**Handler**: LoginWithApiKeyCommandHandler\n**Context**: Authentication"
+          },
+          "response": []
+        }
+      ],
+      "description": "API key authentication for programmatic access"
+    },
+    {
+      "name": "Two-Factor Authentication (2FA)",
+      "item": [
+        {
+          "name": "Setup 2FA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('TOTP setup data is returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.secret).to.exist;",
+                  "    pm.expect(jsonData.qrCodeUri).to.exist;",
+                  "    ",
+                  "    // Save secret for verification",
+                  "    pm.environment.set('totp_secret', jsonData.secret);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/2fa/setup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "2fa", "setup"]
+            },
+            "description": "Generate TOTP secret and QR code for 2FA setup. Requires authentication.\n\n**Command**: SetupTwoFactorCommand\n**Handler**: SetupTwoFactorCommandHandler\n**Context**: Authentication"
+          },
+          "response": []
+        },
+        {
+          "name": "Enable 2FA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Backup codes are returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.backupCodes).to.be.an('array');",
+                  "    pm.expect(jsonData.backupCodes).to.have.lengthOf.at.least(8);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/2fa/enable",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "2fa", "enable"]
+            },
+            "description": "Enable 2FA by verifying TOTP code. Returns backup codes. Requires authentication.\n\n**Command**: EnableTwoFactorCommand\n**Handler**: EnableTwoFactorCommandHandler\n**Context**: Authentication"
+          },
+          "response": []
+        },
+        {
+          "name": "Get 2FA Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('2FA status is returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.isTwoFactorEnabled).to.be.a('boolean');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/me/2fa/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "me", "2fa", "status"]
+            },
+            "description": "Get 2FA status for current user. Requires authentication.\n\n**Query**: GetTwoFactorStatusQuery\n**Handler**: GetTwoFactorStatusQueryHandler\n**Context**: Authentication"
+          },
+          "response": []
+        },
+        {
+          "name": "Disable 2FA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"Demo123!\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/2fa/disable",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "2fa", "disable"]
+            },
+            "description": "Disable 2FA. Requires current password and TOTP/backup code. Requires authentication.\n\n**Command**: DisableTwoFactorCommand\n**Handler**: DisableTwoFactorCommandHandler\n**Context**: Authentication"
+          },
+          "response": []
+        }
+      ],
+      "description": "Two-Factor Authentication (TOTP) setup and management"
+    }
+  ]
+}

@@ -28,8 +28,11 @@ const RESULTS_DIR = path.join(MONOREPO_ROOT, 'newman-results');
 // Collection files
 const KNOWLEDGE_BASE_COLLECTION = path.join(POSTMAN_DIR, 'KnowledgeBase-DDD-Tests.postman_collection.json');
 const KNOWLEDGE_BASE_ENV = path.join(POSTMAN_DIR, 'Local-Development.postman_environment.json');
-const MAIN_COLLECTION = path.join(TESTS_POSTMAN_DIR, 'MeepleAI-API.postman_collection.json');
-const MAIN_ENV = path.join(TESTS_POSTMAN_DIR, 'MeepleAI-Local.postman_environment.json');
+const HEALTH_COLLECTION = path.join(TESTS_POSTMAN_DIR, 'collections/01-health/HealthCheck.postman_collection.json');
+const AUTH_COLLECTION = path.join(TESTS_POSTMAN_DIR, 'collections/02-authentication/Authentication.postman_collection.json');
+const GAMES_COLLECTION = path.join(TESTS_POSTMAN_DIR, 'collections/03-game-management/GameManagement.postman_collection.json');
+const KB_COLLECTION = path.join(TESTS_POSTMAN_DIR, 'collections/04-knowledge-base/KnowledgeBase.postman_collection.json');
+const LOCAL_ENV = path.join(TESTS_POSTMAN_DIR, 'environments/local.postman_environment.json');
 
 /**
  * Helper function to run Newman and parse results
@@ -153,8 +156,11 @@ test.describe('API Smoke Tests (Newman + Postman)', () => {
   test('should have Postman collections available', () => {
     expect(fs.existsSync(KNOWLEDGE_BASE_COLLECTION)).toBeTruthy();
     expect(fs.existsSync(KNOWLEDGE_BASE_ENV)).toBeTruthy();
-    expect(fs.existsSync(MAIN_COLLECTION)).toBeTruthy();
-    expect(fs.existsSync(MAIN_ENV)).toBeTruthy();
+    expect(fs.existsSync(HEALTH_COLLECTION)).toBeTruthy();
+    expect(fs.existsSync(AUTH_COLLECTION)).toBeTruthy();
+    expect(fs.existsSync(GAMES_COLLECTION)).toBeTruthy();
+    expect(fs.existsSync(KB_COLLECTION)).toBeTruthy();
+    expect(fs.existsSync(LOCAL_ENV)).toBeTruthy();
   });
 
   test('API should be healthy before running tests', async ({ request }) => {
@@ -227,14 +233,29 @@ test.describe('KnowledgeBase API Tests (DDD Phase 3)', () => {
   });
 });
 
-test.describe('Main API Tests (Critical Endpoints)', () => {
+test.describe('DDD Bounded Context Tests (New Structure)', () => {
   test.describe.configure({ mode: 'serial' });
 
-  test.skip('should pass Authentication tests', async () => {
+  test('should pass Health Check tests', async () => {
     const result = await runNewmanCollection(
-      MAIN_COLLECTION,
-      MAIN_ENV,
-      { folder: 'Authentication', timeout: 60000 }
+      HEALTH_COLLECTION,
+      LOCAL_ENV,
+      { timeout: 30000 }
+    );
+
+    console.log('\n💚 Health Check Tests:');
+    console.log(`  ✅ Passed: ${result.stats.tests.passed}`);
+    console.log(`  ❌ Failed: ${result.stats.tests.failed}`);
+
+    expect(result.stats.assertions.failed).toBe(0);
+    expect(result.success).toBeTruthy();
+  });
+
+  test('should pass Authentication tests', async () => {
+    const result = await runNewmanCollection(
+      AUTH_COLLECTION,
+      LOCAL_ENV,
+      { timeout: 60000 }
     );
 
     console.log('\n🔐 Authentication Tests:');
@@ -245,28 +266,28 @@ test.describe('Main API Tests (Critical Endpoints)', () => {
     expect(result.success).toBeTruthy();
   });
 
-  test.skip('should pass Games endpoint tests', async () => {
+  test('should pass Game Management tests', async () => {
     const result = await runNewmanCollection(
-      MAIN_COLLECTION,
-      MAIN_ENV,
-      { folder: 'Games', timeout: 30000 }
+      GAMES_COLLECTION,
+      LOCAL_ENV,
+      { timeout: 30000 }
     );
 
-    console.log('\n🎲 Games Tests:');
+    console.log('\n🎲 Game Management Tests:');
     console.log(`  ✅ Passed: ${result.stats.tests.passed}`);
 
     expect(result.stats.assertions.failed).toBe(0);
     expect(result.success).toBeTruthy();
   });
 
-  test.skip('should pass AI & RAG tests', async () => {
+  test('should pass Knowledge Base tests (DDD)', async () => {
     const result = await runNewmanCollection(
-      MAIN_COLLECTION,
-      MAIN_ENV,
-      { folder: 'AI & RAG', timeout: 90000 } // Longer timeout for AI
+      KB_COLLECTION,
+      LOCAL_ENV,
+      { timeout: 90000 } // Longer timeout for AI
     );
 
-    console.log('\n🤖 AI & RAG Tests:');
+    console.log('\n🤖 Knowledge Base Tests:');
     console.log(`  ✅ Passed: ${result.stats.tests.passed}`);
 
     expect(result.stats.assertions.failed).toBe(0);

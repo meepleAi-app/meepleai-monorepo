@@ -298,8 +298,8 @@ public async Task OptimisticConcurrencyHandlesConflicts()
 ## API Testing with Postman
 
 ### Setup
-1. Import collection: `docs/postman/MeepleAI.postman_collection.json`
-2. Import environment: `docs/postman/MeepleAI-Local.postman_environment.json`
+1. Import collections from: `tests/postman/collections/` (DDD bounded contexts)
+2. Import environment: `tests/postman/environments/local.postman_environment.json`
 3. Set environment variables:
    - `API_BASE_URL`: `http://localhost:5080`
    - `ADMIN_EMAIL`: `admin@meepleai.dev`

@@ -41,7 +41,7 @@ public class GetConfigByKeyQueryHandlerTests
         var query = new GetConfigByKeyQuery("max.connections");
 
         _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("max.connections", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByKeyAsync("max.connections", It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(config);
 
         // Act
@@ -63,7 +63,7 @@ public class GetConfigByKeyQueryHandlerTests
         var query = new GetConfigByKeyQuery("non.existent.key");
 
         _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("non.existent.key", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByKeyAsync("non.existent.key", It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SystemConfig?)null);
 
         // Act
@@ -72,7 +72,7 @@ public class GetConfigByKeyQueryHandlerTests
         // Assert
         Assert.Null(result);
         _mockConfigRepository.Verify(
-            r => r.GetByKeyAsync("non.existent.key", It.IsAny<CancellationToken>()),
+            r => r.GetByKeyAsync("non.existent.key", It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -92,7 +92,7 @@ public class GetConfigByKeyQueryHandlerTests
         var query = new GetConfigByKeyQuery("feature.enabled");
 
         _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("feature.enabled", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByKeyAsync("feature.enabled", It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(config);
 
         // Act
@@ -121,7 +121,7 @@ public class GetConfigByKeyQueryHandlerTests
         var query = new GetConfigByKeyQuery("test.key");
 
         _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("test.key", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByKeyAsync("test.key", It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(config);
 
         // Act
@@ -143,7 +143,7 @@ public class GetConfigByKeyQueryHandlerTests
         var cancellationToken = cancellationTokenSource.Token;
 
         _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("test.key", cancellationToken))
+            .Setup(r => r.GetByKeyAsync("test.key", It.IsAny<string?>(), It.IsAny<bool>(), cancellationToken))
             .ReturnsAsync((SystemConfig?)null);
 
         // Act
@@ -151,7 +151,7 @@ public class GetConfigByKeyQueryHandlerTests
 
         // Assert
         _mockConfigRepository.Verify(
-            r => r.GetByKeyAsync("test.key", cancellationToken),
+            r => r.GetByKeyAsync("test.key", It.IsAny<string?>(), It.IsAny<bool>(), cancellationToken),
             Times.Once);
     }
 
@@ -174,7 +174,7 @@ public class GetConfigByKeyQueryHandlerTests
         var query = new GetConfigByKeyQuery("cache.ttl");
 
         _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("cache.ttl", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByKeyAsync("cache.ttl", It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(config);
 
         // Act
@@ -185,5 +185,133 @@ public class GetConfigByKeyQueryHandlerTests
         Assert.Equal("600", result.Value);
         Assert.Equal(2, result.Version); // Version incremented after update
         Assert.NotNull(result.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task Handle_WithSpecificEnvironment_PassesCorrectParameters()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var config = new SystemConfig(
+            Guid.NewGuid(),
+            new ConfigKey("api.endpoint"),
+            "https://prod.api.com",
+            "string",
+            userId,
+            environment: "Production"
+        );
+
+        var query = new GetConfigByKeyQuery("api.endpoint", "Production", true);
+
+        _mockConfigRepository
+            .Setup(r => r.GetByKeyAsync("api.endpoint", "Production", true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config)
+            .Verifiable();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("api.endpoint", result.Key);
+        Assert.Equal("https://prod.api.com", result.Value);
+        _mockConfigRepository.Verify(
+            r => r.GetByKeyAsync("api.endpoint", "Production", true, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithActiveOnlyFalse_PassesCorrectParameters()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var inactiveConfig = new SystemConfig(
+            Guid.NewGuid(),
+            new ConfigKey("feature.disabled"),
+            "false",
+            "bool",
+            userId
+        );
+        inactiveConfig.Deactivate();
+
+        var query = new GetConfigByKeyQuery("feature.disabled", "Development", false);
+
+        _mockConfigRepository
+            .Setup(r => r.GetByKeyAsync("feature.disabled", "Development", false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(inactiveConfig)
+            .Verifiable();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.IsActive);
+        _mockConfigRepository.Verify(
+            r => r.GetByKeyAsync("feature.disabled", "Development", false, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithNullEnvironment_PassesNullToRepository()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var config = new SystemConfig(
+            Guid.NewGuid(),
+            new ConfigKey("global.setting"),
+            "value",
+            "string",
+            userId
+        );
+
+        var query = new GetConfigByKeyQuery("global.setting", null, true);
+
+        _mockConfigRepository
+            .Setup(r => r.GetByKeyAsync("global.setting", null, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(config)
+            .Verifiable();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        _mockConfigRepository.Verify(
+            r => r.GetByKeyAsync("global.setting", null, true, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithDifferentEnvironments_PassesCorrectEnvironment()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var stagingConfig = new SystemConfig(
+            Guid.NewGuid(),
+            new ConfigKey("db.connection"),
+            "staging-db-url",
+            "string",
+            userId,
+            environment: "Staging"
+        );
+
+        var query = new GetConfigByKeyQuery("db.connection", "Staging", true);
+
+        _mockConfigRepository
+            .Setup(r => r.GetByKeyAsync("db.connection", "Staging", true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stagingConfig)
+            .Verifiable();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("staging-db-url", result.Value);
+        Assert.Equal("Staging", result.Environment);
+        _mockConfigRepository.Verify(
+            r => r.GetByKeyAsync("db.connection", "Staging", true, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

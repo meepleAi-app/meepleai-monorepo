@@ -1,6 +1,6 @@
 using System;
 using Api.SharedKernel.Domain.ValueObjects;
-using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.Validation;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
@@ -20,20 +20,14 @@ public sealed class GameTitle : ValueObject
 
     public GameTitle(string title)
     {
-        if (string.IsNullOrWhiteSpace(title))
-            throw new ValidationException("Game title cannot be empty");
+        Value = title
+            .NotNullOrWhiteSpace(nameof(GameTitle), "Game title cannot be empty")
+            .Then(t => t.Trim().MinLength(MinLength, nameof(GameTitle), $"Game title must be at least {MinLength} character"))
+            .Then(t => t.MaxLength(MaxLength, nameof(GameTitle), $"Game title cannot exceed {MaxLength} characters"))
+            .ThrowIfFailure(nameof(GameTitle));
 
-        var trimmed = title.Trim();
-
-        if (trimmed.Length < MinLength)
-            throw new ValidationException($"Game title must be at least {MinLength} character");
-
-        if (trimmed.Length > MaxLength)
-            throw new ValidationException($"Game title cannot exceed {MaxLength} characters");
-
-        Value = trimmed;
-        NormalizedValue = Normalize(trimmed);
-        Slug = GenerateSlug(trimmed);
+        NormalizedValue = Normalize(Value);
+        Slug = GenerateSlug(Value);
     }
 
     /// <summary>

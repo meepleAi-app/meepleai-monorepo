@@ -21,6 +21,14 @@ SharedKernel/
 │   │   └── AggregateRoot<TId> Base class with domain event management
 │   ├── ValueObjects/          Base value object class
 │   │   └── ValueObject        Base class with value equality
+│   ├── Validation/            Validation framework (NEW)
+│   │   ├── ValidationExtensions     Core validation methods
+│   │   ├── CommonValidators         Domain-specific validators
+│   │   ├── ValidationHelpers        Helper utilities
+│   │   └── README.md               Complete documentation
+│   ├── Results/               Result pattern for functional error handling
+│   │   ├── Result<T>          Success/failure result wrapper
+│   │   └── Error              Error information record
 │   ├── Interfaces/            Core domain interfaces
 │   │   ├── IEntity<TId>       Entity marker interface
 │   │   ├── IAggregateRoot     Aggregate root marker interface
@@ -76,6 +84,8 @@ public class User : AggregateRoot<Guid>
 
 Value objects are immutable and have no identity. Equality is based on all properties.
 
+**Modern approach using ValidationExtensions framework:**
+
 ```csharp
 public class Email : ValueObject
 {
@@ -83,27 +93,34 @@ public class Email : ValueObject
 
     public Email(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            throw new ValidationException(nameof(Email), "Email cannot be empty");
-
-        if (!IsValidEmail(value))
-            throw new ValidationException(nameof(Email), "Invalid email format");
-
-        Value = value.ToLowerInvariant();
+        Value = value
+            .NotNullOrWhiteSpace(nameof(Email), "Email cannot be empty")
+            .Then(e => e.IsValidEmail())
+            .ThrowIfFailure(nameof(Email))
+            .ToLowerInvariant();
     }
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {
         yield return Value;
     }
-
-    private static bool IsValidEmail(string email)
-    {
-        // Email validation logic
-        return email.Contains('@');
-    }
 }
 ```
+
+**Legacy approach (deprecated):**
+
+```csharp
+// ❌ Old pattern - avoid in new code
+if (string.IsNullOrWhiteSpace(value))
+    throw new ValidationException(nameof(Email), "Email cannot be empty");
+
+// ✓ New pattern - use ValidationExtensions
+Value = value
+    .NotNullOrWhiteSpace(nameof(Email), "Email cannot be empty")
+    .ThrowIfFailure(nameof(Email));
+```
+
+See [Validation Framework Documentation](Domain/Validation/README.md) for complete usage guide.
 
 ### Domain Events
 

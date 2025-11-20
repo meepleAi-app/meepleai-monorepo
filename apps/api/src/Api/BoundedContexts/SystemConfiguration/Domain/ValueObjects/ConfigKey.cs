@@ -1,5 +1,5 @@
 using Api.SharedKernel.Domain.ValueObjects;
-using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 
@@ -13,19 +13,14 @@ public sealed class ConfigKey : ValueObject
 
     public ConfigKey(string key)
     {
-        if (string.IsNullOrWhiteSpace(key))
-            throw new ValidationException("Configuration key cannot be empty");
-
-        var trimmed = key.Trim();
-
-        if (trimmed.Length > 200)
-            throw new ValidationException("Configuration key cannot exceed 200 characters");
-
-        // Validate format: alphanumeric, colons, underscores, hyphens only
-        if (!System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^[a-zA-Z0-9:_\-\.]+$"))
-            throw new ValidationException("Configuration key can only contain alphanumeric characters, colons, underscores, hyphens, and dots");
-
-        Value = trimmed;
+        Value = key
+            .NotNullOrWhiteSpace(nameof(ConfigKey), "Configuration key cannot be empty")
+            .Then(k => k.Trim().MaxLength(200, nameof(ConfigKey), "Configuration key cannot exceed 200 characters"))
+            .Then(k => k.MatchesPattern(
+                @"^[a-zA-Z0-9:_\-\.]+$",
+                nameof(ConfigKey),
+                "Configuration key can only contain alphanumeric characters, colons, underscores, hyphens, and dots"))
+            .ThrowIfFailure(nameof(ConfigKey));
     }
 
     /// <summary>

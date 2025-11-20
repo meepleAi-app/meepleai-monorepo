@@ -1,5 +1,5 @@
 using Api.SharedKernel.Domain.ValueObjects;
-using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.Validation;
 
 namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 
@@ -9,15 +9,13 @@ public sealed class FileName : ValueObject
 
     public FileName(string fileName)
     {
-        if (string.IsNullOrWhiteSpace(fileName))
-            throw new ValidationException("File name cannot be empty");
-
-        var trimmed = fileName.Trim();
-        if (trimmed.Length > 255)
-            throw new ValidationException("File name cannot exceed 255 characters");
-
-        if (!trimmed.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            throw new ValidationException("File must be a PDF (.pdf extension)");
+        var trimmed = fileName
+            .NotNullOrWhiteSpace(nameof(fileName), "File name cannot be empty")
+            .Then(f => f.Trim().MaxLength(255, nameof(fileName), "File name cannot exceed 255 characters"))
+            .Then(f => f.Must(
+                name => name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase),
+                "File must be a PDF (.pdf extension)"))
+            .ThrowIfFailure(nameof(FileName));
 
         Value = trimmed;
     }

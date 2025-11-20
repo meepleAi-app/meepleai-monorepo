@@ -1,336 +1,191 @@
-# 🎯 CODE QUALITY INITIATIVE - README
+# 🗺️ MeepleAI Roadmap Documentation
 
-**MeepleAI Monorepo** | **Novembre 2025 - Febbraio 2026** | **DDD 100% + Production Quality**
-
----
-
-## 📁 DOCUMENTAZIONE DISPONIBILE
-
-### 1. 📋 Roadmap Completa
-**File**: `ROADMAP-CODE-QUALITY-2025.md`
-
-Documento dettagliato con:
-- 30 issue code quality prioritizzate
-- Timeline 11 settimane (Nov 2025 - Feb 2026)
-- Achievement recenti (13 issue chiuse 15/11)
-- DDD/CQRS migration roadmap
-- Month 3 Multi-Model Validation
-- Metriche, dashboard, raccomandazioni
-
-**Usalo per**: Visione completa del progetto
+**Last Updated**: 2025-11-20
+**Status**: 🟢 Phase 1A ~60% Complete | DDD Migration 100% ✅
 
 ---
 
-### 2. ⚡ Quick Reference
-**File**: `QUICK-REFERENCE-TOP-10-ISSUES.md`
+## 📚 Documentation Structure
 
-Riferimento rapido con:
-- Top 10 issue in ordine di esecuzione
-- Code snippets per fix critici
-- Timeline settimanale
-- Checklist completamento
-- Success metrics
+This directory contains the strategic roadmap and evolution planning for the MeepleAI project.
 
-**Usalo per**: Consultazione quotidiana, implementazione rapida
+### Current Roadmap Documents
 
----
-
-### 3. 📊 Issue Tracking (CSV)
-**File**: `issue-tracking-code-quality.csv`
-
-Spreadsheet con 30 issue:
-- Priority, Week, Issue #, Title
-- Area, Category, Effort, Impact
-- Status, Notes
-
-**Usalo per**: Tracking in Excel/Google Sheets, reporting
+| Document | Purpose | Audience | Last Updated |
+|----------|---------|----------|--------------|
+| **[ROADMAP.md](./ROADMAP.md)** | **Main current roadmap** - Phase 1A progress, TIER system, 8-10 week timeline | Development Team, PM | 2025-11-18 |
+| **[meepleai-evolution-2025.md](./meepleai-evolution-2025.md)** | **Long-term vision** - Q1-Q3 2025 strategic evolution from RAG to AI Game Master | Leadership, Investors | 2025-11-17 |
+| **[COMPLETION-REPORT.md](./quick-reference-top-10-issues.md)** | **Historical completion report** - Top 10 critical issues completed Nov 2025 | All stakeholders | 2025-11-17 |
 
 ---
 
-## 🚀 COME INIZIARE
+## 🚀 Quick Start
 
-### Step 1: Leggere la Roadmap
+### For Developers - Current Sprint
+
+**Read**: [ROADMAP.md](./ROADMAP.md)
+**Focus**: TIER 2 completion (2 issues remaining) → TIER 3 (Dataset annotation + Q&A UI)
+
+**Immediate Actions**:
 ```bash
-cat docs/ROADMAP-CODE-QUALITY-2025.md
+# TIER 2 Remaining (P0 - This Week)
+- #987: Quality Framework Integration Tests (2-3 days)
+- #978: End-to-End Testing Q→Response (3 days)
 ```
 
-### Step 2: Consultare Quick Reference
-```bash
-cat docs/QUICK-REFERENCE-TOP-10-ISSUES.md
-```
+### For Leadership - Strategic Planning
 
-### Step 3: Aprire Tracking CSV
-```bash
-# Excel
-open docs/issue-tracking-code-quality.csv
+**Read**: [meepleai-evolution-2025.md](./meepleai-evolution-2025.md)
+**Focus**: Evolution roadmap through Q3 2025, budget allocation, market strategy
 
-# Google Sheets
-# Upload file to Google Drive
-```
-
-### Step 4: Iniziare con #1183 (P0 Critical)
-```bash
-# Vedi QUICK-REFERENCE per code snippets
-git checkout -b fix/deadlock-rate-limit-service-1183
-```
+**Key Milestones**:
+- ✅ Q4 2024-Q1 2025: Baseline + DDD Migration (COMPLETED)
+- 🟡 Q4 2025: Multi-Model Validation (IN PROGRESS)
+- ⏳ Q1 2026: Italian support + Real-time games
+- ⏳ Q2-Q3 2026: Full production launch
 
 ---
 
-## 🎯 OBIETTIVI CHIAVE
+## 📊 Current Status Summary
 
-### Q4 2025 (Nov-Dic)
-- ✅ **Week 1**: Fix critical deadlock + performance quick wins
-- ✅ **Week 2-3**: DDD Migration → 100%
-- ✅ **Week 4-5**: Advanced CQRS patterns + Security
+### Phase 1A Progress (~60% Complete)
 
-**Milestone**: DDD Architecture 100% Complete
+| Tier | Completed | Remaining | Progress | Status |
+|------|-----------|-----------|----------|--------|
+| **TIER 0 (Blockers)** | 4 | 0 | 100% | ✅ COMPLETE |
+| **TIER 1 (Testing)** | 3 | 0 | 100% | ✅ COMPLETE |
+| **TIER 2 (Month 4 MVP)** | 11 | 2 | ~85% | 🔄 NEARLY DONE |
+| **TIER 3 (Month 5 MVP)** | 2 | 10 | ~17% | 🟡 IN PROGRESS |
+| **TIER 4 (Month 6 MVP)** | 1 | 11 | ~8% | ⏸️ PENDING |
+| **Frontend Modernization** | 9 | 0 | 100% | ✅ COMPLETE |
+| **Backend Validation** | 8 | 2 | ~80% | 🔄 NEARLY DONE |
 
----
+**Total Phase 1A**: ~38/64 issues completed (~60%)
 
-### Q1 2026 (Gen-Feb)
-- ✅ **Week 6-9**: Multi-Model Validation production-ready
-- ✅ **Week 10-11**: Sprint 3-5 completion
+### Recent Achievements (November 2025) 🎉
 
-**Milestone**: Production RAG Quality (<3% hallucination)
-
----
-
-## 📈 PROGRESS TRACKING
-
-### Current Status (17 Nov 2025)
-```
-✅ Sprint 1 - COMPLETATO
-✅ Sprint 2 - COMPLETATO
-✅ Sprint 3 - COMPLETATO
-✅ Sprint 4 - COMPLETATO (Issue #1191 OAuth, #1194 Error Handling)
-🟡 Sprint 5 - Aperto (2 issue rimanenti)
-
-DDD Migration: 100% ✅ COMPLETATO!
-Code Quality Issues Top 10: 10/10 COMPLETATE ✅
-Critical Bugs: 0 (P0) ✅
-Legacy Services Removed: 4/4 ✅
-```
-
-### Weekly Updates
-Aggiornare questo README ogni settimana con:
-- Issue completate
-- Blockers incontrati
-- Metriche aggiornate
-- Next steps
+- ✅ **DDD Migration 100%** - 5,387 lines legacy code removed, 96+ CQRS handlers
+- ✅ **Frontend Modernization** - Next.js 16, React 19, complete migration (9/9)
+- ✅ **Validation Foundation** - Multi-model consensus operational (8/10)
+- ✅ **Critical Blockers** - All P0/P1 issues resolved (10/10)
+- ✅ **Performance** - +30% query performance with AsNoTracking
+- ✅ **160+ PRs merged** - Exceptional team velocity
 
 ---
 
-## 🔥 ISSUE CRITICHE
+## 🎯 Milestones & Timeline
 
-### P0 - IMMEDIATE ACTION
-- **#1183**: Fix Deadlock in RateLimitService ✅ COMPLETATO
-  - **File**: `apps/api/src/Api/Services/RateLimitService.cs:160-161`
-  - **Impact**: System-wide auth failure risk
-  - **Effort**: 2-3 ore
-  - **Status**: ✅ RISOLTO (Commit: 63cfca1)
+### Completed Milestones ✅
+
+| Milestone | Target | Achieved | Status |
+|-----------|--------|----------|--------|
+| **TIER 0 Blockers** | Week 1 | Week 1 (Nov 2025) | ✅ ON TIME |
+| **TIER 1 Testing** | Week 1 | Week 1 (Nov 2025) | ✅ ON TIME |
+| **DDD 100%** | Week 4 (Dec 2025) | Week 2 (Nov 2025) | ✅ EARLY! |
+| **Frontend Migration** | Week 8 | Week 3 (Nov 2025) | ✅ EARLY! |
+
+### Upcoming Milestones 🎯
+
+| Milestone | Timeline | Criteria |
+|-----------|----------|----------|
+| **TIER 2 Complete** | End of current week | #987 + #978 done |
+| **TIER 3 Complete** | +6 weeks (Late Jan 2026) | Dataset + Q&A UI + Quality validation |
+| **MVP Launch** | +10 weeks (Early Feb 2026) | All features + security audit + docs |
 
 ---
 
-## 📊 METRICHE CHIAVE
+## 🎯 Success Metrics
+
+### Quality Targets (MVP)
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| DDD Migration | 100% | 100% | ✅ COMPLETATO |
-| Critical Bugs | 0 | 0 | ✅ RISOLTO |
-| Query Performance | +30% | +30% | ✅ IMPLEMENTATO |
-| RAG Hallucination | <3% | TBD | 🟡 Month 3 |
-| Code Coverage | 90%+ | 90.03% | ✅ Maintained |
-| Legacy Services | 0 | 0 | ✅ RIMOSSI TUTTI |
+| **BGAI Accuracy** | ≥80% | ~75-80% | 🟡 Near target |
+| **Hallucination Rate** | ≤10% | <5% | 🟢 Achieved |
+| **Test Coverage** | ≥90% | 90%+ | 🟢 Maintained |
+| **PDF Quality Score** | ≥0.80 | 0.80-0.95 | 🟢 Good |
+
+### Performance Targets
+
+| Metric | Target | Current | Status |
+|--------|--------|---------|--------|
+| **P95 Latency** | <3s | ~2.5s | 🟢 Near target |
+| **TTFT (Streaming)** | <1s | ~800ms | 🟢 Achieved |
+| **Lighthouse Score** | ≥90 | ✅ | 🟢 Achieved |
 
 ---
 
-## 👥 TEAM & OWNERSHIP
+## 📁 Related Documentation
 
-### Backend Team
-- **Focus**: DDD/CQRS Migration, Month 3 Validation
-- **Issues**: #1183-#1191, #973-#982
-- **Timeline**: Week 1-9
+### Architecture & Technical
+- **[System Architecture](../../01-architecture/overview/system-architecture.md)** - Full system design
+- **[CLAUDE.md](../../../CLAUDE.md)** - Complete project reference
+- **[ADR-001: Hybrid RAG](../../01-architecture/adr/adr-001-hybrid-rag.md)** - RAG architecture
+- **[ADR-006: Multi-Layer Validation](../../01-architecture/adr/)** - Validation framework
 
-### Frontend Team
-- **Focus**: Sprint 3-5 Completion
-- **Issues**: #1098-#1100, #864-#865, #868-#869
-- **Timeline**: Week 10-11
+### Planning & Execution
+- **[Organization](../organization/)** - Sprint planning, execution calendar
+- **[Planning](../planning/)** - Implementation plans, Gantt charts
+- **[Testing](../testing/)** - Test strategies and guides
 
-### DevOps Team
-- **Focus**: Performance monitoring, load testing
-- **Support**: #1183 (deadlock testing), #1192 (query perf)
-
----
-
-## 🛠️ TOOLS & RESOURCES
-
-### Development
-- **IDE**: Visual Studio 2022 / VS Code
-- **Testing**: xUnit + Testcontainers
-- **Profiling**: dotnet-trace, BenchmarkDotNet
-
-### Monitoring
-- **Logs**: Serilog → Seq
-- **Traces**: OpenTelemetry → Jaeger
-- **Metrics**: Prometheus + Grafana (Month 4)
-
-### Documentation
-- **Architecture**: `docs/architecture/`
-- **ADRs**: `docs/architecture/adr-*.md`
-- **CLAUDE.md**: `/home/user/meepleai-monorepo/CLAUDE.md`
+### Historical Reference
+- **[COMPLETION-REPORT.md](./quick-reference-top-10-issues.md)** - Top 10 issues completion (Nov 2025)
 
 ---
 
-## 📅 CALENDAR VIEW
+## 🚨 Active Risks & Mitigations
 
-```
-NOVEMBRE 2025
-─────────────────────────────────────────
-Week 1 (18-22): #1183 #1192 #1187
-Week 2 (25-29): #1184 #1188
+### Resolved ✅
+- ~~Backend Build Errors~~ (#1271 - Fixed)
+- ~~SSE Crash~~ (#1233 - Fixed)
+- ~~Frontend Coverage~~ (#1255 - Fixed)
+- ~~Security Vulnerabilities~~ (Multiple fixes)
 
-DICEMBRE 2025
-─────────────────────────────────────────
-Week 3 (2-6):   #1189 #1185
-Week 4 (9-13):  #1191 #1186 #1190
-Week 5 (16-20): #1193 #1194
-
-GENNAIO 2026
-─────────────────────────────────────────
-Week 6-7 (23 Dic - 3 Gen): #974 #975 #973 #976
-Week 8 (6-10):   #977 #979
-Week 9 (13-17):  #978 #981 #980 #982
-
-FEBBRAIO 2026
-─────────────────────────────────────────
-Week 10-11: Sprint 3-5 Completion
-```
+### Active 🟡
+1. **Accuracy <80%** - Probability: 20% | Mitigation: Dataset expansion in progress
+2. **Dataset Annotation Quality** - Probability: 35% | Mitigation: Rigorous review process
+3. **Performance P95 >3s** - Probability: 15% | Mitigation: Monitoring active, ~2.5s achieved
 
 ---
 
-## ✅ QUICK CHECKLIST
+## 📞 Support & Communication
 
-### Week 1 (18-22 Nov) - COMPLETATO ✅
-- [x] Review ROADMAP-CODE-QUALITY-2025.md
-- [x] Review QUICK-REFERENCE-TOP-10-ISSUES.md
-- [x] Import issue-tracking-code-quality.csv to spreadsheet
-- [x] Fix #1183 (Deadlock - 2-3h) - Commit: 63cfca1
-- [x] Implement #1192 (AsNoTracking - 4-6h) - Commit: c04bd24
-- [x] Implement #1187 (Config values - 3-4h) - Commit: ce1a601
-- [x] Update progress in this README
+### Project Communication
+- **Daily Updates**: Issue comments on GitHub
+- **Weekly Sync**: Team progress summary
+- **Checkpoint Reviews**: Demo + retrospective
+- **Blockers**: Immediate escalation (#meepleai-dev)
 
-### Week 2 (25-29 Nov) - COMPLETATO ✅
-- [x] Start #1184 (ChatService → CQRS) - Commit: 2704fff
-- [x] Start #1188 (AgentService → CQRS) - Commit: 6a1a4f0
-- [x] Daily progress updates
-- [x] Weekly review meeting
-
-### Week 3 (2-6 Dic) - COMPLETATO ✅
-- [x] #1189 (RuleSpec Comment/Diff → CQRS) - Commit: 9115f92
-- [x] #1185 (RuleSpecService → CQRS) - Commit: d468c48
-
-### Week 4 (9-13 Dic) - COMPLETATO ✅
-- [x] #1191 (OAuth → CQRS) - Commit: 1ab7556
-- [x] #1186 (Streaming Handlers) - Commit: d936238
-- [x] #1190 (Domain Events) - Commit: 0dcc47d
-
-### Current Focus (Week 5+)
-- [ ] Month 3: Multi-Model Validation (#974, #975)
-- [ ] Sprint 5: Frontend completion (#868, #869)
-- [ ] Performance optimization (#977, #979)
-
----
-
-## 🎉 MILESTONES
-
-### Milestone 1: Critical Fixes Complete (Week 1) - ✅ COMPLETATO
-- [x] Sprint 1-3 completed (15 Nov)
-- [x] #1183 deadlock fixed (Commit: 63cfca1)
-- [x] Performance quick wins deployed (AsNoTracking +30%)
-- **Target**: 22 Nov 2025 → **Achieved**: 22 Nov 2025
-
-### Milestone 2: DDD Migration 100% (Week 4) - ✅ COMPLETATO
-- [x] All 4 legacy services removed (ChatService, AgentService, RuleSpecService, OAuth)
-- [x] Advanced CQRS patterns implemented (Streaming, Domain Events)
-- [x] Architecture documentation updated
-- **Target**: 13 Dec 2025 → **Achieved**: 16 Nov 2025 (AHEAD OF SCHEDULE!)
-
-### Milestone 3: Multi-Model Validation (Week 9)
-- [ ] GPT-4 + Claude consensus operational
-- [ ] <3% hallucination rate achieved
-- [ ] Production quality metrics met
-- **Target**: 17 Jan 2026
-
-### Milestone 4: MVP Quality Complete (Week 11)
-- [ ] All Sprint 3-5 issues closed
-- [ ] Frontend polish complete
-- [ ] Ready for beta testing
-- **Target**: 31 Jan 2026
-
----
-
-## 📞 SUPPORT & ESCALATION
-
-### Questions?
-- **Slack**: #meepleai-dev
-- **Email**: dev-team@meepleai.dev
+### Key Resources
 - **Issues**: https://github.com/DegrassiAaron/meepleai-monorepo/issues
-
-### Escalation Path
-1. **Technical Blockers**: Post in #meepleai-dev
-2. **Architecture Decisions**: Review ADRs, propose new ADR
-3. **Priority Changes**: Engineering Lead approval required
+- **Documentation**: `docs/INDEX.md` (160+ docs, 900+ pages)
+- **Architecture**: `docs/01-architecture/`
 
 ---
 
-## 🔄 UPDATE HISTORY
+## 📅 Document Update Schedule
 
-| Date | Update | Author |
-|------|--------|--------|
-| 15 Nov 2025 | Initial roadmap created | Engineering Lead |
-| 15 Nov 2025 | Sprint 1-3 completed (13 issues) | Team |
-| 22 Nov 2025 | Week 1 completed - All P0/P1 issues resolved | Team |
-| 16 Nov 2025 | DDD 100% milestone ACHIEVED (ahead of schedule!) | Team |
-| 17 Nov 2025 | Roadmap updated with completion status | Claude |
+This README and related roadmap documents are reviewed and updated:
+- **Weekly**: Progress tracking updates
+- **Milestone**: After major completions
+- **Monthly**: Strategic review and adjustment
 
 ---
 
-## 📚 ADDITIONAL RESOURCES
+## 🎉 Key Takeaways
 
-### Architecture Docs
-- `docs/architecture/board-game-ai-architecture-overview.md`
-- `docs/architecture/adr-001-hybrid-rag-architecture.md`
-- `docs/refactoring/ddd-status-and-roadmap.md`
+**Current Focus** (Week Current to Current+1):
+- Complete TIER 2 (#987, #978) - 5-6 days
+- Begin TIER 3 dataset annotation
+- Maintain quality and test coverage
 
-### Testing Docs
-- `docs/testing/test-writing-guide.md`
-- `docs/testing/integration-testing-guide.md`
+**MVP Launch Target**: **Early February 2026** (8-10 weeks)
 
-### Security Docs
-- `docs/SECURITY.md`
-- `docs/security-scanning.md`
+**Status**: 🟢 **ON TRACK** - Exceptional progress, stable system, clear path to MVP
 
 ---
 
-**Last Updated**: 17 Novembre 2025
-**Next Review**: Weekly (Every Friday)
-**Status**: 🟢 Active Development - Phase 1 Complete!
-
----
-
-## 🎯 SUCCESS DEFINITION
-
-This initiative is successful when:
-
-1. ✅ **DDD Migration**: 100% complete (0 legacy services)
-2. ✅ **Critical Bugs**: 0 P0 issues open
-3. ✅ **Performance**: 30%+ query performance improvement
-4. ✅ **Quality**: <3% RAG hallucination rate
-5. ✅ **Code Coverage**: Maintained at 90%+
-6. ✅ **Sprint Completion**: All Sprint 3-5 issues closed
-
-**ETA**: 31 Gennaio 2026 (11 settimane)
-
----
-
-**Let's build world-class code! 🚀**
+**Version**: 2.0
+**Owner**: Engineering Team
+**Next Review**: Post-TIER 2 completion
+**Consolidated**: 2025-11-20 (4 roadmap documents merged)

@@ -1,6 +1,9 @@
 # 🎯 TOP 10 ISSUE PRIORITARIE - COMPLETION REPORT
+**Historical Completion Report - November 2025**
 
 **MeepleAI Monorepo** | **17 Novembre 2025** | **Status: ALL COMPLETED ✅**
+
+> **Note**: This is a historical completion report. For current roadmap and active issues, see [ROADMAP.md](./ROADMAP.md) or the main [README.md](./README.md).
 
 ---
 

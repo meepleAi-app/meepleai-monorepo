@@ -1,7 +1,10 @@
 # 🚀 ROADMAP MEEPLEAI EVOLUTION 2025
 ## Da RAG Assistant a AI Game Master
+**Long-Term Strategic Vision Document**
 
 ### 📅 Timeline: Q1-Q3 2025 | Budget: €100k | Team: 4-6 developers
+
+> **Note**: This document provides long-term strategic vision and planning. For current sprint details and immediate tasks, see [ROADMAP.md](./ROADMAP.md). For navigation, see [README.md](./README.md).
 
 ---
 

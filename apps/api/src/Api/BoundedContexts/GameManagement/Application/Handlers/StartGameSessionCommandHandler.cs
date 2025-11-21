@@ -23,9 +23,9 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
         IGameRepository gameRepository,
         IUnitOfWork unitOfWork)
     {
-        _sessionRepository = sessionRepository;
-        _gameRepository = gameRepository;
-        _unitOfWork = unitOfWork;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<GameSessionDto> Handle(StartGameSessionCommand command, CancellationToken cancellationToken)

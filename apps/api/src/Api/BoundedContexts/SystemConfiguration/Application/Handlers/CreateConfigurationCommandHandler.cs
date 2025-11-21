@@ -16,8 +16,8 @@ public class CreateConfigurationCommandHandler : ICommandHandler<CreateConfigura
         IConfigurationRepository configurationRepository,
         IUnitOfWork unitOfWork)
     {
-        _configurationRepository = configurationRepository;
-        _unitOfWork = unitOfWork;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<ConfigurationDto> Handle(CreateConfigurationCommand command, CancellationToken cancellationToken)

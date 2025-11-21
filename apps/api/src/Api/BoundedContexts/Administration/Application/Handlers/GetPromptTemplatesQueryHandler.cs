@@ -17,7 +17,7 @@ public class GetPromptTemplatesQueryHandler
 
     public GetPromptTemplatesQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<(IReadOnlyList<PromptTemplateDto> Templates, int TotalCount)> Handle(

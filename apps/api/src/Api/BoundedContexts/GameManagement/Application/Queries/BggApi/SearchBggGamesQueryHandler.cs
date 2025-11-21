@@ -20,8 +20,8 @@ public sealed class SearchBggGamesQueryHandler : IQueryHandler<SearchBggGamesQue
         IBggApiService bggApiService,
         ILogger<SearchBggGamesQueryHandler> logger)
     {
-        _bggApiService = bggApiService;
-        _logger = logger;
+        _bggApiService = bggApiService ?? throw new ArgumentNullException(nameof(bggApiService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<List<BggSearchResultDto>> Handle(SearchBggGamesQuery query, CancellationToken cancellationToken)

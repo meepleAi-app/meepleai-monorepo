@@ -18,8 +18,8 @@ public sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinked
         IOAuthAccountRepository oauthAccountRepository,
         ILogger<GetLinkedOAuthAccountsQueryHandler> logger)
     {
-        _oauthAccountRepository = oauthAccountRepository;
-        _logger = logger;
+        _oauthAccountRepository = oauthAccountRepository ?? throw new ArgumentNullException(nameof(oauthAccountRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<GetLinkedOAuthAccountsResult> Handle(GetLinkedOAuthAccountsQuery query, CancellationToken cancellationToken)

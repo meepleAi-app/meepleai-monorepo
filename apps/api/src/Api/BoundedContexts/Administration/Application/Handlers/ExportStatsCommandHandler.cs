@@ -15,7 +15,7 @@ public class ExportStatsCommandHandler : ICommandHandler<ExportStatsCommand, str
 
     public ExportStatsCommandHandler(IAdminStatsService adminStatsService)
     {
-        _adminStatsService = adminStatsService;
+        _adminStatsService = adminStatsService ?? throw new ArgumentNullException(nameof(adminStatsService));
     }
 
     public async Task<string> Handle(ExportStatsCommand command, CancellationToken cancellationToken)

@@ -20,9 +20,9 @@ public class DeleteChatThreadCommandHandler : ICommandHandler<DeleteChatThreadCo
         IUnitOfWork unitOfWork,
         ILogger<DeleteChatThreadCommandHandler> logger)
     {
-        _threadRepository = threadRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<bool> Handle(DeleteChatThreadCommand request, CancellationToken cancellationToken)

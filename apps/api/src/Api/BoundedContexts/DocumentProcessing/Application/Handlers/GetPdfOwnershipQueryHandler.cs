@@ -18,8 +18,8 @@ public class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery, P
         IPdfDocumentRepository documentRepository,
         ILogger<GetPdfOwnershipQueryHandler> logger)
     {
-        _documentRepository = documentRepository;
-        _logger = logger;
+        _documentRepository = documentRepository ?? throw new ArgumentNullException(nameof(documentRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<PdfOwnershipResult?> Handle(GetPdfOwnershipQuery query, CancellationToken cancellationToken)

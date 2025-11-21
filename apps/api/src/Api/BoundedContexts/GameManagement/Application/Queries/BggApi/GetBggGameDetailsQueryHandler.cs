@@ -20,8 +20,8 @@ public sealed class GetBggGameDetailsQueryHandler : IQueryHandler<GetBggGameDeta
         IBggApiService bggApiService,
         ILogger<GetBggGameDetailsQueryHandler> logger)
     {
-        _bggApiService = bggApiService;
-        _logger = logger;
+        _bggApiService = bggApiService ?? throw new ArgumentNullException(nameof(bggApiService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<BggGameDetailsDto?> Handle(GetBggGameDetailsQuery query, CancellationToken cancellationToken)

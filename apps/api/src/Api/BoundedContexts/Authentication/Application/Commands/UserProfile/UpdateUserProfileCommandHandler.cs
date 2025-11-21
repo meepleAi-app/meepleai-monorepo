@@ -20,8 +20,8 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         IUserRepository userRepository,
         IUnitOfWork unitOfWork)
     {
-        _userRepository = userRepository;
-        _unitOfWork = unitOfWork;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(UpdateUserProfileCommand command, CancellationToken cancellationToken)

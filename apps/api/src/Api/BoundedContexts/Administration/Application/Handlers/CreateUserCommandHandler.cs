@@ -24,9 +24,9 @@ public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, UserD
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
-        _userRepository = userRepository;
-        _unitOfWork = unitOfWork;
-        _timeProvider = timeProvider;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<UserDto> Handle(CreateUserCommand command, CancellationToken cancellationToken)

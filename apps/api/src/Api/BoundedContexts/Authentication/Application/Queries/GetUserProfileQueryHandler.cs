@@ -15,7 +15,7 @@ public class GetUserProfileQueryHandler : IQueryHandler<GetUserProfileQuery, Use
 
     public GetUserProfileQueryHandler(IUserRepository userRepository)
     {
-        _userRepository = userRepository;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     public async Task<UserProfileDto?> Handle(GetUserProfileQuery query, CancellationToken cancellationToken)

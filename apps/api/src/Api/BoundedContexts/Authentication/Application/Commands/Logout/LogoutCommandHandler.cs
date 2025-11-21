@@ -18,8 +18,8 @@ public class LogoutCommandHandler : ICommandHandler<LogoutCommand>
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork)
     {
-        _sessionRepository = sessionRepository;
-        _unitOfWork = unitOfWork;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(LogoutCommand command, CancellationToken cancellationToken)

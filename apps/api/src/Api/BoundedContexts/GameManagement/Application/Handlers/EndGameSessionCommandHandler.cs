@@ -19,8 +19,8 @@ public class EndGameSessionCommandHandler : ICommandHandler<EndGameSessionComman
         IGameSessionRepository sessionRepository,
         IUnitOfWork unitOfWork)
     {
-        _sessionRepository = sessionRepository;
-        _unitOfWork = unitOfWork;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<GameSessionDto> Handle(EndGameSessionCommand command, CancellationToken cancellationToken)

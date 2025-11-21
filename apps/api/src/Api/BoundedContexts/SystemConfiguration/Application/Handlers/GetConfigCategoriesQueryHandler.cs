@@ -13,7 +13,7 @@ public class GetConfigCategoriesQueryHandler : IQueryHandler<GetConfigCategories
 
     public GetConfigCategoriesQueryHandler(IConfigurationRepository configurationRepository)
     {
-        _configurationRepository = configurationRepository;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
     }
 
     public async Task<IReadOnlyList<string>> Handle(GetConfigCategoriesQuery query, CancellationToken cancellationToken)

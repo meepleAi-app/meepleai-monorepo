@@ -14,8 +14,8 @@ public class DeleteConfigurationCommandHandler : ICommandHandler<DeleteConfigura
         IConfigurationRepository configurationRepository,
         IUnitOfWork unitOfWork)
     {
-        _configurationRepository = configurationRepository;
-        _unitOfWork = unitOfWork;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<bool> Handle(DeleteConfigurationCommand command, CancellationToken cancellationToken)

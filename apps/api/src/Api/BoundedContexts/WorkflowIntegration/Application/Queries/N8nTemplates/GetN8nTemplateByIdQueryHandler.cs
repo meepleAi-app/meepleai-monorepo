@@ -20,8 +20,8 @@ public sealed class GetN8nTemplateByIdQueryHandler : IQueryHandler<GetN8nTemplat
         N8nTemplateService templateService,
         ILogger<GetN8nTemplateByIdQueryHandler> logger)
     {
-        _templateService = templateService;
-        _logger = logger;
+        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<WorkflowTemplateDetailDto?> Handle(GetN8nTemplateByIdQuery query, CancellationToken cancellationToken)

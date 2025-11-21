@@ -15,7 +15,7 @@ public class GetUserChatsQueryHandler : IQueryHandler<GetUserChatsQuery, IReadOn
 
     public GetUserChatsQueryHandler(IChatThreadRepository threadRepository)
     {
-        _threadRepository = threadRepository;
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
     }
 
     public async Task<IReadOnlyList<ChatThreadDto>> Handle(GetUserChatsQuery request, CancellationToken cancellationToken)

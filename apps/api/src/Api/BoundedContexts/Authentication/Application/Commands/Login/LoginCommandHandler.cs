@@ -28,11 +28,11 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
-        _userRepository = userRepository;
-        _sessionRepository = sessionRepository;
-        _tempSessionService = tempSessionService;
-        _unitOfWork = unitOfWork;
-        _timeProvider = timeProvider;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _tempSessionService = tempSessionService ?? throw new ArgumentNullException(nameof(tempSessionService));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<LoginResponse> Handle(LoginCommand command, CancellationToken cancellationToken)

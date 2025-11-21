@@ -15,7 +15,7 @@ public class GetGameByIdQueryHandler : IQueryHandler<GetGameByIdQuery, GameDto?>
 
     public GetGameByIdQueryHandler(IGameRepository gameRepository)
     {
-        _gameRepository = gameRepository;
+        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
     }
 
     public async Task<GameDto?> Handle(GetGameByIdQuery query, CancellationToken cancellationToken)

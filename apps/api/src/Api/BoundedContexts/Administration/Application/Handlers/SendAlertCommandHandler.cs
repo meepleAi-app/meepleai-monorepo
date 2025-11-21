@@ -15,7 +15,7 @@ public class SendAlertCommandHandler : ICommandHandler<SendAlertCommand, AlertDt
 
     public SendAlertCommandHandler(IAlertingService alertingService)
     {
-        _alertingService = alertingService;
+        _alertingService = alertingService ?? throw new ArgumentNullException(nameof(alertingService));
     }
 
     public async Task<AlertDto> Handle(SendAlertCommand command, CancellationToken cancellationToken)

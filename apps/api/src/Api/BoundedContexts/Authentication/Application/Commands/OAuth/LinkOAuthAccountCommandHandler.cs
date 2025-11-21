@@ -24,10 +24,10 @@ public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAc
         IUnitOfWork unitOfWork,
         ILogger<LinkOAuthAccountCommandHandler> logger)
     {
-        _userRepository = userRepository;
-        _oauthAccountRepository = oauthAccountRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _oauthAccountRepository = oauthAccountRepository ?? throw new ArgumentNullException(nameof(oauthAccountRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<LinkOAuthAccountResult> Handle(LinkOAuthAccountCommand command, CancellationToken cancellationToken)

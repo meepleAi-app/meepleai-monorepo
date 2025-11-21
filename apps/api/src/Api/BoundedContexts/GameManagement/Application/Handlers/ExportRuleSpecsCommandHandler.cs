@@ -17,7 +17,7 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
 
     public ExportRuleSpecsCommandHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<byte[]> Handle(ExportRuleSpecsCommand command, CancellationToken cancellationToken)

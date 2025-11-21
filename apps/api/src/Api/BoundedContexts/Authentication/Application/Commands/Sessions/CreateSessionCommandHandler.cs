@@ -25,10 +25,10 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
-        _userRepository = userRepository;
-        _sessionRepository = sessionRepository;
-        _unitOfWork = unitOfWork;
-        _timeProvider = timeProvider;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<CreateSessionResponse> Handle(CreateSessionCommand command, CancellationToken cancellationToken)

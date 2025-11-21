@@ -24,9 +24,9 @@ public class DemoLoginCommandHandler : ICommandHandler<DemoLoginCommand, LoginRe
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork)
     {
-        _userRepository = userRepository;
-        _sessionRepository = sessionRepository;
-        _unitOfWork = unitOfWork;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<LoginResponse> Handle(DemoLoginCommand command, CancellationToken cancellationToken)

@@ -12,7 +12,7 @@ public class GetAllN8nConfigsQueryHandler : IQueryHandler<GetAllN8nConfigsQuery,
 
     public GetAllN8nConfigsQueryHandler(IN8nConfigurationRepository repository)
     {
-        _repository = repository;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
     public async Task<List<N8nConfigurationDto>> Handle(GetAllN8nConfigsQuery query, CancellationToken cancellationToken)

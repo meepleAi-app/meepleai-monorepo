@@ -19,9 +19,9 @@ public class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResu
         ITotpService totpService,
         ILogger<Verify2FAQueryHandler> logger)
     {
-        _userRepository = userRepository;
-        _totpService = totpService;
-        _logger = logger;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _totpService = totpService ?? throw new ArgumentNullException(nameof(totpService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<Verify2FAResult> Handle(Verify2FAQuery query, CancellationToken cancellationToken)

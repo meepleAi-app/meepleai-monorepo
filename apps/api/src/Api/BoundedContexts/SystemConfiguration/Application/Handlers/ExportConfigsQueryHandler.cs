@@ -14,7 +14,7 @@ public class ExportConfigsQueryHandler : IQueryHandler<ExportConfigsQuery, Confi
 
     public ExportConfigsQueryHandler(IConfigurationRepository configurationRepository)
     {
-        _configurationRepository = configurationRepository;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
     }
 
     public async Task<ConfigurationExportDto> Handle(ExportConfigsQuery query, CancellationToken cancellationToken)

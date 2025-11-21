@@ -14,7 +14,7 @@ public class ResolveAlertCommandHandler : ICommandHandler<ResolveAlertCommand, b
 
     public ResolveAlertCommandHandler(IAlertingService alertingService)
     {
-        _alertingService = alertingService;
+        _alertingService = alertingService ?? throw new ArgumentNullException(nameof(alertingService));
     }
 
     public async Task<bool> Handle(ResolveAlertCommand command, CancellationToken cancellationToken)

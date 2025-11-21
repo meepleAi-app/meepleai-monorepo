@@ -18,8 +18,8 @@ public class CreateApiKeyCommandHandler : ICommandHandler<CreateApiKeyCommand, C
         IApiKeyRepository apiKeyRepository,
         IUnitOfWork unitOfWork)
     {
-        _apiKeyRepository = apiKeyRepository;
-        _unitOfWork = unitOfWork;
+        _apiKeyRepository = apiKeyRepository ?? throw new ArgumentNullException(nameof(apiKeyRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<CreateApiKeyResponse> Handle(CreateApiKeyCommand command, CancellationToken cancellationToken)

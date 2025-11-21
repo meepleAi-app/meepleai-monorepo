@@ -16,7 +16,7 @@ public class GetPromptTemplateByIdQueryHandler : IQueryHandler<GetPromptTemplate
 
     public GetPromptTemplateByIdQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<PromptTemplateDto?> Handle(

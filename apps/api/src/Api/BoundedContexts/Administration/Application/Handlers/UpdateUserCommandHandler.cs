@@ -21,8 +21,8 @@ public class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, UserD
         IUserRepository userRepository,
         IUnitOfWork unitOfWork)
     {
-        _userRepository = userRepository;
-        _unitOfWork = unitOfWork;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<UserDto> Handle(UpdateUserCommand command, CancellationToken cancellationToken)

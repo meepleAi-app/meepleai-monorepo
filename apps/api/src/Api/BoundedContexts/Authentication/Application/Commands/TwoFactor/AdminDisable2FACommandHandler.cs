@@ -21,9 +21,9 @@ public class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FAComm
         IUnitOfWork unitOfWork,
         ILogger<AdminDisable2FACommandHandler> logger)
     {
-        _userRepository = userRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<AdminDisable2FAResult> Handle(AdminDisable2FACommand command, CancellationToken cancellationToken)

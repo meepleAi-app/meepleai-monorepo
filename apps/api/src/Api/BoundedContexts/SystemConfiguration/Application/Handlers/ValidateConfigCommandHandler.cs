@@ -14,7 +14,7 @@ public class ValidateConfigCommandHandler : ICommandHandler<ValidateConfigComman
 
     public ValidateConfigCommandHandler(ConfigurationValidator validator)
     {
-        _validator = validator;
+        _validator = validator ?? throw new ArgumentNullException(nameof(validator));
     }
 
     public Task<ConfigurationValidationResult> Handle(ValidateConfigCommand command, CancellationToken cancellationToken)

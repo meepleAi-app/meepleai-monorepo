@@ -22,9 +22,9 @@ public class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateRul
         RuleAtomParsingDomainService parsingService,
         TimeProvider timeProvider)
     {
-        _dbContext = dbContext;
-        _parsingService = parsingService;
-        _timeProvider = timeProvider;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _parsingService = parsingService ?? throw new ArgumentNullException(nameof(parsingService));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<RuleSpecDto> Handle(GenerateRuleSpecFromPdfCommand command, CancellationToken cancellationToken)

@@ -422,6 +422,77 @@ describe('RequestCache', () => {
       expect(key1).toBe(key2);
     });
 
+    it('should include skipCircuitBreaker in cache key (Issue #1453)', () => {
+      const key1 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        skipCircuitBreaker: true,
+      });
+      const key2 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        skipCircuitBreaker: false,
+      });
+      const key3 = cache.generateKey('GET', '/api/test', undefined, undefined, undefined);
+
+      // Different circuit breaker settings should produce different keys
+      expect(key1).not.toBe(key2);
+      expect(key1).not.toBe(key3);
+      expect(key2).not.toBe(key3);
+    });
+
+    it('should include skipRetry in cache key (Issue #1453)', () => {
+      const key1 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        skipRetry: true,
+      });
+      const key2 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        skipRetry: false,
+      });
+      const key3 = cache.generateKey('GET', '/api/test', undefined, undefined, undefined);
+
+      // Different retry settings should produce different keys
+      expect(key1).not.toBe(key2);
+      expect(key1).not.toBe(key3);
+      expect(key2).not.toBe(key3);
+    });
+
+    it('should include retryConfig in cache key (Issue #1453)', () => {
+      const key1 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        retryConfig: { maxAttempts: 3 },
+      });
+      const key2 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        retryConfig: { maxAttempts: 5 },
+      });
+      const key3 = cache.generateKey('GET', '/api/test', undefined, undefined, undefined);
+
+      // Different retry configs should produce different keys
+      expect(key1).not.toBe(key2);
+      expect(key1).not.toBe(key3);
+    });
+
+    it('should generate same key for identical options (Issue #1453)', () => {
+      const options1 = {
+        skipCircuitBreaker: true,
+        skipRetry: false,
+        retryConfig: { maxAttempts: 3, baseDelay: 1000 },
+      };
+      const options2 = {
+        skipCircuitBreaker: true,
+        skipRetry: false,
+        retryConfig: { maxAttempts: 3, baseDelay: 1000 },
+      };
+
+      const key1 = cache.generateKey('GET', '/api/test', undefined, undefined, options1);
+      const key2 = cache.generateKey('GET', '/api/test', undefined, undefined, options2);
+
+      // Identical options should produce same key
+      expect(key1).toBe(key2);
+    });
+
+    it('should handle empty options object (Issue #1453)', () => {
+      const key1 = cache.generateKey('GET', '/api/test', undefined, undefined, {});
+      const key2 = cache.generateKey('GET', '/api/test', undefined, undefined, undefined);
+
+      // Empty options should be treated same as no options
+      expect(key1).toBe(key2);
+    });
+
     it('should handle objects with different property order (hash collision prevention)', () => {
       // Objects with same properties but different order should hash identically
       const obj1 = { name: 'John', age: 30, city: 'NYC' };
@@ -604,6 +675,90 @@ describe('RequestCache', () => {
       expect(config.ttl).toBe(100); // Should use default
 
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('Option-Sensitive Deduplication (Issue #1453)', () => {
+    it('should NOT deduplicate requests with different skipCircuitBreaker options', async () => {
+      let callCount = 0;
+      const requestFn = jest.fn().mockImplementation(async () => {
+        callCount++;
+        return { data: `result-${callCount}` };
+      });
+
+      // Two requests with different circuit breaker settings
+      const key1 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        skipCircuitBreaker: true,
+      });
+      const key2 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        skipCircuitBreaker: false,
+      });
+
+      // Execute requests simultaneously
+      const [result1, result2] = await Promise.all([
+        cache.dedupe(key1, requestFn),
+        cache.dedupe(key2, requestFn),
+      ]);
+
+      // Both requests should execute (not deduplicated)
+      expect(callCount).toBe(2);
+      expect(result1.data).toBe('result-1');
+      expect(result2.data).toBe('result-2');
+    });
+
+    it('should NOT deduplicate requests with different retry config', async () => {
+      let callCount = 0;
+      const requestFn = jest.fn().mockImplementation(async () => {
+        callCount++;
+        return { data: `result-${callCount}` };
+      });
+
+      // Two requests with different retry configs
+      const key1 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        retryConfig: { maxAttempts: 3 },
+      });
+      const key2 = cache.generateKey('GET', '/api/test', undefined, undefined, {
+        retryConfig: { maxAttempts: 5 },
+      });
+
+      // Execute requests simultaneously
+      const [result1, result2] = await Promise.all([
+        cache.dedupe(key1, requestFn),
+        cache.dedupe(key2, requestFn),
+      ]);
+
+      // Both requests should execute (not deduplicated)
+      expect(callCount).toBe(2);
+      expect(result1.data).toBe('result-1');
+      expect(result2.data).toBe('result-2');
+    });
+
+    it('should deduplicate requests with identical options', async () => {
+      let callCount = 0;
+      const requestFn = jest.fn().mockImplementation(async () => {
+        callCount++;
+        return { data: `result-${callCount}` };
+      });
+
+      const options = {
+        skipCircuitBreaker: true,
+        retryConfig: { maxAttempts: 3 },
+      };
+
+      // Two requests with identical options
+      const key1 = cache.generateKey('GET', '/api/test', undefined, undefined, options);
+      const key2 = cache.generateKey('GET', '/api/test', undefined, undefined, options);
+
+      // Execute requests simultaneously
+      const [result1, result2] = await Promise.all([
+        cache.dedupe(key1, requestFn),
+        cache.dedupe(key2, requestFn),
+      ]);
+
+      // Only one request should execute (deduplicated)
+      expect(callCount).toBe(1);
+      expect(result1.data).toBe('result-1');
+      expect(result2.data).toBe('result-1');
     });
   });
 

@@ -1,5 +1,5 @@
 /**
- * Request Deduplication Cache (Issue #1454)
+ * Request Deduplication Cache (Issue #1454, #1453)
  *
  * Prevents identical simultaneous requests from hitting the backend multiple times,
  * reducing server load and improving performance.
@@ -7,9 +7,10 @@
  * Features:
  * - TTL-based deduplication (default: 100ms)
  * - LRU eviction (max 100 concurrent requests)
- * - Cache key: method + URL + body hash + auth context
+ * - Cache key: method + URL + body hash + auth context + request options
  * - Metrics for cache hits/misses
  * - Opt-in/opt-out per request
+ * - Option-sensitive caching (circuit breaker, retry config)
  */
 
 /**
@@ -67,6 +68,32 @@ export interface CacheMetrics {
  * Maximum size for request body hashing to prevent DoS
  */
 const MAX_HASH_INPUT_SIZE = 10000;
+
+/**
+ * Option-sensitive fields that should be included in cache key
+ * to prevent requests with different options from sharing cached promises.
+ *
+ * This is a subset of RequestOptions (from httpClient.ts) that contains only
+ * the fields that affect request behavior (circuit breaker, retry logic).
+ * Custom callbacks (like onRetry) are handled separately by disabling deduplication
+ * when they are present.
+ *
+ * @see RequestOptions in httpClient.ts
+ */
+export interface CacheKeyOptions {
+  /** Whether circuit breaker is disabled for this request */
+  skipCircuitBreaker?: boolean;
+  /** Whether retry is disabled for this request */
+  skipRetry?: boolean;
+  /** Retry configuration that affects request behavior */
+  retryConfig?: {
+    maxAttempts?: number;
+    baseDelay?: number;
+    maxDelay?: number;
+    enabled?: boolean;
+    jitter?: number;
+  };
+}
 
 /**
  * Request deduplication cache with TTL and LRU eviction
@@ -142,7 +169,8 @@ export class RequestCache {
     method: string,
     url: string,
     body?: unknown,
-    authContext?: string
+    authContext?: string,
+    options?: CacheKeyOptions
   ): string {
     const parts = [method.toUpperCase(), url];
 
@@ -155,6 +183,15 @@ export class RequestCache {
     // Add auth context if present
     if (authContext) {
       parts.push(authContext);
+    }
+
+    // Add option-sensitive fields to prevent requests with different options
+    // from sharing cached promises (Issue #1453)
+    if (options) {
+      const optionsHash = this.hashOptions(options);
+      if (optionsHash) {
+        parts.push(optionsHash);
+      }
     }
 
     return parts.join('::');
@@ -323,6 +360,34 @@ export class RequestCache {
     // Delete and re-add to move to end (most recently used)
     this.accessOrder.delete(key);
     this.accessOrder.set(key, true);
+  }
+
+  /**
+   * Hash option-sensitive fields for cache key generation
+   */
+  private hashOptions(options: CacheKeyOptions): string {
+    // Only include fields that affect request behavior
+    const normalized: Record<string, unknown> = {};
+
+    if (options.skipCircuitBreaker !== undefined) {
+      normalized.skipCircuitBreaker = options.skipCircuitBreaker;
+    }
+
+    if (options.skipRetry !== undefined) {
+      normalized.skipRetry = options.skipRetry;
+    }
+
+    if (options.retryConfig) {
+      normalized.retryConfig = options.retryConfig;
+    }
+
+    // If no option-sensitive fields are present, return empty string
+    if (Object.keys(normalized).length === 0) {
+      return '';
+    }
+
+    // Use the same hashing logic as for request bodies
+    return this.hashObject(normalized);
   }
 
   /**

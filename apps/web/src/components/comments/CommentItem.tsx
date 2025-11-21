@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import type { RuleSpecComment } from "@/lib/api";
 import { MentionInput } from "../chat/MentionInput";
 import { cn } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 interface CommentItemProps {
   comment: RuleSpecComment;
@@ -35,6 +36,7 @@ export function CommentItem({
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
   const canEdit = comment.userId === currentUserId && !disabled;
   const canDelete = (comment.userId === currentUserId || currentUserRole === "Admin") && !disabled;
@@ -64,7 +66,14 @@ export function CommentItem({
   };
 
   const handleDelete = async () => {
-    const confirmed = confirm("Sei sicuro di voler eliminare questo commento?");
+    const confirmed = await confirm({
+      title: "Elimina commento",
+      message: "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata.",
+      variant: "destructive",
+      confirmText: "Elimina",
+      cancelText: "Annulla",
+    });
+
     if (!confirmed) {
       return;
     }
@@ -369,6 +378,9 @@ export function CommentItem({
           ))}
         </div>
       )}
+
+      {/* Confirm dialog */}
+      <ConfirmDialogComponent />
     </div>
   );
 }

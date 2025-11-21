@@ -3,6 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { CommentItem } from '../comments/CommentItem';
 import type { RuleSpecComment } from '../../lib/api';
 
+// Mock useConfirmDialog hook
+const mockConfirm = jest.fn().mockResolvedValue(true);
+jest.mock('@/hooks/useConfirmDialog', () => ({
+  useConfirmDialog: jest.fn(() => ({
+    confirm: mockConfirm,
+    ConfirmDialogComponent: () => null,
+  })),
+}));
+
 describe('CommentItem', () => {
   const mockComment: RuleSpecComment = {
     id: 'comment-1',
@@ -33,6 +42,7 @@ describe('CommentItem', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockConfirm.mockResolvedValue(true); // Reset to default behavior
   });
 
   describe('Rendering', () => {
@@ -691,7 +701,7 @@ describe('CommentItem', () => {
   describe('Delete Functionality', () => {
     it('shows confirmation dialog when delete is clicked', async () => {
       const user = userEvent.setup();
-      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+      mockConfirm.mockResolvedValue(false);
 
       render(
         <CommentItem
@@ -709,13 +719,18 @@ describe('CommentItem', () => {
       const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
-      expect(confirmSpy).toHaveBeenCalledWith('Sei sicuro di voler eliminare questo commento?');
-      confirmSpy.mockRestore();
+      await waitFor(() => {
+        expect(mockConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('Sei sicuro'),
+          })
+        );
+      });
     });
 
     it('does not delete when confirmation is cancelled', async () => {
       const user = userEvent.setup();
-      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+      mockConfirm.mockResolvedValue(false);
 
       render(
         <CommentItem
@@ -733,13 +748,14 @@ describe('CommentItem', () => {
       const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
-      expect(mockOnDelete).not.toHaveBeenCalled();
-      confirmSpy.mockRestore();
+      await waitFor(() => {
+        expect(mockOnDelete).not.toHaveBeenCalled();
+      });
     });
 
     it('deletes comment when confirmation is accepted', async () => {
       const user = userEvent.setup();
-      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      mockConfirm.mockResolvedValue(true);
       mockOnDelete.mockResolvedValue(undefined);
 
       render(
@@ -761,13 +777,11 @@ describe('CommentItem', () => {
       await waitFor(() => {
         expect(mockOnDelete).toHaveBeenCalledWith('comment-1');
       });
-
-      confirmSpy.mockRestore();
     });
 
     it('shows loading state while deleting', async () => {
       const user = userEvent.setup();
-      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      mockConfirm.mockResolvedValue(true);
       mockOnDelete.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
 
       render(
@@ -786,15 +800,15 @@ describe('CommentItem', () => {
       const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
-      expect(screen.getByRole('button', { name: 'Delete comment' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Delete comment' })).toBeDisabled();
-
-      confirmSpy.mockRestore();
+      // Wait for confirmation dialog to be processed
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Delete comment' })).toBeDisabled();
+      });
     });
 
     it('disables edit button while deleting', async () => {
       const user = userEvent.setup();
-      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      mockConfirm.mockResolvedValue(true);
       mockOnDelete.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
 
       render(
@@ -813,15 +827,16 @@ describe('CommentItem', () => {
       const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
-      const editButton = screen.getByRole('button', { name: 'Edit comment' });
-      expect(editButton).toBeDisabled();
-
-      confirmSpy.mockRestore();
+      // Wait for confirmation dialog to be processed
+      await waitFor(() => {
+        const editButton = screen.getByRole('button', { name: 'Edit comment' });
+        expect(editButton).toBeDisabled();
+      });
     });
 
     it('shows error alert when delete fails', async () => {
       const user = userEvent.setup();
-      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      mockConfirm.mockResolvedValue(true);
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
 
@@ -847,14 +862,13 @@ describe('CommentItem', () => {
         expect(alertSpy).toHaveBeenCalledWith('Impossibile eliminare il commento');
       });
 
-      confirmSpy.mockRestore();
       consoleErrorSpy.mockRestore();
       alertSpy.mockRestore();
     });
 
     it('logs error to console when delete fails', async () => {
       const user = userEvent.setup();
-      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      mockConfirm.mockResolvedValue(true);
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
 
@@ -881,7 +895,6 @@ describe('CommentItem', () => {
         expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to delete comment:', error);
       });
 
-      confirmSpy.mockRestore();
       consoleErrorSpy.mockRestore();
       alertSpy.mockRestore();
     });

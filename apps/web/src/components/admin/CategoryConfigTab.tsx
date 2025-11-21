@@ -10,6 +10,7 @@ import { toast } from "@/components/layout";
 import { api, SystemConfigurationDto, UpdateConfigurationRequest } from "@/lib/api";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 interface CategoryConfigTabProps {
   title: string;
@@ -32,6 +33,7 @@ export default function CategoryConfigTab({
   const [categoryConfigs, setCategoryConfigs] = useState<SystemConfigurationDto[]>([]);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
   useEffect(() => {
     // Filter configurations by category
@@ -63,9 +65,13 @@ export default function CategoryConfigTab({
     const isDestructive = destructiveKeys.some((key) => config.key.includes(key));
 
     if (isDestructive && editing.value !== config.value) {
-      const confirmed = window.confirm(
-        `⚠️ Warning: Changing '${config.key}' may require re-indexing vector documents. This operation may take significant time. Continue?`
-      );
+      const confirmed = await confirm({
+        title: "⚠️ Destructive Configuration Change",
+        message: `Changing '${config.key}' may require re-indexing vector documents. This operation may take significant time. Do you want to continue?`,
+        variant: "destructive",
+        confirmText: "Continue",
+        cancelText: "Cancel",
+      });
       if (!confirmed) {
         setEditing(null);
         return;
@@ -262,6 +268,9 @@ export default function CategoryConfigTab({
         </h4>
         <CategoryHelpText category={category} />
       </div>
+
+      {/* Confirm dialog */}
+      <ConfirmDialogComponent />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 /**
  * CONFIG-06: CategoryConfigTab Component Tests
+ * Updated for Issue #1435 - Custom ConfirmDialog
  */
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -9,6 +10,15 @@ import { toast } from "@/components/layout";
 
 jest.mock("../../../lib/api");
 jest.mock("@/components/layout");
+
+// Mock useConfirmDialog hook
+const mockConfirm = jest.fn().mockResolvedValue(true);
+jest.mock("@/hooks/useConfirmDialog", () => ({
+  useConfirmDialog: jest.fn(() => ({
+    confirm: mockConfirm,
+    ConfirmDialogComponent: () => null,
+  })),
+}));
 
 const mockApi = api as jest.Mocked<typeof api>;
 const mockToast = toast as jest.Mocked<typeof toast>;
@@ -57,6 +67,7 @@ describe("CategoryConfigTab", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockConfirm.mockResolvedValue(true); // Reset to default behavior
     mockApi.config = {
       updateConfiguration: jest.fn().mockResolvedValue({}),
     } as any;
@@ -140,7 +151,7 @@ describe("CategoryConfigTab", () => {
     });
   });
 
-  it("shows destructive change warning for ChunkSize", () => {
+  it("shows destructive change warning for ChunkSize", async () => {
     const chunkSizeConfig = {
       ...mockConfigurations[0],
       key: "Rag:ChunkSize",
@@ -148,7 +159,8 @@ describe("CategoryConfigTab", () => {
       value: "512",
     };
 
-    const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
+    // Mock confirm to return false (user cancels)
+    mockConfirm.mockResolvedValue(false);
 
     render(
       <CategoryConfigTab
@@ -168,12 +180,15 @@ describe("CategoryConfigTab", () => {
     const saveButton = screen.getByText("Save");
     fireEvent.click(saveButton);
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringContaining("re-indexing")
-    );
-    expect(mockApi.config.updateConfiguration).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("re-indexing"),
+        })
+      );
+    });
 
-    confirmSpy.mockRestore();
+    expect(mockApi.config.updateConfiguration).not.toHaveBeenCalled();
   });
 
   it("shows empty state when no configurations", () => {

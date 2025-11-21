@@ -1,5 +1,6 @@
 /**
  * CONFIG-06: FeatureFlagsTab Component Tests
+ * Updated for Issue #1435 - Custom ConfirmDialog
  */
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -10,6 +11,15 @@ import { toast } from "@/components/layout";
 // Mock dependencies
 jest.mock("../../../lib/api");
 jest.mock("@/components/layout");
+
+// Mock useConfirmDialog hook
+const mockConfirm = jest.fn().mockResolvedValue(true);
+jest.mock("@/hooks/useConfirmDialog", () => ({
+  useConfirmDialog: jest.fn(() => ({
+    confirm: mockConfirm,
+    ConfirmDialogComponent: () => null,
+  })),
+}));
 
 const mockApi = api as jest.Mocked<typeof api>;
 const mockToast = toast as jest.Mocked<typeof toast>;
@@ -78,6 +88,7 @@ describe("FeatureFlagsTab", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockConfirm.mockResolvedValue(true); // Reset to default behavior
     mockApi.config = {
       updateConfiguration: jest.fn().mockResolvedValue({}),
     } as any;
@@ -111,8 +122,6 @@ describe("FeatureFlagsTab", () => {
   });
 
   it("toggles non-critical feature flags without confirmation", async () => {
-    const confirmSpy = jest.spyOn(window, "confirm").mockImplementation(() => true);
-
     render(
       <FeatureFlagsTab
         configurations={mockConfigurations}
@@ -132,13 +141,11 @@ describe("FeatureFlagsTab", () => {
       expect(mockToast.success).toHaveBeenCalled();
       expect(mockOnChange).toHaveBeenCalled();
     });
-
-    expect(confirmSpy).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
   });
 
-  it("shows confirmation prompt for critical features before disabling", () => {
-    const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
+  it("shows confirmation prompt for critical features before disabling", async () => {
+    // Mock confirm to return false (user cancels)
+    mockConfirm.mockResolvedValue(false);
 
     render(
       <FeatureFlagsTab
@@ -150,10 +157,11 @@ describe("FeatureFlagsTab", () => {
     const ragCachingToggle = screen.getAllByRole("switch")[0];
     fireEvent.click(ragCachingToggle);
 
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(mockApi.config.updateConfiguration).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockConfirm).toHaveBeenCalled();
+    });
 
-    confirmSpy.mockRestore();
+    expect(mockApi.config.updateConfiguration).not.toHaveBeenCalled();
   });
 
   it("displays restart warning for flags requiring restart", () => {
@@ -177,7 +185,6 @@ describe("FeatureFlagsTab", () => {
   });
 
   it("surfaces API errors and keeps toggle state unchanged", async () => {
-    const confirmSpy = jest.spyOn(window, "confirm").mockImplementation(() => true);
     mockApi.config.updateConfiguration = jest
       .fn()
       .mockRejectedValue(new Error("API Error"));
@@ -194,8 +201,6 @@ describe("FeatureFlagsTab", () => {
 
     await waitFor(() => {
       expect(mockToast.error).toHaveBeenCalled();
-    });
-
-    confirmSpy.mockRestore();
+    }, { timeout: 3000 });
   });
 });

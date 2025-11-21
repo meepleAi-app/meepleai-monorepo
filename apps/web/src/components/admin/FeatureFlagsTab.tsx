@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { toast } from "@/components/layout";
 import { api, SystemConfigurationDto } from "@/lib/api";
 import { Switch } from "@/components/ui/switch";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 interface FeatureFlagsTabProps {
   configurations: SystemConfigurationDto[];
@@ -22,6 +23,7 @@ interface FeatureFlagsTabProps {
 export default function FeatureFlagsTab({ configurations, onConfigurationChange }: FeatureFlagsTabProps) {
   const [featureFlags, setFeatureFlags] = useState<SystemConfigurationDto[]>([]);
   const [toggling, setToggling] = useState<string | null>(null);
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
   useEffect(() => {
     // Filter configurations to show only FeatureFlag category
@@ -37,9 +39,13 @@ export default function FeatureFlagsTab({ configurations, onConfigurationChange 
     const isCritical = criticalFlags.some((cf) => flag.key.includes(cf));
 
     if (isCritical && flag.isActive) {
-      const confirmed = window.confirm(
-        `Are you sure you want to disable '${flag.key}'? This may impact user experience.`
-      );
+      const confirmed = await confirm({
+        title: "Disable Critical Feature",
+        message: `Are you sure you want to disable '${flag.key}'? This may impact user experience.`,
+        variant: "destructive",
+        confirmText: "Disable",
+        cancelText: "Cancel",
+      });
       if (!confirmed) return;
     }
 
@@ -185,6 +191,9 @@ export default function FeatureFlagsTab({ configurations, onConfigurationChange 
           <li>• Inactive flags (🔒) cannot be toggled until activated in the database</li>
         </ul>
       </div>
+
+      {/* Confirm dialog */}
+      <ConfirmDialogComponent />
     </div>
   );
 }

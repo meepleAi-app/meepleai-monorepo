@@ -60,8 +60,10 @@ public static class KnowledgeBaseServiceExtensions
 
         // ISSUE-962 (BGAI-020): Provider Health Check Service (Singleton - background service)
         services.AddHostedService<ProviderHealthCheckService>();
-        services.AddSingleton<ProviderHealthCheckService>(sp =>
+        services.AddSingleton<IProviderHealthCheckService>(sp =>
             sp.GetServices<IHostedService>().OfType<ProviderHealthCheckService>().First());
+        services.AddSingleton<ProviderHealthCheckService>(sp =>
+            (ProviderHealthCheckService)sp.GetRequiredService<IProviderHealthCheckService>());
 
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();

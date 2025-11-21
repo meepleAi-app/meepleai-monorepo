@@ -98,10 +98,10 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
                 var token = i == 0 ? words[i] : " " + words[i];
                 yield return CreateEvent(StreamingEventType.Token, new StreamingToken(token));
 
-                // Small delay to simulate streaming
+                // Small delay to simulate streaming (use Task.Delay directly to avoid FakeTimeProvider issues in tests)
                 if (i < words.Length - 1)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(10), _timeProvider, cancellationToken);
+                    await Task.Delay(10, cancellationToken);
                 }
             }
 

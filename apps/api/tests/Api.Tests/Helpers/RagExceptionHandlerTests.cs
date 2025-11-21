@@ -414,4 +414,256 @@ public class RagExceptionHandlerTests
         // Assert
         Assert.Equal(expectedResponse.answer, response.answer);
     }
+
+    // Issue #1444: Tests for HandleServiceException method
+
+    [Fact]
+    public void HandleServiceException_HttpRequestException_ReturnsFailureResult()
+    {
+        // Arrange
+        var exception = new HttpRequestException("Connection refused");
+        Func<string, TestResult> failureFactory = errorMessage => TestResult.CreateFailure(errorMessage);
+
+        // Act
+        var result = RagExceptionHandler.HandleServiceException(
+            exception,
+            _mockLogger.Object,
+            "vector search",
+            failureFactory);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Network error", result.ErrorMessage ?? "");
+    }
+
+    [Fact]
+    public void HandleServiceException_TaskCanceledException_ReturnsTimeoutMessage()
+    {
+        // Arrange
+        var exception = new TaskCanceledException("Request timed out");
+        Func<string, TestResult> failureFactory = errorMessage => TestResult.CreateFailure(errorMessage);
+
+        // Act
+        var result = RagExceptionHandler.HandleServiceException(
+            exception,
+            _mockLogger.Object,
+            "embedding generation",
+            failureFactory);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("timed out", result.ErrorMessage ?? "");
+    }
+
+    [Fact]
+    public void HandleServiceException_WithActivity_SetsErrorStatus()
+    {
+        // Arrange
+        using var activity = MeepleAiActivitySources.Rag.StartActivity("Test");
+        var exception = new InvalidOperationException("Configuration error");
+        Func<string, TestResult> failureFactory = errorMessage => TestResult.CreateFailure(errorMessage);
+
+        // Act
+        var result = RagExceptionHandler.HandleServiceException(
+            exception,
+            _mockLogger.Object,
+            "service operation",
+            failureFactory,
+            activity);
+
+        // Assert
+        Assert.Equal(ActivityStatusCode.Error, activity.Status);
+        Assert.Contains("Configuration error", activity.StatusDescription ?? "");
+    }
+
+    [Fact]
+    public void HandleServiceException_WithoutUserFriendlyMessage_ReturnsTechnicalMessage()
+    {
+        // Arrange
+        var exception = new ArgumentException("Invalid parameter");
+        Func<string, TestResult> failureFactory = errorMessage => TestResult.CreateFailure(errorMessage);
+
+        // Act
+        var result = RagExceptionHandler.HandleServiceException(
+            exception,
+            _mockLogger.Object,
+            "validation",
+            failureFactory,
+            useUserFriendlyMessage: false);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("validation failed", result.ErrorMessage ?? "");
+    }
+
+    [Fact]
+    public void HandleServiceException_LogsException()
+    {
+        // Arrange
+        var exception = new HttpRequestException("Test error");
+        Func<string, TestResult> failureFactory = errorMessage => TestResult.CreateFailure(errorMessage);
+
+        // Act
+        RagExceptionHandler.HandleServiceException(
+            exception,
+            _mockLogger.Object,
+            "test operation",
+            failureFactory);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    // Issue #1444: Tests for LogAndRethrow method
+
+    [Fact]
+    public void LogAndRethrow_LogsExceptionAndRethrows()
+    {
+        // Arrange
+        var exception = new InvalidOperationException("Test error");
+
+        // Act & Assert
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            RagExceptionHandler.LogAndRethrow(
+                exception,
+                _mockLogger.Object,
+                "test operation"));
+
+        Assert.Equal(exception, ex);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public void LogAndRethrow_WithAdditionalContext_IncludesContextInLog()
+    {
+        // Arrange
+        var exception = new HttpRequestException("Connection failed");
+        var additionalContext = new object[] { "gameId", "123", "query", "test" };
+
+        // Act & Assert
+        var ex = Assert.Throws<HttpRequestException>(() =>
+            RagExceptionHandler.LogAndRethrow(
+                exception,
+                _mockLogger.Object,
+                "search operation",
+                additionalContext));
+
+        Assert.Equal(exception, ex);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    // Issue #1444: Tests for GetUserFriendlyMessage method
+
+    [Fact]
+    public void GetUserFriendlyMessage_TaskCanceledException_ReturnsTimeoutMessage()
+    {
+        // Arrange
+        var exception = new TaskCanceledException("Operation timed out");
+
+        // Act
+        var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
+
+        // Assert
+        Assert.Contains("timed out", message);
+        Assert.Contains("try again", message);
+    }
+
+    [Fact]
+    public void GetUserFriendlyMessage_TimeoutException_ReturnsTimeoutMessage()
+    {
+        // Arrange
+        var exception = new TimeoutException("Request timeout");
+
+        // Act
+        var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
+
+        // Assert
+        Assert.Contains("timed out", message);
+    }
+
+    [Fact]
+    public void GetUserFriendlyMessage_HttpRequestException_ReturnsNetworkError()
+    {
+        // Arrange
+        var exception = new HttpRequestException("Connection failed", null, System.Net.HttpStatusCode.BadGateway);
+
+        // Act
+        var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
+
+        // Assert
+        Assert.Contains("Network error", message);
+        Assert.Contains("502", message);
+    }
+
+    [Fact]
+    public void GetUserFriendlyMessage_UnknownException_ReturnsDefaultMessage()
+    {
+        // Arrange
+        var exception = new NotImplementedException("Feature not implemented");
+        var defaultMessage = "This is the default error message";
+
+        // Act
+        var message = RagExceptionHandler.GetUserFriendlyMessage(exception, defaultMessage);
+
+        // Assert
+        Assert.Equal(defaultMessage, message);
+    }
+
+    [Fact]
+    public void GetUserFriendlyMessage_InvalidOperationExceptionWithConfiguration_ReturnsConfigError()
+    {
+        // Arrange
+        var exception = new InvalidOperationException("Configuration is invalid");
+
+        // Act
+        var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
+
+        // Assert
+        Assert.Contains("Configuration error", message);
+        Assert.Contains("contact support", message);
+    }
+
+    [Fact]
+    public void GetUserFriendlyMessage_ArgumentException_ReturnsInvalidParametersMessage()
+    {
+        // Arrange
+        var exception = new ArgumentException("Invalid argument provided");
+
+        // Act
+        var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
+
+        // Assert
+        Assert.Contains("Invalid request parameters", message);
+    }
+
+    // Helper class for testing Result pattern
+    private record TestResult
+    {
+        public bool Success { get; init; }
+        public string? ErrorMessage { get; init; }
+
+        public static TestResult CreateSuccess() => new() { Success = true };
+        public static TestResult CreateFailure(string error) => new() { Success = false, ErrorMessage = error };
+    }
 }

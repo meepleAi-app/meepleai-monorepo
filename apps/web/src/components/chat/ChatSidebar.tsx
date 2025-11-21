@@ -18,8 +18,7 @@ import { GameSelector } from './GameSelector';
 import { AgentSelector } from './AgentSelector';
 import { ChatHistory } from './ChatHistory';
 import { LoadingButton } from '../loading/LoadingButton';
-
-const MAX_THREADS_PER_GAME = 5;
+import { CHAT_CONFIG } from '@/config';
 
 export function ChatSidebar() {
   // Zustand selectors - only subscribe to needed slices
@@ -42,7 +41,7 @@ export function ChatSidebar() {
 
   // Calculate active thread count for current game
   const activeThreadCount = chats.filter(t => t.status !== 'Closed').length;
-  const isAtThreadLimit = activeThreadCount >= MAX_THREADS_PER_GAME;
+  const isAtThreadLimit = activeThreadCount >= CHAT_CONFIG.MAX_THREADS_PER_GAME;
 
   return (
     <aside
@@ -99,7 +98,7 @@ export function ChatSidebar() {
                 "text-[#5f6368]",
                 isAtThreadLimit && "text-[#d93025] font-semibold"
               )}>
-                {activeThreadCount} / {MAX_THREADS_PER_GAME} thread attivi
+                {activeThreadCount} / {CHAT_CONFIG.MAX_THREADS_PER_GAME} thread attivi
               </span>
               {isAtThreadLimit && (
                 <div className="mt-1 text-[10px] text-[#d93025]">

@@ -7,6 +7,7 @@
 import { type CSSProperties, useState, useEffect } from 'react';
 import { type CategorizedError, getErrorIcon, getErrorTitle } from '@/lib/errorUtils';
 import { showErrorToast, shouldShowToast } from '@/lib/toastUtils';
+import { UI_CONFIG } from '@/config';
 
 interface ErrorDisplayProps {
   error: CategorizedError;
@@ -25,7 +26,7 @@ interface ErrorDisplayProps {
   autoRetry?: boolean;
   /**
    * Maximum number of automatic retries
-   * @default 3
+   * @default UI_CONFIG.ERROR_DISPLAY_MAX_RETRIES (3)
    */
   maxRetries?: number;
 }
@@ -37,7 +38,7 @@ export function ErrorDisplay({
   showTechnicalDetails = false,
   showToast = true,
   autoRetry = false,
-  maxRetries = 3
+  maxRetries = UI_CONFIG.ERROR_DISPLAY_MAX_RETRIES
 }: ErrorDisplayProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -84,8 +85,11 @@ export function ErrorDisplay({
       return;
     }
 
-    // Exponential backoff: 1s, 2s, 4s
-    const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+    // Exponential backoff: baseDelay * 2^retryCount, capped at maxDelay
+    const delay = Math.min(
+      UI_CONFIG.ERROR_DISPLAY_RETRY_BASE_DELAY_MS * Math.pow(2, retryCount),
+      UI_CONFIG.ERROR_DISPLAY_MAX_RETRY_DELAY_MS
+    );
     const timeout = setTimeout(() => {
       handleRetry();
     }, delay);

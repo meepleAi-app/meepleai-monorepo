@@ -16,6 +16,7 @@
 import { useChatStore } from '../../store';
 import { api } from '@/lib/api';
 import { ChatThread, Message } from '@/types';
+import { CHAT_CONFIG } from '@/config';
 
 // Mock dependencies
 jest.mock('@/lib/api');
@@ -450,7 +451,7 @@ describe('chatSlice', () => {
 
       await useChatStore.getState().createChat();
 
-      // Should not attempt to archive (only 4 active threads + 1 new = 5)
+      // Should not attempt to archive (only 4 active threads + 1 new = MAX_THREADS_PER_GAME)
       expect(mockChat.closeThread).not.toHaveBeenCalled();
     });
 

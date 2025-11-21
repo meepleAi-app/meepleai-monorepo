@@ -10,6 +10,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ChatSidebar } from '../../../components/chat/ChatSidebar';
+import { CHAT_CONFIG } from '../../../config';
 
 // Mock the Zustand store module with stable references
 const mockCreateChat = jest.fn();
@@ -453,7 +454,7 @@ describe('ChatSidebar Component', () => {
       });
       render(<ChatSidebar />);
 
-      expect(screen.getByText(/2 \/ 5 thread attivi/)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(`2 \\/ ${CHAT_CONFIG.MAX_THREADS_PER_GAME} thread attivi`))).toBeInTheDocument();
     });
 
     it('shows warning when at thread limit', () => {
@@ -471,7 +472,7 @@ describe('ChatSidebar Component', () => {
       });
       render(<ChatSidebar />);
 
-      expect(screen.getByText(/5 \/ 5 thread attivi/)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(`${CHAT_CONFIG.MAX_THREADS_PER_GAME} \\/ ${CHAT_CONFIG.MAX_THREADS_PER_GAME} thread attivi`))).toBeInTheDocument();
       expect(screen.getByText(/thread più vecchio sarà archiviato/)).toBeInTheDocument();
     });
 
@@ -489,7 +490,7 @@ describe('ChatSidebar Component', () => {
       });
       render(<ChatSidebar />);
 
-      expect(screen.getByText(/2 \/ 5 thread attivi/)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(`2 \\/ ${CHAT_CONFIG.MAX_THREADS_PER_GAME} thread attivi`))).toBeInTheDocument();
     });
 
     it('does not show thread count when no game selected', () => {

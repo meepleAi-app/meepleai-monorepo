@@ -262,7 +262,7 @@ public sealed class ChangePasswordCommandValidatorTests
         var result = _validator.TestValidate(command);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x)
+        result.ShouldHaveValidationErrorFor(x => x.NewPassword)
             .WithErrorMessage("New password must be different from current password");
     }
 

@@ -17,7 +17,7 @@ permissions:
   contents: read        # Required: Checkout code
   pull-requests: write  # Required: Comment on PRs with performance results
   checks: write         # Required: Report Lighthouse CI results
-  actions: read         # Required: Download artifacts from previous runs for regression comparison
+  actions: write        # Required: Upload/download artifacts (actions/upload-artifact@v6)
 
 # Cancel previous runs on same PR/branch to avoid piling up
 concurrency:

@@ -29,7 +29,7 @@ on:
 permissions:
   contents: read        # Required: Checkout code
   pull-requests: write  # Required: Comment on PRs with performance test results
-  actions: read         # Required: Download baseline artifacts from previous workflow runs
+  actions: write        # Required: Upload/download artifacts (actions/upload-artifact@v6)
   checks: write         # Required: Report k6 test results
 
 env:

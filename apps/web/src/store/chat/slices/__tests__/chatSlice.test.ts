@@ -6,7 +6,7 @@
  * - State initialization
  * - loadChats: Success, error, null response, empty array
  * - createChat: Success, validation, auto-archiving, errors
- * - deleteChat: Success, user cancellation, active chat cleanup, errors
+ * - deleteChat: Success, active chat cleanup, errors (confirmation handled by component)
  * - selectChat: Success, loadMessages integration
  * - updateChatTitle: Success, missing game, thread not found
  * - Loading states and error handling
@@ -23,10 +23,6 @@ const mockApi = api as jest.Mocked<typeof api>;
 
 // Explicitly cast nested mock objects for proper TypeScript support
 const mockChat = mockApi.chat as jest.Mocked<typeof api.chat>;
-
-// Mock window.confirm
-const mockConfirm = jest.fn();
-global.confirm = mockConfirm;
 
 // Mock console methods to avoid noise in tests
 const originalConsoleError = console.error;
@@ -489,34 +485,17 @@ describe('chatSlice', () => {
         messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': [createMockMessage()] },
       });
 
-      mockConfirm.mockReturnValue(true);
       mockApi.delete.mockResolvedValue({} as any);
 
       await useChatStore.getState().deleteChat('aa0e8400-e29b-41d4-a716-000000000001');
 
-      // Verify confirmation dialog shown
-      expect(mockConfirm).toHaveBeenCalledWith('Sei sicuro di voler eliminare questa chat?');
-
       // Verify API called
-      expect(mockApi.delete).toHaveBeenCalledWith('/api/v1/chats/thread-1');
+      expect(mockApi.delete).toHaveBeenCalledWith('/api/v1/chats/aa0e8400-e29b-41d4-a716-000000000001');
 
       // Verify thread removed from state
       const state = useChatStore.getState();
       expect(state.chatsByGame['770e8400-e29b-41d4-a716-000000000001']).toEqual([thread2]);
       expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toBeUndefined();
-    });
-
-    it('should return early if user cancels confirmation', async () => {
-      useChatStore.setState({
-        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
-        chatsByGame: { '770e8400-e29b-41d4-a716-000000000001': [createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000001' })] },
-      });
-
-      mockConfirm.mockReturnValue(false);
-
-      await useChatStore.getState().deleteChat('aa0e8400-e29b-41d4-a716-000000000001');
-
-      expect(mockApi.delete).not.toHaveBeenCalled();
     });
 
     it('should return early if no game selected', async () => {
@@ -526,7 +505,6 @@ describe('chatSlice', () => {
 
       await useChatStore.getState().deleteChat('aa0e8400-e29b-41d4-a716-000000000001');
 
-      expect(mockConfirm).not.toHaveBeenCalled();
       expect(mockApi.delete).not.toHaveBeenCalled();
     });
 
@@ -537,7 +515,6 @@ describe('chatSlice', () => {
         activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
       });
 
-      mockConfirm.mockReturnValue(true);
       mockApi.delete.mockResolvedValue({} as any);
 
       await useChatStore.getState().deleteChat('aa0e8400-e29b-41d4-a716-000000000001');
@@ -558,7 +535,6 @@ describe('chatSlice', () => {
         activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000002' },
       });
 
-      mockConfirm.mockReturnValue(true);
       mockApi.delete.mockResolvedValue({} as any);
 
       await useChatStore.getState().deleteChat('aa0e8400-e29b-41d4-a716-000000000001');
@@ -574,7 +550,6 @@ describe('chatSlice', () => {
         chatsByGame: { '770e8400-e29b-41d4-a716-000000000001': [createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000001' })] },
       });
 
-      mockConfirm.mockReturnValue(true);
       mockApi.delete.mockRejectedValue(error);
 
       const setErrorSpy = jest.spyOn(useChatStore.getState(), 'setError');
@@ -590,7 +565,6 @@ describe('chatSlice', () => {
         chatsByGame: { '770e8400-e29b-41d4-a716-000000000001': [createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000001' })] },
       });
 
-      mockConfirm.mockReturnValue(true);
       mockApi.delete.mockResolvedValue({} as any);
 
       const setLoadingSpy = jest.spyOn(useChatStore.getState(), 'setLoading');
@@ -607,7 +581,6 @@ describe('chatSlice', () => {
         chatsByGame: {},
       });
 
-      mockConfirm.mockReturnValue(true);
       mockApi.delete.mockResolvedValue({} as any);
 
       await useChatStore.getState().deleteChat('aa0e8400-e29b-41d4-a716-000000000001');
@@ -795,7 +768,6 @@ describe('chatSlice', () => {
       expect(state.chatsByGame['770e8400-e29b-41d4-a716-000000000001'][0].title).toBe('Updated Title');
 
       // Delete chat
-      mockConfirm.mockReturnValue(true);
       mockApi.delete.mockResolvedValue({} as any);
       await useChatStore.getState().deleteChat('new');
 
@@ -862,7 +834,6 @@ describe('chatSlice', () => {
         chatsByGame: { '770e8400-e29b-41d4-a716-000000000001': [createMockChatThread({ id: specialId })] },
       });
 
-      mockConfirm.mockReturnValue(true);
       mockApi.delete.mockResolvedValue({} as any);
 
       await useChatStore.getState().deleteChat(specialId);

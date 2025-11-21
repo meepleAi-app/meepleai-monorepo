@@ -27,9 +27,6 @@ const mockApi = api as jest.Mocked<typeof api>;
 // Explicitly cast nested mock objects for TypeScript
 const mockChat = mockApi.chat as jest.Mocked<typeof api.chat>;
 
-// Mock window.confirm
-global.confirm = jest.fn(() => true);
-
 // Create test store with minimal slices
 const createTestStore = () => {
   return create<ChatStore>()(
@@ -665,25 +662,13 @@ describe('messagesSlice', () => {
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.deleteMessage.mockResolvedValue(createMockMessageResponse());
-      (global.confirm as jest.Mock).mockReturnValue(true);
 
       await store.getState().deleteMessage('msg-1');
 
-      expect(global.confirm).toHaveBeenCalledWith(
-        'Sei sicuro di voler eliminare questo messaggio?'
-      );
       expect(mockChat.deleteMessage).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001', 'msg-1');
       expect(mockLoadMessages).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001');
       expect(setLoading).toHaveBeenCalledWith('deleting', true);
       expect(setLoading).toHaveBeenCalledWith('deleting', false);
-    });
-
-    it('should not delete if user cancels confirmation', async () => {
-      (global.confirm as jest.Mock).mockReturnValue(false);
-
-      await store.getState().deleteMessage('msg-1');
-
-      expect(mockChat.deleteMessage).not.toHaveBeenCalled();
     });
 
     it('should not delete if no game selected', async () => {
@@ -691,7 +676,6 @@ describe('messagesSlice', () => {
 
       await store.getState().deleteMessage('msg-1');
 
-      expect(global.confirm).not.toHaveBeenCalled();
       expect(mockChat.deleteMessage).not.toHaveBeenCalled();
     });
 
@@ -700,7 +684,6 @@ describe('messagesSlice', () => {
 
       await store.getState().deleteMessage('msg-1');
 
-      expect(global.confirm).not.toHaveBeenCalled();
       expect(mockChat.deleteMessage).not.toHaveBeenCalled();
     });
 
@@ -709,7 +692,6 @@ describe('messagesSlice', () => {
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.deleteMessage.mockRejectedValue(new Error('API Error'));
-      (global.confirm as jest.Mock).mockReturnValue(true);
 
       await store.getState().deleteMessage('msg-1');
 

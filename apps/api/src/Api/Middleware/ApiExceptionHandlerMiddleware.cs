@@ -2,6 +2,7 @@ using System;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Domain.Exceptions;
+using FluentValidation;
 
 namespace Api.Middleware;
 
@@ -63,6 +64,13 @@ public class ApiExceptionHandlerMiddleware
             context.Request.Method,
             context.TraceIdentifier);
 
+        // Special handling for FluentValidation exceptions (Issue #1449)
+        if (ex is FluentValidation.ValidationException fluentValidationEx)
+        {
+            await HandleFluentValidationExceptionAsync(context, fluentValidationEx);
+            return;
+        }
+
         // Determine status code and error type based on exception type
         var (statusCode, errorType, message) = MapExceptionToResponse(ex);
 
@@ -86,6 +94,46 @@ public class ApiExceptionHandlerMiddleware
             timestamp = DateTime.UtcNow,
             // Include stack trace only in development
             stackTrace = _environment.IsDevelopment() ? ex.StackTrace : null
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse);
+    }
+
+    /// <summary>
+    /// Handles FluentValidation exceptions with HTTP 422 and structured error messages.
+    /// Issue #1449: Returns validation errors in a structured format for client consumption.
+    /// </summary>
+    private async Task HandleFluentValidationExceptionAsync(
+        HttpContext context,
+        FluentValidation.ValidationException validationException)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        // Record validation error metrics
+        MeepleAiMetrics.RecordApiError(
+            exception: validationException,
+            httpStatusCode: StatusCodes.Status422UnprocessableEntity,
+            endpoint: endpoint,
+            isUnhandled: true);
+
+        context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        context.Response.ContentType = "application/json";
+
+        // Group validation errors by property name
+        var errors = validationException.Errors
+            .GroupBy(e => e.PropertyName)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(e => e.ErrorMessage).ToArray()
+            );
+
+        var errorResponse = new
+        {
+            error = "validation_error",
+            message = "One or more validation errors occurred",
+            errors = errors,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
         };
 
         await context.Response.WriteAsJsonAsync(errorResponse);

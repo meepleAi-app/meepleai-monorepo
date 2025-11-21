@@ -152,8 +152,16 @@ builder.Services.AddInfrastructureServices(builder.Configuration, builder.Enviro
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
+// Issue #1449: FluentValidation for CQRS pipeline
+builder.Services.AddFluentValidation();
+
 // DDD-PHASE1: MediatR for CQRS (Commands, Queries, Handlers)
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+// Issue #1449: Add ValidationBehavior to MediatR pipeline
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+    cfg.AddOpenBehavior(typeof(Api.SharedKernel.Application.Behaviors.ValidationBehavior<,>));
+});
 
 // Application services (Domain, AI, Admin)
 // BGAI-001-v2: Pass configuration for PDF extractor provider selection

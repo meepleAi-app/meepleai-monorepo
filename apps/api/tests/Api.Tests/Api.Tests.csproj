@@ -11,6 +11,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FluentAssertions" Version="8.8.0" />
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
+    <PackageReference Include="FluentValidation.TestHelper" Version="11.11.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
     <PackageReference Include="Moq" Version="4.20.72" />

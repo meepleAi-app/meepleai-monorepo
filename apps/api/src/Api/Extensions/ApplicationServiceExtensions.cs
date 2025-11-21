@@ -11,6 +11,7 @@ using Api.Services.Pdf;
 using Api.Services.Qdrant;
 using Api.Services.Rag;
 using Api.Observability;
+using FluentValidation;
 
 namespace Api.Extensions;
 
@@ -211,6 +212,22 @@ public static class ApplicationServiceExtensions
 
         // BGAI-042: Weekly automated quality evaluation
         services.AddHostedService<WeeklyEvaluationService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers FluentValidation validators for CQRS pipeline validation.
+    /// Issue #1449: FluentValidation for Authentication bounded context.
+    /// </summary>
+    public static IServiceCollection AddFluentValidation(this IServiceCollection services)
+    {
+        // Register all validators from the Authentication bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.Authentication.Application.Validators.LoginCommandValidator>();
+
+        // Future: Add validators from other bounded contexts here
+        // services.AddValidatorsFromAssemblyContaining<GameManagement.Validators.SomeValidator>();
+        // services.AddValidatorsFromAssemblyContaining<KnowledgeBase.Validators.SomeValidator>();
 
         return services;
     }

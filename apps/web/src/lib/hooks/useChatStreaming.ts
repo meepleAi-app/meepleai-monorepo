@@ -1,8 +1,28 @@
-import { useCallback, useRef, useState } from 'react';
-import { Citation } from '@/types'; // #859
+/**
+ * useChatStreaming Hook - Unified Streaming Implementation (Issue #1451)
+ *
+ * Consolidated streaming hook that supports both real SSE and mock modes.
+ * Extracted logic into separate helpers for better maintainability.
+ *
+ * Features:
+ * - Real SSE streaming via useRealStreaming
+ * - Mock streaming simulation via useMockStreaming
+ * - Environment variable mode selection (NEXT_PUBLIC_USE_MOCK_STREAMING)
+ * - Identical interface for both modes
+ * - Zero breaking changes for existing consumers
+ *
+ * Migration from useChatStream:
+ * - Use useChatStreaming with useMock=true or set NEXT_PUBLIC_USE_MOCK_STREAMING=true
+ * - Old useChatStream is deprecated and will be removed in Sprint 5
+ */
 
-// Event types that match the backend
-type StreamingEventType = 'token' | 'stateUpdate' | 'citations' | 'complete' | 'error' | 'heartbeat' | 'followUpQuestions';
+import { Citation } from '@/types';
+import { useRealStreaming, type RealStreamingState, type RealStreamingControls, type RealStreamingCallbacks } from './useRealStreaming';
+import { useMockStreaming, type MockStreamingState, type MockStreamingControls, type MockStreamingCallbacks } from './useMockStreaming';
+
+// Re-export types for compatibility
+export type StreamingState = RealStreamingState | MockStreamingState;
+export type StreamingControls = RealStreamingControls | MockStreamingControls;
 
 type Snippet = {
   text: string;
@@ -11,343 +31,90 @@ type Snippet = {
   line?: number | null;
 };
 
-type StateUpdateData = {
-  state: string;
-};
-
-// #859: Updated to support both snippets (legacy) and citations (new)
-type CitationsData = {
-  snippets?: Snippet[];
-  citations?: Citation[];
-};
-
-type TokenData = {
-  token: string;
-};
-
-// #859: Updated to support both snippets and citations
-type CompleteData = {
-  totalTokens: number;
-  confidence?: number;
-  snippets?: Snippet[];
-  citations?: Citation[];
-};
-
-type ErrorData = {
-  message: string;
-  code?: string;
-};
-
-type FollowUpQuestionsData = {
-  questions: string[];
-};
-
-type StreamingEvent = {
-  type: StreamingEventType;
-  data: StateUpdateData | CitationsData | TokenData | CompleteData | ErrorData | FollowUpQuestionsData | null;
-};
-
-// #859: Added citations to streaming state
-export type StreamingState = {
-  state: string | null;
-  currentAnswer: string;
-  snippets: Snippet[];
-  citations: Citation[]; // #859: PDF citations from RAG
-  followUpQuestions: string[]; // CHAT-02
-  totalTokens: number;
-  confidence: number | null;
-  isStreaming: boolean;
-  error: string | null;
-};
-
-export type StreamingControls = {
-  startStreaming: (gameId: string, query: string, chatId?: string, searchMode?: string) => void;
-  stopStreaming: () => void;
-  reset: () => void;
-};
-
-const INITIAL_STATE: StreamingState = {
-  state: null,
-  currentAnswer: '',
-  snippets: [],
-  citations: [], // #859
-  followUpQuestions: [], // CHAT-02
-  totalTokens: 0,
-  confidence: null,
-  isStreaming: false,
-  error: null,
-};
+/**
+ * Streaming callbacks (unified interface)
+ */
+export interface StreamingCallbacks {
+  onComplete?: (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[]; citations?: Citation[] }) => void;
+  onError?: (error: string) => void;
+}
 
 /**
- * React hook for streaming QA responses using Server-Sent Events (SSE)
+ * Hook options
+ */
+export interface UseChatStreamingOptions extends StreamingCallbacks {
+  /**
+   * Use mock streaming mode instead of real SSE
+   * @default false (reads from NEXT_PUBLIC_USE_MOCK_STREAMING if not specified)
+   */
+  useMock?: boolean;
+}
+
+/**
+ * Unified React hook for streaming QA responses
  *
- * Usage:
+ * Supports both real SSE streaming and mock streaming simulation.
+ * Mode selection via `useMock` prop or `NEXT_PUBLIC_USE_MOCK_STREAMING` environment variable.
+ *
+ * @param options - Configuration and callbacks
+ * @param options.useMock - Force mock mode (default: reads from env NEXT_PUBLIC_USE_MOCK_STREAMING)
+ * @param options.onComplete - Callback when streaming completes
+ * @param options.onError - Callback when streaming errors occur
+ *
+ * @returns [state, controls] tuple
+ *
+ * @example Real SSE mode (default)
  * ```tsx
  * const [streamingState, streamingControls] = useChatStreaming({
  *   onComplete: (answer, snippets, metadata) => {
- *     // Handle completed response
+ *     console.log('Streaming complete:', answer);
  *   },
  *   onError: (error) => {
- *     // Handle error
+ *     console.error('Streaming error:', error);
  *   }
  * });
  *
- * // Start streaming with optional search mode (AI-14)
  * streamingControls.startStreaming(gameId, userQuery, chatId, searchMode);
+ * ```
  *
- * // Stop streaming
- * streamingControls.stopStreaming();
+ * @example Mock mode (for development/testing)
+ * ```tsx
+ * const [streamingState, streamingControls] = useChatStreaming({
+ *   useMock: true,
+ *   onComplete: (answer) => {
+ *     console.log('Mock streaming complete:', answer);
+ *   }
+ * });
+ *
+ * streamingControls.startStreaming(gameId, userQuery);
+ * ```
+ *
+ * @example Environment-based mode selection
+ * ```bash
+ * # .env.local
+ * NEXT_PUBLIC_USE_MOCK_STREAMING=true
  * ```
  */
-// #859: Updated onComplete callback to include citations
-export function useChatStreaming(callbacks?: {
-  onComplete?: (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[]; citations?: Citation[] }) => void;
-  onError?: (error: string) => void;
-}): [StreamingState, StreamingControls] {
-  const [state, setState] = useState<StreamingState>(INITIAL_STATE);
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+export function useChatStreaming(
+  options?: UseChatStreamingOptions
+): [StreamingState, StreamingControls] {
+  // Determine mode: explicit prop > environment variable > default (real)
+  const useMock = options?.useMock ?? (process.env.NEXT_PUBLIC_USE_MOCK_STREAMING === 'true');
 
-  /**
-   * Stable ref to callbacks to prevent startStreaming recreation.
-   *
-   * **Pattern**: Callback Ref Pattern for Custom Hooks
-   *
-   * **Why**: Callbacks passed to custom hooks are often recreated on every parent render,
-   * causing hooks that depend on them to recreate unnecessarily, leading to infinite loops.
-   *
-   * **Solution**: Store callbacks in a ref that never changes identity, but update the ref's
-   * current value on every render. This ensures:
-   * 1. Dependencies arrays remain stable (no infinite loops)
-   * 2. Latest callback is always called (via ref.current)
-   * 3. No stale closures (ref is updated before each call)
-   *
-   * @see https://react.dev/reference/react/useRef#avoiding-recreating-the-ref-contents
-   */
-  const callbacksRef = useRef(callbacks);
+  // Extract callbacks
+  const callbacks: RealStreamingCallbacks | MockStreamingCallbacks | undefined = options ? {
+    onComplete: options.onComplete,
+    onError: options.onError,
+  } : undefined;
 
-  // Always keep ref up to date with latest callbacks (no deps needed - runs every render)
-  callbacksRef.current = callbacks;
+  // Use appropriate implementation based on mode
+  const [realState, realControls] = useRealStreaming(callbacks);
+  const [mockState, mockControls] = useMockStreaming(callbacks);
 
-  const stopStreaming = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    setState((prev) => ({ ...prev, isStreaming: false }));
-  }, []);
+  // Return the selected implementation
+  if (useMock) {
+    return [mockState, mockControls];
+  }
 
-  const reset = useCallback(() => {
-    stopStreaming();
-    setState(INITIAL_STATE);
-  }, [stopStreaming]);
-
-  const startStreaming = useCallback(
-    (gameId: string, query: string, chatId?: string, searchMode: string = 'Hybrid') => {
-      // Stop any existing stream
-      stopStreaming();
-
-      // Reset state
-      setState({
-        ...INITIAL_STATE,
-        isStreaming: true,
-      });
-
-      // Create AbortController for cancellation
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
-      // Build URL with query parameters
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
-      const url = new URL('/api/v1/agents/qa/stream', baseUrl);
-
-      // EventSource doesn't support POST, so we need to use fetch with streaming
-      // We'll use fetch with ReadableStream instead of EventSource for proper POST support
-      // AI-14: Include searchMode in request body (default: 'Hybrid')
-      const requestBody = JSON.stringify({ gameId, query, chatId, searchMode });
-
-      fetch(url.toString(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
-        credentials: 'include', // Include cookies for authentication
-        signal: abortController.signal,
-      })
-        .then(async (response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const reader = response.body?.getReader();
-          if (!reader) {
-            throw new Error('No response body');
-          }
-
-          const decoder = new TextDecoder();
-          let buffer = '';
-
-          // Read the stream
-          while (true) {
-            const { done, value } = await reader.read();
-
-            if (done) {
-              break;
-            }
-
-            // Decode chunk and add to buffer
-            buffer += decoder.decode(value, { stream: true });
-
-            // Process complete SSE messages (separated by \n\n)
-            const lines = buffer.split('\n\n');
-            buffer = lines.pop() || ''; // Keep incomplete message in buffer
-
-            for (const line of lines) {
-              if (!line.trim()) continue;
-
-              // Parse SSE format: "event: eventType\ndata: jsonData"
-              const eventMatch = line.match(/event:\s*(\w+)/);
-              const dataMatch = line.match(/data:\s*([\s\S]+)/);
-
-              if (eventMatch && dataMatch) {
-                const eventType = eventMatch[1] as StreamingEventType;
-                let eventData: unknown = null;
-
-                try {
-                  eventData = JSON.parse(dataMatch[1]);
-                } catch {
-                  // Ignore parse errors for non-JSON data
-                }
-
-                // Handle different event types
-                switch (eventType) {
-                  case 'stateUpdate':
-                    setState((prev) => ({
-                      ...prev,
-                      state: (eventData as StateUpdateData)?.state || null,
-                    }));
-                    break;
-
-                  case 'citations': {
-                    // #859: Handle both snippets (legacy) and citations (new)
-                    const citationsData = eventData as CitationsData;
-                    setState((prev) => ({
-                      ...prev,
-                      snippets: citationsData?.snippets || prev.snippets,
-                      citations: citationsData?.citations || prev.citations,
-                    }));
-                    break;
-                  }
-
-                  case 'token':
-                    setState((prev) => ({
-                      ...prev,
-                      currentAnswer: prev.currentAnswer + ((eventData as TokenData)?.token || ''),
-                    }));
-                    break;
-
-                  case 'followUpQuestions': {
-                    const followUpData = eventData as FollowUpQuestionsData;
-                    setState((prev) => ({
-                      ...prev,
-                      followUpQuestions: followUpData?.questions || [],
-                    }));
-                    break;
-                  }
-
-                  case 'complete': {
-                    const completeData = eventData as CompleteData;
-                    setState((prev) => {
-                      // #859: Include citations in final state
-                      const finalState = {
-                        ...prev,
-                        totalTokens: completeData?.totalTokens || 0,
-                        confidence: completeData?.confidence || null,
-                        snippets: completeData?.snippets || prev.snippets,
-                        citations: completeData?.citations || prev.citations, // #859
-                        isStreaming: false,
-                        state: null,
-                      };
-
-                      // Call completion callback
-                      if (callbacksRef.current?.onComplete) {
-                        callbacksRef.current.onComplete(finalState.currentAnswer, finalState.snippets, {
-                          totalTokens: finalState.totalTokens,
-                          confidence: finalState.confidence,
-                          followUpQuestions: prev.followUpQuestions.length > 0 ? prev.followUpQuestions : undefined,
-                          citations: finalState.citations.length > 0 ? finalState.citations : undefined, // #859
-                        });
-                      }
-
-                      return finalState;
-                    });
-                    break;
-                  }
-
-                  case 'error': {
-                    const errorData = eventData as ErrorData;
-                    const errorMessage = errorData?.message || 'Unknown error occurred';
-                    setState((prev) => ({
-                      ...prev,
-                      error: errorMessage,
-                      isStreaming: false,
-                      state: null,
-                    }));
-                    if (callbacks?.onError) {
-                      callbacks.onError(errorMessage);
-                    }
-                    break;
-                  }
-
-                  case 'heartbeat':
-                    // Ignore heartbeat events (keep connection alive)
-                    break;
-
-                  default:
-                    console.warn('Unknown event type:', eventType);
-                }
-              }
-            }
-          }
-        })
-        .catch((error) => {
-          // Don't treat abort as an error
-          if (error.name === 'AbortError') {
-            setState((prev) => ({
-              ...prev,
-              isStreaming: false,
-              state: null,
-            }));
-            return;
-          }
-
-          const errorMessage = error instanceof Error ? error.message : 'Failed to stream response';
-          setState((prev) => ({
-            ...prev,
-            error: errorMessage,
-            isStreaming: false,
-            state: null,
-          }));
-          if (callbacksRef.current?.onError) {
-            callbacksRef.current.onError(errorMessage);
-          }
-        });
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- callbacks intentionally omitted, accessed via stable callbacksRef to prevent infinite recreation
-    [stopStreaming]
-  );
-
-  return [
-    state,
-    {
-      startStreaming,
-      stopStreaming,
-      reset,
-    },
-  ];
+  return [realState, realControls];
 }

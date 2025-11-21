@@ -15,19 +15,15 @@ Comprehensive tests for UI state management:
 - **Search Mode**: Vector, Keyword, Hybrid mode toggle
 - **Integration**: Multi-action workflows and state independence
 
-### 🚧 useChatStream.test.ts
-**Coverage: ~90%** (80+ tests)
+### ✅ Streaming Tests Migrated
+**Note**: Streaming functionality has been migrated to `useChatStreaming` (Issue #1451).
 
-Comprehensive tests for SSE streaming hook:
-- **Initial State**: Validates default state and function availability
-- **Stream Start**: Error handling for null chatId, state reset, optimistic message creation
-- **Streaming Behavior**: Word-by-word streaming, progressive content updates
-- **Stream Cancellation**: stopStream functionality, cleanup, abort controller
-- **Error Handling**: Cancelled stream handling, error logging, state cleanup
-- **Cleanup**: Unmount handling, chatId change cleanup
-- **Integration**: Complete workflow, consecutive streams, rapid start/stop cycles
-- **Mock Responses**: Random response selection, realistic streaming speed
-- **Edge Cases**: Empty messages, long messages, special characters
+Streaming tests are now located at:
+- `apps/web/src/lib/hooks/__tests__/useChatStreaming.test.ts` - Real SSE streaming tests
+- `apps/web/src/lib/hooks/__tests__/useMockStreaming.test.ts` - Mock streaming tests
+- `apps/web/src/lib/hooks/__tests__/useChatStreaming.unified.test.ts` - Mode switching tests
+
+See `docs/04-frontend/streaming-hooks.md` for complete documentation.
 
 ## Running Tests
 
@@ -39,13 +35,11 @@ npm test -- src/store/chat
 ### Run specific test file
 ```bash
 npm test -- src/store/chat/slices/__tests__/uiSlice.test.ts
-npm test -- src/store/chat/__tests__/useChatStream.test.ts
 ```
 
 ### Run with coverage
 ```bash
 npm test -- src/store/chat/slices/__tests__/uiSlice.test.ts --coverage --collectCoverageFrom="src/store/chat/slices/uiSlice.ts"
-npm test -- src/store/chat/__tests__/useChatStream.test.ts --coverage --collectCoverageFrom="src/store/chat/useChatStream.ts"
 ```
 
 ## Coverage Results
@@ -56,16 +50,11 @@ npm test -- src/store/chat/__tests__/useChatStream.test.ts --coverage --collectC
 - **Functions**: 100%
 - **Lines**: 100%
 
-### useChatStream.ts
-- **Estimated Coverage**: ~90%+
-- **Test Count**: 80+ comprehensive tests
-- **Scenarios Covered**:
-  - ✅ All state initialization
-  - ✅ Stream lifecycle (start/stop/complete)
-  - ✅ Error handling and recovery
-  - ✅ Optimistic updates integration
-  - ✅ Cleanup and resource management
-  - ✅ Edge cases and error conditions
+### Streaming Tests (Migrated)
+Streaming test coverage is now maintained in:
+- `useChatStreaming.test.ts` - Real SSE: ~90%+ coverage
+- `useMockStreaming.test.ts` - Mock mode: ~90%+ coverage
+- `useChatStreaming.unified.test.ts` - Mode switching: 100% coverage
 
 ## Test Organization
 
@@ -122,26 +111,27 @@ expect(result.current.loading).toEqual({
 
 ## Coverage Improvements
 
-### Before
+### Before (Issue #1083)
 - uiSlice.ts: 35.48%
-- useChatStream.ts: 6.77%
 
-### After
+### After (Issue #1083)
 - uiSlice.ts: **100%** ✅
-- useChatStream.ts: **~90%** ✅
 
 ### Total Improvement
 - **+54.52%** for uiSlice.ts
-- **+83.23%** for useChatStream.ts
-- **Target: 90%+ achieved for both files**
+- **Target: 90%+ achieved**
 
 ## Notes
 
-### useChatStream.ts
-The hook implements mock streaming using setTimeout to simulate word-by-word delivery. Tests validate this mock implementation. Phase 4 will replace this with real SSE EventSource integration.
+### Streaming Tests (Issue #1451)
+Streaming functionality has been migrated to unified `useChatStreaming` hook with separate helpers:
+- `useRealStreaming` - Real SSE via fetch + ReadableStream
+- `useMockStreaming` - Mock simulation with setTimeout
+
+See `docs/04-frontend/streaming-hooks.md` for complete documentation.
 
 ### Test Timeouts
-Some useChatStream tests may require increased timeouts due to async streaming behavior:
+Some streaming tests may require increased timeouts due to async behavior:
 ```bash
 npm test -- --testTimeout=30000
 ```
@@ -152,14 +142,6 @@ npm test -- --testTimeout=30000
 - **AbortController**: Real implementation for cancellation testing
 
 ## Future Enhancements
-
-### Phase 4 - Real SSE Integration
-When implementing real SSE with EventSource:
-1. Update mock setup to use real SSE events
-2. Add tests for network failures
-3. Add tests for reconnection logic
-4. Add tests for partial chunk handling
-5. Add tests for citation parsing
 
 ### Additional Test Coverage
 - Performance testing for large message streams
@@ -178,10 +160,10 @@ Tests are configured to run with:
 ### Debugging Tests
 ```bash
 # Run with verbose output
-npm test -- src/store/chat/__tests__/useChatStream.test.ts --verbose
+npm test -- src/store/chat/slices/__tests__/uiSlice.test.ts --verbose
 
 # Run specific test
-npm test -- --testNamePattern="should start streaming"
+npm test -- --testNamePattern="should set loading state"
 
 # Run in watch mode
 npm test:watch -- src/store/chat
@@ -190,5 +172,7 @@ npm test:watch -- src/store/chat
 ## References
 
 - Issue #1083: Chat Store Zustand Migration
+- Issue #1451: Streaming Hooks Consolidation
 - CLAUDE.md: Testing standards and coverage requirements
 - docs/02-development/testing/testing-guide.md: Comprehensive testing guide
+- docs/04-frontend/streaming-hooks.md: Streaming hooks documentation

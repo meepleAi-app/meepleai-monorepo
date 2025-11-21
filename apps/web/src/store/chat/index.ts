@@ -4,7 +4,9 @@
  * Centralized exports for Zustand-based chat state management.
  *
  * Usage:
- *   import { useChatStore, useActiveChat, useChatStream } from '@/store/chat';
+ *   import { useChatStore, useActiveChat } from '@/store/chat';
+ *
+ * Note: For streaming functionality, use useChatStreaming from '@/lib/hooks/useChatStreaming'
  */
 
 // Main store
@@ -22,10 +24,6 @@ export {
   useIsCreating,
   useIsSending,
 } from './hooks';
-
-// Streaming hook
-export { useChatStream } from './useChatStream';
-export type { StreamState, StreamControls } from './useChatStream';
 
 // Types
 export type {

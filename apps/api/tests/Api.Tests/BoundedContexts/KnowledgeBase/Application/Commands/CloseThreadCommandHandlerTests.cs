@@ -46,8 +46,8 @@ public class CloseThreadCommandHandlerTests
         Assert.NotNull(result);
         Assert.Equal(threadId, result.Id);
         Assert.Equal("closed", result.Status);
-        _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(thread, default), Times.Once);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]

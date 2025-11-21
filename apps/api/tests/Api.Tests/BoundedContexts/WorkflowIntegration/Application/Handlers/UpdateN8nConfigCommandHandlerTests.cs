@@ -175,9 +175,9 @@ public class UpdateN8nConfigCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNullWebhookUrl_ClearsWebhook()
+    public async Task Handle_WithNullWebhookUrl_PreservesExistingWebhook()
     {
-        // Arrange
+        // Arrange - In the update pattern, null means "don't change"
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var existingConfig = new N8nConfiguration(
@@ -193,7 +193,7 @@ public class UpdateN8nConfigCommandHandlerTests
             ConfigId: configId,
             Name: "Test Config",
             BaseUrl: null,
-            WebhookUrl: null,
+            WebhookUrl: null, // null means "don't change", not "clear"
             ApiKeyEncrypted: null,
             IsActive: null
         );
@@ -205,8 +205,8 @@ public class UpdateN8nConfigCommandHandlerTests
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert - WebhookUrl should be null after update
-        Assert.Null(result.WebhookUrl);
+        // Assert - WebhookUrl should remain unchanged when null is passed
+        Assert.Equal("https://old.webhook.com", result.WebhookUrl);
     }
 
     [Fact]

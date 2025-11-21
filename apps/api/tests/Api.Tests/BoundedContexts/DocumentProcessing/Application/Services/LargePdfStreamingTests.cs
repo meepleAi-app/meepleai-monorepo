@@ -119,9 +119,12 @@ public class LargePdfStreamingTests
             UseTempFileForLargePdfs = true
         });
 
+        // Need ≥800 chars/page to achieve quality score ≥0.80
+        // Quality formula: 0.5 + (chars - 500) / 500 * 0.5 for chars in [500, 1000]
+        var realisticText = new string('A', 850); // 850 chars → quality score ~0.85
         var chunks = new List<PageTextChunk>
         {
-            new PageTextChunk(PageNumber: 1, Text: "Page 1", CharStartIndex: 0, CharEndIndex: 6)
+            new PageTextChunk(PageNumber: 1, Text: realisticText, CharStartIndex: 0, CharEndIndex: realisticText.Length)
         };
 
         var stage1 = new FakePagedExtractor(success: true, chunks: chunks);

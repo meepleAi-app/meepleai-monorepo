@@ -65,6 +65,13 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddSingleton(_timeProvider);
 
+        // Register domain event infrastructure
+        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
+
+        // Register MediatR (required by MeepleAiDbContext for domain event dispatching)
+        services.AddMediatR(config =>
+            config.RegisterServicesFromAssembly(typeof(Api.BoundedContexts.Authentication.Application.Commands.LoginCommandHandler).Assembly));
+
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 

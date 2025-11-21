@@ -70,9 +70,9 @@ public class RegisterCommandHandlerTests
         Assert.NotNull(result.SessionToken);
         Assert.True(result.ExpiresAt > DateTime.UtcNow);
 
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]
@@ -107,9 +107,9 @@ public class RegisterCommandHandlerTests
         Assert.False(result.User.IsTwoFactorEnabled);
         Assert.Null(result.User.TwoFactorEnabledAt);
 
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]
@@ -290,9 +290,9 @@ public class RegisterCommandHandlerTests
 
         Assert.Equal("Email is already registered", exception.Message);
 
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
     }
 
     [Fact]
@@ -352,8 +352,8 @@ public class RegisterCommandHandlerTests
 
         Assert.Equal("Only administrators can assign elevated roles", exception.Message);
 
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
     }
 
     [Fact]
@@ -435,7 +435,7 @@ public class RegisterCommandHandlerTests
             () => _handler.Handle(command, CancellationToken.None)
         );
 
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Never);
     }
 
     [Fact]
@@ -597,7 +597,7 @@ public class RegisterCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]

@@ -90,7 +90,7 @@ public class InvokeAgentCommandHandlerTests
         Assert.NotEmpty(result.Results);
 
         // Verify agent was updated
-        _mockAgentRepo.Verify(r => r.UpdateAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Once);
+        _mockAgentRepo.Verify(r => r.UpdateAsync(It.IsAny<Agent>(), default), Times.Once);
     }
 
     [Fact]

@@ -17,7 +17,7 @@ public class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedResu
 
     public GetAllUsersQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<PagedResult<UserDto>> Handle(GetAllUsersQuery query, CancellationToken cancellationToken)

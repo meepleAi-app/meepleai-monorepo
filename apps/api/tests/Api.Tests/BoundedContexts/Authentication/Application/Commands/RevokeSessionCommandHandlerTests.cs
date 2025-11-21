@@ -52,8 +52,8 @@ public class RevokeSessionCommandHandlerTests
         // Assert
         Assert.True(result.Success);
         Assert.Null(result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class RevokeSessionCommandHandlerTests
         // Assert
         Assert.True(result.Success);
         Assert.Null(result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, default), Times.Once);
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class RevokeSessionCommandHandlerTests
         // Assert
         Assert.False(result.Success);
         Assert.Contains("Unauthorized", result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), default), Times.Once);
     }
 
     [Fact]

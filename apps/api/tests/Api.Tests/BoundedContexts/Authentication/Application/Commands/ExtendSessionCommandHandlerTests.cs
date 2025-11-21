@@ -64,8 +64,8 @@ public class ExtendSessionCommandHandlerTests
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(result.NewExpiresAt);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class ExtendSessionCommandHandlerTests
         // Assert
         Assert.False(result.Success);
         Assert.Contains("Rate limit exceeded", result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), default), Times.Never);
     }
 
     [Fact]
@@ -140,6 +140,6 @@ public class ExtendSessionCommandHandlerTests
         // Assert
         Assert.False(result.Success);
         Assert.Contains("Unauthorized", result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), default), Times.Never);
     }
 }

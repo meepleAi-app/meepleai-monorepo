@@ -10,7 +10,7 @@ public record GetAllUsersQuery(
     string? SearchTerm = null,
     string? RoleFilter = null,
     string? SortBy = null,
-    string? SortOrder = null,
+    string? SortOrder = "desc", // Default to descending order
     int Page = 1,
     int Limit = 20
 ) : IQuery<PagedResult<UserDto>>;

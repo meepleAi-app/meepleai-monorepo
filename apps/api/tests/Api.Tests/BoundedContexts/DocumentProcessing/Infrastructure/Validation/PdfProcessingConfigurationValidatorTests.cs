@@ -184,6 +184,9 @@ public class PdfProcessingConfigurationValidatorTests
         // Arrange
         var options = CreateValidOptions();
         options.MaxFileSizeBytes = fileSize;
+        // LargePdfThresholdBytes must be between 1KB and MaxFileSizeBytes
+        // Use half of max, but ensure it's at least 1KB
+        options.LargePdfThresholdBytes = Math.Max(1024, fileSize / 2);
 
         // Act
         var result = _validator.Validate(null, options);
@@ -422,7 +425,9 @@ public class PdfProcessingConfigurationValidatorTests
                 WarningThreshold = 0.70,
                 MinCharsPerPage = 500
             },
-            MaxFileSizeBytes = 104857600,
+            MaxFileSizeBytes = 104857600, // 100 MB
+            LargePdfThresholdBytes = 52428800, // 50 MB (must be ≤ MaxFileSizeBytes)
+            UseTempFileForLargePdfs = true,
             Extractor = new ExtractorOptions
             {
                 Provider = "Orchestrator",

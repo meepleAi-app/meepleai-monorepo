@@ -20,8 +20,10 @@ public class UserRepository : RepositoryBase, IUserRepository
 
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        // Include OAuthAccounts for domain logic that requires checking auth methods
         var userEntity = await DbContext.Users
             .Include(u => u.BackupCodes)
+            .Include(u => u.OAuthAccounts)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
@@ -30,8 +32,10 @@ public class UserRepository : RepositoryBase, IUserRepository
 
     public async Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken = default)
     {
+        // Include OAuthAccounts for domain logic that requires checking auth methods
         var userEntity = await DbContext.Users
             .Include(u => u.BackupCodes)
+            .Include(u => u.OAuthAccounts)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email == email.Value, cancellationToken);
 
@@ -54,8 +58,10 @@ public class UserRepository : RepositoryBase, IUserRepository
 
     public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default)
     {
+        // Include OAuthAccounts for domain logic that requires checking auth methods
         var userEntities = await DbContext.Users
             .Include(u => u.BackupCodes)
+            .Include(u => u.OAuthAccounts)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
@@ -102,7 +108,8 @@ public class UserRepository : RepositoryBase, IUserRepository
         // Collect domain events BEFORE updating persistence entity
         CollectDomainEvents(entity);
 
-        // Load the existing user with backup codes to properly manage the child collection
+        // Load the existing user with backup codes for update
+        // Note: We don't need to track OAuthAccounts here since they're managed via OAuthAccountRepository
         var existingUser = await DbContext.Users
             .Include(u => u.BackupCodes)
             .FirstOrDefaultAsync(u => u.Id == entity.Id, cancellationToken);
@@ -228,6 +235,31 @@ public class UserRepository : RepositoryBase, IUserRepository
             }
         }
 
+        // Reconstruct OAuth accounts collection using reflection
+        if (entity.OAuthAccounts.Any())
+        {
+            var oauthAccountsField = typeof(User).GetField("_oauthAccounts", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (oauthAccountsField != null)
+            {
+                var oauthAccountsList = (List<OAuthAccount>)oauthAccountsField.GetValue(user)!;
+                oauthAccountsList.Clear();
+
+                foreach (var oauthEntity in entity.OAuthAccounts)
+                {
+                    var oauthAccount = new OAuthAccount(
+                        oauthEntity.Id,
+                        oauthEntity.UserId,
+                        oauthEntity.Provider,
+                        oauthEntity.ProviderUserId,
+                        oauthEntity.AccessTokenEncrypted,
+                        oauthEntity.RefreshTokenEncrypted,
+                        oauthEntity.TokenExpiresAt
+                    );
+                    oauthAccountsList.Add(oauthAccount);
+                }
+            }
+        }
+
         return user;
     }
 
@@ -246,7 +278,10 @@ public class UserRepository : RepositoryBase, IUserRepository
             return new List<User>();
         }
 
+        // Include OAuthAccounts for domain logic that requires checking auth methods
         var userEntities = await DbContext.Users
+            .Include(u => u.BackupCodes)
+            .Include(u => u.OAuthAccounts)
             .Where(u => (u.DisplayName != null && u.DisplayName.Contains(query)) || u.Email.Contains(query))
             .OrderBy(u => u.DisplayName ?? u.Email)
             .Take(maxResults)

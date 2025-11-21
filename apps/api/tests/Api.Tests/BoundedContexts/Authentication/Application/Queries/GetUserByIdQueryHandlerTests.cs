@@ -47,7 +47,7 @@ public class GetUserByIdQueryHandlerTests
         Assert.False(result.IsTwoFactorEnabled);
         Assert.Null(result.TwoFactorEnabledAt);
 
-        _userRepositoryMock.Verify(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _userRepositoryMock.Verify(x => x.GetByIdAsync(user.Id, default), Times.Once);
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class GetUserByIdQueryHandlerTests
         // Assert
         Assert.Null(result);
 
-        _userRepositoryMock.Verify(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
+        _userRepositoryMock.Verify(x => x.GetByIdAsync(userId, default), Times.Once);
     }
 
     #endregion
@@ -237,8 +237,8 @@ public class GetUserByIdQueryHandlerTests
         await _handler.Handle(query, CancellationToken.None);
 
         // Assert - Query handlers are read-only
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
-        _userRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Never);
+        _userRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<User>(), default), Times.Never);
     }
 
     #endregion

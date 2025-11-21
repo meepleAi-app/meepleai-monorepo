@@ -15,14 +15,14 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 
 /// <summary>
 /// Tests for GetSessionStatusQueryHandler focusing on authorization.
-/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
-public class GetSessionStatusQueryHandlerTests
+public class GetSessionStatusQueryHandlerTests : IDisposable
 {
-    /// <summary>
-    /// Creates a fresh DbContext for each test to ensure complete isolation
-    /// </summary>
-    private static MeepleAiDbContext CreateFreshDbContext()
+    private readonly MeepleAiDbContext _dbContext;
+    private readonly Mock<ILogger<GetSessionStatusQueryHandler>> _loggerMock;
+    private readonly GetSessionStatusQueryHandler _handler;
+
+    public GetSessionStatusQueryHandlerTests()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -30,25 +30,17 @@ public class GetSessionStatusQueryHandlerTests
 
         var mediatorMock = new Mock<IMediator>();
         var domainEventCollectorMock = new Mock<IDomainEventCollector>();
-        return new MeepleAiDbContext(options, mediatorMock.Object, domainEventCollectorMock.Object);
-    }
+        domainEventCollectorMock.Setup(x => x.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
+        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, domainEventCollectorMock.Object);
+        _loggerMock = new Mock<ILogger<GetSessionStatusQueryHandler>>();
 
-    /// <summary>
-    /// Creates a GetSessionStatusQueryHandler instance with the given context
-    /// </summary>
-    private static GetSessionStatusQueryHandler CreateHandler(MeepleAiDbContext context)
-    {
-        var loggerMock = new Mock<ILogger<GetSessionStatusQueryHandler>>();
-        return new GetSessionStatusQueryHandler(context, loggerMock.Object);
+        _handler = new GetSessionStatusQueryHandler(_dbContext, _loggerMock.Object);
     }
 
     [Fact]
     public async Task Handle_OwnerAccessesOwnSession_ReturnsSession()
     {
-        // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
-        var handler = CreateHandler(context);
-
+        // Arrange
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -70,14 +62,14 @@ public class GetSessionStatusQueryHandlerTests
             User = user
         };
 
-        context.Users.Add(user);
-        context.UserSessions.Add(session);
-        await context.SaveChangesAsync();
+        _dbContext.Users.Add(user);
+        _dbContext.UserSessions.Add(session);
+        await _dbContext.SaveChangesAsync();
 
         var query = new GetSessionStatusQuery(sessionId, userId, false);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -88,10 +80,7 @@ public class GetSessionStatusQueryHandlerTests
     [Fact]
     public async Task Handle_AdminAccessesAnySession_ReturnsSession()
     {
-        // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
-        var handler = CreateHandler(context);
-
+        // Arrange
         var sessionOwnerId = Guid.NewGuid();
         var adminUserId = Guid.NewGuid();
 
@@ -115,14 +104,14 @@ public class GetSessionStatusQueryHandlerTests
             User = owner
         };
 
-        context.Users.Add(owner);
-        context.UserSessions.Add(session);
-        await context.SaveChangesAsync();
+        _dbContext.Users.Add(owner);
+        _dbContext.UserSessions.Add(session);
+        await _dbContext.SaveChangesAsync();
 
         var query = new GetSessionStatusQuery(sessionId, adminUserId, true);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -132,10 +121,7 @@ public class GetSessionStatusQueryHandlerTests
     [Fact]
     public async Task Handle_NonOwnerNonAdmin_ReturnsNull()
     {
-        // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
-        var handler = CreateHandler(context);
-
+        // Arrange
         var sessionOwnerId = Guid.NewGuid();
         var differentUserId = Guid.NewGuid();
 
@@ -159,14 +145,14 @@ public class GetSessionStatusQueryHandlerTests
             User = owner
         };
 
-        context.Users.Add(owner);
-        context.UserSessions.Add(session);
-        await context.SaveChangesAsync();
+        _dbContext.Users.Add(owner);
+        _dbContext.UserSessions.Add(session);
+        await _dbContext.SaveChangesAsync();
 
         var query = new GetSessionStatusQuery(sessionId, differentUserId, false);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Null(result);
@@ -175,19 +161,22 @@ public class GetSessionStatusQueryHandlerTests
     [Fact]
     public async Task Handle_SessionNotFound_ReturnsNull()
     {
-        // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
-        var handler = CreateHandler(context);
-
+        // Arrange
         var sessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
         var query = new GetSessionStatusQuery(sessionId, userId, false);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Null(result);
+    }
+
+    public void Dispose()
+    {
+        _dbContext?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

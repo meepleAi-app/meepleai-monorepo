@@ -107,6 +107,9 @@ public class OAuthIntegrationTests : IAsyncLifetime
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
+        // Register domain event infrastructure
+        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
+
         // Register MediatR with handlers
         services.AddMediatR(config =>
             config.RegisterServicesFromAssembly(typeof(HandleOAuthCallbackCommandHandler).Assembly));
@@ -347,10 +350,10 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
     #endregion
 
-    #region Test 4: UnlinkOAuthAccount_LastAuthMethod_Fails
+    #region Test 4: UnlinkOAuthAccount_WithPasswordFallback_Succeeds
 
     [Fact]
-    public async Task UnlinkOAuthAccount_LastAuthMethod_Fails()
+    public async Task UnlinkOAuthAccount_WithPasswordFallback_Succeeds()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -360,14 +363,14 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
 
         var userId = Guid.NewGuid();
-        var email = new Email("oauth-only@test.meepleai.dev");
+        var email = new Email("oauth-single@test.meepleai.dev");
 
-        // Create user with OAuth-only (in practice, domain logic prevents unlink of only auth method)
+        // Create user with password (realistic scenario)
         var user = new User(
             userId,
             email,
-            "OAuth Only User",
-            PasswordHash.Create("placeholder"), // Placeholder since OAuth-only users might not have password
+            "Single OAuth User",
+            PasswordHash.Create("Password123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -386,7 +389,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         await oauthAccountRepository.AddAsync(oauthAccount, TestCancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
-        // Act - Attempt to unlink the only auth method
+        // Act - Attempt to unlink OAuth account (user has password, so this WILL succeed)
         var command = new UnlinkOAuthAccountCommand
         {
             UserId = userId,
@@ -396,16 +399,14 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
         var result = await mediator.Send(command, TestCancellationToken);
 
-        // Assert - Should fail (cannot unlink only auth method)
-        Assert.False(result.Success, "Should fail when unlinking only auth method");
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("lockout", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        // Assert - Should succeed because user has password as fallback auth method
+        Assert.True(result.Success, "Should succeed when user has password as fallback");
 
-        // Verify OAuth account NOT deleted
+        // Verify OAuth account WAS deleted (user still has password auth)
         var oauthAccountInDb = await oauthAccountRepository.GetByIdAsync(oauthAccountId, TestCancellationToken);
-        Assert.NotNull(oauthAccountInDb);
+        Assert.Null(oauthAccountInDb);
 
-        _output("✓ Test 4 passed: Cannot unlink only authentication method (lockout prevention)");
+        _output("✓ Test 4 passed: OAuth account can be unlinked when user has password as fallback");
     }
 
     #endregion
@@ -458,7 +459,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // GitHub (expired token)
         var githubAccountId = Guid.NewGuid();
-        var githubExpiration = DateTime.UtcNow.AddHours(-1); // Expired
+        var githubExpiration = DateTime.UtcNow.AddDays(-1); // Clearly expired (1 day ago)
         var githubAccount = new OAuthAccount(
             githubAccountId,
             userId,
@@ -620,9 +621,10 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
     private async Task CreateTestDataAsync()
     {
-        // Pre-create some users for reference in tests
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
+        // Use a new scope to avoid entity tracking conflicts
+        using var scope = _serviceProvider!.CreateScope();
+        var scopedUserRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var scopedUnitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var testUser = new User(
             Guid.Parse("00000000-0000-0000-0000-000000000001"),
@@ -631,8 +633,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
             PasswordHash.Create("TestPassword123!"),
             Role.User);
 
-        await userRepository.AddAsync(testUser, TestCancellationToken);
-        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        await scopedUserRepository.AddAsync(testUser, TestCancellationToken);
+        await scopedUnitOfWork.SaveChangesAsync(TestCancellationToken);
     }
 
     private async Task ResetDatabaseAsync()

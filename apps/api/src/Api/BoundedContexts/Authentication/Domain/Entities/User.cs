@@ -291,9 +291,12 @@ public sealed class User : AggregateRoot<Guid>
             throw new DomainException($"OAuth provider '{provider}' is not linked to this user");
 
         // Business rule: Cannot unlink if it would leave user with no auth methods (prevent lockout)
-        // Check BEFORE removing to see what state we'd be in after removal
-        if (PasswordHash == null && _oauthAccounts.Count == 1)
-            throw new DomainException("Cannot unlink OAuth account: User must have at least one authentication method (password or OAuth)");
+        // User must have EITHER a password OR at least 2 OAuth accounts (so after removing one, at least 1 remains)
+        bool hasPassword = PasswordHash != null;
+        bool willHaveOAuthAfterUnlink = _oauthAccounts.Count > 1;
+
+        if (!hasPassword && !willHaveOAuthAfterUnlink)
+            throw new DomainException("Cannot unlink OAuth account: User must have at least one authentication method (password or OAuth) to prevent account lockout");
 
         _oauthAccounts.Remove(account);
         AddDomainEvent(new OAuthAccountUnlinkedEvent(Id, provider));

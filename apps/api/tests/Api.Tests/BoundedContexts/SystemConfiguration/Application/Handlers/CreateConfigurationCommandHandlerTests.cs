@@ -91,7 +91,7 @@ public class CreateConfigurationCommandHandlerTests
         Assert.Equal("true", result.Value);
         Assert.Equal("bool", result.ValueType);
         Assert.Null(result.Description);
-        Assert.Null(result.Category);
+        Assert.Equal("Features", result.Category); // Category was passed explicitly in the command
     }
 
     [Fact]

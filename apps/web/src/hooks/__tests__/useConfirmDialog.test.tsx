@@ -308,4 +308,56 @@ describe('useConfirmDialog', () => {
     // Should not throw or leak memory
     unmount();
   });
+
+  it('should handle concurrent confirmation attempts correctly', async () => {
+    const TestComponent = () => {
+      const { confirm, ConfirmDialogComponent } = useConfirmDialog();
+      const [results, setResults] = React.useState<string[]>([]);
+
+      const handleConcurrentConfirms = () => {
+        // Call confirm twice without awaiting the first one
+        confirm({
+          title: 'First Confirmation',
+          message: 'First message',
+        }).then(result => {
+          setResults(prev => [...prev, `First: ${result}`]);
+        });
+
+        // Immediately call confirm again
+        confirm({
+          title: 'Second Confirmation',
+          message: 'Second message',
+        }).then(result => {
+          setResults(prev => [...prev, `Second: ${result}`]);
+        });
+      };
+
+      return (
+        <>
+          <button onClick={handleConcurrentConfirms}>Start Concurrent</button>
+          <div data-testid="results">{results.join(', ')}</div>
+          <ConfirmDialogComponent />
+        </>
+      );
+    };
+
+    render(<TestComponent />);
+
+    fireEvent.click(screen.getByText('Start Concurrent'));
+
+    // Second confirmation should be visible (overrides first)
+    await waitFor(() => {
+      expect(screen.getByText('Second Confirmation')).toBeInTheDocument();
+      expect(screen.queryByText('First Confirmation')).not.toBeInTheDocument();
+    });
+
+    // Confirm the second dialog
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    await waitFor(() => {
+      const resultsText = screen.getByTestId('results').textContent;
+      // Second confirmation should be resolved with true
+      expect(resultsText).toContain('Second: true');
+    });
+  });
 });

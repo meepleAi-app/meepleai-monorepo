@@ -23,7 +23,6 @@ import {
   setMockOnComplete,
   setMockOnError,
   mockApi,
-  originalConfirm,
 } from '../chat-test-utils';
 
 // Mock the API module
@@ -272,13 +271,8 @@ describe('Chat Test Utilities', () => {
         expect((mockApi.chat.deleteMessage as jest.Mock).mock.calls).toHaveLength(0);
       });
 
-      it('should restore window.confirm to original', () => {
-        window.confirm = jest.fn();
-
-        resetAllMocks();
-
-        expect(window.confirm).toBe(originalConfirm);
-      });
+      // Note: window.confirm restoration test removed (Issue #1435)
+      // We now use custom ConfirmDialog component instead
 
       it('should reset mockOnComplete to null', () => {
         setMockOnComplete(() => {});

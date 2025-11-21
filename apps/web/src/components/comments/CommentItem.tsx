@@ -3,6 +3,7 @@ import type { RuleSpecComment } from "@/lib/api";
 import { MentionInput } from "../chat/MentionInput";
 import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { useAlertDialog } from "@/hooks/useAlertDialog";
 
 interface CommentItemProps {
   comment: RuleSpecComment;
@@ -37,6 +38,7 @@ export function CommentItem({
   const [replyText, setReplyText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
+  const { alert: showAlert, AlertDialogComponent } = useAlertDialog();
 
   const canEdit = comment.userId === currentUserId && !disabled;
   const canDelete = (comment.userId === currentUserId || currentUserRole === "Admin") && !disabled;
@@ -54,7 +56,11 @@ export function CommentItem({
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to edit comment:", error);
-      alert("Impossibile modificare il commento");
+      await showAlert({
+        title: "Errore",
+        message: "Impossibile modificare il commento",
+        variant: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -83,7 +89,11 @@ export function CommentItem({
       await onDelete(comment.id);
     } catch (error) {
       console.error("Failed to delete comment:", error);
-      alert("Impossibile eliminare il commento");
+      await showAlert({
+        title: "Errore",
+        message: "Impossibile eliminare il commento",
+        variant: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -101,7 +111,11 @@ export function CommentItem({
       setIsReplying(false);
     } catch (error) {
       console.error("Failed to reply:", error);
-      alert("Impossibile aggiungere la risposta");
+      await showAlert({
+        title: "Errore",
+        message: "Impossibile aggiungere la risposta",
+        variant: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -118,7 +132,11 @@ export function CommentItem({
       await onResolve(comment.id);
     } catch (error) {
       console.error("Failed to resolve comment:", error);
-      alert("Impossibile contrassegnare come risolto");
+      await showAlert({
+        title: "Errore",
+        message: "Impossibile contrassegnare come risolto",
+        variant: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -130,7 +148,11 @@ export function CommentItem({
       await onUnresolve(comment.id);
     } catch (error) {
       console.error("Failed to unresolve comment:", error);
-      alert("Impossibile riaprire il commento");
+      await showAlert({
+        title: "Errore",
+        message: "Impossibile riaprire il commento",
+        variant: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -381,6 +403,9 @@ export function CommentItem({
 
       {/* Confirm dialog */}
       <ConfirmDialogComponent />
+
+      {/* Alert dialog */}
+      <AlertDialogComponent />
     </div>
   );
 }

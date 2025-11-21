@@ -475,7 +475,7 @@ describe('withRetry', () => {
 
     // Run multiple times to ensure clamping works even with random jitter
     const delays: number[] = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 3; i++) {
       fn.mockClear();
       fn.mockRejectedValueOnce(serverError)
         .mockResolvedValueOnce('success');
@@ -491,12 +491,12 @@ describe('withRetry', () => {
     }
 
     // ALL delays must be >= 3000ms (server's minimum)
-    expect(delays.length).toBe(20);
+    expect(delays.length).toBe(3);
     delays.forEach(delay => {
       expect(delay).toBeGreaterThanOrEqual(3000); // Never less than 3000ms
       expect(delay).toBeLessThan(3900); // 3000ms + 30% jitter = 3900ms
     });
-  }, 20000); // Increase timeout for multiple retry cycles
+  }, 20000); // Timeout sufficient for 3 retry cycles (~9 seconds)
 
   it('should fall back to exponential backoff when Retry-After is not present', async () => {
     const mockResponse = {

@@ -83,7 +83,9 @@ export class HttpClient {
     );
 
     // Force skipDedup if custom onRetry callback is present
-    const skipDedup = options?.skipDedup ?? (options?.retry?.onRetry !== undefined) ?? false;
+    const skipDedup = options?.retry?.onRetry !== undefined
+      ? true  // Force skipDedup when custom onRetry callback is present
+      : (options?.skipDedup ?? false);  // Otherwise use explicit value or default to false for GET
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -224,7 +226,9 @@ export class HttpClient {
     );
 
     // Force skipDedup if custom onRetry callback is present
-    const skipDedup = options?.skipDedup ?? (options?.retry?.onRetry !== undefined) ?? true;
+    const skipDedup = options?.retry?.onRetry !== undefined
+      ? true  // Force skipDedup when custom onRetry callback is present
+      : (options?.skipDedup ?? true);  // Otherwise use explicit value or default to true for POST
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -369,7 +373,9 @@ export class HttpClient {
     );
 
     // Force skipDedup if custom onRetry callback is present
-    const skipDedup = options?.skipDedup ?? (options?.retry?.onRetry !== undefined) ?? true;
+    const skipDedup = options?.retry?.onRetry !== undefined
+      ? true  // Force skipDedup when custom onRetry callback is present
+      : (options?.skipDedup ?? true);  // Otherwise use explicit value or default to true for PUT
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -496,7 +502,9 @@ export class HttpClient {
     );
 
     // Force skipDedup if custom onRetry callback is present
-    const skipDedup = options?.skipDedup ?? (options?.retry?.onRetry !== undefined) ?? true;
+    const skipDedup = options?.retry?.onRetry !== undefined
+      ? true  // Force skipDedup when custom onRetry callback is present
+      : (options?.skipDedup ?? true);  // Otherwise use explicit value or default to true for DELETE
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(

@@ -305,7 +305,8 @@ jobs:
     needs: k6-performance-tests
     if: failure() && github.event_name == 'schedule'
     permissions:
-      issues: write  # Required: Create GitHub issues
+      contents: read  # Required: Checkout code
+      issues: write   # Required: Create GitHub issues
     steps:
       - name: Checkout code
         uses: actions/checkout@v5

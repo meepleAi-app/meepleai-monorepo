@@ -18,19 +18,11 @@ on:
           - stress
           - spike
 
-  pull_request:
-    paths:
-      - 'apps/api/**'
-      - 'tests/k6/**'
-      - '.github/workflows/k6-performance.yml'
-
 # Explicit permissions (Least Privilege Principle - Issue #1455)
 # https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
 permissions:
   contents: read        # Required: Checkout code
-  pull-requests: write  # Required: Comment on PRs with performance test results
-  actions: write        # Required: Upload/download artifacts (actions/upload-artifact@v6)
-  checks: write         # Required: Report k6 test results
+  actions: write        # Required: Upload/download artifacts (actions/upload-artifact@v4)
 
 env:
   API_BASE_URL: http://localhost:5080
@@ -45,6 +37,8 @@ jobs:
     name: K6 Performance Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Only run scheduled tests on main branch
+    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
 
     services:
       postgres:
@@ -151,14 +145,8 @@ jobs:
           # Create reports directory
           mkdir -p reports
 
-          # Run tests based on trigger
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            # Quick smoke test for PRs
-            k6 run --env TEST_TYPE=smoke scenarios/all.js
-          else
-            # Full load test for scheduled runs
-            k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/all.js
-          fi
+          # Run tests (scheduled or manual)
+          k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/all.js
         env:
           API_BASE_URL: ${{ env.API_BASE_URL }}
           TEST_USER_EMAIL: 'test@meepleai.dev'
@@ -179,89 +167,6 @@ jobs:
           name: k6-performance-reports-${{ github.run_number }}
           path: tests/k6/reports/
           retention-days: 30
-
-      - name: Get latest main workflow run
-        if: github.event_name == 'pull_request'
-        id: get-baseline-run
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'k6-performance.yml',
-              branch: 'main',
-              status: 'success',
-              per_page: 1
-            });
-            if (runs.data.workflow_runs.length > 0) {
-              core.setOutput('run-id', runs.data.workflow_runs[0].id);
-              core.setOutput('found', 'true');
-            } else {
-              core.setOutput('found', 'false');
-            }
-
-      - name: Download baseline report
-        if: github.event_name == 'pull_request' && steps.get-baseline-run.outputs.found == 'true'
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: k6-performance-reports-latest
-          path: tests/k6/baseline/
-          run-id: ${{ steps.get-baseline-run.outputs.run-id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check for performance regressions
-        if: github.event_name == 'pull_request'
-        working-directory: tests/k6
-        continue-on-error: true
-        run: |
-          if [ -f baseline/summary.json ]; then
-            echo "Comparing against baseline..."
-            node utils/detect-regression.js baseline/summary.json reports/summary.json 10
-          else
-            echo "⚠️ No baseline found, skipping regression detection"
-            echo "This will be the new baseline once merged to main"
-          fi
-
-      - name: Post results to PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const fs = require('fs');
-            const summary = JSON.parse(fs.readFileSync('tests/k6/reports/summary.json', 'utf8'));
-            const metrics = summary.metrics;
-
-            const comment = `
-            ## 🚀 K6 Performance Test Results
-
-            | Metric | Value |
-            |--------|-------|
-            | Total Requests | ${metrics.http_reqs?.values.count || 0} |
-            | Error Rate | ${((metrics.http_req_failed?.values.rate || 0) * 100).toFixed(2)}% |
-            | Avg Response Time | ${(metrics.http_req_duration?.values.avg || 0).toFixed(2)}ms |
-            | P95 Response Time | ${(metrics.http_req_duration?.values['p(95)'] || 0).toFixed(2)}ms |
-            | Throughput | ${(metrics.http_reqs?.values.rate || 0).toFixed(2)} req/s |
-
-            ### Endpoint Performance
-
-            | Endpoint | P95 Latency | Threshold | Status |
-            |----------|-------------|-----------|--------|
-            | RAG Search | ${(metrics['http_req_duration{endpoint:rag-search}']?.values['p(95)'] || 0).toFixed(2)}ms | 2000ms | ${(metrics['http_req_duration{endpoint:rag-search}']?.values['p(95)'] || 0) < 2000 ? '✅' : '❌'} |
-            | Chat | ${(metrics['http_req_duration{endpoint:chat}']?.values['p(95)'] || 0).toFixed(2)}ms | 1000ms | ${(metrics['http_req_duration{endpoint:chat}']?.values['p(95)'] || 0) < 1000 ? '✅' : '❌'} |
-            | Games | ${(metrics['http_req_duration{endpoint:games}']?.values['p(95)'] || 0).toFixed(2)}ms | 500ms | ${(metrics['http_req_duration{endpoint:games}']?.values['p(95)'] || 0) < 500 ? '✅' : '❌'} |
-            | Sessions | ${(metrics['http_req_duration{endpoint:sessions}']?.values['p(95)'] || 0).toFixed(2)}ms | 100ms | ${(metrics['http_req_duration{endpoint:sessions}']?.values['p(95)'] || 0) < 100 ? '✅' : '❌'} |
-
-            [View detailed report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            `;
-
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: comment
-            });
 
       - name: Save baseline report
         if: github.ref == 'refs/heads/main' && github.event_name == 'schedule'

@@ -186,7 +186,7 @@ public class ApiExceptionHandlerMiddleware
             ),
 
             // Domain exceptions (from SharedKernel)
-            ValidationException validationEx => (
+            Api.SharedKernel.Domain.Exceptions.ValidationException validationEx => (
                 StatusCodes.Status400BadRequest,
                 "validation_error",
                 validationEx.Message

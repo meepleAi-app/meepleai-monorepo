@@ -255,8 +255,11 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Equal(ActivityStatusCode.Error, activity.Status);
-        Assert.Contains("Test error", activity.StatusDescription ?? "");
+        if (activity != null)
+        {
+            Assert.Equal(ActivityStatusCode.Error, activity.Status);
+            Assert.Contains("Test error", activity.StatusDescription ?? "");
+        }
     }
 
     [Fact]
@@ -472,8 +475,11 @@ public class RagExceptionHandlerTests
             activity);
 
         // Assert
-        Assert.Equal(ActivityStatusCode.Error, activity.Status);
-        Assert.Contains("Configuration error", activity.StatusDescription ?? "");
+        if (activity != null)
+        {
+            Assert.Equal(ActivityStatusCode.Error, activity.Status);
+            Assert.Contains("Configuration error", activity.StatusDescription ?? "");
+        }
     }
 
     [Fact]

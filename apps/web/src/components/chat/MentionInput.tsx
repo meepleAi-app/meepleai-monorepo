@@ -104,44 +104,50 @@ export function MentionInput({
   };
 
   // Calculate dropdown position based on cursor position
-  const updateDropdownPosition = () => {
+  // Use requestAnimationFrame to avoid layout thrashing during rapid typing
+  const updateDropdownPosition = useCallback(() => {
     if (!textareaRef.current) return;
 
-    const textarea = textareaRef.current;
-    const cursorPos = textarea.selectionStart;
+    // Schedule DOM operations for next animation frame to batch layout reads/writes
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return; // Double-check ref still valid
 
-    // Create temporary element to measure text
-    const tempDiv = document.createElement('div');
-    const computedStyle = window.getComputedStyle(textarea);
+      const textarea = textareaRef.current;
+      const cursorPos = textarea.selectionStart;
 
-    // Copy textarea styles to temp div
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.visibility = 'hidden';
-    tempDiv.style.width = computedStyle.width;
-    tempDiv.style.font = computedStyle.font;
-    tempDiv.style.padding = computedStyle.padding;
-    tempDiv.style.border = computedStyle.border;
-    tempDiv.style.whiteSpace = 'pre-wrap';
-    tempDiv.style.wordWrap = 'break-word';
+      // Create temporary element to measure text
+      const tempDiv = document.createElement('div');
+      const computedStyle = window.getComputedStyle(textarea);
 
-    // Set text up to cursor
-    const textBeforeCursor = value.substring(0, cursorPos);
-    tempDiv.textContent = textBeforeCursor;
+      // Copy textarea styles to temp div
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.visibility = 'hidden';
+      tempDiv.style.width = computedStyle.width;
+      tempDiv.style.font = computedStyle.font;
+      tempDiv.style.padding = computedStyle.padding;
+      tempDiv.style.border = computedStyle.border;
+      tempDiv.style.whiteSpace = 'pre-wrap';
+      tempDiv.style.wordWrap = 'break-word';
 
-    document.body.appendChild(tempDiv);
+      // Set text up to cursor
+      const textBeforeCursor = value.substring(0, cursorPos);
+      tempDiv.textContent = textBeforeCursor;
 
-    // Get dimensions
-    const textHeight = tempDiv.offsetHeight;
-    const textareaRect = textarea.getBoundingClientRect();
+      document.body.appendChild(tempDiv);
 
-    document.body.removeChild(tempDiv);
+      // Get dimensions
+      const textHeight = tempDiv.offsetHeight;
+      const textareaRect = textarea.getBoundingClientRect();
 
-    // Position dropdown below cursor
-    const top = textareaRect.top + textHeight - textarea.scrollTop + 20; // 20px offset
-    const left = textareaRect.left + 12; // 12px padding
+      document.body.removeChild(tempDiv);
 
-    setDropdownPosition({ top, left });
-  };
+      // Position dropdown below cursor
+      const top = textareaRect.top + textHeight - textarea.scrollTop + 20; // 20px offset
+      const left = textareaRect.left + 12; // 12px padding
+
+      setDropdownPosition({ top, left });
+    });
+  }, [value]);
 
   // Search users via API
   useEffect(() => {

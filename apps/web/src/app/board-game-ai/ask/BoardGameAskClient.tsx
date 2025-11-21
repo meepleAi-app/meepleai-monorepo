@@ -103,7 +103,8 @@ export default function BoardGameAskClient() {
     return () => {
       abortController.abort();
     };
-  }, [selectedGameId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedGameId intentionally omitted to prevent infinite loop from auto-selection
+  }, []);
 
   // Handle ask question
   const handleAskQuestion = () => {

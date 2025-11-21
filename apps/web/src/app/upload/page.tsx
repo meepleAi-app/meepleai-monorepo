@@ -84,7 +84,8 @@ export default function UploadPage({
     if (games.length > 0 && !selectedGameId) {
       setSelectedGameId(games[0].id);
     }
-  }, [games, selectedGameId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedGameId intentionally omitted to prevent infinite loop from auto-selection
+  }, [games]);
 
   // Wizard steps configuration (memoized for performance - PERF #1093)
   const wizardSteps = useMemo(() => [

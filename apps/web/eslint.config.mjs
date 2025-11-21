@@ -93,8 +93,8 @@ export default [
       "no-unused-vars": "off", // Use @typescript-eslint/no-unused-vars instead
       "no-undef": "off", // TypeScript handles this better than ESLint
 
-      // React Hooks - temporarily relaxed for alpha phase
-      "react-hooks/exhaustive-deps": "off",
+      // React Hooks - enforce dependency arrays to prevent infinite loops (Issue #XXXX)
+      "react-hooks/exhaustive-deps": "error",
 
       // Accessibility rules (basic)
       "jsx-a11y/alt-text": "warn",

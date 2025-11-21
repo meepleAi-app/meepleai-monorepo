@@ -11,11 +11,11 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class GetLlmHealthQueryHandler : IQueryHandler<GetLlmHealthQuery, LlmHealthStatusDto>
 {
-    private readonly ProviderHealthCheckService _healthCheckService;
+    private readonly IProviderHealthCheckService _healthCheckService;
     private readonly HybridLlmService _hybridLlmService;
 
     public GetLlmHealthQueryHandler(
-        ProviderHealthCheckService healthCheckService,
+        IProviderHealthCheckService healthCheckService,
         HybridLlmService hybridLlmService)
     {
         _healthCheckService = healthCheckService ?? throw new ArgumentNullException(nameof(healthCheckService));

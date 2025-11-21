@@ -1,6 +1,12 @@
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Configuration;
+using Api.Services.LlmClients;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -14,13 +20,34 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class GetLlmHealthQueryHandlerTests
 {
-    private readonly Mock<ProviderHealthCheckService> _healthCheckServiceMock;
+    private readonly Mock<IProviderHealthCheckService> _healthCheckServiceMock;
     private readonly Mock<HybridLlmService> _hybridLlmServiceMock;
 
     public GetLlmHealthQueryHandlerTests()
     {
-        _healthCheckServiceMock = new Mock<ProviderHealthCheckService>();
-        _hybridLlmServiceMock = new Mock<HybridLlmService>();
+        _healthCheckServiceMock = new Mock<IProviderHealthCheckService>();
+
+        // Create mocks for HybridLlmService dependencies
+        var llmClientMock = new Mock<ILlmClient>();
+        llmClientMock.Setup(x => x.ProviderName).Returns("TestProvider");
+
+        var clients = new List<ILlmClient> { llmClientMock.Object };
+        var routingStrategyMock = new Mock<ILlmRoutingStrategy>();
+        var costLogRepositoryMock = new Mock<ILlmCostLogRepository>();
+        var loggerMock = new Mock<ILogger<HybridLlmService>>();
+        var aiSettingsMock = new Mock<IOptions<AiProviderSettings>>();
+        var healthCheckServiceMock = new Mock<IProviderHealthCheckService>();
+
+        // Configure aiSettingsMock to return a valid AiProviderSettings
+        aiSettingsMock.Setup(x => x.Value).Returns(new AiProviderSettings());
+
+        _hybridLlmServiceMock = new Mock<HybridLlmService>(
+            clients,
+            routingStrategyMock.Object,
+            costLogRepositoryMock.Object,
+            loggerMock.Object,
+            aiSettingsMock.Object,
+            healthCheckServiceMock.Object);
     }
 
     #region Construction Tests

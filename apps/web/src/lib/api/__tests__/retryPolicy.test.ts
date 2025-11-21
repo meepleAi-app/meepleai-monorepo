@@ -360,5 +360,124 @@ describe('withRetry', () => {
     // Check that delays vary due to jitter
     const uniqueDelays = new Set(delays);
     expect(uniqueDelays.size).toBeGreaterThan(5); // Should have variation
+  }, 15000); // Increase timeout to 15s for 10 retry cycles
+
+  it('should honor Retry-After header from server response', async () => {
+    // Mock response with Retry-After header
+    const mockResponse = {
+      headers: {
+        get: jest.fn((header: string) => {
+          if (header === 'Retry-After') {
+            return '5'; // 5 seconds
+          }
+          return null;
+        }),
+      },
+    } as unknown as Response;
+
+    const serverError = new ServerError({
+      message: 'Service Unavailable',
+      statusCode: 503,
+      endpoint: '/test',
+      response: mockResponse,
+    });
+
+    const fn = jest
+      .fn()
+      .mockRejectedValueOnce(serverError)
+      .mockResolvedValueOnce('success');
+
+    const delays: number[] = [];
+    const onRetry = jest.fn((attempt, error, delayMs) => {
+      delays.push(delayMs);
+    });
+
+    await withRetry(fn, {
+      retryConfig: { maxAttempts: 3, baseDelay: 1000, maxDelay: 10000, enabled: true, jitter: 0.3 },
+      onRetry,
+    });
+
+    // Should use server's Retry-After (5000ms ± jitter) instead of exponential backoff (1000ms ± jitter)
+    expect(delays.length).toBe(1);
+    expect(delays[0]).toBeGreaterThan(3500); // 5000ms - 30% jitter = 3500ms
+    expect(delays[0]).toBeLessThan(6500); // 5000ms + 30% jitter = 6500ms
+  }, 10000); // Increase timeout for 5s retry delay
+
+  it('should honor Retry-After header in HTTP-date format', async () => {
+    // Create a date 10 seconds in the future
+    const retryDate = new Date(Date.now() + 10000);
+
+    const mockResponse = {
+      headers: {
+        get: jest.fn((header: string) => {
+          if (header === 'Retry-After') {
+            return retryDate.toUTCString();
+          }
+          return null;
+        }),
+      },
+    } as unknown as Response;
+
+    const serverError = new ServerError({
+      message: 'Service Unavailable',
+      statusCode: 503,
+      endpoint: '/test',
+      response: mockResponse,
+    });
+
+    const fn = jest
+      .fn()
+      .mockRejectedValueOnce(serverError)
+      .mockResolvedValueOnce('success');
+
+    const delays: number[] = [];
+    const onRetry = jest.fn((attempt, error, delayMs) => {
+      delays.push(delayMs);
+    });
+
+    await withRetry(fn, {
+      retryConfig: { maxAttempts: 3, baseDelay: 1000, maxDelay: 15000, enabled: true, jitter: 0.3 },
+      onRetry,
+    });
+
+    // Should use server's Retry-After (~10000ms ± jitter)
+    expect(delays.length).toBe(1);
+    expect(delays[0]).toBeGreaterThan(7000); // 10000ms - 30% jitter = 7000ms
+    expect(delays[0]).toBeLessThan(13000); // 10000ms + 30% jitter = 13000ms
+  }, 15000); // Increase timeout for 10s retry delay
+
+  it('should fall back to exponential backoff when Retry-After is not present', async () => {
+    const mockResponse = {
+      headers: {
+        get: jest.fn(() => null), // No Retry-After header
+      },
+    } as unknown as Response;
+
+    const serverError = new ServerError({
+      message: 'Internal Server Error',
+      statusCode: 500,
+      endpoint: '/test',
+      response: mockResponse,
+    });
+
+    const fn = jest
+      .fn()
+      .mockRejectedValueOnce(serverError)
+      .mockResolvedValueOnce('success');
+
+    const delays: number[] = [];
+    const onRetry = jest.fn((attempt, error, delayMs) => {
+      delays.push(delayMs);
+    });
+
+    await withRetry(fn, {
+      retryConfig: { maxAttempts: 3, baseDelay: 1000, maxDelay: 10000, enabled: true, jitter: 0.3 },
+      onRetry,
+    });
+
+    // Should use exponential backoff (1000ms ± jitter for first attempt)
+    expect(delays.length).toBe(1);
+    expect(delays[0]).toBeGreaterThan(700); // 1000ms - 30% jitter = 700ms
+    expect(delays[0]).toBeLessThan(1300); // 1000ms + 30% jitter = 1300ms
   });
 });

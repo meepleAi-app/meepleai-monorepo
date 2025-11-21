@@ -89,10 +89,12 @@ export const createMessagesSlice: StateCreator<
     setError(null);
     setLoading('sending', true);
 
+    // Declare threadId outside try block so it's accessible in catch for rollback
+    let threadId = activeChatIds[selectedGameId] ?? '';
+    let isNewThread = false;
+
     try {
       // Create thread if none exists
-      let threadId = activeChatIds[selectedGameId] ?? '';
-      let isNewThread = false;
 
       if (!threadId) {
         const autoTitle = content.trim().substring(0, 50) + (content.length > 50 ? '...' : '');
@@ -162,7 +164,8 @@ export const createMessagesSlice: StateCreator<
       setError("Errore nell'invio del messaggio");
 
       // Rollback optimistic update
-      const threadId = activeChatIds[selectedGameId];
+      // Use the threadId from try block scope (not activeChatIds snapshot)
+      // This ensures rollback works even for newly created threads
       if (threadId) {
         set((state) => {
           const messages = state.messagesByChat[threadId] ?? [];

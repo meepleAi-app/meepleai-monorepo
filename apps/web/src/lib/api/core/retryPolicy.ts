@@ -216,14 +216,23 @@ export async function withRetry<T>(
         throw error;
       }
 
+      // Extract Retry-After header from server response (if available)
+      let retryAfterMs: number | undefined;
+      if (error instanceof ApiError && error.response) {
+        const retryAfterHeader = error.response.headers.get('Retry-After');
+        retryAfterMs = parseRetryAfter(retryAfterHeader);
+      }
+
       // Calculate backoff delay for this retry attempt
-      const delayMs = calculateBackoffDelay(attempt, config);
+      // Honor server-provided Retry-After if available (adaptive backoff)
+      const delayMs = calculateBackoffDelay(attempt, config, retryAfterMs);
 
       // Log retry attempt
       if (error instanceof ApiError) {
+        const backoffType = retryAfterMs ? 'server Retry-After' : 'exponential backoff';
         console.warn(
           `[Retry] Attempt ${attempt + 1}/${config.maxAttempts} failed for ${error.endpoint || 'unknown'}. ` +
-          `Retrying in ${delayMs}ms... (Status: ${error.statusCode || 'network error'}, ` +
+          `Retrying in ${delayMs}ms (${backoffType})... (Status: ${error.statusCode || 'network error'}, ` +
           `CorrelationId: ${error.correlationId || 'none'})`
         );
       } else {

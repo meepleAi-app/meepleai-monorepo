@@ -50,7 +50,7 @@ public class HybridLlmService : ILlmService
     private readonly ILlmRoutingStrategy _routingStrategy;
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<HybridLlmService> _logger;
-    private readonly ProviderHealthCheckService? _healthCheckService;
+    private readonly IProviderHealthCheckService? _healthCheckService;
     private readonly IOptions<AiProviderSettings> _aiSettings;
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
@@ -72,7 +72,7 @@ public class HybridLlmService : ILlmService
         ILlmCostLogRepository costLogRepository,
         ILogger<HybridLlmService> logger,
         IOptions<AiProviderSettings> aiSettings,
-        ProviderHealthCheckService? healthCheckService = null)
+        IProviderHealthCheckService? healthCheckService = null)
     {
         _clients = clients ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -693,7 +693,7 @@ public class HybridLlmService : ILlmService
     /// <summary>
     /// ISSUE-962: Get monitoring status for all providers
     /// </summary>
-    public Dictionary<string, (string circuitState, string latencyStats)> GetMonitoringStatus()
+    public virtual Dictionary<string, (string circuitState, string latencyStats)> GetMonitoringStatus()
     {
         lock (_monitoringLock)
         {

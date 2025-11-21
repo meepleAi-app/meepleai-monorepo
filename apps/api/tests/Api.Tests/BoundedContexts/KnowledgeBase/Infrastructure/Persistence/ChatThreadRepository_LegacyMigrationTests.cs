@@ -28,9 +28,13 @@ public class ChatThreadRepository_LegacyMigrationTests : IAsyncLifetime
 
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(x => x.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
         _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         await _dbContext.Database.EnsureCreatedAsync();
-        _repository = new ChatThreadRepository(_dbContext, new Mock<IDomainEventCollector>().Object);
+
+        var repositoryEventCollector = new Mock<IDomainEventCollector>();
+        repositoryEventCollector.Setup(x => x.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
+        _repository = new ChatThreadRepository(_dbContext, repositoryEventCollector.Object);
     }
 
     public async ValueTask DisposeAsync()

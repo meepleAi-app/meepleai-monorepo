@@ -545,3 +545,85 @@ The CI pipeline now includes a validation step that:
 **Decision Maker**: Engineering Lead
 **Implementation**: Issue #1450 (Completed 2025-11-21)
 **Status**: ✅ Fully Operational
+
+---
+
+## Update (2025-11-21 - Issue #1543)
+
+### NSwag MSBuild Removal
+
+**Context**: NSwag.MSBuild integration caused local build failures due to incompatibility with .NET 9 minimal APIs:
+- **Error**: `NSwag requires BuildWebHost or CreateWebHostBuilder/CreateHostBuilder method`
+- **Impact**: Local `dotnet build` and `dotnet test` blocked
+- **Root Cause**: NSwag.MSBuild expects legacy ASP.NET Core patterns, not minimal APIs
+
+**Decision**: Migrate from NSwag.MSBuild to hybrid OpenAPI generation approach (Option C):
+
+1. **Removed**:
+   - `NSwag.MSBuild` package (v14.2.0)
+   - `NSwag.ApiDescription.Client` package (v14.2.0)
+   - NSwag MSBuild target from `Api.csproj`
+   - `nswag.json` configuration file
+
+2. **Retained**:
+   - Swashbuckle.AspNetCore (v10.0.1) for runtime OpenAPI generation
+   - `/swagger/v1/swagger.json` endpoint (Development only)
+   - openapi-zod-client for Zod schema generation
+
+3. **Added**:
+   - **Scalar.AspNetCore** (v2.11.0) - Modern OpenAPI documentation UI
+   - **Committed openapi.json** (Option C - Hybrid approach)
+   - Updated `generate-api-client.ts` to use committed spec as fallback
+
+### New Workflow (Option C - Hybrid)
+
+**TypeScript Generation**:
+```bash
+# Uses committed openapi.json (apps/api/src/Api/openapi.json)
+cd apps/web
+pnpm generate:api
+```
+
+**OpenAPI Spec Regeneration** (when API changes):
+```bash
+# 1. Fix build errors (ActiveSession, EndpointFilter issues)
+# 2. Run API locally
+cd apps/api && dotnet run
+
+# 3. Download updated spec
+curl http://localhost:5080/swagger/v1/swagger.json -o src/Api/openapi.json
+
+# 4. Commit updated spec
+git add src/Api/openapi.json
+git commit -m "chore: update OpenAPI spec"
+```
+
+### Benefits
+
+✅ **Unblocked Local Builds**:
+- No more NSwag MSBuild errors
+- `dotnet build` and `dotnet test` work locally
+- Developers can run coverage tools
+
+✅ **Improved Developer Experience**:
+- Modern Scalar UI at `/scalar/v1` (replaces Swagger UI)
+- DeepSpace theme, testing capabilities, code samples
+- Swagger UI still available at `/api/docs` for compatibility
+
+✅ **Simplified Architecture**:
+- One less build-time dependency
+- Runtime-only OpenAPI generation (cleaner)
+- Committed spec enables frontend development without running API
+
+### Migration Notes
+
+- **CI/CD**: Validation job still works (reads committed openapi.json)
+- **Frontend**: No changes needed (generate-api-client.ts updated)
+- **Build Errors**: Preexisting errors (ActiveSession, EndpointFilter) block Swagger generation until fixed
+- **Template Spec**: Current openapi.json is minimal template (to be regenerated post-build-fix)
+
+### References
+
+- Issue #1543: NSwag build error blocks local test/coverage execution
+- Scalar Documentation: https://scalar.com/
+- Microsoft.AspNetCore.OpenApi: Native .NET 9 OpenAPI support

@@ -59,6 +59,7 @@
 |-------|-------------|----------|-------|
 | [PDF Processing Guide](./guides/pdf-processing-guide.md) | 3-stage PDF pipeline implementation (Unstructured, SmolDocling, Docnet) | ⭐ Essential (if PDF work) | 20+ |
 | [LLM Integration Guide](./guides/llm-integration-guide.md) | Integrate OpenRouter, OpenAI, Claude for RAG/chat | ⭐ Essential (if LLM work) | 15+ |
+| [ADR-013](../01-architecture/adr/adr-013-nswag-typescript-generation.md) / [ADR-014](../01-architecture/adr/adr-014-nswag-msbuild-removal.md) | OpenAPI spec generation & TypeScript client (Scalar UI at `/scalar/v1`) | Recommended (if API work) | 15 |
 | [AI Provider Integration](./guides/ai-provider-integration.md) | Add new AI providers (OpenRouter, OpenAI, etc.) | Recommended | 10 |
 | [Dependency Management](./guides/dependency-management.md) | Managing NuGet/npm dependencies, versioning | Recommended | 8 |
 | [Migration Management](./guides/migration-management.md) | EF Core migrations best practices | Recommended | 8 |
@@ -69,6 +70,7 @@
 
 - **PDF Processing**: Working on document upload, extraction, or quality validation
 - **LLM Integration**: Adding RAG features, chat improvements, or new LLM providers
+- **ADR-013/ADR-014**: Adding API endpoints, updating OpenAPI spec, regenerating TypeScript types
 - **AI Provider Integration**: Switching LLM providers (e.g., OpenRouter → Azure OpenAI)
 - **Dependency Management**: Updating packages, resolving version conflicts
 - **Migration Management**: Creating/applying database migrations

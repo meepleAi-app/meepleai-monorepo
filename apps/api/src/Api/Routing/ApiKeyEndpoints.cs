@@ -17,8 +17,8 @@ public static class ApiKeyEndpoints
         // API-04: API Key Management endpoints
         group.MapPost("/api-keys", async (CreateApiKeyRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             if (string.IsNullOrWhiteSpace(request.KeyName))
             {
@@ -35,12 +35,13 @@ public static class ApiKeyEndpoints
             logger.LogInformation("API key '{KeyId}' created for user {UserId}", result.ApiKey.Id, session.User.Id);
 
             return Results.Created($"/api/v1/api-keys/{result.ApiKey.Id}", result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapGet("/api-keys", async (HttpContext context, IMediator mediator, bool includeRevoked = false, int page = 1, int pageSize = 20, CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new Api.BoundedContexts.Authentication.Application.Queries.ListApiKeysQuery(
                 session.User.Id,
@@ -49,12 +50,13 @@ public static class ApiKeyEndpoints
                 pageSize);
             var result = await mediator.Send(query, ct);
             return Results.Json(result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapGet("/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyQuery(keyId, session.User.Id);
             var apiKey = await mediator.Send(query, ct);
@@ -66,12 +68,13 @@ public static class ApiKeyEndpoints
             }
 
             return Results.Json(apiKey);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapPut("/api-keys/{keyId}", async (string keyId, UpdateApiKeyRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("User {UserId} updating API key {KeyId}", session.User.Id, keyId);
 
@@ -89,12 +92,13 @@ public static class ApiKeyEndpoints
 
             logger.LogInformation("API key {KeyId} updated by user {UserId}", keyId, session.User.Id);
             return Results.Json(updated);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapDelete("/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("User {UserId} revoking API key {KeyId}", session.User.Id, keyId);
 
@@ -109,12 +113,13 @@ public static class ApiKeyEndpoints
 
             logger.LogInformation("API key {KeyId} revoked by user {UserId}", keyId, session.User.Id);
             return Results.NoContent();
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapPost("/api-keys/{keyId}/rotate", async (string keyId, RotateApiKeyRequest? request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("User {UserId} rotating API key {KeyId}", session.User.Id, keyId);
 
@@ -132,12 +137,13 @@ public static class ApiKeyEndpoints
 
             logger.LogInformation("API key {OldKeyId} rotated to {NewKeyId} by user {UserId}", keyId, result.NewApiKey.Id, session.User.Id);
             return Results.Json(result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapGet("/api-keys/{keyId}/usage", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new Api.BoundedContexts.Authentication.Application.Queries.GetApiKeyUsageQuery(keyId, session.User.Id);
             var usage = await mediator.Send(query, ct);
@@ -149,13 +155,14 @@ public static class ApiKeyEndpoints
             }
 
             return Results.Json(usage);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // API-04: Admin API Key Management endpoint
         group.MapDelete("/admin/api-keys/{keyId}", async (string keyId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
+            // Session validated AND Admin role checked by RequireAdminSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("Admin {AdminId} permanently deleting API key {KeyId}", session.User.Id, keyId);
 
@@ -170,7 +177,8 @@ public static class ApiKeyEndpoints
 
             logger.LogInformation("API key {KeyId} permanently deleted by admin {AdminId}", keyId, session.User.Id);
             return Results.NoContent();
-        });
+        })
+        .RequireAdminSession(); // Issue #1446: Automatic admin session validation
 
         return group;
     }

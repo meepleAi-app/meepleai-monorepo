@@ -357,8 +357,8 @@ public static class PromptManagementEndpoints
         // Get active version of prompt template (Authenticated users)
         group.MapGet("/prompts/{templateId:guid}/versions/active", async (Guid templateId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Get template to retrieve name
             var templateQuery = new Api.BoundedContexts.Administration.Application.Queries.GetPromptTemplateQuery(templateId.ToString());
@@ -376,7 +376,8 @@ public static class PromptManagementEndpoints
             }
 
             return Results.Json(activeVersion);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // Activate version (rollback capability) (Admin only)
         group.MapPut("/prompts/{templateId:guid}/versions/{versionId:guid}/activate", async (Guid templateId, Guid versionId, ActivatePromptVersionRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>

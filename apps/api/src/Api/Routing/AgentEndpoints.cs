@@ -24,16 +24,8 @@ public static class AgentEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
-
-            // Authorization: Only Admin can create agents
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to create agent without permission",
-                    session.User.Id, session.User.Role);
-                return Results.Forbid();
-            }
+            // Session validated AND Admin role checked by RequireAdminSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var command = new CreateAgentCommand(
                 Name: req.Name,
@@ -51,6 +43,7 @@ public static class AgentEndpoints
 
             return Results.Created($"/api/v1/agents/{result.Id}", result);
         })
+        .RequireAdminSession() // Issue #1446: Automatic admin session validation
         .WithName("CreateAgent")
         .Produces(201)
         .Produces(400)
@@ -64,8 +57,8 @@ public static class AgentEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new GetAgentByIdQuery(id);
             var result = await mediator.Send(query, ct);
@@ -77,6 +70,7 @@ public static class AgentEndpoints
 
             return Results.Ok(result);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithName("GetAgentById")
         .Produces(200)
         .Produces(404)
@@ -91,8 +85,8 @@ public static class AgentEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new GetAllAgentsQuery(activeOnly, type);
             var results = await mediator.Send(query, ct);
@@ -108,6 +102,7 @@ public static class AgentEndpoints
                 count = results.Count
             });
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithName("GetAllAgents")
         .Produces(200)
         .Produces(500);
@@ -121,16 +116,8 @@ public static class AgentEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
-
-            // Authorization: Only Admin can configure agents
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to configure agent without permission",
-                    session.User.Id, session.User.Role);
-                return Results.Forbid();
-            }
+            // Session validated AND Admin role checked by RequireAdminSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var command = new ConfigureAgentCommand(
                 AgentId: id,
@@ -159,6 +146,7 @@ public static class AgentEndpoints
 
             return Results.Ok(result);
         })
+        .RequireAdminSession() // Issue #1446: Automatic admin session validation
         .WithName("ConfigureAgent")
         .Produces(200)
         .Produces(400)
@@ -174,8 +162,8 @@ public static class AgentEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var command = new InvokeAgentCommand(
                 AgentId: id,
@@ -193,6 +181,7 @@ public static class AgentEndpoints
 
             return Results.Ok(result);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithName("InvokeAgent")
         .Produces(200)
         .Produces(400)

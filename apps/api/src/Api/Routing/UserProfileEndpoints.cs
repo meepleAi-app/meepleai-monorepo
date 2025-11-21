@@ -1,4 +1,5 @@
 using Api.Extensions;
+using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,8 +25,8 @@ public static class UserProfileEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var query = new DddGetUserProfileQuery { UserId = Guid.Parse(session.User.Id) };
             var profile = await mediator.Send(query, ct);
@@ -38,6 +39,7 @@ public static class UserProfileEndpoints
 
             return Results.Json(profile);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("GetUserProfile")
         .WithTags("User Profile")
@@ -59,8 +61,8 @@ public static class UserProfileEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var command = new DddUpdateUserProfileCommand
             {
@@ -74,6 +76,7 @@ public static class UserProfileEndpoints
 
             return Results.Json(new { ok = true, message = "Profile updated successfully" });
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("UpdateUserProfile")
         .WithTags("User Profile")
@@ -102,8 +105,8 @@ public static class UserProfileEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var command = new DddChangePasswordCommand
             {
@@ -117,6 +120,7 @@ public static class UserProfileEndpoints
 
             return Results.Json(new { ok = true, message = "Password changed successfully" });
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("ChangePassword")
         .WithTags("User Profile")

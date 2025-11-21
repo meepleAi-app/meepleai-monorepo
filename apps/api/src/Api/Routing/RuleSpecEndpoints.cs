@@ -22,8 +22,8 @@ public static class RuleSpecEndpoints
     {
         group.MapGet("/games/{gameId:guid}/rulespec", async (Guid gameId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("Fetching RuleSpec for game {GameId}", gameId);
             var ruleSpec = await mediator.Send(new GetRuleSpecQuery(gameId), ct);
@@ -35,7 +35,8 @@ public static class RuleSpecEndpoints
             }
 
             return Results.Json(ruleSpec);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapPut("/games/{gameId:guid}/rulespec", async (Guid gameId, RuleSpec ruleSpec, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -174,10 +175,10 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
-            if (!Guid.TryParse(session!.User.Id, out var userId))
+            if (!Guid.TryParse(session.User.Id, out var userId))
             {
                 throw new BadRequestException("Invalid user ID format");
             }
@@ -189,6 +190,7 @@ public static class RuleSpecEndpoints
             logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
             return Results.Created($"/api/v1/comments/{comment.Id}", comment);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("CreateRuleSpecComment")
         .WithTags("Comments")
@@ -206,10 +208,10 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
-            if (!Guid.TryParse(session!.User.Id, out var userId))
+            if (!Guid.TryParse(session.User.Id, out var userId))
             {
                 throw new BadRequestException("Invalid user ID format");
             }
@@ -221,6 +223,7 @@ public static class RuleSpecEndpoints
             logger.LogInformation("Reply {ReplyId} created successfully", reply.Id);
             return Results.Created($"/api/v1/comments/{reply.Id}", reply);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("CreateCommentReply")
         .WithTags("Comments")
@@ -240,9 +243,9 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
-            var userId = session!.User.Id;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var userId = session.User.Id;
 
             logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} (includeResolved: {IncludeResolved})",
                 userId, gameId, version, includeResolved);
@@ -251,6 +254,7 @@ public static class RuleSpecEndpoints
             var comments = await mediator.Send(query, ct);
             return Results.Ok(comments);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("GetRuleSpecComments")
         .WithTags("Comments")
@@ -268,9 +272,9 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
-            var userId = session!.User.Id;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            var userId = session.User.Id;
 
             logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} line {LineNumber}",
                 userId, gameId, version, lineNumber);
@@ -279,6 +283,7 @@ public static class RuleSpecEndpoints
             var comments = await mediator.Send(query, ct);
             return Results.Ok(comments);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("GetLineComments")
         .WithTags("Comments")

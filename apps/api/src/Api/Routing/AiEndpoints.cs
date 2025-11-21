@@ -34,8 +34,8 @@ public static class AiEndpoints
             bool generateFollowUps = true, // CHAT-02: opt-in parameter
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             if (string.IsNullOrWhiteSpace(req.gameId))
             {
@@ -177,12 +177,13 @@ public static class AiEndpoints
         .Produces<QaResponse>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
-        .Produces(StatusCodes.Status500InternalServerError);
+        .Produces(StatusCodes.Status500InternalServerError)
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, IRagService rag, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             if (string.IsNullOrWhiteSpace(req.gameId))
             {
@@ -223,7 +224,8 @@ public static class AiEndpoints
             await mediator.Send(logCommand, ct);
 
             return Results.Json(resp);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // API-02: Streaming RAG Explain endpoint (SSE)
         // Migrated to CQRS: Uses StreamExplainQuery via MediatR (Issue #1186)
@@ -648,8 +650,8 @@ public static class AiEndpoints
         // Migrated to CQRS: Uses ProvideAgentFeedbackCommand via MediatR (Issue #1188)
         group.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             if (!string.Equals(req.userId, session.User.Id, StringComparison.Ordinal))
             {
@@ -679,14 +681,15 @@ public static class AiEndpoints
                 session.User.Id);
 
             return Results.Json(new { ok = true });
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // CHESS-04: Chess conversational agent endpoint
         // Migrated to CQRS: Uses InvokeChessAgentCommand via MediatR (Issue #1188)
         group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Issue #1445: Use centralized query validation
             var queryError = QueryValidator.ValidateQuery(req.question);
@@ -748,7 +751,8 @@ public static class AiEndpoints
             await mediator.Send(logCommand, ct);
 
             return Results.Json(resp);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapGet("/bgg/search", async (
             HttpContext context,
@@ -758,9 +762,7 @@ public static class AiEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // Authentication required
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
 
             // Issue #1445: Use centralized query validation
             var queryError = QueryValidator.ValidateQuery(q);
@@ -778,7 +780,8 @@ public static class AiEndpoints
             var results = await mediator.Send(query, ct);
             logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
             return Results.Json(new { results });
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapGet("/bgg/games/{bggId:int}", async (
             int bggId,
@@ -787,9 +790,7 @@ public static class AiEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // Authentication required
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
 
             // Validate BGG ID
             if (bggId <= 0)
@@ -812,21 +813,15 @@ public static class AiEndpoints
 
             logger.LogInformation("BGG game details retrieved: {BggId}, {Name}", bggId, details.Name);
             return Results.Json(details);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
 
         // Migrated to CQRS: Uses IndexChessKnowledgeCommand via MediatR (Issue #1188)
         group.MapPost("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to index chess knowledge without permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            // Session validated AND Admin role checked by RequireAdminSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 
@@ -848,13 +843,14 @@ public static class AiEndpoints
                 totalChunks = result.TotalChunks,
                 categoryCounts = result.CategoryCounts
             });
-        });
+        })
+        .RequireAdminSession(); // Issue #1446: Admin-only endpoint
 
         // Migrated to CQRS: Uses SearchChessKnowledgeQuery via MediatR (Issue #1188)
         group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Issue #1445: Use centralized query validation
             var queryError = QueryValidator.ValidateQuery(q);
@@ -890,20 +886,14 @@ public static class AiEndpoints
                     chunkIndex = r.ChunkIndex
                 })
             });
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // Migrated to CQRS: Uses DeleteChessKnowledgeCommand via MediatR (Issue #1188)
         group.MapDelete("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to delete chess knowledge without permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            // Session validated AND Admin role checked by RequireAdminSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
 
@@ -917,7 +907,8 @@ public static class AiEndpoints
 
             logger.LogInformation("Chess knowledge deletion completed successfully");
             return Results.Json(new { success = true });
-        });
+        })
+        .RequireAdminSession(); // Issue #1446: Admin-only endpoint
 
         // UI-01: Chat management endpoints
         return group;

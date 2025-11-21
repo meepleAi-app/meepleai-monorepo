@@ -23,14 +23,14 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetAllGamesQuery();
             var result = await mediator.Send(query, ct);
 
             return Results.Ok(result);
-        });
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
         // Get game by ID (DDD/CQRS)
         group.MapGet("/games/{id}", async (
@@ -39,14 +39,14 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetGameByIdQuery(id);
             var result = await mediator.Send(query, ct);
 
             return result != null ? Results.Ok(result) : Results.NotFound();
-        });
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
         // Get game details with extended metadata and statistics (DDD/CQRS)
         // Issue #1196: Supports Game Detail Page (Issue #855)
@@ -56,14 +56,14 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetGameDetailsQuery(id);
             var result = await mediator.Send(query, ct);
 
             return result != null ? Results.Ok(result) : Results.NotFound();
-        });
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
         // Get rule specifications for a game (DDD/CQRS)
         // Issue #1196: Supports Rules tab in Game Detail Page (Issue #855)
@@ -73,14 +73,14 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetRuleSpecsQuery(id);
             var result = await mediator.Send(query, ct);
 
             return Results.Ok(result);
-        });
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
         // Create game (DDD/CQRS) - Admin/Editor only
         group.MapPost("/games", async (
@@ -148,11 +148,7 @@ public static class GameEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // Auth check
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
-            {
-                return Results.Unauthorized();
-            }
+            // Session validated by RequireSessionFilter
 
             var command = new StartGameSessionCommand(
                 GameId: request.GameId,
@@ -162,7 +158,8 @@ public static class GameEndpoints
             var result = await mediator.Send(command, ct);
             logger.LogInformation("Started game session {SessionId} for game {GameId}", result.Id, result.GameId);
             return Results.Created($"/api/v1/sessions/{result.Id}", result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // Add player to session
         group.MapPost("/sessions/{id}/players", async (
@@ -173,11 +170,7 @@ public static class GameEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // Auth check
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
-            {
-                return Results.Unauthorized();
-            }
+            // Session validated by RequireSessionFilter
 
             var command = new AddPlayerToSessionCommand(
                 SessionId: id,
@@ -189,7 +182,8 @@ public static class GameEndpoints
             var result = await mediator.Send(command, ct);
             logger.LogInformation("Added player {PlayerName} to session {SessionId}", request.PlayerName, id);
             return Results.Ok(result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // Complete game session
         group.MapPost("/sessions/{id}/complete", async (
@@ -199,11 +193,7 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
-            {
-                return Results.Unauthorized();
-            }
+            // Session validated by RequireSessionFilter
 
             var command = new CompleteGameSessionCommand(
                 SessionId: id,
@@ -212,7 +202,8 @@ public static class GameEndpoints
 
             var result = await mediator.Send(command, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // Abandon game session
         group.MapPost("/sessions/{id}/abandon", async (
@@ -221,11 +212,7 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
-            {
-                return Results.Unauthorized();
-            }
+            // Session validated by RequireSessionFilter
 
             var command = new AbandonGameSessionCommand(
                 SessionId: id,
@@ -234,7 +221,8 @@ public static class GameEndpoints
 
             var result = await mediator.Send(command, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // Get session by ID
         group.MapGet("/sessions/{id}", async (
@@ -243,20 +231,14 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
-            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
-
-            if (!hasSession && !hasApiKey)
-            {
-                return Results.Unauthorized();
-            }
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetGameSessionByIdQuery(id);
             var result = await mediator.Send(query, ct);
 
             return result != null ? Results.Ok(result) : Results.NotFound();
-        });
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
         // Get active sessions for game
         group.MapGet("/games/{gameId}/sessions/active", async (
@@ -265,20 +247,14 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
-            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
-
-            if (!hasSession && !hasApiKey)
-            {
-                return Results.Unauthorized();
-            }
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetActiveSessionsByGameQuery(gameId);
             var result = await mediator.Send(query, ct);
 
             return Results.Ok(result);
-        });
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
         // Pause game session
         group.MapPost("/sessions/{id}/pause", async (
@@ -287,17 +263,14 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
-            {
-                return Results.Unauthorized();
-            }
+            // Session validated by RequireSessionFilter
 
             var command = new PauseGameSessionCommand(SessionId: id);
             var result = await mediator.Send(command, ct);
 
             return Results.Ok(result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // Resume game session
         group.MapPost("/sessions/{id}/resume", async (
@@ -306,17 +279,14 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
-            {
-                return Results.Unauthorized();
-            }
+            // Session validated by RequireSessionFilter
 
             var command = new ResumeGameSessionCommand(SessionId: id);
             var result = await mediator.Send(command, ct);
 
             return Results.Ok(result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // End game session (alias for complete)
         group.MapPost("/sessions/{id}/end", async (
@@ -326,11 +296,7 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
-            {
-                return Results.Unauthorized();
-            }
+            // Session validated by RequireSessionFilter
 
             var command = new EndGameSessionCommand(
                 SessionId: id,
@@ -339,7 +305,8 @@ public static class GameEndpoints
 
             var result = await mediator.Send(command, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // Get all active sessions (with pagination)
         group.MapGet("/sessions/active", async (
@@ -349,20 +316,14 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
-            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
-
-            if (!hasSession && !hasApiKey)
-            {
-                return Results.Unauthorized();
-            }
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetActiveSessionsQuery(Limit: limit, Offset: offset);
             var result = await mediator.Send(query, ct);
 
             return Results.Ok(result);
-        });
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
         // Get session history (with filters and pagination)
         group.MapGet("/sessions/history", async (
@@ -375,14 +336,7 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
-            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
-
-            if (!hasSession && !hasApiKey)
-            {
-                return Results.Unauthorized();
-            }
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             var query = new GetSessionHistoryQuery(
                 GameId: gameId,
@@ -394,7 +348,8 @@ public static class GameEndpoints
 
             var result = await mediator.Send(query, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
         // Get session statistics (aggregated stats with filters)
         group.MapGet("/sessions/statistics", async (
@@ -406,14 +361,7 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Auth check
-            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
-            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
-
-            if (!hasSession && !hasApiKey)
-            {
-                return Results.Unauthorized();
-            }
+            // User authenticated via session OR API key (RequireAuthenticatedUserFilter)
 
             // Default topPlayersLimit to 5 if not specified or invalid, cap at 100 for performance
             if (topPlayersLimit <= 0)
@@ -430,7 +378,8 @@ public static class GameEndpoints
 
             var result = await mediator.Send(query, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
 
         return group;
     }

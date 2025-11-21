@@ -27,8 +27,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             // Validate request
             if (!Guid.TryParse(req.gameId, out var gameId))
@@ -73,6 +74,7 @@ public static class KnowledgeBaseEndpoints
             });
         })
         .WithName("KnowledgeBaseSearch")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("KnowledgeBase");
 
         // DDD-PHASE3: RAG Q&A endpoint using MediatR
@@ -83,8 +85,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             // Validate request
             if (!Guid.TryParse(req.gameId, out var gameId))
@@ -131,6 +134,7 @@ public static class KnowledgeBaseEndpoints
             });
         })
         .WithName("KnowledgeBaseAsk")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("KnowledgeBase");
 
         // CHAT-THREAD-01: Create chat thread
@@ -141,8 +145,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             if (!Guid.TryParse(session.User.Id, out var userId))
             {
@@ -162,6 +167,7 @@ public static class KnowledgeBaseEndpoints
             return Results.Created($"/api/v1/chat-threads/{result.Id}", result);
         })
         .WithName("CreateChatThread")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
         // CHAT-THREAD-02: Get chat thread by ID
@@ -172,8 +178,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             var query = new GetChatThreadByIdQuery(threadId);
             var result = await mediator.Send(query, ct);
@@ -198,6 +205,7 @@ public static class KnowledgeBaseEndpoints
             return Results.Ok(result);
         })
         .WithName("GetChatThreadById")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
         // CHAT-THREAD-03: Get threads by game
@@ -208,8 +216,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             if (gameId.HasValue)
             {
@@ -229,6 +238,7 @@ public static class KnowledgeBaseEndpoints
             }
         })
         .WithName("GetChatThreadsByGame")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
         // CHAT-THREAD-04: Add message to thread
@@ -240,8 +250,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             if (string.IsNullOrWhiteSpace(req.Content))
             {
@@ -281,6 +292,7 @@ public static class KnowledgeBaseEndpoints
             return Results.Ok(result);
         })
         .WithName("AddMessageToThread")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
         // CHAT-THREAD-05: Close chat thread
@@ -291,8 +303,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             // SEC: Authorize BEFORE executing command
             if (!Guid.TryParse(session.User.Id, out var userId))
@@ -322,6 +335,7 @@ public static class KnowledgeBaseEndpoints
             return Results.Ok(result);
         })
         .WithName("CloseThread")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
         // CHAT-THREAD-06: Reopen chat thread
@@ -332,8 +346,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             // SEC: Authorize BEFORE executing command
             if (!Guid.TryParse(session.User.Id, out var userId))
@@ -363,6 +378,7 @@ public static class KnowledgeBaseEndpoints
             return Results.Ok(result);
         })
         .WithName("ReopenThread")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
         // ISSUE-860: Export chat thread (DDD implementation)
@@ -374,8 +390,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             // SEC: Authorize BEFORE executing command
             if (!Guid.TryParse(session.User.Id, out var userId))
@@ -422,6 +439,7 @@ public static class KnowledgeBaseEndpoints
                 statusCode: 200);
         })
         .WithName("ExportChatThread")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads")
         .Produces<string>(200, "application/json", "text/markdown")
         .ProducesProblem(400)
@@ -439,8 +457,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             if (!Guid.TryParse(session.User.Id, out var userId))
             {
@@ -461,6 +480,7 @@ public static class KnowledgeBaseEndpoints
             return Results.Ok(result);
         })
         .WithName("UpdateChatMessage")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
         // ISSUE-1184: Delete message from thread
@@ -472,8 +492,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             if (!Guid.TryParse(session.User.Id, out var userId))
             {
@@ -491,6 +512,7 @@ public static class KnowledgeBaseEndpoints
             return Results.Ok(result);
         })
         .WithName("DeleteChatMessage")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
         // ISSUE-1184: Delete chat thread
@@ -501,8 +523,9 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+            
 
             if (!Guid.TryParse(session.User.Id, out var userId))
             {
@@ -517,6 +540,7 @@ public static class KnowledgeBaseEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteChatThread")
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithTags("ChatThreads");
 
         return group;

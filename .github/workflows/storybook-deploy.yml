@@ -34,20 +34,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
         with:
           node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: apps/web/pnpm-lock.yaml
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
 
-      - name: Install dependencies
-        run: pnpm install
+      - name: Cache Storybook build
+        uses: actions/cache@v4
+        with:
+          path: apps/web/storybook-static
+          key: ${{ runner.os }}-storybook-${{ hashFiles('apps/web/src/components/**', 'apps/web/.storybook/**') }}
+          restore-keys: |
+            ${{ runner.os }}-storybook-
 
       - name: Build Storybook
         run: pnpm build-storybook --quiet

@@ -80,10 +80,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      - name: Setup backend environment
+        uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
+          working-directory: apps/api
 
       - name: Install k6
         run: |
@@ -92,10 +93,6 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
           sudo apt-get update
           sudo apt-get install -y k6
-
-      - name: Restore .NET dependencies
-        working-directory: apps/api/src/Api
-        run: dotnet restore
 
       - name: Build API
         working-directory: apps/api/src/Api
@@ -307,11 +304,164 @@ jobs:
     runs-on: ubuntu-latest
     needs: k6-performance-tests
     if: failure() && github.event_name == 'schedule'
+    permissions:
+      issues: write  # Required: Create GitHub issues
     steps:
-      - name: Send notification
-        run: |
-          echo "Performance tests failed on scheduled run"
-          # Add Slack/email notification here
-          # curl -X POST -H 'Content-type: application/json' \
-          #   --data '{"text":"K6 Performance Tests Failed"}' \
-          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Send Slack notification
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        uses: actions/github-script@v8
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          script: |
+            const webhook = process.env.SLACK_WEBHOOK_URL;
+            if (!webhook) {
+              console.log('⚠️ SLACK_WEBHOOK_URL not configured, skipping Slack notification');
+              return;
+            }
+
+            const payload = {
+              text: '🚨 K6 Performance Tests Failed',
+              blocks: [
+                {
+                  type: 'header',
+                  text: {
+                    type: 'plain_text',
+                    text: '🚨 K6 Performance Tests Failed',
+                    emoji: true
+                  }
+                },
+                {
+                  type: 'section',
+                  fields: [
+                    {
+                      type: 'mrkdwn',
+                      text: `*Repository:*\n${context.repo.owner}/${context.repo.repo}`
+                    },
+                    {
+                      type: 'mrkdwn',
+                      text: `*Branch:*\n${context.ref.replace('refs/heads/', '')}`
+                    },
+                    {
+                      type: 'mrkdwn',
+                      text: `*Trigger:*\nScheduled (nightly)`
+                    },
+                    {
+                      type: 'mrkdwn',
+                      text: `*Run ID:*\n${context.runId}`
+                    }
+                  ]
+                },
+                {
+                  type: 'actions',
+                  elements: [
+                    {
+                      type: 'button',
+                      text: {
+                        type: 'plain_text',
+                        text: 'View Workflow Run',
+                        emoji: true
+                      },
+                      url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+                    }
+                  ]
+                }
+              ]
+            };
+
+            const response = await fetch(webhook, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+              console.error(`❌ Failed to send Slack notification: ${response.statusText}`);
+            } else {
+              console.log('✅ Slack notification sent successfully');
+            }
+
+      - name: Check for existing performance issue
+        id: check-issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'performance,automated',
+              per_page: 100
+            });
+
+            const performanceIssue = issues.data.find(issue =>
+              issue.title.includes('K6 Performance Tests Failed')
+            );
+
+            if (performanceIssue) {
+              core.setOutput('issue-exists', 'true');
+              core.setOutput('issue-number', performanceIssue.number);
+              console.log(`Found existing issue: #${performanceIssue.number}`);
+            } else {
+              core.setOutput('issue-exists', 'false');
+              console.log('No existing performance issue found');
+            }
+
+      - name: Create or update GitHub issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issueExists = '${{ steps.check-issue.outputs.issue-exists }}' === 'true';
+            const issueNumber = '${{ steps.check-issue.outputs.issue-number }}';
+
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const timestamp = new Date().toISOString();
+
+            const comment = `## 🔴 Performance Test Failure - ${timestamp}
+
+**Run:** [#${context.runId}](${runUrl})
+**Branch:** ${context.ref.replace('refs/heads/', '')}
+**Trigger:** Scheduled (nightly)
+
+### Action Required
+The nightly K6 performance tests have failed. Please investigate the workflow run for details.
+
+### Common Issues to Check
+- [ ] API response times exceeding thresholds
+- [ ] Increased error rates
+- [ ] Database connection issues
+- [ ] Memory or resource constraints
+- [ ] Breaking changes in recent commits
+
+### Next Steps
+1. Review the [workflow run](${runUrl}) logs
+2. Check the performance reports artifact
+3. Investigate and fix the root cause
+4. Re-run the workflow to verify the fix
+5. Close this issue once resolved`;
+
+            if (issueExists) {
+              // Add comment to existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(issueNumber),
+                body: comment
+              });
+              console.log(`✅ Added comment to existing issue #${issueNumber}`);
+            } else {
+              // Create new issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🚨 K6 Performance Tests Failed - Investigation Required',
+                body: comment,
+                labels: ['performance', 'automated', 'bug', 'priority: high']
+              });
+              console.log(`✅ Created new issue #${issue.data.number}`);
+            }

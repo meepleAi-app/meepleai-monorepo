@@ -84,6 +84,90 @@ jobs:
       - name: Validate RuleSpec Examples
         run: node schemas/validate-all-examples.js
 
+  validate-api-codegen:
+    needs: changes
+    name: API - Validate Code Generation
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when API/web files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1  # Shallow clone for faster checkout
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm modules
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('apps/web/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Install frontend dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore .NET packages
+        working-directory: apps/api
+        run: dotnet restore
+
+      - name: Build API (generates OpenAPI spec and TypeScript client)
+        working-directory: apps/api
+        run: dotnet build --no-restore
+        env:
+          NSwagExecution: 'true'
+
+      - name: Generate Zod schemas
+        working-directory: apps/web
+        run: pnpm generate:api
+        env:
+          OPENAPI_FILE: ../../api/src/Api/openapi.json
+
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain apps/web/src/lib/api/generated/)" ]; then
+            echo "❌ Generated API client files are out of date!"
+            echo ""
+            echo "The following files have uncommitted changes:"
+            git status --porcelain apps/web/src/lib/api/generated/
+            echo ""
+            echo "Please run 'pnpm generate:api' locally and commit the changes."
+            echo ""
+            git diff apps/web/src/lib/api/generated/
+            exit 1
+          else
+            echo "✅ Generated API client files are up to date"
+          fi
+
   # Testing Strategy: Test Pyramid (70% unit, 20% integration, 5% quality, 5% E2E)
   # Reference: docs/02-development/testing/testing-strategy.md
 

@@ -1,7 +1,8 @@
 # ADR-013: NSwag TypeScript Client and Zod Schema Generation
 
-**Status**: Proposed
+**Status**: Implemented
 **Date**: 2025-01-19
+**Implementation Date**: 2025-11-21 (Issue #1450)
 **Deciders**: Engineering Lead, Frontend Team, Backend Team
 **Context**: Code Review - Backend-Frontend Interactions Type Safety
 
@@ -488,6 +489,59 @@ apps/web/src/lib/api/generated/
 
 ---
 
+## Implementation Details (2025-11-21)
+
+### Final Architecture
+
+We implemented a hybrid approach using:
+- **NSwag.MSBuild** (v14.2.0) for TypeScript client generation
+- **openapi-zod-client** (v1.18.3) for Zod schema generation
+
+### Key Files
+
+1. **Backend**:
+   - `apps/api/src/Api/Api.csproj` - Added NSwag.MSBuild packages
+   - `apps/api/src/Api/nswag.json` - NSwag configuration for TypeScript client
+   - MSBuild target to generate on build (Debug mode or NSwagExecution=true)
+
+2. **Frontend**:
+   - `apps/web/scripts/generate-api-client.ts` - Main generation script
+   - `apps/web/src/lib/api/generated/` - Output directory
+   - `apps/web/src/lib/api/generated/.gitignore` - Excludes generated files from git
+   - `apps/web/package.json` - Added `generate:api` and `generate:api:watch` scripts
+
+3. **CI/CD**:
+   - `.github/workflows/ci.yml` - New `validate-api-codegen` job
+   - Validates generated files are up-to-date on every PR
+   - Fails if manual changes needed
+
+### Usage
+
+```bash
+# Generate API client and schemas
+cd apps/web
+pnpm generate:api
+
+# Watch mode (regenerate on API changes)
+pnpm generate:api:watch
+```
+
+### CI Integration
+
+The CI pipeline now includes a validation step that:
+1. Builds the API (triggers NSwag to generate openapi.json)
+2. Runs the generation script
+3. Verifies generated files match committed versions
+4. Fails the build if they differ (with helpful diff output)
+
+### Migration Status
+
+- ✅ **Phase 1-4 Complete**: All phases implemented
+- ✅ **CI/CD Integration**: Validation job added
+- ⏳ **Manual Schema Migration**: Can be done incrementally (existing schemas still work)
+
+---
+
 **Decision Maker**: Engineering Lead
-**Approval**: Pending Frontend & Backend Team Review
-**Implementation**: Issue #TBD (Sprint 3)
+**Implementation**: Issue #1450 (Completed 2025-11-21)
+**Status**: ✅ Fully Operational

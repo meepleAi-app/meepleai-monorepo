@@ -44,6 +44,14 @@
     <PackageReference Include="StackExchange.Redis" Version="2.10.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" />
     <PackageReference Include="Microsoft.OpenApi" Version="3.0.1" />
+    <PackageReference Include="NSwag.MSBuild" Version="14.2.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="NSwag.ApiDescription.Client" Version="14.2.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
     <PackageReference Include="System.Text.Json" Version="10.0.0" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
@@ -78,4 +86,8 @@
   <ItemGroup>
     <None Include="tessdata\**\*" CopyToOutputDirectory="Always" />
   </ItemGroup>
+  <!-- NSwag: Generate OpenAPI specification and TypeScript client -->
+  <Target Name="NSwag" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug' Or '$(NSwagExecution)' == 'true'">
+    <Exec WorkingDirectory="$(ProjectDir)" EnvironmentVariables="ASPNETCORE_ENVIRONMENT=Development" Command="$(NSwagExe_Net90) run nswag.json /variables:Configuration=$(Configuration)" />
+  </Target>
 </Project>

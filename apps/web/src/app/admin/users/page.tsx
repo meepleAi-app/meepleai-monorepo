@@ -128,7 +128,8 @@ export default function UserManagement() {
       setLoading(false);
       addToast("error", "Failed to load users");
     }
-  }, [page, pageSize, search, roleFilter, sortBy, sortOrder, addToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- addToast is stable (defined with useCallback and empty deps)
+  }, [page, pageSize, search, roleFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchUsers();
@@ -518,7 +519,7 @@ export default function UserManagement() {
 
       {/* Toast Notifications */}
       <div className="fixed top-4 right-4 z-[1001]">
-        {toasts.map((toast) => (
+        {toasts?.map((toast) => (
           <div
             key={toast.id}
             className={cn(

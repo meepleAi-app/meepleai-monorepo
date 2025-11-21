@@ -108,6 +108,27 @@ export function useChatStreaming(callbacks?: {
   const eventSourceRef = useRef<EventSource | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  /**
+   * Stable ref to callbacks to prevent startStreaming recreation.
+   *
+   * **Pattern**: Callback Ref Pattern for Custom Hooks
+   *
+   * **Why**: Callbacks passed to custom hooks are often recreated on every parent render,
+   * causing hooks that depend on them to recreate unnecessarily, leading to infinite loops.
+   *
+   * **Solution**: Store callbacks in a ref that never changes identity, but update the ref's
+   * current value on every render. This ensures:
+   * 1. Dependencies arrays remain stable (no infinite loops)
+   * 2. Latest callback is always called (via ref.current)
+   * 3. No stale closures (ref is updated before each call)
+   *
+   * @see https://react.dev/reference/react/useRef#avoiding-recreating-the-ref-contents
+   */
+  const callbacksRef = useRef(callbacks);
+
+  // Always keep ref up to date with latest callbacks (no deps needed - runs every render)
+  callbacksRef.current = callbacks;
+
   const stopStreaming = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
@@ -254,8 +275,8 @@ export function useChatStreaming(callbacks?: {
                       };
 
                       // Call completion callback
-                      if (callbacks?.onComplete) {
-                        callbacks.onComplete(finalState.currentAnswer, finalState.snippets, {
+                      if (callbacksRef.current?.onComplete) {
+                        callbacksRef.current.onComplete(finalState.currentAnswer, finalState.snippets, {
                           totalTokens: finalState.totalTokens,
                           confidence: finalState.confidence,
                           followUpQuestions: prev.followUpQuestions.length > 0 ? prev.followUpQuestions : undefined,
@@ -312,12 +333,13 @@ export function useChatStreaming(callbacks?: {
             isStreaming: false,
             state: null,
           }));
-          if (callbacks?.onError) {
-            callbacks.onError(errorMessage);
+          if (callbacksRef.current?.onError) {
+            callbacksRef.current.onError(errorMessage);
           }
         });
     },
-    [callbacks, stopStreaming]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- callbacks intentionally omitted, accessed via stable callbacksRef to prevent infinite recreation
+    [stopStreaming]
   );
 
   return [

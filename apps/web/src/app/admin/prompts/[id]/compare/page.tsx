@@ -84,8 +84,8 @@ export default function CompareVersions() {
     fetchVersions();
   }, [fetchVersions]);
 
-  const version1 = versions.find((v) => v.id === version1Id);
-  const version2 = versions.find((v) => v.id === version2Id);
+  const version1 = versions?.find((v) => v.id === version1Id);
+  const version2 = versions?.find((v) => v.id === version2Id);
 
   const canCompare = version1 && version2 && version1.id !== version2.id;
 

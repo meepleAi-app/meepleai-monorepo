@@ -36,6 +36,8 @@ public class RequireSessionFilterTests
         public override HttpContext HttpContext => _httpContext;
 
         public override IList<object?> Arguments => new List<object?>();
+
+        public override T GetArgument<T>(int index) => throw new NotImplementedException();
     }
 
     [Fact]

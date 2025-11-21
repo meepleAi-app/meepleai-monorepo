@@ -103,8 +103,8 @@ public sealed class OAuthAccount : AggregateRoot<Guid>
     /// </summary>
     public bool SupportsRefresh()
     {
-        // Discord and Google support refresh tokens
+        // Discord, Google, and GitHub support refresh tokens
         return !string.IsNullOrWhiteSpace(RefreshTokenEncrypted) &&
-               (Provider == "google" || Provider == "discord");
+               (Provider == "google" || Provider == "discord" || Provider == "github");
     }
 }

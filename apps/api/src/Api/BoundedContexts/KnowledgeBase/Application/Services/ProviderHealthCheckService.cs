@@ -4,23 +4,6 @@ using Api.Services.LlmClients;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
-/// Interface for LLM provider health check service
-/// ISSUE-962 (BGAI-020): Monitors provider availability and updates health status
-/// </summary>
-public interface IProviderHealthCheckService
-{
-    /// <summary>
-    /// Get health status for a specific provider
-    /// </summary>
-    ProviderHealthStatus? GetProviderHealth(string providerName);
-
-    /// <summary>
-    /// Get health status for all providers
-    /// </summary>
-    Dictionary<string, ProviderHealthStatus> GetAllProviderHealth();
-}
-
-/// <summary>
 /// Background service for periodic LLM provider health checks
 /// ISSUE-962 (BGAI-020): Monitors provider availability and updates health status
 /// </summary>

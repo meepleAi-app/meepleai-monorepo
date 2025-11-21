@@ -29,16 +29,10 @@ public static class WebApplicationExtensions
         // OPS-02: OpenTelemetry Prometheus metrics endpoint
         app.MapPrometheusScrapingEndpoint();
 
-        // API-01: Swagger UI and Scalar API Reference (development only)
+        // API-01: Native .NET 9 OpenAPI with Scalar UI (development only)
         if (app.Environment.IsDevelopment())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI(options =>
-            {
-                options.SwaggerEndpoint("/swagger/v1/swagger.json", "MeepleAI API v1");
-                options.RoutePrefix = "api/docs"; // Swagger UI at /api/docs
-                options.DocumentTitle = "MeepleAI API Documentation";
-            });
+            app.MapOpenApi();
 
             // Issue #1543: Scalar - Modern OpenAPI documentation UI
             // Access at /scalar/v1

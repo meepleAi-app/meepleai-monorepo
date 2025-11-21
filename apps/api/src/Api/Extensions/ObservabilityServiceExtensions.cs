@@ -152,68 +152,8 @@ public static class ObservabilityServiceExtensions
     /// </remarks>
     private static IServiceCollection AddSwaggerServices(this IServiceCollection services)
     {
-        // API-01: OpenAPI/Swagger configuration
-        services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen(options =>
-        {
-            options.SwaggerDoc("v1", new OpenApiInfo
-            {
-                Version = "v1",
-                Title = "MeepleAI API",
-                Description = "AI-powered board game rules assistant API with RAG-based question answering, rule explanations, and chess analysis",
-                Contact = new OpenApiContact
-                {
-                    Name = "MeepleAI Support",
-                    Email = "support@meepleai.dev"
-                }
-            });
-
-            // API Key Security Scheme
-            options.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
-            {
-                Type = SecuritySchemeType.ApiKey,
-                In = ParameterLocation.Header,
-                Name = "Authorization",
-                Description = "API key authentication via Authorization: ApiKey <key> header. Browser clients can also rely on the secure meeple_apikey cookie issued during API key login."
-            });
-
-            // Cookie Security Scheme (existing session-based auth)
-            options.AddSecurityDefinition("Cookie", new OpenApiSecurityScheme
-            {
-                Type = SecuritySchemeType.ApiKey,
-                In = ParameterLocation.Cookie,
-                Name = "meepleai_session",
-                Description = "Cookie-based session authentication for web clients"
-            });
-
-            // Apply security requirements globally
-            // Both schemes use empty scopes (API Key auth doesn't require OAuth2-style scopes)
-            var apiKeyScheme = new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "ApiKey"
-                }
-            };
-
-            var cookieScheme = new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Cookie"
-                }
-            };
-
-            // Add both authentication schemes as global requirements
-            // Clients can use either API key (Authorization header) or session cookie
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                { apiKeyScheme, Array.Empty<string>() },
-                { cookieScheme, Array.Empty<string>() }
-            });
-        });
+        // API-01: Native .NET 9 OpenAPI configuration
+        services.AddOpenApi();
 
         return services;
     }

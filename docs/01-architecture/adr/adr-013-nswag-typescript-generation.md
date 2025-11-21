@@ -1,10 +1,14 @@
 # ADR-013: NSwag TypeScript Client and Zod Schema Generation
 
-**Status**: Implemented
+**Status**: Superseded by .NET 9 Native OpenAPI (2025-11-22, Issue #1583)
 **Date**: 2025-01-19
 **Implementation Date**: 2025-11-21 (Issue #1450)
+**Migration Date**: 2025-11-22 (Issue #1583 - Swashbuckle → Microsoft.AspNetCore.OpenApi 9.0.0)
 **Deciders**: Engineering Lead, Frontend Team, Backend Team
 **Context**: Code Review - Backend-Frontend Interactions Type Safety
+
+> **Update 2025-11-22**: Migrated from Swashbuckle.AspNetCore to Microsoft.AspNetCore.OpenApi 9.0.0 (native .NET 9).
+> OpenAPI endpoint changed: `/swagger/v1/swagger.json` → `/openapi/v1.json`. See Migration Notes below.
 
 ---
 
@@ -625,5 +629,116 @@ git commit -m "chore: update OpenAPI spec"
 ### References
 
 - Issue #1543: NSwag build error blocks local test/coverage execution
+- Issue #1583: OAuth test failures + OpenAPI migration
 - Scalar Documentation: https://scalar.com/
 - Microsoft.AspNetCore.OpenApi: Native .NET 9 OpenAPI support
+
+---
+
+## Migration Notes (2025-11-22)
+
+### OpenAPI Provider Migration: Swashbuckle → .NET 9 Native
+
+**Trigger**: Issue #1583 (OAuth integration test failures)
+
+**Root Cause**: Swashbuckle 10.0.1 + Microsoft.OpenApi 3.0.1 incompatibility caused Npgsql connection issues in Testcontainers.
+
+**Solution**: Migrated to Microsoft.AspNetCore.OpenApi 9.0.0 (native .NET 9 OpenAPI generation).
+
+### Changes
+
+**Backend (apps/api/src/Api/Api.csproj)**:
+```diff
+- Swashbuckle.AspNetCore 10.0.1
+- Microsoft.OpenApi 3.0.1 (invalid - spec version not package version)
++ Microsoft.AspNetCore.OpenApi 9.0.0 (native .NET 9)
+```
+
+**Configuration Simplified**:
+```csharp
+// Before (ObservabilityServiceExtensions.cs): 83 lines of Swashbuckle config
+services.AddEndpointsApiExplorer();
+services.AddSwaggerGen(options => { /* 70+ lines */ });
+
+// After: 1 line
+services.AddOpenApi();
+```
+
+**Middleware Updated** (WebApplicationExtensions.cs):
+```csharp
+// Before
+app.UseSwagger();
+app.UseSwaggerUI(options => { /* config */ });
+
+// After
+app.MapOpenApi();
+```
+
+### Endpoint Changes
+
+| Aspect | Old (Swashbuckle) | New (Native .NET 9) |
+|--------|-------------------|---------------------|
+| **OpenAPI JSON** | `/swagger/v1/swagger.json` | `/openapi/v1.json` |
+| **Swagger UI** | `/api/docs` | ❌ Removed |
+| **Scalar UI** | `/scalar/v1` | ✅ `/scalar/v1` (unchanged) |
+| **UI Recommendation** | Swagger UI | Scalar (modern, feature-rich) |
+
+### Frontend Integration Impact
+
+**generate-api-client.ts Updated**:
+```typescript
+// Before
+const OPENAPI_URL = 'http://localhost:8080/swagger/v1/swagger.json';
+
+// After
+const OPENAPI_URL = 'http://localhost:8080/openapi/v1.json';
+```
+
+**Manual Regeneration Steps**:
+```bash
+# 1. Start API
+cd apps/api && dotnet run
+
+# 2. Download new spec
+curl http://localhost:5080/openapi/v1.json -o src/Api/openapi.json
+
+# 3. Generate TypeScript types + Zod schemas
+cd apps/web && pnpm generate:api
+```
+
+### Benefits of Migration
+
+1. **Native .NET 9 Support**: No third-party dependency for OpenAPI generation
+2. **Simpler Configuration**: 83 lines → 1 line (98% reduction)
+3. **Stability**: Microsoft.AspNetCore.OpenAPI 9.0.0 is production-ready and maintained by Microsoft
+4. **Compatibility**: No more Swashbuckle/Microsoft.OpenApi version conflicts
+5. **Test Reliability**: Fixed Npgsql connection issues in integration tests
+6. **Future-Proof**: Aligned with .NET 9+ best practices
+
+### Breaking Changes
+
+**None for API consumers**:
+- OpenAPI document still available (different endpoint)
+- Scalar UI continues to work
+- Frontend type generation unaffected (script updated)
+
+**For Developers**:
+- Swagger UI removed (use Scalar UI at `/scalar/v1` instead)
+- OpenAPI endpoint URL changed (documented above)
+
+### Rollback Plan
+
+If issues arise, revert to Swashbuckle:
+```bash
+dotnet add package Swashbuckle.AspNetCore --version 6.9.0
+# Revert ObservabilityServiceExtensions.cs and WebApplicationExtensions.cs
+# Update generate-api-client.ts back to /swagger/v1/swagger.json
+```
+
+**Note**: Swashbuckle 10.x NOT recommended due to Microsoft.OpenApi 2.x breaking changes.
+
+### Related
+
+- **ADR-014**: NSwag.MSBuild removal (incompatible with .NET 9)
+- **Issue #1583**: OAuth test failures (resolved by this migration)
+- **PR #1593**: Implementation PR

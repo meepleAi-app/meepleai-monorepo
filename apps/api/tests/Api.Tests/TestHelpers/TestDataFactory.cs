@@ -1,7 +1,9 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
@@ -106,7 +108,7 @@ public static class TestDataFactory
         new UserBuilder()
             .WithEmail(email ?? "user@test.com")
             .WithDisplayName(displayName ?? "Test User")
-            .WithRole(BoundedContexts.Authentication.Domain.ValueObjects.Role.User)
+            .WithRole(Role.User)
             .Build();
 
     /// <summary>
@@ -116,7 +118,7 @@ public static class TestDataFactory
         new UserBuilder()
             .WithEmail(email ?? "admin@test.com")
             .WithDisplayName("Test Admin")
-            .WithRole(BoundedContexts.Authentication.Domain.ValueObjects.Role.Admin)
+            .WithRole(Role.Admin)
             .Build();
 
     /// <summary>
@@ -126,7 +128,7 @@ public static class TestDataFactory
         new UserBuilder()
             .WithEmail(email ?? "editor@test.com")
             .WithDisplayName("Test Editor")
-            .WithRole(BoundedContexts.Authentication.Domain.ValueObjects.Role.Editor)
+            .WithRole(Role.Editor)
             .Build();
 
     /// <summary>
@@ -269,8 +271,8 @@ public static class TestDataFactory
     public static Agent CreateRagAgent(string? name = null) =>
         new AgentBuilder()
             .WithName(name ?? "Test RAG Agent")
-            .WithType(BoundedContexts.KnowledgeBase.Domain.ValueObjects.AgentType.RagAgent)
-            .WithStrategy(BoundedContexts.KnowledgeBase.Domain.ValueObjects.AgentStrategy.HybridSearch())
+            .WithType(AgentType.RagAgent)
+            .WithStrategy(AgentStrategy.HybridSearch())
             .Build();
 
     /// <summary>
@@ -279,8 +281,8 @@ public static class TestDataFactory
     public static Agent CreateCitationAgent(string? name = null) =>
         new AgentBuilder()
             .WithName(name ?? "Test Citation Agent")
-            .WithType(BoundedContexts.KnowledgeBase.Domain.ValueObjects.AgentType.RagAgent)
-            .WithStrategy(BoundedContexts.KnowledgeBase.Domain.ValueObjects.AgentStrategy.VectorOnly())
+            .WithType(AgentType.RagAgent)
+            .WithStrategy(AgentStrategy.VectorOnly())
             .Build();
 
     /// <summary>
@@ -289,8 +291,8 @@ public static class TestDataFactory
     public static Agent CreateConversationAgent(string? name = null) =>
         new AgentBuilder()
             .WithName(name ?? "Test Conversation Agent")
-            .WithType(BoundedContexts.KnowledgeBase.Domain.ValueObjects.AgentType.ConversationAgent)
-            .WithStrategy(BoundedContexts.KnowledgeBase.Domain.ValueObjects.AgentStrategy.HybridSearch())
+            .WithType(AgentType.ConversationAgent)
+            .WithStrategy(AgentStrategy.HybridSearch())
             .Build();
 
     #endregion

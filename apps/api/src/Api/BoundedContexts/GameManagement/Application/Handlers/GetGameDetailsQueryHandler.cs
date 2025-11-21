@@ -19,8 +19,8 @@ public class GetGameDetailsQueryHandler : IQueryHandler<GetGameDetailsQuery, Gam
         IGameRepository gameRepository,
         IGameSessionRepository sessionRepository)
     {
-        _gameRepository = gameRepository;
-        _sessionRepository = sessionRepository;
+        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
     }
 
     public async Task<GameDetailsDto?> Handle(GetGameDetailsQuery query, CancellationToken cancellationToken)

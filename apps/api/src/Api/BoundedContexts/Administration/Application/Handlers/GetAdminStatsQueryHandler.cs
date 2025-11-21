@@ -15,7 +15,7 @@ public class GetAdminStatsQueryHandler : IQueryHandler<GetAdminStatsQuery, Dashb
 
     public GetAdminStatsQueryHandler(IAdminStatsService adminStatsService)
     {
-        _adminStatsService = adminStatsService;
+        _adminStatsService = adminStatsService ?? throw new ArgumentNullException(nameof(adminStatsService));
     }
 
     public async Task<DashboardStatsDto> Handle(GetAdminStatsQuery query, CancellationToken cancellationToken)

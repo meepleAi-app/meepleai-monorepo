@@ -16,7 +16,7 @@ public class GetPromptVersionsQueryHandler : IQueryHandler<GetPromptVersionsQuer
 
     public GetPromptVersionsQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<IReadOnlyList<PromptVersionDto>> Handle(

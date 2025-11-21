@@ -15,7 +15,7 @@ public class GetChatThreadsByGameQueryHandler : IQueryHandler<GetChatThreadsByGa
 
     public GetChatThreadsByGameQueryHandler(IChatThreadRepository threadRepository)
     {
-        _threadRepository = threadRepository;
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
     }
 
     public async Task<IReadOnlyList<ChatThreadDto>> Handle(GetChatThreadsByGameQuery query, CancellationToken cancellationToken)

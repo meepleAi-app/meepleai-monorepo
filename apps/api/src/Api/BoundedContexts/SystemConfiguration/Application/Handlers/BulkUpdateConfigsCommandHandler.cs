@@ -18,8 +18,8 @@ public class BulkUpdateConfigsCommandHandler : ICommandHandler<BulkUpdateConfigs
         IConfigurationRepository configurationRepository,
         IUnitOfWork unitOfWork)
     {
-        _configurationRepository = configurationRepository;
-        _unitOfWork = unitOfWork;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<IReadOnlyList<ConfigurationDto>> Handle(BulkUpdateConfigsCommand command, CancellationToken cancellationToken)

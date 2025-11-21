@@ -17,8 +17,8 @@ public class Enable2FACommandHandler : ICommandHandler<Enable2FACommand, Enable2
         ITotpService totpService,
         ILogger<Enable2FACommandHandler> logger)
     {
-        _totpService = totpService;
-        _logger = logger;
+        _totpService = totpService ?? throw new ArgumentNullException(nameof(totpService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<Enable2FAResult> Handle(Enable2FACommand command, CancellationToken cancellationToken)

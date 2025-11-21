@@ -20,8 +20,8 @@ public sealed class ImportN8nTemplateCommandHandler : ICommandHandler<ImportN8nT
         N8nTemplateService templateService,
         ILogger<ImportN8nTemplateCommandHandler> logger)
     {
-        _templateService = templateService;
-        _logger = logger;
+        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<ImportTemplateResponse> Handle(ImportN8nTemplateCommand command, CancellationToken cancellationToken)

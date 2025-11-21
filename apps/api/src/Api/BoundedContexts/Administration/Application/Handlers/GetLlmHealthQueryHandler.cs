@@ -18,8 +18,8 @@ public class GetLlmHealthQueryHandler : IQueryHandler<GetLlmHealthQuery, LlmHeal
         ProviderHealthCheckService healthCheckService,
         HybridLlmService hybridLlmService)
     {
-        _healthCheckService = healthCheckService;
-        _hybridLlmService = hybridLlmService;
+        _healthCheckService = healthCheckService ?? throw new ArgumentNullException(nameof(healthCheckService));
+        _hybridLlmService = hybridLlmService ?? throw new ArgumentNullException(nameof(hybridLlmService));
     }
 
     public Task<LlmHealthStatusDto> Handle(GetLlmHealthQuery query, CancellationToken cancellationToken)

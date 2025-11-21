@@ -19,8 +19,8 @@ public sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordC
         IPasswordResetService passwordResetService,
         ILogger<ResetPasswordCommandHandler> logger)
     {
-        _passwordResetService = passwordResetService;
-        _logger = logger;
+        _passwordResetService = passwordResetService ?? throw new ArgumentNullException(nameof(passwordResetService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<ResetPasswordResult> Handle(ResetPasswordCommand command, CancellationToken cancellationToken)

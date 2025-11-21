@@ -17,8 +17,8 @@ public class Get2FAStatusQueryHandler : IQueryHandler<Get2FAStatusQuery, TwoFact
         ITotpService totpService,
         ILogger<Get2FAStatusQueryHandler> logger)
     {
-        _totpService = totpService;
-        _logger = logger;
+        _totpService = totpService ?? throw new ArgumentNullException(nameof(totpService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<TwoFactorStatusDto?> Handle(Get2FAStatusQuery query, CancellationToken cancellationToken)

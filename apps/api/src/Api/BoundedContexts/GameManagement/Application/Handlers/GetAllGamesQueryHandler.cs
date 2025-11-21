@@ -15,7 +15,7 @@ public class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, IReadOnly
 
     public GetAllGamesQueryHandler(IGameRepository gameRepository)
     {
-        _gameRepository = gameRepository;
+        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
     }
 
     public async Task<IReadOnlyList<GameDto>> Handle(GetAllGamesQuery query, CancellationToken cancellationToken)

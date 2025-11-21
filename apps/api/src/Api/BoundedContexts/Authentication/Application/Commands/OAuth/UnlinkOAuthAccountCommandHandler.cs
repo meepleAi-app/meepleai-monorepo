@@ -23,10 +23,10 @@ public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAu
         IUnitOfWork unitOfWork,
         ILogger<UnlinkOAuthAccountCommandHandler> logger)
     {
-        _userRepository = userRepository;
-        _oauthAccountRepository = oauthAccountRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _oauthAccountRepository = oauthAccountRepository ?? throw new ArgumentNullException(nameof(oauthAccountRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<UnlinkOAuthAccountResult> Handle(UnlinkOAuthAccountCommand command, CancellationToken cancellationToken)

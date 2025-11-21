@@ -14,7 +14,7 @@ public class InvalidateCacheCommandHandler : ICommandHandler<InvalidateCacheComm
 
     public InvalidateCacheCommandHandler(IHybridCacheService cache)
     {
-        _cache = cache;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     public async Task<Unit> Handle(InvalidateCacheCommand command, CancellationToken cancellationToken)

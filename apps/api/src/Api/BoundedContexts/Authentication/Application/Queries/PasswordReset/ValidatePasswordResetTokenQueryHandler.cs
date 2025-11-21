@@ -18,8 +18,8 @@ public sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<Valid
         IPasswordResetService passwordResetService,
         ILogger<ValidatePasswordResetTokenQueryHandler> logger)
     {
-        _passwordResetService = passwordResetService;
-        _logger = logger;
+        _passwordResetService = passwordResetService ?? throw new ArgumentNullException(nameof(passwordResetService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<ValidatePasswordResetTokenResult> Handle(ValidatePasswordResetTokenQuery query, CancellationToken cancellationToken)

@@ -20,8 +20,8 @@ public sealed class GetWorkflowErrorsQueryHandler : IQueryHandler<GetWorkflowErr
         IWorkflowErrorLoggingService errorLoggingService,
         ILogger<GetWorkflowErrorsQueryHandler> logger)
     {
-        _errorLoggingService = errorLoggingService;
-        _logger = logger;
+        _errorLoggingService = errorLoggingService ?? throw new ArgumentNullException(nameof(errorLoggingService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<PagedResult<WorkflowErrorDto>> Handle(GetWorkflowErrorsQuery query, CancellationToken cancellationToken)

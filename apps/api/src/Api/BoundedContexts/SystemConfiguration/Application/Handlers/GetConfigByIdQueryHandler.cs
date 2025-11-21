@@ -11,7 +11,7 @@ public class GetConfigByIdQueryHandler : IQueryHandler<GetConfigByIdQuery, Confi
 
     public GetConfigByIdQueryHandler(IConfigurationRepository configurationRepository)
     {
-        _configurationRepository = configurationRepository;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
     }
 
     public async Task<ConfigurationDto?> Handle(GetConfigByIdQuery query, CancellationToken cancellationToken)

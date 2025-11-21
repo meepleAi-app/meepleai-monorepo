@@ -21,9 +21,9 @@ public sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand, 
         ITempSessionService tempSessionService,
         ILogger<Verify2FACommandHandler> logger)
     {
-        _totpService = totpService;
-        _tempSessionService = tempSessionService;
-        _logger = logger;
+        _totpService = totpService ?? throw new ArgumentNullException(nameof(totpService));
+        _tempSessionService = tempSessionService ?? throw new ArgumentNullException(nameof(tempSessionService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<Verify2FAResult> Handle(Verify2FACommand command, CancellationToken cancellationToken)

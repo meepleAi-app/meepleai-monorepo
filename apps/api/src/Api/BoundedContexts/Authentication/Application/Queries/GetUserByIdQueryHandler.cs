@@ -14,7 +14,7 @@ public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto?>
 
     public GetUserByIdQueryHandler(IUserRepository userRepository)
     {
-        _userRepository = userRepository;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     public async Task<UserDto?> Handle(GetUserByIdQuery query, CancellationToken cancellationToken)

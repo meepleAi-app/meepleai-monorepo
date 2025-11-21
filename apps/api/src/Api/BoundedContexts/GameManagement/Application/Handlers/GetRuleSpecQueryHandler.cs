@@ -15,7 +15,7 @@ public class GetRuleSpecQueryHandler : IQueryHandler<GetRuleSpecQuery, RuleSpecD
 
     public GetRuleSpecQueryHandler(MeepleAiDbContext dbContext)
     {
-        _dbContext = dbContext;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<RuleSpecDto?> Handle(GetRuleSpecQuery query, CancellationToken cancellationToken)

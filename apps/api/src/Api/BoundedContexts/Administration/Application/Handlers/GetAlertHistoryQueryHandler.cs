@@ -15,7 +15,7 @@ public class GetAlertHistoryQueryHandler : IQueryHandler<GetAlertHistoryQuery, L
 
     public GetAlertHistoryQueryHandler(IAlertingService alertingService)
     {
-        _alertingService = alertingService;
+        _alertingService = alertingService ?? throw new ArgumentNullException(nameof(alertingService));
     }
 
     public async Task<List<AlertDto>> Handle(GetAlertHistoryQuery query, CancellationToken cancellationToken)

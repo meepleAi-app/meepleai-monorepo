@@ -15,7 +15,7 @@ public class GetConfigByKeyQueryHandler : IQueryHandler<GetConfigByKeyQuery, Con
 
     public GetConfigByKeyQueryHandler(IConfigurationRepository configurationRepository)
     {
-        _configurationRepository = configurationRepository;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
     }
 
     public async Task<ConfigurationDto?> Handle(GetConfigByKeyQuery query, CancellationToken cancellationToken)

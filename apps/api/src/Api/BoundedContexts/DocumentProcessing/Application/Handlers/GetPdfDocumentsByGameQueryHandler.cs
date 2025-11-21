@@ -12,7 +12,7 @@ public class GetPdfDocumentsByGameQueryHandler : IQueryHandler<GetPdfDocumentsBy
 
     public GetPdfDocumentsByGameQueryHandler(IPdfDocumentRepository documentRepository)
     {
-        _documentRepository = documentRepository;
+        _documentRepository = documentRepository ?? throw new ArgumentNullException(nameof(documentRepository));
     }
 
     public async Task<IReadOnlyList<PdfDocumentDto>> Handle(GetPdfDocumentsByGameQuery query, CancellationToken cancellationToken)

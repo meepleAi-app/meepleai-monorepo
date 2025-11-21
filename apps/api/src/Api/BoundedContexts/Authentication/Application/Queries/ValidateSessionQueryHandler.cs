@@ -20,9 +20,9 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
         IUserRepository userRepository,
         TimeProvider timeProvider)
     {
-        _sessionRepository = sessionRepository;
-        _userRepository = userRepository;
-        _timeProvider = timeProvider;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<SessionStatusDto> Handle(ValidateSessionQuery query, CancellationToken cancellationToken)

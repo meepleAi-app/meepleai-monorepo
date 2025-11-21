@@ -16,8 +16,8 @@ public sealed class GenerateEvaluationReportQueryHandler : IQueryHandler<Generat
         IPromptEvaluationService evaluationService,
         ILogger<GenerateEvaluationReportQueryHandler> logger)
     {
-        _evaluationService = evaluationService;
-        _logger = logger;
+        _evaluationService = evaluationService ?? throw new ArgumentNullException(nameof(evaluationService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<(string Report, string ContentType)> Handle(GenerateEvaluationReportQuery query, CancellationToken cancellationToken)

@@ -19,8 +19,8 @@ public class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOnly
         IUserRepository userRepository,
         ILogger<SearchUsersQueryHandler> logger)
     {
-        _userRepository = userRepository;
-        _logger = logger;
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<IReadOnlyList<UserSearchResultDto>> Handle(SearchUsersQuery query, CancellationToken cancellationToken)

@@ -15,7 +15,7 @@ public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, S
 
     public GetSessionStatsQueryHandler(IGameSessionRepository sessionRepository)
     {
-        _sessionRepository = sessionRepository;
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
     }
 
     public async Task<SessionStatsDto> Handle(GetSessionStatsQuery query, CancellationToken cancellationToken)

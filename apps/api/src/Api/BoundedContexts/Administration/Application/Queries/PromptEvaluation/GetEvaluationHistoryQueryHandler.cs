@@ -17,8 +17,8 @@ public sealed class GetEvaluationHistoryQueryHandler : IQueryHandler<GetEvaluati
         IPromptEvaluationService evaluationService,
         ILogger<GetEvaluationHistoryQueryHandler> logger)
     {
-        _evaluationService = evaluationService;
-        _logger = logger;
+        _evaluationService = evaluationService ?? throw new ArgumentNullException(nameof(evaluationService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<List<PromptEvaluationResult>> Handle(GetEvaluationHistoryQuery query, CancellationToken cancellationToken)

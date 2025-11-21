@@ -17,8 +17,8 @@ public class ValidateApiKeyQueryHandler : IQueryHandler<ValidateApiKeyQuery, Use
         IApiKeyRepository apiKeyRepository,
         IUserRepository userRepository)
     {
-        _apiKeyRepository = apiKeyRepository;
-        _userRepository = userRepository;
+        _apiKeyRepository = apiKeyRepository ?? throw new ArgumentNullException(nameof(apiKeyRepository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     public async Task<UserDto?> Handle(ValidateApiKeyQuery query, CancellationToken cancellationToken)

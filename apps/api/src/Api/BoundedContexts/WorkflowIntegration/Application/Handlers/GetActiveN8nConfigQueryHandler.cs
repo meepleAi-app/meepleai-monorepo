@@ -11,7 +11,7 @@ public class GetActiveN8nConfigQueryHandler : IQueryHandler<GetActiveN8nConfigQu
 
     public GetActiveN8nConfigQueryHandler(IN8nConfigurationRepository configRepository)
     {
-        _configRepository = configRepository;
+        _configRepository = configRepository ?? throw new ArgumentNullException(nameof(configRepository));
     }
 
     public async Task<N8nConfigurationDto?> Handle(GetActiveN8nConfigQuery query, CancellationToken cancellationToken)

@@ -15,7 +15,7 @@ public class GetActiveAlertsQueryHandler : IQueryHandler<GetActiveAlertsQuery, L
 
     public GetActiveAlertsQueryHandler(IAlertingService alertingService)
     {
-        _alertingService = alertingService;
+        _alertingService = alertingService ?? throw new ArgumentNullException(nameof(alertingService));
     }
 
     public async Task<List<AlertDto>> Handle(GetActiveAlertsQuery query, CancellationToken cancellationToken)

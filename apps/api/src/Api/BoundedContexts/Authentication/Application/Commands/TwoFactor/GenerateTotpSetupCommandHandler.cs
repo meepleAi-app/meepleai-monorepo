@@ -18,8 +18,8 @@ public sealed class GenerateTotpSetupCommandHandler : ICommandHandler<GenerateTo
         ITotpService totpService,
         ILogger<GenerateTotpSetupCommandHandler> logger)
     {
-        _totpService = totpService;
-        _logger = logger;
+        _totpService = totpService ?? throw new ArgumentNullException(nameof(totpService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<GenerateTotpSetupResult> Handle(GenerateTotpSetupCommand command, CancellationToken cancellationToken)

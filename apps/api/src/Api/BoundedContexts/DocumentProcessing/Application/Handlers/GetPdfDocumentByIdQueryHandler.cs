@@ -12,7 +12,7 @@ public class GetPdfDocumentByIdQueryHandler : IQueryHandler<GetPdfDocumentByIdQu
 
     public GetPdfDocumentByIdQueryHandler(IPdfDocumentRepository documentRepository)
     {
-        _documentRepository = documentRepository;
+        _documentRepository = documentRepository ?? throw new ArgumentNullException(nameof(documentRepository));
     }
 
     public async Task<PdfDocumentDto?> Handle(GetPdfDocumentByIdQuery query, CancellationToken cancellationToken)

@@ -11,7 +11,7 @@ public class GetAllConfigsQueryHandler : IQueryHandler<GetAllConfigsQuery, Paged
 
     public GetAllConfigsQueryHandler(IConfigurationRepository configurationRepository)
     {
-        _configurationRepository = configurationRepository;
+        _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
     }
 
     public async Task<PagedConfigurationResult> Handle(GetAllConfigsQuery query, CancellationToken cancellationToken)

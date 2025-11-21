@@ -59,8 +59,8 @@ public class CreateApiKeyCommandHandlerTests
         Assert.True(result.ExpiresAt.HasValue);
         Assert.True(result.ExpiresAt.Value > DateTime.UtcNow);
 
-        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]
@@ -206,8 +206,8 @@ public class CreateApiKeyCommandHandlerTests
             () => _handler.Handle(command, CancellationToken.None)
         );
 
-        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), default), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
     }
 
     [Fact]
@@ -251,7 +251,7 @@ public class CreateApiKeyCommandHandlerTests
             () => _handler.Handle(command, CancellationToken.None)
         );
 
-        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), default), Times.Never);
     }
 
     [Fact]
@@ -388,7 +388,7 @@ public class CreateApiKeyCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]

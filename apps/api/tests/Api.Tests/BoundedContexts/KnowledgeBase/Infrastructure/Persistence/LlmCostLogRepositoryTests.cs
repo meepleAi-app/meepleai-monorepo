@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -27,8 +28,21 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     {
         // Arrange
         await ResetDatabaseAsync();
-        
+
+        // Create test user for foreign key constraint
         var userId = Guid.NewGuid();
+        var user = new UserEntity
+        {
+            Id = userId,
+            Email = "test@llmcost.com",
+            DisplayName = "Test User",
+            PasswordHash = "hash",
+            Role = "User",
+            CreatedAt = DateTime.UtcNow
+        };
+        DbContext.Users.Add(user);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
+
         var cost = new LlmCostCalculation
         {
             ModelId = "openai/gpt-4o-mini",
@@ -140,9 +154,33 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     {
         // Arrange
         await ResetDatabaseAsync();
-        
+
+        // Create test users for foreign key constraints
         var user1 = Guid.NewGuid();
         var user2 = Guid.NewGuid();
+
+        var testUser1 = new UserEntity
+        {
+            Id = user1,
+            Email = "user1@llmcost.com",
+            DisplayName = "Test User 1",
+            PasswordHash = "hash",
+            Role = "User",
+            CreatedAt = DateTime.UtcNow
+        };
+        var testUser2 = new UserEntity
+        {
+            Id = user2,
+            Email = "user2@llmcost.com",
+            DisplayName = "Test User 2",
+            PasswordHash = "hash",
+            Role = "User",
+            CreatedAt = DateTime.UtcNow
+        };
+        DbContext.Users.Add(testUser1);
+        DbContext.Users.Add(testUser2);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await Repository.LogCostAsync(user1, "User", CreateCost(0.001m), "chat", true, null, 100, null, null, ct: TestCancellationToken);

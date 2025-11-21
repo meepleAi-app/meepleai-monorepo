@@ -36,6 +36,15 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     private const string BarragePdfPath = "../../../../data/barrage_rulebook.pdf";
     private const string TerraformingMarsPdfPath = "../../../../data/terraforming-mars-regole.pdf";
 
+    // Helper to check if tests can run
+    private void EnsureTestInfrastructureAvailable()
+    {
+        if (_extractor == null)
+        {
+            Assert.Skip($"Docker image '{ContainerImage}' not available. Build with: cd apps/smoldocling-service && docker build -t {ContainerImage} .");
+        }
+    }
+
     public SmolDoclingIntegrationTests()
     {
         _output = Console.WriteLine;
@@ -43,6 +52,32 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
+        // Check if Docker image exists before attempting to start container
+        try
+        {
+            using var client = new Docker.DotNet.DockerClientConfiguration().CreateClient();
+            var images = await client.Images.ListImagesAsync(new Docker.DotNet.Models.ImagesListParameters
+            {
+                Filters = new Dictionary<string, IDictionary<string, bool>>
+                {
+                    ["reference"] = new Dictionary<string, bool> { [ContainerImage] = true }
+                }
+            });
+
+            if (!images.Any())
+            {
+                _output($"Docker image '{ContainerImage}' not found. Skipping integration tests.");
+                _output("To run these tests, build the image first:");
+                _output($"  cd apps/smoldocling-service && docker build -t {ContainerImage} .");
+                return; // Skip initialization - tests will be skipped
+            }
+        }
+        catch (Exception ex)
+        {
+            _output($"Docker check failed: {ex.Message}. Tests will be skipped.");
+            return;
+        }
+
         _output("Starting SmolDocling VLM service container...");
 
         // Build container configuration for SmolDocling
@@ -126,6 +161,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task SuccessfulPdfExtraction_ViaSmolDoclingService()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Use Barrage rulebook (21MB, Italian, moderate complexity)
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
@@ -160,6 +196,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ServiceTimeout_HandledGracefully()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Use small PDF to ensure normal completion (testing timeout requires cancellation)
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
@@ -181,6 +218,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task UserCancellation_PropagatesCorrectly()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
 
@@ -205,6 +243,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ServiceUnavailable_CircuitBreakerHandling()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Create extractor pointing to non-existent service
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole());
@@ -252,6 +291,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task InvalidPdf_ErrorHandling()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Create corrupted PDF (invalid header)
         var invalidPdfBytes = System.Text.Encoding.UTF8.GetBytes("This is not a valid PDF file content");
         await using var invalidStream = new MemoryStream(invalidPdfBytes);
@@ -295,6 +335,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task LargeFilePdf_ProcessesSuccessfully()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages, complex layout)
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
 
@@ -325,6 +366,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ConcurrentRequests_HandleMultipleSimultaneously()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Use Barrage PDF for concurrent processing
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
@@ -363,6 +405,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ServiceRestart_RecoveryAfterTemporaryFailure()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - First request to establish baseline
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 

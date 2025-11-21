@@ -35,12 +35,9 @@ public class SecurityHeadersMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // Add security headers before processing the request
-        context.Response.OnStarting(() =>
-        {
-            AddSecurityHeaders(context);
-            return Task.CompletedTask;
-        });
+        // Add security headers immediately before processing the request
+        // This ensures headers are present in all scenarios (including tests)
+        AddSecurityHeaders(context);
 
         await _next(context);
     }

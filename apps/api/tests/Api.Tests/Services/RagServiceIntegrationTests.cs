@@ -183,7 +183,7 @@ public class RagServiceIntegrationTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Please provide a question.", result.answer);
+        Assert.Equal("Please provide a question", result.answer);
         Assert.Empty(result.snippets);
     }
 

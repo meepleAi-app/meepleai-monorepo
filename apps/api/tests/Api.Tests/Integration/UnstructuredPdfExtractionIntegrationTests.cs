@@ -34,6 +34,15 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     private const string BarragePdfPath = "../../../../data/barrage_rulebook.pdf";
     private const string TerraformingMarsPdfPath = "../../../../data/terraforming-mars-regole.pdf";
 
+    // Helper to check if tests can run
+    private void EnsureTestInfrastructureAvailable()
+    {
+        if (_extractor == null)
+        {
+            Assert.Skip($"Docker image '{ContainerImage}' not available. Build with: cd apps/unstructured-service && docker build -t {ContainerImage} .");
+        }
+    }
+
     public UnstructuredPdfExtractionIntegrationTests()
     {
         _output = Console.WriteLine;
@@ -41,6 +50,32 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
+        // Check if Docker image exists before attempting to start container
+        try
+        {
+            using var client = new Docker.DotNet.DockerClientConfiguration().CreateClient();
+            var images = await client.Images.ListImagesAsync(new Docker.DotNet.Models.ImagesListParameters
+            {
+                Filters = new Dictionary<string, IDictionary<string, bool>>
+                {
+                    ["reference"] = new Dictionary<string, bool> { [ContainerImage] = true }
+                }
+            });
+
+            if (!images.Any())
+            {
+                _output($"Docker image '{ContainerImage}' not found. Skipping integration tests.");
+                _output("To run these tests, build the image first:");
+                _output($"  cd apps/unstructured-service && docker build -t {ContainerImage} .");
+                return; // Skip initialization - tests will be skipped
+            }
+        }
+        catch (Exception ex)
+        {
+            _output($"Docker check failed: {ex.Message}. Tests will be skipped.");
+            return;
+        }
+
         _output("Starting Unstructured service container...");
 
         // Build container configuration
@@ -116,6 +151,10 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task SimpleItalianPdf_SuccessfulExtraction()
     {
+        EnsureTestInfrastructureAvailable();
+        // Skip if Docker image not available
+        if (_extractor == null) Assert.Skip($"Docker image '{ContainerImage}' not available");
+
         // Arrange - Use Barrage rulebook (21MB, Italian)
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
@@ -139,6 +178,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ComplexMultiColumnPdf_SuccessfulExtraction()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Use Terraforming Mars rulebook (38MB, Italian, complex layout)
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
 
@@ -163,6 +203,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ItalianLanguageText_ExtractsCorrectly()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
@@ -188,6 +229,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task TableDetection_ExtractsStructuredData()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Board game rulebooks typically have tables
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
@@ -211,6 +253,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task QualityScoreCalculation_MeetsThreshold()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
@@ -242,6 +285,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ServiceTimeout_HandledGracefully()
     {
+        EnsureTestInfrastructureAvailable();
         // This test validates that extremely long operations would timeout
         // For integration tests, we rely on the service's own timeout handling
         // and verify our client handles it correctly
@@ -267,6 +311,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ServiceHealthCheck_RespondsCorrectly()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange & Act
         var response = await _httpClient!.GetAsync("/health", TestCancellationToken);
 
@@ -283,6 +328,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task InvalidPdf_HandledGracefully()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Create invalid PDF (corrupted header)
         var invalidPdfBytes = System.Text.Encoding.UTF8.GetBytes("This is not a PDF file");
         await using var invalidStream = new MemoryStream(invalidPdfBytes);
@@ -308,6 +354,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task LargeMultiPagePdf_ProcessesSuccessfully()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages)
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
 
@@ -329,6 +376,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task SemanticChunking_ProducesPagedResults()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
@@ -356,6 +404,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task MetadataExtraction_IncludesPageNumbers()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
 
@@ -387,6 +436,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task EndToEnd_Pipeline_WithRealPdf()
     {
+        EnsureTestInfrastructureAvailable();
         // Arrange - Full E2E test simulating actual usage
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
 

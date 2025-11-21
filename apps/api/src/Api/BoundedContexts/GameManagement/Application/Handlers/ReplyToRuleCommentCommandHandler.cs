@@ -30,9 +30,9 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
         TimeProvider timeProvider,
         ILogger<ReplyToRuleCommentCommandHandler> logger)
     {
-        _dbContext = dbContext;
-        _timeProvider = timeProvider;
-        _logger = logger;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<RuleCommentDto> Handle(ReplyToRuleCommentCommand command, CancellationToken cancellationToken)

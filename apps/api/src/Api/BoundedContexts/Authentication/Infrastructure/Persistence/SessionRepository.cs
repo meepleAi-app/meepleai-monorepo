@@ -95,9 +95,32 @@ public class SessionRepository : RepositoryBase, ISessionRepository
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        await DbContext.UserSessions
+        var sessionsToRevoke = await DbContext.UserSessions
             .Where(s => s.UserId == userId && s.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), cancellationToken);
+            .ToListAsync(cancellationToken);
+
+        if (sessionsToRevoke.Count == 0)
+        {
+            return; // No sessions to revoke (idempotent)
+        }
+
+        foreach (var session in sessionsToRevoke)
+        {
+            session.RevokedAt = now;
+            DbContext.Entry(session).State = EntityState.Modified;
+        }
+
+        try
+        {
+            var rowsAffected = await DbContext.SaveChangesAsync(cancellationToken);
+            // rowsAffected might be 0 if another concurrent operation already revoked the sessions
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Concurrency conflict: another process already revoked the session(s)
+            // This is expected and acceptable for concurrent revocations (idempotent operation)
+            // The session is already revoked by another process, so we can safely ignore this
+        }
     }
 
     /// <summary>

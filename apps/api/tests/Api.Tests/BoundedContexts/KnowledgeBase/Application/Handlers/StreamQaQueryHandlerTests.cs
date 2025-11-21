@@ -192,6 +192,11 @@ public class StreamQaQueryHandlerTests
             metadata: null
         );
 
+        // FIX: Mock GenerateQaCacheKey to return a valid cache key
+        _cacheMock
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("test-cache-key");
+
         _cacheMock
             .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cachedResponse);
@@ -287,7 +292,7 @@ public class StreamQaQueryHandlerTests
         }
 
         // Assert
-        _chatThreadRepositoryMock.Verify(x => x.GetByIdAsync(threadId, It.IsAny<CancellationToken>()), Times.Once);
+        _chatThreadRepositoryMock.Verify(x => x.GetByIdAsync(threadId, default), Times.Once);
         _chatContextServiceMock.Verify(x => x.ShouldIncludeChatHistory(chatThread), Times.Once);
         _chatContextServiceMock.Verify(x => x.BuildChatHistoryContext(chatThread), Times.Once);
         _chatContextServiceMock.Verify(x => x.EnrichPromptWithHistory(basePrompt, chatHistory), Times.Once);

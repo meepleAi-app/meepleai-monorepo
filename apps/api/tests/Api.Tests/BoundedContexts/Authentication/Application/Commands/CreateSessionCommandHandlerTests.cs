@@ -64,8 +64,8 @@ public class CreateSessionCommandHandlerTests
         Assert.Equal(user.Id, result.User.Id);
         Assert.Equal("user@example.com", result.User.Email);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]
@@ -168,8 +168,8 @@ public class CreateSessionCommandHandlerTests
         Assert.Contains(userId.ToString(), exception.Message);
         Assert.Contains("not found", exception.Message);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
     }
 
     #endregion
@@ -227,7 +227,7 @@ public class CreateSessionCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     #endregion

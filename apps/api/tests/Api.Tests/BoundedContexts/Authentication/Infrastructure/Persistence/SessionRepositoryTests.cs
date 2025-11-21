@@ -556,8 +556,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
 
         await Task.WhenAll(tasks);
 
-        // Assert
-        var revokedSession = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
+        // Assert - Use AsNoTracking to fetch fresh data from database (bypass change tracker cache)
+        var revokedSession = await DbContext.UserSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(revokedSession);
         Assert.NotNull(revokedSession.RevokedAt);
     }

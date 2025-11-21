@@ -43,6 +43,55 @@ public class AskQuestionQueryHandlerSecurityTests
         var mockHybridSearchService = new Mock<IHybridSearchService>();
         var mockSearchLogger = new Mock<ILogger<SearchQueryHandler>>();
 
+        // Setup IEmbeddingService to return valid EmbeddingResult
+        mockEmbeddingService
+            .Setup(e => e.GenerateEmbeddingAsync(
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult
+            {
+                Success = true,
+                Embeddings = new List<float[]> { new float[768] }, // 768-dimensional vector
+                ErrorMessage = null
+            });
+
+        // Setup IEmbeddingRepository to return empty results by default
+        mockEmbeddingRepo
+            .Setup(r => r.SearchByVectorAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Embedding>());
+
+        // Setup VectorSearchDomainService
+        mockVectorSearchService
+            .Setup(v => v.ValidateSearchParameters(It.IsAny<int>(), It.IsAny<double>()))
+            .Callback((int topK, double minScore) => { }); // No-op validation
+
+        mockVectorSearchService
+            .Setup(v => v.Search(It.IsAny<Vector>(), It.IsAny<List<Embedding>>(), It.IsAny<int>(), It.IsAny<double>()))
+            .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>()); // Return empty list
+
+        // Setup RRF Fusion domain service
+        mockRrfService
+            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>()))
+            .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>()); // Return empty list
+
+        // Setup IHybridSearchService to return empty results by default
+        mockHybridSearchService
+            .Setup(h => h.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<Guid>(),
+                It.IsAny<SearchMode>(),
+                It.IsAny<int>(),
+                It.IsAny<float>(),
+                It.IsAny<float>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+
         _searchHandler = new SearchQueryHandler(
             mockEmbeddingRepo.Object,
             mockVectorSearchService.Object,
@@ -388,6 +437,15 @@ public class AskQuestionQueryHandlerSecurityTests
         _mockQualityService
             .Setup(s => s.IsLowQuality(It.IsAny<Confidence>()))
             .Returns(false);
+
+        // Setup ChatContextDomainService (for cases where it's not explicitly mocked in tests)
+        _mockChatContextService
+            .Setup(s => s.ShouldIncludeChatHistory(It.IsAny<ChatThread>()))
+            .Returns(false); // Default: don't include history
+
+        _mockChatContextService
+            .Setup(s => s.EnrichPromptWithHistory(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>((basePrompt, history) => $"{basePrompt}\n{history}");
 
         // Setup LlmService
         _mockLlmService

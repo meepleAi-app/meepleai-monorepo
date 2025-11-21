@@ -67,7 +67,7 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
                 query.GameId, queryVector, query.Query, query.TopK, query.MinScore, cancellationToken),
 
             _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}")
-        };
+        } ?? new List<Domain.Entities.SearchResult>();
 
         // Map to DTOs
         var dtos = searchResults.Select(sr => new SearchResultDto(

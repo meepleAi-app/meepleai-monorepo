@@ -72,8 +72,8 @@ public class LoginCommandHandlerTests
         Assert.Equal("user@example.com", result.User.Email);
         Assert.Equal(Role.User.Value, result.User.Role);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
         _tempSessionServiceMock.Verify(x => x.CreateTempSessionAsync(It.IsAny<Guid>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -109,8 +109,8 @@ public class LoginCommandHandlerTests
         Assert.Null(result.User);
         Assert.Null(result.SessionToken);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
         _tempSessionServiceMock.Verify(x => x.CreateTempSessionAsync(user.Id, "127.0.0.1"), Times.Once);
     }
 
@@ -198,8 +198,8 @@ public class LoginCommandHandlerTests
 
         Assert.Equal("Invalid email or password", exception.Message);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
     }
 
     [Fact]
@@ -226,8 +226,8 @@ public class LoginCommandHandlerTests
 
         Assert.Equal("Invalid email or password", exception.Message);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
     }
 
     [Fact]
@@ -274,7 +274,7 @@ public class LoginCommandHandlerTests
             () => _handler.Handle(command, CancellationToken.None)
         );
 
-        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), default), Times.Never);
     }
 
     [Fact]
@@ -447,7 +447,7 @@ public class LoginCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]
@@ -476,7 +476,7 @@ public class LoginCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
     }
 
     #endregion

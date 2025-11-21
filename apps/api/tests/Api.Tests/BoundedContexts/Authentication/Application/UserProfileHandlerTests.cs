@@ -97,7 +97,7 @@ public class UserProfileHandlerTests
 
         // Assert
         Assert.Equal("New Display Name", user.DisplayName);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class UserProfileHandlerTests
 
         // Assert
         Assert.Equal("newemail@test.com", user.Email.Value);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public class UserProfileHandlerTests
         // Assert
         Assert.True(user.VerifyPassword("NewPassword456!"));
         Assert.False(user.VerifyPassword(currentPassword));
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]

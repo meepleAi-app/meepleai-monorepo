@@ -36,9 +36,6 @@ export const mockApi = api as jest.Mocked<typeof api> & {
   };
 };
 
-// Original window functions for restoration
-export const originalConfirm = window.confirm;
-
 /**
  * Creates standard test data used across chat tests
  */
@@ -161,9 +158,6 @@ export const resetAllMocks = () => {
   mockStopStreaming.mockReset();
   mockOnComplete = null;
   mockOnError = null;
-
-  // Restore window functions
-  window.confirm = originalConfirm;
 };
 
 /**

@@ -11,9 +11,13 @@ export interface ConfirmOptions {
   cancelText?: string
 }
 
-interface ConfirmState extends ConfirmOptions {
+interface ConfirmState {
   isOpen: boolean
-  resolve: ((value: boolean) => void) | null
+  title: string
+  message: string
+  variant: "default" | "destructive"
+  confirmText: string
+  cancelText: string
 }
 
 /**
@@ -59,8 +63,28 @@ interface ConfirmState extends ConfirmOptions {
  * @returns Object containing:
  * - confirm: Function that shows dialog and returns Promise<boolean>
  * - ConfirmDialogComponent: React component to render in JSX
+ *
+ * @important Concurrent Calls
+ * If multiple confirm() calls are made concurrently (without awaiting),
+ * only the most recent dialog will be displayed. Previous pending dialogs
+ * will be superseded. Always await each call before making the next.
+ *
+ * @example Correct usage (sequential)
+ * ```tsx
+ * await confirm({ title: "First" })
+ * await confirm({ title: "Second" })
+ * ```
+ *
+ * @example Avoid (concurrent - first promise may not resolve as expected)
+ * ```tsx
+ * confirm({ title: "First" })
+ * confirm({ title: "Second" })
+ * ```
  */
 export function useConfirmDialog() {
+  // Use ref to store resolve callback to prevent unnecessary re-renders
+  const resolveRef = React.useRef<((value: boolean) => void) | null>(null)
+
   const [state, setState] = React.useState<ConfirmState>({
     isOpen: false,
     title: "",
@@ -68,11 +92,11 @@ export function useConfirmDialog() {
     variant: "default",
     confirmText: "Confirm",
     cancelText: "Cancel",
-    resolve: null,
   })
 
   const confirm = React.useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise<boolean>((resolve) => {
+      resolveRef.current = resolve
       setState({
         isOpen: true,
         title: options.title,
@@ -80,28 +104,30 @@ export function useConfirmDialog() {
         variant: options.variant ?? "default",
         confirmText: options.confirmText ?? "Confirm",
         cancelText: options.cancelText ?? "Cancel",
-        resolve,
       })
     })
   }, [])
 
   const handleConfirm = React.useCallback(() => {
-    state.resolve?.(true)
-    setState((prev) => ({ ...prev, isOpen: false, resolve: null }))
-  }, [state.resolve])
+    resolveRef.current?.(true)
+    resolveRef.current = null
+    setState((prev) => ({ ...prev, isOpen: false }))
+  }, [])
 
   const handleCancel = React.useCallback(() => {
-    state.resolve?.(false)
-    setState((prev) => ({ ...prev, isOpen: false, resolve: null }))
-  }, [state.resolve])
+    resolveRef.current?.(false)
+    resolveRef.current = null
+    setState((prev) => ({ ...prev, isOpen: false }))
+  }, [])
 
   const handleOpenChange = React.useCallback((open: boolean) => {
     if (!open) {
       // Dialog was closed via overlay or escape key - treat as cancel
-      state.resolve?.(false)
-      setState((prev) => ({ ...prev, isOpen: false, resolve: null }))
+      resolveRef.current?.(false)
+      resolveRef.current = null
+      setState((prev) => ({ ...prev, isOpen: false }))
     }
-  }, [state.resolve])
+  }, [])
 
   const ConfirmDialogComponent = React.useCallback(() => {
     return (

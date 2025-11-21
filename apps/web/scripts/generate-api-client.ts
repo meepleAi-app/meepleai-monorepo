@@ -17,7 +17,7 @@
  * Regenerate it when API changes by:
  *   1. Fix build errors (ActiveSession, EndpointFilter issues)
  *   2. Run API: cd apps/api && dotnet run
- *   3. Download spec: curl http://localhost:5080/swagger/v1/swagger.json -o apps/api/src/Api/openapi.json
+ *   3. Download spec: curl http://localhost:5080/openapi/v1.json -o apps/api/src/Api/openapi.json
  *
  * Architecture:
  * - Zod Schemas: Generated automatically (this script)
@@ -28,7 +28,7 @@ import { generateZodClientFromOpenAPI } from 'openapi-zod-client';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-const OPENAPI_URL = process.env.OPENAPI_URL || 'http://localhost:8080/swagger/v1/swagger.json';
+const OPENAPI_URL = process.env.OPENAPI_URL || 'http://localhost:8080/openapi/v1.json';
 const OPENAPI_FILE = process.env.OPENAPI_FILE || '../../api/src/Api/openapi.json';
 const OUTPUT_DIR = path.join(__dirname, '../src/lib/api/generated');
 

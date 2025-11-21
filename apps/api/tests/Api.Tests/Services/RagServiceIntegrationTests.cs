@@ -508,10 +508,10 @@ public class RagServiceIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// Test08: Verify that RagService requests TopK configuration
+    /// Test09: Verify that RagService requests MinScore configuration
     /// </summary>
     [Fact]
-    public async Task AskAsync_RequestsTopKConfiguration()
+    public async Task AskAsync_RequestsMinScoreConfiguration()
     {
         // Arrange
         var customMock = RagTestHelpers.CreateCustomConfigProvider(minScore: 0.8);

@@ -287,7 +287,7 @@ jobs:
 
       - name: Upload Playwright Report
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-e2e-report-${{ github.run_number }}
           path: apps/web/playwright-report/
@@ -470,7 +470,7 @@ jobs:
 
       - name: Upload Newman Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: newman-reports-${{ github.run_number }}
           path: |
@@ -480,7 +480,7 @@ jobs:
 
       - name: Upload API Logs
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: api-logs-${{ github.run_number }}
           path: apps/api/src/Api/api.log
@@ -548,7 +548,7 @@ jobs:
         run: pnpm test:e2e e2e/accessibility.spec.ts
       - name: Upload Playwright Report
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-a11y-report-${{ github.run_number }}
           path: apps/web/playwright-report/
@@ -690,7 +690,7 @@ jobs:
 
       - name: Upload Coverage Report
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: api-coverage-report-${{ github.run_number }}
           path: apps/api/tests/Api.Tests/coverage-report/
@@ -893,7 +893,7 @@ jobs:
 
       - name: Upload RAG Evaluation Report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: rag-evaluation-report-${{ github.run_number }}
           path: apps/api/evaluation-reports/
@@ -1038,7 +1038,7 @@ jobs:
 
       - name: Upload Test Results
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: llm-integration-test-results-${{ github.run_number }}
           path: apps/api/tests/Api.Tests/TestResults/

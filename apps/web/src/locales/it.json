@@ -46,6 +46,7 @@
   },
   "auth": {
     "login": {
+      "signInDescription": "Accedi al tuo account per iniziare",
       "signInTo": "Accedi a MeepleAI"
     },
     "oauth": {

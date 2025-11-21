@@ -127,7 +127,7 @@ public class UpdateUserCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(Role.Admin.Value, result.Role);
+        Assert.Equal("admin", result.Role); // Role values are lowercase
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -235,7 +235,7 @@ public class UpdateUserCommandHandlerTests
         Assert.NotNull(result);
         Assert.Equal("new@example.com", result.Email);
         Assert.Equal("New Name", result.DisplayName);
-        Assert.Equal(Role.Editor.Value, result.Role);
+        Assert.Equal("editor", result.Role); // Role values are lowercase
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

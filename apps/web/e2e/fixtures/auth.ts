@@ -58,6 +58,16 @@ export async function setupMockAuth(page: Page, role: 'Admin' | 'Editor' | 'User
     expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
   };
 
+  // Catch-all for any unmocked API calls - MUST BE FIRST
+  // More specific route mocks below will override this
+  await page.route(`${API_BASE}/api/**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] })
+    });
+  });
+
   // Mock /auth/me to return authenticated user
   await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
     await route.fulfill({
@@ -75,6 +85,102 @@ export async function setupMockAuth(page: Page, role: 'Admin' | 'Editor' | 'User
       body: JSON.stringify(userResponse)
     });
   });
+
+  // Mock games endpoint (commonly needed by authenticated pages)
+  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([])
+    });
+  });
+
+  // Mock chat/threads endpoint
+  await page.route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([])
+    });
+  });
+
+  // Mock user profile endpoint
+  await page.route(`${API_BASE}/api/v1/users/me`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: userResponse.user.id,
+        email: userResponse.user.email,
+        displayName: userResponse.user.displayName,
+        role: userResponse.user.role,
+        createdAt: new Date().toISOString()
+      })
+    });
+  });
+
+  // Mock settings/profile endpoints
+  await page.route(`${API_BASE}/api/v1/settings/**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true })
+    });
+  });
+
+  // Mock RuleSpec/editor endpoints (for Editor role)
+  if (role === 'Editor' || role === 'Admin') {
+    await page.route(`${API_BASE}/api/v1/rulespecs**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+    });
+
+    await page.route(`${API_BASE}/api/v1/versions**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+    });
+  }
+
+  // Mock admin endpoints (for admin role)
+  if (role === 'Admin') {
+    await page.route(`${API_BASE}/api/v1/admin/**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: [] })
+      });
+    });
+
+    await page.route(`${API_BASE}/api/v1/configuration**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+    });
+
+    await page.route(`${API_BASE}/api/v1/users**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+    });
+
+    await page.route(`${API_BASE}/api/v1/analytics**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ metrics: [] })
+      });
+    });
+  }
 
   return userResponse;
 }

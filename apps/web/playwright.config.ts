@@ -18,8 +18,8 @@ export default defineConfig({
   timeout: 60000, // 60s global timeout for dev mode
   fullyParallel: true, // Issue #843: Enable parallel for better CI performance
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 4 : 2, // Issue #843: 4 workers in CI, 2 local for optimal speed
+  retries: process.env.CI ? 1 : 0, // Reduce retries from 2 to 1 for faster feedback
+  workers: process.env.CI ? 8 : 4, // Issue #843: Increased from 4 to 8 workers in CI, 4 local for optimal speed
   reporter: process.env.CI ? 'dot' : 'html', // Concise output in CI, HTML report locally
   use: {
     baseURL,

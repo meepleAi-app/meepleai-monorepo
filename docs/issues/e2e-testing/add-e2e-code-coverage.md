@@ -102,14 +102,21 @@ export default defineConfig({
 }
 ```
 
-### Option 2: V8 Coverage (Playwright Built-in)
+### Option 2: V8 Coverage (Playwright with CDP)
+
+> **⚠️ IMPORTANT NOTE**: Playwright does NOT have a built-in `page.coverage` API like Puppeteer. The code example below is **incorrect** and will throw `TypeError: page.coverage is not a function` at runtime.
+>
+> To collect V8 coverage with Playwright, you must use the Chrome DevTools Protocol (CDP) directly via `page.context().newCDPSession()`. This requires significant additional setup and is not recommended for most use cases. **Option 1 (Istanbul/NYC) is the recommended approach for Playwright**.
+>
+> This section is kept for reference but should not be used as-is. See [Playwright CDP documentation](https://playwright.dev/docs/api/class-cdpsession) for the correct implementation.
 
 ```bash
-# Install V8 to Istanbul converter
+# Install V8 to Istanbul converter (if using CDP approach)
 pnpm add -D v8-to-istanbul
 ```
 
 ```typescript
+// ❌ INCORRECT - This code uses Puppeteer API, not Playwright
 // tests/fixtures/coverage.ts - Collect coverage in test hooks
 import { test as base, Page } from '@playwright/test';
 import fs from 'fs/promises';
@@ -123,7 +130,8 @@ type CoverageFixtures = {
 export const test = base.extend<CoverageFixtures>({
   autoTestFixture: [
     async ({ page }, use, testInfo) => {
-      // Start V8 coverage collection via Chrome DevTools Protocol
+      // ❌ ERROR: page.coverage does not exist in Playwright
+      // This is a Puppeteer API, not Playwright API
       await page.coverage.startJSCoverage({
         resetOnNavigation: false,
         reportAnonymousScripts: true,
@@ -131,7 +139,7 @@ export const test = base.extend<CoverageFixtures>({
 
       await use();
 
-      // Stop coverage and save results
+      // ❌ ERROR: page.coverage does not exist in Playwright
       const coverage = await page.coverage.stopJSCoverage();
 
       if (coverage.length > 0) {

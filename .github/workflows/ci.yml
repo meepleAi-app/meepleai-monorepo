@@ -28,7 +28,7 @@ permissions:
   contents: read        # Required: Checkout code
   pull-requests: write  # Required: Comment on PRs with test results
   checks: write         # Required: Report test results and coverage
-  actions: read         # Required: Access workflow artifacts for comparison
+  actions: write        # Required: Upload artifacts (actions/upload-artifact@v6)
 
 # Cancel previous runs on same PR/branch to avoid piling up
 concurrency:
@@ -303,8 +303,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: meepleai
-          POSTGRES_PASSWORD: meepleai_dev_password
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'meepleai' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meepleai_dev_password' }}
           POSTGRES_DB: meepleai_dev
         ports:
           - 5432:5432
@@ -359,7 +359,7 @@ jobs:
         working-directory: apps/api/src/Api
         env:
           ASPNETCORE_ENVIRONMENT: Development
-          ConnectionStrings__Postgres: "Host=localhost;Port=5432;Database=meepleai_dev;Username=meepleai;Password=meepleai_dev_password"
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_dev;Username=meepleai;Password=meepleai_dev_password' }}
           QDRANT_URL: "http://localhost:6333"
           REDIS_URL: "localhost:6379"
           OPENROUTER_API_KEY: "test-key-for-ci"
@@ -564,8 +564,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: meeple
-          POSTGRES_PASSWORD: meeplepass
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'meeple' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meeplepass' }}
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
@@ -646,7 +646,7 @@ jobs:
           OPENROUTER_API_KEY: test-key-for-ci
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
-          ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
           # Test Pyramid: 70% Unit Tests (<5s) + 20% Integration Tests (<2min)
@@ -744,8 +744,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: meeple
-          POSTGRES_PASSWORD: meeplepass
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'meeple' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meeplepass' }}
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
@@ -827,7 +827,7 @@ jobs:
           CI: true
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
-          ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
         run: |
           # Quality Tests: Validate AI quality metrics on golden dataset
           # Thresholds:
@@ -848,7 +848,7 @@ jobs:
         env:
           CI: true
           QDRANT_URL: http://127.0.0.1:6333
-          ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
         run: |
           # Create output directory
           mkdir -p evaluation-reports
@@ -918,8 +918,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: meeple
-          POSTGRES_PASSWORD: meeplepass
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'meeple' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meeplepass' }}
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
@@ -1026,7 +1026,7 @@ jobs:
           OPENROUTER_API_KEY: test-key-for-ci
           QDRANT_URL: http://127.0.0.1:6333
           REDIS_URL: 127.0.0.1:6379
-          ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
           echo "::notice::Running LLM integration tests with Ollama"

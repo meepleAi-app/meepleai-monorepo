@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read        # Required: Checkout code and compare migrations
   pull-requests: write  # Required: Comment on PRs with migration validation results
-  actions: read         # Required: Upload SQL script artifacts
+  actions: write        # Required: Upload SQL script artifacts (actions/upload-artifact@v6)
 
 jobs:
   validate-migrations:

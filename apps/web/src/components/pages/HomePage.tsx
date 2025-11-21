@@ -17,6 +17,7 @@ import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { ThemeSwitcher } from "@/components/layout";
 import { Button } from "@/components/ui/button";
+import { MotionButton } from "@/components/ui/motion-button";
 import { Card } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth";
 import { useAuth } from "@/hooks/useAuth";
@@ -127,47 +128,32 @@ export default function HomePage() {
               {t('home.hero.subtitle')}
             </p>
             <div className="flex flex-wrap gap-4">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <MotionButton
+                onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
+                className="text-lg shadow-[0_15px_45px_rgba(14,116,244,0.35)] focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                data-testid="hero-get-started"
               >
-                <Button
-                  onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
-                  className="text-lg shadow-[0_15px_45px_rgba(14,116,244,0.35)] focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                  data-testid="hero-get-started"
-                >
-                  {authUser ? t('home.hero.cta.goToChat') : t('home.hero.cta.getStarted')}
-                </Button>
-              </motion.div>
+                {authUser ? t('home.hero.cta.goToChat') : t('home.hero.cta.getStarted')}
+              </MotionButton>
               {!authUser && (
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button
-                    variant="outline"
-                    className="text-lg border-white/70 text-white hover:bg-white hover:text-slate-900 focus-visible:ring-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                    onClick={handleTryDemo}
-                    data-testid="hero-try-demo"
-                  >
-                    {t('home.hero.cta.tryDemo')}
-                  </Button>
-                </motion.div>
-              )}
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
+                <MotionButton
                   variant="outline"
                   className="text-lg border-white/70 text-white hover:bg-white hover:text-slate-900 focus-visible:ring-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                  asChild
+                  onClick={handleTryDemo}
+                  data-testid="hero-try-demo"
                 >
-                  <a href="#features">
-                    {t('home.hero.cta.seeHow')}
-                  </a>
-                </Button>
-              </motion.div>
+                  {t('home.hero.cta.tryDemo')}
+                </MotionButton>
+              )}
+              <MotionButton
+                variant="outline"
+                className="text-lg border-white/70 text-white hover:bg-white hover:text-slate-900 focus-visible:ring-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                asChild
+              >
+                <a href="#features">
+                  {t('home.hero.cta.seeHow')}
+                </a>
+              </MotionButton>
             </div>
           </motion.div>
 
@@ -242,18 +228,13 @@ export default function HomePage() {
         >
           <h2 className="text-5xl font-bold">{t('home.cta.title')}</h2>
           <p className="text-xl opacity-90">{t('home.cta.subtitle')}</p>
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <MotionButton
+            onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
+            className="text-lg bg-white text-primary hover:bg-slate-100"
+            data-testid="cta-get-started"
           >
-            <Button
-              onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
-              className="text-lg bg-white text-primary hover:bg-slate-100"
-              data-testid="cta-get-started"
-            >
-              {authUser ? t('home.hero.cta.startChatting') : t('home.hero.cta.getStarted')}
-            </Button>
-          </motion.div>
+            {authUser ? t('home.hero.cta.startChatting') : t('home.hero.cta.getStarted')}
+          </MotionButton>
         </motion.div>
       </section>
       </main>

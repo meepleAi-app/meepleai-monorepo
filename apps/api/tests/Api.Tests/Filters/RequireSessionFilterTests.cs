@@ -20,6 +20,24 @@ public class RequireSessionFilterTests
         _nextMock = new Mock<EndpointFilterDelegate>();
     }
 
+    /// <summary>
+    /// Test implementation of EndpointFilterInvocationContext for unit testing.
+    /// DefaultEndpointFilterInvocationContext is internal to ASP.NET Core.
+    /// </summary>
+    private sealed class TestEndpointFilterInvocationContext : EndpointFilterInvocationContext
+    {
+        private readonly HttpContext _httpContext;
+
+        public TestEndpointFilterInvocationContext(HttpContext httpContext)
+        {
+            _httpContext = httpContext;
+        }
+
+        public override HttpContext HttpContext => _httpContext;
+
+        public override IList<object?> Arguments => new List<object?>();
+    }
+
     [Fact]
     public async Task InvokeAsync_ReturnsUnauthorized_WhenSessionNotPresent()
     {
@@ -93,7 +111,7 @@ public class RequireSessionFilterTests
         // Set session key with null value
         httpContext.Items[nameof(ActiveSession)] = null;
 
-        var context = new DefaultEndpointFilterInvocationContext(httpContext);
+        var context = new TestEndpointFilterInvocationContext(httpContext);
 
         // Act
         var result = await filter.InvokeAsync(context, _nextMock.Object);
@@ -114,7 +132,7 @@ public class RequireSessionFilterTests
         // Set session key with wrong type (string instead of ActiveSession)
         httpContext.Items[nameof(ActiveSession)] = "not a session";
 
-        var context = new DefaultEndpointFilterInvocationContext(httpContext);
+        var context = new TestEndpointFilterInvocationContext(httpContext);
 
         // Act
         var result = await filter.InvokeAsync(context, _nextMock.Object);
@@ -136,7 +154,7 @@ public class RequireSessionFilterTests
             httpContext.Items[nameof(ActiveSession)] = testSession;
         }
 
-        return new DefaultEndpointFilterInvocationContext(httpContext);
+        return new TestEndpointFilterInvocationContext(httpContext);
     }
 
     private ActiveSession CreateTestSession()

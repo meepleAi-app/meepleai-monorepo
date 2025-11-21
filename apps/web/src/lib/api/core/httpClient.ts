@@ -72,6 +72,132 @@ export class HttpClient {
     schema?: z.ZodSchema<T>,
     options?: RequestOptions
   ): Promise<T | null> {
+    // Generate cache key for deduplication (opt-in by default for GET)
+    const cacheKey = globalRequestCache.generateKey(
+      'GET',
+      `${this.baseUrl}${path}`,
+      undefined,
+      this.getAuthContext()
+    );
+
+    // Use request cache for deduplication (wraps retry logic)
+    return globalRequestCache.dedupe(
+      cacheKey,
+      async () => {
+        // Check circuit breaker before attempting request
+        if (!options?.skipCircuitBreaker && !canExecuteCircuit(path)) {
+          const error = new Error(`Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`);
+          error.name = 'CircuitBreakerError';
+          throw error;
+        }
+
+        let retryCount = 0;
+
+        const result = await withRetry(
+          async () => {
+            try {
+              const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: this.getHeaders(),
+                ...options,
+              });
+
+              // 401 returns null for optional authentication (not an error to retry)
+              if (response.status === 401) {
+                return null;
+              }
+
+              if (!response.ok) {
+                await this.handleError(path, response, options);
+              }
+
+              const data = await response.json();
+
+              // Validate response with Zod if schema provided
+              if (schema) {
+                const validated = this.validateResponse(path, data, schema);
+
+                // Track success after retry
+                if (retryCount > 0) {
+                  recordRetrySuccess();
+                }
+
+                // Record circuit breaker success
+                if (!options?.skipCircuitBreaker) {
+                  recordCircuitSuccess(path);
+                }
+
+                return validated;
+              }
+
+              // Track success after retry
+              if (retryCount > 0) {
+                recordRetrySuccess();
+              }
+
+              // Record circuit breaker success
+              if (!options?.skipCircuitBreaker) {
+                recordCircuitSuccess(path);
+              }
+
+              return data as T;
+            } catch (error) {
+              // Convert fetch errors to NetworkError for retry logic
+              if (error instanceof TypeError && error.message.includes('fetch')) {
+                throw new NetworkError({
+                  message: `Network error for ${path}: ${error.message}`,
+                  endpoint: path,
+                });
+              }
+              throw error;
+            }
+          },
+          {
+            ...options?.retry,
+            onRetry: (attempt, error, delayMs) => {
+              retryCount = attempt;
+
+              // Check for Retry-After header for adaptive backoff
+              if (error instanceof ApiError && error.response) {
+                const retryAfterHeader = error.response.headers.get('Retry-After');
+                const retryAfterMs = parseRetryAfter(retryAfterHeader);
+
+                if (retryAfterMs) {
+                  console.info(
+                    `[AdaptiveBackoff] Server requested delay via Retry-After header for ${path}: ${retryAfterMs}ms`
+                  );
+                }
+              }
+
+              // Record metrics for each retry
+              const statusCode = error instanceof ApiError ? error.statusCode : undefined;
+              recordRetryAttempt(path, statusCode, delayMs);
+
+              // Call user-provided callback if exists
+              if (options?.retry?.onRetry) {
+                options.retry.onRetry(attempt, error, delayMs);
+              }
+            },
+          }
+        ).catch((error) => {
+          // Track failure after all retries exhausted
+          if (retryCount > 0) {
+            recordRetryFailure();
+          }
+
+          // Record circuit breaker failure
+          if (!options?.skipCircuitBreaker) {
+            recordCircuitFailure(path);
+          }
+
+          throw error;
+        });
+
+        return result;
+      },
+      options?.skipDedup ?? false // Default: deduplication enabled for GET
+    );
     // Check circuit breaker before attempting request
     if (!options?.skipCircuitBreaker && !canExecuteCircuit(path)) {
       const error = new Error(`Circuit breaker is OPEN for ${path}. Request denied to prevent cascading failures.`);
@@ -194,6 +320,110 @@ export class HttpClient {
     schema?: z.ZodSchema<T>,
     options?: RequestOptions
   ): Promise<T> {
+    // Generate cache key for deduplication (opt-out by default for POST)
+    const cacheKey = globalRequestCache.generateKey(
+      'POST',
+      `${this.baseUrl}${path}`,
+      body,
+      this.getAuthContext()
+    );
+
+    // Use request cache for deduplication (wraps retry logic)
+    return globalRequestCache.dedupe(
+      cacheKey,
+      async () => {
+        let retryCount = 0;
+
+        const result = await withRetry(
+          async () => {
+            try {
+              const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  ...this.getHeaders(),
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body ?? {}),
+                ...options,
+              });
+
+              if (response.status === 401) {
+                const error = await createApiError(path, response);
+                if (!options?.skipErrorLogging) {
+                  logApiError(error);
+                }
+                throw error;
+              }
+
+              if (!response.ok) {
+                await this.handleError(path, response, options);
+              }
+
+              // Handle 204 No Content (no body to parse)
+              if (response.status === 204) {
+                // Track success after retry
+                if (retryCount > 0) {
+                  recordRetrySuccess();
+                }
+                return undefined as T;
+              }
+
+              const data = await response.json();
+
+              // Validate response with Zod if schema provided
+              if (schema) {
+                const validated = this.validateResponse(path, data, schema);
+                // Track success after retry
+                if (retryCount > 0) {
+                  recordRetrySuccess();
+                }
+                return validated;
+              }
+
+              // Track success after retry
+              if (retryCount > 0) {
+                recordRetrySuccess();
+              }
+
+              return data as T;
+            } catch (error) {
+              // Convert fetch errors to NetworkError for retry logic
+              if (error instanceof TypeError && error.message.includes('fetch')) {
+                throw new NetworkError({
+                  message: `Network error for ${path}: ${error.message}`,
+                  endpoint: path,
+                });
+              }
+              throw error;
+            }
+          },
+          {
+            ...options?.retry,
+            onRetry: (attempt, error, delayMs) => {
+              retryCount = attempt;
+              // Record metrics for each retry
+              const statusCode = error instanceof ApiError ? error.statusCode : undefined;
+              recordRetryAttempt(path, statusCode, delayMs);
+
+              // Call user-provided callback if exists
+              if (options?.retry?.onRetry) {
+                options.retry.onRetry(attempt, error, delayMs);
+              }
+            },
+          }
+        ).catch((error) => {
+          // Track failure after all retries exhausted
+          if (retryCount > 0) {
+            recordRetryFailure();
+          }
+          throw error;
+        });
+
+        return result;
+      },
+      options?.skipDedup ?? true // Default: deduplication disabled for POST
+    );
     let retryCount = 0;
 
     const result = await withRetry(
@@ -294,6 +524,101 @@ export class HttpClient {
     schema?: z.ZodSchema<T>,
     options?: RequestOptions
   ): Promise<T> {
+    // Generate cache key for deduplication (opt-out by default for PUT)
+    const cacheKey = globalRequestCache.generateKey(
+      'PUT',
+      `${this.baseUrl}${path}`,
+      body,
+      this.getAuthContext()
+    );
+
+    // Use request cache for deduplication (wraps retry logic)
+    return globalRequestCache.dedupe(
+      cacheKey,
+      async () => {
+        let retryCount = 0;
+
+        const result = await withRetry(
+          async () => {
+            try {
+              const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+                method: 'PUT',
+                credentials: 'include',
+                headers: {
+                  ...this.getHeaders(),
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+                ...options,
+              });
+
+              if (response.status === 401) {
+                const error = await createApiError(path, response);
+                if (!options?.skipErrorLogging) {
+                  logApiError(error);
+                }
+                throw error;
+              }
+
+              if (!response.ok) {
+                await this.handleError(path, response, options);
+              }
+
+              const data = await response.json();
+
+              // Validate response with Zod if schema provided
+              if (schema) {
+                const validated = this.validateResponse(path, data, schema);
+                // Track success after retry
+                if (retryCount > 0) {
+                  recordRetrySuccess();
+                }
+                return validated;
+              }
+
+              // Track success after retry
+              if (retryCount > 0) {
+                recordRetrySuccess();
+              }
+
+              return data as T;
+            } catch (error) {
+              // Convert fetch errors to NetworkError for retry logic
+              if (error instanceof TypeError && error.message.includes('fetch')) {
+                throw new NetworkError({
+                  message: `Network error for ${path}: ${error.message}`,
+                  endpoint: path,
+                });
+              }
+              throw error;
+            }
+          },
+          {
+            ...options?.retry,
+            onRetry: (attempt, error, delayMs) => {
+              retryCount = attempt;
+              // Record metrics for each retry
+              const statusCode = error instanceof ApiError ? error.statusCode : undefined;
+              recordRetryAttempt(path, statusCode, delayMs);
+
+              // Call user-provided callback if exists
+              if (options?.retry?.onRetry) {
+                options.retry.onRetry(attempt, error, delayMs);
+              }
+            },
+          }
+        ).catch((error) => {
+          // Track failure after all retries exhausted
+          if (retryCount > 0) {
+            recordRetryFailure();
+          }
+          throw error;
+        });
+
+        return result;
+      },
+      options?.skipDedup ?? true // Default: deduplication disabled for PUT
+    );
     let retryCount = 0;
 
     const result = await withRetry(
@@ -380,6 +705,83 @@ export class HttpClient {
    * DELETE request with automatic retry
    */
   async delete(path: string, options?: RequestOptions): Promise<void> {
+    // Generate cache key for deduplication (opt-out by default for DELETE)
+    const cacheKey = globalRequestCache.generateKey(
+      'DELETE',
+      `${this.baseUrl}${path}`,
+      undefined,
+      this.getAuthContext()
+    );
+
+    // Use request cache for deduplication (wraps retry logic)
+    return globalRequestCache.dedupe(
+      cacheKey,
+      async () => {
+        let retryCount = 0;
+
+        await withRetry(
+          async () => {
+            try {
+              const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: this.getHeaders(),
+                ...options,
+              });
+
+              if (response.status === 401) {
+                const error = await createApiError(path, response);
+                if (!options?.skipErrorLogging) {
+                  logApiError(error);
+                }
+                throw error;
+              }
+
+              if (!response.ok) {
+                await this.handleError(path, response, options);
+              }
+
+              // Track success after retry
+              if (retryCount > 0) {
+                recordRetrySuccess();
+              }
+
+              // DELETE returns 204 NoContent, no body to parse
+            } catch (error) {
+              // Convert fetch errors to NetworkError for retry logic
+              if (error instanceof TypeError && error.message.includes('fetch')) {
+                throw new NetworkError({
+                  message: `Network error for ${path}: ${error.message}`,
+                  endpoint: path,
+                });
+              }
+              throw error;
+            }
+          },
+          {
+            ...options?.retry,
+            onRetry: (attempt, error, delayMs) => {
+              retryCount = attempt;
+              // Record metrics for each retry
+              const statusCode = error instanceof ApiError ? error.statusCode : undefined;
+              recordRetryAttempt(path, statusCode, delayMs);
+
+              // Call user-provided callback if exists
+              if (options?.retry?.onRetry) {
+                options.retry.onRetry(attempt, error, delayMs);
+              }
+            },
+          }
+        ).catch((error) => {
+          // Track failure after all retries exhausted
+          if (retryCount > 0) {
+            recordRetryFailure();
+          }
+          throw error;
+        });
+      },
+      options?.skipDedup ?? true // Default: deduplication disabled for DELETE
+    );
     let retryCount = 0;
 
     await withRetry(

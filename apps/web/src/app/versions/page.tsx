@@ -9,6 +9,8 @@ import { DiffViewerEnhanced } from "@/components/diff";
 import { VersionTimeline, VersionTimelineFilters } from "@/components/versioning";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/utils/errorHandler";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 type AuthUser = {
   id: string;
@@ -132,7 +134,11 @@ function VersionHistoryContent() {
         }
       }
     } catch (err) {
-      console.error(err);
+      logger.error(
+        'Failed to load version history',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('VersionHistoryPage', 'loadHistory', { gameId: gId, operation: 'load_history' })
+      );
       setErrorMessage(getErrorMessage(err, "Impossibile caricare lo storico versioni."));
     } finally {
       setIsLoadingHistory(false);
@@ -147,7 +153,11 @@ function VersionHistoryContent() {
         setTimelineAuthors(response.authors);
       }
     } catch (err) {
-      console.error("Failed to load timeline authors:", err);
+      logger.error(
+        'Failed to load timeline authors',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('VersionHistoryPage', 'loadTimelineAuthors', { gameId: gId, operation: 'load_timeline_authors' })
+      );
     }
   }, []);
 
@@ -167,7 +177,11 @@ function VersionHistoryContent() {
         setDiff(diffData);
       }
     } catch (err) {
-      console.error(err);
+      logger.error(
+        'Failed to load version diff',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('VersionHistoryPage', 'loadDiff', { gameId, fromVersion: selectedFromVersion, toVersion: selectedToVersion, operation: 'load_diff' })
+      );
       setErrorMessage(getErrorMessage(err, "Impossibile caricare il diff."));
     } finally {
       setIsLoadingDiff(false);
@@ -214,7 +228,11 @@ function VersionHistoryContent() {
       // Reload history
       await loadHistory(gameId);
     } catch (err) {
-      console.error(err);
+      logger.error(
+        'Failed to restore version',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('VersionHistoryPage', 'handleRestoreVersion', { gameId, version, operation: 'restore_version' })
+      );
       setErrorMessage(getErrorMessage(err, "Impossibile ripristinare la versione"));
     } finally {
       setIsRestoring(false);

@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { api } from "../api";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 /**
  * CHAT-03: Multi-game chat context switching hook
@@ -160,7 +162,11 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
         isLoadingChats: false,
       });
     } catch (err) {
-      console.error(`Error loading chats for game ${gameId}:`, err);
+      logger.error(
+        'Error loading chats for game',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('useMultiGameChat', 'loadChatsForGame', { gameId })
+      );
       updateGameState(gameId, {
         chats: [],
         isLoadingChats: false,
@@ -227,7 +233,14 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
         });
       }
     } catch (err) {
-      console.error("Error loading chat history:", err);
+      logger.error(
+        'Error loading chat history',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('useMultiGameChat', 'loadChatHistory', {
+          chatId,
+          gameId: activeGameId,
+        })
+      );
       updateGameState(activeGameId, { isLoadingMessages: false });
     }
   }, [activeGameId, updateGameState]);
@@ -255,7 +268,14 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
       }
       return null;
     } catch (err) {
-      console.error("Error creating chat:", err);
+      logger.error(
+        'Error creating chat',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('useMultiGameChat', 'createNewChat', {
+          gameId,
+          agentId,
+        })
+      );
       return null;
     }
   }, [getGameState, updateGameState]);
@@ -277,7 +297,14 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
         messages: gameState.activeChatId === chatId ? [] : gameState.messages,
       });
     } catch (err) {
-      console.error("Error deleting chat:", err);
+      logger.error(
+        'Error deleting chat',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('useMultiGameChat', 'deleteChat', {
+          chatId,
+          gameId: activeGameId,
+        })
+      );
     }
   }, [activeGameId, getGameState, updateGameState]);
 

@@ -3,6 +3,8 @@ import Image from "next/image";
 import { api, BggSearchResult, BggGameDetails } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 import { LoadingButton } from "@/components/loading/LoadingButton";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface BggSearchModalProps {
   isOpen: boolean;
@@ -55,7 +57,11 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
         setError("No games found. Try a different search term.");
       }
     } catch (err) {
-      console.error("BGG search error:", err);
+      logger.error(
+        'BGG search error',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('BggSearchModal', 'handleSearch', { query: searchQuery })
+      );
       setError("Failed to search BoardGameGeek. The service may be unavailable. Please try again later.");
       setResults([]);
     } finally {
@@ -72,7 +78,11 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
       onSelect(details);
       onClose();
     } catch (err) {
-      console.error("BGG game details error:", err);
+      logger.error(
+        'BGG game details error',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('BggSearchModal', 'handleSelectGame', { bggId })
+      );
       setError("Failed to fetch game details. Please try again.");
     } finally {
       setLoadingDetails(false);

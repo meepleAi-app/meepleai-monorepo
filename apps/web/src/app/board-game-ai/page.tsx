@@ -10,6 +10,8 @@ import { AccessibleButton } from "@/components/accessible";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LoadingButton } from "@/components/loading/LoadingButton";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 type AuthUser = {
   id: string;
@@ -55,7 +57,11 @@ export default function BoardGameAI() {
     try {
       await api.post("/api/v1/auth/logout");
     } catch (err) {
-      console.error(err);
+      logger.error(
+        'Logout failed',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('BoardGameAI', 'logout', { operation: 'user_logout' })
+      );
     } finally {
       setAuthUser(null);
     }

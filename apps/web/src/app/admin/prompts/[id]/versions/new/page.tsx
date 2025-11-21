@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { PromptEditor } from "@/components/prompt";
 import { LoadingButton } from "@/components/loading/LoadingButton";
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 type ToastState = {
   show: boolean;
@@ -100,7 +102,11 @@ export default function NewPromptVersion() {
           await api.post<{}>(`/api/v1/admin/prompts/${id}/versions/${result.id}/activate`, {});
           showToast("Version created and activated", "success");
         } catch (err) {
-          console.error("Failed to activate version:", err);
+          logger.error(
+            'Failed to activate prompt version',
+            err instanceof Error ? err : new Error(String(err)),
+            createErrorContext('NewPromptVersion', 'handleSubmit', { promptId: id, versionId: result.id, operation: 'activate_version' })
+          );
         }
       }
 

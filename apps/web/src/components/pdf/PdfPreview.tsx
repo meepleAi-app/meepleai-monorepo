@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { List } from 'react-window';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // Note: CSS imports commented out due to module resolution issues in Next.js 15.5.4
 // import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -122,10 +124,14 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
   }, []);
 
   const onDocumentLoadError = useCallback((err: Error) => {
-    console.error('PDF load error:', err);
+    logger.error(
+      'PDF load error',
+      err instanceof Error ? err : new Error(String(err)),
+      createErrorContext('PdfPreview', 'onDocumentLoadError', { fileName: file.name })
+    );
     setError('Failed to load PDF. The file may be corrupted or in an unsupported format.');
     setLoading(false);
-  }, []);
+  }, [file.name]);
 
   const goToPage = useCallback((page: number) => {
     if (numPages && page >= 1 && page <= numPages) {

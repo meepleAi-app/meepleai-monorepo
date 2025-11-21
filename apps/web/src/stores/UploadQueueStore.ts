@@ -23,6 +23,8 @@ import type {
   FileData
 } from '../workers/uploadQueue.worker';
 import type { UploadQueueItem as WorkerUploadQueueItem } from '../workers/uploadQueue.worker';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // Re-export types for public API
 export type {
@@ -130,7 +132,11 @@ class UploadQueueStore {
       this.isReady = false; // Will be set to true on WORKER_READY message
 
     } catch (error) {
-      console.error('[UploadQueueStore] Failed to initialize worker:', error);
+      logger.error(
+        'Failed to initialize worker',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('UploadQueueStore', 'initializeWorker', {})
+      );
       this.workerError = error instanceof Error ? error : new Error('Worker initialization failed');
       this.isReady = false;
     } finally {
@@ -184,7 +190,13 @@ class UploadQueueStore {
           break;
 
         case 'WORKER_ERROR':
-          console.error('[UploadQueueStore] Worker error:', response.payload.message);
+          logger.error(
+            'Worker error',
+            new Error(response.payload.message),
+            createErrorContext('UploadQueueStore', 'setupWorkerListeners', {
+              errorMessage: response.payload.message
+            })
+          );
           this.workerError = new Error(response.payload.message);
           this.notifyListeners();
           break;
@@ -197,12 +209,20 @@ class UploadQueueStore {
     };
 
     this.worker.onerror = (error) => {
-      console.error('[UploadQueueStore] Worker uncaught error:', error);
+      logger.error(
+        'Worker uncaught error',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('UploadQueueStore', 'setupWorkerListeners.onerror', {})
+      );
       this.handleWorkerCrash();
     };
 
     this.worker.onmessageerror = (error) => {
-      console.error('[UploadQueueStore] Worker message deserialization error:', error);
+      logger.error(
+        'Worker message deserialization error',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('UploadQueueStore', 'setupWorkerListeners.onmessageerror', {})
+      );
       this.workerError = new Error('Worker message deserialization failed');
       this.notifyListeners();
     };
@@ -210,7 +230,14 @@ class UploadQueueStore {
 
   private handleWorkerCrash(): void {
     if (this.restartCount >= this.MAX_RESTARTS) {
-      console.error('[UploadQueueStore] Max restart attempts reached');
+      logger.error(
+        'Max restart attempts reached',
+        new Error(`Worker crashed ${this.MAX_RESTARTS} times. Please reload the page.`),
+        createErrorContext('UploadQueueStore', 'handleWorkerCrash', {
+          restartCount: this.restartCount,
+          maxRestarts: this.MAX_RESTARTS
+        })
+      );
       this.workerError = new Error(
         `Worker crashed ${this.MAX_RESTARTS} times. Please reload the page.`
       );
@@ -330,7 +357,15 @@ class UploadQueueStore {
       try {
         await this.addFiles(request.files, request.gameId, request.language);
       } catch (error) {
-        console.error('[UploadQueueStore] Failed to process buffered request:', error);
+        logger.error(
+          'Failed to process buffered request',
+          error instanceof Error ? error : new Error(String(error)),
+          createErrorContext('UploadQueueStore', 'processPendingFileRequests', {
+            gameId: request.gameId,
+            language: request.language,
+            fileCount: request.files.length
+          })
+        );
       }
     }
   }
@@ -352,7 +387,13 @@ class UploadQueueStore {
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
     } catch (error) {
-      console.error('[UploadQueueStore] Failed to save to localStorage:', error);
+      logger.error(
+        'Failed to save to localStorage',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('UploadQueueStore', 'saveToLocalStorage', {
+          itemCount: items.length
+        })
+      );
     }
   }
 
@@ -373,7 +414,11 @@ class UploadQueueStore {
         };
       }
     } catch (error) {
-      console.error('[UploadQueueStore] Failed to load from localStorage:', error);
+      logger.error(
+        'Failed to load from localStorage',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('UploadQueueStore', 'loadFromLocalStorage', {})
+      );
     }
     return null;
   }
@@ -398,7 +443,11 @@ class UploadQueueStore {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
-      console.error('[UploadQueueStore] Failed to clear localStorage:', error);
+      logger.error(
+        'Failed to clear localStorage',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('UploadQueueStore', 'clearLocalStorage', {})
+      );
     }
   }
 
@@ -515,7 +564,13 @@ class UploadQueueStore {
 
   private postMessage(message: WorkerRequest, transferables?: Transferable[]): void {
     if (!this.worker) {
-      console.error('[UploadQueueStore] Worker not initialized');
+      logger.error(
+        'Worker not initialized',
+        new Error('Worker not initialized'),
+        createErrorContext('UploadQueueStore', 'postMessage', {
+          messageType: message.type
+        })
+      );
       return;
     }
 
@@ -530,7 +585,13 @@ class UploadQueueStore {
         this.worker.postMessage(message);
       }
     } catch (error) {
-      console.error('[UploadQueueStore] Failed to post message to worker:', error);
+      logger.error(
+        'Failed to post message to worker',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('UploadQueueStore', 'postMessage', {
+          messageType: message.type
+        })
+      );
       this.workerError = error instanceof Error ? error : new Error('Failed to communicate with worker');
       this.notifyListeners();
     }

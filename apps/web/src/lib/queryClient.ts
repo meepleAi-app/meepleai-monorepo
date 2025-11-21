@@ -14,6 +14,8 @@
  */
 
 import { isServer, QueryClient, DefaultOptions } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 /**
  * Default options for all queries and mutations
@@ -38,8 +40,11 @@ const defaultOptions: DefaultOptions = {
 
     // Log mutation errors
     onError: (error) => {
-      console.error('Mutation error:', error);
-      // TODO: Add Serilog/Seq integration for production error tracking
+      logger.error(
+        'Mutation error',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('QueryClient', 'mutation')
+      );
     },
   },
 };

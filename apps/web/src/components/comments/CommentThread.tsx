@@ -3,6 +3,8 @@ import { api, type RuleSpecComment, type RuleSpecCommentsResponse } from "@/lib/
 import { CommentItem } from "./CommentItem";
 import { CommentForm } from "./CommentForm";
 import { getErrorMessage } from "@/lib/utils/errorHandler";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface CommentThreadProps {
   gameId: string;
@@ -38,7 +40,11 @@ export function CommentThread({
         setComments(filteredComments);
       }
     } catch (err) {
-      console.error("Failed to load comments:", err);
+      logger.error(
+        'Failed to load comments',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('CommentThread', 'loadComments', { gameId, version, lineNumber })
+      );
       setError(getErrorMessage(err, "Impossibile caricare i commenti"));
     } finally {
       setIsLoading(false);
@@ -61,7 +67,11 @@ export function CommentThread({
       });
       await loadComments();
     } catch (err) {
-      console.error("Failed to create comment:", err);
+      logger.error(
+        'Failed to create comment',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('CommentThread', 'handleCreateComment', { gameId, version, lineNumber })
+      );
       setError(getErrorMessage(err, "Impossibile creare il commento"));
     } finally {
       setIsSubmitting(false);
@@ -78,7 +88,11 @@ export function CommentThread({
       });
       await loadComments();
     } catch (err) {
-      console.error("Failed to update comment:", err);
+      logger.error(
+        'Failed to update comment',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('CommentThread', 'handleEditComment', { gameId, commentId })
+      );
       setError(getErrorMessage(err, "Impossibile modificare il commento"));
     } finally {
       setIsSubmitting(false);
@@ -96,7 +110,11 @@ export function CommentThread({
       await api.chat.deleteRuleSpecComment(gameId, commentId);
       await loadComments();
     } catch (err) {
-      console.error("Failed to delete comment:", err);
+      logger.error(
+        'Failed to delete comment',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('CommentThread', 'handleDeleteComment', { gameId, commentId })
+      );
       setError(getErrorMessage(err, "Impossibile eliminare il commento"));
     } finally {
       setIsSubmitting(false);
@@ -113,7 +131,11 @@ export function CommentThread({
       });
       await loadComments();
     } catch (err) {
-      console.error("Failed to create reply:", err);
+      logger.error(
+        'Failed to create reply',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('CommentThread', 'handleReply', { parentCommentId })
+      );
       setError(getErrorMessage(err, "Impossibile creare la risposta"));
     } finally {
       setIsSubmitting(false);
@@ -128,7 +150,11 @@ export function CommentThread({
       await api.chat.resolveComment(commentId);
       await loadComments();
     } catch (err) {
-      console.error("Failed to resolve comment:", err);
+      logger.error(
+        'Failed to resolve comment',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('CommentThread', 'handleResolve', { commentId })
+      );
       setError(getErrorMessage(err, "Impossibile risolvere il commento"));
     } finally {
       setIsSubmitting(false);
@@ -143,7 +169,11 @@ export function CommentThread({
       await api.chat.unresolveComment(commentId);
       await loadComments();
     } catch (err) {
-      console.error("Failed to unresolve comment:", err);
+      logger.error(
+        'Failed to unresolve comment',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('CommentThread', 'handleUnresolve', { commentId })
+      );
       setError(getErrorMessage(err, "Impossibile riaprire il commento"));
     } finally {
       setIsSubmitting(false);

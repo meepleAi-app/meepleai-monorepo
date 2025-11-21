@@ -27,6 +27,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { Citation } from '@/types';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 type Game = {
   id: string;
@@ -61,7 +63,11 @@ export default function BoardGameAskClient() {
       setQuestion(''); // Clear input after successful response
     },
     onError: (error) => {
-      console.error('Streaming error:', error);
+      logger.error(
+        'Streaming error occurred',
+        new Error(error),
+        createErrorContext('BoardGameAskClient', 'streamingError', { operation: 'chat_streaming' })
+      );
     },
   });
 
@@ -87,7 +93,11 @@ export default function BoardGameAskClient() {
       } catch (err) {
         // Don't set error if request was aborted
         if (!abortController.signal.aborted) {
-          console.error('Failed to fetch games:', err);
+          logger.error(
+            'Failed to fetch games',
+            err instanceof Error ? err : new Error(String(err)),
+            createErrorContext('BoardGameAskClient', 'fetchGames', { operation: 'load_games' })
+          );
           setGamesError('Failed to load games. Please try again.');
         }
       } finally {

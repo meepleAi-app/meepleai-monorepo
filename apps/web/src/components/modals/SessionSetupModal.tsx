@@ -45,6 +45,8 @@ import {
 import { Game, SessionPlayerDto, GameSessionDto, api } from '@/lib/api';
 import { Plus, Trash2, AlertCircle } from 'lucide-react';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 export interface SessionSetupModalProps {
   /** Whether the modal is open */
@@ -232,7 +234,11 @@ export function SessionSetupModal({
       onSessionCreated?.(session);
       onClose();
     } catch (err) {
-      console.error('Failed to start session:', err);
+      logger.error(
+        'Failed to start session',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SessionSetupModal', 'handleSubmit', { gameId: game.id, playerCount: players.length })
+      );
       setError(
         err instanceof Error
           ? err.message

@@ -6,6 +6,8 @@ import { ErrorDisplay } from '@/components/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface TemplateParameter {
   name: string;
@@ -70,7 +72,11 @@ const N8nTemplatesPage = () => {
 
       setTemplates(data);
     } catch (err) {
-      console.error('Failed to load templates:', err);
+      logger.error(
+        'Failed to load n8n templates',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('N8nTemplatesPage', 'loadTemplates', { category, operation: 'load_templates' })
+      );
       setError('Failed to load templates. Please try again.');
     } finally {
       setLoading(false);
@@ -92,7 +98,11 @@ const N8nTemplatesPage = () => {
 
       setSelectedTemplate(data);
     } catch (err) {
-      console.error('Failed to load template details:', err);
+      logger.error(
+        'Failed to load n8n template details',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('N8nTemplatesPage', 'handleSelectTemplate', { templateId, operation: 'load_template_details' })
+      );
       setError('Failed to load template details. Please try again.');
     }
   };
@@ -114,7 +124,11 @@ const N8nTemplatesPage = () => {
       // Auto-dismiss success message after 5 seconds
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
-      console.error('Failed to import template:', err);
+      logger.error(
+        'Failed to import n8n template',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('N8nTemplatesPage', 'handleImport', { templateId, operation: 'import_template' })
+      );
       const errorMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || getErrorMessage(err, 'Failed to import template');
       setError(`Import failed: ${errorMsg}`);
     } finally {

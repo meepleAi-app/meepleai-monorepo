@@ -4,6 +4,8 @@ import { MentionInput } from "../chat/MentionInput";
 import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAlertDialog } from "@/hooks/useAlertDialog";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface CommentItemProps {
   comment: RuleSpecComment;
@@ -55,7 +57,11 @@ export function CommentItem({
       await onEdit(comment.id, editText);
       setIsEditing(false);
     } catch (error) {
-      console.error("Failed to edit comment:", error);
+      logger.error(
+        'Failed to edit comment',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('CommentItem', 'handleSaveEdit', { commentId: comment.id })
+      );
       await showAlert({
         title: "Errore",
         message: "Impossibile modificare il commento",
@@ -88,7 +94,11 @@ export function CommentItem({
     try {
       await onDelete(comment.id);
     } catch (error) {
-      console.error("Failed to delete comment:", error);
+      logger.error(
+        'Failed to delete comment',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('CommentItem', 'handleDelete', { commentId: comment.id })
+      );
       await showAlert({
         title: "Errore",
         message: "Impossibile eliminare il commento",
@@ -110,7 +120,11 @@ export function CommentItem({
       setReplyText("");
       setIsReplying(false);
     } catch (error) {
-      console.error("Failed to reply:", error);
+      logger.error(
+        'Failed to reply',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('CommentItem', 'handleReply', { commentId: comment.id })
+      );
       await showAlert({
         title: "Errore",
         message: "Impossibile aggiungere la risposta",
@@ -131,7 +145,11 @@ export function CommentItem({
     try {
       await onResolve(comment.id);
     } catch (error) {
-      console.error("Failed to resolve comment:", error);
+      logger.error(
+        'Failed to resolve comment',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('CommentItem', 'handleResolve', { commentId: comment.id })
+      );
       await showAlert({
         title: "Errore",
         message: "Impossibile contrassegnare come risolto",
@@ -147,7 +165,11 @@ export function CommentItem({
     try {
       await onUnresolve(comment.id);
     } catch (error) {
-      console.error("Failed to unresolve comment:", error);
+      logger.error(
+        'Failed to unresolve comment',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('CommentItem', 'handleUnresolve', { commentId: comment.id })
+      );
       await showAlert({
         title: "Errore",
         message: "Impossibile riaprire il commento",

@@ -1,8 +1,10 @@
 /**
  * Client-side error logging service with structured logging
  * Integrates with backend observability stack (correlation IDs, structured logs)
+ * and Sentry for production error tracking (Issue #1433)
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { ErrorContext, ErrorSeverity, getErrorSeverity, sanitizeError } from './errors';
 
 /**
@@ -112,7 +114,7 @@ class Logger {
   }
 
   /**
-   * Log error
+   * Log error with Sentry integration
    */
   error(message: string, error?: Error, context?: Partial<ErrorContext>): void {
     const entry: LogEntry = {
@@ -125,6 +127,61 @@ class Logger {
     };
 
     this.addToQueue(entry);
+
+    // Send to Sentry with context
+    if (typeof window !== 'undefined') {
+      Sentry.withScope((scope) => {
+        // Add correlation ID
+        if (this.correlationId) {
+          scope.setTag('correlationId', this.correlationId);
+        }
+
+        // Add custom context
+        if (context) {
+          if (context.component) {
+            scope.setTag('component', context.component);
+          }
+          if (context.action) {
+            scope.setTag('action', context.action);
+          }
+          if (context.userId) {
+            scope.setUser({ id: context.userId });
+          }
+          if (context.metadata) {
+            scope.setContext('metadata', context.metadata);
+          }
+        }
+
+        // Set severity level
+        const sentryLevel = this.mapSeverityToSentryLevel(entry.severity || ErrorSeverity.ERROR);
+        scope.setLevel(sentryLevel);
+
+        // Capture the error
+        if (error) {
+          Sentry.captureException(error);
+        } else {
+          Sentry.captureMessage(message, sentryLevel);
+        }
+      });
+    }
+  }
+
+  /**
+   * Maps ErrorSeverity to Sentry severity level
+   */
+  private mapSeverityToSentryLevel(severity: ErrorSeverity): Sentry.SeverityLevel {
+    switch (severity) {
+      case ErrorSeverity.INFO:
+        return 'info';
+      case ErrorSeverity.WARNING:
+        return 'warning';
+      case ErrorSeverity.ERROR:
+        return 'error';
+      case ErrorSeverity.CRITICAL:
+        return 'fatal';
+      default:
+        return 'error';
+    }
   }
 
   /**

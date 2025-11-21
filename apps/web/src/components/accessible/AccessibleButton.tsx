@@ -50,6 +50,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { ButtonHTMLAttributes, forwardRef } from "react";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 export interface AccessibleButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -145,8 +147,10 @@ export const AccessibleButton = forwardRef<
   ) => {
     // Validation: icon-only buttons must have aria-label
     if (iconOnly && !ariaLabel && process.env.NODE_ENV === "development") {
-      console.error(
-        "AccessibleButton: Icon-only buttons must have an aria-label prop for screen reader accessibility"
+      logger.error(
+        'AccessibleButton: Icon-only buttons must have an aria-label prop for screen reader accessibility',
+        new Error('Missing aria-label on icon-only button'),
+        createErrorContext('AccessibleButton', 'render', { iconOnly, hasAriaLabel: !!ariaLabel })
       );
     }
 

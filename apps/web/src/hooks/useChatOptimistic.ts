@@ -18,6 +18,8 @@
 import { useCallback, useState } from 'react';
 import { Message } from '@/types';
 import { useChatStore, useActiveMessages } from '@/store/chat';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 export interface UseChatOptimisticResult {
   /**
@@ -95,7 +97,15 @@ export function useChatOptimistic(): UseChatOptimisticResult {
         // Backend updates are handled by Zustand store's sendMessage
         setOptimisticId(null);
       } catch (err) {
-        console.error('Failed to send message (optimistic):', err);
+        logger.error(
+          'Failed to send message (optimistic)',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('useChatOptimistic', 'sendMessageOptimistic', {
+            gameId: selectedGameId,
+            agentId: selectedAgentId,
+            contentLength: content.length,
+          })
+        );
 
         // 5. Rollback on error
         // Remove the optimistic message from Zustand store

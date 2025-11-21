@@ -16,6 +16,8 @@
 import { api, ApiError } from '@/lib/api';
 import { getLocalizedError, type LocalizedError, successMessages } from '@/lib/i18n/errors';
 import type { AuthUser } from '@/types';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // ============================================================================
 // Types
@@ -98,7 +100,11 @@ export async function loginAction(
       message: successMessages.loginSuccess
     };
   } catch (error) {
-    console.error('Login action failed:', error);
+    logger.error(
+      'Login action failed',
+      error instanceof Error ? error : new Error(String(error)),
+      createErrorContext('AuthActions', 'loginAction', { operation: 'login' })
+    );
 
     if (error instanceof ApiError) {
       return {
@@ -176,7 +182,11 @@ export async function registerAction(
       message: successMessages.registrationSuccess
     };
   } catch (error) {
-    console.error('Registration action failed:', error);
+    logger.error(
+      'Registration action failed',
+      error instanceof Error ? error : new Error(String(error)),
+      createErrorContext('AuthActions', 'registerAction', { operation: 'register' })
+    );
 
     if (error instanceof ApiError) {
       // Special handling for email conflict (409)
@@ -231,7 +241,11 @@ export async function logoutAction(): Promise<AuthActionState> {
       message: successMessages.logoutSuccess
     };
   } catch (error) {
-    console.error('Logout action failed:', error);
+    logger.error(
+      'Logout action failed',
+      error instanceof Error ? error : new Error(String(error)),
+      createErrorContext('AuthActions', 'logoutAction', { operation: 'logout' })
+    );
 
     // Even if API call fails, consider it success to clear client state
     // User can't remain logged in if server rejected logout
@@ -272,7 +286,11 @@ export async function extendSessionAction(): Promise<SessionActionState> {
       message: successMessages.sessionExtended
     };
   } catch (error) {
-    console.error('Extend session action failed:', error);
+    logger.error(
+      'Extend session action failed',
+      error instanceof Error ? error : new Error(String(error)),
+      createErrorContext('AuthActions', 'extendSessionAction', { operation: 'extend_session' })
+    );
 
     if (error instanceof ApiError) {
       return {
@@ -315,7 +333,11 @@ export async function getCurrentUser(): Promise<AuthActionState> {
       user: response.user
     };
   } catch (error) {
-    console.error('Get current user failed:', error);
+    logger.error(
+      'Get current user failed',
+      error instanceof Error ? error : new Error(String(error)),
+      createErrorContext('AuthActions', 'getCurrentUser', { operation: 'get_current_user' })
+    );
 
     return {
       success: false,

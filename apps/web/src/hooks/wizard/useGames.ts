@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { AuthUser } from '@/types/auth';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface GameSummary {
   id: string;
@@ -51,7 +53,11 @@ export function useGames() {
       const response = await api.games.getAll();
       setGames(response.games.map(g => ({ id: g.id, name: g.title, createdAt: g.createdAt })));
     } catch (err) {
-      console.error('Failed to load games', err);
+      logger.error(
+        'Failed to load games',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('useGames', 'fetchGames')
+      );
       setError('Unable to load games. Please refresh and try again.');
     } finally {
       setLoading(false);
@@ -63,7 +69,11 @@ export function useGames() {
     async (name: string): Promise<GameSummary | null> => {
       setCreating(true);
       setError(null);
-      console.error('createGame not yet implemented in modular API');
+      logger.error(
+        'createGame not yet implemented in modular API',
+        new Error('Create game functionality not yet available'),
+        createErrorContext('useGames', 'createGame', { name })
+      );
       setError('Create game functionality not yet available.');
       setCreating(false);
       return null; // Return null instead of throwing

@@ -36,6 +36,8 @@ import {
   applyTheme,
   type Theme,
 } from '@/lib/themes';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface ColorSchemeContextValue {
   /** Current active theme */
@@ -97,7 +99,11 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
         setThemes([...THEMES, ...customThemes]);
       }
     } catch (err) {
-      console.error('Failed to load custom themes:', err);
+      logger.error(
+        'Failed to load custom themes',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('ColorSchemeProvider', 'loadCustomThemes')
+      );
     }
   }, [mounted]);
 
@@ -143,7 +149,11 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
     try {
       localStorage.setItem('meepleai-custom-themes', JSON.stringify(customThemes));
     } catch (err) {
-      console.error('Failed to save custom theme:', err);
+      logger.error(
+        'Failed to save custom theme',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('ColorSchemeProvider', 'addCustomTheme', { themeId: theme.id })
+      );
     }
   }, [themes]);
 
@@ -163,7 +173,11 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
     try {
       localStorage.setItem('meepleai-custom-themes', JSON.stringify(customThemes));
     } catch (err) {
-      console.error('Failed to update custom themes:', err);
+      logger.error(
+        'Failed to update custom themes',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('ColorSchemeProvider', 'removeCustomTheme', { themeId })
+      );
     }
 
     // If removing current theme, switch to default

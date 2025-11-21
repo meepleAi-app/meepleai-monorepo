@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-json';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 export interface PrismHighlighterProps {
   code: string;
@@ -23,7 +25,11 @@ export function PrismHighlighter({
     try {
       return Prism.highlight(code, Prism.languages[language] || Prism.languages.json, language);
     } catch (error) {
-      console.error('Prism highlighting error:', error);
+      logger.error(
+        'Prism highlighting error',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('PrismHighlighter', 'highlight', { language, codeLength: code.length })
+      );
       return code; // Fallback to plain text
     }
   }, [code, language]);

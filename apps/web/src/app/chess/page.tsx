@@ -6,6 +6,8 @@ import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
 import { Chess } from "chess.js";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // Type definitions
 type AuthUser = {
@@ -88,7 +90,11 @@ export default function ChessPage() {
       setCurrentPosition(newGame.fen());
       setHighlightedSquares({});
     } catch (error) {
-      console.error("Invalid FEN:", error);
+      logger.error(
+        'Invalid FEN position',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('ChessPage', 'loadFenPosition', { fen, operation: 'load_fen' })
+      );
       setErrorMessage("Posizione FEN non valida.");
     }
   };
@@ -115,7 +121,11 @@ export default function ChessPage() {
           };
         }
       } catch (error) {
-        console.error("Invalid move:", move, error);
+        logger.error(
+          'Invalid move in highlight',
+          error instanceof Error ? error : new Error(String(error)),
+          createErrorContext('ChessPage', 'highlightMoves', { move, operation: 'highlight_move' })
+        );
       }
     });
 
@@ -179,7 +189,11 @@ export default function ChessPage() {
         highlightMoves(res.suggestedMoves);
       }
     } catch (err) {
-      console.error("Error sending message:", err);
+      logger.error(
+        'Failed to send chess message',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('ChessPage', 'sendMessage', { question: userMessageContent, position: currentPosition, operation: 'send_chess_message' })
+      );
       setErrorMessage("Errore nella comunicazione con l'agente scacchi. Riprova.");
 
       // Remove the user message if the request failed
@@ -219,7 +233,11 @@ export default function ChessPage() {
 
       return true;
     } catch (error) {
-      console.error("Error making move:", error);
+      logger.error(
+        'Failed to make chess move',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('ChessPage', 'onDrop', { from: sourceSquare, to: targetSquare, operation: 'make_move' })
+      );
       return false;
     }
   };

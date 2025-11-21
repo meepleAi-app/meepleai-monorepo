@@ -15,6 +15,8 @@
 
 import { api, ApiError, type ExportFormat } from '@/lib/api';
 import { getLocalizedError, type LocalizedError, successMessages } from '@/lib/i18n/errors';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // ============================================================================
 // Types
@@ -110,7 +112,11 @@ export async function exportChatAction(
       message: successMessages.exportSuccess
     };
   } catch (error) {
-    console.error('Export chat action failed:', error);
+    logger.error(
+      'Export chat action failed',
+      error instanceof Error ? error : new Error(String(error)),
+      createErrorContext('ChatActions', 'exportChatAction', { chatId: formData.get('chatId') as string, format: formData.get('format') as string, operation: 'export_chat' })
+    );
 
     if (error instanceof ApiError) {
       return {

@@ -149,11 +149,11 @@ jobs:
           fi
 
       - name: Upload .NET Vulnerability Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dotnet-vulnerability-report
           path: apps/api/vulnerability-report.txt
-          retention-days: 7
+          retention-days: 30
 
       # Frontend dependency scanning
       - name: Setup pnpm
@@ -206,13 +206,13 @@ jobs:
           fi
 
       - name: Upload Frontend Vulnerability Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: frontend-vulnerability-report
           path: |
             apps/web/audit-report.txt
             apps/web/audit-report.json
-          retention-days: 7
+          retention-days: 30
 
       # Fail the pipeline if HIGH severity vulnerabilities found
       - name: Check Severity Threshold
@@ -316,11 +316,11 @@ jobs:
           exit 1
 
       - name: Upload Security Scan Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dotnet-security-scan-report
           path: apps/api/security-scan.log
-          retention-days: 7
+          retention-days: 30
 
   # Semgrep SAST & Secrets Scanning
   semgrep-scan:
@@ -376,7 +376,7 @@ jobs:
         if: always()
 
       - name: Upload Semgrep Reports
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: semgrep-security-reports
           path: |

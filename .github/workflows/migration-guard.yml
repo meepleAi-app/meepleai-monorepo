@@ -26,16 +26,20 @@ jobs:
 
       - name: Get base branch migrations
         id: base_migrations
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          git checkout ${{ github.base_ref }}
+          git checkout "$BASE_REF"
           BASE_MIGRATIONS=$(find apps/api/src/Api/Migrations -name "*.cs" -not -name "*Designer.cs" -not -name "*Snapshot.cs" | sort)
           echo "base_count=$(echo "$BASE_MIGRATIONS" | wc -l)" >> $GITHUB_OUTPUT
           echo "$BASE_MIGRATIONS" > /tmp/base_migrations.txt
 
       - name: Get PR branch migrations
         id: pr_migrations
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          git checkout ${{ github.head_ref }}
+          git checkout "$HEAD_REF"
           PR_MIGRATIONS=$(find apps/api/src/Api/Migrations -name "*.cs" -not -name "*Designer.cs" -not -name "*Snapshot.cs" | sort)
           echo "pr_count=$(echo "$PR_MIGRATIONS" | wc -l)" >> $GITHUB_OUTPUT
           echo "$PR_MIGRATIONS" > /tmp/pr_migrations.txt
@@ -137,7 +141,7 @@ jobs:
 
       - name: Upload SQL Migration Scripts
         if: steps.generate_sql.outputs.sql_generated == 'true'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: migration-sql-preview-${{ github.event.pull_request.number }}
           path: |

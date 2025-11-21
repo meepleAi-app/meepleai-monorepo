@@ -1,11 +1,11 @@
 # 🗺️ MeepleAI Master Roadmap 2025-2026
 **Main Current Roadmap Document - REFACTORING & CLEANUP PRIORITY**
 
-**Ultimo Aggiornamento**: 2025-11-20 (Aggiornato con issue completate)
-**Issue Aperte**: ~120 (dopo completamento recente di 11 issue)
+**Ultimo Aggiornamento**: 2025-11-21 (Aggiornato con 144 issue aperte + 24 nuove Testing Quality)
+**Issue Aperte**: **144** (verificato da GitHub Issues - +24 nuove Testing Quality)
 **Issue Completate (Nov 2025)**: 171+ (analisi git log - +11 dal 2025-11-18)
 **Progress Complessivo**: 🟢 **~75%** Phase 1A Complete
-**Timeline Rimanente**: 8-10 settimane (Dic 2025 - Feb 2026)
+**Timeline Rimanente**: 10-12 settimane (Dic 2025 - Feb 2026) - **ESTESA** per TIER 3 espanso
 **Owner**: Engineering Team
 
 > **🔧 NUOVA PRIORITÀ**: Questa roadmap è stata riorganizzata per prioritizzare **refactoring, pulizia e aggiornamento del codice** come prerequisiti per il completamento MVP. Security e code quality sono ora TIER 0.
@@ -17,15 +17,63 @@
 ### 🎯 NUOVO FOCUS - REFACTORING & CLEANUP FIRST!
 
 **Strategia Aggiornata (Nov 2025)**:
-1. ✅ **TIER 0**: Security Critical + Large Refactoring (8 issues) - **PRIORITY 1**
-2. ✅ **TIER 1**: High Priority Refactoring & Code Cleanup (9 issues) - **PRIORITY 2**
-3. ✅ **TIER 2**: Medium Priority Improvements & Optimizations (10+ issues) - **PRIORITY 3**
-4. ✅ **TIER 3**: Testing & Quality Assurance (11 issues) - **PRIORITY 4**
-5. ✅ **TIER 4**: MVP Features Month 5-6 (30 issues) - **PRIORITY 5**
-6. ✅ **TIER 5**: Security Audit & Final Validation (2 issues) - **PRIORITY 6**
-7. 📦 **PHASE 2**: Deferred Post-MVP (~70 issues) - **DEFERRED**
+1. ✅ **TIER 0**: Security Critical + Large Refactoring (1 issue) - **PRIORITY 1** - 🎉 87.5% DONE
+2. ✅ **TIER 1**: High Priority Refactoring & Code Cleanup (10 issues) - **PRIORITY 2** - ⚡ 44% DONE
+3. ✅ **TIER 2**: Medium Priority Improvements & Optimizations (15 issues) - **PRIORITY 3** - 🔄 READY
+4. 🆕 **TIER 3**: Testing & Quality Assurance (**35 issues** - ESPANSO +24!) - **PRIORITY 4** - ⚠️ EXPANDED
+5. ✅ **TIER 4**: MVP Features Month 5-6 (25 issues) - **PRIORITY 5** - ⏸️ WAITING
+6. ✅ **TIER 5**: Security Audit & Final Validation (2 issues) - **PRIORITY 6** - ⏸️ WAITING
+7. 📦 **PHASE 2**: Deferred Post-MVP (~56 issues) - **DEFERRED**
 
 **Rationale**: Un codebase pulito, refactorizzato e sicuro è prerequisito per features stabili e maintenance a lungo termine.
+
+---
+
+## 🆕 AGGIORNAMENTO CRITICO v8.0 (2025-11-21)
+
+### 📊 Panoramica Cambiamenti
+
+**Issue Totali Verificate**: **144 aperte** (era ~120 stimato)
+**Nuove Issue Identificate**: **+24 issue** (+20%)
+**TIER Impattato**: **TIER 3** (Testing & Quality Assurance)
+
+### 🚨 Impatto Principale: TIER 3 Espanso
+
+**TIER 3 è esploso da 11 a 35 issue (+218%!)**
+
+#### Nuove Issue (create 2025-11-20):
+1. **Testing Quality Improvements** (#1499-1511): 13 issue
+   - Test isolation, naming conventions, data factories
+   - Mock helpers, fetch mocks, large file splits
+   - Magic numbers, regions cleanup, theory tests
+   - Error boundaries, performance tests, SDK tests, visual regression
+
+2. **E2E Testing Expansion** (#1489-1498): 10 issue
+   - RBAC authorization tests, demo login fixes
+   - Browser matrix (Firefox, Safari), visual regression
+   - Streaming stability, negative scenarios, timeout reduction
+   - POM migration, E2E coverage reporting
+
+#### Impatto Timeline:
+- **Effort**: +60-80 ore per TIER 3 (da ~108-138h a ~140-180h)
+- **Timeline**: +1-2 settimane (da 3 a 4-5 settimane per TIER 3)
+- **Overall**: Timeline MVP estesa a 10-12 settimane (era 8-10 settimane)
+
+#### Impatto Complessivo:
+- **Total Effort**: 628-823 ore (era 537-704 ore) - **+17%**
+- **Total Timeline**: 17-21 settimane (era 15-18 settimane) - **+2-3 settimane**
+- **MVP Launch**: March 2026 (era February 2026)
+
+### ✅ Raccomandazioni
+
+1. **Priorità Invariate**: Completare TIER 0-1 prima (refactoring + security)
+2. **TIER 3 Approach**: Dividere in sub-phases:
+   - **Phase 3A**: Testing Quality Improvements (HIGH priority - 6 issue)
+   - **Phase 3B**: Original Testing Goals (coverage, E2E, performance)
+   - **Phase 3C**: Testing Quality Improvements (MEDIUM priority - 7 issue)
+   - **Phase 3D**: E2E Expansion (cross-browser, visual regression)
+3. **Parallelize**: Alcune issue di testing possono essere parallele con TIER 4 MVP features
+4. **Team Scaling**: Considerare 3-4 developers per comprimere timeline a 12-15 settimane
 
 ---
 
@@ -142,11 +190,13 @@ Focus su features utente finali:
 
 ---
 
-## 🚨 TIER 0: CRITICAL - Security & Large Refactoring (8 issues)
+## 🚨 TIER 0: CRITICAL - Security & Large Refactoring (1 issue)
 
-**Timeline**: ~~Week 1-2~~ **COMPLETATO** 🎉
-**Effort**: ~~80-100 ore~~ **Effettivo: ~85 ore** (entro stima)
-**Status**: 🟢 **7/8 completate** (87.5%) - **SOLO 1 RIMASTA!**
+**Timeline**: ~~Week 1-2~~ **QUASI COMPLETATO** 🎉
+**Effort**: ~~80-100 ore~~ **Effettivo: ~85 ore completate + 8-12 ore rimanenti**
+**Status**: 🟢 **7/8 completate** (87.5%) - **SOLO #1439 ANCORA APERTA!**
+
+> ⚠️ **NOTA**: #1439 (AdminEndpoints split) appare ancora aperta su GitHub. Verificare se è stata completata con PR #1484 o necessita ulteriore lavoro.
 
 ### 🔐 Security Critical (4 issues) - ✅ 3/4 COMPLETATE!
 
@@ -278,11 +328,19 @@ Focus su features utente finali:
 
 ---
 
-## ✅ TIER 3: Testing & Quality Assurance (11 issues)
+## ✅ TIER 3: Testing & Quality Assurance (35 issues - ESPANSO!)
 
-**Timeline**: Week 5-7 (3 settimane)
-**Effort**: ~80-100 ore di sviluppo
-**Status**: 🟡 **1/11 completate** (#1369 PDF citation done)
+**Timeline**: Week 5-9 (4-5 settimane) - **ESTESO** per nuove issue
+**Effort**: ~140-180 ore di sviluppo (+60-80 ore per nuove issue)
+**Status**: 🟡 **1/35 completate** (#1369 PDF citation done)
+
+> 🆕 **CAMBIAMENTO SIGNIFICATIVO**: TIER 3 è esploso da 11 a 35 issue (+218%)!
+>
+> **Nuove Issue Identificate (2025-11-21)**:
+> - 13 nuove issue **Testing Quality** (#1499-1511): Improve test infrastructure
+> - 10 nuove issue **E2E Testing** (#1489-1498): Complete E2E coverage
+>
+> **Impatto**: Timeline estesa di 1-2 settimane, effort +60-80 ore
 
 ### 🧪 Frontend Testing (5 issues)
 
@@ -309,17 +367,101 @@ Focus su features utente finali:
 
 **Total Effort**: ~54-70 ore
 
-### ✅ TIER 3 Completion Criteria
+### 🆕 Testing Quality Improvements (13 issues) - **NUOVE!**
 
-- [ ] Frontend coverage ≥90% restored and maintained
-- [ ] All component tests passing (90%+ coverage)
-- [ ] Responsive design validated across 5 breakpoints
-- [ ] Performance P95 latency <3s achieved
-- [ ] Accuracy validation ≥80% on golden dataset
-- [ ] E2E tests passing for all critical user journeys
-- [ ] Quality framework operational (5-metric)
+**Created**: 2025-11-20 (day after roadmap v7.0)
+**Category**: Test infrastructure and quality improvements
+**Total Effort**: ~35-45 ore
+
+#### HIGH Priority (6 issues)
+
+| # | Issue | Area | Effort | Impact | Note |
+|---|-------|------|--------|--------|------|
+| **#1504** | Split Large Test Files (frontend) | Frontend | 4-6h | High | Improve test maintainability |
+| **#1503** | Replace Global Fetch Mocks (frontend) | Frontend | 4-6h | High | Test isolation improvement |
+| **#1502** | Extract SSE Mock Helper (frontend) | Frontend | 3-4h | High | Reusable test utilities |
+| **#1501** | Create Test Data Factories (backend) | Backend | 4-6h | High | DRY test data creation |
+| **#1500** | Fix Test Isolation Issues (backend) | Backend | 6-8h | High | Critical test reliability |
+| **#1499** | Standardize Test Naming Convention (backend) | Backend | 3-4h | Medium | Test discoverability |
+
+**Subtotal**: ~24-34 ore
+
+#### MEDIUM Priority (7 issues)
+
+| # | Issue | Area | Effort | Impact | Note |
+|---|-------|------|--------|--------|------|
+| **#1511** | Expand Visual Regression Tests (frontend) | Frontend | 3-4h | Medium | Chromatic coverage |
+| **#1510** | Add API SDK Integration Tests (frontend) | Frontend | 3-4h | Medium | SDK reliability |
+| **#1509** | Add Performance Tests (frontend) | Frontend | 2-3h | Medium | Frontend performance |
+| **#1508** | Add Error Boundary Tests (frontend) | Frontend | 2-3h | Medium | Error handling |
+| **#1507** | Remove Excessive Regions (backend) | Backend | 2h | Low | Code cleanup |
+| **#1506** | Consolidate with Theory Tests (backend) | Backend | 2-3h | Medium | Test DRY |
+| **#1505** | Reduce Magic Numbers in Tests (backend) | Backend | 2-3h | Medium | Test readability |
+
+**Subtotal**: ~16-22 ore
+
+### 🆕 E2E Testing Expansion (10 issues) - **NUOVE!**
+
+**Created**: 2025-11-20
+**Category**: End-to-end testing coverage gaps
+**Total Effort**: ~30-40 ore
+
+| # | Issue | Target | Effort | Priority | Note |
+|---|-------|--------|--------|----------|------|
+| **#1498** | E2E Code Coverage Reporting | Coverage metrics | 3-4h | Medium | CI integration |
+| **#1497** | Browser Matrix (Firefox, Safari) | Multi-browser | 4-6h | Medium | Cross-browser testing |
+| **#1496** | Visual Regression Tests (10-15 components) | 10-15 tests | 6-8h | Medium | Component visuals |
+| **#1495** | Improve Streaming Test Stability (7 files) | 7 test files | 4-6h | Medium | Flaky test fixes |
+| **#1494** | Add Negative Test Scenarios (15+ tests) | 15+ tests | 4-6h | Medium | Error path coverage |
+| **#1493** | Reduce Hardcoded Timeouts (67 occurrences) | 67 fixes | 3-4h | Medium | Test reliability |
+| **#1492** | Complete POM Migration (30 test files) | 30 files | 6-8h | Medium | Maintainability |
+| **#1491** | Fix Demo Login Tests (currently skipped) | Fix skipped | 2-3h | High | Critical flow |
+| **#1490** | Add RBAC Authorization Tests (10+ tests) | 10+ tests | 4-6h | High | Security testing |
+| **#1489** | [Additional E2E issue] | TBD | TBD | TBD | Details TBD |
+
+**Total Effort**: ~36-51 ore
+
+### ✅ TIER 3 Completion Criteria (AGGIORNATI)
+
+#### Original Criteria (11 issues)
+- [ ] Frontend coverage ≥90% restored and maintained (#1255)
+- [ ] All component tests passing (90%+ coverage) (#992)
+- [ ] Responsive design validated across 5 breakpoints (#993)
+- [ ] Performance P95 latency <3s achieved (#1020)
+- [ ] Accuracy validation ≥80% on golden dataset (#1019)
+- [ ] E2E tests passing for all critical user journeys (#1018, #1009)
+- [ ] Quality framework operational (5-metric) (#999, #1000)
+
+#### 🆕 New Testing Quality Criteria (13 issues)
+- [ ] Test isolation issues fixed (backend) (#1500)
+- [ ] Test naming conventions standardized (#1499)
+- [ ] Test data factories implemented (#1501)
+- [ ] SSE mock helper extracted (#1502)
+- [ ] Global fetch mocks replaced (#1503)
+- [ ] Large test files split (#1504)
+- [ ] Magic numbers reduced in tests (#1505)
+- [ ] Theory tests consolidated (#1506)
+- [ ] Excessive regions removed (#1507)
+- [ ] Error boundary tests added (#1508)
+- [ ] Frontend performance tests added (#1509)
+- [ ] API SDK integration tests added (#1510)
+- [ ] Visual regression tests expanded (#1511)
+
+#### 🆕 New E2E Testing Criteria (10 issues)
+- [ ] RBAC authorization tests complete (#1490)
+- [ ] Demo login tests fixed (#1491)
+- [ ] POM migration complete (30 files) (#1492)
+- [ ] Hardcoded timeouts reduced (#1493)
+- [ ] Negative test scenarios added (#1494)
+- [ ] Streaming test stability improved (#1495)
+- [ ] Visual regression tests (10-15 components) (#1496)
+- [ ] Browser matrix (Firefox, Safari) (#1497)
+- [ ] E2E code coverage reporting (#1498)
+- [ ] Additional E2E scenarios (#1489)
 
 **🚀 GATE**: TIER 4 MVP features can start once TIER 3 testing infrastructure is ready.
+
+**⚠️ IMPACT**: TIER 3 completion now requires ~140-180 hours (was ~80-100 hours), extending timeline by 1-2 weeks.
 
 ---
 
@@ -458,32 +600,43 @@ Focus su features utente finali:
 
 ## 📊 Progress Summary & Metrics
 
-### Overall Progress (~120 Open Issues dopo completamenti recenti)
+### Overall Progress (144 Open Issues - Verified 2025-11-21)
 
 | Tier | Issue Totali | Completate | Rimanenti | Progress | Timeline | Status |
 |------|--------------|------------|-----------|----------|----------|--------|
 | **TIER 0 (Critical)** | 8 | 7 | 1 | 🟢 **87.5%** | ~~Week 1-2~~ DONE | ⚡ 1 RIMASTA |
-| **TIER 1 (High)** | 9 | 4 | 5 | 🟡 **44.4%** | Week 3-4 (in progress) | ⚡ IN PROGRESS |
-| **TIER 2 (Medium)** | 10 | 0 | 10 | 🔴 **0%** | Week 4-5 (ready) | ✅ READY |
-| **TIER 3 (Testing)** | 11 | 1 | 10 | 🟡 **~9%** | Week 5-7 (3 weeks) | ⏸️ WAITING |
-| **TIER 4 (MVP Features)** | 30 | ~3 | ~27 | 🟡 **~10%** | Week 6-10 (5 weeks) | ⏸️ WAITING |
-| **TIER 5 (Security Audit)** | 2 | 0 | 2 | 🔴 **0%** | Week 11-12 (2 weeks) | ⏸️ WAITING |
-| **PHASE 2 (Deferred)** | ~70 | 0 | ~70 | ⚪ **0%** | Post-MVP (2026 H2) | 📦 DEFERRED |
-| **TOTAL** | **~140** | **~15** | **~125** | 🟢 **~11%** | 8-10 weeks to MVP | 🚀 ACCELERATO |
+| **TIER 1 (High)** | 10 | 4 | 6 | 🟡 **40%** | Week 3-4 (in progress) | ⚡ IN PROGRESS |
+| **TIER 2 (Medium)** | 15 | 0 | 15 | 🔴 **0%** | Week 4-5 (ready) | ✅ READY |
+| **TIER 3 (Testing)** | **35** 🆕 | 1 | 34 | 🔴 **~3%** | Week 5-9 (4-5 weeks) 🆕 | ⚠️ **ESPANSO** |
+| **TIER 4 (MVP Features)** | 25 | ~3 | ~22 | 🟡 **~12%** | Week 10-14 (5 weeks) | ⏸️ WAITING |
+| **TIER 5 (Security Audit)** | 2 | 0 | 2 | 🔴 **0%** | Week 15-16 (2 weeks) | ⏸️ WAITING |
+| **PHASE 2 (Deferred)** | ~56 | 0 | ~56 | ⚪ **0%** | Post-MVP (2026 H2) | 📦 DEFERRED |
+| **TOTAL** | **144** | **~15** | **~129** | 🟢 **~10%** | **10-12 weeks to MVP** 🆕 | 🚀 STEADY |
 
-### Effort Estimation Summary
+**🆕 CAMBIAMENTI PRINCIPALI (2025-11-21)**:
+- **TIER 3**: +24 issue (+218%) - Testing quality improvement
+- **Timeline**: Estesa di 1-2 settimane (10-12 weeks invece di 8-10 weeks)
+- **Effort**: +60-80 ore per TIER 3
+- **Total Issues**: 144 (verificato da GitHub, era ~120)
 
-| Category | Issues | Effort (hours) | Weeks (40h/week) |
-|----------|--------|----------------|------------------|
-| **TIER 0: Critical** | 8 | 77-99h | ~2 weeks |
-| **TIER 1: High** | 9 | 67-86h | ~2 weeks |
-| **TIER 2: Medium** | 10 | 43-63h | ~1.5 weeks |
-| **TIER 3: Testing** | 11 | 108-138h | ~3 weeks |
-| **TIER 4: MVP Features** | 30 | 210-268h | ~6 weeks |
-| **TIER 5: Security** | 2 | 32-50h | ~1 week |
-| **TOTAL to MVP** | **70** | **537-704h** | **~15-18 weeks** |
+### Effort Estimation Summary (AGGIORNATO 2025-11-21)
 
-**Note**: Timeline assumes 1-2 developers full-time. With team scaling, can compress to 10-12 weeks.
+| Category | Issues | Effort (hours) | Weeks (40h/week) | Cambiamenti |
+|----------|--------|----------------|------------------|-------------|
+| **TIER 0: Critical** | 8 → 1 | ~~77-99h~~ → 8-12h | ~~2 weeks~~ → 0.5 weeks | ✅ 87.5% DONE |
+| **TIER 1: High** | 9 → 10 | 67-86h → 70-90h | ~2 weeks | +1 issue (testing) |
+| **TIER 2: Medium** | 10 → 15 | 43-63h → 60-85h | ~1.5-2 weeks | +5 issue (testing) |
+| **TIER 3: Testing** | 11 → **35** 🆕 | 108-138h → **140-180h** 🆕 | ~3 weeks → **4-5 weeks** 🆕 | **+24 issue (+218%)** |
+| **TIER 4: MVP Features** | 30 → 25 | 210-268h → 190-250h | ~5-6 weeks | -5 issue (ricalcolo) |
+| **TIER 5: Security** | 2 | 32-50h | ~1 week | Invariato |
+| **TOTAL to MVP** | **70 → 88** 🆕 | **537-704h → 628-823h** 🆕 | **~15-18 weeks → 17-21 weeks** 🆕 | **+18 issue (+26%)** |
+
+**🆕 IMPATTO AGGIORNAMENTO**:
+- **Effort Increase**: +91-119 ore (+17%)
+- **Timeline Extension**: +2-3 settimane
+- **Main Driver**: TIER 3 Testing Quality Expansion (+24 issue)
+
+**Note**: Timeline assumes 1-2 developers full-time. With team scaling to 3-4 developers, can compress to 12-15 weeks.
 
 ### 🎯 Key Performance Indicators (KPIs)
 
@@ -998,29 +1151,43 @@ Questo documento **v6.0** consolida e sostituisce:
 5. **Coverage Critical**: Frontend coverage 66%→90% is a gate for all work
 6. **Deferred Scope**: ~70 issues clearly marked as Post-MVP
 
-### Immediate Actions (This Week)
+### Immediate Actions (This Week - Updated 2025-11-21)
 
-#### Monday-Tuesday: Security Critical
-1. **#1455** - Fix GitHub Actions hardcoded credentials
-2. **#1432** - Remove hardcoded demo password from frontend
+#### ⚠️ PRIORITY UPDATE: Focus on TIER 0-1 Completion
 
-#### Wednesday-Thursday: Security Critical
-3. **#1448** - Implement CORS whitelist headers
-4. **#1447** - Add SecurityHeadersMiddleware
+**Current Status**:
+- ✅ TIER 0: 87.5% complete (solo #1439 potenzialmente aperta - verificare)
+- ⚡ TIER 1: 40% complete (6 issue rimanenti)
+- 🆕 TIER 3: Espanso con +24 nuove issue di testing quality
 
-#### Friday: Validation
-5. Run security scan (CodeQL + dependency audit)
-6. Verify all critical issues resolved
-7. Plan Week 2 large refactoring sprint
+#### Monday-Tuesday: Verify TIER 0 Status
+1. **Verificare #1439** - AdminEndpoints split: Issue completata con PR #1484? Se sì, chiudere issue
+2. **Se #1439 aperta** - Completare AdminEndpoints split (8-12h)
+3. **Se #1439 chiusa** - TIER 0 al 100%! 🎉 Iniziare TIER 1
 
-### Success Metrics (15 weeks)
+#### Wednesday-Friday: Advance TIER 1 (High Priority)
+1. **#1456** - GitHub Actions Phase 2 Standardization (8-10h)
+2. **#1449** - FluentValidation Auth CQRS (8-10h)
+3. **#1444** - Extract RagExceptionHandler Pattern (3-4h) - QUICK WIN
 
-- ✅ **70 issues completed** (TIER 0-5)
+#### Weekend/Next Week: Plan TIER 3 Expansion
+1. Review 24 nuove issue di testing (#1499-1511, #1489-1498)
+2. Prioritize testing quality improvements
+3. Create sprint plan for TIER 3 (4-5 weeks)
+
+**Goal Week**: Complete TIER 0 (verify #1439), advance TIER 1 to 60-70%, plan TIER 3 approach
+
+### Success Metrics (17-21 weeks - Updated 2025-11-21)
+
+- ✅ **88 issues completed** (TIER 0-5) - **+18 issues (+26%)**
 - ✅ **~3,645 LOC removed** (30% complexity reduction)
 - ✅ **Security audit passed** (0 critical/high findings)
 - ✅ **Coverage ≥90%** (frontend + backend)
 - ✅ **Accuracy ≥80%** (golden dataset validation)
-- ✅ **MVP launched** (February 2026)
+- ✅ **Testing quality improved** - **24 nuove issue completate** 🆕
+- ✅ **MVP launched** (March 2026) - **ESTESO** di 2-3 settimane
+
+**🆕 Updated Timeline**: 17-21 weeks (was 15-18 weeks) due to TIER 3 expansion
 
 ### Vision Statement
 
@@ -1090,6 +1257,7 @@ git push -u origin refactor/issue-XXX          # Push
 
 ### Changelog Roadmap
 
+- **v8.0** (2025-11-21): 🆕 **MAJOR EXPANSION** - 144 issue verificate (+24 nuove Testing Quality), TIER 3 esploso (+218%), timeline estesa 10-12 settimane
 - **v7.0** (2025-11-20): 🎉 **Major Update** - 11 issue completate (TIER 0: 87.5%, TIER 1: 44.4%), nuova sequenza ottimizzata
 - **v6.0** (2025-11-20): Complete refactoring-first reorganization, 131 open issues analyzed
 - **v5.0** (2025-11-18): Consolidamento finale + verifica GitHub commits
@@ -1101,14 +1269,22 @@ git push -u origin refactor/issue-XXX          # Push
 
 ---
 
-**Versione**: 7.0 (Progress Update + Optimized Sequence)
+**Versione**: 8.0 (Testing Quality Expansion + 144 Issues Verified)
 **Owner**: Engineering Team
-**Ultima Revisione**: 2025-11-20
+**Ultima Revisione**: 2025-11-21
 **Prossima Revisione**: Post-TIER 1 completion (Week 5)
-**Status**: 🟢 **EXCELLENT PROGRESS** - TIER 0 87.5%, TIER 1 44.4% complete
-**Open Issues**: ~120 (dopo 11 completamenti recenti)
-**Effort to MVP**: ~400-550 hours (8-10 weeks con 1-2 devs)
-**Progress Velocity**: +8% in 2 giorni (3% → 11%)
+**Status**: 🟡 **EXPANDED SCOPE** - TIER 3 +24 issue (+218%), timeline extended
+**Open Issues**: **144** (verificato GitHub 2025-11-21) - 13 Testing Quality + 10 E2E nuove
+**Effort to MVP**: ~628-823 hours (17-21 weeks con 1-2 devs, 12-15 weeks con 3-4 devs)
+**Progress Velocity**: Stabile ~10% (TIER 0-1 progressing well, TIER 3 expanded)
+
+**🆕 KEY CHANGES v8.0**:
+- **TIER 3 Expansion**: 11 → 35 issue (+218%) - Testing quality now major focus
+- **New Testing Quality**: 13 issue (#1499-1511) - Test isolation, naming, factories, mocks
+- **New E2E Testing**: 10 issue (#1489-1498) - RBAC, browser matrix, visual regression
+- **Timeline Impact**: +2-3 weeks extension (10-12 weeks realistic to MVP)
+- **Effort Impact**: +91-119 hours (+17% overall)
+- **Total Verified**: 144 open issues (was ~120 estimated)
 
 ---
 

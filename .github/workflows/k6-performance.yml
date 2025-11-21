@@ -330,26 +330,26 @@ jobs:
 
             const comment = `## 🔴 Performance Test Failure - ${timestamp}
 
-**Run:** [#${context.runId}](${runUrl})
-**Branch:** ${context.ref.replace('refs/heads/', '')}
-**Trigger:** Scheduled (nightly)
+            **Run:** [#${context.runId}](${runUrl})
+            **Branch:** ${context.ref.replace('refs/heads/', '')}
+            **Trigger:** Scheduled (nightly)
 
-### Action Required
-The nightly K6 performance tests have failed. Please investigate the workflow run for details.
+            ### Action Required
+            The nightly K6 performance tests have failed. Please investigate the workflow run for details.
 
-### Common Issues to Check
-- [ ] API response times exceeding thresholds
-- [ ] Increased error rates
-- [ ] Database connection issues
-- [ ] Memory or resource constraints
-- [ ] Breaking changes in recent commits
+            ### Common Issues to Check
+            - [ ] API response times exceeding thresholds
+            - [ ] Increased error rates
+            - [ ] Database connection issues
+            - [ ] Memory or resource constraints
+            - [ ] Breaking changes in recent commits
 
-### Next Steps
-1. Review the [workflow run](${runUrl}) logs
-2. Check the performance reports artifact
-3. Investigate and fix the root cause
-4. Re-run the workflow to verify the fix
-5. Close this issue once resolved`;
+            ### Next Steps
+            1. Review the [workflow run](${runUrl}) logs
+            2. Check the performance reports artifact
+            3. Investigate and fix the root cause
+            4. Re-run the workflow to verify the fix
+            5. Close this issue once resolved`.replace(/^            /gm, '');
 
             if (issueExists) {
               // Add comment to existing issue

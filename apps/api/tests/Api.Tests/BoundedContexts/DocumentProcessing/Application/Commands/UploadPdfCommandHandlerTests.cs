@@ -18,28 +18,32 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 /// NOTE: Highly complex handler (574 lines) with many dependencies and background processing.
 /// These tests focus on construction, validation, and core scenarios.
 /// TODO: Add comprehensive integration tests for full upload workflow.
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class UploadPdfCommandHandlerTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
-    private readonly Mock<ILogger<UploadPdfCommandHandler>> _loggerMock;
-    private readonly Mock<IPdfTextExtractor> _pdfTextExtractorMock;
-    private readonly Mock<IPdfTableExtractor> _tableExtractorMock;
-    private readonly Mock<IBackgroundTaskService> _backgroundTaskServiceMock;
-    private readonly Mock<IAiResponseCacheService> _cacheServiceMock;
-    private readonly Mock<IBlobStorageService> _blobStorageServiceMock;
-
-    public UploadPdfCommandHandlerTests()
+    /// <summary>
+    /// Creates a fresh DbContext for each test to ensure complete isolation
+    /// </summary>
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext();
-        _scopeFactoryMock = new Mock<IServiceScopeFactory>();
-        _loggerMock = new Mock<ILogger<UploadPdfCommandHandler>>();
-        _pdfTextExtractorMock = new Mock<IPdfTextExtractor>();
-        _tableExtractorMock = new Mock<IPdfTableExtractor>();
-        _backgroundTaskServiceMock = new Mock<IBackgroundTaskService>();
-        _cacheServiceMock = new Mock<IAiResponseCacheService>();
-        _blobStorageServiceMock = new Mock<IBlobStorageService>();
+        return DbContextHelper.CreateInMemoryDbContext();
+    }
+
+    /// <summary>
+    /// Creates a fresh set of mocks for each test
+    /// </summary>
+    private static (Mock<IServiceScopeFactory>, Mock<ILogger<UploadPdfCommandHandler>>, Mock<IPdfTextExtractor>, Mock<IPdfTableExtractor>, Mock<IBackgroundTaskService>, Mock<IAiResponseCacheService>, Mock<IBlobStorageService>) CreateMocks()
+    {
+        var scopeFactoryMock = new Mock<IServiceScopeFactory>();
+        var loggerMock = new Mock<ILogger<UploadPdfCommandHandler>>();
+        var pdfTextExtractorMock = new Mock<IPdfTextExtractor>();
+        var tableExtractorMock = new Mock<IPdfTableExtractor>();
+        var backgroundTaskServiceMock = new Mock<IBackgroundTaskService>();
+        var cacheServiceMock = new Mock<IAiResponseCacheService>();
+        var blobStorageServiceMock = new Mock<IBlobStorageService>();
+
+        return (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock);
     }
 
     #region Construction Tests
@@ -47,16 +51,20 @@ public class UploadPdfCommandHandlerTests
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock) = CreateMocks();
+
         // Act
         var handler = new UploadPdfCommandHandler(
-            _dbContext,
-            _scopeFactoryMock.Object,
-            _loggerMock.Object,
-            _pdfTextExtractorMock.Object,
-            _tableExtractorMock.Object,
-            _backgroundTaskServiceMock.Object,
-            _cacheServiceMock.Object,
-            _blobStorageServiceMock.Object);
+            context,
+            scopeFactoryMock.Object,
+            loggerMock.Object,
+            pdfTextExtractorMock.Object,
+            tableExtractorMock.Object,
+            backgroundTaskServiceMock.Object,
+            cacheServiceMock.Object,
+            blobStorageServiceMock.Object);
 
         // Assert
         Assert.NotNull(handler);
@@ -65,128 +73,159 @@ public class UploadPdfCommandHandlerTests
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock) = CreateMocks();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
                 null!,
-                _scopeFactoryMock.Object,
-                _loggerMock.Object,
-                _pdfTextExtractorMock.Object,
-                _tableExtractorMock.Object,
-                _backgroundTaskServiceMock.Object,
-                _cacheServiceMock.Object,
-                _blobStorageServiceMock.Object));
+                scopeFactoryMock.Object,
+                loggerMock.Object,
+                pdfTextExtractorMock.Object,
+                tableExtractorMock.Object,
+                backgroundTaskServiceMock.Object,
+                cacheServiceMock.Object,
+                blobStorageServiceMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullScopeFactory_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (_, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock) = CreateMocks();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContext,
+                context,
                 null!,
-                _loggerMock.Object,
-                _pdfTextExtractorMock.Object,
-                _tableExtractorMock.Object,
-                _backgroundTaskServiceMock.Object,
-                _cacheServiceMock.Object,
-                _blobStorageServiceMock.Object));
+                loggerMock.Object,
+                pdfTextExtractorMock.Object,
+                tableExtractorMock.Object,
+                backgroundTaskServiceMock.Object,
+                cacheServiceMock.Object,
+                blobStorageServiceMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, _, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock) = CreateMocks();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContext,
-                _scopeFactoryMock.Object,
+                context,
+                scopeFactoryMock.Object,
                 null!,
-                _pdfTextExtractorMock.Object,
-                _tableExtractorMock.Object,
-                _backgroundTaskServiceMock.Object,
-                _cacheServiceMock.Object,
-                _blobStorageServiceMock.Object));
+                pdfTextExtractorMock.Object,
+                tableExtractorMock.Object,
+                backgroundTaskServiceMock.Object,
+                cacheServiceMock.Object,
+                blobStorageServiceMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullPdfTextExtractor_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, loggerMock, _, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock) = CreateMocks();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContext,
-                _scopeFactoryMock.Object,
-                _loggerMock.Object,
+                context,
+                scopeFactoryMock.Object,
+                loggerMock.Object,
                 null!,
-                _tableExtractorMock.Object,
-                _backgroundTaskServiceMock.Object,
-                _cacheServiceMock.Object,
-                _blobStorageServiceMock.Object));
+                tableExtractorMock.Object,
+                backgroundTaskServiceMock.Object,
+                cacheServiceMock.Object,
+                blobStorageServiceMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullTableExtractor_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, _, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock) = CreateMocks();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContext,
-                _scopeFactoryMock.Object,
-                _loggerMock.Object,
-                _pdfTextExtractorMock.Object,
+                context,
+                scopeFactoryMock.Object,
+                loggerMock.Object,
+                pdfTextExtractorMock.Object,
                 null!,
-                _backgroundTaskServiceMock.Object,
-                _cacheServiceMock.Object,
-                _blobStorageServiceMock.Object));
+                backgroundTaskServiceMock.Object,
+                cacheServiceMock.Object,
+                blobStorageServiceMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullBackgroundTaskService_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, _, cacheServiceMock, blobStorageServiceMock) = CreateMocks();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContext,
-                _scopeFactoryMock.Object,
-                _loggerMock.Object,
-                _pdfTextExtractorMock.Object,
-                _tableExtractorMock.Object,
+                context,
+                scopeFactoryMock.Object,
+                loggerMock.Object,
+                pdfTextExtractorMock.Object,
+                tableExtractorMock.Object,
                 null!,
-                _cacheServiceMock.Object,
-                _blobStorageServiceMock.Object));
+                cacheServiceMock.Object,
+                blobStorageServiceMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullCacheService_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, _, blobStorageServiceMock) = CreateMocks();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContext,
-                _scopeFactoryMock.Object,
-                _loggerMock.Object,
-                _pdfTextExtractorMock.Object,
-                _tableExtractorMock.Object,
-                _backgroundTaskServiceMock.Object,
+                context,
+                scopeFactoryMock.Object,
+                loggerMock.Object,
+                pdfTextExtractorMock.Object,
+                tableExtractorMock.Object,
+                backgroundTaskServiceMock.Object,
                 null!,
-                _blobStorageServiceMock.Object));
+                blobStorageServiceMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullBlobStorageService_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, _) = CreateMocks();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UploadPdfCommandHandler(
-                _dbContext,
-                _scopeFactoryMock.Object,
-                _loggerMock.Object,
-                _pdfTextExtractorMock.Object,
-                _tableExtractorMock.Object,
-                _backgroundTaskServiceMock.Object,
-                _cacheServiceMock.Object,
+                context,
+                scopeFactoryMock.Object,
+                loggerMock.Object,
+                pdfTextExtractorMock.Object,
+                tableExtractorMock.Object,
+                backgroundTaskServiceMock.Object,
+                cacheServiceMock.Object,
                 null!));
     }
 

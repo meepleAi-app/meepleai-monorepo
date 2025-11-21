@@ -15,22 +15,29 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Tests PDF text indexing workflow (chunking, embedding, Qdrant indexing).
 /// NOTE: Complex orchestrator with many dependencies - focused on construction and validation.
 /// TODO: Add integration tests for full indexing workflow.
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class IndexPdfCommandHandlerTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<ITextChunkingService> _chunkingServiceMock;
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly Mock<IQdrantService> _qdrantServiceMock;
-    private readonly Mock<ILogger<IndexPdfCommandHandler>> _loggerMock;
-
-    public IndexPdfCommandHandlerTests()
+    /// <summary>
+    /// Creates a fresh DbContext for each test to ensure complete isolation
+    /// </summary>
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext();
-        _chunkingServiceMock = new Mock<ITextChunkingService>();
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _qdrantServiceMock = new Mock<IQdrantService>();
-        _loggerMock = new Mock<ILogger<IndexPdfCommandHandler>>();
+        return DbContextHelper.CreateInMemoryDbContext();
+    }
+
+    /// <summary>
+    /// Creates a fresh set of mocks for each test
+    /// </summary>
+    private static (Mock<ITextChunkingService>, Mock<IEmbeddingService>, Mock<IQdrantService>, Mock<ILogger<IndexPdfCommandHandler>>) CreateMocks()
+    {
+        var chunkingServiceMock = new Mock<ITextChunkingService>();
+        var embeddingServiceMock = new Mock<IEmbeddingService>();
+        var qdrantServiceMock = new Mock<IQdrantService>();
+        var loggerMock = new Mock<ILogger<IndexPdfCommandHandler>>();
+
+        return (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock);
     }
 
     #region Construction Tests
@@ -38,13 +45,17 @@ public class IndexPdfCommandHandlerTests
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock) = CreateMocks();
+
         // Act
         var handler = new IndexPdfCommandHandler(
-            _dbContext,
-            _chunkingServiceMock.Object,
-            _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
-            _loggerMock.Object);
+            context,
+            chunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            qdrantServiceMock.Object,
+            loggerMock.Object);
 
         // Assert
         Assert.NotNull(handler);
@@ -53,16 +64,18 @@ public class IndexPdfCommandHandlerTests
     [Fact]
     public void Constructor_WithTimeProvider_CreatesInstance()
     {
-        // Arrange
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock) = CreateMocks();
         var timeProvider = TimeProvider.System;
 
         // Act
         var handler = new IndexPdfCommandHandler(
-            _dbContext,
-            _chunkingServiceMock.Object,
-            _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
-            _loggerMock.Object,
+            context,
+            chunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            qdrantServiceMock.Object,
+            loggerMock.Object,
             timeProvider);
 
         // Assert
@@ -72,13 +85,17 @@ public class IndexPdfCommandHandlerTests
     [Fact]
     public void Constructor_WithNullTimeProvider_UsesSystemTimeProvider()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock) = CreateMocks();
+
         // Act
         var handler = new IndexPdfCommandHandler(
-            _dbContext,
-            _chunkingServiceMock.Object,
-            _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
-            _loggerMock.Object,
+            context,
+            chunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            qdrantServiceMock.Object,
+            loggerMock.Object,
             null);
 
         // Assert

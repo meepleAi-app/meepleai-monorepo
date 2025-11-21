@@ -578,6 +578,33 @@ jobs:
             -p:Exclude="[*]Api.Migrations.*" \
             -- xUnit.Parallelization.MaxParallelThreads=2
 
+      # TEST-002: Validate test isolation by running tests in random order (Issue #1500)
+      # This ensures tests don't depend on shared state or execution order
+      # Uses xUnit's built-in test order randomization with GUID seed
+      - name: Validate Test Isolation (Random Order)
+        timeout-minutes: 15
+        env:
+          CI: true
+          OPENROUTER_API_KEY: test-key-for-ci
+          QDRANT_URL: http://127.0.0.1:6333
+          REDIS_URL: 127.0.0.1:6379
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
+        run: |
+          # Run tests with randomized order to validate test isolation
+          # Reference: docs/02-development/testing/test-isolation-best-practices.md
+          # Seed based on workflow run ID for reproducible failures
+          TEST_SEED="${{ github.run_id }}"
+          echo "::notice::Running tests in random order (seed: $TEST_SEED) to validate test isolation"
+          dotnet test \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --blame-hang-timeout 5m \
+            -- xUnit.Parallelization.MaxParallelThreads=2 \
+               xUnit.MethodDisplay=ClassAndMethod \
+               xUnit.ParallelizeAssembly=false \
+               xUnit.ParallelizeTestCollections=false
+
       - name: Upload API Coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v4

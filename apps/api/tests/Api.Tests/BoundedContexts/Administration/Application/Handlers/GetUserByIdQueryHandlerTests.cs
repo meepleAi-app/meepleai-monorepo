@@ -13,22 +13,30 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Tests for GetUserByIdQueryHandler.
 /// Tests user retrieval by ID with session tracking.
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
-public class GetUserByIdQueryHandlerTests : IDisposable
+public class GetUserByIdQueryHandlerTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly GetUserByIdQueryHandler _handler;
-
-    public GetUserByIdQueryHandlerTests()
+    /// <summary>
+    /// Creates a fresh DbContext for each test to ensure complete isolation
+    /// </summary>
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext($"TestDb_{Guid.NewGuid()}");
-        _handler = new GetUserByIdQueryHandler(_dbContext);
+        return DbContextHelper.CreateInMemoryDbContext();
+    }
+
+    private static GetUserByIdQueryHandler CreateHandler(MeepleAiDbContext context)
+    {
+        return new GetUserByIdQueryHandler(context);
     }
 
     [Fact]
     public async Task Handle_WithExistingUser_ReturnsUserDto()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
+
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -39,13 +47,13 @@ public class GetUserByIdQueryHandlerTests : IDisposable
             PasswordHash = "hashed_password",
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Users.Add(user);
-        await _dbContext.SaveChangesAsync();
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
 
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -58,12 +66,15 @@ public class GetUserByIdQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithNonExistentUser_ReturnsNull()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
+
         var nonExistentId = Guid.NewGuid();
         var query = new GetUserByIdQuery(nonExistentId.ToString());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Null(result);
@@ -72,7 +83,10 @@ public class GetUserByIdQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithUserHavingActiveSessions_ReturnsLastSeenAt()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
+
         var userId = Guid.NewGuid();
         var lastSeenDate = DateTime.UtcNow.AddHours(-2);
 
@@ -97,14 +111,14 @@ public class GetUserByIdQueryHandlerTests : IDisposable
             RevokedAt = null // Active session
         };
 
-        _dbContext.Users.Add(user);
-        _dbContext.UserSessions.Add(session);
-        await _dbContext.SaveChangesAsync();
+        context.Users.Add(user);
+        context.UserSessions.Add(session);
+        await context.SaveChangesAsync();
 
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -115,7 +129,10 @@ public class GetUserByIdQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithMultipleSessions_ReturnsLatestLastSeenAt()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
+
         var userId = Guid.NewGuid();
         var oldLastSeen = DateTime.UtcNow.AddDays(-5);
         var recentLastSeen = DateTime.UtcNow.AddHours(-1);
@@ -152,14 +169,14 @@ public class GetUserByIdQueryHandlerTests : IDisposable
             RevokedAt = null
         };
 
-        _dbContext.Users.Add(user);
-        _dbContext.UserSessions.AddRange(oldSession, recentSession);
-        await _dbContext.SaveChangesAsync();
+        context.Users.Add(user);
+        context.UserSessions.AddRange(oldSession, recentSession);
+        await context.SaveChangesAsync();
 
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -170,7 +187,10 @@ public class GetUserByIdQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_IgnoresRevokedSessions_WhenCalculatingLastSeen()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
+
         var userId = Guid.NewGuid();
         var revokedLastSeen = DateTime.UtcNow.AddHours(-1);
 
@@ -195,14 +215,14 @@ public class GetUserByIdQueryHandlerTests : IDisposable
             RevokedAt = DateTime.UtcNow.AddHours(-2) // Revoked session
         };
 
-        _dbContext.Users.Add(user);
-        _dbContext.UserSessions.Add(revokedSession);
-        await _dbContext.SaveChangesAsync();
+        context.Users.Add(user);
+        context.UserSessions.Add(revokedSession);
+        await context.SaveChangesAsync();
 
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -212,7 +232,10 @@ public class GetUserByIdQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithEmptyDisplayName_ReturnsEmptyString()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
+
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -223,22 +246,16 @@ public class GetUserByIdQueryHandlerTests : IDisposable
             PasswordHash = "hashed_password",
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Users.Add(user);
-        await _dbContext.SaveChangesAsync();
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
 
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(string.Empty, result.DisplayName);
-    }
-
-    public void Dispose()
-    {
-        _dbContext.Database.EnsureDeleted();
-        _dbContext.Dispose();
     }
 }

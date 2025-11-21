@@ -14,17 +14,17 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
-public class MoveValidationDomainServiceTests : IDisposable
+/// <summary>
+/// Unit tests for MoveValidationDomainService
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
+/// </summary>
+public class MoveValidationDomainServiceTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<ILogger<MoveValidationDomainService>> _loggerMock;
-    private readonly MoveValidationDomainService _service;
-    private readonly Guid _gameId = Guid.NewGuid();
-    private readonly Guid _sessionId = Guid.NewGuid();
-
-    public MoveValidationDomainServiceTests()
+    /// <summary>
+    /// Creates a fresh DbContext for each test to ensure complete isolation
+    /// </summary>
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        // Setup in-memory database
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
@@ -35,9 +35,16 @@ public class MoveValidationDomainServiceTests : IDisposable
             .Setup(collector => collector.GetAndClearEvents())
             .Returns(Array.Empty<IDomainEvent>());
 
-        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
-        _loggerMock = new Mock<ILogger<MoveValidationDomainService>>();
-        _service = new MoveValidationDomainService(_dbContext, _loggerMock.Object);
+        return new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
+    }
+
+    /// <summary>
+    /// Creates a MoveValidationDomainService instance with the given context
+    /// </summary>
+    private static MoveValidationDomainService CreateService(MeepleAiDbContext context)
+    {
+        var loggerMock = new Mock<ILogger<MoveValidationDomainService>>();
+        return new MoveValidationDomainService(context, loggerMock.Object);
     }
 
     #region Constructor Tests
@@ -45,17 +52,23 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
+        // Arrange
+        var loggerMock = new Mock<ILogger<MoveValidationDomainService>>();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new MoveValidationDomainService(null!, _loggerMock.Object));
+            new MoveValidationDomainService(null!, loggerMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new MoveValidationDomainService(_dbContext, null!));
+            new MoveValidationDomainService(context, null!));
     }
 
     #endregion
@@ -65,36 +78,42 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithNullSession_ThrowsArgumentNullException()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
         var move = new Move("Alice", "roll dice");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.ValidateMoveAsync(null!, move));
+            service.ValidateMoveAsync(null!, move));
     }
 
     [Fact]
     public async Task ValidateMoveAsync_WithNullMove_ThrowsArgumentNullException()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
         var session = CreateDefaultSession();
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.ValidateMoveAsync(session, null!));
+            service.ValidateMoveAsync(session, null!));
     }
 
     [Fact]
     public async Task ValidateMoveAsync_WithFinishedSession_ReturnsInvalid()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
         var session = CreateDefaultSession();
         session.Start();
         session.Complete("Alice");
         var move = new Move("Alice", "roll dice");
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.False(result.IsValid);
@@ -105,13 +124,15 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithPlayerNotInSession_ReturnsInvalid()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
         var session = CreateDefaultSession();
         session.Start();
         var move = new Move("Charlie", "roll dice"); // Charlie not in session
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.False(result.IsValid);
@@ -126,13 +147,15 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithNoRuleSpec_ReturnsUncertain()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
         var session = CreateDefaultSession();
         session.Start();
         var move = new Move("Alice", "roll dice");
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.False(result.IsValid);
@@ -144,20 +167,24 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithRuleSpec_FindsApplicableRules()
     {
-        // Arrange
-        await SeedRuleSpecAsync(_gameId, "v1", new List<RuleAtom>
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var gameId = Guid.NewGuid();
+
+        await SeedRuleSpecAsync(context, gameId, "v1", new List<RuleAtom>
         {
             new RuleAtom("rule1", "Players must roll dice at the start of their turn", "Gameplay", "5"),
             new RuleAtom("rule2", "Movement is determined by dice roll", "Movement", "6"),
             new RuleAtom("rule3", "Players draw a card when landing on special spaces", "Cards", "8")
         });
 
-        var session = CreateDefaultSession();
+        var session = CreateDefaultSession(gameId);
         session.Start();
         var move = new Move("Alice", "roll dice");
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.True(result.IsValid);
@@ -169,23 +196,27 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithSpecificVersion_UsesCorrectVersion()
     {
-        // Arrange
-        await SeedRuleSpecAsync(_gameId, "v1", new List<RuleAtom>
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var gameId = Guid.NewGuid();
+
+        await SeedRuleSpecAsync(context, gameId, "v1", new List<RuleAtom>
         {
             new RuleAtom("rule1", "Old dice rule", "Gameplay", "5")
         });
 
-        await SeedRuleSpecAsync(_gameId, "v2", new List<RuleAtom>
+        await SeedRuleSpecAsync(context, gameId, "v2", new List<RuleAtom>
         {
             new RuleAtom("rule2", "New dice rule with advantage", "Gameplay", "5")
         });
 
-        var session = CreateDefaultSession();
+        var session = CreateDefaultSession(gameId);
         session.Start();
         var move = new Move("Alice", "roll dice");
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move, ruleSpecVersion: "v1");
+        var result = await service.ValidateMoveAsync(session, move, ruleSpecVersion: "v1");
 
         // Assert
         Assert.True(result.IsValid);
@@ -200,15 +231,19 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithComplexAction_FindsRelevantRules()
     {
-        // Arrange
-        await SeedRuleSpecAsync(_gameId, "v1", new List<RuleAtom>
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var gameId = Guid.NewGuid();
+
+        await SeedRuleSpecAsync(context, gameId, "v1", new List<RuleAtom>
         {
             new RuleAtom("rule1", "Players may trade resources with other players", "Trading", "10"),
             new RuleAtom("rule2", "Resources include wood, stone, and wheat", "Resources", "4"),
             new RuleAtom("rule3", "Combat is resolved by dice roll", "Combat", "15")
         });
 
-        var session = CreateDefaultSession();
+        var session = CreateDefaultSession(gameId);
         session.Start();
         var move = new Move("Alice", "trade resources", additionalContext: new Dictionary<string, string>
         {
@@ -217,7 +252,7 @@ public class MoveValidationDomainServiceTests : IDisposable
         });
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.True(result.IsValid);
@@ -227,19 +262,23 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithPosition_ConsidersPositionInMatching()
     {
-        // Arrange
-        await SeedRuleSpecAsync(_gameId, "v1", new List<RuleAtom>
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var gameId = Guid.NewGuid();
+
+        await SeedRuleSpecAsync(context, gameId, "v1", new List<RuleAtom>
         {
             new RuleAtom("rule1", "The center space grants bonus points", "Spaces", "7"),
             new RuleAtom("rule2", "Corner spaces allow drawing a card", "Spaces", "8")
         });
 
-        var session = CreateDefaultSession();
+        var session = CreateDefaultSession(gameId);
         session.Start();
         var move = new Move("Alice", "move piece", position: "center");
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.True(result.IsValid);
@@ -253,18 +292,22 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithNoApplicableRules_ReturnsLowConfidence()
     {
-        // Arrange
-        await SeedRuleSpecAsync(_gameId, "v1", new List<RuleAtom>
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var gameId = Guid.NewGuid();
+
+        await SeedRuleSpecAsync(context, gameId, "v1", new List<RuleAtom>
         {
             new RuleAtom("rule1", "Combat is resolved by dice roll", "Combat", "15")
         });
 
-        var session = CreateDefaultSession();
+        var session = CreateDefaultSession(gameId);
         session.Start();
         var move = new Move("Alice", "paint picture"); // Completely unrelated action
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.False(result.IsValid);
@@ -275,8 +318,12 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithMultipleRulesAndReferences_ReturnsHighConfidence()
     {
-        // Arrange
-        await SeedRuleSpecAsync(_gameId, "v1", new List<RuleAtom>
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var gameId = Guid.NewGuid();
+
+        await SeedRuleSpecAsync(context, gameId, "v1", new List<RuleAtom>
         {
             new RuleAtom("rule1", "Players must roll dice at start of turn", "Gameplay", "5", "12"),
             new RuleAtom("rule2", "Dice roll determines movement distance", "Movement", "6", "15"),
@@ -284,12 +331,12 @@ public class MoveValidationDomainServiceTests : IDisposable
             new RuleAtom("rule4", "Maximum dice roll is 12", "Rules", "2", "8")
         });
 
-        var session = CreateDefaultSession();
+        var session = CreateDefaultSession(gameId);
         session.Start();
         var move = new Move("Alice", "roll dice");
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.True(result.IsValid);
@@ -303,17 +350,21 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_DuringSetup_ProvidesSuggestions()
     {
-        // Arrange
-        await SeedRuleSpecAsync(_gameId, "v1", new List<RuleAtom>
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var gameId = Guid.NewGuid();
+
+        await SeedRuleSpecAsync(context, gameId, "v1", new List<RuleAtom>
         {
             new RuleAtom("rule1", "During setup, each player places starting pieces", "Setup", "3")
         });
 
-        var session = CreateDefaultSession(); // Status is Setup by default
+        var session = CreateDefaultSession(gameId); // Status is Setup by default
         var move = new Move("Alice", "place piece", position: "A1");
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.True(result.IsValid);
@@ -330,19 +381,23 @@ public class MoveValidationDomainServiceTests : IDisposable
     [Fact]
     public async Task ValidateMoveAsync_WithRestrictiveRules_ProvidesSuggestions()
     {
-        // Arrange
-        await SeedRuleSpecAsync(_gameId, "v1", new List<RuleAtom>
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var gameId = Guid.NewGuid();
+
+        await SeedRuleSpecAsync(context, gameId, "v1", new List<RuleAtom>
         {
             new RuleAtom("rule1", "Players cannot move backwards", "Movement", "8"),
             new RuleAtom("rule2", "Forward movement is allowed", "Movement", "7")
         });
 
-        var session = CreateDefaultSession();
+        var session = CreateDefaultSession(gameId);
         session.Start();
         var move = new Move("Alice", "move piece", position: "back");
 
         // Act
-        var result = await _service.ValidateMoveAsync(session, move);
+        var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
         Assert.True(result.IsValid || !result.IsValid); // Result depends on heuristics
@@ -357,7 +412,7 @@ public class MoveValidationDomainServiceTests : IDisposable
 
     #region Helper Methods
 
-    private GameSession CreateDefaultSession()
+    private static GameSession CreateDefaultSession(Guid? gameId = null)
     {
         var players = new List<SessionPlayer>
         {
@@ -365,10 +420,10 @@ public class MoveValidationDomainServiceTests : IDisposable
             new SessionPlayer("Bob", 2, "Blue")
         };
 
-        return new GameSession(_sessionId, _gameId, players);
+        return new GameSession(Guid.NewGuid(), gameId ?? Guid.NewGuid(), players);
     }
 
-    private async Task SeedRuleSpecAsync(Guid gameId, string version, List<RuleAtom> rules)
+    private static async Task SeedRuleSpecAsync(MeepleAiDbContext context, Guid gameId, string version, List<RuleAtom> rules)
     {
         var ruleSpecEntity = new RuleSpecEntity
         {
@@ -392,8 +447,8 @@ public class MoveValidationDomainServiceTests : IDisposable
             })
             .ToList();
 
-        _dbContext.RuleSpecs.Add(ruleSpecEntity);
-        await _dbContext.SaveChangesAsync();
+        context.RuleSpecs.Add(ruleSpecEntity);
+        await context.SaveChangesAsync();
     }
 
     private static int? TryParseNullableInt(string? value)
@@ -407,10 +462,4 @@ public class MoveValidationDomainServiceTests : IDisposable
     }
 
     #endregion
-
-    public void Dispose()
-    {
-        _dbContext.Database.EnsureDeleted();
-        _dbContext.Dispose();
-    }
 }

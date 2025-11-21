@@ -16,10 +16,10 @@ const webServerConfig = shouldStartWebServer
 export default defineConfig({
   testDir: './e2e',
   timeout: 60000, // 60s global timeout for dev mode
-  fullyParallel: true, // Issue #843: Enable parallel for better CI performance
+  fullyParallel: false, // Disabled to prevent memory exhaustion with large test suites (497 tests)
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0, // Reduce retries from 2 to 1 for faster feedback
-  workers: process.env.CI ? 6 : 4, // Issue #843: Reduced from 8 to 6 workers in CI to prevent memory exhaustion (~6GB heap limit), 4 local for optimal speed
+  workers: process.env.CI ? 2 : 1, // Further reduced to 2 workers in CI (from 3) and 1 local to prevent memory exhaustion with fullyParallel disabled
   reporter: process.env.CI ? 'dot' : 'html', // Concise output in CI, HTML report locally
   use: {
     baseURL,

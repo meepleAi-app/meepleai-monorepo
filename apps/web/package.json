@@ -24,6 +24,7 @@
     "test:e2e:chat": "playwright test e2e/chat* --reporter=html",
     "test:e2e:admin": "playwright test e2e/admin* --reporter=html",
     "test:e2e:pdf": "playwright test e2e/pdf* --reporter=html",
+    "test:e2e:groups": "tsx scripts/run-e2e-groups.ts",
     "test:performance": "playwright test e2e/performance.spec.ts",
     "test:performance:ui": "playwright test e2e/performance.spec.ts --ui",
     "test:a11y": "jest --testPathPatterns=\"(a11y|accessibility)\"",

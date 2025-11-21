@@ -501,13 +501,14 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Input value={profile?.Role || ''} disabled />
+                    <Label htmlFor="role">Role</Label>
+                    <Input id="role" value={profile?.Role || ''} disabled />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Member Since</Label>
+                    <Label htmlFor="memberSince">Member Since</Label>
                     <Input
+                      id="memberSince"
                       value={profile?.CreatedAt ? new Date(profile.CreatedAt).toLocaleDateString() : ''}
                       disabled
                     />

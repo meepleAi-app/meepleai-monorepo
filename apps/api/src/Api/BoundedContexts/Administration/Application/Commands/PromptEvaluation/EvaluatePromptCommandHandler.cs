@@ -17,8 +17,8 @@ public sealed class EvaluatePromptCommandHandler : ICommandHandler<EvaluatePromp
         IPromptEvaluationService evaluationService,
         ILogger<EvaluatePromptCommandHandler> logger)
     {
-        _evaluationService = evaluationService;
-        _logger = logger;
+        _evaluationService = evaluationService ?? throw new ArgumentNullException(nameof(evaluationService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<PromptEvaluationResult> Handle(EvaluatePromptCommand command, CancellationToken cancellationToken)

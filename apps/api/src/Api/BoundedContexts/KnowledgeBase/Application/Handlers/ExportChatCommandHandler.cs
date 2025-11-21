@@ -16,7 +16,7 @@ public class ExportChatCommandHandler : ICommandHandler<ExportChatCommand, Expor
 
     public ExportChatCommandHandler(IChatThreadRepository threadRepository)
     {
-        _threadRepository = threadRepository;
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
     }
 
     public async Task<ExportedChatDto> Handle(ExportChatCommand command, CancellationToken cancellationToken)

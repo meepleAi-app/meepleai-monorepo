@@ -14,8 +14,8 @@ public class DeleteN8nConfigCommandHandler : ICommandHandler<DeleteN8nConfigComm
         IN8nConfigurationRepository repository,
         IUnitOfWork unitOfWork)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<bool> Handle(DeleteN8nConfigCommand command, CancellationToken cancellationToken)

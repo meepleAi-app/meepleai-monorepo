@@ -20,8 +20,8 @@ public sealed class LogWorkflowErrorCommandHandler : ICommandHandler<LogWorkflow
         IWorkflowErrorLoggingService errorLoggingService,
         ILogger<LogWorkflowErrorCommandHandler> logger)
     {
-        _errorLoggingService = errorLoggingService;
-        _logger = logger;
+        _errorLoggingService = errorLoggingService ?? throw new ArgumentNullException(nameof(errorLoggingService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task Handle(LogWorkflowErrorCommand command, CancellationToken cancellationToken)

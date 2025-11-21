@@ -88,7 +88,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_ValidQuery_StreamsCorrectEvents()
     {
         // Arrange
-        var gameId = "game123";
+        var gameId = Guid.NewGuid().ToString();
         var userQuery = "How do I start the game?";
         var query = new StreamQaQuery(gameId, userQuery, null);
 
@@ -131,7 +131,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_LlmStreamingTokens_EmitsTokenEvents()
     {
         // Arrange
-        var gameId = "game123";
+        var gameId = Guid.NewGuid().ToString();
         var userQuery = "How to win?";
         var query = new StreamQaQuery(gameId, userQuery, null);
 
@@ -174,7 +174,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_CachedResponse_StreamsFromCache()
     {
         // Arrange
-        var gameId = "game123";
+        var gameId = Guid.NewGuid().ToString();
         var userQuery = "Cached question?";
         var query = new StreamQaQuery(gameId, userQuery, null);
 
@@ -337,7 +337,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_ThreadNotFound_ContinuesWithoutChatHistory()
     {
         // Arrange
-        var gameId = "game123";
+        var gameId = Guid.NewGuid().ToString();
         var threadId = Guid.NewGuid();
         var query = new StreamQaQuery(gameId, "Test query", threadId);
 
@@ -368,7 +368,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_EmptyQuery_ReturnsError()
     {
         // Arrange
-        var query = new StreamQaQuery("game123", "", null);
+        var query = new StreamQaQuery(Guid.NewGuid().ToString(), "", null);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -381,15 +381,15 @@ public class StreamQaQueryHandlerTests
         Assert.Single(events);
         Assert.Equal(StreamingEventType.Error, events[0].Type);
         var error = Assert.IsType<StreamingError>(events[0].Data);
-        Assert.Equal("Please provide a question.", error.errorMessage);
-        Assert.Equal("EMPTY_QUERY", error.errorCode);
+        Assert.Equal("Please provide a question", error.errorMessage);
+        Assert.Equal("INVALID_QUERY", error.errorCode);
     }
 
     [Fact]
     public async Task Handle_WhitespaceQuery_ReturnsError()
     {
         // Arrange
-        var query = new StreamQaQuery("game123", "   ", null);
+        var query = new StreamQaQuery(Guid.NewGuid().ToString(), "   ", null);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -407,7 +407,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_NullQuery_ReturnsError()
     {
         // Arrange
-        var query = new StreamQaQuery("game123", null!, null);
+        var query = new StreamQaQuery(Guid.NewGuid().ToString(), null!, null);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -429,7 +429,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_SearchReturnsNoResults_ReturnsError()
     {
         // Arrange
-        var gameId = "game123";
+        var gameId = Guid.NewGuid().ToString();
         var query = new StreamQaQuery(gameId, "Test query", null);
 
         _cacheMock
@@ -478,7 +478,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_CancellationRequested_StopsStreaming()
     {
         // Arrange
-        var gameId = "game123";
+        var gameId = Guid.NewGuid().ToString();
         var query = new StreamQaQuery(gameId, "Test query", null);
 
         SetupSearchMocks(gameId, query.Query);
@@ -530,7 +530,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_CalculatesConfidenceScores()
     {
         // Arrange
-        var gameId = "game123";
+        var gameId = Guid.NewGuid().ToString();
         var query = new StreamQaQuery(gameId, "Test query", null);
 
         SetupSearchMocks(gameId, query.Query);

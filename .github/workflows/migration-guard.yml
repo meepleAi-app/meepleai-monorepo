@@ -141,7 +141,7 @@ jobs:
 
       - name: Upload SQL Migration Scripts
         if: steps.generate_sql.outputs.sql_generated == 'true'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: migration-sql-preview-${{ github.event.pull_request.number }}
           path: |

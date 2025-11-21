@@ -81,7 +81,7 @@ jobs:
           NODE_ENV: production
 
       - name: Upload Next.js Build Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: nextjs-build-${{ github.sha }}
           path: |
@@ -137,7 +137,7 @@ jobs:
         run: pnpm exec playwright install-deps chromium
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: nextjs-build-${{ github.sha }}
           path: apps/web
@@ -149,7 +149,7 @@ jobs:
 
       - name: Upload Playwright Report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: lighthouse-playwright-report-${{ github.run_number }}
           path: apps/web/playwright-report/
@@ -169,7 +169,7 @@ jobs:
 
       - name: Upload Lighthouse Reports
         if: always() && steps.check-reports.outputs.reports_exist == 'true'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: lighthouse-reports-${{ github.run_number }}
           path: apps/web/lighthouse-reports/
@@ -204,7 +204,7 @@ jobs:
         run: pnpm install
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: nextjs-build-${{ github.sha }}
           path: apps/web
@@ -217,7 +217,7 @@ jobs:
 
       - name: Upload Lighthouse CI Results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci/
@@ -282,7 +282,7 @@ jobs:
           node-version: 20
 
       - name: Download PR Lighthouse Results
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci-pr

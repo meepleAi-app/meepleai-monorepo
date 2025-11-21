@@ -221,7 +221,7 @@ public sealed class ValidationBehaviorTests
 
         var mockValidator = new Mock<IValidator<LoginCommand>>();
         mockValidator
-            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default))
+            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
         var nextCalled = false;

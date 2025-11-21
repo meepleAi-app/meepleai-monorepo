@@ -36,7 +36,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test01_Stage1HighQuality_ReturnsStage1Result()
+    public async Task Stage1HighQuality_ReturnsStage1Result()
     {
         // Arrange - Stage 1 succeeds with High quality (0.85 ≥ 0.80)
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, text: "Stage1 text");
@@ -66,7 +66,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test02_Stage1LowQuality_FallsBackToStage2()
+    public async Task Stage1LowQuality_FallsBackToStage2()
     {
         // Arrange - Stage 1 Low quality (0.50 < 0.80), Stage 2 Medium (0.70 ≥ 0.70)
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Stage1 low");
@@ -94,7 +94,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test03_Stage1And2Fail_FallsBackToStage3()
+    public async Task Stage1And2Fail_FallsBackToStage3()
     {
         // Arrange - Stages 1-2 fail, Stage 3 succeeds (best effort)
         var stage1 = new FakeExtractor(success: false, quality: ExtractionQuality.VeryLow, text: "", errorMsg: "Stage1 unavailable");
@@ -121,7 +121,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test04_Stage2LowQuality_FallsBackToStage3()
+    public async Task Stage2LowQuality_FallsBackToStage3()
     {
         // Arrange - Stage 1 Low (0.50 < 0.80), Stage 2 Low (0.50 < 0.70), Stage 3 Medium
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Stage1");
@@ -147,7 +147,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test05_AllStagesFail_ReturnsStage3FailureResult()
+    public async Task AllStagesFail_ReturnsStage3FailureResult()
     {
         // Arrange - All stages fail
         var stage1 = new FakeExtractor(success: false, quality: ExtractionQuality.VeryLow, text: "", errorMsg: "Stage1 error");
@@ -174,7 +174,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test06_Stage1Exception_CatchesAndFallsBackToStage2()
+    public async Task Stage1Exception_CatchesAndFallsBackToStage2()
     {
         // Arrange - Stage 1 throws exception, Stage 2 succeeds
         var stage1 = new FakeExtractor(throwException: true);
@@ -196,7 +196,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test07_PagedExtraction_Stage1Success()
+    public async Task PagedExtraction_Stage1Success()
     {
         // Arrange - Paged extraction with Stage 1 success (high quality chars/page)
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, pageCount: 10, charsPerPage: 1200); // 0.85 ≥ 0.80
@@ -224,7 +224,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test08_PagedExtraction_FallbackToStage3()
+    public async Task PagedExtraction_FallbackToStage3()
     {
         // Arrange - Stages 1-2 fail paged extraction, Stage 3 succeeds (best effort)
         var stage1 = new FakeExtractor(success: false, errorMsg: "Stage1 paged failed");
@@ -251,7 +251,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test09_PagedExtraction_HonorsQualityThreshold()
+    public async Task PagedExtraction_HonorsQualityThreshold()
     {
         // Arrange - Test quality-based fallback with linear interpolation
         // Stage 1: 400 cpp → score 0.40 < 0.80 → falls back
@@ -282,7 +282,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test10_PagedExtraction_VeryLowQualityFallsBackToStage3()
+    public async Task PagedExtraction_VeryLowQualityFallsBackToStage3()
     {
         // Arrange - All stages low quality with linear interpolation
         // Stage 1: 200 cpp → 0.20 < 0.80 → rejects
@@ -314,7 +314,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test11_PagedExtraction_HighQualityStage1Accepted()
+    public async Task PagedExtraction_HighQualityStage1Accepted()
     {
         // Arrange - Stage 1 at threshold boundary (800 cpp → 0.80)
         // Stage 1: 800 cpp → score 0.80 ≥ 0.80 → accepts immediately (exactly at threshold)
@@ -344,7 +344,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test09_PerformanceTracking_RecordsDuration()
+    public async Task PerformanceTracking_RecordsDuration()
     {
         // Arrange
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, text: "Fast extraction");
@@ -366,7 +366,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test10_QualityMapping_CorrectThresholds()
+    public async Task QualityMapping_CorrectThresholds()
     {
         // Test different quality levels and their threshold behavior
         var testCases = new[]
@@ -406,7 +406,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     [InlineData(52428800, true)]     // 50 MB - under limit (50 * 1024 * 1024)
     [InlineData(104857600, true)]    // 100 MB - at limit (boundary) (100 * 1024 * 1024)
     [InlineData(105906176, false)]   // 101 MB - exceeds limit (101 * 1024 * 1024)
-    public async Task Test11_FileSizeLimit_ReturnsExpected(long size, bool shouldSucceed)
+    public async Task FileSizeLimit_ReturnsExpected(long size, bool shouldSucceed)
     {
         // Arrange - Create fake extractors (won't be called for oversized PDFs)
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, text: "Should not extract");
@@ -455,7 +455,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test12_NonSeekableStream_SkipsSizeCheck()
+    public async Task NonSeekableStream_SkipsSizeCheck()
     {
         // Arrange - Non-seekable stream (size check should be skipped gracefully)
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, text: "Extracted successfully");
@@ -487,7 +487,7 @@ public class EnhancedPdfProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task Test13_DefaultMaxSize_WhenConfigMissing()
+    public async Task DefaultMaxSize_WhenConfigMissing()
     {
         // Arrange - No configuration (should use default 100 MB)
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, text: "Extracted");

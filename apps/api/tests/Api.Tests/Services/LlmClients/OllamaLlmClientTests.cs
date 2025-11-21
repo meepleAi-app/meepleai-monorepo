@@ -20,7 +20,7 @@ public class OllamaLlmClientTests
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     [Fact]
-    public void Test01_SupportsModel_LocalModel_ReturnsTrue()
+    public void SupportsModel_LocalModel_ReturnsTrue()
     {
         // Arrange
         var client = CreateClient();
@@ -32,7 +32,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    public void Test02_SupportsModel_OpenRouterModel_ReturnsFalse()
+    public void SupportsModel_OpenRouterModel_ReturnsFalse()
     {
         // Arrange
         var client = CreateClient();
@@ -43,7 +43,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    public void Test03_ProviderName_ReturnsOllama()
+    public void ProviderName_ReturnsOllama()
     {
         // Arrange & Act
         var client = CreateClient();
@@ -53,7 +53,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    public async Task Test04_GenerateCompletion_Success_ReturnsResult()
+    public async Task GenerateCompletion_Success_ReturnsResult()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -95,7 +95,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    public async Task Test05_GenerateCompletion_Timeout_ReturnsFailure()
+    public async Task GenerateCompletion_Timeout_ReturnsFailure()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -124,7 +124,7 @@ public class OllamaLlmClientTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Test06_GenerateCompletion_ModelNotFound_ReturnsError()
+    public async Task GenerateCompletion_ModelNotFound_ReturnsError()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -157,7 +157,7 @@ public class OllamaLlmClientTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Test07_GenerateCompletionStream_Success_YieldsChunks()
+    public async Task GenerateCompletionStream_Success_YieldsChunks()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -197,7 +197,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    public async Task Test08_ItalianQuery_ReturnsItalianResponse()
+    public async Task ItalianQuery_ReturnsItalianResponse()
     {
         // Arrange - Test Italian language handling
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -240,7 +240,7 @@ public class OllamaLlmClientTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Test09_ConcurrentRequests_HandledCorrectly()
+    public async Task ConcurrentRequests_HandledCorrectly()
     {
         // Arrange
         var responseJson = JsonSerializer.Serialize(new
@@ -272,7 +272,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    public async Task Test10_ResponseParsing_InvalidJson_ReturnsFailure()
+    public async Task ResponseParsing_InvalidJson_ReturnsFailure()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -299,7 +299,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    public async Task Test11_EmptyPrompt_ReturnsFailure()
+    public async Task EmptyPrompt_ReturnsFailure()
     {
         // Arrange
         var client = CreateClient();
@@ -314,7 +314,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    public async Task Test12_HttpRequestException_ReturnsFailure()
+    public async Task HttpRequestException_ReturnsFailure()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();

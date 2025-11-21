@@ -57,7 +57,7 @@ public class RagServicePerformanceTests : IDisposable
     /// Target: P95 <3000ms for question answering flow
     /// </summary>
     [Fact]
-    public async Task Test01_AskAsync_P95Latency_UnderTarget()
+    public async Task AskAsync_P95Latency_UnderTarget()
     {
         // Arrange
         const int iterations = 20;
@@ -116,7 +116,7 @@ public class RagServicePerformanceTests : IDisposable
     /// Target: P95 <3000ms for explanation generation flow
     /// </summary>
     [Fact]
-    public async Task Test02_ExplainAsync_P95Latency_UnderTarget()
+    public async Task ExplainAsync_P95Latency_UnderTarget()
     {
         // Arrange
         const int iterations = 20;
@@ -175,7 +175,7 @@ public class RagServicePerformanceTests : IDisposable
     /// Target: P95 <3000ms for hybrid search flow
     /// </summary>
     [Fact]
-    public async Task Test03_AskWithHybridSearchAsync_P95Latency_UnderTarget()
+    public async Task AskWithHybridSearchAsync_P95Latency_UnderTarget()
     {
         // Arrange
         const int iterations = 20;

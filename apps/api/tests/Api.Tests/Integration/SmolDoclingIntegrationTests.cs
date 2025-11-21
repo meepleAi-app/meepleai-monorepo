@@ -124,7 +124,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     #region Test Case 1: Successful PDF extraction via service
 
     [Fact]
-    public async Task Test01_SuccessfulPdfExtraction_ViaSmolDoclingService()
+    public async Task SuccessfulPdfExtraction_ViaSmolDoclingService()
     {
         // Arrange - Use Barrage rulebook (21MB, Italian, moderate complexity)
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
@@ -158,7 +158,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     #region Test Case 2: Service timeout handling
 
     [Fact]
-    public async Task Test02_ServiceTimeout_HandledGracefully()
+    public async Task ServiceTimeout_HandledGracefully()
     {
         // Arrange - Use small PDF to ensure normal completion (testing timeout requires cancellation)
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
@@ -179,7 +179,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test02b_UserCancellation_PropagatesCorrectly()
+    public async Task UserCancellation_PropagatesCorrectly()
     {
         // Arrange
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
@@ -203,7 +203,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     #region Test Case 3: Service unavailable (circuit breaker)
 
     [Fact]
-    public async Task Test03_ServiceUnavailable_CircuitBreakerHandling()
+    public async Task ServiceUnavailable_CircuitBreakerHandling()
     {
         // Arrange - Create extractor pointing to non-existent service
         var services = new ServiceCollection();
@@ -250,7 +250,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     #region Test Case 4: Invalid PDF error from service
 
     [Fact]
-    public async Task Test04_InvalidPdf_ErrorHandling()
+    public async Task InvalidPdf_ErrorHandling()
     {
         // Arrange - Create corrupted PDF (invalid header)
         var invalidPdfBytes = System.Text.Encoding.UTF8.GetBytes("This is not a valid PDF file content");
@@ -293,7 +293,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     #region Test Case 5: Large file processing
 
     [Fact]
-    public async Task Test05_LargeFilePdf_ProcessesSuccessfully()
+    public async Task LargeFilePdf_ProcessesSuccessfully()
     {
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages, complex layout)
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
@@ -323,7 +323,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     #region Test Case 6: Concurrent requests
 
     [Fact]
-    public async Task Test06_ConcurrentRequests_HandleMultipleSimultaneously()
+    public async Task ConcurrentRequests_HandleMultipleSimultaneously()
     {
         // Arrange - Use Barrage PDF for concurrent processing
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
@@ -361,7 +361,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     #region Test Case 7: Service restart recovery
 
     [Fact]
-    public async Task Test07_ServiceRestart_RecoveryAfterTemporaryFailure()
+    public async Task ServiceRestart_RecoveryAfterTemporaryFailure()
     {
         // Arrange - First request to establish baseline
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");

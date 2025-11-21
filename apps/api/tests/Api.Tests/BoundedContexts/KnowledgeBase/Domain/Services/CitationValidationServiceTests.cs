@@ -83,7 +83,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test01_ValidateCitations_AllValid_ReturnsValid()
+    public async Task ValidateCitations_AllValid_ReturnsValid()
     {
         // Arrange
         var snippets = TestDataFactory.CreateValidSnippets(_pdf1Id, count: 2)
@@ -104,7 +104,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test02_ValidateCitations_Empty_ReturnsValid()
+    public async Task ValidateCitations_Empty_ReturnsValid()
     {
         // Arrange
         var snippets = new List<Snippet>();
@@ -121,7 +121,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test03_ValidateCitations_DocumentNotFound_ReturnsInvalid()
+    public async Task ValidateCitations_DocumentNotFound_ReturnsInvalid()
     {
         // Arrange
         var nonExistentPdfId = Guid.NewGuid();
@@ -143,7 +143,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test04_ValidateCitations_InvalidPageNumber_ReturnsInvalid()
+    public async Task ValidateCitations_InvalidPageNumber_ReturnsInvalid()
     {
         // Arrange - PDF1 has 10 pages, try page 15
         var snippets = new List<Snippet>
@@ -164,7 +164,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test05_ValidateCitations_PageZero_ReturnsInvalid()
+    public async Task ValidateCitations_PageZero_ReturnsInvalid()
     {
         // Arrange - Page 0 is invalid (pages start at 1)
         var snippets = TestDataFactory.CreateSnippetsWithInvalidPages(_pdf1Id).Take(1).ToList();
@@ -179,7 +179,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test06_ValidateCitations_MalformedSource_ReturnsInvalid()
+    public async Task ValidateCitations_MalformedSource_ReturnsInvalid()
     {
         // Arrange - Invalid source format (not "PDF:guid")
         var snippets = new List<Snippet>
@@ -198,7 +198,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test07_ValidateCitations_NullSource_ReturnsInvalid()
+    public async Task ValidateCitations_NullSource_ReturnsInvalid()
     {
         // Arrange
         var snippets = new List<Snippet>
@@ -216,7 +216,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test08_ValidateCitations_MixedValidInvalid_ReturnsPartiallyValid()
+    public async Task ValidateCitations_MixedValidInvalid_ReturnsPartiallyValid()
     {
         // Arrange - 2 valid, 1 invalid
         var nonExistentPdfId = Guid.NewGuid();
@@ -241,7 +241,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test09_ValidateCitations_BoundaryPages_ValidatesCorrectly()
+    public async Task ValidateCitations_BoundaryPages_ValidatesCorrectly()
     {
         // Arrange - Test boundary pages (first and last)
         var snippets = new List<Snippet>
@@ -262,7 +262,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test10_ValidateSingleCitation_Valid_ReturnsTrue()
+    public async Task ValidateSingleCitation_Valid_ReturnsTrue()
     {
         // Arrange
         var snippet = new Snippet("text", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.9f);
@@ -275,7 +275,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test11_ValidateSingleCitation_Invalid_ReturnsFalse()
+    public async Task ValidateSingleCitation_Invalid_ReturnsFalse()
     {
         // Arrange
         var nonExistentPdfId = Guid.NewGuid();
@@ -289,7 +289,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test12_ValidateCitations_InvalidGameId_ReturnsInvalid()
+    public async Task ValidateCitations_InvalidGameId_ReturnsInvalid()
     {
         // Arrange
         var snippets = new List<Snippet>
@@ -310,7 +310,7 @@ public class CitationValidationServiceTests : IDisposable
     // ========== Additional Comprehensive Tests (BGAI-031) ==========
 
     [Fact]
-    public async Task Test13_ValidateCitations_NegativePageNumber_ReturnsInvalid()
+    public async Task ValidateCitations_NegativePageNumber_ReturnsInvalid()
     {
         // Arrange - Negative page number
         var snippets = new List<Snippet>
@@ -328,7 +328,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test14_ValidateCitations_LargeCollection_ValidatesAll()
+    public async Task ValidateCitations_LargeCollection_ValidatesAll()
     {
         // Arrange - Large collection of valid citations
         var snippets = new List<Snippet>();
@@ -350,7 +350,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test15_ValidateCitations_ValidationAccuracy_CalculatesCorrectly()
+    public async Task ValidateCitations_ValidationAccuracy_CalculatesCorrectly()
     {
         // Arrange - 7 valid, 3 invalid = 70% accuracy
         var validPdfId = _pdf1Id;
@@ -381,7 +381,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test16_ValidateCitations_DuplicateCitations_ValidatesEach()
+    public async Task ValidateCitations_DuplicateCitations_ValidatesEach()
     {
         // Arrange - Same citation repeated
         var snippets = new List<Snippet>
@@ -401,7 +401,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test17_ValidateCitations_WhitespaceSource_ReturnsInvalid()
+    public async Task ValidateCitations_WhitespaceSource_ReturnsInvalid()
     {
         // Arrange - Whitespace-only source
         var snippets = new List<Snippet>
@@ -419,7 +419,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test18_ValidateCitations_EmptyStringSource_ReturnsInvalid()
+    public async Task ValidateCitations_EmptyStringSource_ReturnsInvalid()
     {
         // Arrange - Empty string source
         var snippets = new List<Snippet>
@@ -437,7 +437,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test19_ValidateCitations_InvalidGuidInSource_ReturnsInvalid()
+    public async Task ValidateCitations_InvalidGuidInSource_ReturnsInvalid()
     {
         // Arrange - Invalid GUID format
         var snippets = new List<Snippet>
@@ -455,7 +455,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test20_ValidateCitations_MultiplePdfDocuments_ValidatesCrossDocument()
+    public async Task ValidateCitations_MultiplePdfDocuments_ValidatesCrossDocument()
     {
         // Arrange - Citations from both PDFs
         var snippets = new List<Snippet>
@@ -477,7 +477,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test21_ValidateCitations_SourceWithoutColon_ReturnsInvalid()
+    public async Task ValidateCitations_SourceWithoutColon_ReturnsInvalid()
     {
         // Arrange - Source missing colon separator
         var snippets = new List<Snippet>
@@ -495,7 +495,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test22_ValidateCitations_SourceWithWrongPrefix_ReturnsInvalid()
+    public async Task ValidateCitations_SourceWithWrongPrefix_ReturnsInvalid()
     {
         // Arrange - Wrong prefix (not "PDF:")
         var snippets = new List<Snippet>
@@ -513,7 +513,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test23_ValidateSingleCitation_NegativePage_ReturnsFalse()
+    public async Task ValidateSingleCitation_NegativePage_ReturnsFalse()
     {
         // Arrange
         var snippet = new Snippet("text", $"PDF:{_pdf1Id}", page: -1, line: 0, score: 0.9f);
@@ -526,7 +526,7 @@ public class CitationValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Test24_ValidateCitations_AllErrorTypes_ReturnsMultipleErrors()
+    public async Task ValidateCitations_AllErrorTypes_ReturnsMultipleErrors()
     {
         // Arrange - Create one of each error type
         var nonExistentPdfId = Guid.NewGuid();

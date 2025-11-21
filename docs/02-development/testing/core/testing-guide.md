@@ -807,7 +807,11 @@ describe('LoadingButton', () => {
 });
 ```
 
-**Backend**: `MethodName_Condition_ExpectedResult`
+**Backend**: `MethodName_Scenario_ExpectedResult`
+
+⚠️ **IMPORTANT**: Do NOT use `Test##_` prefixes (e.g., `Test01_`, `Test02_`). These were deprecated as of 2025-11-20.
+
+✅ **Recommended Pattern**:
 ```csharp
 [Fact]
 public async Task LoginAsync_WithValidCredentials_ReturnsSession() { }
@@ -818,6 +822,22 @@ public async Task LoginAsync_WithInvalidPassword_ThrowsUnauthorizedException() {
 [Fact]
 public async Task ValidateApiKeyAsync_WithExpiredKey_ReturnsNull() { }
 ```
+
+❌ **Deprecated Pattern** (DO NOT USE):
+```csharp
+[Fact]
+public async Task Test01_LoginAsync_WithValidCredentials_ReturnsSession() { } // ❌ Don't use Test## prefix
+
+[Fact]
+public async Task Test02_LoginAsync_WithInvalidPassword_ThrowsUnauthorizedException() { } // ❌ Don't use Test## prefix
+```
+
+**Rationale**:
+- **Self-documenting**: Name describes the complete test scenario
+- **IDE-friendly**: Alphabetical sorting by method name, not by number
+- **xUnit standard**: Pattern recommended by Microsoft and xUnit documentation
+- **Refactoring-safe**: Numbers become obsolete when tests are reordered
+- **Readability**: Easier to understand what the test does without reading the code
 
 ---
 

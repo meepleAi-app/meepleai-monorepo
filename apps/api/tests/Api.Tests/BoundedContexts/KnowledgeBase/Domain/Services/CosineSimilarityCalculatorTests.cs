@@ -17,7 +17,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test01_CalculateCosineSimilarity_IdenticalTexts_Returns100()
+    public void CalculateCosineSimilarity_IdenticalTexts_Returns100()
     {
         // Arrange
         var text = "The knight moves in an L-shape: two squares in one direction and one square perpendicular.";
@@ -30,7 +30,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test02_CalculateCosineSimilarity_HighlySimilarTexts_ReturnsHighScore()
+    public void CalculateCosineSimilarity_HighlySimilarTexts_ReturnsHighScore()
     {
         // Arrange - Very similar semantic content with different wording
         var text1 = "The knight moves in an L-shape: two squares in one direction and one square perpendicular to that direction.";
@@ -44,7 +44,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test03_CalculateCosineSimilarity_ModeratelySimilarTexts_ReturnsMediumScore()
+    public void CalculateCosineSimilarity_ModeratelySimilarTexts_ReturnsMediumScore()
     {
         // Arrange - Same topic, different explanations
         var text1 = "The knight moves two squares vertically and one square horizontally, or two squares horizontally and one square vertically.";
@@ -59,7 +59,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test04_CalculateCosineSimilarity_DifferentTexts_ReturnsLowScore()
+    public void CalculateCosineSimilarity_DifferentTexts_ReturnsLowScore()
     {
         // Arrange - Completely different topics
         var text1 = "The knight moves in an L-shape on the chessboard.";
@@ -73,7 +73,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test05_CalculateCosineSimilarity_CompletelyDifferentTexts_ReturnsVeryLowScore()
+    public void CalculateCosineSimilarity_CompletelyDifferentTexts_ReturnsVeryLowScore()
     {
         // Arrange - No semantic overlap
         var text1 = "The game of chess originated in India during the 6th century.";
@@ -87,7 +87,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test06_CalculateCosineSimilarity_EmptyFirstText_ReturnsZero()
+    public void CalculateCosineSimilarity_EmptyFirstText_ReturnsZero()
     {
         // Arrange
         var text = "Some text content";
@@ -100,7 +100,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test07_CalculateCosineSimilarity_EmptySecondText_ReturnsZero()
+    public void CalculateCosineSimilarity_EmptySecondText_ReturnsZero()
     {
         // Arrange
         var text = "Some text content";
@@ -113,7 +113,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test08_CalculateCosineSimilarity_BothEmpty_ReturnsZero()
+    public void CalculateCosineSimilarity_BothEmpty_ReturnsZero()
     {
         // Act
         var similarity = _calculator.CalculateCosineSimilarity("", "");
@@ -123,7 +123,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test09_CalculateCosineSimilarity_WhitespaceOnly_ReturnsZero()
+    public void CalculateCosineSimilarity_WhitespaceOnly_ReturnsZero()
     {
         // Act
         var similarity = _calculator.CalculateCosineSimilarity("   ", "\t\n");
@@ -133,7 +133,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test10_CalculateCosineSimilarity_CaseInsensitive()
+    public void CalculateCosineSimilarity_CaseInsensitive()
     {
         // Arrange
         var text1 = "The KNIGHT moves in an L-SHAPE.";
@@ -147,7 +147,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test11_CalculateCosineSimilarity_PunctuationHandling()
+    public void CalculateCosineSimilarity_PunctuationHandling()
     {
         // Arrange
         var text1 = "The knight moves in an L-shape!";
@@ -161,7 +161,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test12_CalculateCosineSimilarity_WordOrder_AffectsSimilarity()
+    public void CalculateCosineSimilarity_WordOrder_AffectsSimilarity()
     {
         // Arrange - Same words, different order (TF-IDF cosine is bag-of-words, order doesn't matter much)
         var text1 = "The quick brown fox jumps over the lazy dog";
@@ -176,7 +176,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test13_CalculateCosineSimilarity_TermFrequency_Matters()
+    public void CalculateCosineSimilarity_TermFrequency_Matters()
     {
         // Arrange - Different term frequencies
         var text1 = "chess chess chess game board";
@@ -191,7 +191,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test14_CalculateCosineSimilarity_LongTexts_SimilarContent()
+    public void CalculateCosineSimilarity_LongTexts_SimilarContent()
     {
         // Arrange - Longer, realistic board game rule explanations
         var text1 = @"In chess, the knight is a piece that moves in an L-shaped pattern.
@@ -213,7 +213,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test15_CalculateCosineSimilarity_ConsensusThreshold_Example()
+    public void CalculateCosineSimilarity_ConsensusThreshold_Example()
     {
         // Arrange - Simulate GPT-4 and Claude responses that should achieve consensus
         var gpt4Response = @"Castling is a special move in chess involving the king and one rook.
@@ -238,7 +238,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test16_CalculateCosineSimilarity_NonConsensus_Example()
+    public void CalculateCosineSimilarity_NonConsensus_Example()
     {
         // Arrange - Different enough responses that shouldn't achieve consensus
         var response1 = "The rook can move any number of squares horizontally or vertically.";
@@ -253,7 +253,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test17_CalculateCosineSimilarity_ShortTexts_IdenticalContent()
+    public void CalculateCosineSimilarity_ShortTexts_IdenticalContent()
     {
         // Arrange
         var text1 = "Yes, you can castle.";
@@ -268,7 +268,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test18_CalculateCosineSimilarity_SymmetricProperty()
+    public void CalculateCosineSimilarity_SymmetricProperty()
     {
         // Arrange
         var text1 = "The bishop moves diagonally across the board.";
@@ -283,7 +283,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test19_CalculateCosineSimilarity_RangeValidation()
+    public void CalculateCosineSimilarity_RangeValidation()
     {
         // Arrange - Various text pairs
         var testCases = new[]
@@ -306,7 +306,7 @@ public class CosineSimilarityCalculatorTests
     }
 
     [Fact]
-    public void Test20_CalculateCosineSimilarity_NullText_ReturnsZero()
+    public void CalculateCosineSimilarity_NullText_ReturnsZero()
     {
         // Act & Assert
         var similarity1 = _calculator.CalculateCosineSimilarity(null!, "text");

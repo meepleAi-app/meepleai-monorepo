@@ -22,7 +22,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region GetByIdAsync Tests
 
     [Fact]
-    public async Task Test01_GetByIdAsync_ExistingUser_ReturnsUser()
+    public async Task GetByIdAsync_ExistingUser_ReturnsUser()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -41,7 +41,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test02_GetByIdAsync_NonExistingUser_ReturnsNull()
+    public async Task GetByIdAsync_NonExistingUser_ReturnsNull()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -59,7 +59,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region GetByEmailAsync Tests
 
     [Fact]
-    public async Task Test03_GetByEmailAsync_ExistingUser_ReturnsUser()
+    public async Task GetByEmailAsync_ExistingUser_ReturnsUser()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -79,7 +79,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test04_GetByEmailAsync_CaseInsensitive_ReturnsUser()
+    public async Task GetByEmailAsync_CaseInsensitive_ReturnsUser()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -98,7 +98,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test05_GetByEmailAsync_NonExistingEmail_ReturnsNull()
+    public async Task GetByEmailAsync_NonExistingEmail_ReturnsNull()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -116,7 +116,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region ExistsByEmailAsync Tests
 
     [Fact]
-    public async Task Test06_ExistsByEmailAsync_ExistingUser_ReturnsTrue()
+    public async Task ExistsByEmailAsync_ExistingUser_ReturnsTrue()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -134,7 +134,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test07_ExistsByEmailAsync_NonExistingUser_ReturnsFalse()
+    public async Task ExistsByEmailAsync_NonExistingUser_ReturnsFalse()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -152,7 +152,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region HasAnyUsersAsync Tests
 
     [Fact]
-    public async Task Test08_HasAnyUsersAsync_EmptyDatabase_ReturnsFalse()
+    public async Task HasAnyUsersAsync_EmptyDatabase_ReturnsFalse()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -165,7 +165,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test09_HasAnyUsersAsync_PopulatedDatabase_ReturnsTrue()
+    public async Task HasAnyUsersAsync_PopulatedDatabase_ReturnsTrue()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -185,7 +185,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region CountAdminsAsync Tests
 
     [Fact]
-    public async Task Test10_CountAdminsAsync_NoAdmins_ReturnsZero()
+    public async Task CountAdminsAsync_NoAdmins_ReturnsZero()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -203,7 +203,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test11_CountAdminsAsync_MultipleAdmins_ReturnsCorrectCount()
+    public async Task CountAdminsAsync_MultipleAdmins_ReturnsCorrectCount()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -230,7 +230,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region GetAllAsync Tests
 
     [Fact]
-    public async Task Test12_GetAllAsync_EmptyDatabase_ReturnsEmptyList()
+    public async Task GetAllAsync_EmptyDatabase_ReturnsEmptyList()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -243,7 +243,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test13_GetAllAsync_MultipleUsers_ReturnsAll()
+    public async Task GetAllAsync_MultipleUsers_ReturnsAll()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -271,7 +271,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region AddAsync Tests
 
     [Fact]
-    public async Task Test14_AddAsync_NewUser_PersistsSuccessfully()
+    public async Task AddAsync_NewUser_PersistsSuccessfully()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -289,7 +289,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test15_AddAsync_UserWith2FA_PersistsCorrectly()
+    public async Task AddAsync_UserWith2FA_PersistsCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -313,7 +313,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region UpdateAsync Tests
 
     [Fact]
-    public async Task Test16_UpdateAsync_ModifiedUser_PersistsChanges()
+    public async Task UpdateAsync_ModifiedUser_PersistsChanges()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -339,7 +339,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test17_UpdateAsync_Enable2FA_UpdatesCorrectly()
+    public async Task UpdateAsync_Enable2FA_UpdatesCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -366,7 +366,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region DeleteAsync Tests
 
     [Fact]
-    public async Task Test18_DeleteAsync_ExistingUser_RemovesFromDatabase()
+    public async Task DeleteAsync_ExistingUser_RemovesFromDatabase()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -384,7 +384,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test19_DeleteAsync_NonExistingUser_DoesNotThrow()
+    public async Task DeleteAsync_NonExistingUser_DoesNotThrow()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -400,7 +400,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region ExistsAsync Tests
 
     [Fact]
-    public async Task Test20_ExistsAsync_ExistingUser_ReturnsTrue()
+    public async Task ExistsAsync_ExistingUser_ReturnsTrue()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -416,7 +416,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test21_ExistsAsync_NonExistingUser_ReturnsFalse()
+    public async Task ExistsAsync_NonExistingUser_ReturnsFalse()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -434,7 +434,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region Mapping Tests
 
     [Fact]
-    public async Task Test22_Mapping_DomainToPersistence_AllFieldsCorrect()
+    public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -457,7 +457,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test23_Mapping_PersistenceToDomain_AllFieldsCorrect()
+    public async Task Mapping_PersistenceToDomain_AllFieldsCorrect()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -479,7 +479,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test24_Mapping_2FAFields_PreservedCorrectly()
+    public async Task Mapping_2FAFields_PreservedCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -503,7 +503,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region Concurrent Access Tests
 
     [Fact]
-    public async Task Test25_ConcurrentReads_NoConflicts()
+    public async Task ConcurrentReads_NoConflicts()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -529,7 +529,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test26_ConcurrentEmailLookups_NoConflicts()
+    public async Task ConcurrentEmailLookups_NoConflicts()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -559,7 +559,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region Transaction Tests
 
     [Fact]
-    public async Task Test27_Transaction_Rollback_NoDataPersisted()
+    public async Task Transaction_Rollback_NoDataPersisted()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -575,7 +575,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test28_MultipleOperations_SingleTransaction_AllOrNothing()
+    public async Task MultipleOperations_SingleTransaction_AllOrNothing()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -597,7 +597,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     #region Edge Cases
 
     [Fact]
-    public async Task Test29_NullableFields_HandledCorrectly()
+    public async Task NullableFields_HandledCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -614,7 +614,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test30_SpecialCharacters_EmailHandling()
+    public async Task SpecialCharacters_EmailHandling()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -633,7 +633,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test31_LargeDataset_PerformanceTest()
+    public async Task LargeDataset_PerformanceTest()
     {
         // Arrange - Add 100 users
         await ResetDatabaseAsync();
@@ -655,7 +655,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     }
 
     [Fact]
-    public async Task Test32_AsNoTracking_QueriesDoNotTrackEntities()
+    public async Task AsNoTracking_QueriesDoNotTrackEntities()
     {
         // Arrange
         await ResetDatabaseAsync();

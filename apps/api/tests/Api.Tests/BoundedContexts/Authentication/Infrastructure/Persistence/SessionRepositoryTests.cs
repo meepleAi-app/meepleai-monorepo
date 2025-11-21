@@ -22,7 +22,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region GetByTokenHashAsync Tests
 
     [Fact]
-    public async Task Test01_GetByTokenHashAsync_ExistingSession_ReturnsSession()
+    public async Task GetByTokenHashAsync_ExistingSession_ReturnsSession()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -42,7 +42,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test02_GetByTokenHashAsync_NonExistingToken_ReturnsNull()
+    public async Task GetByTokenHashAsync_NonExistingToken_ReturnsNull()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -60,7 +60,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region GetByUserIdAsync Tests
 
     [Fact]
-    public async Task Test03_GetByUserIdAsync_NoSessions_ReturnsEmptyList()
+    public async Task GetByUserIdAsync_NoSessions_ReturnsEmptyList()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -74,7 +74,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test04_GetByUserIdAsync_MultipleSessions_ReturnsAllOrdered()
+    public async Task GetByUserIdAsync_MultipleSessions_ReturnsAllOrdered()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -101,7 +101,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test05_GetByUserIdAsync_MultipleUsers_FiltersCorrectly()
+    public async Task GetByUserIdAsync_MultipleUsers_FiltersCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -131,7 +131,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region GetActiveSessionsByUserIdAsync Tests
 
     [Fact]
-    public async Task Test06_GetActiveSessionsByUserIdAsync_OnlyActiveSessions_ReturnsAll()
+    public async Task GetActiveSessionsByUserIdAsync_OnlyActiveSessions_ReturnsAll()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -151,7 +151,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test07_GetActiveSessionsByUserIdAsync_ExpiredSessions_Excluded()
+    public async Task GetActiveSessionsByUserIdAsync_ExpiredSessions_Excluded()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -172,7 +172,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test08_GetActiveSessionsByUserIdAsync_RevokedSessions_Excluded()
+    public async Task GetActiveSessionsByUserIdAsync_RevokedSessions_Excluded()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -194,7 +194,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test09_GetActiveSessionsByUserIdAsync_MixedSessions_FiltersCorrectly()
+    public async Task GetActiveSessionsByUserIdAsync_MixedSessions_FiltersCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -225,7 +225,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region AddAsync Tests
 
     [Fact]
-    public async Task Test10_AddAsync_NewSession_PersistsSuccessfully()
+    public async Task AddAsync_NewSession_PersistsSuccessfully()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -246,7 +246,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test11_AddAsync_SessionWithMetadata_StoresAllFields()
+    public async Task AddAsync_SessionWithMetadata_StoresAllFields()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -275,7 +275,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region UpdateAsync Tests
 
     [Fact]
-    public async Task Test12_UpdateAsync_LastSeenAt_UpdatesCorrectly()
+    public async Task UpdateAsync_LastSeenAt_UpdatesCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -298,7 +298,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test13_UpdateAsync_RevokeSession_PersistsRevocation()
+    public async Task UpdateAsync_RevokeSession_PersistsRevocation()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -325,7 +325,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region RevokeAllUserSessionsAsync Tests
 
     [Fact]
-    public async Task Test14_RevokeAllUserSessionsAsync_MultipleSessions_RevokesAll()
+    public async Task RevokeAllUserSessionsAsync_MultipleSessions_RevokesAll()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -349,7 +349,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test15_RevokeAllUserSessionsAsync_AlreadyRevokedSessions_NoEffect()
+    public async Task RevokeAllUserSessionsAsync_AlreadyRevokedSessions_NoEffect()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -379,7 +379,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test16_RevokeAllUserSessionsAsync_MultipleUsers_OnlyTargetUser()
+    public async Task RevokeAllUserSessionsAsync_MultipleUsers_OnlyTargetUser()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -411,7 +411,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region Mapping Tests
 
     [Fact]
-    public async Task Test17_Mapping_DomainToPersistence_AllFieldsCorrect()
+    public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -439,7 +439,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test18_Mapping_PersistenceToDomain_AllFieldsCorrect()
+    public async Task Mapping_PersistenceToDomain_AllFieldsCorrect()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -465,7 +465,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region Expiration Query Tests
 
     [Fact]
-    public async Task Test19_ExpirationQuery_EdgeCase_ExactExpirationTime()
+    public async Task ExpirationQuery_EdgeCase_ExactExpirationTime()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -490,7 +490,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test20_ExpirationQuery_FutureSessions_IncludedInActive()
+    public async Task ExpirationQuery_FutureSessions_IncludedInActive()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -511,7 +511,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region Concurrent Access Tests
 
     [Fact]
-    public async Task Test21_ConcurrentTokenLookups_NoConflicts()
+    public async Task ConcurrentTokenLookups_NoConflicts()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -538,7 +538,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test22_ConcurrentRevocations_Idempotent()
+    public async Task ConcurrentRevocations_Idempotent()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -567,7 +567,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     #region Edge Cases
 
     [Fact]
-    public async Task Test23_NullableFields_IpAddress_HandledCorrectly()
+    public async Task NullableFields_IpAddress_HandledCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -585,7 +585,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test24_NullableFields_UserAgent_HandledCorrectly()
+    public async Task NullableFields_UserAgent_HandledCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -603,7 +603,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test25_LongUserAgent_PersistsCorrectly()
+    public async Task LongUserAgent_PersistsCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -622,7 +622,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
     }
 
     [Fact]
-    public async Task Test26_AsNoTracking_QueriesDoNotTrackEntities()
+    public async Task AsNoTracking_QueriesDoNotTrackEntities()
     {
         // Arrange
         await ResetDatabaseAsync();

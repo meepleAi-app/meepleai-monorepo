@@ -23,7 +23,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
         => new LlmCostLogRepository(dbContext, Mock.Of<ILogger<LlmCostLogRepository>>());
 
     [Fact]
-    public async Task Test01_LogCost_SuccessfulRequest_StoresCorrectly()
+    public async Task LogCost_SuccessfulRequest_StoresCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -73,7 +73,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     }
 
     [Fact]
-    public async Task Test02_GetTotalCost_MultipleRequests_SumsCorrectly()
+    public async Task GetTotalCost_MultipleRequests_SumsCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -92,7 +92,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     }
 
     [Fact]
-    public async Task Test03_GetCostsByProvider_GroupsCorrectly()
+    public async Task GetCostsByProvider_GroupsCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -113,7 +113,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     }
 
     [Fact]
-    public async Task Test04_GetCostsByRole_GroupsCorrectly()
+    public async Task GetCostsByRole_GroupsCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -136,7 +136,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     }
 
     [Fact]
-    public async Task Test05_GetUserCost_FiltersCorrectly()
+    public async Task GetUserCost_FiltersCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -159,7 +159,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     }
 
     [Fact]
-    public async Task Test06_GetDailyCost_ReturnsCorrectTotal()
+    public async Task GetDailyCost_ReturnsCorrectTotal()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -178,7 +178,7 @@ public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepositor
     }
 
     [Fact]
-    public async Task Test07_DateRangeFilter_WorksCorrectly()
+    public async Task DateRangeFilter_WorksCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();

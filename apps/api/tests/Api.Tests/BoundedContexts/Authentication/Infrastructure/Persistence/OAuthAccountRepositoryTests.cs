@@ -24,7 +24,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     #region GetByUserIdAndProviderAsync Tests
 
     [Fact]
-    public async Task Test01_GetByUserIdAndProviderAsync_ExistingAccount_ReturnsAccount()
+    public async Task GetByUserIdAndProviderAsync_ExistingAccount_ReturnsAccount()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -44,7 +44,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test02_GetByUserIdAndProviderAsync_CaseInsensitiveProvider_ReturnsAccount()
+    public async Task GetByUserIdAndProviderAsync_CaseInsensitiveProvider_ReturnsAccount()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -62,7 +62,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test03_GetByUserIdAndProviderAsync_NonExisting_ReturnsNull()
+    public async Task GetByUserIdAndProviderAsync_NonExisting_ReturnsNull()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -80,7 +80,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     #region GetByProviderUserIdAsync Tests
 
     [Fact]
-    public async Task Test04_GetByProviderUserIdAsync_ExistingAccount_ReturnsAccount()
+    public async Task GetByProviderUserIdAsync_ExistingAccount_ReturnsAccount()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -100,7 +100,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test05_GetByProviderUserIdAsync_ForOAuthLogin_FindsCorrectUser()
+    public async Task GetByProviderUserIdAsync_ForOAuthLogin_FindsCorrectUser()
     {
         // Arrange - Simulate OAuth login scenario
         await ResetDatabaseAsync();
@@ -123,7 +123,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test06_GetByProviderUserIdAsync_NonExisting_ReturnsNull()
+    public async Task GetByProviderUserIdAsync_NonExisting_ReturnsNull()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -140,7 +140,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     #region GetByUserIdAsync Tests
 
     [Fact]
-    public async Task Test07_GetByUserIdAsync_NoAccounts_ReturnsEmptyList()
+    public async Task GetByUserIdAsync_NoAccounts_ReturnsEmptyList()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -154,7 +154,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test08_GetByUserIdAsync_MultipleProviders_ReturnsAllOrdered()
+    public async Task GetByUserIdAsync_MultipleProviders_ReturnsAllOrdered()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -181,7 +181,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test09_GetByUserIdAsync_MultipleUsers_FiltersCorrectly()
+    public async Task GetByUserIdAsync_MultipleUsers_FiltersCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -211,7 +211,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     #region AddAsync Tests
 
     [Fact]
-    public async Task Test10_AddAsync_NewAccount_PersistsSuccessfully()
+    public async Task AddAsync_NewAccount_PersistsSuccessfully()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -241,7 +241,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test11_AddAsync_WithoutRefreshToken_PersistsCorrectly()
+    public async Task AddAsync_WithoutRefreshToken_PersistsCorrectly()
     {
         // Arrange - Some providers don't provide refresh tokens
         await ResetDatabaseAsync();
@@ -269,7 +269,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     #region UpdateAsync Tests
 
     [Fact]
-    public async Task Test12_UpdateAsync_RefreshTokens_UpdatesCorrectly()
+    public async Task UpdateAsync_RefreshTokens_UpdatesCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -300,7 +300,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test13_UpdateAsync_AccessTokenOnly_UpdatesWithoutRefresh()
+    public async Task UpdateAsync_AccessTokenOnly_UpdatesWithoutRefresh()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -328,7 +328,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     #region DeleteAsync Tests
 
     [Fact]
-    public async Task Test14_DeleteAsync_ExistingAccount_RemovesFromDatabase()
+    public async Task DeleteAsync_ExistingAccount_RemovesFromDatabase()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -347,7 +347,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test15_DeleteAsync_NonExistingAccount_DoesNotThrow()
+    public async Task DeleteAsync_NonExistingAccount_DoesNotThrow()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -364,7 +364,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     #region Mapping Tests
 
     [Fact]
-    public async Task Test16_Mapping_DomainToPersistence_AllFieldsCorrect()
+    public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -396,7 +396,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     }
 
     [Fact]
-    public async Task Test17_Mapping_PersistenceToDomain_AllFieldsCorrect()
+    public async Task Mapping_PersistenceToDomain_AllFieldsCorrect()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -422,7 +422,7 @@ public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepos
     #region Multi-Provider Scenarios
 
     [Fact]
-    public async Task Test18_MultiProvider_UserWithThreeProviders_AllPersistCorrectly()
+    public async Task MultiProvider_UserWithThreeProviders_AllPersistCorrectly()
     {
         // Arrange - User links Google, GitHub, and Discord
         await ResetDatabaseAsync();

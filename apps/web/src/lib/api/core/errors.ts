@@ -111,6 +111,8 @@ export class ValidationError extends ApiError {
 
 /**
  * 429 Rate Limit - Too many requests
+ *
+ * Includes helper methods for displaying countdown timers and user-friendly messages.
  */
 export class RateLimitError extends ApiError {
   public readonly retryAfter?: number;
@@ -123,11 +125,105 @@ export class RateLimitError extends ApiError {
     this.retryAfter = details.retryAfter;
   }
 
+  /**
+   * Get the number of seconds until retry is allowed
+   */
+  public getRetryAfterSeconds(): number {
+    return this.retryAfter || 0;
+  }
+
+  /**
+   * Get the timestamp when retry is allowed
+   */
+  public getRetryAfterDate(): Date {
+    const now = new Date(this.timestamp);
+    const retryAfterMs = (this.retryAfter || 0) * 1000;
+    return new Date(now.getTime() + retryAfterMs);
+  }
+
+  /**
+   * Get a user-friendly message with countdown
+   * @param remainingSeconds Optional override for countdown display
+   */
+  public getUserFriendlyMessage(remainingSeconds?: number): string {
+    const seconds = remainingSeconds ?? this.getRetryAfterSeconds();
+
+    if (seconds <= 0) {
+      return 'You can now retry your request.';
+    }
+
+    if (seconds === 1) {
+      return 'Too many requests. Please wait 1 second.';
+    }
+
+    if (seconds < 60) {
+      return `Too many requests. Please wait ${seconds} seconds.`;
+    }
+
+    const minutes = Math.ceil(seconds / 60);
+    if (minutes === 1) {
+      return 'Too many requests. Please wait 1 minute.';
+    }
+
+    return `Too many requests. Please wait ${minutes} minutes.`;
+  }
+
+  /**
+   * Check if retry is currently allowed based on elapsed time
+   */
+  public canRetryNow(): boolean {
+    const now = new Date();
+    const retryDate = this.getRetryAfterDate();
+    return now >= retryDate;
+  }
+
+  /**
+   * Get remaining seconds until retry is allowed
+   */
+  public getRemainingSeconds(): number {
+    const now = new Date();
+    const retryDate = this.getRetryAfterDate();
+    const diffMs = retryDate.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diffMs / 1000));
+  }
+
   public override toJSON(): Record<string, unknown> {
     return {
       ...super.toJSON(),
       retryAfter: this.retryAfter,
     };
+  }
+
+  /**
+   * Parse Retry-After header value (supports both seconds and HTTP-date formats)
+   * @param retryAfterValue The value from the Retry-After header
+   * @returns Number of seconds to wait, or undefined if invalid
+   */
+  public static parseRetryAfter(retryAfterValue: string | null | undefined): number | undefined {
+    if (!retryAfterValue) {
+      return undefined;
+    }
+
+    // Try parsing as number of seconds
+    const seconds = parseInt(retryAfterValue, 10);
+    if (!isNaN(seconds) && seconds > 0) {
+      return seconds;
+    }
+
+    // Try parsing as HTTP-date (RFC 7231)
+    try {
+      const retryDate = new Date(retryAfterValue);
+      if (!isNaN(retryDate.getTime())) {
+        const now = new Date();
+        const diffMs = retryDate.getTime() - now.getTime();
+        const diffSeconds = Math.ceil(diffMs / 1000);
+        return Math.max(0, diffSeconds);
+      }
+    } catch {
+      // Invalid date format
+    }
+
+    return undefined;
   }
 }
 
@@ -221,10 +317,11 @@ export async function createApiError(
     case 422:
       return new ValidationError({ ...baseDetails, validationErrors });
     case 429: {
-      const retryAfter = response.headers.get('Retry-After');
+      const retryAfterHeader = response.headers.get('Retry-After');
+      const retryAfter = RateLimitError.parseRetryAfter(retryAfterHeader);
       return new RateLimitError({
         ...baseDetails,
-        retryAfter: retryAfter ? parseInt(retryAfter, 10) : undefined,
+        retryAfter,
       });
     }
     case 500:

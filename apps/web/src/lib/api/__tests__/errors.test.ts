@@ -186,6 +186,191 @@ describe('RateLimitError', () => {
 
     expect(json.retryAfter).toBe(120);
   });
+
+  describe('getRetryAfterSeconds', () => {
+    it('should return retry after value in seconds', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 45,
+      });
+
+      expect(error.getRetryAfterSeconds()).toBe(45);
+    });
+
+    it('should return 0 when retry after is not set', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+      });
+
+      expect(error.getRetryAfterSeconds()).toBe(0);
+    });
+  });
+
+  describe('getRetryAfterDate', () => {
+    it('should calculate correct retry date', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 60,
+      });
+
+      const retryDate = error.getRetryAfterDate();
+      const expectedDate = new Date(new Date(error.timestamp).getTime() + 60000);
+
+      expect(retryDate.getTime()).toBeCloseTo(expectedDate.getTime(), -2);
+    });
+
+    it('should return current timestamp when retry after is 0', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 0,
+      });
+
+      const retryDate = error.getRetryAfterDate();
+      const errorDate = new Date(error.timestamp);
+
+      expect(retryDate.getTime()).toBe(errorDate.getTime());
+    });
+  });
+
+  describe('getUserFriendlyMessage', () => {
+    it('should format message for 1 second', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 1,
+      });
+
+      expect(error.getUserFriendlyMessage()).toBe('Too many requests. Please wait 1 second.');
+    });
+
+    it('should format message for multiple seconds', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 45,
+      });
+
+      expect(error.getUserFriendlyMessage()).toBe('Too many requests. Please wait 45 seconds.');
+    });
+
+    it('should format message for 1 minute', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 60,
+      });
+
+      expect(error.getUserFriendlyMessage()).toBe('Too many requests. Please wait 1 minute.');
+    });
+
+    it('should format message for multiple minutes', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 150,
+      });
+
+      expect(error.getUserFriendlyMessage()).toBe('Too many requests. Please wait 3 minutes.');
+    });
+
+    it('should show retry allowed message when seconds is 0', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 60,
+      });
+
+      expect(error.getUserFriendlyMessage(0)).toBe('You can now retry your request.');
+    });
+
+    it('should accept remaining seconds override', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 60,
+      });
+
+      expect(error.getUserFriendlyMessage(30)).toBe('Too many requests. Please wait 30 seconds.');
+    });
+  });
+
+  describe('canRetryNow', () => {
+    it('should return false when time has not elapsed', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 3600, // 1 hour in the future
+      });
+
+      expect(error.canRetryNow()).toBe(false);
+    });
+
+    it('should return true when retry after is 0', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 0,
+      });
+
+      expect(error.canRetryNow()).toBe(true);
+    });
+  });
+
+  describe('getRemainingSeconds', () => {
+    it('should return remaining seconds until retry is allowed', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 60,
+      });
+
+      const remaining = error.getRemainingSeconds();
+      expect(remaining).toBeGreaterThan(0);
+      expect(remaining).toBeLessThanOrEqual(60);
+    });
+
+    it('should return 0 when time has elapsed', () => {
+      const error = new RateLimitError({
+        message: 'Too many requests',
+        retryAfter: 0,
+      });
+
+      expect(error.getRemainingSeconds()).toBe(0);
+    });
+  });
+
+  describe('parseRetryAfter', () => {
+    it('should parse seconds as number', () => {
+      const result = RateLimitError.parseRetryAfter('60');
+      expect(result).toBe(60);
+    });
+
+    it('should parse HTTP-date format', () => {
+      const futureDate = new Date(Date.now() + 60000); // 60 seconds in future
+      const result = RateLimitError.parseRetryAfter(futureDate.toUTCString());
+
+      expect(result).toBeGreaterThan(55);
+      expect(result).toBeLessThanOrEqual(60);
+    });
+
+    it('should return undefined for null', () => {
+      const result = RateLimitError.parseRetryAfter(null);
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined for undefined', () => {
+      const result = RateLimitError.parseRetryAfter(undefined);
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined for invalid string', () => {
+      const result = RateLimitError.parseRetryAfter('invalid');
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined for negative seconds', () => {
+      const result = RateLimitError.parseRetryAfter('-10');
+      expect(result).toBeUndefined();
+    });
+
+    it('should handle past HTTP-date by returning 0', () => {
+      const pastDate = new Date(Date.now() - 60000); // 60 seconds in past
+      const result = RateLimitError.parseRetryAfter(pastDate.toUTCString());
+
+      expect(result).toBe(0);
+    });
+  });
 });
 
 describe('ServerError', () => {
@@ -315,7 +500,7 @@ describe('createApiError', () => {
     expect((error as ValidationError).validationErrors).toEqual(validationErrors);
   });
 
-  it('should create RateLimitError for 429 with retry after', async () => {
+  it('should create RateLimitError for 429 with retry after in seconds', async () => {
     const response = new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
       status: 429,
       headers: { 'Retry-After': '60' },
@@ -326,6 +511,34 @@ describe('createApiError', () => {
     expect(error).toBeInstanceOf(RateLimitError);
     expect(error.statusCode).toBe(429);
     expect((error as RateLimitError).retryAfter).toBe(60);
+  });
+
+  it('should create RateLimitError for 429 with HTTP-date format', async () => {
+    const futureDate = new Date(Date.now() + 60000); // 60 seconds in future
+    const response = new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+      status: 429,
+      headers: { 'Retry-After': futureDate.toUTCString() },
+    });
+
+    const error = await createApiError('/api/v1/test', response);
+
+    expect(error).toBeInstanceOf(RateLimitError);
+    expect(error.statusCode).toBe(429);
+    const retryAfter = (error as RateLimitError).retryAfter;
+    expect(retryAfter).toBeGreaterThan(55);
+    expect(retryAfter).toBeLessThanOrEqual(60);
+  });
+
+  it('should create RateLimitError for 429 without retry after header', async () => {
+    const response = new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+      status: 429,
+    });
+
+    const error = await createApiError('/api/v1/test', response);
+
+    expect(error).toBeInstanceOf(RateLimitError);
+    expect(error.statusCode).toBe(429);
+    expect((error as RateLimitError).retryAfter).toBeUndefined();
   });
 
   it('should create ServerError for 500', async () => {

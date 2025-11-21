@@ -102,8 +102,10 @@ export const createMessagesSlice: StateCreator<
         isNewThread = true;
 
         set((state) => {
-          const currentThreads = state.chatsByGame[selectedGameId] ?? [];
-          state.chatsByGame[selectedGameId] = [newThread, ...currentThreads];
+          if (!state.chatsByGame[selectedGameId]) {
+            state.chatsByGame[selectedGameId] = [];
+          }
+          state.chatsByGame[selectedGameId].unshift(newThread);
           state.activeChatIds[selectedGameId] = threadId;
           state.messagesByChat[threadId] = [];
         });
@@ -111,8 +113,10 @@ export const createMessagesSlice: StateCreator<
 
       // Optimistic update
       set((state) => {
-        const currentMessages = state.messagesByChat[threadId] ?? [];
-        state.messagesByChat[threadId] = [...currentMessages, userMessage];
+        if (!state.messagesByChat[threadId]) {
+          state.messagesByChat[threadId] = [];
+        }
+        state.messagesByChat[threadId].push(userMessage);
       });
 
       // Send to backend
@@ -256,8 +260,10 @@ export const createMessagesSlice: StateCreator<
 
   addOptimisticMessage: (message, threadId) =>
     set((state) => {
-      const currentMessages = state.messagesByChat[threadId] ?? [];
-      state.messagesByChat[threadId] = [...currentMessages, { ...message, isOptimistic: true }];
+      if (!state.messagesByChat[threadId]) {
+        state.messagesByChat[threadId] = [];
+      }
+      state.messagesByChat[threadId].push({ ...message, isOptimistic: true });
     }),
 
   removeOptimisticMessage: (messageId, threadId) =>

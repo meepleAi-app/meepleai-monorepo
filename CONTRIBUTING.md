@@ -315,6 +315,56 @@ export default function GamesPage() {
 }
 ```
 
+### Zustand State Management with Immer
+
+When working with Zustand stores that use Immer middleware, follow these patterns for consistency and optimal performance:
+
+**✅ DO: Use Direct Mutations (Immer handles immutability)**
+```typescript
+set((state) => {
+  // Direct property assignment
+  state.property = newValue;
+
+  // Array appending - use push()
+  if (!state.items) state.items = [];
+  state.items.push(newItem);
+
+  // Array prepending - use unshift()
+  if (!state.items) state.items = [];
+  state.items.unshift(newItem);
+
+  // Direct array assignment
+  state.items = newArray;
+
+  // Filter creates new array (acceptable)
+  state.items = state.items.filter(item => condition);
+});
+```
+
+**❌ DON'T: Use Spread Operators for Arrays (unnecessary with Immer)**
+```typescript
+set((state) => {
+  // ❌ Unnecessary spread for appending
+  state.items = [...state.items, newItem];
+
+  // ❌ Unnecessary spread for prepending
+  state.items = [newItem, ...state.items];
+});
+```
+
+**Key Benefits**:
+- **Cleaner Code**: Direct mutations are more readable and concise
+- **Better Performance**: Eliminates unnecessary array copying
+- **Type Safety**: Easier to track mutations with TypeScript
+- **Immer Philosophy**: Leverages Immer's automatic immutability handling
+
+**Note**: Object spreading for property updates is still acceptable:
+```typescript
+state.items.push({ ...item, newProperty: value });
+```
+
+**See Also**: Issue #1438 - Standardize Immer Patterns in Zustand Slices
+
 ## Testing Guidelines
 
 We follow **Behavior-Driven Development (BDD)** principles with comprehensive test coverage.

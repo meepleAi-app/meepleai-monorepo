@@ -206,7 +206,7 @@ describe('messagesSlice', () => {
       const state = store.getState();
       expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toHaveLength(2);
       expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0]).toMatchObject({
-        id: 'thread-1-0',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001-0',
         role: 'user',
         content: 'User message',
         backendMessageId: 'msg-1',
@@ -215,7 +215,7 @@ describe('messagesSlice', () => {
         feedback: null,
       });
       expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][1]).toMatchObject({
-        id: 'thread-1-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001-1',
         role: 'assistant',
         content: 'Assistant message',
         backendMessageId: 'msg-2',
@@ -284,7 +284,7 @@ describe('messagesSlice', () => {
       const messages = state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000002'];
 
       expect(messages[0]).toMatchObject({
-        id: 'thread-2-0',
+        id: 'aa0e8400-e29b-41d4-a716-000000000002-0',
         role: 'user',
         content: 'Simple message',
         feedback: null,
@@ -727,11 +727,11 @@ describe('messagesSlice', () => {
     });
 
     it('should set feedback successfully', async () => {
-      mockApi.post.mockResolvedValue(null as any);
+      mockChat.submitAgentFeedback.mockResolvedValue(undefined);
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
+      expect(mockChat.submitAgentFeedback).toHaveBeenCalledWith({
         messageId: 'backend-msg-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
@@ -760,16 +760,10 @@ describe('messagesSlice', () => {
         },
       });
 
-      mockApi.post.mockResolvedValue(null as any);
-
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
-        messageId: 'backend-msg-1',
-        endpoint: 'qa',
-        gameId: '770e8400-e29b-41d4-a716-000000000001',
-        feedback: null,
-      });
+      // API should NOT be called when toggling to null (FE-IMP-005: API doesn't accept null)
+      expect(mockChat.submitAgentFeedback).not.toHaveBeenCalled();
 
       const state = store.getState();
       expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBeNull();
@@ -793,11 +787,11 @@ describe('messagesSlice', () => {
         },
       });
 
-      mockApi.post.mockResolvedValue(null as any);
+      mockChat.submitAgentFeedback.mockResolvedValue(undefined);
 
       await store.getState().setMessageFeedback('msg-1', 'not-helpful');
 
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
+      expect(mockChat.submitAgentFeedback).toHaveBeenCalledWith({
         messageId: 'backend-msg-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
@@ -823,11 +817,11 @@ describe('messagesSlice', () => {
         },
       });
 
-      mockApi.post.mockResolvedValue(null as any);
+      mockChat.submitAgentFeedback.mockResolvedValue(undefined);
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
+      expect(mockChat.submitAgentFeedback).toHaveBeenCalledWith({
         messageId: 'msg-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
@@ -836,7 +830,7 @@ describe('messagesSlice', () => {
     });
 
     it('should revert on API error', async () => {
-      mockApi.post.mockRejectedValue(new Error('API Error'));
+      mockChat.submitAgentFeedback.mockRejectedValue(new Error('API Error'));
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
@@ -849,7 +843,7 @@ describe('messagesSlice', () => {
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
-      expect(mockApi.post).not.toHaveBeenCalled();
+      expect(mockChat.submitAgentFeedback).not.toHaveBeenCalled();
     });
 
     it('should not set feedback if no active thread', async () => {
@@ -857,13 +851,13 @@ describe('messagesSlice', () => {
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
-      expect(mockApi.post).not.toHaveBeenCalled();
+      expect(mockChat.submitAgentFeedback).not.toHaveBeenCalled();
     });
 
     it('should not set feedback if message not found', async () => {
       await store.getState().setMessageFeedback('non-existent', 'helpful');
 
-      expect(mockApi.post).not.toHaveBeenCalled();
+      expect(mockChat.submitAgentFeedback).not.toHaveBeenCalled();
     });
   });
 
@@ -1226,7 +1220,7 @@ describe('messagesSlice', () => {
         },
       });
 
-      mockApi.post.mockResolvedValue(null as any);
+      mockChat.submitAgentFeedback.mockResolvedValue(undefined);
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
@@ -1253,7 +1247,7 @@ describe('messagesSlice', () => {
         },
       });
 
-      mockApi.post.mockResolvedValue(null as any);
+      mockChat.submitAgentFeedback.mockResolvedValue(undefined);
 
       await store.getState().setMessageFeedback('msg-1', 'not-helpful');
 
@@ -1407,12 +1401,12 @@ describe('messagesSlice', () => {
         },
       });
 
-      mockApi.post.mockResolvedValue(null as any);
+      mockChat.submitAgentFeedback.mockResolvedValue(undefined);
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
       // Should use msg-1 as fallback when backendMessageId is undefined
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
+      expect(mockChat.submitAgentFeedback).toHaveBeenCalledWith({
         messageId: 'msg-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
@@ -1439,12 +1433,12 @@ describe('messagesSlice', () => {
         },
       });
 
-      mockApi.post.mockResolvedValue(null as any);
+      mockChat.submitAgentFeedback.mockResolvedValue(undefined);
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
       // Should use 'qa' as default endpoint
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
+      expect(mockChat.submitAgentFeedback).toHaveBeenCalledWith({
         messageId: 'backend-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
@@ -1471,12 +1465,12 @@ describe('messagesSlice', () => {
         },
       });
 
-      mockApi.post.mockResolvedValue(null as any);
+      mockChat.submitAgentFeedback.mockResolvedValue(undefined);
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
       // Should use selectedGameId as fallback
-      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
+      expect(mockChat.submitAgentFeedback).toHaveBeenCalledWith({
         messageId: 'backend-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
@@ -1506,12 +1500,10 @@ describe('messagesSlice', () => {
       // Set selectedGameId to null after setting up messages
       store.setState({ selectedGameId: null });
 
-      mockApi.post.mockResolvedValue(null as any);
-
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
       // Should not call API when no selected game
-      expect(mockApi.post).not.toHaveBeenCalled();
+      expect(mockChat.submitAgentFeedback).not.toHaveBeenCalled();
     });
 
     it('should handle updateMessageInThread with multiple updates', () => {
@@ -1591,7 +1583,7 @@ describe('messagesSlice', () => {
         },
       });
 
-      mockApi.post.mockResolvedValue(null as any);
+      mockChat.submitAgentFeedback.mockResolvedValue(undefined);
 
       // Rapid feedback changes
       await Promise.all([
@@ -1599,7 +1591,7 @@ describe('messagesSlice', () => {
         store.getState().setMessageFeedback('msg-1', 'not-helpful'),
       ]);
 
-      expect(mockApi.post).toHaveBeenCalledTimes(2);
+      expect(mockChat.submitAgentFeedback).toHaveBeenCalledTimes(2);
     });
 
     it('should preserve message order during operations', async () => {

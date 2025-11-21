@@ -8,7 +8,10 @@
     "skipToMain": "Salta al contenuto principale"
   },
   "admin": {
-    "analytics": "Analisi",
+    "analytics": {
+      "dashboard": "Pannello Analisi",
+      "backToUsers": "Torna agli Utenti"
+    },
     "cache": "Cache",
     "configuration": "Configurazione",
     "games": "Giochi",

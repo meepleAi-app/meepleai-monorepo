@@ -47,12 +47,7 @@ export function useChatOptimistic(): UseChatOptimisticResult {
   // Zustand store - single source of truth
   const selectedGameId = useChatStore((state) => state.selectedGameId);
   const selectedAgentId = useChatStore((state) => state.selectedAgentId);
-  const activeChatIds = useChatStore((state) => state.activeChatIds);
   const sendMessage = useChatStore((state) => state.sendMessage);
-  const addOptimisticMessage = useChatStore((state) => state.addOptimisticMessage);
-  const removeOptimisticMessage = useChatStore((state) => state.removeOptimisticMessage);
-
-  const activeChatId = selectedGameId ? activeChatIds[selectedGameId] : null;
   const messages = useActiveMessages();
 
   const [optimisticId, setOptimisticId] = useState<string | null>(null);
@@ -61,40 +56,29 @@ export function useChatOptimistic(): UseChatOptimisticResult {
   /**
    * Send message with optimistic update
    * Pattern from Issue #1167 (Simplified for #1436):
-   * 1. Create temporary optimistic message
-   * 2. Optimistically update Zustand store
-   * 3. Send to backend
-   * 4. Backend updates store with real data
-   * 5. Rollback on error
+   * 1. Delegate to Zustand store's sendMessage (handles everything)
+   * 2. sendMessage creates thread if needed, adds optimistic message, sends to backend
+   * 3. Track loading state for UI feedback
+   *
+   * Note: sendMessage already handles optimistic updates and rollback,
+   * so we don't duplicate that logic here
    */
   const sendMessageOptimistic = useCallback(
     async (content: string) => {
-      if (!selectedGameId || !selectedAgentId || !content.trim() || !activeChatId) {
+      if (!selectedGameId || !selectedAgentId || !content.trim()) {
         return;
       }
 
-      // 1. Create temporary optimistic message
+      // Track optimistic update (reactive state for UI feedback)
       const tempId = `temp-${Date.now()}`;
-      const tempMessage: Message = {
-        id: tempId,
-        role: 'user',
-        content: content.trim(),
-        timestamp: new Date(),
-        isOptimistic: true, // #1167: Flag for UI rendering
-      };
-
-      // Track optimistic update (reactive state)
       setOptimisticId(tempId);
 
-      // 2. Optimistically update Zustand store
-      addOptimisticMessage(tempMessage, activeChatId);
-
       try {
-        // 3. Send to backend (Zustand store handles thread creation and updates)
+        // Delegate to Zustand store's sendMessage
+        // It handles: thread creation, optimistic message, backend call, rollback
         await sendMessage(content);
 
-        // 4. Clear optimistic state (reactive)
-        // Backend updates are handled by Zustand store's sendMessage
+        // Clear optimistic state (reactive)
         setOptimisticId(null);
       } catch (err) {
         logger.error(
@@ -107,11 +91,8 @@ export function useChatOptimistic(): UseChatOptimisticResult {
           })
         );
 
-        // 5. Rollback on error
-        // Remove the optimistic message from Zustand store
-        removeOptimisticMessage(tempId, activeChatId);
-
         // Clear optimistic state on error (reactive)
+        // Rollback is handled by sendMessage
         setOptimisticId(null);
 
         // Re-throw so caller can show error toast
@@ -121,10 +102,7 @@ export function useChatOptimistic(): UseChatOptimisticResult {
     [
       selectedGameId,
       selectedAgentId,
-      activeChatId,
       sendMessage,
-      addOptimisticMessage,
-      removeOptimisticMessage,
     ]
   );
 

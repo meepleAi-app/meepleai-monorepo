@@ -383,9 +383,208 @@ Request → Generate Cache Key → Check Cache
 - **PR**: TBD
 - **Acceptance Criteria**: ✅ All met
 
+## Grafana Alerts
+
+### Alert Configuration Examples
+
+Add these alerts to your Prometheus Alertmanager configuration:
+
+```yaml
+groups:
+  - name: request_cache_alerts
+    interval: 30s
+    rules:
+      # Critical: Very Low Cache Hit Rate
+      - alert: CriticalCacheHitRate
+        expr: http_client_cache_hit_rate_percent < 30
+        for: 10m
+        labels:
+          severity: critical
+          component: request_cache
+        annotations:
+          summary: "Critical: Request cache hit rate below 30%"
+          description: "Cache hit rate is {{ $value }}% (threshold: 30%). This indicates poor cache effectiveness."
+          impact: "High backend load, slower response times"
+          action: "Check if cache is properly configured, investigate TTL settings"
+
+      # Warning: Low Cache Hit Rate
+      - alert: LowCacheHitRate
+        expr: http_client_cache_hit_rate_percent < 50
+        for: 15m
+        labels:
+          severity: warning
+          component: request_cache
+        annotations:
+          summary: "Warning: Request cache hit rate below 50%"
+          description: "Cache hit rate is {{ $value }}% (threshold: 50%)"
+          action: "Review cache configuration and TTL settings"
+
+      # Warning: High Cache Eviction Rate
+      - alert: HighCacheEvictionRate
+        expr: rate(http_client_cache_evictions_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: request_cache
+        annotations:
+          summary: "High cache eviction rate detected"
+          description: "Cache eviction rate is {{ $value }}/s (threshold: 10/s)"
+          impact: "Frequent evictions reduce cache effectiveness"
+          action: "Increase NEXT_PUBLIC_REQUEST_DEDUP_MAX_SIZE (current: 100)"
+
+      # Warning: High Cache Expiration Rate
+      - alert: HighCacheExpirationRate
+        expr: rate(http_client_cache_expirations_total[5m]) > 50
+        for: 5m
+        labels:
+          severity: warning
+          component: request_cache
+        annotations:
+          summary: "High cache expiration rate"
+          description: "Cache expiration rate is {{ $value }}/s (threshold: 50/s)"
+          impact: "Entries expiring too quickly, reducing cache benefit"
+          action: "Consider increasing NEXT_PUBLIC_REQUEST_DEDUP_TTL (current: 100ms)"
+
+      # Info: Cache Filling Up
+      - alert: CacheNearCapacity
+        expr: http_client_cache_size > 80
+        for: 5m
+        labels:
+          severity: info
+          component: request_cache
+        annotations:
+          summary: "Request cache near capacity"
+          description: "Cache size is {{ $value }} (max: 100)"
+          action: "Monitor for evictions, consider increasing maxSize if needed"
+
+      # Critical: Cache Disabled
+      - alert: CacheDisabled
+        expr: absent(http_client_cache_hits_total)
+        for: 5m
+        labels:
+          severity: critical
+          component: request_cache
+        annotations:
+          summary: "Request cache metrics not available"
+          description: "Cache may be disabled or metrics endpoint is down"
+          action: "Check NEXT_PUBLIC_REQUEST_DEDUP_ENABLED and metrics endpoint"
+```
+
+### Grafana Dashboard JSON
+
+Example dashboard configuration for Grafana:
+
+```json
+{
+  "dashboard": {
+    "title": "Request Deduplication Cache",
+    "panels": [
+      {
+        "title": "Cache Hit Rate",
+        "targets": [
+          {
+            "expr": "http_client_cache_hit_rate_percent",
+            "legendFormat": "Hit Rate %"
+          }
+        ],
+        "type": "gauge",
+        "thresholds": [
+          { "value": 0, "color": "red" },
+          { "value": 50, "color": "yellow" },
+          { "value": 70, "color": "green" }
+        ]
+      },
+      {
+        "title": "Cache Hits vs Misses",
+        "targets": [
+          {
+            "expr": "rate(http_client_cache_hits_total[5m])",
+            "legendFormat": "Hits/s"
+          },
+          {
+            "expr": "rate(http_client_cache_misses_total[5m])",
+            "legendFormat": "Misses/s"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Cache Size",
+        "targets": [
+          {
+            "expr": "http_client_cache_size",
+            "legendFormat": "Entries"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Cache Evictions & Expirations",
+        "targets": [
+          {
+            "expr": "rate(http_client_cache_evictions_total[5m])",
+            "legendFormat": "Evictions/s"
+          },
+          {
+            "expr": "rate(http_client_cache_expirations_total[5m])",
+            "legendFormat": "Expirations/s"
+          }
+        ],
+        "type": "graph"
+      }
+    ]
+  }
+}
+```
+
+### Slack/PagerDuty Integration
+
+To send alerts to Slack or PagerDuty, configure Alertmanager:
+
+```yaml
+# alertmanager.yml
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'pagerduty'
+    - match:
+        severity: warning
+      receiver: 'slack'
+
+receivers:
+  - name: 'default'
+    slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#alerts'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+  - name: 'slack'
+    slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#cache-alerts'
+        title: '[{{ .Status }}] {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.action }}{{ end }}'
+
+  - name: 'pagerduty'
+    pagerduty_configs:
+      - service_key: 'YOUR_PAGERDUTY_KEY'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+```
+
 ## Future Improvements
 
-- [ ] Add Prometheus metrics exporter
+- [x] Add Prometheus metrics exporter ✅
+- [x] Add Grafana alert examples ✅
 - [ ] Add cache statistics dashboard
 - [ ] Implement cache warming strategies
 - [ ] Add request prioritization

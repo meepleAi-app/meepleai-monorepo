@@ -103,8 +103,8 @@ describe('messagesSlice', () => {
 
   // Helper to create mock ChatThread
   const createMockThread = (overrides?: Partial<ChatThread>): ChatThread => ({
-    id: 'thread-1',
-    gameId: 'game-1',
+    id: 'aa0e8400-e29b-41d4-a716-000000000001',
+    gameId: '770e8400-e29b-41d4-a716-000000000001',
     title: 'Test Thread',
     createdAt: '2025-01-01T00:00:00Z',
     lastMessageAt: null,
@@ -116,8 +116,8 @@ describe('messagesSlice', () => {
   // Helper to create mock ChatMessageResponse
   const createMockMessageResponse = (overrides?: Partial<any>): any => ({
     id: 'msg-1',
-    chatId: 'thread-1',
-    userId: 'user-1',
+    chatId: 'aa0e8400-e29b-41d4-a716-000000000001',
+    userId: '990e8400-e29b-41d4-a716-000000000001',
     level: 'info',
     content: 'Test message',
     sequenceNumber: 1,
@@ -169,8 +169,8 @@ describe('messagesSlice', () => {
 
   describe('loadMessages', () => {
     const mockThread: ChatThread = {
-      id: 'thread-1',
-      gameId: 'game-1',
+      id: 'aa0e8400-e29b-41d4-a716-000000000001',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       title: 'Test Thread',
       createdAt: '2025-01-01T00:00:00Z',
       lastMessageAt: '2025-01-01T01:00:00Z',
@@ -182,7 +182,7 @@ describe('messagesSlice', () => {
           timestamp: '2025-01-01T00:00:00Z',
           backendMessageId: 'msg-1',
           endpoint: 'qa',
-          gameId: 'game-1',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
           feedback: null,
         },
         {
@@ -191,7 +191,7 @@ describe('messagesSlice', () => {
           timestamp: '2025-01-01T00:30:00Z',
           backendMessageId: 'msg-2',
           endpoint: 'qa',
-          gameId: 'game-1',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
           feedback: 'helpful',
         },
       ],
@@ -200,24 +200,24 @@ describe('messagesSlice', () => {
     it('should load messages successfully', async () => {
       mockChat.getThreadById.mockResolvedValue(mockThread);
 
-      await store.getState().loadMessages('thread-1');
+      await store.getState().loadMessages('aa0e8400-e29b-41d4-a716-000000000001');
 
       expect(setLoading).toHaveBeenCalledWith('messages', true);
-      expect(mockChat.getThreadById).toHaveBeenCalledWith('thread-1');
+      expect(mockChat.getThreadById).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001');
       expect(setLoading).toHaveBeenCalledWith('messages', false);
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toHaveLength(2);
-      expect(state.messagesByChat['thread-1'][0]).toMatchObject({
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toHaveLength(2);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0]).toMatchObject({
         id: 'thread-1-0',
         role: 'user',
         content: 'User message',
         backendMessageId: 'msg-1',
         endpoint: 'qa',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         feedback: null,
       });
-      expect(state.messagesByChat['thread-1'][1]).toMatchObject({
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][1]).toMatchObject({
         id: 'thread-1-1',
         role: 'assistant',
         content: 'Assistant message',
@@ -229,10 +229,10 @@ describe('messagesSlice', () => {
     it('should handle null thread (not found)', async () => {
       mockChat.getThreadById.mockResolvedValue(null as any);
 
-      await store.getState().loadMessages('thread-1');
+      await store.getState().loadMessages('aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toEqual([]);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toEqual([]);
       expect(setLoading).toHaveBeenCalledWith('messages', true);
       expect(setLoading).toHaveBeenCalledWith('messages', false);
     });
@@ -241,22 +241,22 @@ describe('messagesSlice', () => {
       const error = new Error('API Error');
       mockChat.getThreadById.mockRejectedValue(error);
 
-      await store.getState().loadMessages('thread-1');
+      await store.getState().loadMessages('aa0e8400-e29b-41d4-a716-000000000001');
 
       expect(setError).toHaveBeenCalledWith('Errore nel caricamento dei messaggi');
       expect(setLoading).toHaveBeenCalledWith('messages', false);
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toEqual([]);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toEqual([]);
     });
 
     it('should convert timestamps to Date objects', async () => {
       mockChat.getThreadById.mockResolvedValue(mockThread);
 
-      await store.getState().loadMessages('thread-1');
+      await store.getState().loadMessages('aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      const messages = state.messagesByChat['thread-1'];
+      const messages = state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'];
 
       expect(messages[0].timestamp).toBeInstanceOf(Date);
       expect(messages[1].timestamp).toBeInstanceOf(Date);
@@ -264,8 +264,8 @@ describe('messagesSlice', () => {
 
     it('should handle messages without optional fields', async () => {
       const minimalThread: ChatThread = {
-        id: 'thread-2',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000002',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: 'Minimal Thread',
         createdAt: '2025-01-01T00:00:00Z',
         lastMessageAt: null,
@@ -281,10 +281,10 @@ describe('messagesSlice', () => {
 
       mockChat.getThreadById.mockResolvedValue(minimalThread);
 
-      await store.getState().loadMessages('thread-2');
+      await store.getState().loadMessages('aa0e8400-e29b-41d4-a716-000000000002');
 
       const state = store.getState();
-      const messages = state.messagesByChat['thread-2'];
+      const messages = state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000002'];
 
       expect(messages[0]).toMatchObject({
         id: 'thread-2-0',
@@ -305,7 +305,7 @@ describe('messagesSlice', () => {
   describe('sendMessage', () => {
     beforeEach(() => {
       store.setState({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
         activeChatIds: {},
         chatsByGame: {},
@@ -316,7 +316,7 @@ describe('messagesSlice', () => {
     it('should create new thread and send message', async () => {
       const mockNewThread: ChatThread = {
         id: 'thread-new',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: 'What are the rules for setup?',
         createdAt: '2025-01-01T00:00:00Z',
         lastMessageAt: null,
@@ -330,7 +330,7 @@ describe('messagesSlice', () => {
       await store.getState().sendMessage('What are the rules for setup?');
 
       expect(mockChat.createThread).toHaveBeenCalledWith({
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: 'What are the rules for setup?',
         initialMessage: null,
       });
@@ -344,15 +344,15 @@ describe('messagesSlice', () => {
       );
 
       const state = store.getState();
-      expect(state.activeChatIds['game-1']).toBe('thread-new');
-      expect(state.chatsByGame['game-1']).toContainEqual(mockNewThread);
+      expect(state.activeChatIds['770e8400-e29b-41d4-a716-000000000001']).toBe('thread-new');
+      expect(state.chatsByGame['770e8400-e29b-41d4-a716-000000000001']).toContainEqual(mockNewThread);
     });
 
     it('should truncate long titles to 50 chars', async () => {
       const longMessage = 'This is a very long message that exceeds fifty characters and should be truncated';
       const mockNewThread: ChatThread = {
         id: 'thread-new',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: longMessage.substring(0, 50) + '...',
         createdAt: '2025-01-01T00:00:00Z',
         lastMessageAt: null,
@@ -366,7 +366,7 @@ describe('messagesSlice', () => {
       await store.getState().sendMessage(longMessage);
 
       expect(mockChat.createThread).toHaveBeenCalledWith({
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: longMessage.substring(0, 50) + '...',
         initialMessage: null,
       });
@@ -374,7 +374,7 @@ describe('messagesSlice', () => {
 
     it('should use existing thread if available', async () => {
       store.setState({
-        activeChatIds: { 'game-1': 'thread-existing' },
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'thread-existing' },
         messagesByChat: { 'thread-existing': [] },
       });
 
@@ -396,7 +396,7 @@ describe('messagesSlice', () => {
       mockChat.createThread.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({
           id: 'thread-new',
-          gameId: 'game-1',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
           title: 'Test',
           createdAt: '2025-01-01T00:00:00Z',
           lastMessageAt: null,
@@ -416,8 +416,8 @@ describe('messagesSlice', () => {
 
     it('should remove isOptimistic flag after success', async () => {
       store.setState({
-        activeChatIds: { 'game-1': 'thread-1' },
-        messagesByChat: { 'thread-1': [] },
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
+        messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': [] },
       });
 
       mockChat.addMessage.mockResolvedValue(createMockThread());
@@ -425,7 +425,7 @@ describe('messagesSlice', () => {
       await store.getState().sendMessage('Test message');
 
       const state = store.getState();
-      const messages = state.messagesByChat['thread-1'];
+      const messages = state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'];
 
       // Message should exist and not be optimistic
       expect(messages).toHaveLength(1);
@@ -434,8 +434,8 @@ describe('messagesSlice', () => {
 
     it('should rollback optimistic update on error', async () => {
       store.setState({
-        activeChatIds: { 'game-1': 'thread-1' },
-        messagesByChat: { 'thread-1': [] },
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
+        messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': [] },
       });
 
       mockChat.addMessage.mockRejectedValue(new Error('API Error'));
@@ -445,7 +445,7 @@ describe('messagesSlice', () => {
       expect(setError).toHaveBeenCalledWith("Errore nell'invio del messaggio");
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toEqual([]);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toEqual([]);
     });
 
     it('should not send if no game selected', async () => {
@@ -475,8 +475,8 @@ describe('messagesSlice', () => {
 
     it('should trim message content', async () => {
       store.setState({
-        activeChatIds: { 'game-1': 'thread-1' },
-        messagesByChat: { 'thread-1': [] },
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
+        messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': [] },
       });
 
       mockChat.addMessage.mockResolvedValue(createMockThread());
@@ -484,7 +484,7 @@ describe('messagesSlice', () => {
       await store.getState().sendMessage('  Test message  ');
 
       expect(mockChat.addMessage).toHaveBeenCalledWith(
-        'thread-1',
+        'aa0e8400-e29b-41d4-a716-000000000001',
         {
           content: 'Test message',
           role: 'user',
@@ -494,15 +494,15 @@ describe('messagesSlice', () => {
 
     it('should update chat title if first message in existing thread', async () => {
       store.setState({
-        activeChatIds: { 'game-1': 'thread-1' },
-        messagesByChat: { 'thread-1': [] },
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
+        messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': [] },
       });
 
       mockChat.addMessage.mockResolvedValue(createMockThread());
 
       await store.getState().sendMessage('First message');
 
-      expect(updateChatTitle).toHaveBeenCalledWith('thread-1', 'First message');
+      expect(updateChatTitle).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001', 'First message');
     });
 
     it('should not update title if not first message', async () => {
@@ -514,8 +514,8 @@ describe('messagesSlice', () => {
       };
 
       store.setState({
-        activeChatIds: { 'game-1': 'thread-1' },
-        messagesByChat: { 'thread-1': [existingMessage] },
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
+        messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': [existingMessage] },
       });
 
       mockChat.addMessage.mockResolvedValue(createMockThread());
@@ -535,8 +535,8 @@ describe('messagesSlice', () => {
 
     it('should set loading states correctly', async () => {
       store.setState({
-        activeChatIds: { 'game-1': 'thread-1' },
-        messagesByChat: { 'thread-1': [] },
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
+        messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': [] },
       });
 
       mockChat.addMessage.mockResolvedValue(createMockThread());
@@ -555,10 +555,10 @@ describe('messagesSlice', () => {
   describe('editMessage', () => {
     beforeEach(() => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'user',
@@ -579,11 +579,11 @@ describe('messagesSlice', () => {
       await store.getState().editMessage('msg-1', 'Updated message');
 
       expect(mockChat.updateMessage).toHaveBeenCalledWith(
-        'thread-1',
+        'aa0e8400-e29b-41d4-a716-000000000001',
         'msg-1',
         'Updated message'
       );
-      expect(mockLoadMessages).toHaveBeenCalledWith('thread-1');
+      expect(mockLoadMessages).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001');
       expect(setLoading).toHaveBeenCalledWith('updating', true);
       expect(setLoading).toHaveBeenCalledWith('updating', false);
     });
@@ -597,7 +597,7 @@ describe('messagesSlice', () => {
       await store.getState().editMessage('msg-1', '  Updated message  ');
 
       expect(mockChat.updateMessage).toHaveBeenCalledWith(
-        'thread-1',
+        'aa0e8400-e29b-41d4-a716-000000000001',
         'msg-1',
         'Updated message'
       );
@@ -645,10 +645,10 @@ describe('messagesSlice', () => {
   describe('deleteMessage', () => {
     beforeEach(() => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'user',
@@ -672,8 +672,8 @@ describe('messagesSlice', () => {
       expect(global.confirm).toHaveBeenCalledWith(
         'Sei sicuro di voler eliminare questo messaggio?'
       );
-      expect(mockChat.deleteMessage).toHaveBeenCalledWith('thread-1', 'msg-1');
-      expect(mockLoadMessages).toHaveBeenCalledWith('thread-1');
+      expect(mockChat.deleteMessage).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001', 'msg-1');
+      expect(mockLoadMessages).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001');
       expect(setLoading).toHaveBeenCalledWith('deleting', true);
       expect(setLoading).toHaveBeenCalledWith('deleting', false);
     });
@@ -725,10 +725,10 @@ describe('messagesSlice', () => {
   describe('setMessageFeedback', () => {
     beforeEach(() => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
@@ -736,7 +736,7 @@ describe('messagesSlice', () => {
               timestamp: new Date(),
               backendMessageId: 'backend-msg-1',
               endpoint: 'qa',
-              gameId: 'game-1',
+              gameId: '770e8400-e29b-41d4-a716-000000000001',
               feedback: null,
             },
           ],
@@ -752,18 +752,18 @@ describe('messagesSlice', () => {
       expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
         messageId: 'backend-msg-1',
         endpoint: 'qa',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         feedback: 'helpful',
       });
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].feedback).toBe('helpful');
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBe('helpful');
     });
 
     it('should toggle feedback to null if same value', async () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
@@ -771,7 +771,7 @@ describe('messagesSlice', () => {
               timestamp: new Date(),
               backendMessageId: 'backend-msg-1',
               endpoint: 'qa',
-              gameId: 'game-1',
+              gameId: '770e8400-e29b-41d4-a716-000000000001',
               feedback: 'helpful',
             },
           ],
@@ -785,18 +785,18 @@ describe('messagesSlice', () => {
       expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
         messageId: 'backend-msg-1',
         endpoint: 'qa',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         feedback: null,
       });
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].feedback).toBeNull();
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBeNull();
     });
 
     it('should change feedback from one value to another', async () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
@@ -804,7 +804,7 @@ describe('messagesSlice', () => {
               timestamp: new Date(),
               backendMessageId: 'backend-msg-1',
               endpoint: 'qa',
-              gameId: 'game-1',
+              gameId: '770e8400-e29b-41d4-a716-000000000001',
               feedback: 'helpful',
             },
           ],
@@ -818,18 +818,18 @@ describe('messagesSlice', () => {
       expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
         messageId: 'backend-msg-1',
         endpoint: 'qa',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         feedback: 'not-helpful',
       });
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].feedback).toBe('not-helpful');
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBe('not-helpful');
     });
 
     it('should use defaults for missing optional fields', async () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
@@ -848,7 +848,7 @@ describe('messagesSlice', () => {
       expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
         messageId: 'msg-1',
         endpoint: 'qa',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         feedback: 'helpful',
       });
     });
@@ -859,7 +859,7 @@ describe('messagesSlice', () => {
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].feedback).toBeNull();
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBeNull();
     });
 
     it('should not set feedback if no game selected', async () => {
@@ -893,7 +893,7 @@ describe('messagesSlice', () => {
     it('should add optimistic message to thread', () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [],
+          'aa0e8400-e29b-41d4-a716-000000000001': [],
         },
       });
 
@@ -904,11 +904,11 @@ describe('messagesSlice', () => {
         timestamp: new Date(),
       };
 
-      store.getState().addOptimisticMessage(newMessage, 'thread-1');
+      store.getState().addOptimisticMessage(newMessage, 'aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toHaveLength(1);
-      expect(state.messagesByChat['thread-1'][0]).toMatchObject({
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toHaveLength(1);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0]).toMatchObject({
         ...newMessage,
         isOptimistic: true,
       });
@@ -924,7 +924,7 @@ describe('messagesSlice', () => {
 
       store.setState({
         messagesByChat: {
-          'thread-1': [existingMessage],
+          'aa0e8400-e29b-41d4-a716-000000000001': [existingMessage],
         },
       });
 
@@ -935,11 +935,11 @@ describe('messagesSlice', () => {
         timestamp: new Date(),
       };
 
-      store.getState().addOptimisticMessage(newMessage, 'thread-1');
+      store.getState().addOptimisticMessage(newMessage, 'aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toHaveLength(2);
-      expect(state.messagesByChat['thread-1'][1].isOptimistic).toBe(true);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toHaveLength(2);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][1].isOptimistic).toBe(true);
     });
 
     it('should create thread entry if not exists', () => {
@@ -966,7 +966,7 @@ describe('messagesSlice', () => {
     it('should remove optimistic message from thread', () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'user',
@@ -990,17 +990,17 @@ describe('messagesSlice', () => {
         },
       });
 
-      store.getState().removeOptimisticMessage('temp-1', 'thread-1');
+      store.getState().removeOptimisticMessage('temp-1', 'aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toHaveLength(2);
-      expect(state.messagesByChat['thread-1'].find(m => m.id === 'temp-1')).toBeUndefined();
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toHaveLength(2);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'].find(m => m.id === 'temp-1')).toBeUndefined();
     });
 
     it('should handle non-existent message gracefully', () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'user',
@@ -1011,10 +1011,10 @@ describe('messagesSlice', () => {
         },
       });
 
-      store.getState().removeOptimisticMessage('non-existent', 'thread-1');
+      store.getState().removeOptimisticMessage('non-existent', 'aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toHaveLength(1);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toHaveLength(1);
     });
 
     it('should handle non-existent thread gracefully', () => {
@@ -1033,7 +1033,7 @@ describe('messagesSlice', () => {
     beforeEach(() => {
       store.setState({
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'user',
@@ -1054,13 +1054,13 @@ describe('messagesSlice', () => {
     });
 
     it('should update message fields', () => {
-      store.getState().updateMessageInThread('thread-1', 'msg-1', {
+      store.getState().updateMessageInThread('aa0e8400-e29b-41d4-a716-000000000001', 'msg-1', {
         content: 'Updated content',
         feedback: 'not-helpful',
       });
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0]).toMatchObject({
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0]).toMatchObject({
         id: 'msg-1',
         content: 'Updated content',
         feedback: 'not-helpful',
@@ -1069,12 +1069,12 @@ describe('messagesSlice', () => {
     });
 
     it('should update single field', () => {
-      store.getState().updateMessageInThread('thread-1', 'msg-1', {
+      store.getState().updateMessageInThread('aa0e8400-e29b-41d4-a716-000000000001', 'msg-1', {
         feedback: 'helpful',
       });
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0]).toMatchObject({
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0]).toMatchObject({
         id: 'msg-1',
         content: 'Original content', // preserved
         feedback: 'helpful',
@@ -1082,14 +1082,14 @@ describe('messagesSlice', () => {
     });
 
     it('should handle non-existent message gracefully', () => {
-      store.getState().updateMessageInThread('thread-1', 'non-existent', {
+      store.getState().updateMessageInThread('aa0e8400-e29b-41d4-a716-000000000001', 'non-existent', {
         content: 'New content',
       });
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toHaveLength(2);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toHaveLength(2);
       // Original messages unchanged
-      expect(state.messagesByChat['thread-1'][0].content).toBe('Original content');
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].content).toBe('Original content');
     });
 
     it('should handle non-existent thread gracefully', () => {
@@ -1103,21 +1103,21 @@ describe('messagesSlice', () => {
     });
 
     it('should preserve other message properties', () => {
-      const originalTimestamp = store.getState().messagesByChat['thread-1'][0].timestamp;
+      const originalTimestamp = store.getState().messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].timestamp;
 
-      store.getState().updateMessageInThread('thread-1', 'msg-1', {
+      store.getState().updateMessageInThread('aa0e8400-e29b-41d4-a716-000000000001', 'msg-1', {
         content: 'Updated content',
       });
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].timestamp).toEqual(originalTimestamp);
-      expect(state.messagesByChat['thread-1'][0].role).toBe('user');
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].timestamp).toEqual(originalTimestamp);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].role).toBe('user');
     });
 
     it('should update isOptimistic flag', () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'temp-1',
               role: 'user',
@@ -1129,12 +1129,12 @@ describe('messagesSlice', () => {
         },
       });
 
-      store.getState().updateMessageInThread('thread-1', 'temp-1', {
+      store.getState().updateMessageInThread('aa0e8400-e29b-41d4-a716-000000000001', 'temp-1', {
         isOptimistic: false,
       });
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].isOptimistic).toBe(false);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].isOptimistic).toBe(false);
     });
   });
 
@@ -1145,8 +1145,8 @@ describe('messagesSlice', () => {
   describe('Branch Coverage Edge Cases', () => {
     it('should handle messages with null feedback field', async () => {
       const threadWithNullFeedback: ChatThread = {
-        id: 'thread-1',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: 'Test Thread',
         createdAt: '2025-01-01T00:00:00Z',
         lastMessageAt: null,
@@ -1163,16 +1163,16 @@ describe('messagesSlice', () => {
 
       mockChat.getThreadById.mockResolvedValue(threadWithNullFeedback);
 
-      await store.getState().loadMessages('thread-1');
+      await store.getState().loadMessages('aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].feedback).toBeNull();
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBeNull();
     });
 
     it('should handle messages with undefined feedback field', async () => {
       const threadWithUndefinedFeedback: ChatThread = {
-        id: 'thread-1',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: 'Test Thread',
         createdAt: '2025-01-01T00:00:00Z',
         lastMessageAt: null,
@@ -1188,17 +1188,17 @@ describe('messagesSlice', () => {
 
       mockChat.getThreadById.mockResolvedValue(threadWithUndefinedFeedback);
 
-      await store.getState().loadMessages('thread-1');
+      await store.getState().loadMessages('aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].feedback).toBeNull();
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBeNull();
     });
 
     it('should handle title generation for exactly 50 character messages', async () => {
       const exactly50Chars = '12345678901234567890123456789012345678901234567890'; // exactly 50
       const mockNewThread: ChatThread = {
         id: 'thread-new',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: exactly50Chars,
         createdAt: '2025-01-01T00:00:00Z',
         lastMessageAt: null,
@@ -1207,7 +1207,7 @@ describe('messagesSlice', () => {
       };
 
       store.setState({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
       });
 
@@ -1218,7 +1218,7 @@ describe('messagesSlice', () => {
 
       // Should NOT add ellipsis for exactly 50 chars
       expect(mockChat.createThread).toHaveBeenCalledWith({
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: exactly50Chars,
         initialMessage: null,
       });
@@ -1226,10 +1226,10 @@ describe('messagesSlice', () => {
 
     it('should handle setMessageFeedback with null previous feedback', async () => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
@@ -1237,7 +1237,7 @@ describe('messagesSlice', () => {
               timestamp: new Date(),
               backendMessageId: 'backend-1',
               endpoint: 'qa',
-              gameId: 'game-1',
+              gameId: '770e8400-e29b-41d4-a716-000000000001',
               feedback: null,
             },
           ],
@@ -1249,15 +1249,15 @@ describe('messagesSlice', () => {
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].feedback).toBe('helpful');
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBe('helpful');
     });
 
     it('should handle setMessageFeedback with undefined previous feedback', async () => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
@@ -1265,7 +1265,7 @@ describe('messagesSlice', () => {
               timestamp: new Date(),
               backendMessageId: 'backend-1',
               endpoint: 'qa',
-              gameId: 'game-1',
+              gameId: '770e8400-e29b-41d4-a716-000000000001',
             },
           ],
         },
@@ -1276,20 +1276,20 @@ describe('messagesSlice', () => {
       await store.getState().setMessageFeedback('msg-1', 'not-helpful');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0].feedback).toBe('not-helpful');
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBe('not-helpful');
     });
 
     it('should handle removeOptimisticMessage when thread has no messages', () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [],
+          'aa0e8400-e29b-41d4-a716-000000000001': [],
         },
       });
 
-      store.getState().removeOptimisticMessage('non-existent', 'thread-1');
+      store.getState().removeOptimisticMessage('non-existent', 'aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toEqual([]);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toEqual([]);
     });
 
     it('should handle updateMessageInThread when messages array is undefined', () => {
@@ -1326,7 +1326,7 @@ describe('messagesSlice', () => {
       const shortMessage = 'Short message';
       const mockNewThread: ChatThread = {
         id: 'thread-new',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: shortMessage,
         createdAt: '2025-01-01T00:00:00Z',
         lastMessageAt: null,
@@ -1335,7 +1335,7 @@ describe('messagesSlice', () => {
       };
 
       store.setState({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
       });
 
@@ -1346,7 +1346,7 @@ describe('messagesSlice', () => {
 
       // Should NOT add ellipsis for messages under 50 chars
       expect(mockChat.createThread).toHaveBeenCalledWith({
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: shortMessage,
         initialMessage: null,
       });
@@ -1355,7 +1355,7 @@ describe('messagesSlice', () => {
     it('should handle removeOptimisticMessage when message exists in middle of array', () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'user',
@@ -1379,18 +1379,18 @@ describe('messagesSlice', () => {
         },
       });
 
-      store.getState().removeOptimisticMessage('temp-1', 'thread-1');
+      store.getState().removeOptimisticMessage('temp-1', 'aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toHaveLength(2);
-      expect(state.messagesByChat['thread-1'][0].id).toBe('msg-1');
-      expect(state.messagesByChat['thread-1'][1].id).toBe('msg-2');
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toHaveLength(2);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].id).toBe('msg-1');
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][1].id).toBe('msg-2');
     });
 
     it('should handle loadMessages when thread has empty messages array', async () => {
       const emptyThread: ChatThread = {
-        id: 'thread-1',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: 'Empty Thread',
         createdAt: '2025-01-01T00:00:00Z',
         lastMessageAt: null,
@@ -1400,25 +1400,25 @@ describe('messagesSlice', () => {
 
       mockChat.getThreadById.mockResolvedValue(emptyThread);
 
-      await store.getState().loadMessages('thread-1');
+      await store.getState().loadMessages('aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toEqual([]);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toEqual([]);
     });
 
     it('should handle setMessageFeedback when message has no backendMessageId', async () => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
               content: 'Message',
               timestamp: new Date(),
               endpoint: 'qa',
-              gameId: 'game-1',
+              gameId: '770e8400-e29b-41d4-a716-000000000001',
               feedback: null,
             },
           ],
@@ -1433,24 +1433,24 @@ describe('messagesSlice', () => {
       expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
         messageId: 'msg-1',
         endpoint: 'qa',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         feedback: 'helpful',
       });
     });
 
     it('should handle setMessageFeedback when message has no endpoint', async () => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
               content: 'Message',
               timestamp: new Date(),
               backendMessageId: 'backend-1',
-              gameId: 'game-1',
+              gameId: '770e8400-e29b-41d4-a716-000000000001',
               feedback: null,
             },
           ],
@@ -1465,17 +1465,17 @@ describe('messagesSlice', () => {
       expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
         messageId: 'backend-1',
         endpoint: 'qa',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         feedback: 'helpful',
       });
     });
 
     it('should handle setMessageFeedback when message has no gameId', async () => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
@@ -1497,17 +1497,17 @@ describe('messagesSlice', () => {
       expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
         messageId: 'backend-1',
         endpoint: 'qa',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         feedback: 'helpful',
       });
     });
 
     it('should handle setMessageFeedback when selectedGameId is null', async () => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
@@ -1535,7 +1535,7 @@ describe('messagesSlice', () => {
     it('should handle updateMessageInThread with multiple updates', () => {
       store.setState({
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'user',
@@ -1548,14 +1548,14 @@ describe('messagesSlice', () => {
         },
       });
 
-      store.getState().updateMessageInThread('thread-1', 'msg-1', {
+      store.getState().updateMessageInThread('aa0e8400-e29b-41d4-a716-000000000001', 'msg-1', {
         content: 'Updated',
         feedback: 'helpful',
         isOptimistic: true,
       });
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1'][0]).toMatchObject({
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0]).toMatchObject({
         id: 'msg-1',
         content: 'Updated',
         feedback: 'helpful',
@@ -1571,10 +1571,10 @@ describe('messagesSlice', () => {
   describe('Edge Cases', () => {
     it('should handle concurrent message operations', async () => {
       store.setState({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
-        activeChatIds: { 'game-1': 'thread-1' },
-        messagesByChat: { 'thread-1': [] },
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
+        messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': [] },
       });
 
       mockChat.addMessage.mockResolvedValue(createMockThread());
@@ -1591,10 +1591,10 @@ describe('messagesSlice', () => {
 
     it('should handle rapid feedback changes', async () => {
       store.setState({
-        selectedGameId: 'game-1',
-        activeChatIds: { 'game-1': 'thread-1' },
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
         messagesByChat: {
-          'thread-1': [
+          'aa0e8400-e29b-41d4-a716-000000000001': [
             {
               id: 'msg-1',
               role: 'assistant',
@@ -1602,7 +1602,7 @@ describe('messagesSlice', () => {
               timestamp: new Date(),
               backendMessageId: 'backend-1',
               endpoint: 'qa',
-              gameId: 'game-1',
+              gameId: '770e8400-e29b-41d4-a716-000000000001',
               feedback: null,
             },
           ],
@@ -1643,7 +1643,7 @@ describe('messagesSlice', () => {
       ];
 
       store.setState({
-        messagesByChat: { 'thread-1': messages },
+        messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': messages },
       });
 
       // Add optimistic message
@@ -1654,11 +1654,11 @@ describe('messagesSlice', () => {
         timestamp: new Date('2025-01-01T00:03:00Z'),
       };
 
-      store.getState().addOptimisticMessage(newMessage, 'thread-1');
+      store.getState().addOptimisticMessage(newMessage, 'aa0e8400-e29b-41d4-a716-000000000001');
 
       const state = store.getState();
-      expect(state.messagesByChat['thread-1']).toHaveLength(4);
-      expect(state.messagesByChat['thread-1'][3].content).toBe('Fourth');
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toHaveLength(4);
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][3].content).toBe('Fourth');
     });
   });
 });

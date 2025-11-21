@@ -111,7 +111,7 @@ describe('sessionSlice', () => {
 
   describe('selectGame', () => {
     it('should set selectedGameId to the provided value', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
 
       store.getState().selectGame(gameId);
 
@@ -128,8 +128,8 @@ describe('sessionSlice', () => {
 
     it('should handle null gameId', () => {
       // First set a game
-      store.getState().selectGame('game-123');
-      expect(store.getState().selectedGameId).toBe('game-123');
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000123');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000123');
 
       // Then set to null
       store.getState().selectGame(null);
@@ -138,8 +138,8 @@ describe('sessionSlice', () => {
     });
 
     it('should reset selectedAgentId when game changes', () => {
-      const gameId1 = 'game-123';
-      const gameId2 = 'game-456';
+      const gameId1 = '770e8400-e29b-41d4-a716-000000000123';
+      const gameId2 = '770e8400-e29b-41d4-a716-000000000456';
       const agentId = 'agent-789';
 
       // Select game and agent
@@ -157,7 +157,7 @@ describe('sessionSlice', () => {
     });
 
     it('should NOT reset selectedAgentId when selecting the same game', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
       const agentId = 'agent-789';
 
       // Select game and agent
@@ -175,7 +175,7 @@ describe('sessionSlice', () => {
     });
 
     it('should reset selectedAgentId when changing from null to a game', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
       const agentId = 'agent-789';
 
       // Start with null game
@@ -193,7 +193,7 @@ describe('sessionSlice', () => {
     });
 
     it('should reset selectedAgentId when changing from a game to null', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
       const agentId = 'agent-789';
 
       // Select game and agent
@@ -211,9 +211,9 @@ describe('sessionSlice', () => {
     });
 
     it('should handle rapid game changes correctly', () => {
-      const gameId1 = 'game-1';
-      const gameId2 = 'game-2';
-      const gameId3 = 'game-3';
+      const gameId1 = '770e8400-e29b-41d4-a716-000000000001';
+      const gameId2 = '770e8400-e29b-41d4-a716-000000000002';
+      const gameId3 = '770e8400-e29b-41d4-a716-000000000003';
       const agentId = 'agent-123';
 
       store.getState().selectGame(gameId1);
@@ -274,7 +274,7 @@ describe('sessionSlice', () => {
     });
 
     it('should not affect selectedGameId', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
       const agentId1 = 'agent-123';
       const agentId2 = 'agent-456';
 
@@ -342,7 +342,7 @@ describe('sessionSlice', () => {
     });
 
     it('should not affect other session state', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
       const agentId = 'agent-456';
 
       store.getState().selectGame(gameId);
@@ -414,7 +414,7 @@ describe('sessionSlice', () => {
     });
 
     it('should not affect other session state', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
       const agentId = 'agent-456';
 
       store.getState().selectGame(gameId);
@@ -443,13 +443,13 @@ describe('sessionSlice', () => {
       expect(store.getState().sidebarCollapsed).toBe(false);
 
       // Select game
-      store.getState().selectGame('game-1');
-      expect(store.getState().selectedGameId).toBe('game-1');
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000001');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000001');
       expect(store.getState().selectedAgentId).toBeNull();
 
       // Select agent
       store.getState().selectAgent('agent-1');
-      expect(store.getState().selectedGameId).toBe('game-1');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000001');
       expect(store.getState().selectedAgentId).toBe('agent-1');
 
       // Collapse sidebar
@@ -457,14 +457,14 @@ describe('sessionSlice', () => {
       expect(store.getState().sidebarCollapsed).toBe(true);
 
       // Change game (should reset agent)
-      store.getState().selectGame('game-2');
-      expect(store.getState().selectedGameId).toBe('game-2');
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000002');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000002');
       expect(store.getState().selectedAgentId).toBeNull();
       expect(store.getState().sidebarCollapsed).toBe(true);
 
       // Select new agent
       store.getState().selectAgent('agent-2');
-      expect(store.getState().selectedGameId).toBe('game-2');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000002');
       expect(store.getState().selectedAgentId).toBe('agent-2');
 
       // Expand sidebar
@@ -479,7 +479,7 @@ describe('sessionSlice', () => {
     });
 
     it('should maintain state independence between actions', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
       const agentId = 'agent-456';
 
       // Set all state
@@ -506,7 +506,7 @@ describe('sessionSlice', () => {
     });
 
     it('should handle concurrent state updates', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
       const agentId = 'agent-456';
 
       // Multiple rapid updates
@@ -514,10 +514,10 @@ describe('sessionSlice', () => {
       store.getState().selectAgent(agentId);
       store.getState().toggleSidebar();
       store.getState().setSidebarCollapsed(false);
-      store.getState().selectGame('game-789');
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000789');
 
       // Final state should reflect all updates in order
-      expect(store.getState().selectedGameId).toBe('game-789');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000789');
       expect(store.getState().selectedAgentId).toBeNull(); // Reset by game change
       expect(store.getState().sidebarCollapsed).toBe(false);
     });
@@ -535,23 +535,23 @@ describe('sessionSlice', () => {
 
     it('should preserve state through multiple game-agent cycles', () => {
       // First cycle
-      store.getState().selectGame('game-1');
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000001');
       store.getState().selectAgent('agent-1');
-      expect(store.getState().selectedGameId).toBe('game-1');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000001');
       expect(store.getState().selectedAgentId).toBe('agent-1');
 
       // Second cycle
-      store.getState().selectGame('game-2');
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000002');
       expect(store.getState().selectedAgentId).toBeNull();
       store.getState().selectAgent('agent-2');
-      expect(store.getState().selectedGameId).toBe('game-2');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000002');
       expect(store.getState().selectedAgentId).toBe('agent-2');
 
       // Third cycle
-      store.getState().selectGame('game-3');
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000003');
       expect(store.getState().selectedAgentId).toBeNull();
       store.getState().selectAgent('agent-3');
-      expect(store.getState().selectedGameId).toBe('game-3');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000003');
       expect(store.getState().selectedAgentId).toBe('agent-3');
     });
   });
@@ -563,7 +563,7 @@ describe('sessionSlice', () => {
   describe('State Consistency', () => {
     it('should maintain referential integrity when no changes occur', () => {
       const initialState = store.getState();
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
 
       // Select same game twice
       store.getState().selectGame(gameId);
@@ -577,7 +577,7 @@ describe('sessionSlice', () => {
     });
 
     it('should handle sidebar state independently of selection state', () => {
-      const gameId = 'game-123';
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
       const agentId = 'agent-456';
 
       // Set selections

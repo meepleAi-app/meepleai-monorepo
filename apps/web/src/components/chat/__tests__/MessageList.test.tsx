@@ -50,7 +50,7 @@ const createMockMessage = (overrides?: Partial<Message>): Message => ({
  * Helper to setup chat store with default values
  */
 const setupChatStore = (overrides?: any) => {
-  const gameId = overrides?.selectedGameId || 'game-1';
+  const gameId = overrides?.selectedGameId || '770e8400-e29b-41d4-a716-000000000001';
   const activeChatId = overrides?.activeChatId || 'chat-1';
   const messages = overrides?.messages || [];
 
@@ -312,7 +312,7 @@ describe('MessageList', () => {
       act(() => {
         useChatStore.setState({
           messagesByChat: { 'chat-123': mockMessages },
-          activeChatIds: { 'game-1': 'chat-123' }
+          activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'chat-123' }
         });
       });
       rerender(<MessageList />);

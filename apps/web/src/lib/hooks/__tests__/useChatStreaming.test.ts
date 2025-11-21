@@ -52,7 +52,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-123', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000123', 'test query');
       });
 
       await waitFor(() => {
@@ -69,7 +69,7 @@ describe('useChatStreaming', () => {
       // Set some initial state
       act(() => {
         const [, controls] = result.current;
-        controls.startStreaming('game-1', 'query 1');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'query 1');
       });
 
       await waitFor(() => {
@@ -80,7 +80,7 @@ describe('useChatStreaming', () => {
       // Start new stream
       act(() => {
         const [, controls] = result.current;
-        controls.startStreaming('game-2', 'query 2');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000002', 'query 2');
       });
 
       await waitFor(() => {
@@ -97,7 +97,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-456', 'How do I play?', 'chat-789');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000456', 'How do I play?', 'chat-789');
       });
 
       await waitFor(() => {
@@ -119,7 +119,7 @@ describe('useChatStreaming', () => {
       );
 
       expect(JSON.parse(options.body as string)).toEqual({
-        gameId: 'game-456',
+        gameId: '770e8400-e29b-41d4-a716-000000000456',
         query: 'How do I play?',
         chatId: 'chat-789',
         searchMode: 'Hybrid',
@@ -157,7 +157,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -183,7 +183,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -206,7 +206,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -227,7 +227,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -249,7 +249,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -272,7 +272,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -315,7 +315,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -342,7 +342,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -361,7 +361,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -381,7 +381,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -426,7 +426,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -477,7 +477,7 @@ describe('useChatStreaming', () => {
 
       // Start and complete a stream
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -517,7 +517,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -539,7 +539,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -580,7 +580,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -602,7 +602,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -626,7 +626,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -650,7 +650,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -675,7 +675,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -710,7 +710,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -739,7 +739,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -767,7 +767,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -807,7 +807,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -833,7 +833,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -864,7 +864,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -889,7 +889,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -927,7 +927,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -985,7 +985,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -1013,7 +1013,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {
@@ -1076,7 +1076,7 @@ describe('useChatStreaming', () => {
 
       // Start first stream
       act(() => {
-        controls.startStreaming('game-1', 'query 1');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'query 1');
       });
 
       await waitFor(() => {
@@ -1086,7 +1086,7 @@ describe('useChatStreaming', () => {
 
       // Immediately start second stream (should cancel first)
       act(() => {
-        controls.startStreaming('game-2', 'query 2');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000002', 'query 2');
       });
 
       await waitFor(() => {
@@ -1123,7 +1123,7 @@ describe('useChatStreaming', () => {
 
       // First stream
       act(() => {
-        controls.startStreaming('game-1', 'query 1');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'query 1');
       });
 
       await waitFor(() => {
@@ -1133,7 +1133,7 @@ describe('useChatStreaming', () => {
 
       // Second stream should reset
       act(() => {
-        controls.startStreaming('game-2', 'query 2');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000002', 'query 2');
       });
 
       await waitFor(() => {
@@ -1177,7 +1177,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       // Initial state
@@ -1218,7 +1218,7 @@ describe('useChatStreaming', () => {
       const [, controls] = result.current;
 
       act(() => {
-        controls.startStreaming('game-1', 'test query');
+        controls.startStreaming('770e8400-e29b-41d4-a716-000000000001', 'test query');
       });
 
       await waitFor(() => {

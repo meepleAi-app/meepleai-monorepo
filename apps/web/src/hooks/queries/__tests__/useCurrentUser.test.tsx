@@ -44,7 +44,7 @@ describe('useCurrentUser', () => {
 
   it('should fetch current user successfully', async () => {
     const mockUser = {
-      id: 'user-1',
+      id: '990e8400-e29b-41d4-a716-000000000001',
       email: 'test@example.com',
       displayName: 'Test User',
       role: 'user',
@@ -102,7 +102,7 @@ describe('useCurrentUser', () => {
 
   it('should cache user data', async () => {
     const mockUser = {
-      id: 'user-1',
+      id: '990e8400-e29b-41d4-a716-000000000001',
       email: 'test@example.com',
       displayName: 'Test User',
       role: 'user',

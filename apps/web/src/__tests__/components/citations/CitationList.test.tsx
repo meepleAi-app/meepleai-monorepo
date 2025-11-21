@@ -12,19 +12,19 @@ import { Citation } from '@/types';
 describe('CitationList', () => {
   const mockCitations: Citation[] = [
     {
-      documentId: 'doc-1',
+      documentId: '880e8400-e29b-41d4-a716-000000000001',
       pageNumber: 10,
       snippet: 'First citation snippet',
       relevanceScore: 0.95,
     },
     {
-      documentId: 'doc-2',
+      documentId: '880e8400-e29b-41d4-a716-000000000002',
       pageNumber: 25,
       snippet: 'Second citation snippet',
       relevanceScore: 0.80,
     },
     {
-      documentId: 'doc-3',
+      documentId: '880e8400-e29b-41d4-a716-000000000003',
       pageNumber: 42,
       snippet: 'Third citation snippet',
       relevanceScore: 0.70,

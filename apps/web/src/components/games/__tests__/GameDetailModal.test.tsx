@@ -23,7 +23,7 @@ describe('GameDetailModal', () => {
   const mockOnOpenChange = jest.fn();
 
   const mockGame: Game = {
-    id: 'game-123',
+    id: '770e8400-e29b-41d4-a716-000000000123',
     title: 'Test Game',
     publisher: 'Test Publisher',
     bggId: 12345,

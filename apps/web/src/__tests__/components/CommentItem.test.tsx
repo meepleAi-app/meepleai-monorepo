@@ -37,9 +37,9 @@ jest.mock('../../components/chat/MentionInput', () => ({
  */
 const createMockComment = (overrides?: Partial<RuleSpecComment>): RuleSpecComment => ({
   id: 'comment-1',
-  gameId: 'game-1',
+  gameId: '770e8400-e29b-41d4-a716-000000000001',
   version: 'v1.0',
-  userId: 'user-1',
+  userId: '990e8400-e29b-41d4-a716-000000000001',
   userDisplayName: 'Test User',
   atomId: null,
   lineNumber: null,

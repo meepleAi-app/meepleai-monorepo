@@ -34,9 +34,9 @@ const mockApi = api as jest.Mocked<typeof api>;
  */
 const createMockComment = (overrides?: Partial<RuleSpecComment>): RuleSpecComment => ({
   id: 'comment-1',
-  gameId: 'game-1',
+  gameId: '770e8400-e29b-41d4-a716-000000000001',
   version: 'v1.0',
-  userId: 'user-1',
+  userId: '990e8400-e29b-41d4-a716-000000000001',
   userDisplayName: 'Test User',
   atomId: null,
   lineNumber: null,
@@ -56,7 +56,7 @@ const createMockComment = (overrides?: Partial<RuleSpecComment>): RuleSpecCommen
 
 describe('CommentThread Component', () => {
   const defaultProps = {
-    gameId: 'game-1',
+    gameId: '770e8400-e29b-41d4-a716-000000000001',
     version: 'v1.0',
     currentUserId: 'current-user',
     currentUserRole: 'Editor',
@@ -103,7 +103,7 @@ describe('CommentThread Component', () => {
     it('renders hidden test data elements', () => {
       render(<CommentThread {...defaultProps} />);
 
-      expect(screen.getByTestId('comment-game-id')).toHaveTextContent('game-1');
+      expect(screen.getByTestId('comment-game-id')).toHaveTextContent('770e8400-e29b-41d4-a716-000000000001');
       expect(screen.getByTestId('comment-version')).toHaveTextContent('v1.0');
       expect(screen.getByTestId('comment-user-id')).toHaveTextContent('current-user');
       expect(screen.getByTestId('comment-user-role')).toHaveTextContent('Editor');
@@ -128,7 +128,7 @@ describe('CommentThread Component', () => {
       render(<CommentThread {...defaultProps} />);
 
       await waitFor(() => {
-        expect(mockApi.chat.getRuleSpecComments).toHaveBeenCalledWith('game-1', 'v1.0', true);
+        expect(mockApi.chat.getRuleSpecComments).toHaveBeenCalledWith('770e8400-e29b-41d4-a716-000000000001', 'v1.0', true);
       });
     });
 
@@ -137,7 +137,7 @@ describe('CommentThread Component', () => {
 
       await waitFor(() => {
         expect(mockApi.chat.getRuleSpecComments).toHaveBeenCalledWith(
-          'game-1',
+          '770e8400-e29b-41d4-a716-000000000001',
           'v1.0',
           true // includeResolved default
         );
@@ -155,7 +155,7 @@ describe('CommentThread Component', () => {
       fireEvent.click(checkbox);
 
       await waitFor(() => {
-        expect(mockApi.chat.getRuleSpecComments).toHaveBeenCalledWith('game-1', 'v1.0', false);
+        expect(mockApi.chat.getRuleSpecComments).toHaveBeenCalledWith('770e8400-e29b-41d4-a716-000000000001', 'v1.0', false);
       });
     });
   });
@@ -299,7 +299,7 @@ describe('CommentThread Component', () => {
       fireEvent.submit(form.closest('form')!);
 
       await waitFor(() => {
-        expect(mockApi.chat.createRuleSpecComment).toHaveBeenCalledWith('game-1', 'v1.0', {
+        expect(mockApi.chat.createRuleSpecComment).toHaveBeenCalledWith('770e8400-e29b-41d4-a716-000000000001', 'v1.0', {
           commentText: 'New comment',
           atomId: null,
           lineNumber: null,
@@ -318,7 +318,7 @@ describe('CommentThread Component', () => {
 
       await waitFor(() => {
         expect(mockApi.chat.createRuleSpecComment).toHaveBeenCalledWith(
-          'game-1',
+          '770e8400-e29b-41d4-a716-000000000001',
           'v1.0',
           expect.objectContaining({
             lineNumber: 42,
@@ -404,7 +404,7 @@ describe('CommentThread Component', () => {
 
         await waitFor(() => {
           expect(mockApi.chat.updateRuleSpecComment).toHaveBeenCalledWith(
-            'game-1',
+            '770e8400-e29b-41d4-a716-000000000001',
             'comment-1',
             { commentText: 'Updated comment' }
           );
@@ -853,7 +853,7 @@ describe('CommentThread Component', () => {
     it('passes correct props to CommentItem', async () => {
       const comment = createMockComment({
         id: 'comment-1',
-        userId: 'user-1',
+        userId: '990e8400-e29b-41d4-a716-000000000001',
       });
 
       (mockApi.chat.getRuleSpecComments as jest.Mock).mockResolvedValue({

@@ -22,7 +22,7 @@ const mockApi = api as jest.Mocked<typeof api>;
 describe('ChatPage - Feedback', () => {
   const userResponse = {
     user: {
-      id: 'user-1',
+      id: '990e8400-e29b-41d4-a716-000000000001',
       email: 'user@example.com',
       displayName: 'Test User',
       role: 'User',
@@ -44,7 +44,7 @@ describe('ChatPage - Feedback', () => {
       timestamp: new Date('2025-01-10T10:01:00Z'),
       backendMessageId: 'backend-msg-2',
       endpoint: 'qa',
-      gameId: 'game-1',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       feedback: null,
     },
   ];
@@ -54,10 +54,10 @@ describe('ChatPage - Feedback', () => {
 
     // Set store state - use false to preserve action functions
     useChatStore.setState({
-      selectedGameId: 'game-1',
+      selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
       selectedAgentId: 'agent-1',
       sidebarCollapsed: false,
-      activeChatIds: { 'game-1': 'chat-1' },
+      activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'chat-1' },
       messagesByChat: { 'chat-1': [...mockMessages] },
       games: [],
       agents: [],
@@ -104,7 +104,7 @@ describe('ChatPage - Feedback', () => {
     expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
       messageId: 'backend-msg-2',
       endpoint: 'qa',
-      gameId: 'game-1',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       feedback: 'helpful',
     });
   });
@@ -126,7 +126,7 @@ describe('ChatPage - Feedback', () => {
     expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
       messageId: 'backend-msg-2',
       endpoint: 'qa',
-      gameId: 'game-1',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       feedback: 'not-helpful',
     });
   });
@@ -195,7 +195,7 @@ describe('ChatPage - Feedback', () => {
     expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
       messageId: 'backend-msg-2',
       endpoint: 'qa',
-      gameId: 'game-1',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       feedback: 'helpful',
     });
   });
@@ -209,6 +209,6 @@ describe('ChatPage - Feedback', () => {
     // Verify assistant message has feedback capability
     expect(mockMessages[1].backendMessageId).toBe('backend-msg-2');
     expect(mockMessages[1].endpoint).toBe('qa');
-    expect(mockMessages[1].gameId).toBe('game-1');
+    expect(mockMessages[1].gameId).toBe('770e8400-e29b-41d4-a716-000000000001');
   });
 });

@@ -48,9 +48,9 @@ describe('useChatOptimistic', () => {
     // Initialize store with mock sendMessage
     useChatStore.setState({
       ...createMockStoreState({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
-        activeChatIds: { 'game-1': 'chat-123' },
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'chat-123' },
         messagesByChat: { 'chat-123': [] },
       }),
       sendMessage: mockSendMessage,

@@ -17,9 +17,9 @@ import { ChatThread } from '@/types';
 
 describe('ThreadListItem', () => {
   const mockThread: ChatThread = {
-    id: 'thread-1',
-    userId: 'user-1',
-    gameId: 'game-1',
+    id: 'aa0e8400-e29b-41d4-a716-000000000001',
+    userId: '990e8400-e29b-41d4-a716-000000000001',
+    gameId: '770e8400-e29b-41d4-a716-000000000001',
     title: 'How to play Catan?',
     status: 'Active',
     createdAt: new Date('2025-11-15T10:00:00Z').toISOString(),

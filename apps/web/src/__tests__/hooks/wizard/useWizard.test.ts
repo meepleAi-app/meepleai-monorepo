@@ -21,11 +21,11 @@ describe('useWizard', () => {
       act(() => {
         result.current.dispatch({
           type: 'UPLOAD_SUCCESS',
-          documentId: 'doc-123'
+          documentId: '880e8400-e29b-41d4-a716-000000000123'
         });
       });
 
-      expect(result.current.state.documentId).toBe('doc-123');
+      expect(result.current.state.documentId).toBe('880e8400-e29b-41d4-a716-000000000123');
       expect(result.current.state.currentStep).toBe('parse');
       expect(result.current.state.processingStatus).toBe('pending');
       expect(result.current.state.error).toBeNull();
@@ -43,7 +43,7 @@ describe('useWizard', () => {
       act(() => {
         result.current.dispatch({
           type: 'UPLOAD_SUCCESS',
-          documentId: 'doc-123'
+          documentId: '880e8400-e29b-41d4-a716-000000000123'
         });
       });
 
@@ -240,13 +240,13 @@ describe('useWizard', () => {
 
       // Make some changes
       act(() => {
-        result.current.dispatch({ type: 'UPLOAD_SUCCESS', documentId: 'doc-123' });
+        result.current.dispatch({ type: 'UPLOAD_SUCCESS', documentId: '880e8400-e29b-41d4-a716-000000000123' });
         result.current.dispatch({ type: 'PROCESSING_UPDATE', status: 'completed' });
         result.current.dispatch({ type: 'ERROR', error: 'Test error' });
       });
 
       expect(result.current.state.currentStep).toBe('parse');
-      expect(result.current.state.documentId).toBe('doc-123');
+      expect(result.current.state.documentId).toBe('880e8400-e29b-41d4-a716-000000000123');
 
       // Reset
       act(() => {
@@ -270,7 +270,7 @@ describe('useWizard', () => {
 
       // Upload success → parse step
       act(() => {
-        result.current.dispatch({ type: 'UPLOAD_SUCCESS', documentId: 'doc-123' });
+        result.current.dispatch({ type: 'UPLOAD_SUCCESS', documentId: '880e8400-e29b-41d4-a716-000000000123' });
       });
       expect(result.current.state.currentStep).toBe('parse');
       expect(result.current.state.processingStatus).toBe('pending');
@@ -300,7 +300,7 @@ describe('useWizard', () => {
 
       // Upload success
       act(() => {
-        result.current.dispatch({ type: 'UPLOAD_SUCCESS', documentId: 'doc-123' });
+        result.current.dispatch({ type: 'UPLOAD_SUCCESS', documentId: '880e8400-e29b-41d4-a716-000000000123' });
       });
 
       // Processing error

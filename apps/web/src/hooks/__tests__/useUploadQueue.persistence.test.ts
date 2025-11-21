@@ -80,7 +80,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Just verify queue state was updated
@@ -95,7 +95,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -155,7 +155,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -190,7 +190,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -220,7 +220,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -235,7 +235,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       let itemId: string;
@@ -258,7 +258,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -281,7 +281,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -296,7 +296,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Should persist queue successfully
@@ -329,7 +329,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Should not crash - queue should still work
@@ -405,7 +405,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Sync messages might be sent
@@ -419,7 +419,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await tab1.current.addFiles([file], 'game-123', 'en');
+        await tab1.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Tab 2 might receive sync
@@ -436,7 +436,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Verify queue is updated correctly
@@ -453,8 +453,8 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file2 = new File(['content 2'], 'test2.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await tab1.current.addFiles([file1], 'game-123', 'en');
-        await tab2.current.addFiles([file2], 'game-456', 'en');
+        await tab1.current.addFiles([file1], '770e8400-e29b-41d4-a716-000000000123', 'en');
+        await tab2.current.addFiles([file2], '770e8400-e29b-41d4-a716-000000000456', 'en');
       });
 
       // State merging behavior
@@ -467,7 +467,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await tab1.current.addFiles([file], 'game-123', 'en');
+        await tab1.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Tab 2 should be aware of upload
@@ -485,7 +485,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await tab1.current.addFiles([file], 'game-123', 'en');
+        await tab1.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -508,7 +508,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       unmount();
@@ -523,7 +523,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await tab1.current.addFiles([file], 'game-123', 'en');
+        await tab1.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       let itemId: string;
@@ -548,7 +548,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await tab1.current.addFiles([file], 'game-123', 'en');
+        await tab1.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -571,7 +571,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       );
 
       await act(async () => {
-        await tab1.current.addFiles(files, 'game-123', 'en');
+        await tab1.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Tab 2 receives rapid updates
@@ -597,8 +597,8 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       ];
 
       await act(async () => {
-        await tab1.current.addFiles(files1, 'game-123', 'en');
-        await tab2.current.addFiles(files2, 'game-456', 'en');
+        await tab1.current.addFiles(files1, '770e8400-e29b-41d4-a716-000000000123', 'en');
+        await tab2.current.addFiles(files2, '770e8400-e29b-41d4-a716-000000000456', 'en');
       });
 
       await waitFor(() => {
@@ -616,7 +616,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await tab1.current.addFiles([file], 'game-123', 'en');
+        await tab1.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       unmount1();
@@ -641,7 +641,7 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       unmount();
@@ -661,9 +661,9 @@ describe('useUploadQueue - Persistence & Multi-Tab', () => {
 
       await act(async () => {
         await Promise.all([
-          tab1.current.addFiles([file1], 'game-1', 'en'),
-          tab2.current.addFiles([file2], 'game-2', 'en'),
-          tab3.current.addFiles([file3], 'game-3', 'en')
+          tab1.current.addFiles([file1], '770e8400-e29b-41d4-a716-000000000001', 'en'),
+          tab2.current.addFiles([file2], '770e8400-e29b-41d4-a716-000000000002', 'en'),
+          tab3.current.addFiles([file3], '770e8400-e29b-41d4-a716-000000000003', 'en')
         ]);
       });
 

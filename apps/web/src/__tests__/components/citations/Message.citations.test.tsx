@@ -26,13 +26,13 @@ jest.mock('@/store/chat/store', () => ({
 describe('Message - Citations Feature (#859)', () => {
   const mockCitations: Citation[] = [
     {
-      documentId: 'doc-1',
+      documentId: '880e8400-e29b-41d4-a716-000000000001',
       pageNumber: 10,
       snippet: 'Citation from page 10',
       relevanceScore: 0.95,
     },
     {
-      documentId: 'doc-2',
+      documentId: '880e8400-e29b-41d4-a716-000000000002',
       pageNumber: 25,
       snippet: 'Citation from page 25',
       relevanceScore: 0.80,

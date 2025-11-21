@@ -49,7 +49,7 @@ describe('Type Index Exports', () => {
 
       const chat: import('../index').Chat = {
         id: 'chat-1',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         gameName: 'Test Game',
         agentId: 'agent-1',
         agentName: 'Test Agent',
@@ -71,7 +71,7 @@ describe('Type Index Exports', () => {
       };
 
       const ruleSpec: import('../index').RuleSpec = {
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         version: '1.0.0',
         createdAt: '2024-01-01',
         rules: [],

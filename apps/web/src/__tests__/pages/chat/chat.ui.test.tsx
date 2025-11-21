@@ -115,7 +115,7 @@ const mockUseChatStore = useChatStore as jest.MockedFunction<typeof useChatStore
 describe('ChatPage - UI Interactions', () => {
   const userResponse = {
     user: {
-      id: 'user-1',
+      id: '990e8400-e29b-41d4-a716-000000000001',
       email: 'user@example.com',
       displayName: 'Test User',
       role: 'User',
@@ -266,7 +266,7 @@ describe('ChatPage - UI Interactions', () => {
 
     // Mock selected game
     const mockGame = {
-      id: 'game-1',
+      id: '770e8400-e29b-41d4-a716-000000000001',
       name: 'Chess',
       createdAt: new Date().toISOString()
     };
@@ -275,12 +275,12 @@ describe('ChatPage - UI Interactions', () => {
 
     mockUseChatStore.mockReturnValue({
       ...defaultStoreState,
-      selectedGameId: 'game-1',
+      selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
       games: [mockGame],
     });
 
     mockUseChatStore.mockReturnValue({
-      selectedGameId: 'game-1',
+      selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
       selectedAgentId: null,
       activeChatId: null,
       messages: [],
@@ -315,14 +315,14 @@ describe('ChatPage - UI Interactions', () => {
     const { useSelectedGame, useSelectedAgent, useActiveChat } = require('@/store/chat');
 
     const mockGame = {
-      id: 'game-1',
+      id: '770e8400-e29b-41d4-a716-000000000001',
       name: 'Chess',
       createdAt: new Date().toISOString()
     };
 
     const mockAgent = {
       id: 'agent-1',
-      gameId: 'game-1',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       name: 'Chess Expert',
       kind: 'qa',
       createdAt: new Date().toISOString()
@@ -330,7 +330,7 @@ describe('ChatPage - UI Interactions', () => {
 
     const mockChat = {
       id: 'chat-1',
-      gameId: 'game-1',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       agentId: 'agent-1',
       title: 'Chess Rules',
       createdAt: new Date().toISOString(),
@@ -343,12 +343,12 @@ describe('ChatPage - UI Interactions', () => {
 
     mockUseChatStore.mockReturnValue({
       ...defaultStoreState,
-      selectedGameId: 'game-1',
+      selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
       selectedAgentId: 'agent-1',
       games: [mockGame],
       agents: [mockAgent],
-      activeChatIds: { 'game-1': 'chat-1' },
-      chatsByGame: { 'game-1': [mockChat] },
+      activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'chat-1' },
+      chatsByGame: { '770e8400-e29b-41d4-a716-000000000001': [mockChat] },
       messagesByChat: {
         'chat-1': [
           {
@@ -362,7 +362,7 @@ describe('ChatPage - UI Interactions', () => {
     });
 
     mockUseChatStore.mockReturnValue({
-      selectedGameId: 'game-1',
+      selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
       selectedAgentId: 'agent-1',
       activeChatId: 'chat-1',
       messages: [

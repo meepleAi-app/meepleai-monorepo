@@ -31,8 +31,8 @@ Object.defineProperty(window, 'localStorage', {
 
 // Test data
 const mockGames: Game[] = [
-  { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
-  { id: 'game-2', name: 'Go', createdAt: '2024-01-02T00:00:00Z' },
+  { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+  { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Go', createdAt: '2024-01-02T00:00:00Z' },
 ];
 
 const mockAgents: Agent[] = [
@@ -46,21 +46,21 @@ const mockMessages: Message[] = [
     role: 'user',
     content: 'How do I castle in chess?',
     timestamp: new Date('2024-01-01T10:00:00Z'),
-    gameId: 'game-1',
+    gameId: '770e8400-e29b-41d4-a716-000000000001',
   },
   {
     id: 'msg-2',
     role: 'assistant',
     content: 'Castling is a special move involving the king and rook.',
     timestamp: new Date('2024-01-01T10:01:00Z'),
-    gameId: 'game-1',
+    gameId: '770e8400-e29b-41d4-a716-000000000001',
   },
 ];
 
 const mockChats: ChatThread[] = [
   {
     id: 'chat-1',
-    gameId: 'game-1',
+    gameId: '770e8400-e29b-41d4-a716-000000000001',
     title: 'Learning Chess Basics',
     createdAt: '2024-01-01T09:00:00Z',
     lastMessageAt: '2024-01-01T10:01:00Z',
@@ -123,7 +123,7 @@ describe('useSearch', () => {
     act(() => {
       searchResults = result.current.search({
         query: '',
-        filters: { gameId: 'game-1' },
+        filters: { gameId: '770e8400-e29b-41d4-a716-000000000001' },
         limit: 100,
       });
     });
@@ -131,7 +131,7 @@ describe('useSearch', () => {
     expect(searchResults).toBeDefined();
     searchResults.forEach((result: any) => {
       if (result.type === 'message' || result.type === 'chat') {
-        expect(result.gameId).toBe('game-1');
+        expect(result.gameId).toBe('770e8400-e29b-41d4-a716-000000000001');
       }
       // Agents are global and should be included regardless of game filter
       if (result.type === 'agent') {

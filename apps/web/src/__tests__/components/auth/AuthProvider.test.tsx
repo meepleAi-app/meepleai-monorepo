@@ -51,7 +51,7 @@ describe('AuthProvider', () => {
   describe('Initialization', () => {
     it('loads user on mount', async () => {
       const mockUser = {
-        id: 'user-1',
+        id: '990e8400-e29b-41d4-a716-000000000001',
         email: 'test@example.com',
         displayName: 'Test User',
         role: 'User',
@@ -93,7 +93,7 @@ describe('AuthProvider', () => {
   describe('login', () => {
     it('successfully logs in user', async () => {
       const mockUser = {
-        id: 'user-1',
+        id: '990e8400-e29b-41d4-a716-000000000001',
         email: 'test@example.com',
         displayName: 'Test User',
         role: 'User',
@@ -165,7 +165,7 @@ describe('AuthProvider', () => {
   describe('register', () => {
     it('successfully registers user', async () => {
       const mockUser = {
-        id: 'user-2',
+        id: '990e8400-e29b-41d4-a716-000000000002',
         email: 'newuser@example.com',
         displayName: 'New User',
         role: 'User',
@@ -245,7 +245,7 @@ describe('AuthProvider', () => {
   describe('logout', () => {
     it('successfully logs out user', async () => {
       const mockUser = {
-        id: 'user-1',
+        id: '990e8400-e29b-41d4-a716-000000000001',
         email: 'test@example.com',
         displayName: 'Test User',
         role: 'User',
@@ -272,7 +272,7 @@ describe('AuthProvider', () => {
 
     it('handles logout failure gracefully', async () => {
       const mockUser = {
-        id: 'user-1',
+        id: '990e8400-e29b-41d4-a716-000000000001',
         email: 'test@example.com',
         displayName: 'Test User',
         role: 'User',
@@ -301,7 +301,7 @@ describe('AuthProvider', () => {
   describe('refreshUser', () => {
     it('reloads current user', async () => {
       const initialUser = {
-        id: 'user-1',
+        id: '990e8400-e29b-41d4-a716-000000000001',
         email: 'test@example.com',
         displayName: 'Test User',
         role: 'User',

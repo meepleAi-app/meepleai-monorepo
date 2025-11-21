@@ -96,7 +96,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -111,7 +111,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -135,7 +135,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -164,7 +164,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -185,7 +185,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -209,7 +209,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(2));
@@ -230,7 +230,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -254,7 +254,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -270,7 +270,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -287,7 +287,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       let sawProgress = false;
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Monitor for progress updates
@@ -313,7 +313,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -331,7 +331,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -366,7 +366,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -385,7 +385,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -402,7 +402,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
         items: [{
           id: 'restored-1',
           file: { name: 'restored.pdf', size: 1000, type: 'application/pdf', lastModified: Date.now() },
-          gameId: 'game-123',
+          gameId: '770e8400-e29b-41d4-a716-000000000123',
           language: 'en',
           status: 'pending',
           progress: 0,
@@ -441,7 +441,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -465,7 +465,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -502,7 +502,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const setItemCallsBefore = (localStorage.setItem as jest.Mock).mock.calls.length;
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -519,7 +519,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -554,7 +554,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -577,7 +577,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -611,7 +611,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -627,7 +627,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       const initialLength = result.current.queue.length;
@@ -649,7 +649,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -666,7 +666,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -695,7 +695,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -824,7 +824,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -908,7 +908,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1036,7 +1036,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
 
       // Worker may not be ready yet
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Should either queue immediately or buffer until ready
@@ -1055,7 +1055,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1078,9 +1078,9 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       // Add files rapidly before worker is fully ready
       await act(async () => {
         await Promise.all([
-          result.current.addFiles([files[0]], 'game-123', 'en'),
-          result.current.addFiles([files[1]], 'game-123', 'en'),
-          result.current.addFiles([files[2]], 'game-123', 'en')
+          result.current.addFiles([files[0]], '770e8400-e29b-41d4-a716-000000000123', 'en'),
+          result.current.addFiles([files[1]], '770e8400-e29b-41d4-a716-000000000123', 'en'),
+          result.current.addFiles([files[2]], '770e8400-e29b-41d4-a716-000000000123', 'en')
         ]);
       });
 
@@ -1101,9 +1101,9 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles([files[0]], 'game-123', 'en');
-        await result.current.addFiles([files[1]], 'game-123', 'en');
-        await result.current.addFiles([files[2]], 'game-123', 'en');
+        await result.current.addFiles([files[0]], '770e8400-e29b-41d4-a716-000000000123', 'en');
+        await result.current.addFiles([files[1]], '770e8400-e29b-41d4-a716-000000000123', 'en');
+        await result.current.addFiles([files[2]], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1123,7 +1123,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1147,7 +1147,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
         });
 
         await act(async () => {
-          await result.current.addFiles([file], 'game-123', 'en');
+          await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         });
       }
 
@@ -1166,7 +1166,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1187,16 +1187,16 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles([files[0]], 'game-123', 'en');
-        await result.current.addFiles([files[1]], 'game-456', 'it');
+        await result.current.addFiles([files[0]], '770e8400-e29b-41d4-a716-000000000123', 'en');
+        await result.current.addFiles([files[1]], '770e8400-e29b-41d4-a716-000000000456', 'it');
       });
 
       await waitFor(() => {
         expect(result.current.queue.length).toBe(2);
       }, { timeout: 3000 });
 
-      expect(result.current.queue[0].gameId).toBe('game-123');
-      expect(result.current.queue[1].gameId).toBe('game-456');
+      expect(result.current.queue[0].gameId).toBe('770e8400-e29b-41d4-a716-000000000123');
+      expect(result.current.queue[1].gameId).toBe('770e8400-e29b-41d4-a716-000000000456');
     });
 
     it('should handle buffer timeout gracefully', async () => {
@@ -1209,7 +1209,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Fast-forward time
@@ -1233,7 +1233,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1255,7 +1255,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1271,7 +1271,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1290,7 +1290,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1306,7 +1306,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1326,7 +1326,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1357,7 +1357,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1380,7 +1380,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       });
 
       await act(async () => {
-        await result.current.addFiles([largeFile], 'game-123', 'en');
+        await result.current.addFiles([largeFile], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1396,7 +1396,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1414,7 +1414,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1435,7 +1435,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File([], '', { type: '' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Should handle gracefully without crashing
@@ -1458,7 +1458,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const startTime = Date.now();
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1482,7 +1482,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
         });
 
         await act(async () => {
-          await result.current.addFiles([file], 'game-123', 'en');
+          await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         });
 
         await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -1515,7 +1515,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1535,7 +1535,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1553,7 +1553,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Calculate stats multiple times rapidly
@@ -1570,7 +1570,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const emptyFile = new File([], 'empty.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([emptyFile], 'game-123', 'en');
+        await result.current.addFiles([emptyFile], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1587,7 +1587,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], longName, { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1602,7 +1602,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       const file = new File(['test'], specialName, { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1622,7 +1622,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
 
         operations.push(
           act(async () => {
-            await result.current.addFiles([file], 'game-123', 'en');
+            await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
           })
         );
       }
@@ -1644,7 +1644,7 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {

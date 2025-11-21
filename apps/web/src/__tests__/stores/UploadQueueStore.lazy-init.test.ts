@@ -84,7 +84,7 @@ describe('UploadQueueStore - Lazy Initialization (Issue #1301)', () => {
 
       // Add files
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-      await uploadQueueStore.addFiles([file], 'game-1', 'en');
+      await uploadQueueStore.addFiles([file], '770e8400-e29b-41d4-a716-000000000001', 'en');
 
       // Now Worker should be created
       expect(workerConstructorSpy).toHaveBeenCalledTimes(1);

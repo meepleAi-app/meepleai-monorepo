@@ -55,30 +55,30 @@ describe('useChats hooks', () => {
   describe('chatKeys', () => {
     it('generates correct query keys', () => {
       expect(chatKeys.all).toEqual(['chats']);
-      expect(chatKeys.byGame('game-1')).toEqual(['chats', 'game', 'game-1']);
-      expect(chatKeys.detail('thread-1')).toEqual(['chats', 'detail', 'thread-1']);
-      expect(chatKeys.messages('thread-1')).toEqual(['chats', 'messages', 'thread-1']);
+      expect(chatKeys.byGame('770e8400-e29b-41d4-a716-000000000001')).toEqual(['chats', 'game', '770e8400-e29b-41d4-a716-000000000001']);
+      expect(chatKeys.detail('aa0e8400-e29b-41d4-a716-000000000001')).toEqual(['chats', 'detail', 'aa0e8400-e29b-41d4-a716-000000000001']);
+      expect(chatKeys.messages('aa0e8400-e29b-41d4-a716-000000000001')).toEqual(['chats', 'messages', 'aa0e8400-e29b-41d4-a716-000000000001']);
     });
   });
 
   describe('useChats', () => {
     it('fetches chats for a game', async () => {
       const mockChats = [
-        { id: 'chat-1', gameId: 'game-1', title: 'Chat 1', messages: [] },
-        { id: 'chat-2', gameId: 'game-1', title: 'Chat 2', messages: [] },
+        { id: 'chat-1', gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'Chat 1', messages: [] },
+        { id: 'chat-2', gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'Chat 2', messages: [] },
       ];
       (api.chat.getThreadsByGame as jest.Mock).mockResolvedValue(mockChats);
 
-      const { result } = renderHook(() => useChats('game-1'), { wrapper });
+      const { result } = renderHook(() => useChats('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(api.chat.getThreadsByGame).toHaveBeenCalledWith('game-1');
+      expect(api.chat.getThreadsByGame).toHaveBeenCalledWith('770e8400-e29b-41d4-a716-000000000001');
       expect(result.current.data).toEqual(mockChats);
     });
 
     it('does not fetch when disabled', () => {
-      const { result } = renderHook(() => useChats('game-1', false), { wrapper });
+      const { result } = renderHook(() => useChats('770e8400-e29b-41d4-a716-000000000001', false), { wrapper });
 
       expect(result.current.isFetching).toBe(false);
       expect(api.chat.getThreadsByGame).not.toHaveBeenCalled();
@@ -88,7 +88,7 @@ describe('useChats hooks', () => {
       const error = new Error('Failed to fetch chats');
       (api.chat.getThreadsByGame as jest.Mock).mockRejectedValue(error);
 
-      const { result } = renderHook(() => useChats('game-1'), { wrapper });
+      const { result } = renderHook(() => useChats('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -98,19 +98,19 @@ describe('useChats hooks', () => {
 
   describe('useChatThread', () => {
     it('fetches a single chat thread', async () => {
-      const mockThread = { id: 'thread-1', gameId: 'game-1', title: 'Thread', messages: [] };
+      const mockThread = { id: 'aa0e8400-e29b-41d4-a716-000000000001', gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'Thread', messages: [] };
       (api.chat.getThreadById as jest.Mock).mockResolvedValue(mockThread);
 
-      const { result } = renderHook(() => useChatThread('thread-1'), { wrapper });
+      const { result } = renderHook(() => useChatThread('aa0e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(api.chat.getThreadById).toHaveBeenCalledWith('thread-1');
+      expect(api.chat.getThreadById).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001');
       expect(result.current.data).toEqual(mockThread);
     });
 
     it('does not fetch when disabled', () => {
-      const { result } = renderHook(() => useChatThread('thread-1', false), { wrapper });
+      const { result } = renderHook(() => useChatThread('aa0e8400-e29b-41d4-a716-000000000001', false), { wrapper });
 
       expect(result.current.isFetching).toBe(false);
       expect(api.chat.getThreadById).not.toHaveBeenCalled();
@@ -119,21 +119,21 @@ describe('useChats hooks', () => {
 
   describe('useMessages', () => {
     it('fetches messages for a chat (alias for useChatThread)', async () => {
-      const mockThread = { id: 'thread-1', gameId: 'game-1', title: 'Thread', messages: [] };
+      const mockThread = { id: 'aa0e8400-e29b-41d4-a716-000000000001', gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'Thread', messages: [] };
       (api.chat.getThreadById as jest.Mock).mockResolvedValue(mockThread);
 
-      const { result } = renderHook(() => useMessages('thread-1'), { wrapper });
+      const { result } = renderHook(() => useMessages('aa0e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(api.chat.getThreadById).toHaveBeenCalledWith('thread-1');
+      expect(api.chat.getThreadById).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001');
       expect(result.current.data).toEqual(mockThread);
     });
   });
 
   describe('useCreateChat', () => {
     it('creates a new chat thread', async () => {
-      const request = { gameId: 'game-1', title: 'New Chat' };
+      const request = { gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'New Chat' };
       const mockNewChat = { id: 'new-chat', ...request, messages: [] };
       (api.chat.createThread as jest.Mock).mockResolvedValue(mockNewChat);
 
@@ -148,7 +148,7 @@ describe('useChats hooks', () => {
     });
 
     it('invalidates game chats query on success', async () => {
-      const request = { gameId: 'game-1', title: 'New Chat' };
+      const request = { gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'New Chat' };
       const mockNewChat = { id: 'new-chat', ...request, messages: [] };
       (api.chat.createThread as jest.Mock).mockResolvedValue(mockNewChat);
 
@@ -161,7 +161,7 @@ describe('useChats hooks', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: chatKeys.byGame('game-1'),
+        queryKey: chatKeys.byGame('770e8400-e29b-41d4-a716-000000000001'),
       });
     });
   });
@@ -170,27 +170,27 @@ describe('useChats hooks', () => {
     it('adds a message to a thread', async () => {
       const request = { content: 'Hello', role: 'user' as const };
       const mockUpdatedThread = {
-        id: 'thread-1',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         messages: [{ id: 'msg-1', ...request }],
       };
       (api.chat.addMessage as jest.Mock).mockResolvedValue(mockUpdatedThread);
 
       const { result } = renderHook(() => useAddMessage(), { wrapper });
 
-      result.current.mutate({ threadId: 'thread-1', request });
+      result.current.mutate({ threadId: 'aa0e8400-e29b-41d4-a716-000000000001', request });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(api.chat.addMessage).toHaveBeenCalledWith('thread-1', request);
+      expect(api.chat.addMessage).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001', request);
       expect(result.current.data).toEqual(mockUpdatedThread);
     });
 
     it('invalidates thread and game queries on success', async () => {
       const request = { content: 'Hello', role: 'user' as const };
       const mockUpdatedThread = {
-        id: 'thread-1',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         messages: [{ id: 'msg-1', ...request }],
       };
       (api.chat.addMessage as jest.Mock).mockResolvedValue(mockUpdatedThread);
@@ -199,15 +199,15 @@ describe('useChats hooks', () => {
 
       const { result } = renderHook(() => useAddMessage(), { wrapper });
 
-      result.current.mutate({ threadId: 'thread-1', request });
+      result.current.mutate({ threadId: 'aa0e8400-e29b-41d4-a716-000000000001', request });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: chatKeys.detail('thread-1'),
+        queryKey: chatKeys.detail('aa0e8400-e29b-41d4-a716-000000000001'),
       });
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: chatKeys.byGame('game-1'),
+        queryKey: chatKeys.byGame('770e8400-e29b-41d4-a716-000000000001'),
       });
     });
   });
@@ -279,8 +279,8 @@ describe('useChats hooks', () => {
   describe('useCloseChat', () => {
     it('closes a chat thread', async () => {
       const mockClosedThread = {
-        id: 'thread-1',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         closed: true,
         messages: [],
       };
@@ -288,18 +288,18 @@ describe('useChats hooks', () => {
 
       const { result } = renderHook(() => useCloseChat(), { wrapper });
 
-      result.current.mutate('thread-1');
+      result.current.mutate('aa0e8400-e29b-41d4-a716-000000000001');
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(api.chat.closeThread).toHaveBeenCalledWith('thread-1');
+      expect(api.chat.closeThread).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001');
       expect(result.current.data).toEqual(mockClosedThread);
     });
 
     it('invalidates thread and game queries on success', async () => {
       const mockClosedThread = {
-        id: 'thread-1',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         closed: true,
         messages: [],
       };
@@ -309,15 +309,15 @@ describe('useChats hooks', () => {
 
       const { result } = renderHook(() => useCloseChat(), { wrapper });
 
-      result.current.mutate('thread-1');
+      result.current.mutate('aa0e8400-e29b-41d4-a716-000000000001');
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: chatKeys.detail('thread-1'),
+        queryKey: chatKeys.detail('aa0e8400-e29b-41d4-a716-000000000001'),
       });
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: chatKeys.byGame('game-1'),
+        queryKey: chatKeys.byGame('770e8400-e29b-41d4-a716-000000000001'),
       });
     });
   });
@@ -325,8 +325,8 @@ describe('useChats hooks', () => {
   describe('useReopenChat', () => {
     it('reopens a closed chat thread', async () => {
       const mockReopenedThread = {
-        id: 'thread-1',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         closed: false,
         messages: [],
       };
@@ -334,18 +334,18 @@ describe('useChats hooks', () => {
 
       const { result } = renderHook(() => useReopenChat(), { wrapper });
 
-      result.current.mutate('thread-1');
+      result.current.mutate('aa0e8400-e29b-41d4-a716-000000000001');
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(api.chat.reopenThread).toHaveBeenCalledWith('thread-1');
+      expect(api.chat.reopenThread).toHaveBeenCalledWith('aa0e8400-e29b-41d4-a716-000000000001');
       expect(result.current.data).toEqual(mockReopenedThread);
     });
 
     it('invalidates thread and game queries on success', async () => {
       const mockReopenedThread = {
-        id: 'thread-1',
-        gameId: 'game-1',
+        id: 'aa0e8400-e29b-41d4-a716-000000000001',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         closed: false,
         messages: [],
       };
@@ -355,15 +355,15 @@ describe('useChats hooks', () => {
 
       const { result } = renderHook(() => useReopenChat(), { wrapper });
 
-      result.current.mutate('thread-1');
+      result.current.mutate('aa0e8400-e29b-41d4-a716-000000000001');
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: chatKeys.detail('thread-1'),
+        queryKey: chatKeys.detail('aa0e8400-e29b-41d4-a716-000000000001'),
       });
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: chatKeys.byGame('game-1'),
+        queryKey: chatKeys.byGame('770e8400-e29b-41d4-a716-000000000001'),
       });
     });
   });

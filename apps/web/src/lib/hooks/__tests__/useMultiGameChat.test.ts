@@ -32,7 +32,7 @@ describe('useMultiGameChat', () => {
     it('should have correct initial state with activeGameId', async () => {
       mockApi.get.mockResolvedValueOnce([]);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Wait for initial load to complete
       await waitFor(() => {
@@ -46,7 +46,7 @@ describe('useMultiGameChat', () => {
     });
 
     it('should provide all control functions', () => {
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       expect(result.current.switchGame).toBeDefined();
       expect(result.current.loadChatHistory).toBeDefined();
@@ -74,7 +74,7 @@ describe('useMultiGameChat', () => {
     const mockChatsGame1: Chat[] = [
       {
         id: 'chat-1',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         gameName: 'Catan',
         agentId: 'agent-1',
         agentName: 'Rules Agent',
@@ -83,7 +83,7 @@ describe('useMultiGameChat', () => {
       },
       {
         id: 'chat-2',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         gameName: 'Catan',
         agentId: 'agent-1',
         agentName: 'Rules Agent',
@@ -95,7 +95,7 @@ describe('useMultiGameChat', () => {
     const mockChatsGame2: Chat[] = [
       {
         id: 'chat-3',
-        gameId: 'game-2',
+        gameId: '770e8400-e29b-41d4-a716-000000000002',
         gameName: 'Pandemic',
         agentId: 'agent-1',
         agentName: 'Rules Agent',
@@ -107,10 +107,10 @@ describe('useMultiGameChat', () => {
     it('should load chats when switching to a new game', async () => {
       mockApi.get.mockResolvedValueOnce(mockChatsGame1);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await waitFor(() => {
@@ -129,7 +129,7 @@ describe('useMultiGameChat', () => {
 
       const { result, rerender } = renderHook(
         ({ gameId }) => useMultiGameChat(gameId),
-        { initialProps: { gameId: 'game-1' } }
+        { initialProps: { gameId: '770e8400-e29b-41d4-a716-000000000001' } }
       );
 
       // Wait for initial load
@@ -139,7 +139,7 @@ describe('useMultiGameChat', () => {
 
       // Load game-1 chats
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await waitFor(() => {
@@ -147,27 +147,27 @@ describe('useMultiGameChat', () => {
       });
 
       // Switch to game-2
-      rerender({ gameId: 'game-2' });
+      rerender({ gameId: '770e8400-e29b-41d4-a716-000000000002' });
 
       await waitFor(() => {
         expect(result.current.chats).toEqual(mockChatsGame2);
       });
 
       // Verify game-1 and game-2 have separate states
-      expect(result.current.hasGameState('game-1')).toBe(true);
-      expect(result.current.hasGameState('game-2')).toBe(true);
-      expect(result.current.getGameChatCount('game-1')).toBe(2);
-      expect(result.current.getGameChatCount('game-2')).toBe(1);
+      expect(result.current.hasGameState('770e8400-e29b-41d4-a716-000000000001')).toBe(true);
+      expect(result.current.hasGameState('770e8400-e29b-41d4-a716-000000000002')).toBe(true);
+      expect(result.current.getGameChatCount('770e8400-e29b-41d4-a716-000000000001')).toBe(2);
+      expect(result.current.getGameChatCount('770e8400-e29b-41d4-a716-000000000002')).toBe(1);
     });
 
     it('should not reload chats if already loaded for a game', async () => {
       mockApi.get.mockResolvedValueOnce(mockChatsGame1);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // First switch - should load
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await waitFor(() => {
@@ -178,7 +178,7 @@ describe('useMultiGameChat', () => {
 
       // Second switch to same game - should not reload
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await waitFor(() => {
@@ -197,10 +197,10 @@ describe('useMultiGameChat', () => {
 
       mockApi.get.mockReturnValueOnce(chatsPromise);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       act(() => {
-        result.current.switchGame('game-1');
+        result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       // Should be loading
@@ -225,11 +225,11 @@ describe('useMultiGameChat', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockApi.get.mockRejectedValueOnce(new Error('Network error'));
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       await act(async () => {
         try {
-          await result.current.switchGame('game-1');
+          await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
         } catch (e) {
           // Swallow error - we're testing error handling
         }
@@ -252,7 +252,7 @@ describe('useMultiGameChat', () => {
   describe('Message Handling', () => {
     const mockChatWithHistory: ChatWithHistory = {
       id: 'chat-1',
-      gameId: 'game-1',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       gameName: 'Catan',
       agentId: 'agent-1',
       agentName: 'Rules Agent',
@@ -283,7 +283,7 @@ describe('useMultiGameChat', () => {
     it('should load chat history and convert messages', async () => {
       mockApi.get.mockResolvedValueOnce([]).mockResolvedValueOnce(mockChatWithHistory);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Wait for initial load
       await waitFor(() => {
@@ -303,7 +303,7 @@ describe('useMultiGameChat', () => {
       // Check first message (user)
       expect(messages[0].role).toBe('user');
       expect(messages[0].content).toBe('How do I play?');
-      expect(messages[0].gameId).toBe('game-1');
+      expect(messages[0].gameId).toBe('770e8400-e29b-41d4-a716-000000000001');
       expect(messages[0].snippets).toBeUndefined();
       expect(messages[0].backendMessageId).toBe('msg-1');
 
@@ -319,7 +319,7 @@ describe('useMultiGameChat', () => {
     it('should set activeChatId when loading chat history', async () => {
       mockApi.get.mockResolvedValueOnce([]).mockResolvedValueOnce(mockChatWithHistory);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Wait for initial load
       await waitFor(() => {
@@ -345,7 +345,7 @@ describe('useMultiGameChat', () => {
 
       mockApi.get.mockReturnValueOnce(chatPromise);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Wait for initial load
       await waitFor(() => {
@@ -377,7 +377,7 @@ describe('useMultiGameChat', () => {
         .mockResolvedValueOnce([]) // Initial auto-load from useEffect
         .mockRejectedValueOnce(new Error('Chat not found')); // loadChatHistory call
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Wait for initial load to complete
       await waitFor(() => {
@@ -430,7 +430,7 @@ describe('useMultiGameChat', () => {
 
       mockApi.get.mockResolvedValueOnce([]).mockResolvedValueOnce(chatWithBadJson);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Wait for initial load
       await waitFor(() => {
@@ -454,7 +454,7 @@ describe('useMultiGameChat', () => {
     it('should preserve messages per game when switching', async () => {
       const chatGame1: ChatWithHistory = {
         id: 'chat-1',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         gameName: 'Catan',
         agentId: 'agent-1',
         agentName: 'Rules Agent',
@@ -473,7 +473,7 @@ describe('useMultiGameChat', () => {
 
       const chatGame2: ChatWithHistory = {
         id: 'chat-2',
-        gameId: 'game-2',
+        gameId: '770e8400-e29b-41d4-a716-000000000002',
         gameName: 'Pandemic',
         agentId: 'agent-1',
         agentName: 'Rules Agent',
@@ -496,11 +496,11 @@ describe('useMultiGameChat', () => {
         .mockResolvedValueOnce([{ ...chatGame2 }]) // chats for game-2
         .mockResolvedValueOnce(chatGame2); // chat history for chat-2
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Load game-1 chat history
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await act(async () => {
@@ -513,7 +513,7 @@ describe('useMultiGameChat', () => {
 
       // Switch to game-2 and load its chat
       await act(async () => {
-        await result.current.switchGame('game-2');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000002');
       });
 
       await act(async () => {
@@ -528,7 +528,7 @@ describe('useMultiGameChat', () => {
     it('should preserve activeChatId per game', async () => {
       const { result, rerender } = renderHook(
         ({ gameId }) => useMultiGameChat(gameId),
-        { initialProps: { gameId: 'game-1' } }
+        { initialProps: { gameId: '770e8400-e29b-41d4-a716-000000000001' } }
       );
 
       // Set activeChatId for game-1
@@ -539,7 +539,7 @@ describe('useMultiGameChat', () => {
       expect(result.current.activeChatId).toBe('chat-1');
 
       // Switch to game-2
-      rerender({ gameId: 'game-2' });
+      rerender({ gameId: '770e8400-e29b-41d4-a716-000000000002' });
 
       // activeChatId should be null for game-2
       await waitFor(() => {
@@ -554,7 +554,7 @@ describe('useMultiGameChat', () => {
       expect(result.current.activeChatId).toBe('chat-3');
 
       // Switch back to game-1
-      rerender({ gameId: 'game-1' });
+      rerender({ gameId: '770e8400-e29b-41d4-a716-000000000001' });
 
       // Should still have chat-1
       await waitFor(() => {
@@ -566,7 +566,7 @@ describe('useMultiGameChat', () => {
   describe('Create New Chat', () => {
     const mockNewChat: Chat = {
       id: 'chat-new',
-      gameId: 'game-1',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       gameName: 'Catan',
       agentId: 'agent-1',
       agentName: 'Rules Agent',
@@ -577,17 +577,17 @@ describe('useMultiGameChat', () => {
     it('should create new chat and add to chats list', async () => {
       mockApi.post.mockResolvedValueOnce(mockNewChat);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       let createdChat: Chat | null = null;
 
       await act(async () => {
-        createdChat = await result.current.createNewChat('game-1', 'agent-1');
+        createdChat = await result.current.createNewChat('770e8400-e29b-41d4-a716-000000000001', 'agent-1');
       });
 
       expect(createdChat).toEqual(mockNewChat);
       expect(mockApi.post).toHaveBeenCalledWith('/api/v1/chats', {
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         agentId: 'agent-1',
       });
 
@@ -599,10 +599,10 @@ describe('useMultiGameChat', () => {
     it('should set new chat as active and clear messages', async () => {
       mockApi.post.mockResolvedValueOnce(mockNewChat);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       await act(async () => {
-        await result.current.createNewChat('game-1', 'agent-1');
+        await result.current.createNewChat('770e8400-e29b-41d4-a716-000000000001', 'agent-1');
       });
 
       await waitFor(() => {
@@ -615,13 +615,13 @@ describe('useMultiGameChat', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockApi.post.mockRejectedValueOnce(new Error('Failed to create chat'));
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       let createdChat: Chat | null = 'unset' as any;
 
       await act(async () => {
         try {
-          createdChat = await result.current.createNewChat('game-1', 'agent-1');
+          createdChat = await result.current.createNewChat('770e8400-e29b-41d4-a716-000000000001', 'agent-1');
         } catch (e) {
           // Swallow error - we're testing error handling
           createdChat = null;
@@ -643,12 +643,12 @@ describe('useMultiGameChat', () => {
     it('should return null if API returns no chat', async () => {
       mockApi.post.mockResolvedValueOnce(null);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       let createdChat: Chat | null = null;
 
       await act(async () => {
-        createdChat = await result.current.createNewChat('game-1', 'agent-1');
+        createdChat = await result.current.createNewChat('770e8400-e29b-41d4-a716-000000000001', 'agent-1');
       });
 
       expect(createdChat).toBeNull();
@@ -659,7 +659,7 @@ describe('useMultiGameChat', () => {
     const mockChats: Chat[] = [
       {
         id: 'chat-1',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         gameName: 'Catan',
         agentId: 'agent-1',
         agentName: 'Rules Agent',
@@ -668,7 +668,7 @@ describe('useMultiGameChat', () => {
       },
       {
         id: 'chat-2',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         gameName: 'Catan',
         agentId: 'agent-1',
         agentName: 'Rules Agent',
@@ -681,11 +681,11 @@ describe('useMultiGameChat', () => {
       mockApi.get.mockResolvedValueOnce(mockChats);
       mockApi.delete.mockResolvedValueOnce(undefined);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Load chats first
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await waitFor(() => {
@@ -709,11 +709,11 @@ describe('useMultiGameChat', () => {
       mockApi.get.mockResolvedValueOnce(mockChats);
       mockApi.delete.mockResolvedValueOnce(undefined);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Load chats and set active
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await waitFor(() => {
@@ -747,10 +747,10 @@ describe('useMultiGameChat', () => {
       mockApi.get.mockResolvedValueOnce(mockChats);
       mockApi.delete.mockResolvedValueOnce(undefined);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await waitFor(() => {
@@ -788,7 +788,7 @@ describe('useMultiGameChat', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockApi.delete.mockRejectedValueOnce(new Error('Delete failed'));
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       await act(async () => {
         try {
@@ -823,7 +823,7 @@ describe('useMultiGameChat', () => {
 
   describe('State Setters', () => {
     it('should set messages using direct value', () => {
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       const testMessages = [
         {
@@ -842,7 +842,7 @@ describe('useMultiGameChat', () => {
     });
 
     it('should set messages using updater function', () => {
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       const message1 = {
         id: 'msg-1',
@@ -870,12 +870,12 @@ describe('useMultiGameChat', () => {
     });
 
     it('should set chats using direct value', () => {
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       const testChats: Chat[] = [
         {
           id: 'chat-1',
-          gameId: 'game-1',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
           gameName: 'Catan',
           agentId: 'agent-1',
           agentName: 'Rules Agent',
@@ -892,11 +892,11 @@ describe('useMultiGameChat', () => {
     });
 
     it('should set chats using updater function', () => {
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       const chat1: Chat = {
         id: 'chat-1',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         gameName: 'Catan',
         agentId: 'agent-1',
         agentName: 'Rules Agent',
@@ -906,7 +906,7 @@ describe('useMultiGameChat', () => {
 
       const chat2: Chat = {
         id: 'chat-2',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         gameName: 'Catan',
         agentId: 'agent-1',
         agentName: 'Rules Agent',
@@ -951,7 +951,7 @@ describe('useMultiGameChat', () => {
         .mockResolvedValueOnce([]) // Initial load
         .mockResolvedValueOnce([]); // switchGame call
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Wait for initial load
       await waitFor(() => {
@@ -959,15 +959,15 @@ describe('useMultiGameChat', () => {
       });
 
       // After initial load, state should exist
-      expect(result.current.hasGameState('game-1')).toBe(true);
-      expect(result.current.hasGameState('game-2')).toBe(false);
+      expect(result.current.hasGameState('770e8400-e29b-41d4-a716-000000000001')).toBe(true);
+      expect(result.current.hasGameState('770e8400-e29b-41d4-a716-000000000002')).toBe(false);
 
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await waitFor(() => {
-        expect(result.current.hasGameState('game-1')).toBe(true);
+        expect(result.current.hasGameState('770e8400-e29b-41d4-a716-000000000001')).toBe(true);
       });
     });
 
@@ -975,7 +975,7 @@ describe('useMultiGameChat', () => {
       const mockChats: Chat[] = [
         {
           id: 'chat-1',
-          gameId: 'game-1',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
           gameName: 'Catan',
           agentId: 'agent-1',
           agentName: 'Rules Agent',
@@ -984,7 +984,7 @@ describe('useMultiGameChat', () => {
         },
         {
           id: 'chat-2',
-          gameId: 'game-1',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
           gameName: 'Catan',
           agentId: 'agent-1',
           agentName: 'Rules Agent',
@@ -995,21 +995,21 @@ describe('useMultiGameChat', () => {
 
       mockApi.get.mockResolvedValueOnce(mockChats);
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
-      expect(result.current.getGameChatCount('game-1')).toBe(0);
+      expect(result.current.getGameChatCount('770e8400-e29b-41d4-a716-000000000001')).toBe(0);
 
       await act(async () => {
-        await result.current.switchGame('game-1');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
       });
 
       await waitFor(() => {
-        expect(result.current.getGameChatCount('game-1')).toBe(2);
+        expect(result.current.getGameChatCount('770e8400-e29b-41d4-a716-000000000001')).toBe(2);
       });
     });
 
     it('should return 0 for non-existent game', () => {
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       expect(result.current.getGameChatCount('non-existent')).toBe(0);
     });
@@ -1021,7 +1021,7 @@ describe('useMultiGameChat', () => {
 
       const { rerender } = renderHook(
         ({ gameId }) => useMultiGameChat(gameId),
-        { initialProps: { gameId: 'game-1' as string | null } }
+        { initialProps: { gameId: '770e8400-e29b-41d4-a716-000000000001' as string | null } }
       );
 
       await waitFor(() => {
@@ -1030,7 +1030,7 @@ describe('useMultiGameChat', () => {
 
       mockApi.get.mockResolvedValueOnce([]);
 
-      rerender({ gameId: 'game-2' });
+      rerender({ gameId: '770e8400-e29b-41d4-a716-000000000002' });
 
       await waitFor(() => {
         expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-2');
@@ -1040,7 +1040,7 @@ describe('useMultiGameChat', () => {
     it('should not load chats when activeGameId is null', () => {
       const { rerender } = renderHook(
         ({ gameId }) => useMultiGameChat(gameId),
-        { initialProps: { gameId: 'game-1' as string | null } }
+        { initialProps: { gameId: '770e8400-e29b-41d4-a716-000000000001' as string | null } }
       );
 
       mockApi.get.mockClear();
@@ -1056,7 +1056,7 @@ describe('useMultiGameChat', () => {
       mockApi.get.mockResolvedValueOnce([
         {
           id: 'chat-1',
-          gameId: 'game-1',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
           gameName: 'Catan',
           agentId: 'agent-1',
           agentName: 'Rules Agent',
@@ -1065,7 +1065,7 @@ describe('useMultiGameChat', () => {
         },
       ]);
 
-      const { result, rerender } = renderHook(() => useMultiGameChat('game-1'));
+      const { result, rerender } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(result.current.chats).toHaveLength(1);
@@ -1086,7 +1086,7 @@ describe('useMultiGameChat', () => {
         .mockResolvedValueOnce([]) // game-2
         .mockResolvedValueOnce([]); // game-3
 
-      const { result } = renderHook(() => useMultiGameChat('game-1'));
+      const { result } = renderHook(() => useMultiGameChat('770e8400-e29b-41d4-a716-000000000001'));
 
       // Wait for initial load
       await waitFor(() => {
@@ -1095,18 +1095,18 @@ describe('useMultiGameChat', () => {
 
       // Rapidly switch games
       await act(async () => {
-        await result.current.switchGame('game-1');
-        await result.current.switchGame('game-2');
-        await result.current.switchGame('game-3');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000001');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000002');
+        await result.current.switchGame('770e8400-e29b-41d4-a716-000000000003');
       });
 
       await waitFor(() => {
         expect(mockApi.get).toHaveBeenCalledTimes(4);
       }, { timeout: 1000 });
 
-      expect(result.current.hasGameState('game-1')).toBe(true);
-      expect(result.current.hasGameState('game-2')).toBe(true);
-      expect(result.current.hasGameState('game-3')).toBe(true);
+      expect(result.current.hasGameState('770e8400-e29b-41d4-a716-000000000001')).toBe(true);
+      expect(result.current.hasGameState('770e8400-e29b-41d4-a716-000000000002')).toBe(true);
+      expect(result.current.hasGameState('770e8400-e29b-41d4-a716-000000000003')).toBe(true);
     });
   });
 });

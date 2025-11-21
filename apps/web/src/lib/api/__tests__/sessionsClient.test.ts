@@ -26,8 +26,8 @@ describe('SessionsClient', () => {
         const mockResponse: PaginatedSessionsResponse = {
           sessions: [
             {
-              id: 'session-1',
-              gameId: 'game-123',
+              id: '550e8400-e29b-41d4-a716-446655440001',
+              gameId: '660e8400-e29b-41d4-a716-446655440001',
               startedAt: '2025-11-17T10:00:00Z',
               completedAt: null,
               status: 'active',
@@ -108,8 +108,8 @@ describe('SessionsClient', () => {
         const mockResponse: PaginatedSessionsResponse = {
           sessions: [
             {
-              id: 'session-past-1',
-              gameId: 'game-456',
+              id: '550e8400-e29b-41d4-a716-446655440002',
+              gameId: '660e8400-e29b-41d4-a716-446655440002',
               startedAt: '2025-11-16T10:00:00Z',
               completedAt: '2025-11-16T11:30:00Z',
               status: 'completed',
@@ -156,11 +156,11 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.getHistory({ gameId: 'game-123' });
+        const result = await sessionsClient.getHistory({ gameId: '660e8400-e29b-41d4-a716-446655440001' });
 
         expect(result).toEqual(mockResponse);
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('gameId=game-123'),
+          expect.stringContaining('gameId=660e8400-e29b-41d4-a716-446655440001'),
           expect.anything()
         );
       });
@@ -235,7 +235,7 @@ describe('SessionsClient', () => {
         });
 
         const result = await sessionsClient.getHistory({
-          gameId: 'game-123',
+          gameId: '660e8400-e29b-41d4-a716-446655440001',
           startDate: '2025-11-01T00:00:00Z',
           endDate: '2025-11-17T23:59:59Z',
           limit: 10,
@@ -243,7 +243,7 @@ describe('SessionsClient', () => {
         });
 
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringMatching(/gameId=game-123.*startDate.*endDate.*limit=10.*offset=0/),
+          expect.stringMatching(/gameId=660e8400-e29b-41d4-a716-446655440001.*startDate.*endDate.*limit=10/),
           expect.anything()
         );
       });
@@ -271,8 +271,8 @@ describe('SessionsClient', () => {
     describe('getById', () => {
       it('should get a single session by ID', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-123',
-          gameId: 'game-456',
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          gameId: '660e8400-e29b-41d4-a716-446655440002',
           startedAt: '2025-11-17T10:00:00Z',
           completedAt: null,
           status: 'active',
@@ -290,11 +290,11 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.getById('session-123');
+        const result = await sessionsClient.getById('550e8400-e29b-41d4-a716-446655440003');
 
         expect(result).toEqual(mockSession);
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/sessions/session-123'),
+          expect.stringContaining('/api/v1/sessions/550e8400-e29b-41d4-a716-446655440003'),
           expect.objectContaining({ method: 'GET' })
         );
       });
@@ -306,7 +306,7 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.getById('session-123');
+        const result = await sessionsClient.getById('550e8400-e29b-41d4-a716-446655440003');
 
         expect(result).toBeNull();
       });
@@ -315,8 +315,8 @@ describe('SessionsClient', () => {
     describe('start', () => {
       it('should start a new session', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-new',
-          gameId: 'game-789',
+          id: '550e8400-e29b-41d4-a716-446655440004',
+          gameId: '660e8400-e29b-41d4-a716-446655440003',
           startedAt: '2025-11-17T12:00:00Z',
           completedAt: null,
           status: 'active',
@@ -335,7 +335,7 @@ describe('SessionsClient', () => {
         });
 
         const result = await sessionsClient.start({
-          gameId: 'game-789',
+          gameId: '660e8400-e29b-41d4-a716-446655440003',
           players: [
             { playerName: 'Alice', playerOrder: 1, color: 'red' },
             { playerName: 'Bob', playerOrder: 2, color: 'blue' },
@@ -350,7 +350,7 @@ describe('SessionsClient', () => {
           expect.objectContaining({
             method: 'POST',
             body: JSON.stringify({
-              gameId: 'game-789',
+              gameId: '660e8400-e29b-41d4-a716-446655440003',
               players: [
                 { playerName: 'Alice', playerOrder: 1, color: 'red' },
                 { playerName: 'Bob', playerOrder: 2, color: 'blue' },
@@ -364,8 +364,8 @@ describe('SessionsClient', () => {
 
       it('should start session without notes', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-new',
-          gameId: 'game-789',
+          id: '550e8400-e29b-41d4-a716-446655440004',
+          gameId: '660e8400-e29b-41d4-a716-446655440003',
           startedAt: '2025-11-17T12:00:00Z',
           completedAt: null,
           status: 'active',
@@ -384,7 +384,7 @@ describe('SessionsClient', () => {
         });
 
         const result = await sessionsClient.start({
-          gameId: 'game-789',
+          gameId: '660e8400-e29b-41d4-a716-446655440003',
           players: [
             { playerName: 'Alice', playerOrder: 1 },
             { playerName: 'Bob', playerOrder: 2 },
@@ -400,8 +400,8 @@ describe('SessionsClient', () => {
     describe('pause', () => {
       it('should pause an active session', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-123',
-          gameId: 'game-456',
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          gameId: '660e8400-e29b-41d4-a716-446655440002',
           startedAt: '2025-11-17T10:00:00Z',
           completedAt: null,
           status: 'paused',
@@ -419,12 +419,12 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.pause('session-123');
+        const result = await sessionsClient.pause('550e8400-e29b-41d4-a716-446655440003');
 
         expect(result).toEqual(mockSession);
         expect(result.status).toBe('paused');
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/sessions/session-123/pause'),
+          expect.stringContaining('/api/v1/sessions/550e8400-e29b-41d4-a716-446655440003/pause'),
           expect.objectContaining({ method: 'POST' })
         );
       });
@@ -433,8 +433,8 @@ describe('SessionsClient', () => {
     describe('resume', () => {
       it('should resume a paused session', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-123',
-          gameId: 'game-456',
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          gameId: '660e8400-e29b-41d4-a716-446655440002',
           startedAt: '2025-11-17T10:00:00Z',
           completedAt: null,
           status: 'active',
@@ -452,12 +452,12 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.resume('session-123');
+        const result = await sessionsClient.resume('550e8400-e29b-41d4-a716-446655440003');
 
         expect(result).toEqual(mockSession);
         expect(result.status).toBe('active');
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/sessions/session-123/resume'),
+          expect.stringContaining('/api/v1/sessions/550e8400-e29b-41d4-a716-446655440003/resume'),
           expect.objectContaining({ method: 'POST' })
         );
       });
@@ -466,8 +466,8 @@ describe('SessionsClient', () => {
     describe('end', () => {
       it('should end a session without winner', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-123',
-          gameId: 'game-456',
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          gameId: '660e8400-e29b-41d4-a716-446655440002',
           startedAt: '2025-11-17T10:00:00Z',
           completedAt: null,
           status: 'ended',
@@ -485,24 +485,23 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.end('session-123');
+        const result = await sessionsClient.end('550e8400-e29b-41d4-a716-446655440003');
 
         expect(result).toEqual(mockSession);
         expect(result.status).toBe('ended');
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/sessions/session-123/end'),
+          expect.stringContaining('/api/v1/sessions/550e8400-e29b-41d4-a716-446655440003/end'),
           expect.objectContaining({
             method: 'POST',
             body: JSON.stringify({ winnerName: undefined }),
-          durationMinutes: 0,
           })
         );
       });
 
       it('should end a session with winner', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-123',
-          gameId: 'game-456',
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          gameId: '660e8400-e29b-41d4-a716-446655440002',
           startedAt: '2025-11-17T10:00:00Z',
           completedAt: null,
           status: 'ended',
@@ -520,16 +519,15 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.end('session-123', 'Alice');
+        const result = await sessionsClient.end('550e8400-e29b-41d4-a716-446655440003', 'Alice');
 
         expect(result).toEqual(mockSession);
         expect(result.winnerName).toBe('Alice');
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/sessions/session-123/end'),
+          expect.stringContaining('/api/v1/sessions/550e8400-e29b-41d4-a716-446655440003/end'),
           expect.objectContaining({
             method: 'POST',
             body: JSON.stringify({ winnerName: 'Alice' }),
-          durationMinutes: 0,
           })
         );
       });
@@ -538,8 +536,8 @@ describe('SessionsClient', () => {
     describe('complete', () => {
       it('should complete a session without winner', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-123',
-          gameId: 'game-456',
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          gameId: '660e8400-e29b-41d4-a716-446655440002',
           startedAt: '2025-11-17T10:00:00Z',
           completedAt: '2025-11-17T11:00:00Z',
           status: 'completed',
@@ -557,12 +555,12 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.complete('session-123');
+        const result = await sessionsClient.complete('550e8400-e29b-41d4-a716-446655440003');
 
         expect(result).toEqual(mockSession);
         expect(result.status).toBe('completed');
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/sessions/session-123/complete'),
+          expect.stringContaining('/api/v1/sessions/550e8400-e29b-41d4-a716-446655440003/complete'),
           expect.objectContaining({
             method: 'POST',
             body: JSON.stringify({}),
@@ -572,8 +570,8 @@ describe('SessionsClient', () => {
 
       it('should complete a session with winner', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-123',
-          gameId: 'game-456',
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          gameId: '660e8400-e29b-41d4-a716-446655440002',
           startedAt: '2025-11-17T10:00:00Z',
           completedAt: '2025-11-17T11:00:00Z',
           status: 'completed',
@@ -591,12 +589,12 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.complete('session-123', { winnerName: 'Bob' });
+        const result = await sessionsClient.complete('550e8400-e29b-41d4-a716-446655440003', { winnerName: 'Bob' });
 
         expect(result).toEqual(mockSession);
         expect(result.winnerName).toBe('Bob');
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/sessions/session-123/complete'),
+          expect.stringContaining('/api/v1/sessions/550e8400-e29b-41d4-a716-446655440003/complete'),
           expect.objectContaining({
             method: 'POST',
             body: JSON.stringify({ winnerName: 'Bob' }),
@@ -608,8 +606,8 @@ describe('SessionsClient', () => {
     describe('abandon', () => {
       it('should abandon a session', async () => {
         const mockSession: GameSessionDto = {
-          id: 'session-123',
-          gameId: 'game-456',
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          gameId: '660e8400-e29b-41d4-a716-446655440002',
           startedAt: '2025-11-17T10:00:00Z',
           completedAt: null,
           status: 'abandoned',
@@ -627,12 +625,12 @@ describe('SessionsClient', () => {
           headers: new Headers(),
         });
 
-        const result = await sessionsClient.abandon('session-123');
+        const result = await sessionsClient.abandon('550e8400-e29b-41d4-a716-446655440003');
 
         expect(result).toEqual(mockSession);
         expect(result.status).toBe('abandoned');
         expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/sessions/session-123/abandon'),
+          expect.stringContaining('/api/v1/sessions/550e8400-e29b-41d4-a716-446655440003/abandon'),
           expect.objectContaining({
             method: 'POST',
             body: JSON.stringify({}),

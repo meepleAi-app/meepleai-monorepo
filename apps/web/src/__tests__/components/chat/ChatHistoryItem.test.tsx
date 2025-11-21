@@ -11,7 +11,7 @@ import { ChatThread } from '@/types';
 describe('ChatHistoryItem', () => {
   const mockChat: ChatThread = {
     id: 'chat-1',
-    gameId: 'game-1',
+    gameId: '770e8400-e29b-41d4-a716-000000000001',
     title: 'Chess Expert',
     createdAt: '2025-01-10T10:00:00Z',
     lastMessageAt: '2025-01-10T10:05:00Z',

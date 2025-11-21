@@ -84,7 +84,7 @@ function createPdfFile(name: string, content: string = '%PDF-1.4 test content'):
 
 describe('PdfUploadForm', () => {
   const mockProps = {
-    gameId: 'game-1',
+    gameId: '770e8400-e29b-41d4-a716-000000000001',
     gameName: 'Gloomhaven',
     onUploadSuccess: jest.fn(),
     onUploadError: jest.fn()
@@ -281,7 +281,7 @@ describe('PdfUploadForm', () => {
 
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
-        json: async () => ({ documentId: 'doc-123' })
+        json: async () => ({ documentId: '880e8400-e29b-41d4-a716-000000000123' })
       });
 
       render(<PdfUploadForm {...mockProps} />);
@@ -297,7 +297,7 @@ describe('PdfUploadForm', () => {
       await user.click(uploadButton);
 
       await waitFor(() => {
-        expect(mockProps.onUploadSuccess).toHaveBeenCalledWith('doc-123');
+        expect(mockProps.onUploadSuccess).toHaveBeenCalledWith('880e8400-e29b-41d4-a716-000000000123');
       });
     });
 
@@ -339,7 +339,7 @@ describe('PdfUploadForm', () => {
       // Now resolve the upload
       resolveUpload!({
         ok: true,
-        json: async () => ({ documentId: 'doc-123' })
+        json: async () => ({ documentId: '880e8400-e29b-41d4-a716-000000000123' })
       });
 
       // Wait for the click to complete
@@ -347,7 +347,7 @@ describe('PdfUploadForm', () => {
 
       // Verify the upload completed
       await waitFor(() => {
-        expect(mockProps.onUploadSuccess).toHaveBeenCalledWith('doc-123');
+        expect(mockProps.onUploadSuccess).toHaveBeenCalledWith('880e8400-e29b-41d4-a716-000000000123');
       });
     });
 
@@ -386,7 +386,7 @@ describe('PdfUploadForm', () => {
 
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
-        json: async () => ({ documentId: 'doc-123' })
+        json: async () => ({ documentId: '880e8400-e29b-41d4-a716-000000000123' })
       });
 
       render(<PdfUploadForm {...mockProps} />);

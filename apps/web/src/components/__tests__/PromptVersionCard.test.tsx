@@ -20,7 +20,7 @@ describe('PromptVersionCard', () => {
     versionNumber: 1,
     content: 'This is the prompt content for version 1',
     isActive: false,
-    createdById: 'user-1',
+    createdById: '990e8400-e29b-41d4-a716-000000000001',
     createdByEmail: 'user@example.com',
     createdAt: '2025-01-15T10:00:00Z',
   };

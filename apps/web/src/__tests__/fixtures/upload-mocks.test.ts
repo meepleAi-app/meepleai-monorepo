@@ -22,7 +22,7 @@ describe('upload-mocks fixture', () => {
       it('Then returns auth response with default values', () => {
         const authMock = createAuthMock();
 
-        expect(authMock.user.id).toBe('user-1');
+        expect(authMock.user.id).toBe('990e8400-e29b-41d4-a716-000000000001');
         expect(authMock.user.email).toBe('user@example.com');
         expect(authMock.user.role).toBe('Admin');
         expect(authMock.user.displayName).toBe('Test User');
@@ -52,7 +52,7 @@ describe('upload-mocks fixture', () => {
       it('Then returns game with default values', () => {
         const gameMock = createGameMock();
 
-        expect(gameMock.id).toBe('game-1');
+        expect(gameMock.id).toBe('770e8400-e29b-41d4-a716-000000000001');
         expect(gameMock.name).toBe('Test Game');
         expect(gameMock.createdAt).toBeDefined();
       });
@@ -120,7 +120,7 @@ describe('upload-mocks fixture', () => {
       it('Then returns RuleSpec with default rule', () => {
         const ruleSpecMock = createRuleSpecMock();
 
-        expect(ruleSpecMock.gameId).toBe('game-1');
+        expect(ruleSpecMock.gameId).toBe('770e8400-e29b-41d4-a716-000000000001');
         expect(ruleSpecMock.version).toBe('v1');
         expect(ruleSpecMock.rules).toHaveLength(1);
         expect(ruleSpecMock.rules[0].id).toBe('r1');
@@ -200,7 +200,7 @@ describe('upload-mocks fixture', () => {
         expect(response.ok).toBe(true);
         const data = await response.json();
         expect(Array.isArray(data)).toBe(true);
-        expect(data[0].id).toBe('game-1');
+        expect(data[0].id).toBe('770e8400-e29b-41d4-a716-000000000001');
       });
 
       it('Then handles /games POST endpoint', async () => {
@@ -245,7 +245,7 @@ describe('upload-mocks fixture', () => {
 
         expect(response.ok).toBe(true);
         const data = await response.json();
-        expect(data.gameId).toBe('game-1');
+        expect(data.gameId).toBe('770e8400-e29b-41d4-a716-000000000001');
         expect(data.rules).toBeDefined();
       });
 
@@ -255,7 +255,7 @@ describe('upload-mocks fixture', () => {
 
         expect(response.ok).toBe(true);
         const data = await response.json();
-        expect(data.gameId).toBe('game-1');
+        expect(data.gameId).toBe('770e8400-e29b-41d4-a716-000000000001');
       });
     });
 

@@ -97,16 +97,16 @@ services:
     container_name: meepleai-hyperdx
     restart: unless-stopped
     ports:
-      - "8080:8080"   # Web UI
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "8123:8123"   # ClickHouse HTTP (for backups)
+      - "8180:8080"   # Web UI (avoid conflict with meepleai-api:8080)
+      - "14317:4317"  # OTLP gRPC (avoid conflict with Jaeger)
+      - "14318:4318"  # OTLP HTTP (avoid conflict with Jaeger)
+      - # "8123:8123" removed for security - use internal networking only (for backups)
     volumes:
       - hyperdx-data:/var/lib/clickhouse
       - hyperdx-logs:/var/log/hyperdx
     environment:
       # Core Settings
-      - HYPERDX_API_KEY=${HYPERDX_API_KEY:-demo}
+      - HYPERDX_API_KEY=${HYPERDX_API_KEY:?Error: HYPERDX_API_KEY required in production}
       - HYPERDX_LOG_LEVEL=info
       - HYPERDX_SERVICE_NAME=meepleai
 
@@ -123,7 +123,7 @@ services:
       - HYPERDX_ALERT_SLACK_WEBHOOK=${SLACK_WEBHOOK_URL}
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider, "-f", "http://localhost:8180/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -149,7 +149,8 @@ volumes:
 
 networks:
   meepleai:
-    external: true
+    name: meepleai
+    driver: bridge
 ```
 
 **Deployment**:
@@ -159,7 +160,7 @@ docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml up -d meeplea
 ```
 
 **Verification**:
-- [ ] UI accessible: http://localhost:8080
+- [ ] UI accessible: http://localhost:8180
 - [ ] OTel collector ready: `curl http://localhost:4318/v1/traces` (404 OK)
 - [ ] Health check passing: `docker compose ps meepleai-hyperdx` (healthy)
 
@@ -251,7 +252,7 @@ builder.Services.AddOpenTelemetry()
             // HyperDX Exporter (OTLP gRPC)
             .AddOtlpExporter(options =>
             {
-                options.Endpoint = new Uri("http://meepleai-hyperdx:4317");
+                options.Endpoint = new Uri("http://meepleai-hyperdx:14317");
                 options.Protocol = OtlpExportProtocol.Grpc;
                 options.ExportProcessorType = ExportProcessorType.Batch;
                 options.BatchExportProcessorOptions = new BatchExportProcessorOptions<Activity>
@@ -279,7 +280,7 @@ builder.Services.AddOpenTelemetry()
             .AddPrometheusExporter()  // Keep for Grafana infrastructure metrics
             .AddOtlpExporter(options =>
             {
-                options.Endpoint = new Uri("http://meepleai-hyperdx:4317");
+                options.Endpoint = new Uri("http://meepleai-hyperdx:14317");
                 options.Protocol = OtlpExportProtocol.Grpc;
             });
     });
@@ -299,7 +300,7 @@ builder.Host.UseSerilog((context, services, configuration) =>
         // HyperDX via OTLP HTTP
         .WriteTo.OpenTelemetry(options =>
         {
-            options.Endpoint = "http://meepleai-hyperdx:4318/v1/logs";
+            options.Endpoint = "http://meepleai-hyperdx:14318/v1/logs";
             options.Protocol = OtlpProtocol.HttpProtobuf;
             options.ResourceAttributes = new Dictionary<string, object>
             {
@@ -332,7 +333,7 @@ dotnet build
 dotnet run
 ```
 
-Check HyperDX UI (http://localhost:8080) for:
+Check HyperDX UI (http://localhost:8180) for:
 - [ ] Logs appearing from meepleai-api
 - [ ] Traces appearing with spans
 - [ ] Metrics being ingested
@@ -516,7 +517,7 @@ NEXT_PUBLIC_HYPERDX_API_KEY=demo
 
 #### Step 4.1: Application Alerts (HyperDX)
 
-**Create Alerts in HyperDX UI** (http://localhost:8080/alerts):
+**Create Alerts in HyperDX UI** (http://localhost:8180/alerts):
 
 **Alert 1: High Error Rate (Critical)**
 
@@ -661,7 +662,7 @@ groups:
 # Generate test logs from API
 curl -X POST http://localhost:5080/api/v1/test-error
 
-# Verify in HyperDX UI (http://localhost:8080)
+# Verify in HyperDX UI (http://localhost:8180)
 # Search: service.name:meepleai-api AND level:error
 ```
 
@@ -771,7 +772,7 @@ done
 ## Observability
 
 **Primary Tools**:
-- **HyperDX** (http://localhost:8080): Logs, Traces, Session Replay, App Alerts
+- **HyperDX** (http://localhost:8180): Logs, Traces, Session Replay, App Alerts
 - **Prometheus** (http://localhost:9090): Infrastructure Metrics
 - **Grafana** (http://localhost:3001): Business Dashboards
 - **Alertmanager** (http://localhost:9093): Critical Infrastructure Alerts
@@ -801,8 +802,8 @@ done
 3. **`docs/05-operations/runbooks/*.md`**:
 
 Update all runbook links:
-- Replace `http://localhost:8081` (Seq) → `http://localhost:8080` (HyperDX)
-- Replace `http://localhost:16686` (Jaeger) → `http://localhost:8080` (HyperDX)
+- Replace `http://localhost:8081` (Seq) → `http://localhost:8180` (HyperDX)
+- Replace `http://localhost:16686` (Jaeger) → `http://localhost:8180` (HyperDX)
 
 4. **`infra/docker-compose.yml`**:
 

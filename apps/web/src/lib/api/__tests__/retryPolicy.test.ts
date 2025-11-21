@@ -397,9 +397,10 @@ describe('withRetry', () => {
       onRetry,
     });
 
-    // Should use server's Retry-After (5000ms ± jitter) instead of exponential backoff (1000ms ± jitter)
+    // Should use server's Retry-After (5000ms + positive jitter) instead of exponential backoff (1000ms ± jitter)
+    // Never retry before the server's minimum (clamped to 5000ms)
     expect(delays.length).toBe(1);
-    expect(delays[0]).toBeGreaterThan(3500); // 5000ms - 30% jitter = 3500ms
+    expect(delays[0]).toBeGreaterThanOrEqual(5000); // Never less than server's Retry-After
     expect(delays[0]).toBeLessThan(6500); // 5000ms + 30% jitter = 6500ms
   }, 10000); // Increase timeout for 5s retry delay
 
@@ -440,11 +441,62 @@ describe('withRetry', () => {
       onRetry,
     });
 
-    // Should use server's Retry-After (~10000ms ± jitter)
+    // Should use server's Retry-After (~10000ms + positive jitter)
+    // Never retry before the server's minimum (clamped to ~10000ms)
     expect(delays.length).toBe(1);
-    expect(delays[0]).toBeGreaterThan(7000); // 10000ms - 30% jitter = 7000ms
+    expect(delays[0]).toBeGreaterThanOrEqual(9990); // Never less than server's Retry-After (allow small clock drift)
     expect(delays[0]).toBeLessThan(13000); // 10000ms + 30% jitter = 13000ms
   }, 15000); // Increase timeout for 10s retry delay
+
+  it('should clamp Retry-After delay to server minimum (never retry before)', async () => {
+    // This test verifies that jitter never reduces delay below server's Retry-After
+    const mockResponse = {
+      headers: {
+        get: jest.fn((header: string) => {
+          if (header === 'Retry-After') {
+            return '3'; // 3 seconds
+          }
+          return null;
+        }),
+      },
+    } as unknown as Response;
+
+    const serverError = new ServerError({
+      message: 'Service Unavailable',
+      statusCode: 503,
+      endpoint: '/test',
+      response: mockResponse,
+    });
+
+    const fn = jest
+      .fn()
+      .mockRejectedValueOnce(serverError)
+      .mockResolvedValueOnce('success');
+
+    // Run multiple times to ensure clamping works even with random jitter
+    const delays: number[] = [];
+    for (let i = 0; i < 20; i++) {
+      fn.mockClear();
+      fn.mockRejectedValueOnce(serverError)
+        .mockResolvedValueOnce('success');
+
+      const onRetry = jest.fn((attempt, error, delayMs) => {
+        delays.push(delayMs);
+      });
+
+      await withRetry(fn, {
+        retryConfig: { maxAttempts: 3, baseDelay: 1000, maxDelay: 10000, enabled: true, jitter: 0.3 },
+        onRetry,
+      });
+    }
+
+    // ALL delays must be >= 3000ms (server's minimum)
+    expect(delays.length).toBe(20);
+    delays.forEach(delay => {
+      expect(delay).toBeGreaterThanOrEqual(3000); // Never less than 3000ms
+      expect(delay).toBeLessThan(3900); // 3000ms + 30% jitter = 3900ms
+    });
+  }, 20000); // Increase timeout for multiple retry cycles
 
   it('should fall back to exponential backoff when Retry-After is not present', async () => {
     const mockResponse = {

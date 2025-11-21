@@ -121,17 +121,22 @@ export function parseRetryAfter(retryAfterValue: string | null | undefined): num
  * - Attempt 2: 4000ms * (1 ± 0.3) = 2800-5200ms
  *
  * Supports adaptive backoff with server-provided Retry-After header.
+ * When Retry-After is present, applies jitter but clamps to never retry
+ * before the server's minimum wait time.
  */
 export function calculateBackoffDelay(
   attempt: number,
   config: RetryConfig,
   retryAfterMs?: number
 ): number {
-  // If server provided Retry-After, use it (with jitter)
+  // If server provided Retry-After, use it (with jitter, clamped to minimum)
   if (retryAfterMs !== undefined && retryAfterMs > 0) {
     const jitterFactor = 1 + (Math.random() * 2 - 1) * config.jitter;
-    const adaptiveDelay = Math.min(retryAfterMs, config.maxDelay) * jitterFactor;
-    return Math.floor(adaptiveDelay);
+    const cappedRetryAfter = Math.min(retryAfterMs, config.maxDelay);
+    const delayWithJitter = cappedRetryAfter * jitterFactor;
+    // Clamp to ensure we never retry before the server's specified minimum
+    const clampedDelay = Math.max(delayWithJitter, cappedRetryAfter);
+    return Math.floor(clampedDelay);
   }
 
   // Exponential backoff: baseDelay * 2^attempt

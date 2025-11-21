@@ -1,6 +1,12 @@
 import { test as base, Page, Route } from '@playwright/test';
 
-const API_BASE = 'http://localhost:5080';
+// Issue #841: Make API_BASE configurable via environment variables
+const API_BASE = process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+
+// Log configuration in CI for debugging
+if (process.env.CI) {
+  console.log(`[E2E Config] API_BASE: ${API_BASE}`);
+}
 
 /**
  * Authenticate via real backend API and get session cookie
@@ -60,12 +66,44 @@ export async function setupMockAuth(page: Page, role: 'Admin' | 'Editor' | 'User
 
   // Catch-all for any unmocked API calls - MUST BE FIRST
   // More specific route mocks below will override this
+  // Issue #841: Improve catch-all with logging and better error handling
   await page.route(`${API_BASE}/api/**`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [] })
-    });
+    const url = route.request().url();
+    const method = route.request().method();
+
+    // Log unmocked calls for debugging (visible in CI logs)
+    if (process.env.CI || process.env.DEBUG_MOCKS) {
+      console.warn(`⚠️  Unmocked API call: ${method} ${url}`);
+    }
+
+    // Return appropriate response based on HTTP method
+    if (method === 'GET') {
+      // GET requests: return empty array (safe default)
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+    } else if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+      // Mutation requests: return success response
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true })
+      });
+    } else if (method === 'DELETE') {
+      // DELETE requests: return 204 No Content
+      await route.fulfill({
+        status: 204
+      });
+    } else {
+      // Other methods: return generic success
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: [] })
+      });
+    }
   });
 
   // Mock /auth/me to return authenticated user

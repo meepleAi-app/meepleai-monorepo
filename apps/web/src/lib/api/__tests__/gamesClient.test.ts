@@ -23,7 +23,7 @@ describe('GamesClient', () => {
   describe('getAll', () => {
     const mockGames: Game[] = [
       {
-        id: 'game-1',
+        id: '770e8400-e29b-41d4-a716-446655440001',
         title: 'Azul',
         publisher: 'Next Move Games',
         yearPublished: 2017,
@@ -35,7 +35,7 @@ describe('GamesClient', () => {
         createdAt: '2025-01-01T00:00:00Z',
       },
       {
-        id: 'game-2',
+        id: '770e8400-e29b-41d4-a716-446655440002',
         title: 'Wingspan',
         publisher: 'Stonemaier Games',
         yearPublished: 2019,
@@ -47,7 +47,7 @@ describe('GamesClient', () => {
         createdAt: '2025-01-02T00:00:00Z',
       },
       {
-        id: 'game-3',
+        id: '770e8400-e29b-41d4-a716-446655440003',
         title: 'Custom Game',
         publisher: 'Indie Publisher',
         yearPublished: 2024,
@@ -238,7 +238,7 @@ describe('GamesClient', () => {
     it('should paginate results', async () => {
       const manyGames = Array.from({ length: 50 }, (_, i) => ({
         ...mockGames[0],
-        id: `game-${i}`,
+        id: `770e8400-e29b-41d4-a716-${String(446655440000 + i).padStart(12, '0')}`,
         title: `Game ${i}`,
       }));
 
@@ -296,7 +296,7 @@ describe('GamesClient', () => {
   describe('getById', () => {
     it('should get a single game by ID', async () => {
       const mockGame: Game = {
-        id: 'game-123',
+        id: '770e8400-e29b-41d4-a716-446655440123',
         title: 'Azul',
         publisher: 'Next Move Games',
         yearPublished: 2017,
@@ -314,11 +314,11 @@ describe('GamesClient', () => {
         headers: new Headers(),
       });
 
-      const result = await gamesClient.getById('game-123');
+      const result = await gamesClient.getById('770e8400-e29b-41d4-a716-446655440123');
 
       expect(result).toEqual(mockGame);
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/games/game-123'),
+        expect.stringContaining('/api/v1/games/770e8400-e29b-41d4-a716-446655440123'),
         expect.objectContaining({ method: 'GET' })
       );
     });
@@ -344,7 +344,7 @@ describe('GamesClient', () => {
         headers: new Headers(),
       });
 
-      const result = await gamesClient.getById('game-123');
+      const result = await gamesClient.getById('770e8400-e29b-41d4-a716-446655440123');
 
       expect(result).toBeNull();
     });
@@ -354,8 +354,8 @@ describe('GamesClient', () => {
     it('should get PDF documents for a game', async () => {
       const mockDocuments: PdfDocumentDto[] = [
         {
-          id: 'doc-1',
-          gameId: 'game-123',
+          id: '880e8400-e29b-41d4-a716-446655440001',
+          gameId: '770e8400-e29b-41d4-a716-446655440123',
           fileName: 'rulebook.pdf',
           filePath: '/uploads/rulebook.pdf',
           fileSizeBytes: 1024000,
@@ -365,8 +365,8 @@ describe('GamesClient', () => {
           pageCount: 12,
         },
         {
-          id: 'doc-2',
-          gameId: 'game-123',
+          id: '880e8400-e29b-41d4-a716-446655440002',
+          gameId: '770e8400-e29b-41d4-a716-446655440123',
           fileName: 'reference.pdf',
           filePath: '/uploads/reference.pdf',
           fileSizeBytes: 512000,
@@ -383,7 +383,7 @@ describe('GamesClient', () => {
         headers: new Headers(),
       });
 
-      const result = await gamesClient.getDocuments('game-123');
+      const result = await gamesClient.getDocuments('770e8400-e29b-41d4-a716-446655440123');
 
       expect(result).toEqual(mockDocuments);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -398,7 +398,7 @@ describe('GamesClient', () => {
         headers: new Headers(),
       });
 
-      const result = await gamesClient.getDocuments('game-123');
+      const result = await gamesClient.getDocuments('770e8400-e29b-41d4-a716-446655440123');
 
       expect(result).toEqual([]);
     });

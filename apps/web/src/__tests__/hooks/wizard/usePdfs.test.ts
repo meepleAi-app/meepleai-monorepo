@@ -8,7 +8,7 @@ describe('usePdfs', () => {
       fileName: 'rules.pdf',
       fileSizeBytes: 1024 * 1024,
       uploadedAt: '2024-01-15T10:30:00Z',
-      uploadedByUserId: 'user-1',
+      uploadedByUserId: '990e8400-e29b-41d4-a716-000000000001',
       language: 'en',
       status: 'completed',
       logUrl: 'https://example.com/log1'
@@ -18,7 +18,7 @@ describe('usePdfs', () => {
       fileName: 'guide.pdf',
       fileSizeBytes: 1024 * 512,
       uploadedAt: '2024-01-16T14:20:00Z',
-      uploadedByUserId: 'user-1',
+      uploadedByUserId: '990e8400-e29b-41d4-a716-000000000001',
       language: 'it',
       status: 'pending',
       logUrl: null
@@ -57,7 +57,7 @@ describe('usePdfs', () => {
         json: async () => ({ pdfs: mockPdfs })
       });
 
-      const { result } = renderHook(() => usePdfs('game-1'));
+      const { result } = renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       expect(result.current.loading).toBe(true);
 
@@ -78,7 +78,7 @@ describe('usePdfs', () => {
         json: async () => ({ pdfs: [] })
       });
 
-      const { result } = renderHook(() => usePdfs('game-1'));
+      const { result } = renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(result.current.pdfs).toEqual([]);
@@ -92,7 +92,7 @@ describe('usePdfs', () => {
         json: async () => ({})
       });
 
-      const { result } = renderHook(() => usePdfs('game-1'));
+      const { result } = renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(result.current.pdfs).toEqual([]);
@@ -107,7 +107,7 @@ describe('usePdfs', () => {
         statusText: 'Not Found'
       });
 
-      const { result } = renderHook(() => usePdfs('game-1'));
+      const { result } = renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(result.current.error).toBe('Unable to load uploaded PDFs. Please try again.');
@@ -122,7 +122,7 @@ describe('usePdfs', () => {
         statusText: 'Server Error'
       });
 
-      renderHook(() => usePdfs('game-1'));
+      renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith('Failed to load PDFs:', 'Server Error');
@@ -134,7 +134,7 @@ describe('usePdfs', () => {
     it('handles network error', async () => {
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-      const { result } = renderHook(() => usePdfs('game-1'));
+      const { result } = renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(result.current.error).toBe('Unable to load uploaded PDFs. Please try again.');
@@ -151,7 +151,7 @@ describe('usePdfs', () => {
 
       const { result, rerender } = renderHook(
         ({ gameId }) => usePdfs(gameId),
-        { initialProps: { gameId: 'game-1' } }
+        { initialProps: { gameId: '770e8400-e29b-41d4-a716-000000000001' } }
       );
 
       await waitFor(() => {
@@ -161,7 +161,7 @@ describe('usePdfs', () => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
 
       // Change gameId
-      rerender({ gameId: 'game-2' });
+      rerender({ gameId: '770e8400-e29b-41d4-a716-000000000002' });
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -181,7 +181,7 @@ describe('usePdfs', () => {
 
       const { result, rerender } = renderHook(
         ({ gameId }: { gameId: string | null }) => usePdfs(gameId),
-        { initialProps: { gameId: 'game-1' as string | null } }
+        { initialProps: { gameId: '770e8400-e29b-41d4-a716-000000000001' as string | null } }
       );
 
       await waitFor(() => {
@@ -202,14 +202,14 @@ describe('usePdfs', () => {
 
       const { rerender } = renderHook(
         ({ gameId }) => usePdfs(gameId),
-        { initialProps: { gameId: 'game-1' } }
+        { initialProps: { gameId: '770e8400-e29b-41d4-a716-000000000001' } }
       );
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledTimes(1);
       });
 
-      rerender({ gameId: 'game-1' });
+      rerender({ gameId: '770e8400-e29b-41d4-a716-000000000001' });
 
       // Should not trigger additional fetch (useCallback dependency)
       await waitFor(() => {
@@ -225,7 +225,7 @@ describe('usePdfs', () => {
         json: async () => ({ pdfs: mockPdfs })
       });
 
-      const { result } = renderHook(() => usePdfs('game-1'));
+      const { result } = renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -240,7 +240,7 @@ describe('usePdfs', () => {
         json: async () => ({ pdfs: mockPdfs })
       });
 
-      const { result } = renderHook(() => usePdfs('game-1'));
+      const { result } = renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -260,7 +260,7 @@ describe('usePdfs', () => {
       });
       (global.fetch as jest.Mock).mockReturnValueOnce(firstPromise);
 
-      const { result } = renderHook(() => usePdfs('game-1'));
+      const { result } = renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       expect(result.current.loading).toBe(true);
 
@@ -286,7 +286,7 @@ describe('usePdfs', () => {
         json: async () => ({ pdfs: mockPdfs })
       });
 
-      renderHook(() => usePdfs('game-1'));
+      renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
@@ -306,7 +306,7 @@ describe('usePdfs', () => {
         json: async () => ({ pdfs: mockPdfs })
       });
 
-      renderHook(() => usePdfs('game-1'));
+      renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
@@ -324,7 +324,7 @@ describe('usePdfs', () => {
         json: async () => ({ pdfs: mockPdfs })
       });
 
-      renderHook(() => usePdfs('game-1'));
+      renderHook(() => usePdfs('770e8400-e29b-41d4-a716-000000000001'));
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(

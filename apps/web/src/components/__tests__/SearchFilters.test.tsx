@@ -11,9 +11,9 @@ import { createMockAgent } from '@/__tests__/fixtures/common-fixtures';
 
 // Mock data
 const mockGames: Game[] = [
-  { id: 'game-1', name: 'Chess' },
-  { id: 'game-2', name: 'Go' },
-  { id: 'game-3', name: 'Monopoly' },
+  { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' },
+  { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Go' },
+  { id: '770e8400-e29b-41d4-a716-000000000003', name: 'Monopoly' },
 ];
 
 const mockAgents: Agent[] = [
@@ -46,7 +46,7 @@ describe('SearchFilters', () => {
   });
 
   it('should render Clear All button when filters are active', () => {
-    const filters: SearchFiltersType = { gameId: 'game-1' };
+    const filters: SearchFiltersType = { gameId: '770e8400-e29b-41d4-a716-000000000001' };
 
     render(
       <SearchFilters
@@ -75,7 +75,7 @@ describe('SearchFilters', () => {
 
   it('should clear all filters when Clear All is clicked', () => {
     const filters: SearchFiltersType = {
-      gameId: 'game-1',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       agentId: 'agent-1',
       types: ['message'],
     };

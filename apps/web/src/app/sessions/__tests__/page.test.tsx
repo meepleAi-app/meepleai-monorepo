@@ -38,7 +38,7 @@ describe('ActiveSessionsPage', () => {
 
   const mockGames: Game[] = [
     {
-      id: 'game-1',
+      id: '770e8400-e29b-41d4-a716-000000000001',
       title: 'Catan',
       publisher: 'Kosmos',
       yearPublished: 1995,
@@ -50,7 +50,7 @@ describe('ActiveSessionsPage', () => {
       createdAt: '2025-11-17T10:00:00Z',
     },
     {
-      id: 'game-2',
+      id: '770e8400-e29b-41d4-a716-000000000002',
       title: 'Ticket to Ride',
       publisher: 'Days of Wonder',
       yearPublished: 2004,
@@ -65,8 +65,8 @@ describe('ActiveSessionsPage', () => {
 
   const mockSessions: GameSessionDto[] = [
     {
-      id: 'session-1',
-      gameId: 'game-1',
+      id: '550e8400-e29b-41d4-a716-000000000001',
+      gameId: '770e8400-e29b-41d4-a716-000000000001',
       status: 'InProgress',
       startedAt: '2025-11-17T10:00:00Z',
       completedAt: null,
@@ -80,8 +80,8 @@ describe('ActiveSessionsPage', () => {
       durationMinutes: 45,
     },
     {
-      id: 'session-2',
-      gameId: 'game-2',
+      id: '550e8400-e29b-41d4-a716-000000000002',
+      gameId: '770e8400-e29b-41d4-a716-000000000002',
       status: 'Paused',
       startedAt: '2025-11-17T09:00:00Z',
       completedAt: null,
@@ -291,7 +291,7 @@ describe('ActiveSessionsPage', () => {
         await user.click(pauseButton);
 
         await waitFor(() => {
-          expect(api.sessions.pause).toHaveBeenCalledWith('session-1');
+          expect(api.sessions.pause).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-000000000001');
         });
       }
     });
@@ -315,7 +315,7 @@ describe('ActiveSessionsPage', () => {
         await user.click(resumeButton);
 
         await waitFor(() => {
-          expect(api.sessions.resume).toHaveBeenCalledWith('session-2');
+          expect(api.sessions.resume).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-000000000002');
         });
       }
     });
@@ -341,7 +341,7 @@ describe('ActiveSessionsPage', () => {
 
         expect(mockConfirm).toHaveBeenCalled();
         await waitFor(() => {
-          expect(api.sessions.end).toHaveBeenCalledWith('session-1');
+          expect(api.sessions.end).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-000000000001');
         });
       }
 
@@ -385,7 +385,7 @@ describe('ActiveSessionsPage', () => {
       });
 
       const filterSelect = screen.getByLabelText(/filter sessions by game/i);
-      await user.selectOptions(filterSelect, 'game-1');
+      await user.selectOptions(filterSelect, '770e8400-e29b-41d4-a716-000000000001');
 
       await waitFor(() => {
         expect(screen.getByText('Catan')).toBeInTheDocument();
@@ -404,7 +404,7 @@ describe('ActiveSessionsPage', () => {
       const filterSelect = screen.getByLabelText(/filter sessions by game/i);
 
       // Filter to one game
-      await user.selectOptions(filterSelect, 'game-1');
+      await user.selectOptions(filterSelect, '770e8400-e29b-41d4-a716-000000000001');
       await waitFor(() => {
         expect(screen.queryByText('Ticket to Ride')).not.toBeInTheDocument();
       });

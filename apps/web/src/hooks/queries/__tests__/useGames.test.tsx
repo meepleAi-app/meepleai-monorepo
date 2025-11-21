@@ -62,9 +62,9 @@ describe('useGames hooks', () => {
           pageSize: undefined,
         },
       ]);
-      expect(gamesKeys.detail('game-1')).toEqual(['games', 'detail', 'game-1']);
-      expect(gamesKeys.sessions('game-1')).toEqual(['games', 'sessions', 'game-1']);
-      expect(gamesKeys.documents('game-1')).toEqual(['games', 'documents', 'game-1']);
+      expect(gamesKeys.detail('770e8400-e29b-41d4-a716-000000000001')).toEqual(['games', 'detail', '770e8400-e29b-41d4-a716-000000000001']);
+      expect(gamesKeys.sessions('770e8400-e29b-41d4-a716-000000000001')).toEqual(['games', 'sessions', '770e8400-e29b-41d4-a716-000000000001']);
+      expect(gamesKeys.documents('770e8400-e29b-41d4-a716-000000000001')).toEqual(['games', 'documents', '770e8400-e29b-41d4-a716-000000000001']);
     });
 
     it('generates unique keys for different filters', () => {
@@ -89,8 +89,8 @@ describe('useGames hooks', () => {
     it('fetches paginated games list', async () => {
       const mockResponse = {
         games: [
-          { id: 'game-1', title: 'Catan', players: '3-4' },
-          { id: 'game-2', title: 'Ticket to Ride', players: '2-5' },
+          { id: '770e8400-e29b-41d4-a716-000000000001', title: 'Catan', players: '3-4' },
+          { id: '770e8400-e29b-41d4-a716-000000000002', title: 'Ticket to Ride', players: '2-5' },
         ],
         total: 2,
         page: 1,
@@ -109,7 +109,7 @@ describe('useGames hooks', () => {
     it('fetches games with filters', async () => {
       const filters = { search: 'Catan', minPlayers: 2 };
       const mockResponse = {
-        games: [{ id: 'game-1', title: 'Catan', players: '3-4' }],
+        games: [{ id: '770e8400-e29b-41d4-a716-000000000001', title: 'Catan', players: '3-4' }],
         total: 1,
         page: 1,
         pageSize: 20,
@@ -127,7 +127,7 @@ describe('useGames hooks', () => {
     it('fetches games with sorting', async () => {
       const sort = { field: 'title' as const, direction: 'asc' as const };
       const mockResponse = {
-        games: [{ id: 'game-1', title: 'Catan' }],
+        games: [{ id: '770e8400-e29b-41d4-a716-000000000001', title: 'Catan' }],
         total: 1,
         page: 1,
         pageSize: 20,
@@ -171,19 +171,19 @@ describe('useGames hooks', () => {
 
   describe('useGame', () => {
     it('fetches a single game by ID', async () => {
-      const mockGame = { id: 'game-1', title: 'Catan', players: '3-4' };
+      const mockGame = { id: '770e8400-e29b-41d4-a716-000000000001', title: 'Catan', players: '3-4' };
       (api.games.getById as jest.Mock).mockResolvedValue(mockGame);
 
-      const { result } = renderHook(() => useGame('game-1'), { wrapper });
+      const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(api.games.getById).toHaveBeenCalledWith('game-1');
+      expect(api.games.getById).toHaveBeenCalledWith('770e8400-e29b-41d4-a716-000000000001');
       expect(result.current.data).toEqual(mockGame);
     });
 
     it('does not fetch when disabled', () => {
-      const { result } = renderHook(() => useGame('game-1', false), { wrapper });
+      const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001', false), { wrapper });
 
       expect(result.current.isFetching).toBe(false);
       expect(api.games.getById).not.toHaveBeenCalled();
@@ -203,7 +203,7 @@ describe('useGames hooks', () => {
       const error = new Error('Network error');
       (api.games.getById as jest.Mock).mockRejectedValue(error);
 
-      const { result } = renderHook(() => useGame('game-1'), { wrapper });
+      const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -213,7 +213,7 @@ describe('useGames hooks', () => {
 
   describe('useGameSessions', () => {
     it('is not implemented yet', async () => {
-      const { result } = renderHook(() => useGameSessions('game-1'), { wrapper });
+      const { result } = renderHook(() => useGameSessions('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -221,7 +221,7 @@ describe('useGames hooks', () => {
     });
 
     it('does not fetch when disabled', () => {
-      const { result } = renderHook(() => useGameSessions('game-1', false), { wrapper });
+      const { result } = renderHook(() => useGameSessions('770e8400-e29b-41d4-a716-000000000001', false), { wrapper });
 
       expect(result.current.isFetching).toBe(false);
     });
@@ -230,21 +230,21 @@ describe('useGames hooks', () => {
   describe('useGameDocuments', () => {
     it('fetches documents for a game', async () => {
       const mockDocuments = [
-        { id: 'doc-1', title: 'Rulebook.pdf', gameId: 'game-1' },
-        { id: 'doc-2', title: 'Reference.pdf', gameId: 'game-1' },
+        { id: '880e8400-e29b-41d4-a716-000000000001', title: 'Rulebook.pdf', gameId: '770e8400-e29b-41d4-a716-000000000001' },
+        { id: '880e8400-e29b-41d4-a716-000000000002', title: 'Reference.pdf', gameId: '770e8400-e29b-41d4-a716-000000000001' },
       ];
       (api.games.getDocuments as jest.Mock).mockResolvedValue(mockDocuments);
 
-      const { result } = renderHook(() => useGameDocuments('game-1'), { wrapper });
+      const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(api.games.getDocuments).toHaveBeenCalledWith('game-1');
+      expect(api.games.getDocuments).toHaveBeenCalledWith('770e8400-e29b-41d4-a716-000000000001');
       expect(result.current.data).toEqual(mockDocuments);
     });
 
     it('does not fetch when disabled', () => {
-      const { result } = renderHook(() => useGameDocuments('game-1', false), { wrapper });
+      const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001', false), { wrapper });
 
       expect(result.current.isFetching).toBe(false);
       expect(api.games.getDocuments).not.toHaveBeenCalled();
@@ -254,7 +254,7 @@ describe('useGames hooks', () => {
       const error = new Error('Failed to fetch documents');
       (api.games.getDocuments as jest.Mock).mockRejectedValue(error);
 
-      const { result } = renderHook(() => useGameDocuments('game-1'), { wrapper });
+      const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -264,7 +264,7 @@ describe('useGames hooks', () => {
     it('returns empty array for game with no documents', async () => {
       (api.games.getDocuments as jest.Mock).mockResolvedValue([]);
 
-      const { result } = renderHook(() => useGameDocuments('game-1'), { wrapper });
+      const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 

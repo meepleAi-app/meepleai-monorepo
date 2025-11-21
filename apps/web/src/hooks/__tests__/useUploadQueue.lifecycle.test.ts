@@ -138,7 +138,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       const queueLengthBefore = result.current.queue.length;
@@ -210,7 +210,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Simulate visibility change
@@ -240,7 +240,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Change to visible
@@ -331,7 +331,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       const statsBefore = result.current.getStats();
@@ -355,7 +355,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -410,7 +410,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       unmount();
@@ -452,7 +452,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // File should be buffered or processed
@@ -467,7 +467,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -484,9 +484,9 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
 
       await act(async () => {
         await Promise.all([
-          result.current.addFiles(files1, 'game-1', 'en'),
-          result.current.addFiles(files2, 'game-2', 'en'),
-          result.current.addFiles(files3, 'game-3', 'en')
+          result.current.addFiles(files1, '770e8400-e29b-41d4-a716-000000000001', 'en'),
+          result.current.addFiles(files2, '770e8400-e29b-41d4-a716-000000000002', 'en'),
+          result.current.addFiles(files3, '770e8400-e29b-41d4-a716-000000000003', 'en')
         ]);
       });
 
@@ -510,7 +510,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -528,7 +528,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -547,7 +547,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -570,7 +570,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Should handle gracefully
@@ -584,7 +584,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File([content], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -600,7 +600,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       });
 
       await act(async () => {
-        await result.current.addFiles([largeFile], 'game-123', 'en');
+        await result.current.addFiles([largeFile], '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -616,7 +616,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -630,7 +630,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file1 = new File(['content 1'], 'test1.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file1], 'game-123', 'en');
+        await result.current.addFiles([file1], '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -638,7 +638,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file2 = new File(['content 2'], 'test2.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file2], 'game-456', 'en');
+        await result.current.addFiles([file2], '770e8400-e29b-41d4-a716-000000000456', 'en');
         // Timer removed - using real async
       });
 
@@ -651,7 +651,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       unmount();
@@ -669,7 +669,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       expect(result.current.queue).toHaveLength(3);
@@ -690,7 +690,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         // Timer removed - using real async
       });
 
@@ -704,7 +704,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const addPromises = Array.from({ length: 10 }, (_, i) =>
         result.current.addFiles(
           [new File([`content ${i}`], `test${i}.pdf`, { type: 'application/pdf' })],
-          'game-123',
+          '770e8400-e29b-41d4-a716-000000000123',
           'en'
         )
       );
@@ -736,7 +736,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -758,7 +758,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -781,7 +781,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -805,7 +805,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -826,7 +826,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -835,7 +835,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
         if (calls.length > 0) {
           const item = calls[0][0];
           expect(item.id).toBeDefined();
-          expect(item.gameId).toBe('game-123');
+          expect(item.gameId).toBe('770e8400-e29b-41d4-a716-000000000123');
         }
       }, { timeout: 10000 });
     }, 15000);
@@ -852,7 +852,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       unmount();
@@ -879,7 +879,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Should not crash despite callback error
@@ -904,7 +904,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Wait for all uploads to complete
@@ -944,7 +944,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Wait for all uploads to complete
@@ -961,7 +961,7 @@ describe('useUploadQueue - Worker Lifecycle & Observability', () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Should work without callbacks

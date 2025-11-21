@@ -53,7 +53,7 @@ describe('Chat Test Utilities', () => {
         expect(testData.mockAuthResponse).toHaveProperty('user');
         expect(testData.mockAuthResponse).toHaveProperty('expiresAt');
         expect(testData.mockAuthResponse.user).toMatchObject({
-          id: 'user-1',
+          id: '990e8400-e29b-41d4-a716-000000000001',
           email: 'user@example.com',
           displayName: 'Test User',
           role: 'User',
@@ -65,11 +65,11 @@ describe('Chat Test Utilities', () => {
 
         expect(testData.mockGames).toHaveLength(2);
         expect(testData.mockGames[0]).toMatchObject({
-          id: 'game-1',
+          id: '770e8400-e29b-41d4-a716-000000000001',
           name: 'Chess',
         });
         expect(testData.mockGames[1]).toMatchObject({
-          id: 'game-2',
+          id: '770e8400-e29b-41d4-a716-000000000002',
           name: 'Catan',
         });
       });
@@ -104,7 +104,7 @@ describe('Chat Test Utilities', () => {
         expect(testData.mockChats).toHaveLength(2);
         expect(testData.mockChats[0]).toMatchObject({
           id: 'chat-1',
-          gameId: 'game-1',
+          gameId: '770e8400-e29b-41d4-a716-000000000001',
           gameName: 'Chess',
           agentId: 'agent-1',
           agentName: 'Chess Expert',
@@ -468,7 +468,7 @@ describe('Chat Test Utilities', () => {
           game: { name: 'Custom Game' },
         });
 
-        expect(env.game.id).toBe('game-1');
+        expect(env.game.id).toBe('770e8400-e29b-41d4-a716-000000000001');
         expect(env.game.name).toBe('Custom Game');
       });
     });
@@ -487,7 +487,7 @@ describe('Chat Test Utilities', () => {
 
       it('should create agent with overridden properties (Issue #868: agents are global)', () => {
         const env = setupFullChatEnvironment({
-          game: { id: 'game-2', name: 'Catan' },
+          game: { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Catan' },
           agent: { name: 'Catan Helper' },
         });
 

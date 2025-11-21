@@ -16,7 +16,7 @@ describe('PdfTableRow', () => {
     fileName: 'test-game-rules.pdf',
     fileSizeBytes: 2048000, // ~2MB
     uploadedAt: '2024-01-15T10:30:00Z',
-    uploadedByUserId: 'user-456',
+    uploadedByUserId: '990e8400-e29b-41d4-a716-000000000456',
     language: 'en',
     status: 'completed',
     logUrl: 'https://example.com/log/pdf-123'

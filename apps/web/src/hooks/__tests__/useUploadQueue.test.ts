@@ -86,9 +86,9 @@ describe('useUploadQueue (Web Worker Implementation)', () => {
 
       const mockFiles = [new File(['test'], 'test.pdf', { type: 'application/pdf' })];
 
-      await result.current.addFiles(mockFiles, 'game-123', 'en');
+      await result.current.addFiles(mockFiles, '770e8400-e29b-41d4-a716-000000000123', 'en');
 
-      expect(uploadQueueStore.addFiles).toHaveBeenCalledWith(mockFiles, 'game-123', 'en');
+      expect(uploadQueueStore.addFiles).toHaveBeenCalledWith(mockFiles, '770e8400-e29b-41d4-a716-000000000123', 'en');
     });
 
     it('should call control functions', () => {

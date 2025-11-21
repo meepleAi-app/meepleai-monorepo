@@ -52,10 +52,10 @@ describe('MobileSidebar', () => {
 
   const defaultContextValue = {
     games: [
-      { id: 'game-1', name: 'Catan' },
-      { id: 'game-2', name: 'Wingspan' }
+      { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan' },
+      { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Wingspan' }
     ],
-    selectedGameId: 'game-1',
+    selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
     selectedAgentId: 'agent-1',
     loading: { creating: false, messages: false, sending: false },
     createChat: mockCreateChat,

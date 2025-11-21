@@ -11,7 +11,7 @@ import { Citation } from '@/types';
 
 describe('CitationCard', () => {
   const mockCitation: Citation = {
-    documentId: 'doc-123',
+    documentId: '880e8400-e29b-41d4-a716-000000000123',
     pageNumber: 42,
     snippet: 'This is a test citation snippet from the PDF document.',
     relevanceScore: 0.85,

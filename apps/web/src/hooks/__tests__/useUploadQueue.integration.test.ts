@@ -116,7 +116,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -134,7 +134,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -147,7 +147,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -168,7 +168,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Wait for upload to complete
@@ -194,7 +194,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(2));
@@ -217,7 +217,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -234,7 +234,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -254,7 +254,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -280,8 +280,8 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -296,7 +296,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
 
       for (let i = 0; i < 5; i++) {
         await act(async () => {
-          await result.current.addFiles([file], 'game-123', 'en');
+          await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         });
       }
 
@@ -322,7 +322,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       sizes.push(result.current.queue.length);
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -339,14 +339,14 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles([files[0]], 'game-123', 'en');
-        await result.current.addFiles([files[1]], 'game-456', 'it');
+        await result.current.addFiles([files[0]], '770e8400-e29b-41d4-a716-000000000123', 'en');
+        await result.current.addFiles([files[1]], '770e8400-e29b-41d4-a716-000000000456', 'it');
       });
 
       await waitFor(() => {
-        expect(result.current.queue[0].gameId).toBe('game-123');
+        expect(result.current.queue[0].gameId).toBe('770e8400-e29b-41d4-a716-000000000123');
         expect(result.current.queue[0].language).toBe('en');
-        expect(result.current.queue[1].gameId).toBe('game-456');
+        expect(result.current.queue[1].gameId).toBe('770e8400-e29b-41d4-a716-000000000456');
         expect(result.current.queue[1].language).toBe('it');
       });
     });
@@ -359,7 +359,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -378,7 +378,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -398,7 +398,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -412,7 +412,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -429,7 +429,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const progressValues: number[] = [];
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Track progress changes
@@ -458,7 +458,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -474,7 +474,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -498,7 +498,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -532,7 +532,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const statuses: string[] = [];
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Track status changes
@@ -559,7 +559,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -575,7 +575,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -607,7 +607,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -634,7 +634,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -654,7 +654,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const beforeTime = Date.now();
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       const afterTime = Date.now();
@@ -673,7 +673,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -700,7 +700,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -716,9 +716,9 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
-        await result.current.addFiles([file], 'game-123', 'en');
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -738,7 +738,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Look for processing status during upload
@@ -774,7 +774,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -790,7 +790,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -830,7 +830,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -861,7 +861,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -885,7 +885,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -909,7 +909,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -932,7 +932,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -956,7 +956,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -975,7 +975,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1011,7 +1011,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1033,7 +1033,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1055,7 +1055,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1081,7 +1081,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1102,7 +1102,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1117,7 +1117,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(1));
@@ -1152,7 +1152,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const invalidFile = new File([], '', { type: '' });
 
       await act(async () => {
-        await result.current.addFiles([invalidFile], 'game-123', 'en');
+        await result.current.addFiles([invalidFile], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Should handle gracefully
@@ -1174,7 +1174,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1215,7 +1215,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1242,7 +1242,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Check active uploads during processing
@@ -1261,7 +1261,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1281,7 +1281,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Give time for uploads to start
@@ -1304,7 +1304,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
         });
 
         await act(async () => {
-          await result.current.addFiles([file], 'game-123', 'en');
+          await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
         });
       }
 
@@ -1323,7 +1323,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1355,7 +1355,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => expect(result.current.queue.length).toBe(5));
@@ -1389,7 +1389,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1404,7 +1404,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const extraFile = new File(['extra'], 'extra.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([extraFile], 'game-123', 'en');
+        await result.current.addFiles([extraFile], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Still only 3 active
@@ -1424,7 +1424,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1445,7 +1445,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1468,7 +1468,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(firstBatch, 'game-123', 'en');
+        await result.current.addFiles(firstBatch, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1482,7 +1482,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       );
 
       await act(async () => {
-        await result.current.addFiles(secondBatch, 'game-123', 'en');
+        await result.current.addFiles(secondBatch, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1505,7 +1505,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1530,7 +1530,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1555,7 +1555,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1578,7 +1578,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const startTime = Date.now();
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1603,7 +1603,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1624,7 +1624,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1644,7 +1644,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       ];
 
       await act(async () => {
-        await result.current.addFiles(files, 'game-123', 'en');
+        await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       // Wait a bit but not until completion
@@ -1667,7 +1667,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file], 'game-123', 'en');
+        await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1700,7 +1700,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file1 = new File(['1'], '1.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file1], 'game-123', 'en');
+        await result.current.addFiles([file1], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
@@ -1713,7 +1713,7 @@ describe('FE-TEST-010: Upload Queue Integration Tests', () => {
       const file2 = new File(['2'], '2.pdf', { type: 'application/pdf' });
 
       await act(async () => {
-        await result.current.addFiles([file2], 'game-123', 'en');
+        await result.current.addFiles([file2], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {

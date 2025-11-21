@@ -81,7 +81,7 @@ describe('MockApiRouter', () => {
         const response = await router.handle('/games/game-123');
         const data = await response.json();
 
-        expect(data).toEqual({ gameId: 'game-123' });
+        expect(data).toEqual({ gameId: '770e8400-e29b-41d4-a716-000000000123' });
       });
     });
 
@@ -100,7 +100,7 @@ describe('MockApiRouter', () => {
         const data = await response.json();
 
         expect(data).toEqual({
-          gameId: 'game-456',
+          gameId: '770e8400-e29b-41d4-a716-000000000456',
           pdfId: 'pdf-789'
         });
       });
@@ -152,7 +152,7 @@ describe('MockApiRouter', () => {
         const response = await router.handle('https://api.example.com/games/game-999');
         const data = await response.json();
 
-        expect(data).toEqual({ id: 'game-999' });
+        expect(data).toEqual({ id: '770e8400-e29b-41d4-a716-000000000999' });
       });
     });
   });
@@ -226,7 +226,7 @@ describe('MockApiRouter', () => {
     describe('When converting to Jest mock', () => {
       it('Then works with Jest mock functions', async () => {
         const router = new MockApiRouter();
-        const mockData = { userId: 'user-1' };
+        const mockData = { userId: '990e8400-e29b-41d4-a716-000000000001' };
 
         router.get('/auth/me', () => createJsonResponse(mockData));
 
@@ -275,7 +275,7 @@ describe('MockApiRouter', () => {
         });
 
         expect(capturedContext).toMatchObject({
-          params: { id: 'game-123' },
+          params: { id: '770e8400-e29b-41d4-a716-000000000123' },
           url: '/games/game-123',
           method: 'POST',
           init: expect.objectContaining({

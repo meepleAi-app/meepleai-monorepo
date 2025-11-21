@@ -514,9 +514,9 @@ describe('test-utils', () => {
       it('should vary gameId based on index', () => {
         const events = createMockEvents(15);
 
-        expect(events[0].data.gameId).toBe('game-0'); // Math.floor(0/5) = 0
-        expect(events[5].data.gameId).toBe('game-1'); // Math.floor(5/5) = 1
-        expect(events[10].data.gameId).toBe('game-2'); // Math.floor(10/5) = 2
+        expect(events[0].data.gameId).toBe('770e8400-e29b-41d4-a716-000000000000'); // Math.floor(0/5) = 0
+        expect(events[5].data.gameId).toBe('770e8400-e29b-41d4-a716-000000000001'); // Math.floor(5/5) = 1
+        expect(events[10].data.gameId).toBe('770e8400-e29b-41d4-a716-000000000002'); // Math.floor(10/5) = 2
       });
 
       it('should vary chatId based on index', () => {

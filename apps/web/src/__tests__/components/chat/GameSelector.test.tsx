@@ -116,9 +116,9 @@ describe('GameSelector Component', () => {
     it('renders list of available games', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-3', name: 'Risk', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000003', name: 'Risk', createdAt: '2024-01-01T00:00:00Z' },
       ];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
@@ -137,7 +137,7 @@ describe('GameSelector Component', () => {
     });
 
     it('includes placeholder option when games exist', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
       });
@@ -148,8 +148,8 @@ describe('GameSelector Component', () => {
     it('renders correct number of options (games + placeholder)', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
       ];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
@@ -168,9 +168,9 @@ describe('GameSelector Component', () => {
     it('renders games in the order provided', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: 'Zzz Game', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-2', name: 'Aaa Game', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-3', name: 'Mmm Game', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Zzz Game', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Aaa Game', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000003', name: 'Mmm Game', createdAt: '2024-01-01T00:00:00Z' },
       ];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
@@ -190,7 +190,7 @@ describe('GameSelector Component', () => {
     it('uses game.id as option value', async () => {
       const user = userEvent.setup();
       const selectGameSpy = jest.spyOn(useChatStore.getState(), 'selectGame');
-      const games = [{ id: 'game-123', name: 'Test Game', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000123', name: 'Test Game', createdAt: '2024-01-01T00:00:00Z' }];
 
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
@@ -203,7 +203,7 @@ describe('GameSelector Component', () => {
       await user.click(option);
 
       // Verify selectGame was called with the correct game.id
-      expect(selectGameSpy).toHaveBeenCalledWith('game-123');
+      expect(selectGameSpy).toHaveBeenCalledWith('770e8400-e29b-41d4-a716-000000000123');
     });
   });
 
@@ -213,7 +213,7 @@ describe('GameSelector Component', () => {
   describe('Game Selection', () => {
     it('calls selectGame when a game is selected', async () => {
       const user = userEvent.setup();
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
@@ -227,13 +227,13 @@ describe('GameSelector Component', () => {
       const option = await screen.findByRole('option', { name: 'Chess' });
       await user.click(option);
 
-      expect(selectGameSpy).toHaveBeenCalledWith('game-1');
+      expect(selectGameSpy).toHaveBeenCalledWith('770e8400-e29b-41d4-a716-000000000001');
     });
 
     it('does not call selectGame when empty option is selected', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
-        initialState: { games, selectedGameId: 'game-1' }
+        initialState: { games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' }
       });
 
       const selectGameSpy = jest.spyOn(useChatStore.getState(), 'selectGame');
@@ -246,8 +246,8 @@ describe('GameSelector Component', () => {
     it('handles multiple game selections sequentially', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
       ];
       
       renderWithChatStore(<GameSelector />, {
@@ -269,13 +269,13 @@ describe('GameSelector Component', () => {
       await user.click(option2);
 
       expect(selectGameSpy).toHaveBeenCalledTimes(2);
-      expect(selectGameSpy).toHaveBeenNthCalledWith(1, 'game-1');
-      expect(selectGameSpy).toHaveBeenNthCalledWith(2, 'game-2');
+      expect(selectGameSpy).toHaveBeenNthCalledWith(1, '770e8400-e29b-41d4-a716-000000000001');
+      expect(selectGameSpy).toHaveBeenNthCalledWith(2, '770e8400-e29b-41d4-a716-000000000002');
     });
 
     it('uses void operator for async selectGame call', async () => {
       const user = userEvent.setup();
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
@@ -298,11 +298,11 @@ describe('GameSelector Component', () => {
   describe('Selected Game State', () => {
     it('displays currently selected game', () => {
       const games = [
-        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
       ];
       renderWithChatStore(<GameSelector />, {
-        initialState: { games, selectedGameId: 'game-2' }
+        initialState: { games, selectedGameId: '770e8400-e29b-41d4-a716-000000000002' }
       });
 
       // Radix Select shows selected value in trigger
@@ -310,7 +310,7 @@ describe('GameSelector Component', () => {
     });
 
     it('displays empty value when no game is selected', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
         initialState: { games, selectedGameId: null }
       });
@@ -319,7 +319,7 @@ describe('GameSelector Component', () => {
     });
 
     it('handles undefined selectedGameId', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
         initialState: { games, selectedGameId: undefined }
       });
@@ -329,19 +329,19 @@ describe('GameSelector Component', () => {
 
     it('updates value when selectedGameId changes', async () => {
       const games = [
-        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-2', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Catan', createdAt: '2024-01-01T00:00:00Z' },
       ];
       
       renderWithChatStore(<GameSelector />, {
-        initialState: { games, selectedGameId: 'game-1' }
+        initialState: { games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' }
       });
 
       expect(screen.getByRole('combobox')).toHaveTextContent('Chess');
 
       // Update state directly via store wrapped in act()
       await act(async () => {
-        useChatStore.setState({ selectedGameId: 'game-2' });
+        useChatStore.setState({ selectedGameId: '770e8400-e29b-41d4-a716-000000000002' });
       });
 
       await waitFor(() => {
@@ -355,7 +355,7 @@ describe('GameSelector Component', () => {
    */
   describe('Disabled State', () => {
     it('disables select when games are loading', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       
       renderWithChatStore(<GameSelector />, {
         initialState: { 
@@ -369,7 +369,7 @@ describe('GameSelector Component', () => {
     });
 
     it('sets aria-busy when loading', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       
       renderWithChatStore(<GameSelector />, {
         initialState: { 
@@ -383,7 +383,7 @@ describe('GameSelector Component', () => {
     });
 
     it('changes cursor when disabled', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       
       renderWithChatStore(<GameSelector />, {
         initialState: { 
@@ -403,7 +403,7 @@ describe('GameSelector Component', () => {
    */
   describe('Accessibility', () => {
     it('has proper label association', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
       });
@@ -416,7 +416,7 @@ describe('GameSelector Component', () => {
     });
 
     it('has correct aria-busy attribute', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       
       renderWithChatStore(<GameSelector />, {
         initialState: { 
@@ -430,7 +430,7 @@ describe('GameSelector Component', () => {
     });
 
     it('uses semantic select element', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
       });
@@ -454,8 +454,8 @@ describe('GameSelector Component', () => {
     it('handles games with special characters in names', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: "Catan: Trader's & Barbarians", createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-2', name: 'Risk (2nd Edition)', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: "Catan: Trader's & Barbarians", createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Risk (2nd Edition)', createdAt: '2024-01-01T00:00:00Z' },
       ];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
@@ -473,7 +473,7 @@ describe('GameSelector Component', () => {
     it('handles very long game names', async () => {
       const user = userEvent.setup();
       const longName = 'A'.repeat(100);
-      const games = [{ id: 'game-1', name: longName, createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: longName, createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
       });
@@ -497,7 +497,7 @@ describe('GameSelector Component', () => {
       expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
 
       // Load games via store wrapped in act()
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       await act(async () => {
         useChatStore.setState({ 
           games, 
@@ -514,8 +514,8 @@ describe('GameSelector Component', () => {
     it('handles games with duplicate names (different IDs)', async () => {
       const user = userEvent.setup();
       const games = [
-        { id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
-        { id: 'game-2', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' },
       ];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
@@ -532,7 +532,7 @@ describe('GameSelector Component', () => {
 
     it('handles single game in list', async () => {
       const user = userEvent.setup();
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
       });
@@ -572,7 +572,7 @@ describe('GameSelector Component', () => {
    */
   describe('Styling', () => {
     it('applies correct container margin', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       const { container } = renderWithChatStore(<GameSelector />, {
         initialState: { games }
       });
@@ -582,7 +582,7 @@ describe('GameSelector Component', () => {
     });
 
     it('applies correct label styling', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
       });
@@ -592,7 +592,7 @@ describe('GameSelector Component', () => {
     });
 
     it('applies correct select styling', () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       renderWithChatStore(<GameSelector />, {
         initialState: { games }
       });
@@ -604,7 +604,7 @@ describe('GameSelector Component', () => {
     });
 
     it('changes cursor style based on loading state', async () => {
-      const games = [{ id: 'game-1', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2024-01-01T00:00:00Z' }];
       
       renderWithChatStore(<GameSelector />, {
         initialState: { 

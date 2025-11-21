@@ -30,7 +30,7 @@ describe('CommentThread', () => {
       lineContext: null,
       parentCommentId: null,
       replies: [],
-      userId: 'user-1',
+      userId: '990e8400-e29b-41d4-a716-000000000001',
       userDisplayName: 'User One',
       commentText: 'This is a test comment',
       isResolved: false,

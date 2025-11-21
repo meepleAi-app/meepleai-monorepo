@@ -159,17 +159,17 @@ describe('ChatSidebar Component', () => {
   describe('Game Context Badge', () => {
     it('displays game badge when game is selected', () => {
       const games = [
-        { id: 'game-1', name: 'Chess' },
-        { id: 'game-2', name: 'Catan' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Catan' },
       ];
-      setupMockContext({ games, selectedGameId: 'game-1' });
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       render(<ChatSidebar />);
 
       expect(screen.getByText('Chess')).toBeInTheDocument();
     });
 
     it('does not display badge when no game is selected', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
       setupMockContext({ games, selectedGameId: null });
       render(<ChatSidebar />);
 
@@ -177,8 +177,8 @@ describe('ChatSidebar Component', () => {
     });
 
     it('has correct title attribute on badge', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectedGameId: 'game-1' });
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       render(<ChatSidebar />);
 
       const badge = screen.getByText('Chess');
@@ -186,8 +186,8 @@ describe('ChatSidebar Component', () => {
     });
 
     it('has correct aria-label on badge', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectedGameId: 'game-1' });
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       render(<ChatSidebar />);
 
       const badge = screen.getByLabelText('Active game context: Chess');
@@ -196,16 +196,16 @@ describe('ChatSidebar Component', () => {
 
     it('updates badge when selected game changes', () => {
       const games = [
-        { id: 'game-1', name: 'Chess' },
-        { id: 'game-2', name: 'Catan' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Catan' },
       ];
-      setupMockContext({ games, selectedGameId: 'game-1' });
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       const { rerender } = render(<ChatSidebar />);
 
       expect(screen.getByText('Chess')).toBeInTheDocument();
 
       // Change game
-      setupMockContext({ games, selectedGameId: 'game-2' });
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000002' });
       rerender(<ChatSidebar />);
 
       expect(screen.queryByText('Chess')).not.toBeInTheDocument();
@@ -213,8 +213,8 @@ describe('ChatSidebar Component', () => {
     });
 
     it('does not show badge when selected game not found in list', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectedGameId: 'game-999' });
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000999' });
       render(<ChatSidebar />);
 
       // Badge should not render if game not found
@@ -222,8 +222,8 @@ describe('ChatSidebar Component', () => {
     });
 
     it('applies correct badge styling', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectedGameId: 'game-1' });
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       render(<ChatSidebar />);
 
       const badge = screen.getByText('Chess');
@@ -237,7 +237,7 @@ describe('ChatSidebar Component', () => {
   describe('New Chat Button', () => {
     it('calls createChat when button is clicked', () => {
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
       });
       render(<ChatSidebar />);
@@ -257,7 +257,7 @@ describe('ChatSidebar Component', () => {
     });
 
     it('is disabled when no agent is selected', () => {
-      setupMockContext({ selectedGameId: 'game-1', selectedAgentId: null });
+      setupMockContext({ selectedGameId: '770e8400-e29b-41d4-a716-000000000001', selectedAgentId: null });
       render(<ChatSidebar />);
 
       const button = screen.getByTestId('new-chat-button');
@@ -266,7 +266,7 @@ describe('ChatSidebar Component', () => {
 
     it('is enabled when both game and agent are selected', () => {
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
       });
       render(<ChatSidebar />);
@@ -277,7 +277,7 @@ describe('ChatSidebar Component', () => {
 
     it('shows loading state when creating chat', () => {
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
         loading: { chats: false, creating: true, games: false, agents: false, sending: false, messages: false, updating: false, deleting: false },
       });
@@ -290,7 +290,7 @@ describe('ChatSidebar Component', () => {
 
     it('is disabled when creating chat', () => {
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
         loading: { chats: false, creating: true, games: false, agents: false, sending: false, messages: false, updating: false, deleting: false },
       });
@@ -301,7 +301,7 @@ describe('ChatSidebar Component', () => {
     });
 
     it('has correct aria-label', () => {
-      setupMockContext({ selectedGameId: 'game-1', selectedAgentId: 'agent-1' });
+      setupMockContext({ selectedGameId: '770e8400-e29b-41d4-a716-000000000001', selectedAgentId: 'agent-1' });
       render(<ChatSidebar />);
 
       const button = screen.getByTestId('new-chat-button');
@@ -310,7 +310,7 @@ describe('ChatSidebar Component', () => {
 
     it('shows enabled styling when ready', () => {
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
         loading: { chats: false, creating: false, games: false, agents: false, sending: false, messages: false, updating: false, deleting: false },
       });
@@ -331,7 +331,7 @@ describe('ChatSidebar Component', () => {
     it('handles async createChat call with void operator', () => {
       mockCreateChat.mockResolvedValue(undefined);
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
       });
       render(<ChatSidebar />);
@@ -430,7 +430,7 @@ describe('ChatSidebar Component', () => {
       expect(screen.getByTestId('game-selector')).toBeInTheDocument();
 
       // Update context
-      setupMockContext({ selectedGameId: 'game-1' });
+      setupMockContext({ selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       rerender(<ChatSidebar />);
 
       expect(screen.getByTestId('game-selector')).toBeInTheDocument();
@@ -443,9 +443,9 @@ describe('ChatSidebar Component', () => {
   describe('Thread Limits', () => {
     it('shows thread count when game is selected', () => {
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         chatsByGame: {
-          'game-1': [
+          '770e8400-e29b-41d4-a716-000000000001': [
             { id: 'chat-1', status: 'Active' },
             { id: 'chat-2', status: 'Active' },
           ],
@@ -458,9 +458,9 @@ describe('ChatSidebar Component', () => {
 
     it('shows warning when at thread limit', () => {
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         chatsByGame: {
-          'game-1': [
+          '770e8400-e29b-41d4-a716-000000000001': [
             { id: 'chat-1', status: 'Active' },
             { id: 'chat-2', status: 'Active' },
             { id: 'chat-3', status: 'Active' },
@@ -477,9 +477,9 @@ describe('ChatSidebar Component', () => {
 
     it('does not count closed threads toward limit', () => {
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         chatsByGame: {
-          'game-1': [
+          '770e8400-e29b-41d4-a716-000000000001': [
             { id: 'chat-1', status: 'Active' },
             { id: 'chat-2', status: 'Active' },
             { id: 'chat-3', status: 'Closed' },
@@ -512,7 +512,7 @@ describe('ChatSidebar Component', () => {
     });
 
     it('handles undefined selectedGameId', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
       setupMockContext({ games, selectedGameId: undefined });
       render(<ChatSidebar />);
 
@@ -520,7 +520,7 @@ describe('ChatSidebar Component', () => {
     });
 
     it('handles undefined selectedAgentId', () => {
-      setupMockContext({ selectedGameId: 'game-1', selectedAgentId: undefined });
+      setupMockContext({ selectedGameId: '770e8400-e29b-41d4-a716-000000000001', selectedAgentId: undefined });
       render(<ChatSidebar />);
 
       const button = screen.getByTestId('new-chat-button');
@@ -542,8 +542,8 @@ describe('ChatSidebar Component', () => {
 
     it('handles game with very long name in badge', () => {
       const longName = 'A'.repeat(100);
-      const games = [{ id: 'game-1', name: longName }];
-      setupMockContext({ games, selectedGameId: 'game-1' });
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: longName }];
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       render(<ChatSidebar />);
 
       expect(screen.getByText(longName)).toBeInTheDocument();
@@ -551,7 +551,7 @@ describe('ChatSidebar Component', () => {
 
     it('handles simultaneous loading states', () => {
       setupMockContext({
-        selectedGameId: 'game-1',
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
         loading: { chats: false, creating: true, games: true, agents: true, sending: false, messages: false, updating: false, deleting: false },
       });
@@ -593,8 +593,8 @@ describe('ChatSidebar Component', () => {
     });
 
     it('provides context through badge title', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectedGameId: 'game-1' });
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       render(<ChatSidebar />);
 
       const badge = screen.getByText('Chess');
@@ -602,8 +602,8 @@ describe('ChatSidebar Component', () => {
     });
 
     it('provides context through badge aria-label', () => {
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectedGameId: 'game-1' });
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       render(<ChatSidebar />);
 
       expect(screen.getByLabelText('Active game context: Chess')).toBeInTheDocument();
@@ -639,7 +639,7 @@ describe('ChatSidebar Component', () => {
     });
 
     it('applies correct button width', () => {
-      setupMockContext({ selectedGameId: 'game-1', selectedAgentId: 'agent-1' });
+      setupMockContext({ selectedGameId: '770e8400-e29b-41d4-a716-000000000001', selectedAgentId: 'agent-1' });
       render(<ChatSidebar />);
 
       const button = screen.getByTestId('new-chat-button');
@@ -653,8 +653,8 @@ describe('ChatSidebar Component', () => {
   describe('Integration', () => {
     it('passes context correctly to child components', () => {
       setupMockContext({
-        games: [{ id: 'game-1', name: 'Chess' }],
-        selectedGameId: 'game-1',
+        games: [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }],
+        selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
         selectedAgentId: 'agent-1',
       });
       render(<ChatSidebar />);
@@ -670,8 +670,8 @@ describe('ChatSidebar Component', () => {
       const { rerender } = render(<ChatSidebar />);
 
       // Update context
-      const games = [{ id: 'game-1', name: 'Chess' }];
-      setupMockContext({ games, selectedGameId: 'game-1' });
+      const games = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      setupMockContext({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       rerender(<ChatSidebar />);
 
       expect(screen.getByText('Chess')).toBeInTheDocument();

@@ -60,7 +60,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
           id: 'reply-1',
           parentCommentId: commentId,
           commentText: 'This is a reply',
-          userId: 'user-1',
+          userId: '990e8400-e29b-41d4-a716-000000000001',
           userDisplayName: 'Jane Doe',
           createdAt: '2025-11-02T10:00:00Z'
         };
@@ -533,7 +533,7 @@ describe('api.ts - Extended Coverage (TEST-625)', () => {
         const mockUpdated = {
           id: messageId,
           chatId,
-          userId: 'user-1',
+          userId: '990e8400-e29b-41d4-a716-000000000001',
           level: 'user',
           content: 'Updated content',
           sequenceNumber: 1,

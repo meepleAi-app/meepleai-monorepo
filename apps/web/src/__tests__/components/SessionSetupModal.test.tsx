@@ -42,7 +42,7 @@ Object.defineProperty(globalThis, 'crypto', {
 
 describe('SessionSetupModal', () => {
   const mockGame: Game = {
-    id: 'game-123',
+    id: '770e8400-e29b-41d4-a716-000000000123',
     title: 'Catan',
     publisher: 'Catan Studio',
     yearPublished: 1995,
@@ -303,7 +303,7 @@ describe('SessionSetupModal', () => {
       const user = userEvent.setup();
 
       (api.sessions.start as jest.Mock).mockResolvedValue({
-        id: 'session-123',
+        id: '550e8400-e29b-41d4-a716-000000000123',
         gameId: mockGame.id,
         status: 'InProgress',
         startedAt: new Date().toISOString(),
@@ -416,7 +416,7 @@ describe('SessionSetupModal', () => {
       const user = userEvent.setup();
 
       const mockSession: GameSessionDto = {
-        id: 'session-123',
+        id: '550e8400-e29b-41d4-a716-000000000123',
         gameId: mockGame.id,
         status: 'InProgress',
         startedAt: new Date().toISOString(),
@@ -658,7 +658,7 @@ describe('SessionSetupModal', () => {
       const user = userEvent.setup();
 
       const mockSession: GameSessionDto = {
-        id: 'session-123',
+        id: '550e8400-e29b-41d4-a716-000000000123',
         gameId: mockGame.id,
         status: 'InProgress',
         startedAt: new Date().toISOString(),

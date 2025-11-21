@@ -76,7 +76,7 @@ function mockFileReader(result: string) {
 
 describe('MultiFileUpload Component', () => {
   const defaultProps = {
-    gameId: 'game-123',
+    gameId: '770e8400-e29b-41d4-a716-000000000123',
     gameName: 'Test Game',
     language: 'en'
   };
@@ -122,7 +122,7 @@ describe('MultiFileUpload Component', () => {
       render(<MultiFileUpload {...defaultProps} />);
 
       const container = screen.getByTestId('multi-file-upload');
-      expect(container).toHaveAttribute('data-game-id', 'game-123');
+      expect(container).toHaveAttribute('data-game-id', '770e8400-e29b-41d4-a716-000000000123');
       expect(container).toHaveAttribute('data-game-name', 'Test Game');
     });
   });
@@ -146,7 +146,7 @@ describe('MultiFileUpload Component', () => {
           expect.arrayContaining([
             expect.objectContaining({ name: 'test.pdf', size: 1000, type: 'application/pdf' })
           ]),
-          'game-123',
+          '770e8400-e29b-41d4-a716-000000000123',
           'en'
         );
       }, { timeout: 2000 });
@@ -176,7 +176,7 @@ describe('MultiFileUpload Component', () => {
             expect.objectContaining({ name: 'test2.pdf', type: 'application/pdf' }),
             expect.objectContaining({ name: 'test3.pdf', type: 'application/pdf' })
           ]),
-          'game-123',
+          '770e8400-e29b-41d4-a716-000000000123',
           'en'
         );
       }, { timeout: 2000 });
@@ -265,7 +265,7 @@ describe('MultiFileUpload Component', () => {
           expect.arrayContaining([
             expect.objectContaining({ name: 'dropped.pdf', size: 1000, type: 'application/pdf' })
           ]),
-          'game-123',
+          '770e8400-e29b-41d4-a716-000000000123',
           'en'
         );
       }, { timeout: 2000 });
@@ -440,7 +440,7 @@ describe('MultiFileUpload Component', () => {
             expect.objectContaining({ name: 'valid2.pdf', type: 'application/pdf' })
           ])
         );
-        expect(callArgs[1]).toBe('game-123');
+        expect(callArgs[1]).toBe('770e8400-e29b-41d4-a716-000000000123');
         expect(callArgs[2]).toBe('en');
         // Verify invalid.txt was NOT included
         expect(callArgs[0].every((f: File) => f.name !== 'invalid.txt')).toBe(true);
@@ -533,7 +533,7 @@ describe('MultiFileUpload Component', () => {
         {
           id: '1',
           file: createMockFile('test.pdf', 1000, 'application/pdf'),
-          gameId: 'game-123',
+          gameId: '770e8400-e29b-41d4-a716-000000000123',
           language: 'en',
           status: 'pending' as const,
           progress: 0,
@@ -1151,7 +1151,7 @@ describe('MultiFileUpload Component', () => {
         {
           id: '1',
           file: createMockFile('test1.pdf', 1000, 'application/pdf'),
-          gameId: 'game-123',
+          gameId: '770e8400-e29b-41d4-a716-000000000123',
           language: 'en',
           status: 'pending' as const,
           progress: 0,
@@ -1160,7 +1160,7 @@ describe('MultiFileUpload Component', () => {
         {
           id: '2',
           file: createMockFile('test2.pdf', 2000, 'application/pdf'),
-          gameId: 'game-123',
+          gameId: '770e8400-e29b-41d4-a716-000000000123',
           language: 'en',
           status: 'uploading' as const,
           progress: 50,

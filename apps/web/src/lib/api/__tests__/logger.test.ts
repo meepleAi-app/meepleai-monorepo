@@ -183,7 +183,7 @@ describe('logApiError', () => {
       endpoint: '/api/v1/games/123',
     });
 
-    logApiError(error, { userId: 'user-456' });
+    logApiError(error, { userId: '990e8400-e29b-41d4-a716-000000000456' });
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       '[API Error]',
@@ -194,7 +194,7 @@ describe('logApiError', () => {
           correlationId: 'test-404',
           endpoint: '/api/v1/games/123',
           statusCode: 404,
-          userId: 'user-456',
+          userId: '990e8400-e29b-41d4-a716-000000000456',
         }),
       })
     );

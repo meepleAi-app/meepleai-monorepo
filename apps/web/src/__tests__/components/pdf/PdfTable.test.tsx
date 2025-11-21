@@ -9,7 +9,7 @@ describe('PdfTable', () => {
       fileName: 'gloomhaven-rules.pdf',
       fileSizeBytes: 1024 * 1024 * 5, // 5 MB
       uploadedAt: '2024-01-15T10:30:00Z',
-      uploadedByUserId: 'user-1',
+      uploadedByUserId: '990e8400-e29b-41d4-a716-000000000001',
       language: 'en',
       status: 'completed',
       logUrl: 'https://example.com/log1'
@@ -19,7 +19,7 @@ describe('PdfTable', () => {
       fileName: 'wingspan-rules.pdf',
       fileSizeBytes: 1024 * 1024 * 3, // 3 MB
       uploadedAt: '2024-01-16T14:20:00Z',
-      uploadedByUserId: 'user-1',
+      uploadedByUserId: '990e8400-e29b-41d4-a716-000000000001',
       language: 'it',
       status: 'failed',
       logUrl: 'https://example.com/log2'
@@ -29,7 +29,7 @@ describe('PdfTable', () => {
       fileName: 'catan-rules.pdf',
       fileSizeBytes: 1024 * 1024 * 2, // 2 MB
       uploadedAt: '2024-01-17T09:15:00Z',
-      uploadedByUserId: 'user-1',
+      uploadedByUserId: '990e8400-e29b-41d4-a716-000000000001',
       language: 'de',
       status: 'pending',
       logUrl: null

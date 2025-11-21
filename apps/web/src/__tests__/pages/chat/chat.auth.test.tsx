@@ -159,7 +159,7 @@ describe('ChatPage - Authentication', () => {
   it('shows authenticated interface when user is logged in', async () => {
     const userResponse = {
       user: {
-        id: 'user-1',
+        id: '990e8400-e29b-41d4-a716-000000000001',
         email: 'user@example.com',
         displayName: 'Test User',
         role: 'User',

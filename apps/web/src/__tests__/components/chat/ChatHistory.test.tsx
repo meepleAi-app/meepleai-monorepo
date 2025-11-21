@@ -19,8 +19,8 @@ import { useChatStore } from '@/store/chat/store';
  */
 const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
   id: 'chat-1',
-  userId: 'user-1',
-  gameId: 'game-1',
+  userId: '990e8400-e29b-41d4-a716-000000000001',
+  gameId: '770e8400-e29b-41d4-a716-000000000001',
   title: 'Chess Expert',
   status: 'Active', // Issue #858: Added status field
   createdAt: '2025-01-10T10:00:00Z',
@@ -159,9 +159,9 @@ describe('ChatHistory Component', () => {
   describe('Thread Separation', () => {
     it('separates active and archived threads into sections', () => {
       const chats = [
-        createMockChatThread({ id: 'thread-1', title: 'Active Thread 1', status: 'Active' }),
-        createMockChatThread({ id: 'thread-2', title: 'Archived Thread', status: 'Closed' }),
-        createMockChatThread({ id: 'thread-3', title: 'Active Thread 2', status: 'Active' }),
+        createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000001', title: 'Active Thread 1', status: 'Active' }),
+        createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000002', title: 'Archived Thread', status: 'Closed' }),
+        createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000003', title: 'Active Thread 2', status: 'Active' }),
       ];
       const state = setupChatContext({ chats });
       renderWithChatStore(<ChatHistory />, { initialState: state });
@@ -174,8 +174,8 @@ describe('ChatHistory Component', () => {
 
     it('shows only active threads section when no archived threads', () => {
       const chats = [
-        createMockChatThread({ id: 'thread-1', status: 'Active' }),
-        createMockChatThread({ id: 'thread-2', status: 'Active' }),
+        createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000001', status: 'Active' }),
+        createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000002', status: 'Active' }),
       ];
       const state = setupChatContext({ chats });
       renderWithChatStore(<ChatHistory />, { initialState: state });
@@ -187,8 +187,8 @@ describe('ChatHistory Component', () => {
 
     it('shows only archived section when all threads are closed', () => {
       const chats = [
-        createMockChatThread({ id: 'thread-1', status: 'Closed' }),
-        createMockChatThread({ id: 'thread-2', status: 'Closed' }),
+        createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000001', status: 'Closed' }),
+        createMockChatThread({ id: 'aa0e8400-e29b-41d4-a716-000000000002', status: 'Closed' }),
       ];
       const state = setupChatContext({ chats });
       renderWithChatStore(<ChatHistory />, { initialState: state });
@@ -439,7 +439,7 @@ describe('ChatHistory Component', () => {
     it('passes all chat properties to ThreadListItem', () => {
       const chat = createMockChatThread({
         id: 'chat-1',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: 'Chess Expert',
         status: 'Active',
         createdAt: '2025-01-10T10:00:00Z',
@@ -514,7 +514,7 @@ describe('ChatHistory Component', () => {
     it('handles chat with missing optional properties', () => {
       const chat: any = {
         id: 'chat-1',
-        gameId: 'game-1',
+        gameId: '770e8400-e29b-41d4-a716-000000000001',
         title: 'Chess Expert',
         createdAt: '2025-01-10T10:00:00Z',
         lastMessageAt: '2025-01-10T10:05:00Z',

@@ -82,7 +82,7 @@ describe('MessageInput Component', () => {
     it('renders text input field', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -94,7 +94,7 @@ describe('MessageInput Component', () => {
     it('renders send button', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -107,7 +107,7 @@ describe('MessageInput Component', () => {
     it('renders search mode toggle (AI-14)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -119,7 +119,7 @@ describe('MessageInput Component', () => {
     it('displays placeholder text', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -131,7 +131,7 @@ describe('MessageInput Component', () => {
     it('has screen reader only label', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -150,7 +150,7 @@ describe('MessageInput Component', () => {
       const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -166,7 +166,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Current message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -180,7 +180,7 @@ describe('MessageInput Component', () => {
       const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -199,7 +199,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Text',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -216,7 +216,7 @@ describe('MessageInput Component', () => {
       const longMessage = 'A'.repeat(1000);
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -237,7 +237,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -255,7 +255,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -273,7 +273,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -292,7 +292,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: '',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -308,7 +308,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: '   ',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -340,7 +340,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: null,
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -356,7 +356,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -374,7 +374,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -396,7 +396,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -420,7 +420,7 @@ describe('MessageInput Component', () => {
     it('disables input when sending', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -434,7 +434,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -460,7 +460,7 @@ describe('MessageInput Component', () => {
     it('disables input when no agent selected', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: null,
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -474,7 +474,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: '',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -488,7 +488,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: '   ',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -501,7 +501,7 @@ describe('MessageInput Component', () => {
     it('renders search mode toggle when sending', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -533,7 +533,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -547,7 +547,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: true, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -560,7 +560,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -578,7 +578,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           searchMode: 'Vector',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -593,7 +593,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           searchMode: 'Vector',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -610,7 +610,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           searchMode: 'Vector',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -626,7 +626,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           searchMode: 'Hybrid',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -646,7 +646,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -661,7 +661,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: '',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -675,7 +675,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: '',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -690,7 +690,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -709,7 +709,7 @@ describe('MessageInput Component', () => {
     it('has proper aria-label for input', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -721,7 +721,7 @@ describe('MessageInput Component', () => {
     it('has proper aria-label for button', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -734,7 +734,7 @@ describe('MessageInput Component', () => {
     it('has screen reader only label for input', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -747,7 +747,7 @@ describe('MessageInput Component', () => {
     it('associates label with input using htmlFor', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -766,7 +766,7 @@ describe('MessageInput Component', () => {
       const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -783,7 +783,7 @@ describe('MessageInput Component', () => {
       const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -799,7 +799,7 @@ describe('MessageInput Component', () => {
       const setInputValueSpy = jest.spyOn(useChatStore.getState(), 'setInputValue');
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -829,7 +829,7 @@ describe('MessageInput Component', () => {
     it('handles undefined selectedAgentId', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: undefined,
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -843,7 +843,7 @@ describe('MessageInput Component', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: ' \t\n ',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -863,7 +863,7 @@ describe('MessageInput Component', () => {
     it('renders within a form element', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -876,7 +876,7 @@ describe('MessageInput Component', () => {
     it('has correct container structure', () => {
       const { container } = renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }
@@ -889,7 +889,7 @@ describe('MessageInput Component', () => {
     it('uses flexbox layout for form', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
           loading: { sending: false, chats: false, messages: false, creating: false, updating: false, deleting: false, games: false, agents: false }
         }

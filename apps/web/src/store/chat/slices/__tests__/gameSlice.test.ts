@@ -98,8 +98,8 @@ describe('gameSlice', () => {
   describe('setGames', () => {
     it('should set games to provided array', () => {
       const mockGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
-        { id: 'game-2', name: 'Agricola', createdAt: '2024-01-02' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Agricola', createdAt: '2024-01-02' },
       ];
 
       store.getState().setGames(mockGames);
@@ -109,11 +109,11 @@ describe('gameSlice', () => {
 
     it('should replace existing games', () => {
       const initialGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
       ];
       const newGames: Game[] = [
-        { id: 'game-2', name: 'Agricola', createdAt: '2024-01-02' },
-        { id: 'game-3', name: 'Wingspan', createdAt: '2024-01-03' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Agricola', createdAt: '2024-01-02' },
+        { id: '770e8400-e29b-41d4-a716-000000000003', name: 'Wingspan', createdAt: '2024-01-03' },
       ];
 
       store.getState().setGames(initialGames);
@@ -125,7 +125,7 @@ describe('gameSlice', () => {
 
     it('should handle empty array', () => {
       const mockGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
       ];
 
       store.getState().setGames(mockGames);
@@ -137,8 +137,8 @@ describe('gameSlice', () => {
 
     it('should handle games without createdAt', () => {
       const mockGames: Game[] = [
-        { id: 'game-1', name: 'Catan' },
-        { id: 'game-2', name: 'Agricola', createdAt: '2024-01-02' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Agricola', createdAt: '2024-01-02' },
       ];
 
       store.getState().setGames(mockGames);
@@ -197,8 +197,8 @@ describe('gameSlice', () => {
   describe('loadGames', () => {
     it('should load games successfully from API', async () => {
       const mockGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
-        { id: 'game-2', name: 'Agricola', createdAt: '2024-01-02' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Agricola', createdAt: '2024-01-02' },
       ];
 
       mockApi.get.mockResolvedValueOnce(mockGames);
@@ -212,7 +212,7 @@ describe('gameSlice', () => {
 
     it('should set loading state to true before API call', async () => {
       const mockGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
       ];
 
       let loadingDuringCall = false;
@@ -229,7 +229,7 @@ describe('gameSlice', () => {
 
     it('should set loading state to false after successful API call', async () => {
       const mockGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
       ];
 
       mockApi.get.mockResolvedValueOnce(mockGames);
@@ -241,7 +241,7 @@ describe('gameSlice', () => {
 
     it('should clear previous error on successful load', async () => {
       const mockGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
       ];
 
       // Set initial error
@@ -296,7 +296,7 @@ describe('gameSlice', () => {
     it('should reset games to empty array on error', async () => {
       // Set initial games
       const initialGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
       ];
       store.getState().setGames(initialGames);
 
@@ -474,7 +474,7 @@ describe('gameSlice', () => {
   describe('Integration with UI Slice', () => {
     it('should properly coordinate loading states between slices', async () => {
       const mockGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
       ];
 
       // Set up mock BEFORE starting the async operation
@@ -492,7 +492,7 @@ describe('gameSlice', () => {
 
     it('should clear error from UI slice when loading games successfully', async () => {
       const mockGames: Game[] = [
-        { id: 'game-1', name: 'Catan', createdAt: '2024-01-01' },
+        { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Catan', createdAt: '2024-01-01' },
       ];
 
       store.getState().setError('Previous error');

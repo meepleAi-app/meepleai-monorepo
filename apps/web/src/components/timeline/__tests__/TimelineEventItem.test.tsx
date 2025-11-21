@@ -485,7 +485,7 @@ describe('TimelineEventItem Component', () => {
         data: {
           ...mockEvent.data,
           endpoint: '/api/v1/agents/qa',
-          gameId: 'game-456',
+          gameId: '770e8400-e29b-41d4-a716-000000000456',
           chatId: 'chat-789'
         }
       };

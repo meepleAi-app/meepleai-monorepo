@@ -66,7 +66,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });
@@ -86,7 +86,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });
@@ -109,7 +109,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });
@@ -131,7 +131,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });
@@ -153,7 +153,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });
@@ -174,7 +174,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });
@@ -195,7 +195,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: '   ',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });
@@ -229,7 +229,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: null,
         }
       });
@@ -262,7 +262,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       const { rerender } = renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });
@@ -288,7 +288,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: '',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });
@@ -301,7 +301,7 @@ describe('MessageInput - Optimistic Updates (#1167)', () => {
       renderWithChatStore(<MessageInput />, {
         initialState: {
           inputValue: 'Test message',
-          selectedGameId: 'game-1',
+          selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
           selectedAgentId: 'agent-1',
         }
       });

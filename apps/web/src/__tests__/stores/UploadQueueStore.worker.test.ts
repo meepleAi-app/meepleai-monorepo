@@ -62,7 +62,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
           {
             id: 'restored-1',
             file: { name: 'test.pdf', size: 1024, type: 'application/pdf', lastModified: Date.now() },
-            gameId: 'game-1',
+            gameId: '770e8400-e29b-41d4-a716-000000000001',
             language: 'en',
             status: 'pending' as const,
             progress: 0,
@@ -110,7 +110,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
 
       // Try to add files before WORKER_READY
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-      await uploadQueueStore.addFiles([file], 'game-1', 'en');
+      await uploadQueueStore.addFiles([file], '770e8400-e29b-41d4-a716-000000000001', 'en');
 
       // Verify request was buffered (worker not ready yet)
       expect(readyEmitted).toBe(true);
@@ -129,7 +129,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-      await uploadQueueStore.addFiles([file], 'game-1', 'en');
+      await uploadQueueStore.addFiles([file], '770e8400-e29b-41d4-a716-000000000001', 'en');
 
       // Wait for persistence
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -151,7 +151,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
           items: [{
             id: 'test-1',
             file: { name: 'test.pdf', size: 1024, type: 'application/pdf', lastModified: Date.now() },
-            gameId: 'game-1',
+            gameId: '770e8400-e29b-41d4-a716-000000000001',
             language: 'en',
             status: 'pending',
             progress: 0,
@@ -233,7 +233,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-      await uploadQueueStore.addFiles([file], 'game-1', 'en');
+      await uploadQueueStore.addFiles([file], '770e8400-e29b-41d4-a716-000000000001', 'en');
 
       // Start processing
       uploadQueueStore.startProcessing();
@@ -259,7 +259,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-      await uploadQueueStore.addFiles([file], 'game-1', 'en');
+      await uploadQueueStore.addFiles([file], '770e8400-e29b-41d4-a716-000000000001', 'en');
 
       // Start processing
       uploadQueueStore.startProcessing();
@@ -294,7 +294,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
       });
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-      await uploadQueueStore.addFiles([file], 'game-1', 'en');
+      await uploadQueueStore.addFiles([file], '770e8400-e29b-41d4-a716-000000000001', 'en');
 
       uploadQueueStore.startProcessing();
 
@@ -323,7 +323,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-      await uploadQueueStore.addFiles([file], 'game-1', 'en');
+      await uploadQueueStore.addFiles([file], '770e8400-e29b-41d4-a716-000000000001', 'en');
 
       uploadQueueStore.startProcessing();
 
@@ -365,7 +365,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-      await uploadQueueStore.addFiles([file], 'game-1', 'en');
+      await uploadQueueStore.addFiles([file], '770e8400-e29b-41d4-a716-000000000001', 'en');
 
       uploadQueueStore.startProcessing();
 
@@ -404,7 +404,7 @@ describe('UploadQueueStore - Worker Behaviors', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-      await uploadQueueStore.addFiles([file], 'game-1', 'en');
+      await uploadQueueStore.addFiles([file], '770e8400-e29b-41d4-a716-000000000001', 'en');
 
       uploadQueueStore.startProcessing();
 

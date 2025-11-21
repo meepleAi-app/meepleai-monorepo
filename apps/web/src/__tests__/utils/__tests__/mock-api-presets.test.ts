@@ -30,7 +30,7 @@ describe('MockApiPresets', () => {
 
         expect(data).toHaveProperty('user');
         expect(data.user).toMatchObject({
-          id: 'user-1',
+          id: '990e8400-e29b-41d4-a716-000000000001',
           email: 'user@example.com',
           role: 'Admin',
           displayName: 'Test User',
@@ -97,7 +97,7 @@ describe('MockApiPresets', () => {
 
       it('should handle all custom options together', async () => {
         MockApiPresets.auth(router, {
-          userId: 'user-999',
+          userId: '990e8400-e29b-41d4-a716-000000000999',
           email: 'admin@example.com',
           role: 'Admin',
           displayName: 'Admin User',
@@ -108,7 +108,7 @@ describe('MockApiPresets', () => {
         const data = await response.json();
 
         expect(data.user).toMatchObject({
-          id: 'user-999',
+          id: '990e8400-e29b-41d4-a716-000000000999',
           email: 'admin@example.com',
           role: 'Admin',
           displayName: 'Admin User',
@@ -178,8 +178,8 @@ describe('MockApiPresets', () => {
     describe('Custom games list', () => {
       it('should return custom games array', async () => {
         const customGames = [
-          { id: 'game-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
-          { id: 'game-2', name: 'Catan', createdAt: '2025-01-02T00:00:00Z' },
+          { id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+          { id: '770e8400-e29b-41d4-a716-000000000002', name: 'Catan', createdAt: '2025-01-02T00:00:00Z' },
         ];
 
         MockApiPresets.games(router, { games: customGames });
@@ -262,7 +262,7 @@ describe('MockApiPresets', () => {
             fileName: 'rules.pdf',
             fileSizeBytes: 1024,
             uploadedAt: '2025-01-01T00:00:00Z',
-            uploadedByUserId: 'user-1',
+            uploadedByUserId: '990e8400-e29b-41d4-a716-000000000001',
             status: 'completed',
             logUrl: null,
           },
@@ -613,7 +613,7 @@ describe('MockApiPresets', () => {
     it('should pass options to individual presets', async () => {
       MockApiPresets.uploadWorkflow(router, {
         auth: { userId: 'custom-user' },
-        games: { games: [{ id: 'game-1', name: 'Chess' }] },
+        games: { games: [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }] },
       });
 
       const authResponse = await router.handle('/auth/me');

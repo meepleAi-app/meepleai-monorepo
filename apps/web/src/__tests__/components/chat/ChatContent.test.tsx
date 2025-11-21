@@ -45,8 +45,8 @@ jest.mock('next/link', () => {
  */
 const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
   id: 'chat-1',
-  userId: 'user-1',
-  gameId: 'game-1',
+  userId: '990e8400-e29b-41d4-a716-000000000001',
+  gameId: '770e8400-e29b-41d4-a716-000000000001',
   title: 'Chess Expert',
   status: 'Active',
   createdAt: '2025-01-10T10:00:00Z',
@@ -60,7 +60,7 @@ const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
  * Helper to setup chat store with default values
  */
 const setupChatStore = (overrides?: any) => {
-  const gameId = overrides?.selectedGameId || 'game-1';
+  const gameId = overrides?.selectedGameId || '770e8400-e29b-41d4-a716-000000000001';
   const activeChatId = overrides?.activeChatId || null;
   const threads = overrides?.threads || [];
   const games = overrides?.games || [];
@@ -195,8 +195,8 @@ describe('ChatContent Component', () => {
     });
 
     it('displays game name when game is selected', () => {
-      const games: Game[] = [{ id: 'game-1', name: 'Chess' }];
-      const state = setupChatStore({ games, selectedGameId: 'game-1' });
+      const games: Game[] = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      const state = setupChatStore({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       renderWithChatStore(<ChatContent />, { initialState: state });
 
       expect(screen.getByText('Chess')).toBeInTheDocument();
@@ -210,8 +210,8 @@ describe('ChatContent Component', () => {
     });
 
     it('displays "Nessun gioco selezionato" when game is selected but not found', () => {
-      const games: Game[] = [{ id: 'game-1', name: 'Chess' }];
-      const state = setupChatStore({ games, selectedGameId: 'game-999' });
+      const games: Game[] = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      const state = setupChatStore({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000999' });
       renderWithChatStore(<ChatContent />, { initialState: state });
 
       expect(screen.getByText('Nessun gioco selezionato')).toBeInTheDocument();
@@ -420,8 +420,8 @@ describe('ChatContent Component', () => {
     });
 
     it('passes store to child components', () => {
-      const games: Game[] = [{ id: 'game-1', name: 'Chess' }];
-      const state = setupChatStore({ games, selectedGameId: 'game-1' });
+      const games: Game[] = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: 'Chess' }];
+      const state = setupChatStore({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       renderWithChatStore(<ChatContent />, { initialState: state });
 
       // Components should render with store access
@@ -471,8 +471,8 @@ describe('ChatContent Component', () => {
     });
 
     it('handles game with special characters in name', () => {
-      const games: Game[] = [{ id: 'game-1', name: "Catan: Trader's & Barbarians" }];
-      const state = setupChatStore({ games, selectedGameId: 'game-1' });
+      const games: Game[] = [{ id: '770e8400-e29b-41d4-a716-000000000001', name: "Catan: Trader's & Barbarians" }];
+      const state = setupChatStore({ games, selectedGameId: '770e8400-e29b-41d4-a716-000000000001' });
       renderWithChatStore(<ChatContent />, { initialState: state });
 
       expect(screen.getByText("Catan: Trader's & Barbarians")).toBeInTheDocument();

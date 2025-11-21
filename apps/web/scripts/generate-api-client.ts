@@ -69,7 +69,7 @@ async function generateZodSchemas(openApiSpec: string): Promise<void> {
   console.log('🔨 Generating Zod schemas...');
 
   // Parse and validate OpenAPI spec
-  let parsedSpec: any;
+  let parsedSpec: unknown;
   try {
     parsedSpec = JSON.parse(openApiSpec);
   } catch (error) {
@@ -77,15 +77,29 @@ async function generateZodSchemas(openApiSpec: string): Promise<void> {
     throw new Error(`Invalid OpenAPI JSON: ${errorMsg}`);
   }
 
+  // Type guard: Ensure parsedSpec is an object
+  if (typeof parsedSpec !== 'object' || parsedSpec === null || Array.isArray(parsedSpec)) {
+    throw new Error(
+      'Invalid OpenAPI specification format (expected object). ' +
+      'Ensure the backend is generating a valid OpenAPI document.'
+    );
+  }
+
   // Basic validation - check for required OpenAPI fields
-  if (!parsedSpec.openapi && !parsedSpec.swagger) {
+  if (!('openapi' in parsedSpec) && !('swagger' in parsedSpec)) {
     throw new Error(
       'Not a valid OpenAPI specification (missing openapi/swagger field). ' +
       'Ensure the backend is generating a valid OpenAPI document.'
     );
   }
 
-  console.log(`📋 OpenAPI version: ${parsedSpec.openapi || parsedSpec.swagger}`);
+  const version = ('openapi' in parsedSpec && typeof parsedSpec.openapi === 'string')
+    ? parsedSpec.openapi
+    : ('swagger' in parsedSpec && typeof parsedSpec.swagger === 'string')
+      ? parsedSpec.swagger
+      : 'unknown';
+
+  console.log(`📋 OpenAPI version: ${version}`);
 
   const outputPath = path.join(OUTPUT_DIR, 'zod-schemas.ts');
 

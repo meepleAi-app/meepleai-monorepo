@@ -18,6 +18,7 @@
 
 import { logApiError } from './logger';
 import { ApiError, NetworkError, ServerError } from './errors';
+import { API_CONFIG } from '@/config';
 
 export interface RetryConfig {
   /** Maximum number of retry attempts (default: 3) */
@@ -41,18 +42,18 @@ export function getRetryConfig(): RetryConfig {
 
   return {
     maxAttempts: isBrowser
-      ? parseInt(process.env.NEXT_PUBLIC_RETRY_MAX_ATTEMPTS || '3', 10)
-      : 3,
+      ? parseInt(process.env.NEXT_PUBLIC_RETRY_MAX_ATTEMPTS || String(API_CONFIG.RETRY_MAX_ATTEMPTS), 10)
+      : API_CONFIG.RETRY_MAX_ATTEMPTS,
     baseDelay: isBrowser
-      ? parseInt(process.env.NEXT_PUBLIC_RETRY_BASE_DELAY || '1000', 10)
-      : 1000,
+      ? parseInt(process.env.NEXT_PUBLIC_RETRY_BASE_DELAY || String(API_CONFIG.RETRY_BASE_DELAY_MS), 10)
+      : API_CONFIG.RETRY_BASE_DELAY_MS,
     maxDelay: isBrowser
-      ? parseInt(process.env.NEXT_PUBLIC_RETRY_MAX_DELAY || '10000', 10)
-      : 10000,
+      ? parseInt(process.env.NEXT_PUBLIC_RETRY_MAX_DELAY || String(API_CONFIG.RETRY_MAX_DELAY_MS), 10)
+      : API_CONFIG.RETRY_MAX_DELAY_MS,
     enabled: isBrowser
       ? process.env.NEXT_PUBLIC_RETRY_ENABLED !== 'false'
       : true,
-    jitter: 0.3, // 30% jitter
+    jitter: API_CONFIG.RETRY_JITTER,
   };
 }
 

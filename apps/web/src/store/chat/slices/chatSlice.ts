@@ -14,8 +14,7 @@ import { ChatStore, ChatSlice } from '../types';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
-
-const MAX_THREADS_PER_GAME = 5;
+import { CHAT_CONFIG } from '@/config';
 
 export const createChatSlice: StateCreator<
   ChatStore,
@@ -93,7 +92,7 @@ export const createChatSlice: StateCreator<
         const { chatsByGame } = get();
         const activeThreads = (chatsByGame[selectedGameId] ?? [])
           .filter(t => t.status !== 'Closed' && t.id !== newThread.id);
-        if (activeThreads.length > MAX_THREADS_PER_GAME) {
+        if (activeThreads.length > CHAT_CONFIG.MAX_THREADS_PER_GAME) {
           const sorted = [...activeThreads].sort((a, b) =>
             new Date(a.lastMessageAt ?? a.createdAt).getTime() -
             new Date(b.lastMessageAt ?? b.createdAt).getTime()

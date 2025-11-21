@@ -7,13 +7,14 @@
 
 import { toast } from 'sonner';
 import { type CategorizedError, ErrorCategory } from './errorUtils';
+import { UI_CONFIG } from '@/config';
 
 /**
  * Configuration for toast notifications
  */
 export const TOAST_CONFIG = {
   duration: {
-    transient: 5000,  // Auto-dismiss after 5 seconds
+    transient: UI_CONFIG.TOAST_DURATION_MS,  // Auto-dismiss after configured duration
     persistent: Infinity,  // Require manual dismissal
   },
   position: 'top-right' as const,

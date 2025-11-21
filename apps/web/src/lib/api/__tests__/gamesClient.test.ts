@@ -8,6 +8,7 @@
 import { createGamesClient } from '../clients/gamesClient';
 import { HttpClient } from '../core/httpClient';
 import type { Game, PaginatedGamesResponse, PdfDocumentDto } from '../schemas';
+import { globalRequestCache } from '../core/requestCache';
 
 describe('GamesClient', () => {
   let mockFetch: jest.Mock;
@@ -15,6 +16,9 @@ describe('GamesClient', () => {
   let gamesClient: ReturnType<typeof createGamesClient>;
 
   beforeEach(() => {
+    // Clear request cache before each test
+    globalRequestCache.clear();
+
     mockFetch = jest.fn();
     httpClient = new HttpClient({ fetchImpl: mockFetch });
     gamesClient = createGamesClient({ httpClient });

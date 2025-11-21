@@ -3,7 +3,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Api.Observability;
 using Api.Infrastructure;
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 
 namespace Api.Extensions;
 
@@ -137,6 +137,19 @@ public static class ObservabilityServiceExtensions
         return services;
     }
 
+    /// <summary>
+    /// Configures Swagger/OpenAPI documentation with dual authentication support.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection for method chaining.</returns>
+    /// <remarks>
+    /// Registers two security schemes:
+    /// <list type="bullet">
+    /// <item><description><b>ApiKey</b>: Authorization header-based authentication (Authorization: ApiKey {key})</description></item>
+    /// <item><description><b>Cookie</b>: Session cookie-based authentication (meepleai_session)</description></item>
+    /// </list>
+    /// Both schemes are applied globally, allowing clients to use either method.
+    /// </remarks>
     private static IServiceCollection AddSwaggerServices(this IServiceCollection services)
     {
         // API-01: OpenAPI/Swagger configuration
@@ -174,28 +187,31 @@ public static class ObservabilityServiceExtensions
             });
 
             // Apply security requirements globally
-            var apiKeySchemeReference = new OpenApiSecuritySchemeReference("ApiKey", null, null)
+            // Both schemes use empty scopes (API Key auth doesn't require OAuth2-style scopes)
+            var apiKeyScheme = new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReferenceWithDescription
+                Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
                     Id = "ApiKey"
                 }
             };
 
-            var cookieSchemeReference = new OpenApiSecuritySchemeReference("Cookie", null, null)
+            var cookieScheme = new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReferenceWithDescription
+                Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
                     Id = "Cookie"
                 }
             };
 
-            options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+            // Add both authentication schemes as global requirements
+            // Clients can use either API key (Authorization header) or session cookie
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
-                { apiKeySchemeReference, new List<string>() },
-                { cookieSchemeReference, new List<string>() }
+                { apiKeyScheme, Array.Empty<string>() },
+                { cookieScheme, Array.Empty<string>() }
             });
         });
 

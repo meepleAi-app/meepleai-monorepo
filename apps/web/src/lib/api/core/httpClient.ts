@@ -20,7 +20,7 @@ import {
   recordSuccess as recordCircuitSuccess,
   recordFailure as recordCircuitFailure,
 } from './circuitBreaker';
-import { globalRequestCache } from './requestCache';
+import { globalRequestCache, CacheKeyOptions } from './requestCache';
 
 export interface HttpClientConfig {
   baseUrl: string;
@@ -78,8 +78,12 @@ export class HttpClient {
       'GET',
       `${this.baseUrl}${path}`,
       undefined,
-      this.getAuthContext()
+      this.getAuthContext(),
+      this.getCacheKeyOptions(options)
     );
+
+    // Force skipDedup if custom onRetry callback is present
+    const skipDedup = options?.skipDedup ?? (options?.retry?.onRetry !== undefined) ?? false;
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -197,7 +201,7 @@ export class HttpClient {
 
         return result;
       },
-      options?.skipDedup ?? false // Default: deduplication enabled for GET
+      skipDedup // Deduplication disabled if custom onRetry callback or skipDedup is true
     );
   }
 
@@ -215,8 +219,12 @@ export class HttpClient {
       'POST',
       `${this.baseUrl}${path}`,
       body,
-      this.getAuthContext()
+      this.getAuthContext(),
+      this.getCacheKeyOptions(options)
     );
+
+    // Force skipDedup if custom onRetry callback is present
+    const skipDedup = options?.skipDedup ?? (options?.retry?.onRetry !== undefined) ?? true;
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -338,7 +346,7 @@ export class HttpClient {
 
         return result;
       },
-      options?.skipDedup ?? true // Default: deduplication disabled for POST
+      skipDedup // Deduplication disabled if custom onRetry callback or skipDedup is true
     );
   }
 
@@ -356,8 +364,12 @@ export class HttpClient {
       'PUT',
       `${this.baseUrl}${path}`,
       body,
-      this.getAuthContext()
+      this.getAuthContext(),
+      this.getCacheKeyOptions(options)
     );
+
+    // Force skipDedup if custom onRetry callback is present
+    const skipDedup = options?.skipDedup ?? (options?.retry?.onRetry !== undefined) ?? true;
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -466,7 +478,7 @@ export class HttpClient {
 
         return result;
       },
-      options?.skipDedup ?? true // Default: deduplication disabled for PUT
+      skipDedup // Deduplication disabled if custom onRetry callback or skipDedup is true
     );
   }
 
@@ -479,8 +491,12 @@ export class HttpClient {
       'DELETE',
       `${this.baseUrl}${path}`,
       undefined,
-      this.getAuthContext()
+      this.getAuthContext(),
+      this.getCacheKeyOptions(options)
     );
+
+    // Force skipDedup if custom onRetry callback is present
+    const skipDedup = options?.skipDedup ?? (options?.retry?.onRetry !== undefined) ?? true;
 
     // Use request cache for deduplication (wraps retry logic)
     return globalRequestCache.dedupe(
@@ -567,7 +583,7 @@ export class HttpClient {
           throw error;
         });
       },
-      options?.skipDedup ?? true // Default: deduplication disabled for DELETE
+      skipDedup // Deduplication disabled if custom onRetry callback or skipDedup is true
     );
   }
 
@@ -710,6 +726,56 @@ export class HttpClient {
   private getAuthContext(): string | undefined {
     const apiKey = getStoredApiKey();
     return apiKey ? `apikey:${apiKey}` : undefined;
+  }
+
+  /**
+   * Extract option-sensitive fields for cache key generation
+   * to prevent requests with different options from sharing cached promises.
+   *
+   * This method extracts only the fields from RequestOptions that affect
+   * request behavior (circuit breaker, retry logic) to include in the cache key.
+   *
+   * Special handling:
+   * - Empty options {} is treated as undefined (returns undefined)
+   * - Custom onRetry callbacks force deduplication to be disabled (returns undefined)
+   *   to ensure each request can use its own callback
+   *
+   * @param options - The request options to extract cache-sensitive fields from
+   * @returns CacheKeyOptions if any relevant fields are present, undefined otherwise
+   */
+  private getCacheKeyOptions(options?: RequestOptions): CacheKeyOptions | undefined {
+    if (!options) {
+      return undefined;
+    }
+
+    // If custom onRetry callback is present, disable deduplication
+    // to ensure each request can execute its own callback
+    if (options.retry?.onRetry) {
+      return undefined;
+    }
+
+    const cacheKeyOptions: CacheKeyOptions = {};
+    let hasOptions = false;
+
+    // Include circuit breaker flag
+    if (options.skipCircuitBreaker !== undefined) {
+      cacheKeyOptions.skipCircuitBreaker = options.skipCircuitBreaker;
+      hasOptions = true;
+    }
+
+    // Include retry configuration
+    if (options.retry) {
+      if (options.retry.skipRetry !== undefined) {
+        cacheKeyOptions.skipRetry = options.retry.skipRetry;
+        hasOptions = true;
+      }
+      if (options.retry.retryConfig) {
+        cacheKeyOptions.retryConfig = options.retry.retryConfig;
+        hasOptions = true;
+      }
+    }
+
+    return hasOptions ? cacheKeyOptions : undefined;
   }
 
   /**

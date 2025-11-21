@@ -1050,6 +1050,73 @@ describe('HttpClient', () => {
       expect(finalMetrics.misses).toBe(initialMisses + 1);
       expect(finalMetrics.hits).toBe(initialHits + 1);
     });
+
+    it('should NOT deduplicate requests with custom onRetry callback (Issue #1453)', async () => {
+      const responses = [
+        { ok: true, status: 200, json: async () => ({ data: 'result-A' }), headers: new Headers() },
+        { ok: true, status: 200, json: async () => ({ data: 'result-B' }), headers: new Headers() },
+      ];
+      let callIndex = 0;
+
+      mockFetch.mockImplementation(async () => {
+        const response = responses[callIndex % responses.length];
+        callIndex++;
+        return response;
+      });
+
+      const onRetryCallback = () => {
+        // No-op callback
+      };
+
+      // Execute two simultaneous GET requests with custom onRetry callback
+      const promises = [
+        client.get('/api/v1/users', undefined, {
+          retry: { onRetry: onRetryCallback },
+        }),
+        client.get('/api/v1/users', undefined, {
+          retry: { onRetry: onRetryCallback },
+        }),
+      ];
+
+      const results = await Promise.all(promises);
+
+      // Both requests should execute (not deduplicated) because of custom callback
+      expect(callIndex).toBe(2);
+      // Results should be different
+      const resultData = results.map(r => r.data).sort();
+      expect(resultData).toEqual(['result-A', 'result-B']);
+    });
+
+    it('should deduplicate requests without onRetry callback (Issue #1453)', async () => {
+      let callCount = 0;
+
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: `result-${callCount}` }),
+          headers: new Headers(),
+        };
+      });
+
+      // Execute two simultaneous GET requests WITHOUT custom onRetry callback
+      const promises = [
+        client.get('/api/v1/users', undefined, {
+          retry: { retryConfig: { maxAttempts: 3 } },
+        }),
+        client.get('/api/v1/users', undefined, {
+          retry: { retryConfig: { maxAttempts: 3 } },
+        }),
+      ];
+
+      const results = await Promise.all(promises);
+
+      // Only one request should execute (deduplicated)
+      expect(callCount).toBe(1);
+      expect(results[0]).toEqual({ data: 'result-1' });
+      expect(results[1]).toEqual({ data: 'result-1' });
+    });
   });
 });
 

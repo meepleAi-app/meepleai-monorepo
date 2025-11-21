@@ -259,8 +259,8 @@ PDF Upload → EnhancedPdfProcessingOrchestrator
 **Test Pyramid**:
 ```
            /\
-          /  \     E2E Tests (5%) - ~5min
-         /____\    User journey scenarios
+          /  \     E2E Tests (5%) - ~20min (sequential groups)
+         /____\    User journey scenarios (497 tests, 7 groups)
         /      \
        /________\  Quality Tests (5%) - ~15min
       /          \ 5-metric framework
@@ -319,7 +319,8 @@ dotnet test --filter "Category=Integration"
 dotnet test --filter "FullyQualifiedName~RagEvaluationIntegrationTests"
 
 # E2E Tests (5%)
-pnpm test:e2e               # User journey scenarios
+pnpm test:e2e               # User journey scenarios (497 tests, all groups)
+pnpm test:e2e:groups        # Sequential group execution (7 groups: Auth, Chat, Admin, PDF, API, Pages, A11y) - Prevents memory exhaustion
 
 # Performance Tests (k6)
 cd tests/k6
@@ -459,8 +460,8 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 ## CI/CD
 
 **GitHub Actions** (7 workflows optimized):
-- **`ci.yml`**: Main CI pipeline (~14min, 38% faster since 2025-11-09)
-  - Web: Lint → Typecheck → Unit Tests (90%+) → E2E Tests → Accessibility
+- **`ci.yml`**: Main CI pipeline (~25min optimized, E2E sequential groups to prevent memory exhaustion)
+  - Web: Lint → Typecheck → Unit Tests (90%+) → E2E Tests (7 groups: Auth, Chat, Admin, PDF, API, Pages, A11y) → Accessibility
   - API: Build → Unit & Integration Tests (90%+) → Quality Tests (RAG evaluation)
   - Validation: Schemas, Observability configs (Prometheus, Alertmanager, Grafana)
 - **`security-scan.yml`**: CodeQL (C#, JS/TS) + Dependency scanning + Semgrep + Secrets detection

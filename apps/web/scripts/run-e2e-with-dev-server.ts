@@ -23,7 +23,7 @@ async function waitForServer(url: string, timeoutMs = 120_000, intervalMs = 1_00
 
 async function run() {
   const nextArgs = [
-    '--max-old-space-size=6144',
+    '--max-old-space-size=8192',
     NEXT_BIN,
     'dev',
     '-p',

@@ -27,6 +27,15 @@ jest.mock('@/lib/api', () => ({
   },
 }));
 
+// Mock useConfirmDialog hook
+const mockConfirm = jest.fn().mockResolvedValue(true);
+jest.mock('@/hooks/useConfirmDialog', () => ({
+  useConfirmDialog: jest.fn(() => ({
+    confirm: mockConfirm,
+    ConfirmDialogComponent: () => null,
+  })),
+}));
+
 const mockApi = api as jest.Mocked<typeof api>;
 
 /**
@@ -64,11 +73,11 @@ describe('CommentThread Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockConfirm.mockResolvedValue(true); // Reset to default behavior
     (mockApi.chat.getRuleSpecComments as jest.Mock).mockResolvedValue({
       comments: [],
       total: 0,
     });
-    window.confirm = jest.fn(() => true);
   });
 
   /**
@@ -469,7 +478,7 @@ describe('CommentThread Component', () => {
    */
   describe('Deleting Comments', () => {
     it('prompts for confirmation before deleting', async () => {
-      window.confirm = jest.fn(() => false);
+      mockConfirm.mockResolvedValue(false);
       const comment = createMockComment({ userId: 'current-user' });
       (mockApi.chat.getRuleSpecComments as jest.Mock).mockResolvedValue({
         comments: [comment],
@@ -488,7 +497,7 @@ describe('CommentThread Component', () => {
     });
 
     it('calls deleteComment when confirmed', async () => {
-      window.confirm = jest.fn(() => true);
+      mockConfirm.mockResolvedValue(true);
       const comment = createMockComment({ userId: 'current-user' });
       (mockApi.chat.getRuleSpecComments as jest.Mock).mockResolvedValue({
         comments: [comment],
@@ -506,7 +515,7 @@ describe('CommentThread Component', () => {
     });
 
     it('does not delete when cancelled', async () => {
-      window.confirm = jest.fn(() => false);
+      mockConfirm.mockResolvedValue(false);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -519,7 +528,7 @@ describe('CommentThread Component', () => {
     });
 
     it('reloads comments after deleting', async () => {
-      window.confirm = jest.fn(() => true);
+      mockConfirm.mockResolvedValue(true);
       const comment = createMockComment({ userId: 'current-user' });
       (mockApi.chat.getRuleSpecComments as jest.Mock).mockResolvedValue({
         comments: [comment],
@@ -537,7 +546,7 @@ describe('CommentThread Component', () => {
     });
 
     it('displays error when delete fails', async () => {
-      window.confirm = jest.fn(() => true);
+      mockConfirm.mockResolvedValue(true);
       (mockApi.chat.deleteRuleSpecComment as jest.Mock).mockRejectedValue(new Error('Delete failed'));
       (mockApi.chat.getRuleSpecComments as jest.Mock).mockResolvedValue({
         comments: [],
@@ -552,7 +561,7 @@ describe('CommentThread Component', () => {
     });
 
     it('prevents delete when already submitting', async () => {
-      window.confirm = jest.fn(() => true);
+      mockConfirm.mockResolvedValue(true);
       const comment = createMockComment({ userId: 'current-user' });
       (mockApi.chat.getRuleSpecComments as jest.Mock).mockResolvedValue({
         comments: [comment],

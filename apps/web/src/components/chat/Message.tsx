@@ -21,6 +21,7 @@ import { FollowUpQuestions } from './FollowUpQuestions';
 import { CitationList } from '../citations'; // #859
 import type { PdfViewerModalProps } from '../pdf/PdfViewerModal'; // BGAI-074
 import { api } from '@/lib/api';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 const PdfViewerModal = dynamic<PdfViewerModalProps>(
   () => import('../pdf/PdfViewerModal').then(mod => mod.PdfViewerModal),
@@ -54,6 +55,9 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
 
+  // Issue #1435: Confirm dialog for delete action
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
+
   // CHAT-02: Handle follow-up question click
   const handleFollowUpClick = (question: string) => {
     setInputValue(question);
@@ -68,6 +72,21 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
   const handleCitationClick = (citation: Citation) => {
     setSelectedCitation(citation);
     setPdfViewerOpen(true);
+  };
+
+  // Issue #1435: Handle delete with confirmation
+  const handleDeleteWithConfirmation = async (messageId: string) => {
+    const confirmed = await confirm({
+      title: "Elimina messaggio",
+      message: "Sei sicuro di voler eliminare questo messaggio? Questa azione non può essere annullata.",
+      variant: "destructive",
+      confirmText: "Elimina",
+      cancelText: "Annulla",
+    });
+
+    if (confirmed) {
+      await deleteMessage(messageId);
+    }
   };
 
   return (
@@ -112,7 +131,7 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
               message={message}
               isUser={isUser}
               onEdit={startEditMessage}
-              onDelete={deleteMessage}
+              onDelete={handleDeleteWithConfirmation}
               isEditing={isEditing}
               isUpdating={isUpdating}
             />
@@ -182,6 +201,9 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
           {message.timestamp.toLocaleTimeString()}
         </div>
       )}
+
+      {/* Confirm dialog */}
+      <ConfirmDialogComponent />
     </li>
   );
 });

@@ -10,6 +10,7 @@ import React from 'react';
 import { useChatStoreWithSelectors, useCurrentChats, useActiveChat } from '@/store/chat';
 import { ThreadListItem } from './ThreadListItem';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 export function ChatHistory() {
   const chats = useCurrentChats();
@@ -17,6 +18,7 @@ export function ChatHistory() {
   const selectChat = useChatStoreWithSelectors.use.selectChat();
   const deleteChat = useChatStoreWithSelectors.use.deleteChat();
   const loading = useChatStoreWithSelectors.use.loading();
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
   const activeChatId = activeChat?.id ?? null;
 
@@ -24,8 +26,18 @@ export function ChatHistory() {
     void selectChat(chatId);
   };
 
-  const handleDeleteChat = (chatId: string) => {
-    void deleteChat(chatId);
+  const handleDeleteChat = async (chatId: string) => {
+    const confirmed = await confirm({
+      title: "Elimina chat",
+      message: "Sei sicuro di voler eliminare questa chat? Questa azione non può essere annullata.",
+      variant: "destructive",
+      confirmText: "Elimina",
+      cancelText: "Annulla",
+    });
+
+    if (confirmed) {
+      void deleteChat(chatId);
+    }
   };
 
   if (loading.chats) {
@@ -94,6 +106,9 @@ export function ChatHistory() {
           </ul>
         </div>
       )}
+
+      {/* Confirm dialog */}
+      <ConfirmDialogComponent />
     </nav>
   );
 }

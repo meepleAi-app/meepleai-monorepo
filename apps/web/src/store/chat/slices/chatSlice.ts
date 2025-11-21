@@ -109,7 +109,9 @@ export const createChatSlice: StateCreator<
     const { selectedGameId, setLoading, setError, activeChatIds } = get();
 
     if (!selectedGameId) return;
-    if (!confirm('Sei sicuro di voler eliminare questa chat?')) return;
+
+    // Note: Confirmation should be handled by the calling component
+    // using useConfirmDialog hook (Issue #1435)
 
     setLoading('deleting', true);
     setError(null);

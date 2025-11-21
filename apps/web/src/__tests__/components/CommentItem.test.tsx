@@ -1,5 +1,6 @@
 /**
  * CommentItem Component Tests
+ * Updated for Issue #1435 - Custom ConfirmDialog
  *
  * Tests for the CommentItem component that displays individual comments
  * with edit, delete, reply, and resolve/unresolve functionality.
@@ -11,6 +12,15 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CommentItem } from '../../components/comments/CommentItem';
 import { RuleSpecComment } from '@/lib/api';
+
+// Mock useConfirmDialog hook
+const mockConfirm = jest.fn().mockResolvedValue(true);
+jest.mock('@/hooks/useConfirmDialog', () => ({
+  useConfirmDialog: jest.fn(() => ({
+    confirm: mockConfirm,
+    ConfirmDialogComponent: () => null,
+  })),
+}));
 
 // Mock MentionInput component
 interface MockMentionInputProps {
@@ -77,7 +87,7 @@ describe('CommentItem Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    window.confirm = jest.fn(() => true);
+    mockConfirm.mockResolvedValue(true); // Reset to default behavior
     window.alert = jest.fn();
   });
 
@@ -411,12 +421,20 @@ describe('CommentItem Component', () => {
 
       fireEvent.click(screen.getByLabelText('Delete comment'));
 
-      expect(window.confirm).toHaveBeenCalledWith('Sei sicuro di voler eliminare questo commento?');
+      await waitFor(() => {
+        expect(mockConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: "Elimina commento",
+            message: expect.stringContaining("Sei sicuro"),
+            variant: "destructive",
+          })
+        );
+      });
     });
 
     it('calls onDelete when confirmed', async () => {
       const comment = createMockComment({ userId: 'current-user' });
-      window.confirm = jest.fn(() => true);
+      mockConfirm.mockResolvedValue(true);
       mockOnDelete.mockResolvedValue(undefined);
       render(<CommentItem {...defaultProps} comment={comment} />);
 
@@ -429,7 +447,7 @@ describe('CommentItem Component', () => {
 
     it('does not delete when cancelled', async () => {
       const comment = createMockComment({ userId: 'current-user' });
-      window.confirm = jest.fn(() => false);
+      mockConfirm.mockResolvedValue(false);
       render(<CommentItem {...defaultProps} comment={comment} />);
 
       fireEvent.click(screen.getByLabelText('Delete comment'));
@@ -441,7 +459,7 @@ describe('CommentItem Component', () => {
 
     it('shows alert on delete error', async () => {
       const comment = createMockComment({ userId: 'current-user' });
-      window.confirm = jest.fn(() => true);
+      mockConfirm.mockResolvedValue(true);
       mockOnDelete.mockRejectedValue(new Error('Delete failed'));
       render(<CommentItem {...defaultProps} comment={comment} />);
 

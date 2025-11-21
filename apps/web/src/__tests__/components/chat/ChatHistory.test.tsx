@@ -1,5 +1,6 @@
 /**
- * ChatHistory Component Tests (Updated for Issue #858)
+ * ChatHistory Component Tests
+ * Updated for Issue #858 and #1435 - Custom ConfirmDialog
  *
  * Tests for the ChatHistory component that displays a list of chat threads
  * with loading states, empty states, thread management, and active/archived separation.
@@ -13,6 +14,15 @@ import { ChatHistory } from '../../../components/chat/ChatHistory';
 import { ChatThread } from '../../../types';
 import { renderWithChatStore, resetChatStore, updateChatStoreState } from '@/__tests__/utils/zustand-test-utils';
 import { useChatStore } from '@/store/chat/store';
+
+// Mock useConfirmDialog hook
+const mockConfirm = jest.fn().mockResolvedValue(true);
+jest.mock('@/hooks/useConfirmDialog', () => ({
+  useConfirmDialog: jest.fn(() => ({
+    confirm: mockConfirm,
+    ConfirmDialogComponent: () => null,
+  })),
+}));
 
 /**
  * Helper to create mock chat thread object
@@ -33,19 +43,13 @@ const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
 describe('ChatHistory Component', () => {
   let mockSelectChat: jest.Mock;
   let mockDeleteChat: jest.Mock;
-  let originalConfirm: any;
 
   beforeEach(() => {
     mockSelectChat = jest.fn();
     mockDeleteChat = jest.fn();
-    originalConfirm = window.confirm;
-    window.confirm = jest.fn(() => true); // Default to confirming deletions
+    mockConfirm.mockResolvedValue(true); // Reset to default behavior
     jest.clearAllMocks();
     resetChatStore();
-  });
-
-  afterEach(() => {
-    window.confirm = originalConfirm;
   });
 
   /**
@@ -320,23 +324,23 @@ describe('ChatHistory Component', () => {
       const state = setupChatContext({ chats: [chat] });
       renderWithChatStore(<ChatHistory />, { initialState: state });
 
-      // Trigger delete action (implementation detail: via ChatHistoryItem)
-      // The confirmation prompt should be shown
-      expect(window.confirm).not.toHaveBeenCalled();
+      // Trigger delete action (implementation detail: via ThreadListItem)
+      // The confirmation prompt should be shown via useConfirmDialog
+      expect(mockConfirm).not.toHaveBeenCalled();
     });
 
     it('calls deleteChat when deletion is confirmed', () => {
-      window.confirm = jest.fn(() => true);
+      mockConfirm.mockResolvedValue(true);
       const chat = createMockChatThread({ id: 'chat-123' });
       const state = setupChatContext({ chats: [chat] });
       renderWithChatStore(<ChatHistory />, { initialState: state });
 
-      // Simulate delete action (via ChatHistoryItem delete button)
-      // This would require more complex setup with ChatHistoryItem rendering
+      // Simulate delete action (via ThreadListItem delete button)
+      // This would require more complex setup with ThreadListItem rendering
     });
 
     it('does not call deleteChat when deletion is cancelled', () => {
-      window.confirm = jest.fn(() => false);
+      mockConfirm.mockResolvedValue(false);
       const chat = createMockChatThread({ id: 'chat-1' });
       const state = setupChatContext({ chats: [chat] });
       renderWithChatStore(<ChatHistory />, { initialState: state });
@@ -346,17 +350,17 @@ describe('ChatHistory Component', () => {
     });
 
     it('displays correct confirmation message', () => {
-      window.confirm = jest.fn(() => false);
+      mockConfirm.mockResolvedValue(false);
       const chat = createMockChatThread({ id: 'chat-1' });
       const state = setupChatContext({ chats: [chat] });
       renderWithChatStore(<ChatHistory />, { initialState: state });
 
-      // Confirmation message checked in handler
+      // Confirmation message checked via useConfirmDialog hook
     });
 
     it('handles asynchronous deleteChat calls', async () => {
       mockDeleteChat.mockResolvedValue(undefined);
-      window.confirm = jest.fn(() => true);
+      mockConfirm.mockResolvedValue(true);
       const chat = createMockChatThread({ id: 'chat-1' });
       const state = setupChatContext({ chats: [chat] });
       renderWithChatStore(<ChatHistory />, { initialState: state });

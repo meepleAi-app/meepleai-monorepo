@@ -186,7 +186,8 @@ export const createMessagesSlice: StateCreator<
     const threadId = activeChatIds[selectedGameId];
     if (!threadId) return;
 
-    if (!confirm('Sei sicuro di voler eliminare questo messaggio?')) return;
+    // Note: Confirmation should be handled by the calling component
+    // using useConfirmDialog hook (Issue #1435)
 
     setLoading('deleting', true);
     setError(null);

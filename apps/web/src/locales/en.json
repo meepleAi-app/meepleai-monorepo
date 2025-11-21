@@ -8,7 +8,10 @@
     "skipToMain": "Skip to main content"
   },
   "admin": {
-    "analytics": "Analytics",
+    "analytics": {
+      "dashboard": "Analytics Dashboard",
+      "backToUsers": "Back to Users"
+    },
     "cache": "Cache",
     "configuration": "Configuration",
     "games": "Games",

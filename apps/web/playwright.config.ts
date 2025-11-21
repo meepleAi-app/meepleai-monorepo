@@ -19,7 +19,7 @@ export default defineConfig({
   fullyParallel: true, // Issue #843: Enable parallel for better CI performance
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0, // Reduce retries from 2 to 1 for faster feedback
-  workers: process.env.CI ? 8 : 4, // Issue #843: Increased from 4 to 8 workers in CI, 4 local for optimal speed
+  workers: process.env.CI ? 6 : 4, // Issue #843: Reduced from 8 to 6 workers in CI to prevent memory exhaustion (~6GB heap limit), 4 local for optimal speed
   reporter: process.env.CI ? 'dot' : 'html', // Concise output in CI, HTML report locally
   use: {
     baseURL,

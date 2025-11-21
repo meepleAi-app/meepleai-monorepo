@@ -125,14 +125,14 @@ export function AuthModal({
             role="alert"
           >
             <div className="flex">
-              <span className="text-yellow-600 dark:text-yellow-400 mr-2" aria-hidden="true">
+              <span className="text-yellow-700 dark:text-yellow-300 mr-2" aria-hidden="true">
                 ⚠️
               </span>
               <div>
-                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
                   {t('auth.login.sessionExpired')}
                 </p>
-                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                <p className="text-xs text-yellow-800 dark:text-yellow-200 mt-1">
                   {t('auth.login.sessionExpiredMessage')}
                 </p>
               </div>

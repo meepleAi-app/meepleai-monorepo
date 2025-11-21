@@ -35,6 +35,13 @@ export const CHAT_CONFIG = {
    * @default 3000
    */
   OPTIMISTIC_UPDATE_TIMEOUT_MS: 3000,
+
+  /**
+   * Maximum length for search result preview text
+   * Used to truncate long messages in search results
+   * @default 100
+   */
+  SEARCH_PREVIEW_MAX_LENGTH: 100,
 } as const;
 
 /**

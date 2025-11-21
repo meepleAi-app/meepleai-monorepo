@@ -15,6 +15,7 @@ import { Message } from '@/types';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { CHAT_CONFIG } from '@/config';
 
 export const createMessagesSlice: StateCreator<
   ChatStore,
@@ -97,7 +98,7 @@ export const createMessagesSlice: StateCreator<
       // Create thread if none exists
 
       if (!threadId) {
-        const autoTitle = content.trim().substring(0, 50) + (content.length > 50 ? '...' : '');
+        const autoTitle = content.trim().substring(0, CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH) + (content.length > CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH ? '...' : '');
         const newThread = await api.chat.createThread({
           gameId: selectedGameId,
           title: autoTitle,
@@ -137,7 +138,7 @@ export const createMessagesSlice: StateCreator<
       if (!isNewThread) {
         const messages = get().messagesByChat[threadId] ?? [];
         if (messages.length === 1) {
-          const autoTitle = content.trim().substring(0, 50) + (content.length > 50 ? '...' : '');
+          const autoTitle = content.trim().substring(0, CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH) + (content.length > CHAT_CONFIG.AUTO_TITLE_MAX_LENGTH ? '...' : '');
           updateChatTitle(threadId, autoTitle);
         }
       }

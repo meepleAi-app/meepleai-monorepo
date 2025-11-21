@@ -17,6 +17,7 @@ import type {
   AgentSearchResult,
 } from '@/types';
 import type { Game, Agent, Message, ChatThread } from '@/types';
+import { CHAT_CONFIG } from '@/config';
 
 /**
  * Search data sources
@@ -63,7 +64,7 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
     const result: MessageSearchResult = {
       id: message.id,
       type: 'message',
-      title: message.content.slice(0, 100),
+      title: message.content.slice(0, CHAT_CONFIG.SEARCH_PREVIEW_MAX_LENGTH),
       subtitle: message.role === 'user' ? 'You' : 'Assistant',
       timestamp: message.timestamp,
       message,

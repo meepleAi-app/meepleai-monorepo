@@ -3,6 +3,7 @@ using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -85,12 +86,9 @@ public class CitationValidationServiceTests : IDisposable
     public async Task Test01_ValidateCitations_AllValid_ReturnsValid()
     {
         // Arrange
-        var snippets = new List<Snippet>
-        {
-            new Snippet("text1", $"PDF:{_pdf1Id}", page: 1, line: 0, score: 0.9f),
-            new Snippet("text2", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.8f),
-            new Snippet("text3", $"PDF:{_pdf2Id}", page: 3, line: 0, score: 0.7f)
-        };
+        var snippets = TestDataFactory.CreateValidSnippets(_pdf1Id, count: 2)
+            .Concat(TestDataFactory.CreateValidSnippets(_pdf2Id, count: 1).Select(s => new Snippet(s.text, s.source, page: 3, s.line, score: 0.7f)))
+            .ToList();
 
         // Act
         var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
@@ -169,10 +167,7 @@ public class CitationValidationServiceTests : IDisposable
     public async Task Test05_ValidateCitations_PageZero_ReturnsInvalid()
     {
         // Arrange - Page 0 is invalid (pages start at 1)
-        var snippets = new List<Snippet>
-        {
-            new Snippet("text", $"PDF:{_pdf1Id}", page: 0, line: 0, score: 0.9f)
-        };
+        var snippets = TestDataFactory.CreateSnippetsWithInvalidPages(_pdf1Id).Take(1).ToList();
 
         // Act
         var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);

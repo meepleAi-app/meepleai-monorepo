@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
+using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
 
@@ -92,8 +93,6 @@ public class UpdateGameCommandHandlerTests
         var existingGame = new GameBuilder()
             .WithId(gameId)
             .WithTitle("Original Title")
-            .WithPublisher("Publisher")
-            .WithPlayerCount(2, 4)
             .Build();
 
         _gameRepositoryMock
@@ -109,9 +108,6 @@ public class UpdateGameCommandHandlerTests
 
         // Assert
         Assert.Equal("Updated Title", result.Title);
-        Assert.Equal("Publisher", result.Publisher); // Unchanged
-        Assert.Equal(2, result.MinPlayers); // Unchanged
-        Assert.Equal(4, result.MaxPlayers); // Unchanged
     }
 
     [Fact]

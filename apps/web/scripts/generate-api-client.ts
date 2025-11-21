@@ -2,13 +2,23 @@
 /**
  * Generate TypeScript types and Zod schemas from OpenAPI specification
  *
+ * Post-NSwag Migration (Issue #1543):
+ * This script now uses openapi-typescript-codegen for client generation
+ * instead of relying on NSwag MSBuild integration.
+ *
  * This script:
- * 1. Fetches the OpenAPI spec from the running API (or uses a static file)
- * 2. Generates TypeScript types using NSwag (called from backend build)
+ * 1. Fetches the OpenAPI spec from the running API (or uses committed static file)
+ * 2. Generates TypeScript client using openapi-typescript-codegen
  * 3. Generates Zod schemas using openapi-zod-client
  *
  * Usage:
  *   pnpm generate:api
+ *
+ * Note: The openapi.json file is committed to the repo (Option C - Hybrid).
+ * Regenerate it when API changes by:
+ *   1. Fix build errors (ActiveSession, EndpointFilter issues)
+ *   2. Run API: cd apps/api && dotnet run
+ *   3. Download spec: curl http://localhost:5080/swagger/v1/swagger.json -o apps/api/src/Api/openapi.json
  */
 
 import { generateZodClientFromOpenAPI } from 'openapi-zod-client';

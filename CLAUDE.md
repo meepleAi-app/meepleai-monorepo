@@ -117,16 +117,19 @@ docs/                Architecture, ADRs, guides
 - **Features**: Dark mode, A11y testing, auto-documentation
 - **Docs**: `apps/web/STORYBOOK.md`, `apps/web/.storybook/CHROMATIC.md`
 
-### TypeScript Code Generation (ADR-013, Issue #1450)
-- **NSwag + openapi-zod-client**: Automated TypeScript types and Zod schemas from OpenAPI spec
+### TypeScript Code Generation (ADR-013, ADR-014, Issue #1543)
+- **Runtime OpenAPI + openapi-zod-client**: Automated TypeScript types and Zod schemas from OpenAPI spec
 - **Zero Manual Sync**: Backend DTOs → OpenAPI → TypeScript/Zod (single source of truth)
 - **CI Validation**: Build fails if generated files out of sync
 - **Tools**:
-  - NSwag.MSBuild 14.2.0 (TypeScript client generation)
+  - Swashbuckle.AspNetCore 10.0.1 (runtime OpenAPI generation)
+  - Scalar.AspNetCore 2.11.0 (modern API documentation UI at `/scalar/v1`)
   - openapi-zod-client 1.18.3 (Zod schema generation)
-- **Usage**: `pnpm generate:api` (auto-generates from running API or openapi.json)
+- **Usage**: `pnpm generate:api` (uses committed openapi.json from apps/api/src/Api/)
 - **Output**: `apps/web/src/lib/api/generated/` (gitignored, regenerated on demand)
+- **OpenAPI Spec**: Committed to repo (Option C - Hybrid), regenerate when API changes
 - **Benefits**: Compile-time type safety, no drift between backend/frontend, faster development
+- **Note**: NSwag.MSBuild removed (Issue #1543) - incompatible with .NET 9 minimal APIs
 
 ### Performance (PERF-05 to PERF-11)
 - HybridCache L1+L2 (5min TTL)
@@ -433,6 +436,8 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **ADR Multi-Layer Validation** | `docs/01-architecture/adr/adr-006-multi-layer-validation.md` |
 | **ADR Cosine Similarity** | `docs/01-architecture/adr/adr-005-cosine-similarity-consensus.md` |
 | **ADR PDF Processing** | `docs/01-architecture/adr/adr-003b-unstructured-pdf.md` |
+| **ADR TypeScript Generation** | `docs/01-architecture/adr/adr-013-nswag-typescript-generation.md` |
+| **ADR NSwag Removal** | `docs/01-architecture/adr/adr-014-nswag-msbuild-removal.md` |
 | **Security** | `SECURITY.md`, `docs/06-security/code-scanning-remediation-summary.md` |
 | **OAuth Security** | `docs/06-security/oauth-security.md` |
 | **Testing** | `docs/02-development/testing/README.md`, `docs/02-development/testing/core/testing-guide.md` |

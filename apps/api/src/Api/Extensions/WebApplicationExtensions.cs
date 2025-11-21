@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Api.Middleware;
+using Scalar.AspNetCore;
 using Serilog;
 
 namespace Api.Extensions;
@@ -28,7 +29,7 @@ public static class WebApplicationExtensions
         // OPS-02: OpenTelemetry Prometheus metrics endpoint
         app.MapPrometheusScrapingEndpoint();
 
-        // API-01: Swagger UI (development only)
+        // API-01: Swagger UI and Scalar API Reference (development only)
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
@@ -37,6 +38,16 @@ public static class WebApplicationExtensions
                 options.SwaggerEndpoint("/swagger/v1/swagger.json", "MeepleAI API v1");
                 options.RoutePrefix = "api/docs"; // Swagger UI at /api/docs
                 options.DocumentTitle = "MeepleAI API Documentation";
+            });
+
+            // Issue #1543: Scalar - Modern OpenAPI documentation UI
+            // Access at /scalar/v1
+            app.MapScalarApiReference(options =>
+            {
+                options
+                    .WithTitle("MeepleAI API")
+                    .WithTheme(Scalar.AspNetCore.ScalarTheme.DeepSpace)
+                    .WithDefaultHttpClient(Scalar.AspNetCore.ScalarTarget.CSharp, Scalar.AspNetCore.ScalarClient.HttpClient);
             });
         }
 

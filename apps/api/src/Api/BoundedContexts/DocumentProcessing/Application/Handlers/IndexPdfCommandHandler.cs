@@ -36,11 +36,11 @@ public class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingR
         ILogger<IndexPdfCommandHandler> logger,
         TimeProvider? timeProvider = null)
     {
-        _db = db;
-        _chunkingService = chunkingService;
-        _embeddingService = embeddingService;
-        _qdrantService = qdrantService;
-        _logger = logger;
+        _db = db ?? throw new ArgumentNullException(nameof(db));
+        _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 

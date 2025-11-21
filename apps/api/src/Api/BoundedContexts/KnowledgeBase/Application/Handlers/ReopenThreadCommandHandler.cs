@@ -18,8 +18,8 @@ public class ReopenThreadCommandHandler : ICommandHandler<ReopenThreadCommand, C
         IChatThreadRepository threadRepository,
         IUnitOfWork unitOfWork)
     {
-        _threadRepository = threadRepository;
-        _unitOfWork = unitOfWork;
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<ChatThreadDto> Handle(ReopenThreadCommand command, CancellationToken cancellationToken)

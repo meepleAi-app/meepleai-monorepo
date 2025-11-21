@@ -17,6 +17,11 @@ indent_size = 4
 
 # Code quality - Production code (strict enforcement)
 [src/**/*.cs]
+# CA1062: Validate arguments of public methods (ERROR - enforces null-coalescing validation in constructors)
+# Prevents NullReferenceException and ensures Moq compatibility for testing
+# Pattern: _field = param ?? throw new ArgumentNullException(nameof(param));
+dotnet_diagnostic.CA1062.severity = error
+
 # CA2000: Dispose objects before losing scope (ERROR in production)
 dotnet_diagnostic.CA2000.severity = error
 

@@ -25,10 +25,10 @@ public class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageCommand,
         ILogger<UpdateMessageCommandHandler> logger,
         AuditService auditService)
     {
-        _threadRepository = threadRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-        _auditService = auditService;
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
     }
 
     public async Task<ChatThreadDto> Handle(UpdateMessageCommand request, CancellationToken cancellationToken)

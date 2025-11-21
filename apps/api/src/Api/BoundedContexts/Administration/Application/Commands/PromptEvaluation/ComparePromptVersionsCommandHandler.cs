@@ -17,8 +17,8 @@ public sealed class ComparePromptVersionsCommandHandler : ICommandHandler<Compar
         IPromptEvaluationService evaluationService,
         ILogger<ComparePromptVersionsCommandHandler> logger)
     {
-        _evaluationService = evaluationService;
-        _logger = logger;
+        _evaluationService = evaluationService ?? throw new ArgumentNullException(nameof(evaluationService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<PromptComparisonResult> Handle(ComparePromptVersionsCommand command, CancellationToken cancellationToken)

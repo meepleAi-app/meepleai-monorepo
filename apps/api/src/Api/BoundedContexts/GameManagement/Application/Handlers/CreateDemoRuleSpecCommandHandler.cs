@@ -18,8 +18,8 @@ public class CreateDemoRuleSpecCommandHandler : ICommandHandler<CreateDemoRuleSp
 
     public CreateDemoRuleSpecCommandHandler(MeepleAiDbContext dbContext, TimeProvider timeProvider)
     {
-        _dbContext = dbContext;
-        _timeProvider = timeProvider;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<RuleSpecDto> Handle(CreateDemoRuleSpecCommand command, CancellationToken cancellationToken)

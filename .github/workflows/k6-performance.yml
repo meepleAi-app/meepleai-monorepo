@@ -2,7 +2,7 @@ name: K6 Performance Tests
 
 on:
   schedule:
-    # Run nightly at 2 AM UTC
+    # Run nightly at 2 AM UTC (only on main branch)
     - cron: '0 2 * * *'
 
   workflow_dispatch:

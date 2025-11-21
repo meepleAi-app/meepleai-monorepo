@@ -6,6 +6,8 @@ import { api, CacheStats } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 type Game = {
   id: string;
@@ -61,7 +63,11 @@ export default function CacheDashboard() {
         setGames(gamesData);
       }
     } catch (err) {
-      console.error("Failed to fetch games:", err);
+      logger.error(
+        'Failed to fetch games for cache dashboard',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('CacheDashboard', 'fetchGames', { operation: 'load_games' })
+      );
       // Non-critical error, don't block the page
     }
   }, []);

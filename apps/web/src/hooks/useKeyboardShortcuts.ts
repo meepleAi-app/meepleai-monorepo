@@ -11,6 +11,8 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation'; // App Router
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 /**
  * Keyboard shortcut definition
@@ -197,7 +199,15 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[], enabled = tr
           try {
             shortcut.action();
           } catch (error) {
-            console.error('Error executing keyboard shortcut:', error);
+            logger.error(
+              'Error executing keyboard shortcut',
+              error instanceof Error ? error : new Error(String(error)),
+              createErrorContext('useKeyboardShortcuts', 'executeShortcut', {
+                key: shortcut.key,
+                description: shortcut.description,
+                category: shortcut.category,
+              })
+            );
           }
 
           break; // Only execute first matching shortcut

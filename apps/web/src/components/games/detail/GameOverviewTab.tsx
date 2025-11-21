@@ -13,6 +13,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Users, Clock, Calendar, Star, TrendingUp, ExternalLink } from 'lucide-react';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface GameOverviewTabProps {
   game: Game;
@@ -36,7 +38,11 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
         setBggDetails(details);
       } catch (err) {
         setError('Failed to load BoardGameGeek details');
-        console.error('BGG fetch error:', err);
+        logger.error(
+          'BGG fetch error',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('GameOverviewTab', 'fetchBggDetails', { bggId: game.bggId })
+        );
       } finally {
         setLoading(false);
       }

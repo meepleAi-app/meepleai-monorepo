@@ -13,6 +13,8 @@ import { ThemeProvider } from 'next-themes';
 import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { Toaster } from '@/components/ui/sonner';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 import { SessionWarningModal } from '@/components/modals';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
@@ -64,7 +66,11 @@ function AppContent({ children }: { children: ReactNode }) {
       await api.auth.extendSession();
       // Session extended - modal will close automatically when isNearExpiry becomes false
     } catch (error) {
-      console.error('Failed to extend session:', error);
+      logger.error(
+        'Failed to extend session',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('AppProviders', 'handleStayLoggedIn', { operation: 'extend_session' })
+      );
       // Redirect to login on error
       window.location.href = '/login?reason=session_expired';
     }

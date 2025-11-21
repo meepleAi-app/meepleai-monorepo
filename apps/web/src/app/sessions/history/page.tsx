@@ -33,6 +33,8 @@ import {
 } from '@/components/ui/table';
 import { ErrorDisplay } from '@/components/errors';
 import { categorizeError } from '@/lib/errorUtils';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 /**
  * Session status badge component
@@ -205,7 +207,11 @@ export default function SessionHistoryPage() {
       const response = await api.games.getAll();
       setGames(response.games || []);
     } catch (err) {
-      console.error('Failed to load games:', err);
+      logger.error(
+        'Failed to load games for session history',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SessionHistoryPage', 'fetchGames', { operation: 'fetch_games' })
+      );
     }
   };
 

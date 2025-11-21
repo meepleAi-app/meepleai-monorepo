@@ -20,6 +20,8 @@
 import { ReactNode, useMemo } from 'react';
 import { IntlProvider as ReactIntlProvider } from 'react-intl';
 import { DEFAULT_LOCALE, type Locale, getMessages, flattenMessages } from '@/locales';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface IntlProviderProps {
   children: ReactNode;
@@ -87,7 +89,11 @@ export function IntlProvider({ children, locale }: IntlProviderProps) {
           if (err.code === 'MISSING_TRANSLATION') {
             console.warn('Missing translation:', err.message);
           } else {
-            console.error('Intl error:', err);
+            logger.error(
+              'Intl error',
+              err instanceof Error ? err : new Error(String(err)),
+              createErrorContext('IntlProvider', 'onError', { locale: currentLocale, errorCode: err.code })
+            );
           }
         }
       }}

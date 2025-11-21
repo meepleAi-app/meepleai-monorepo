@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // Type definitions
 type AuthUser = {
@@ -232,7 +234,11 @@ export default function SetupPage() {
         setSelectedGameId(gamesList[0].id);
       }
     } catch (err) {
-      console.error("Error loading games:", err);
+      logger.error(
+        'Failed to load games for setup',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SetupPage', 'loadGames', { operation: 'load_games' })
+      );
       setErrorMessage("Error loading games.");
       setGames([]);
     } finally {
@@ -263,7 +269,11 @@ export default function SetupPage() {
         setSetupGuide(guide);
       }
     } catch (err) {
-      console.error("Error loading setup guide:", err);
+      logger.error(
+        'Failed to load setup guide',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SetupPage', 'loadSetupGuide', { gameId: selectedGameId, operation: 'load_setup_guide' })
+      );
       setErrorMessage("Error generating setup guide. Please try again.");
     } finally {
       setIsLoadingGuide(false);

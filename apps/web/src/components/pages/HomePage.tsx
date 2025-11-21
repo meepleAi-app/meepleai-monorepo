@@ -22,6 +22,8 @@ import { Card } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "@/hooks/useTranslation";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // Lazy load below-fold sections
 const FeaturesSection = dynamic(() => import("@/components/landing/FeaturesSection"), {
@@ -48,12 +50,16 @@ export default function HomePage() {
 
   // Handler for "Try Demo" button - uses demo login endpoint
   const handleTryDemo = async () => {
+    const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL || "user@meepleai.dev";
     try {
-      const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL || "user@meepleai.dev";
       await demoLogin({ email: demoEmail });
       router.push("/chat");
     } catch (error) {
-      console.error("Demo login failed:", error);
+      logger.error(
+        'Demo login failed',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('HomePage', 'handleTryDemo', { demoEmail })
+      );
       // Optionally show an error toast/notification
     }
   };

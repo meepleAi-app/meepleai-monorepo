@@ -13,6 +13,8 @@ import { StateCreator } from 'zustand';
 import { ChatStore, MessagesSlice } from '../types';
 import { Message } from '@/types';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 export const createMessagesSlice: StateCreator<
   ChatStore,
@@ -56,7 +58,11 @@ export const createMessagesSlice: StateCreator<
         });
       }
     } catch (err) {
-      console.error('Failed to load messages:', err);
+      logger.error(
+        'Failed to load messages',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('MessagesSlice', 'loadMessages', { threadId })
+      );
       setError('Errore nel caricamento dei messaggi');
       set((state) => {
         state.messagesByChat[threadId] = [];
@@ -144,7 +150,15 @@ export const createMessagesSlice: StateCreator<
       });
 
     } catch (err) {
-      console.error('Failed to send message:', err);
+      logger.error(
+        'Failed to send message',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('MessagesSlice', 'sendMessage', {
+          selectedGameId,
+          selectedAgentId,
+          contentLength: content.trim().length
+        })
+      );
       setError("Errore nell'invio del messaggio");
 
       // Rollback optimistic update
@@ -175,7 +189,11 @@ export const createMessagesSlice: StateCreator<
       await api.chat.updateMessage(threadId, messageId, content.trim());
       await loadMessages(threadId);
     } catch (err) {
-      console.error('Failed to edit message:', err);
+      logger.error(
+        'Failed to edit message',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('MessagesSlice', 'editMessage', { threadId, messageId })
+      );
       setError("Errore nell'aggiornamento del messaggio");
     } finally {
       setLoading('updating', false);
@@ -200,7 +218,11 @@ export const createMessagesSlice: StateCreator<
       await api.chat.deleteMessage(threadId, messageId);
       await loadMessages(threadId);
     } catch (err) {
-      console.error('Failed to delete message:', err);
+      logger.error(
+        'Failed to delete message',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('MessagesSlice', 'deleteMessage', { threadId, messageId })
+      );
       setError("Errore nell'eliminazione del messaggio");
     } finally {
       setLoading('deleting', false);
@@ -245,7 +267,15 @@ export const createMessagesSlice: StateCreator<
         });
       }
     } catch (err) {
-      console.error('Failed to set feedback:', err);
+      logger.error(
+        'Failed to set feedback',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('MessagesSlice', 'setMessageFeedback', {
+          threadId,
+          messageId,
+          feedback: nextFeedback
+        })
+      );
 
       // Revert optimistic update
       set((state) => {

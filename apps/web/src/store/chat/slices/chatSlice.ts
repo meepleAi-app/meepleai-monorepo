@@ -12,6 +12,8 @@
 import { StateCreator } from 'zustand';
 import { ChatStore, ChatSlice } from '../types';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 const MAX_THREADS_PER_GAME = 5;
 
@@ -41,7 +43,11 @@ export const createChatSlice: StateCreator<
         state.chatsByGame[gameId] = chatThreads ?? [];
       });
     } catch (err) {
-      console.error('Failed to load chat threads:', err);
+      logger.error(
+        'Failed to load chat threads',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('ChatSlice', 'loadChats', { gameId })
+      );
       setError('Errore nel caricamento delle chat');
       set((state) => {
         state.chatsByGame[gameId] = [];
@@ -100,13 +106,21 @@ export const createChatSlice: StateCreator<
               await api.chat.closeThread(toArchive.id);
               await get().loadChats(selectedGameId);
             } catch (archiveErr) {
-              console.error('Failed to auto-archive thread:', archiveErr);
+              logger.error(
+                'Failed to auto-archive thread',
+                archiveErr instanceof Error ? archiveErr : new Error(String(archiveErr)),
+                createErrorContext('ChatSlice', 'createChat.autoArchive', { threadId: toArchive.id, gameId: selectedGameId })
+              );
             }
           }
         }
       }
     } catch (err) {
-      console.error('Failed to create chat thread:', err);
+      logger.error(
+        'Failed to create chat thread',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('ChatSlice', 'createChat', { gameId: selectedGameId, agentId: selectedAgentId })
+      );
       setError('Errore nella creazione della chat');
     } finally {
       setLoading('creating', false);
@@ -138,7 +152,11 @@ export const createChatSlice: StateCreator<
         delete state.messagesByChat[chatId];
       });
     } catch (err) {
-      console.error('Failed to delete chat:', err);
+      logger.error(
+        'Failed to delete chat',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('ChatSlice', 'deleteChat', { chatId, gameId: selectedGameId })
+      );
       setError("Errore nell'eliminazione della chat");
     } finally {
       setLoading('deleting', false);

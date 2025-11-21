@@ -13,6 +13,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Users, Clock, Calendar, Star, TrendingUp, ExternalLink, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface GameDetailModalProps {
   game: Game | null;
@@ -40,7 +42,11 @@ export function GameDetailModal({ game, open, onOpenChange }: GameDetailModalPro
         setBggDetails(details);
       } catch (err) {
         setError('Failed to load BGG details');
-        console.error('BGG fetch error:', err);
+        logger.error(
+          'BGG fetch error',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('GameDetailModal', 'fetchBggDetails', { bggId: game.bggId })
+        );
       } finally {
         setLoading(false);
       }

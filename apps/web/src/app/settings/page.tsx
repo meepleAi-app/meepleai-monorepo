@@ -38,6 +38,8 @@ import {
 } from '@/lib/api';
 import { hasStoredApiKey } from '@/lib/api/core/apiKeyStore';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // OAuth provider configuration
 const OAUTH_PROVIDERS = [
@@ -133,7 +135,11 @@ export default function SettingsPage() {
       setEmail(user.Email);
       setError(null);
     } catch (err) {
-      console.error('Failed to load profile:', err);
+      logger.error(
+        'Failed to load profile',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'loadProfile', { operation: 'fetch_profile' })
+      );
       setError('Failed to load profile');
     } finally {
       setLoading(false);
@@ -145,7 +151,11 @@ export default function SettingsPage() {
       const status = await api.auth.getTwoFactorStatus();
       setTwoFactorStatus(status);
     } catch (err) {
-      console.error('Failed to load 2FA status:', err);
+      logger.error(
+        'Failed to load 2FA status',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'load2FAStatus', { operation: 'fetch_2fa_status' })
+      );
     }
   };
 
@@ -161,7 +171,11 @@ export default function SettingsPage() {
         setLinkedAccounts(accounts);
       }
     } catch (error) {
-      console.error('Failed to load OAuth accounts:', error);
+      logger.error(
+        'Failed to load OAuth accounts',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('SettingsPage', 'loadOAuthAccounts', { operation: 'fetch_oauth_accounts' })
+      );
     }
   };
 
@@ -223,7 +237,11 @@ export default function SettingsPage() {
       setShowBackupCodes(true);
       setError(null);
     } catch (err) {
-      console.error('Failed to setup 2FA:', err);
+      logger.error(
+        'Failed to setup 2FA',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'handleSetup2FA', { operation: 'setup_2fa' })
+      );
       setError('Failed to setup 2FA');
     } finally {
       setLoading(false);
@@ -240,7 +258,11 @@ export default function SettingsPage() {
       setVerificationCode('');
       await load2FAStatus();
     } catch (err) {
-      console.error('Failed to enable 2FA:', err);
+      logger.error(
+        'Failed to enable 2FA',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'handleEnable2FA', { operation: 'enable_2fa' })
+      );
       setError('Invalid verification code. Please try again.');
     } finally {
       setLoading(false);
@@ -260,7 +282,11 @@ export default function SettingsPage() {
       setDisableCode('');
       await load2FAStatus();
     } catch (err) {
-      console.error('Failed to disable 2FA:', err);
+      logger.error(
+        'Failed to disable 2FA',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'handleDisable2FA', { operation: 'disable_2fa' })
+      );
       setError('Failed to disable 2FA. Check your password and code.');
     } finally {
       setLoading(false);
@@ -307,7 +333,11 @@ export default function SettingsPage() {
         setError('Failed to unlink account. Please try again.');
       }
     } catch (error) {
-      console.error('Unlink error:', error);
+      logger.error(
+        'Failed to unlink OAuth account',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('SettingsPage', 'handleUnlinkOAuth', { provider, operation: 'unlink_oauth' })
+      );
       setError('Failed to unlink account.');
     } finally {
       setUnlinking(null);
@@ -334,7 +364,11 @@ export default function SettingsPage() {
       setApiKeyInput(''); // Clear input for security
       setSuccess('API key stored for this browser session.');
     } catch (error) {
-      console.error('API key login error:', error);
+      logger.error(
+        'API key login failed',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('SettingsPage', 'handleApiKeyLogin', { operation: 'api_key_login' })
+      );
       setError(getErrorMessage(error, 'Failed to authenticate with API key'));
       setApiKeyAuthenticated(false);
     } finally {
@@ -355,7 +389,11 @@ export default function SettingsPage() {
       setApiKeyAuthenticated(false);
       setSuccess('API key removed from this session');
     } catch (error) {
-      console.error('API key logout error:', error);
+      logger.error(
+        'API key logout failed',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('SettingsPage', 'handleApiKeyLogout', { operation: 'api_key_logout' })
+      );
       setError(getErrorMessage(error, 'Failed to remove API key authentication'));
     } finally {
       setApiKeyLoading(false);
@@ -369,7 +407,11 @@ export default function SettingsPage() {
       const userSessions = await api.auth.getUserSessions();
       setSessions(userSessions);
     } catch (error) {
-      console.error('Failed to load user sessions:', error);
+      logger.error(
+        'Failed to load user sessions',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('SettingsPage', 'loadUserSessions', { operation: 'fetch_sessions' })
+      );
     } finally {
       setSessionsLoading(false);
     }
@@ -390,7 +432,11 @@ export default function SettingsPage() {
       // Reload sessions list
       await loadUserSessions();
     } catch (error) {
-      console.error('Failed to revoke session:', error);
+      logger.error(
+        'Failed to revoke session',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('SettingsPage', 'handleRevokeSession', { sessionId, operation: 'revoke_session' })
+      );
       setError(getErrorMessage(error, 'Failed to revoke session'));
     } finally {
       setRevokingSessionId(null);

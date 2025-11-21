@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 export interface PdfDocument {
   id: string;
@@ -47,7 +49,15 @@ export function usePdfs(gameId: string | null) {
       });
 
       if (!response.ok) {
-        console.error('Failed to load PDFs:', response.statusText);
+        logger.error(
+          'Failed to load PDFs',
+          new Error(`HTTP ${response.status}: ${response.statusText}`),
+          createErrorContext('usePdfs', 'fetchPdfs', {
+            gameId,
+            status: response.status,
+            statusText: response.statusText,
+          })
+        );
         setError('Unable to load uploaded PDFs. Please try again.');
         return;
       }
@@ -55,7 +65,11 @@ export function usePdfs(gameId: string | null) {
       const data: PdfListResponse = await response.json();
       setPdfs(data.pdfs ?? []);
     } catch (err) {
-      console.error('Failed to load PDFs:', err);
+      logger.error(
+        'Failed to load PDFs',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('usePdfs', 'fetchPdfs', { gameId })
+      );
       setError('Unable to load uploaded PDFs. Please try again.');
     } finally {
       setLoading(false);

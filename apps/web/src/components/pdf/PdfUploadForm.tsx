@@ -10,6 +10,8 @@ import { LoadingButton } from '@/components/loading';
 import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
 import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';
 import { ApiError } from '@/lib/api';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // Dynamic import to prevent SSR issues with react-pdf
 const PdfPreview = dynamic(() => import('./PdfPreview').then(mod => ({ default: mod.PdfPreview })), {
@@ -132,7 +134,11 @@ export function PdfUploadForm({
         setValidationErrors({});
       }
     } catch (error) {
-      console.error('Validation error:', error);
+      logger.error(
+        'Validation error',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('PdfUploadForm', 'handleFileChange', { fileName: selectedFile.name })
+      );
       setValidationErrors({ general: 'Failed to validate file. Please try again.' });
       setFile(null);
       e.target.value = '';

@@ -16,6 +16,8 @@ import { useRouter } from 'next/navigation'; // App Router
 import { api } from '@/lib/api';
 import { AuthUser } from '@/types/auth';
 import { isApiError } from '@/types/api';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // ============================================================================
 // Types
@@ -201,7 +203,11 @@ export function useAuth(): UseAuthReturn {
       setUser(null);
       await router.push('/');
     } catch (err) {
-      console.error('Logout error:', err);
+      logger.error(
+        'Logout error',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('useAuth', 'logout')
+      );
       // Clear user state even if API call fails
       setUser(null);
       await router.push('/');

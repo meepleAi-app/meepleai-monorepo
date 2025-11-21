@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { api, type UserSearchResult } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface MentionInputProps {
   value: string;
@@ -164,7 +166,11 @@ export function MentionInput({
         );
         setSearchResults(results || []);
       } catch (error) {
-        console.error("Failed to search users:", error);
+        logger.error(
+          'Failed to search users',
+          error instanceof Error ? error : new Error(String(error)),
+          createErrorContext('MentionInput', 'searchUsers', { query: debouncedQuery })
+        );
         setSearchResults([]);
       } finally {
         setIsSearching(false);

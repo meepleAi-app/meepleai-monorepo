@@ -15,6 +15,8 @@ import React, { createContext, useContext, useCallback, useMemo, PropsWithChildr
 import { AuthUser } from '@/types';
 import { loginAction, registerAction, logoutAction } from '@/actions/auth';
 import { useCurrentUser, useQueryClient } from '@/hooks/queries';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // ============================================================================
 // Types
@@ -75,7 +77,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       return result.user;
     } catch (err) {
-      console.error('Login failed:', err);
+      logger.error(
+        'Login failed',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('AuthProvider', 'login', { email })
+      );
       throw err;
     }
   }, [queryClient]);
@@ -103,7 +109,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       return result.user;
     } catch (err) {
-      console.error('Registration failed:', err);
+      logger.error(
+        'Registration failed',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('AuthProvider', 'register', { email: data.email })
+      );
       throw err;
     }
   }, [queryClient]);
@@ -112,7 +122,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       await logoutAction();
     } catch (err) {
-      console.error('Logout failed:', err);
+      logger.error(
+        'Logout failed',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('AuthProvider', 'logout', {})
+      );
     } finally {
       // Issue #1079: Clear user cache on logout
       queryClient.setQueryData(['user', 'current'], null);

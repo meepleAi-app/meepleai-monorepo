@@ -17,6 +17,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { ErrorDisplay } from './ErrorDisplay';
 import { categorizeError } from '@/lib/errorUtils';
 import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface RouteErrorBoundaryProps {
   /**
@@ -60,7 +61,11 @@ export function RouteErrorBoundary({
     // Log to console in development
     if (process.env.NODE_ENV === 'development') {
       logger.error(`Route error in ${routeName || 'unknown route'}`, error);
-      console.error('Component stack:', errorInfo.componentStack);
+      logger.error(
+        'Component stack',
+        new Error(errorInfo.componentStack || 'No component stack'),
+        createErrorContext('RouteErrorBoundary', 'handleError', { routeName: routeName || 'unknown route', componentStack: errorInfo.componentStack })
+      );
     }
 
     // Call custom error handler if provided

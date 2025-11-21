@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Game, GameFilters, GameSortOptions, PaginatedGamesResponse, api } from '@/lib/api';
 import { GameSearchBar } from '@/components/games/GameSearchBar';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 import { GameFilterPanel } from '@/components/games/GameFilterPanel';
 import { GameSortControl } from '@/components/games/GameSortControl';
 import { GameList } from '@/components/games/GameList';
@@ -55,7 +57,11 @@ export default function GamesPage() {
         setViewMode(savedViewMode as ViewMode);
       }
     } catch (err) {
-      console.error('Failed to load saved preferences:', err);
+      logger.error(
+        'Failed to load saved game preferences',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('GamesPage', 'loadPreferences', { operation: 'load_preferences' })
+      );
     }
   }, []);
 
@@ -92,7 +98,11 @@ export default function GamesPage() {
         }
 
         if (isActive) {
-          console.error('Failed to fetch games:', err);
+          logger.error(
+            'Failed to fetch games',
+            err instanceof Error ? err : new Error(String(err)),
+            createErrorContext('GamesPage', 'fetchGames', { filters, sortOptions, page: currentPage, operation: 'fetch_games' })
+          );
           setError('Failed to load games. Please try again.');
         }
       } finally {
@@ -116,7 +126,11 @@ export default function GamesPage() {
     try {
       localStorage.setItem(STORAGE_KEYS.FILTERS, JSON.stringify(filters));
     } catch (err) {
-      console.error('Failed to save filters:', err);
+      logger.error(
+        'Failed to save game filters',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('GamesPage', 'saveFilters', { operation: 'save_filters' })
+      );
     }
   }, [filters]);
 
@@ -128,7 +142,11 @@ export default function GamesPage() {
         localStorage.removeItem(STORAGE_KEYS.SORT);
       }
     } catch (err) {
-      console.error('Failed to save sort options:', err);
+      logger.error(
+        'Failed to save sort options',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('GamesPage', 'saveSortOptions', { operation: 'save_sort_options' })
+      );
     }
   }, [sortOptions]);
 
@@ -136,7 +154,11 @@ export default function GamesPage() {
     try {
       localStorage.setItem(STORAGE_KEYS.VIEW_MODE, viewMode);
     } catch (err) {
-      console.error('Failed to save view mode:', err);
+      logger.error(
+        'Failed to save view mode',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('GamesPage', 'saveViewMode', { operation: 'save_view_mode' })
+      );
     }
   }, [viewMode]);
 

@@ -12,6 +12,8 @@
 import { StateCreator } from 'zustand';
 import { ChatStore, GameSlice } from '../types';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 export const createGameSlice: StateCreator<
   ChatStore,
@@ -49,7 +51,11 @@ export const createGameSlice: StateCreator<
         state.games = response ?? [];
       });
     } catch (err) {
-      console.error('Failed to load games:', err);
+      logger.error(
+        'Failed to load games',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('GameSlice', 'loadGames', {})
+      );
       setError('Errore nel caricamento dei giochi');
       set((state) => {
         state.games = [];
@@ -72,7 +78,11 @@ export const createGameSlice: StateCreator<
         state.agents = response ?? [];
       });
     } catch (err) {
-      console.error('Failed to load agents:', err);
+      logger.error(
+        'Failed to load agents',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('GameSlice', 'loadAgents', {})
+      );
       setError('Errore nel caricamento degli agenti');
       set((state) => {
         state.agents = [];

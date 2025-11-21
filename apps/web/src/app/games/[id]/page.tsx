@@ -20,6 +20,8 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Game, BggGameDetails, GameSessionDto, api } from '@/lib/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -78,7 +80,11 @@ export default function GameDetailPage() {
         setGame(gameData);
       } catch (err) {
         setError('Failed to load game');
-        console.error('Game fetch error:', err);
+        logger.error(
+          'Failed to load game details',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('GameDetailPage', 'loadGame', { gameId, operation: 'fetch_game' })
+        );
       } finally {
         setLoading(false);
       }
@@ -102,7 +108,11 @@ export default function GameDetailPage() {
         setBggDetails(details);
       } catch (err) {
         setBggError('Failed to load BGG details');
-        console.error('BGG fetch error:', err);
+        logger.error(
+          'Failed to load BGG details',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('GameDetailPage', 'loadBggDetails', { bggId: game.bggId, operation: 'fetch_bgg_details' })
+        );
       } finally {
         setBggLoading(false);
       }
@@ -124,7 +134,11 @@ export default function GameDetailPage() {
         });
         setSessions(response.sessions);
       } catch (err) {
-        console.error('Sessions fetch error:', err);
+        logger.error(
+          'Failed to load game sessions',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('GameDetailPage', 'loadSessions', { gameId, operation: 'fetch_sessions' })
+        );
         setSessions([]);
       } finally {
         setSessionsLoading(false);
@@ -145,7 +159,11 @@ export default function GameDetailPage() {
         setNotes(allNotes[gameId] || '');
       }
     } catch (err) {
-      console.error('Failed to load notes:', err);
+      logger.error(
+        'Failed to load game notes',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('GameDetailPage', 'loadNotes', { gameId, operation: 'load_notes' })
+      );
     }
   }, [gameId]);
 
@@ -160,7 +178,11 @@ export default function GameDetailPage() {
       localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(allNotes));
       alert('Notes saved successfully!');
     } catch (err) {
-      console.error('Failed to save notes:', err);
+      logger.error(
+        'Failed to save game notes',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('GameDetailPage', 'handleSaveNotes', { gameId, operation: 'save_notes' })
+      );
       alert('Failed to save notes');
     }
   };

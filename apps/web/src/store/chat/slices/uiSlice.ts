@@ -13,6 +13,8 @@
 
 import { StateCreator } from 'zustand';
 import { ChatStore, UISlice } from '../types';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 export const createUISlice: StateCreator<
   ChatStore,
@@ -92,7 +94,11 @@ export const createUISlice: StateCreator<
         state.editContent = '';
       });
     } catch (err) {
-      console.error('Failed to save edit:', err);
+      logger.error(
+        'Failed to save edit',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('UiSlice', 'saveEdit', { messageId: editingMessageId })
+      );
       throw err;
     }
   },

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 interface CommentFormProps {
   onSubmit: (commentText: string, atomId: string | null) => Promise<void>;
@@ -29,7 +31,11 @@ export function CommentForm({
       await onSubmit(commentText, atomId);
       setCommentText("");
     } catch (error) {
-      console.error("Failed to create comment:", error);
+      logger.error(
+        'Failed to create comment',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('CommentForm', 'handleSubmit', { atomId })
+      );
       alert("Impossibile creare il commento");
     } finally {
       setIsSubmitting(false);

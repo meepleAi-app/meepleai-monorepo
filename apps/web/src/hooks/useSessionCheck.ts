@@ -18,6 +18,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const NEAR_EXPIRY_THRESHOLD_MINUTES = 5;
@@ -64,7 +66,13 @@ export function useSessionCheck(): UseSessionCheckResult {
       // Don't force logout on network errors - session might still be valid
       const errorObj = err instanceof Error ? err : new Error('Session check failed');
       setError(errorObj);
-      console.error('Session check error:', errorObj);
+      logger.error(
+        'Session check error',
+        errorObj,
+        createErrorContext('useSessionCheck', 'checkSessionStatus', {
+          remainingMinutes,
+        })
+      );
     } finally {
       setIsChecking(false);
     }

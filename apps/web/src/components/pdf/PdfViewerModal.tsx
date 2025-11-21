@@ -22,6 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 // Configure PDF.js worker
 if (typeof window !== 'undefined') {
@@ -147,10 +149,14 @@ export function PdfViewerModal({
   }, []);
 
   const onDocumentLoadError = useCallback((err: Error) => {
-    console.error('PDF load error:', err);
+    logger.error(
+      'PDF load error',
+      err instanceof Error ? err : new Error(String(err)),
+      createErrorContext('PdfViewerModal', 'onDocumentLoadError', { pdfUrl })
+    );
     setError('Failed to load PDF. Please try again.');
     setLoading(false);
-  }, []);
+  }, [pdfUrl]);
 
   const goToPage = useCallback((page: number) => {
     if (numPages && page >= 1 && page <= numPages) {

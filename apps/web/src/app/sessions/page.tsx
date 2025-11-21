@@ -34,6 +34,8 @@ import {
 import { ErrorDisplay } from '@/components/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 /**
  * Session status badge component
@@ -157,7 +159,11 @@ export default function ActiveSessionsPage() {
       const response = await api.games.getAll();
       setGames(response.games || []);
     } catch (err) {
-      console.error('Failed to load games:', err);
+      logger.error(
+        'Failed to load games for active sessions',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('ActiveSessionsPage', 'fetchGames', { operation: 'fetch_games' })
+      );
     }
   };
 

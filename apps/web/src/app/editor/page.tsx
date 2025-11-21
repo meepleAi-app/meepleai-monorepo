@@ -8,6 +8,8 @@ import { RichTextEditor, ViewModeToggle } from "@/components/editor";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/utils/errorHandler";
+import { logger } from '@/lib/logger';
+import { createErrorContext } from '@/lib/errors';
 
 type RuleAtom = {
   id: string;
@@ -165,7 +167,11 @@ function RuleSpecEditorContent() {
           setErrorMessage("RuleSpec non trovato per questo gioco.");
         }
       } catch (err) {
-        console.error(err);
+        logger.error(
+          'Failed to load rule spec',
+          err instanceof Error ? err : new Error(String(err)),
+          createErrorContext('EditorPage', 'loadRuleSpec', { gameId: gId, operation: 'load_rule_spec' })
+        );
         setErrorMessage(getErrorMessage(err, "Impossibile caricare RuleSpec."));
       } finally {
         setIsLoading(false);
@@ -212,7 +218,11 @@ function RuleSpecEditorContent() {
       // Clear success message after 3 seconds
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (err) {
-      console.error("Auto-save error:", err);
+      logger.error(
+        'Auto-save failed',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('EditorPage', 'autoSave', { gameId, operation: 'auto_save' })
+      );
       // Don't show error for auto-save failures to avoid interrupting user
     } finally {
       setIsSaving(false);
@@ -328,7 +338,11 @@ function RuleSpecEditorContent() {
       setHasUnsavedChanges(false);
       setStatusMessage(`RuleSpec salvato con successo (versione ${updated.version})`);
     } catch (err) {
-      console.error(err);
+      logger.error(
+        'Failed to save rule spec',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('EditorPage', 'handleSave', { gameId, operation: 'save_rule_spec' })
+      );
       setErrorMessage(getErrorMessage(err, "Impossibile salvare RuleSpec"));
     } finally {
       setIsSaving(false);

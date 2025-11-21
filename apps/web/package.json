@@ -36,7 +36,9 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "chromatic": "chromatic --exit-zero-on-changes",
-    "chromatic:ci": "chromatic --exit-zero-on-changes --exit-once-uploaded"
+    "chromatic:ci": "chromatic --exit-zero-on-changes --exit-once-uploaded",
+    "generate:api": "tsx scripts/generate-api-client.ts",
+    "generate:api:watch": "tsx watch scripts/generate-api-client.ts"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.4.0",
@@ -147,6 +149,7 @@
     "newman": "^6.2.1",
     "newman-reporter-htmlextra": "^1.23.1",
     "newman-reporter-json": "^1.0.0",
+    "openapi-zod-client": "^1.18.3",
     "playwright-lighthouse": "^4.0.0",
     "postcss": "^8.5.6",
     "storybook": "^10.0.8",

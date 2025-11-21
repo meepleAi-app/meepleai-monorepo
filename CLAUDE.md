@@ -68,6 +68,7 @@ docs/                Architecture, ADRs, guides
 | | `./tools/run-frontend-coverage.sh --open` | Code coverage with HTML report |
 | | `pnpm storybook` | Component dev (localhost:6006) |
 | | `pnpm chromatic` | Visual regression testing (Chromatic) |
+| | `pnpm generate:api` | Generate TypeScript types + Zod schemas from OpenAPI spec |
 | **Docker** | `docker compose up -d` | Full stack (16 services) |
 
 **Services**:
@@ -115,6 +116,17 @@ docs/                Architecture, ADRs, guides
 - **Coverage**: 22 Shadcn/UI + 10 custom components
 - **Features**: Dark mode, A11y testing, auto-documentation
 - **Docs**: `apps/web/STORYBOOK.md`, `apps/web/.storybook/CHROMATIC.md`
+
+### TypeScript Code Generation (ADR-013, Issue #1450)
+- **NSwag + openapi-zod-client**: Automated TypeScript types and Zod schemas from OpenAPI spec
+- **Zero Manual Sync**: Backend DTOs → OpenAPI → TypeScript/Zod (single source of truth)
+- **CI Validation**: Build fails if generated files out of sync
+- **Tools**:
+  - NSwag.MSBuild 14.2.0 (TypeScript client generation)
+  - openapi-zod-client 1.18.3 (Zod schema generation)
+- **Usage**: `pnpm generate:api` (auto-generates from running API or openapi.json)
+- **Output**: `apps/web/src/lib/api/generated/` (gitignored, regenerated on demand)
+- **Benefits**: Compile-time type safety, no drift between backend/frontend, faster development
 
 ### Performance (PERF-05 to PERF-11)
 - HybridCache L1+L2 (5min TTL)

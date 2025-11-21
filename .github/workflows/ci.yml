@@ -278,11 +278,12 @@ jobs:
       - name: Build Next.js for E2E
         run: pnpm build
 
-      # E2E Tests: ~5min execution target
+      # E2E Tests: Sequential group execution to prevent memory exhaustion
+      # Groups: Authentication, Chat, Admin, PDF, API, Pages, Accessibility
       # Scenarios: Happy path, uncertainty handling, mobile responsive, error recovery
-      - name: Run E2E Tests (User Journey Scenarios)
-        timeout-minutes: 10
-        run: pnpm test:e2e
+      - name: Run E2E Tests (User Journey Scenarios - Sequential Groups)
+        timeout-minutes: 20
+        run: pnpm test:e2e:groups
 
       - name: Upload Playwright Report
         if: failure()

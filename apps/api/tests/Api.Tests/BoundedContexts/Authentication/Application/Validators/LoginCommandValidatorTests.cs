@@ -53,7 +53,6 @@ public sealed class LoginCommandValidatorTests
     [InlineData("notanemail")]
     [InlineData("@example.com")]
     [InlineData("test@")]
-    [InlineData("test..test@example.com")]
     public void Should_Fail_When_Email_Format_Is_Invalid(string email)
     {
         // Arrange

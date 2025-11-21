@@ -69,8 +69,9 @@ function CitationModal({
           <h3 className="m-0 text-lg font-semibold">References</h3>
           <button
             onClick={onClose}
-            className="bg-transparent border-none text-2xl cursor-pointer text-slate-500 p-0 w-8 h-8 flex items-center justify-center"
+            className="bg-transparent border-none text-2xl cursor-pointer text-muted-foreground p-0 w-8 h-8 flex items-center justify-center hover:text-foreground transition-colors"
             title="Close"
+            aria-label="Close references modal"
           >
             ×
           </button>
@@ -80,17 +81,17 @@ function CitationModal({
           {snippets.map((snippet, idx) => (
             <div
               key={idx}
-              className="p-3 border border-gray-300 rounded-md bg-gray-50"
+              className="p-3 border border-border rounded-md bg-muted"
             >
               <div className="flex justify-between mb-2">
-                <span className="font-medium text-sm text-gray-900">
+                <span className="font-medium text-sm text-foreground">
                   {snippet.source}
                 </span>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted-foreground">
                   Page {snippet.page}
                 </span>
               </div>
-              <div className="text-[13px] text-slate-500 leading-relaxed">
+              <div className="text-[13px] text-muted-foreground leading-relaxed">
                 {snippet.text}
               </div>
             </div>
@@ -116,8 +117,8 @@ function SetupStepCard({
   return (
     <div
       className={cn(
-        "border border-gray-300 rounded-lg p-5 transition-all duration-200 shadow-sm",
-        isCompleted ? "bg-green-50" : "bg-white"
+        "border border-border rounded-lg p-5 transition-all duration-200 shadow-sm bg-card",
+        isCompleted && "bg-secondary/10"
       )}
     >
       <div className="flex items-start gap-4">
@@ -135,11 +136,11 @@ function SetupStepCard({
         <div className="flex-1">
           {/* Header */}
           <div className="flex items-center gap-2 mb-2">
-            <span className="font-semibold text-base text-gray-900">
+            <span className="font-semibold text-base text-foreground">
               {step.stepNumber}. {step.title}
             </span>
             {step.isOptional && (
-              <span className="text-[11px] font-medium px-2 py-0.5 bg-gray-200 text-slate-500 rounded-xl">
+              <span className="text-[11px] font-medium px-2 py-0.5 bg-muted text-muted-foreground rounded-xl border border-border">
                 OPTIONAL
               </span>
             )}
@@ -148,7 +149,7 @@ function SetupStepCard({
           {/* Instruction */}
           <div
             className={cn(
-              "text-sm text-slate-500 leading-relaxed mb-3",
+              "text-sm text-muted-foreground leading-relaxed mb-3",
               isCompleted && "line-through opacity-70"
             )}
           >
@@ -159,7 +160,8 @@ function SetupStepCard({
           {step.references.length > 0 && (
             <button
               onClick={onViewReferences}
-              className="bg-transparent border border-blue-600 text-blue-600 px-3 py-1.5 rounded text-xs font-medium cursor-pointer flex items-center gap-1.5"
+              className="bg-transparent border border-primary text-primary px-3 py-1.5 rounded text-xs font-medium cursor-pointer flex items-center gap-1.5 hover:bg-primary/10 transition-colors"
+              aria-label={`View ${step.references.length} references for step ${step.stepNumber}`}
             >
               <span>📖</span>
               <span>View {step.references.length} Reference{step.references.length > 1 ? "s" : ""}</span>
@@ -294,15 +296,15 @@ export default function SetupPage() {
   if (!authUser) {
     return (
       <main className="p-6 max-w-[900px] mx-auto font-sans">
-        <Link href="/" className="text-blue-600 no-underline">
+        <Link href="/" className="text-primary no-underline hover:underline">
           ← Back to Home
         </Link>
-        <div className="mt-6 p-8 text-center border border-gray-300 rounded-lg">
+        <div className="mt-6 p-8 text-center border border-border rounded-lg">
           <h2>Accesso richiesto</h2>
           <p>Devi effettuare l'accesso per utilizzare la guida alla configurazione.</p>
           <Link
             href="/"
-            className="inline-block mt-4 px-4 py-2 bg-blue-800 text-white no-underline rounded"
+            className="inline-block mt-4 px-4 py-2 bg-primary text-primary-foreground no-underline rounded hover:opacity-90 transition-opacity"
           >
             Vai al Login
           </Link>
@@ -313,14 +315,14 @@ export default function SetupPage() {
 
   // Main setup guide interface
   return (
-    <main className="min-h-dvh bg-gray-50 font-sans">
+    <main className="min-h-dvh bg-muted font-sans">
       {/* Header */}
-      <div className="bg-white border-b border-gray-300 p-4 sticky top-0 z-[100]">
+      <div className="bg-white border-b border-border p-4 sticky top-0 z-[100]">
         <div className="max-w-[900px] mx-auto flex justify-between items-center">
           <h1 className="m-0 text-2xl font-semibold">Game Setup Guide</h1>
           <Link
             href="/"
-            className="px-4 py-2 bg-blue-600 text-white no-underline rounded text-sm font-medium"
+            className="px-4 py-2 bg-primary text-primary-foreground no-underline rounded text-sm font-medium hover:opacity-90 transition-opacity"
           >
             Home
           </Link>
@@ -330,14 +332,14 @@ export default function SetupPage() {
       {/* Content */}
       <div className="max-w-[900px] mx-auto p-6">
         {/* Game Selection Card */}
-        <div className="bg-white border border-gray-300 rounded-lg p-6 mb-6">
+        <div className="bg-white border border-border rounded-lg p-6 mb-6">
           <h2 className="m-0 mb-4 text-lg font-semibold">Select Game</h2>
 
           <form onSubmit={loadSetupGuide} className="flex gap-3 items-end">
             <div className="flex-1">
               <label
                 htmlFor="gameSelect"
-                className="block mb-2 font-medium text-sm text-slate-500"
+                className="block mb-2 font-medium text-sm text-muted-foreground"
               >
                 Game:
               </label>
@@ -346,7 +348,7 @@ export default function SetupPage() {
                 value={selectedGameId ?? ""}
                 onChange={(e) => setSelectedGameId(e.target.value || null)}
                 disabled={isLoadingGames || isLoadingGuide}
-                className="w-full p-3 text-sm border border-gray-300 rounded bg-white"
+                className="w-full p-3 text-sm border border-border rounded bg-white"
               >
                 <option value="">Select a game...</option>
                 {games.map((game) => (
@@ -361,11 +363,12 @@ export default function SetupPage() {
               type="submit"
               disabled={!selectedGameId || isLoadingGuide}
               className={cn(
-                "px-6 py-3 text-white border-none rounded text-sm font-medium",
+                "px-6 py-3 border-none rounded text-sm font-medium transition-opacity",
                 !selectedGameId || isLoadingGuide
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-green-600 cursor-pointer"
+                  ? "bg-muted text-muted-foreground cursor-not-allowed"
+                  : "bg-secondary text-secondary-foreground cursor-pointer hover:opacity-90"
               )}
+              aria-label="Generate setup guide for selected game"
             >
               {isLoadingGuide ? "Generating..." : "Generate Setup Guide"}
             </button>
@@ -381,11 +384,11 @@ export default function SetupPage() {
 
         {/* Loading State */}
         {isLoadingGuide && (
-          <div className="bg-white border border-gray-300 rounded-lg p-12 text-center">
-            <div className="text-base text-slate-500 mb-4">
+          <div className="bg-white border border-border rounded-lg p-12 text-center">
+            <div className="text-base text-muted-foreground mb-4">
               Generating your setup guide...
             </div>
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-muted-foreground">
               This may take a few moments while we retrieve the best instructions from the rulebook.
             </div>
           </div>
@@ -395,13 +398,13 @@ export default function SetupPage() {
         {setupGuide && !isLoadingGuide && (
           <>
             {/* Progress Card */}
-            <div className="bg-white border border-gray-300 rounded-lg p-6 mb-6">
+            <div className="bg-white border border-border rounded-lg p-6 mb-6">
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h2 className="m-0 mb-2 text-xl font-semibold">
                     {setupGuide.gameTitle}
                   </h2>
-                  <div className="text-sm text-slate-500">
+                  <div className="text-sm text-muted-foreground">
                     Estimated setup time: {setupGuide.estimatedSetupTimeMinutes} minutes
                   </div>
                 </div>
@@ -411,7 +414,7 @@ export default function SetupPage() {
                   className={cn(
                     "px-4 py-2 border-none rounded text-[13px] font-medium",
                     completedSteps.size === 0
-                      ? "bg-gray-200 text-slate-500 cursor-not-allowed"
+                      ? "bg-muted text-muted-foreground cursor-not-allowed"
                       : "bg-red-600 text-white cursor-pointer"
                   )}
                 >
@@ -422,14 +425,14 @@ export default function SetupPage() {
               {/* Progress Bar */}
               <div>
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-900">
+                  <span className="text-sm font-medium text-foreground">
                     Progress: {completedSteps.size} / {setupGuide.steps.length} steps
                   </span>
                   <span className="text-sm font-medium text-green-600">
                     {progressPercentage}%
                   </span>
                 </div>
-                <div className="w-full h-2 bg-gray-200 rounded overflow-hidden">
+                <div className="w-full h-2 bg-muted rounded overflow-hidden">
                   <div
                     className="h-full transition-all duration-300"
                     style={{
@@ -442,7 +445,7 @@ export default function SetupPage() {
 
               {/* Completion Message */}
               {progressPercentage === 100 && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-600 rounded-md text-sm text-green-800 flex items-center gap-3">
+                <div className="mt-4 p-4 bg-secondary/10 border border-secondary rounded-md text-sm text-secondary flex items-center gap-3" role="status" aria-live="polite">
                   <span className="text-2xl">🎉</span>
                   <span>
                     <strong>Setup Complete!</strong> Your game is ready to play. Have fun!
@@ -452,7 +455,7 @@ export default function SetupPage() {
 
               {/* AI Confidence */}
               {setupGuide.confidence !== null && (
-                <div className="mt-3 text-xs text-slate-500">
+                <div className="mt-3 text-xs text-muted-foreground">
                   AI Confidence: {Math.round(setupGuide.confidence * 100)}%
                 </div>
               )}
@@ -475,12 +478,12 @@ export default function SetupPage() {
 
         {/* Empty State */}
         {!setupGuide && !isLoadingGuide && !errorMessage && (
-          <div className="bg-white border border-dashed border-gray-300 rounded-lg p-12 text-center">
+          <div className="bg-white border border-dashed border-border rounded-lg p-12 text-center">
             <div className="text-5xl mb-4">🎲</div>
-            <h3 className="m-0 mb-2 text-lg text-gray-900">
+            <h3 className="m-0 mb-2 text-lg text-foreground">
               No Setup Guide Yet
             </h3>
-            <p className="m-0 text-sm text-slate-500">
+            <p className="m-0 text-sm text-muted-foreground">
               Select a game and click &quot;Generate Setup Guide&quot; to get started with step-by-step instructions.
             </p>
           </div>

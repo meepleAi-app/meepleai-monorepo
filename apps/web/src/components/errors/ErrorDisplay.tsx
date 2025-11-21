@@ -96,9 +96,9 @@ export function ErrorDisplay({
   const containerStyle: CSSProperties = {
     padding: '20px',
     border: '2px solid',
-    borderColor: error.category === 'network' ? '#ff9800' : '#f44336',
+    borderColor: error.category === 'network' ? 'hsl(var(--accent))' : 'hsl(var(--destructive))',
     borderRadius: '8px',
-    backgroundColor: error.category === 'network' ? '#fff3e0' : '#ffebee',
+    backgroundColor: error.category === 'network' ? 'hsl(var(--accent) / 0.1)' : 'hsl(var(--destructive) / 0.1)',
     marginBottom: '20px'
   };
 
@@ -118,20 +118,20 @@ export function ErrorDisplay({
     margin: 0,
     fontSize: '20px',
     fontWeight: 600,
-    color: '#333'
+    color: 'hsl(var(--foreground))'
   };
 
   const messageStyle: CSSProperties = {
     marginBottom: '16px',
     fontSize: '16px',
     lineHeight: 1.5,
-    color: '#444'
+    color: 'hsl(var(--foreground))'
   };
 
   const suggestionsStyle: CSSProperties = {
     marginBottom: '16px',
     padding: '12px',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: 'hsl(var(--muted))',
     borderRadius: '4px'
   };
 
@@ -140,24 +140,24 @@ export function ErrorDisplay({
     marginBottom: '8px',
     fontSize: '14px',
     fontWeight: 600,
-    color: '#555'
+    color: 'hsl(var(--foreground))'
   };
 
   const suggestionListStyle: CSSProperties = {
     margin: 0,
     paddingLeft: '20px',
     fontSize: '14px',
-    color: '#666'
+    color: 'hsl(var(--muted-foreground))'
   };
 
   const correlationIdStyle: CSSProperties = {
     marginTop: '16px',
     padding: '12px',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: 'hsl(var(--muted))',
     borderRadius: '4px',
     fontSize: '13px',
     fontFamily: 'monospace',
-    color: '#666',
+    color: 'hsl(var(--muted-foreground))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between'
@@ -180,33 +180,34 @@ export function ErrorDisplay({
     transition: 'background-color 0.2s'
   };
 
+  // Use semantic tokens for WCAG 2.1 AA compliance (Issue #841)
   const retryButtonStyle: CSSProperties = {
     ...buttonStyle,
-    backgroundColor: '#4caf50',
-    color: 'white'
+    backgroundColor: 'hsl(var(--secondary))',  // WCAG AA compliant green
+    color: 'hsl(var(--secondary-foreground))'
   };
 
   const dismissButtonStyle: CSSProperties = {
     ...buttonStyle,
-    backgroundColor: '#757575',
-    color: 'white'
+    backgroundColor: 'hsl(var(--muted))',
+    color: 'hsl(var(--muted-foreground))'
   };
 
   const detailsButtonStyle: CSSProperties = {
     ...buttonStyle,
     backgroundColor: 'transparent',
-    color: '#1565c0',
-    border: '1px solid #1565c0'
+    color: 'hsl(var(--primary))',
+    border: '1px solid hsl(var(--primary))'
   };
 
   const technicalDetailsStyle: CSSProperties = {
     marginTop: '16px',
     padding: '12px',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: 'hsl(var(--muted))',
     borderRadius: '4px',
     fontSize: '12px',
     fontFamily: 'monospace',
-    color: '#444',
+    color: 'hsl(var(--foreground))',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word'
   };
@@ -261,8 +262,8 @@ export function ErrorDisplay({
               ...buttonStyle,
               padding: '4px 8px',
               fontSize: '12px',
-              backgroundColor: '#e0e0e0',
-              color: '#333'
+              backgroundColor: 'hsl(var(--muted))',
+              color: 'hsl(var(--foreground))'
             }}
             title="Copy to clipboard"
           >

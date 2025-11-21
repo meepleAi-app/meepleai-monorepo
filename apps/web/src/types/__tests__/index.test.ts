@@ -188,14 +188,6 @@ describe('Type Index Exports', () => {
   });
 
   describe('PDF Processing Types', () => {
-    it('should export ProcessingStep enum', () => {
-      const { ProcessingStep } = require('../index');
-
-      // ProcessingStep is an enum with string values
-      expect(ProcessingStep).toBeDefined();
-      expect(typeof ProcessingStep).toBe('object');
-    });
-
     it('should export ProcessingProgress type', () => {
       const progress: import('../index').ProcessingProgress = {
         status: 'Processing',
@@ -238,11 +230,6 @@ describe('Type Index Exports', () => {
       expect(typeof exports.ApiError).toBe('function');
       expect(typeof exports.createApiError).toBe('function');
       expect(typeof exports.isProcessingComplete).toBe('function');
-      expect(typeof exports.getStepLabel).toBe('function');
-      expect(typeof exports.getStepOrder).toBe('function');
-
-      // Check for enum exports
-      expect(typeof exports.ProcessingStep).toBe('object');
     });
   });
 

@@ -649,4 +649,97 @@ describe('RequestCache', () => {
       expect(callCount).toBe(10);
     });
   });
+
+  describe('Prometheus Metrics Export', () => {
+    it('should export metrics in Prometheus format', async () => {
+      const requestFn = jest.fn().mockResolvedValue('result');
+
+      // Generate some metrics
+      await cache.dedupe('key1', requestFn);
+      await cache.dedupe('key1', requestFn); // Hit
+      await cache.dedupe('key2', requestFn); // Miss
+
+      const prometheus = cache.toPrometheusFormat();
+
+      // Check for required Prometheus format elements
+      expect(prometheus).toContain('# HELP http_client_cache_hits_total');
+      expect(prometheus).toContain('# TYPE http_client_cache_hits_total counter');
+      expect(prometheus).toContain('http_client_cache_hits_total 1');
+
+      expect(prometheus).toContain('# HELP http_client_cache_misses_total');
+      expect(prometheus).toContain('# TYPE http_client_cache_misses_total counter');
+      expect(prometheus).toContain('http_client_cache_misses_total 2');
+
+      expect(prometheus).toContain('# HELP http_client_cache_size');
+      expect(prometheus).toContain('# TYPE http_client_cache_size gauge');
+
+      expect(prometheus).toContain('# HELP http_client_cache_hit_rate_percent');
+      expect(prometheus).toContain('# TYPE http_client_cache_hit_rate_percent gauge');
+
+      expect(prometheus).toContain('# HELP http_client_cache_evictions_total');
+      expect(prometheus).toContain('# TYPE http_client_cache_evictions_total counter');
+
+      expect(prometheus).toContain('# HELP http_client_cache_expirations_total');
+      expect(prometheus).toContain('# TYPE http_client_cache_expirations_total counter');
+    });
+
+    it('should calculate hit rate correctly', async () => {
+      cache.clear();
+      const requestFn = jest.fn().mockResolvedValue('result');
+
+      // 1 miss, 3 hits (75% hit rate)
+      await cache.dedupe('key1', requestFn);
+      await cache.dedupe('key1', requestFn);
+      await cache.dedupe('key1', requestFn);
+      await cache.dedupe('key1', requestFn);
+
+      const prometheus = cache.toPrometheusFormat();
+
+      // Hit rate should be 75%
+      expect(prometheus).toContain('http_client_cache_hit_rate_percent 75.00');
+    });
+
+    it('should handle zero requests gracefully', () => {
+      cache.clear();
+
+      const prometheus = cache.toPrometheusFormat();
+
+      expect(prometheus).toContain('http_client_cache_hits_total 0');
+      expect(prometheus).toContain('http_client_cache_misses_total 0');
+      expect(prometheus).toContain('http_client_cache_hit_rate_percent 0.00');
+      expect(prometheus).toContain('http_client_cache_size 0');
+    });
+
+    it('should track evictions in Prometheus format', async () => {
+      const smallCache = new RequestCache({
+        enabled: true,
+        ttl: 100,
+        maxSize: 2,
+      });
+
+      const requestFn = jest.fn().mockResolvedValue('result');
+
+      // Fill cache and trigger eviction
+      await smallCache.dedupe('key1', requestFn);
+      await smallCache.dedupe('key2', requestFn);
+      await smallCache.dedupe('key3', requestFn); // Evicts key1
+
+      const prometheus = smallCache.toPrometheusFormat();
+
+      expect(prometheus).toContain('http_client_cache_evictions_total 1');
+
+      smallCache.clear();
+    });
+
+    it('should format output with newlines', () => {
+      const prometheus = cache.toPrometheusFormat();
+
+      // Should end with newline
+      expect(prometheus).toMatch(/\n$/);
+
+      // Should have multiple lines
+      const lines = prometheus.split('\n').filter((line) => line.length > 0);
+      expect(lines.length).toBeGreaterThan(10);
+    });
+  });
 });

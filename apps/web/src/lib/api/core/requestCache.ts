@@ -407,9 +407,58 @@ export class RequestCache {
     const parsed = parseInt(value, 10);
     return isNaN(parsed) ? defaultValue : parsed;
   }
+
+  /**
+   * Export metrics in Prometheus format
+   */
+  toPrometheusFormat(): string {
+    const lines: string[] = [];
+    const metrics = this.getMetrics();
+
+    // Cache hits counter
+    lines.push('# HELP http_client_cache_hits_total Total number of cache hits');
+    lines.push('# TYPE http_client_cache_hits_total counter');
+    lines.push(`http_client_cache_hits_total ${metrics.hits}`);
+
+    // Cache misses counter
+    lines.push('# HELP http_client_cache_misses_total Total number of cache misses');
+    lines.push('# TYPE http_client_cache_misses_total counter');
+    lines.push(`http_client_cache_misses_total ${metrics.misses}`);
+
+    // Cache hit rate gauge (computed metric)
+    const totalRequests = metrics.hits + metrics.misses;
+    const hitRate = totalRequests > 0 ? (metrics.hits / totalRequests) * 100 : 0;
+    lines.push('# HELP http_client_cache_hit_rate_percent Cache hit rate percentage');
+    lines.push('# TYPE http_client_cache_hit_rate_percent gauge');
+    lines.push(`http_client_cache_hit_rate_percent ${hitRate.toFixed(2)}`);
+
+    // Cache size gauge
+    lines.push('# HELP http_client_cache_size Current number of cached entries');
+    lines.push('# TYPE http_client_cache_size gauge');
+    lines.push(`http_client_cache_size ${metrics.size}`);
+
+    // Cache evictions counter
+    lines.push('# HELP http_client_cache_evictions_total Total number of cache evictions (LRU)');
+    lines.push('# TYPE http_client_cache_evictions_total counter');
+    lines.push(`http_client_cache_evictions_total ${metrics.evictions}`);
+
+    // Cache expirations counter
+    lines.push('# HELP http_client_cache_expirations_total Total number of cache expirations (TTL)');
+    lines.push('# TYPE http_client_cache_expirations_total counter');
+    lines.push(`http_client_cache_expirations_total ${metrics.expirations}`);
+
+    return lines.join('\n') + '\n';
+  }
 }
 
 /**
  * Singleton instance for global request cache
  */
 export const globalRequestCache = new RequestCache();
+
+/**
+ * Export cache metrics in Prometheus format
+ */
+export function exportCacheMetricsPrometheus(): string {
+  return globalRequestCache.toPrometheusFormat();
+}

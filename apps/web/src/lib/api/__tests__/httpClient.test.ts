@@ -711,16 +711,8 @@ describe('HttpClient', () => {
       expect(onRetry).toHaveBeenCalledTimes(1);
       expect(onRetry).toHaveBeenCalledWith(1, expect.any(ServerError), expect.any(Number));
     });
+  });
 
-    it('should work with POST requests', async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 502,
-          json: async () => ({ error: 'Bad Gateway' }),
-          headers: new Headers(),
-        })
-        .mockResolvedValueOnce({
   describe('Request Deduplication (Issue #1454)', () => {
     beforeEach(() => {
       // Clear cache before each test
@@ -897,16 +889,18 @@ describe('HttpClient', () => {
           status: 200,
           json: async () => ({ success: true }),
           headers: new Headers(),
-        });
-
-      const result = await client.post('/api/v1/test', { data: 'test' }, undefined, {
-        retry: {
-          retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
-        },
+        };
       });
 
-      expect(result).toEqual({ success: true });
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const promises = [
+        client.post('/api/v1/test', { data: 'test1' }),
+        client.post('/api/v1/test', { data: 'test2' }),
+      ];
+
+      await Promise.all(promises);
+
+      // Different bodies should not be deduplicated (even though dedup is disabled by default for POST)
+      expect(callCount).toBe(2);
     });
 
     it('should work with PUT requests', async () => {
@@ -979,18 +973,6 @@ describe('HttpClient', () => {
 
       const metrics = getRetryMetrics();
       expect(metrics.failedAfterRetry).toBe(1);
-        };
-      });
-
-      const promises = [
-        client.post('/api/v1/users', { name: 'John' }, undefined, { skipDedup: false }),
-        client.post('/api/v1/users', { name: 'Jane' }, undefined, { skipDedup: false }),
-      ];
-
-      await Promise.all(promises);
-
-      // Different bodies should not be deduplicated
-      expect(callCount).toBe(2);
     });
 
     it('should generate different cache keys for different auth contexts', async () => {

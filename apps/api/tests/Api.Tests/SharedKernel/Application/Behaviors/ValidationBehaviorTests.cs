@@ -23,18 +23,22 @@ public sealed class ValidationBehaviorTests
             Password: "Password123!"
         );
 
-        var mockNext = new Mock<RequestHandlerDelegate<object>>();
-        mockNext.Setup(x => x()).ReturnsAsync(new object());
+        var nextCalled = false;
+        RequestHandlerDelegate<object> next = () =>
+        {
+            nextCalled = true;
+            return Task.FromResult<object>(new object());
+        };
 
         var validators = Enumerable.Empty<IValidator<LoginCommand>>();
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act
-        var result = await behavior.Handle(command, mockNext.Object, CancellationToken.None);
+        var result = await behavior.Handle(command, next, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        mockNext.Verify(x => x(), Times.Once);
+        Assert.True(nextCalled);
     }
 
     [Fact]
@@ -51,18 +55,22 @@ public sealed class ValidationBehaviorTests
             .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
 
-        var mockNext = new Mock<RequestHandlerDelegate<object>>();
-        mockNext.Setup(x => x()).ReturnsAsync(new object());
+        var nextCalled = false;
+        RequestHandlerDelegate<object> next = () =>
+        {
+            nextCalled = true;
+            return Task.FromResult<object>(new object());
+        };
 
         var validators = new[] { mockValidator.Object };
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act
-        var result = await behavior.Handle(command, mockNext.Object, CancellationToken.None);
+        var result = await behavior.Handle(command, next, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        mockNext.Verify(x => x(), Times.Once);
+        Assert.True(nextCalled);
     }
 
     [Fact]
@@ -85,18 +93,23 @@ public sealed class ValidationBehaviorTests
             .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult(validationFailures));
 
-        var mockNext = new Mock<RequestHandlerDelegate<object>>();
+        var nextCalled = false;
+        RequestHandlerDelegate<object> next = () =>
+        {
+            nextCalled = true;
+            return Task.FromResult<object>(new object());
+        };
 
         var validators = new[] { mockValidator.Object };
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            () => behavior.Handle(command, mockNext.Object, CancellationToken.None)
+            () => behavior.Handle(command, next, CancellationToken.None)
         );
 
         Assert.Equal(2, exception.Errors.Count());
-        mockNext.Verify(x => x(), Times.Never);
+        Assert.False(nextCalled);
     }
 
     [Fact]
@@ -118,14 +131,18 @@ public sealed class ValidationBehaviorTests
             .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
 
-        var mockNext = new Mock<RequestHandlerDelegate<object>>();
-        mockNext.Setup(x => x()).ReturnsAsync(new object());
+        var nextCalled = false;
+        RequestHandlerDelegate<object> next = () =>
+        {
+            nextCalled = true;
+            return Task.FromResult<object>(new object());
+        };
 
         var validators = new[] { mockValidator1.Object, mockValidator2.Object };
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act
-        var result = await behavior.Handle(command, mockNext.Object, CancellationToken.None);
+        var result = await behavior.Handle(command, next, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -137,7 +154,7 @@ public sealed class ValidationBehaviorTests
             x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()),
             Times.Once
         );
-        mockNext.Verify(x => x(), Times.Once);
+        Assert.True(nextCalled);
     }
 
     [Fact]
@@ -169,20 +186,25 @@ public sealed class ValidationBehaviorTests
             .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult(validationFailures2));
 
-        var mockNext = new Mock<RequestHandlerDelegate<object>>();
+        var nextCalled = false;
+        RequestHandlerDelegate<object> next = () =>
+        {
+            nextCalled = true;
+            return Task.FromResult<object>(new object());
+        };
 
         var validators = new[] { mockValidator1.Object, mockValidator2.Object };
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            () => behavior.Handle(command, mockNext.Object, CancellationToken.None)
+            () => behavior.Handle(command, next, CancellationToken.None)
         );
 
         Assert.Equal(2, exception.Errors.Count());
         Assert.Contains(exception.Errors, e => e.PropertyName == "Email");
         Assert.Contains(exception.Errors, e => e.PropertyName == "Password");
-        mockNext.Verify(x => x(), Times.Never);
+        Assert.False(nextCalled);
     }
 
     [Fact]
@@ -202,16 +224,21 @@ public sealed class ValidationBehaviorTests
             .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var mockNext = new Mock<RequestHandlerDelegate<object>>();
+        var nextCalled = false;
+        RequestHandlerDelegate<object> next = () =>
+        {
+            nextCalled = true;
+            return Task.FromResult<object>(new object());
+        };
 
         var validators = new[] { mockValidator.Object };
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => behavior.Handle(command, mockNext.Object, cts.Token)
+            () => behavior.Handle(command, next, cts.Token)
         );
 
-        mockNext.Verify(x => x(), Times.Never);
+        Assert.False(nextCalled);
     }
 }

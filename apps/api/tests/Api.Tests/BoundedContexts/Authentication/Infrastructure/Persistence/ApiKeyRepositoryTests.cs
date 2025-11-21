@@ -38,7 +38,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     #region GetByKeyPrefixAsync Tests
 
     [Fact]
-    public async Task Test01_GetByKeyPrefixAsync_ExistingKey_ReturnsApiKey()
+    public async Task GetByKeyPrefixAsync_ExistingKey_ReturnsApiKey()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -63,7 +63,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test02_GetByKeyPrefixAsync_NonExistingPrefix_ReturnsNull()
+    public async Task GetByKeyPrefixAsync_NonExistingPrefix_ReturnsNull()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -81,7 +81,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     #region GetByUserIdAsync Tests
 
     [Fact]
-    public async Task Test03_GetByUserIdAsync_NoKeys_ReturnsEmptyList()
+    public async Task GetByUserIdAsync_NoKeys_ReturnsEmptyList()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -95,7 +95,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test04_GetByUserIdAsync_MultipleKeys_ReturnsAllOrdered()
+    public async Task GetByUserIdAsync_MultipleKeys_ReturnsAllOrdered()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -123,7 +123,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test05_GetByUserIdAsync_MultipleUsers_FiltersCorrectly()
+    public async Task GetByUserIdAsync_MultipleUsers_FiltersCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -153,7 +153,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     #region GetActiveKeysByUserIdAsync Tests
 
     [Fact]
-    public async Task Test06_GetActiveKeysByUserIdAsync_OnlyActiveKeys_ReturnsAll()
+    public async Task GetActiveKeysByUserIdAsync_OnlyActiveKeys_ReturnsAll()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -174,7 +174,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test07_GetActiveKeysByUserIdAsync_RevokedKeys_Excluded()
+    public async Task GetActiveKeysByUserIdAsync_RevokedKeys_Excluded()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -198,7 +198,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test08_GetActiveKeysByUserIdAsync_ExpiredKeys_Excluded()
+    public async Task GetActiveKeysByUserIdAsync_ExpiredKeys_Excluded()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -220,7 +220,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test09_GetActiveKeysByUserIdAsync_InactiveKeys_Excluded()
+    public async Task GetActiveKeysByUserIdAsync_InactiveKeys_Excluded()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -244,7 +244,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test10_GetActiveKeysByUserIdAsync_MixedKeys_FiltersCorrectly()
+    public async Task GetActiveKeysByUserIdAsync_MixedKeys_FiltersCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -277,7 +277,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     #region AddAsync Tests
 
     [Fact]
-    public async Task Test11_AddAsync_NewApiKey_PersistsSuccessfully()
+    public async Task AddAsync_NewApiKey_PersistsSuccessfully()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -308,7 +308,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test12_AddAsync_ApiKeyWithoutExpiration_PersistsCorrectly()
+    public async Task AddAsync_ApiKeyWithoutExpiration_PersistsCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -335,7 +335,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     #region UpdateAsync Tests
 
     [Fact]
-    public async Task Test13_UpdateAsync_LastUsedAt_UpdatesCorrectly()
+    public async Task UpdateAsync_LastUsedAt_UpdatesCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -358,7 +358,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test14_UpdateAsync_RevokeApiKey_PersistsRevocation()
+    public async Task UpdateAsync_RevokeApiKey_PersistsRevocation()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -388,7 +388,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     #region Mapping Tests
 
     [Fact]
-    public async Task Test15_Mapping_DomainToPersistence_AllFieldsCorrect()
+    public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -420,7 +420,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test16_Mapping_PersistenceToDomain_AllFieldsCorrect()
+    public async Task Mapping_PersistenceToDomain_AllFieldsCorrect()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -447,7 +447,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     #region Scope Serialization Tests
 
     [Fact]
-    public async Task Test17_ScopeSerialization_SingleScope_PersistsCorrectly()
+    public async Task ScopeSerialization_SingleScope_PersistsCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -465,7 +465,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test18_ScopeSerialization_MultipleScopes_PersistsCorrectly()
+    public async Task ScopeSerialization_MultipleScopes_PersistsCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -487,7 +487,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     #region Concurrent Access Tests
 
     [Fact]
-    public async Task Test19_ConcurrentPrefixLookups_NoConflicts()
+    public async Task ConcurrentPrefixLookups_NoConflicts()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -514,7 +514,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test20_ConcurrentUsageUpdates_LastOneWins()
+    public async Task ConcurrentUsageUpdates_LastOneWins()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -555,7 +555,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     #region Edge Cases
 
     [Fact]
-    public async Task Test21_NullableFields_Metadata_HandledCorrectly()
+    public async Task NullableFields_Metadata_HandledCorrectly()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -573,7 +573,7 @@ public class ApiKeyRepositoryTests : IntegrationTestBase<ApiKeyRepository>
     }
 
     [Fact]
-    public async Task Test22_AsNoTracking_QueriesDoNotTrackEntities()
+    public async Task AsNoTracking_QueriesDoNotTrackEntities()
     {
         // Arrange
         await ResetDatabaseAsync();

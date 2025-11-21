@@ -58,7 +58,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test01_AnonymousUser_RoutesFreeModel()
+    public void AnonymousUser_RoutesFreeModel()
     {
         // Arrange
         var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
@@ -93,7 +93,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test02_UserRole_Routes80PercentFree()
+    public void UserRole_Routes80PercentFree()
     {
         // Arrange
         var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
@@ -113,7 +113,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test03_EditorRole_Routes50PercentOpenRouter()
+    public void EditorRole_Routes50PercentOpenRouter()
     {
         // Arrange
         var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
@@ -137,7 +137,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test04_AdminRole_Routes80PercentPremium()
+    public void AdminRole_Routes80PercentPremium()
     {
         // Arrange
         var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
@@ -161,7 +161,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test05_RoutingDecision_ContainsReason()
+    public void RoutingDecision_ContainsReason()
     {
         // Arrange
         var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
@@ -179,7 +179,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test06_FreeModelSelection_UsesOpenRouterProvider()
+    public void FreeModelSelection_UsesOpenRouterProvider()
     {
         // Arrange
         var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
@@ -201,7 +201,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test07_LocalOllamaModel_UsesOllamaProvider()
+    public void LocalOllamaModel_UsesOllamaProvider()
     {
         // Arrange
         var strategy = new HybridAdaptiveRoutingStrategy(_logger, _configuration, _aiSettings);
@@ -223,7 +223,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test08_ConfigurationOverride_UsesCustomModels()
+    public void ConfigurationOverride_UsesCustomModels()
     {
         // Arrange - Custom configuration
         var customConfig = new Dictionary<string, string>
@@ -248,7 +248,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test09_ZeroPercentOpenRouter_AlwaysUsesOllama()
+    public void ZeroPercentOpenRouter_AlwaysUsesOllama()
     {
         // Arrange - 0% OpenRouter traffic
         var zeroConfig = new Dictionary<string, string>
@@ -278,7 +278,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test10_HundredPercentOpenRouter_AlwaysUsesOpenRouter()
+    public void HundredPercentOpenRouter_AlwaysUsesOpenRouter()
     {
         // Arrange - 100% OpenRouter traffic
         var fullConfig = new Dictionary<string, string>
@@ -311,7 +311,7 @@ public class HybridAdaptiveRoutingStrategyTests
     #region BGAI-022: AI Provider Configuration Integration Tests
 
     [Fact]
-    public void Test11_PreferredProvider_OverridesUserTierRouting()
+    public void PreferredProvider_OverridesUserTierRouting()
     {
         // Arrange - PreferredProvider set to Ollama
         var preferredSettings = Options.Create(new AiProviderSettings
@@ -337,7 +337,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test12_DisabledProvider_FallsBackToAlternative()
+    public void DisabledProvider_FallsBackToAlternative()
     {
         // Arrange - Ollama disabled, OpenRouter enabled
         // Use 0% OpenRouter to force Ollama selection, then verify fallback
@@ -378,7 +378,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test13_AllProvidersDisabled_ThrowsException()
+    public void AllProvidersDisabled_ThrowsException()
     {
         // Arrange - Both providers disabled
         var allDisabledSettings = Options.Create(new AiProviderSettings
@@ -399,7 +399,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test14_EmptyPreferredProvider_UsesUserTierRouting()
+    public void EmptyPreferredProvider_UsesUserTierRouting()
     {
         // Arrange - Empty PreferredProvider (Option C backward compatibility)
         var emptyPreferredSettings = Options.Create(new AiProviderSettings
@@ -427,7 +427,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test15_MissingAiSection_UsesUserTierRouting()
+    public void MissingAiSection_UsesUserTierRouting()
     {
         // Arrange - Empty providers (backward compatibility for legacy deployments)
         var emptySettings = Options.Create(new AiProviderSettings
@@ -453,7 +453,7 @@ public class HybridAdaptiveRoutingStrategyTests
     #region ISSUE-1159: Missing Provider Fallback Tests
 
     [Fact]
-    public void Test16_BothProvidersMissing_UsesDefaults()
+    public void BothProvidersMissing_UsesDefaults()
     {
         // Arrange - Empty providers dictionary (both missing)
         var emptySettings = Options.Create(new AiProviderSettings
@@ -475,7 +475,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test17_OneProviderDisabled_OtherMissing_FallbackWorks()
+    public void OneProviderDisabled_OtherMissing_FallbackWorks()
     {
         // Arrange - OpenRouter disabled, Ollama missing (should fallback to Ollama defaults)
         var customConfig = new Dictionary<string, string>
@@ -515,7 +515,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test18_BothProvidersExplicitlyDisabled_ThrowsException()
+    public void BothProvidersExplicitlyDisabled_ThrowsException()
     {
         // Arrange - Both providers explicitly disabled
         var customConfig = new Dictionary<string, string>
@@ -546,7 +546,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test19_OneProviderDisabled_OtherExplicitlyEnabled_FallbackWorks()
+    public void OneProviderDisabled_OtherExplicitlyEnabled_FallbackWorks()
     {
         // Arrange - Ollama disabled, OpenRouter explicitly enabled
         var customConfig = new Dictionary<string, string>
@@ -586,7 +586,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test20_MissingProvider_UsesDefaultModel()
+    public void MissingProvider_UsesDefaultModel()
     {
         // Arrange - Only OpenRouter configured, Ollama missing
         var customConfig = new Dictionary<string, string>
@@ -620,7 +620,7 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void Test21_AdminUser_FallbackToMissingProvider_UsesAdminModel()
+    public void AdminUser_FallbackToMissingProvider_UsesAdminModel()
     {
         // Arrange - OpenRouter disabled, Ollama missing (admin should get Claude)
         var customConfig = new Dictionary<string, string>

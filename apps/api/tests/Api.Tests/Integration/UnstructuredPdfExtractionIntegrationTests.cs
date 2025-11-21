@@ -114,7 +114,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test01_SimpleItalianPdf_SuccessfulExtraction()
+    public async Task SimpleItalianPdf_SuccessfulExtraction()
     {
         // Arrange - Use Barrage rulebook (21MB, Italian)
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
@@ -137,7 +137,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test02_ComplexMultiColumnPdf_SuccessfulExtraction()
+    public async Task ComplexMultiColumnPdf_SuccessfulExtraction()
     {
         // Arrange - Use Terraforming Mars rulebook (38MB, Italian, complex layout)
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
@@ -161,7 +161,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test03_ItalianLanguageText_ExtractsCorrectly()
+    public async Task ItalianLanguageText_ExtractsCorrectly()
     {
         // Arrange
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
@@ -186,7 +186,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test04_TableDetection_ExtractsStructuredData()
+    public async Task TableDetection_ExtractsStructuredData()
     {
         // Arrange - Board game rulebooks typically have tables
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
@@ -209,7 +209,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test05_QualityScoreCalculation_MeetsThreshold()
+    public async Task QualityScoreCalculation_MeetsThreshold()
     {
         // Arrange
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
@@ -240,7 +240,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test06_ServiceTimeout_HandledGracefully()
+    public async Task ServiceTimeout_HandledGracefully()
     {
         // This test validates that extremely long operations would timeout
         // For integration tests, we rely on the service's own timeout handling
@@ -265,7 +265,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test07_ServiceHealthCheck_RespondsCorrectly()
+    public async Task ServiceHealthCheck_RespondsCorrectly()
     {
         // Arrange & Act
         var response = await _httpClient!.GetAsync("/health", TestCancellationToken);
@@ -281,7 +281,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test08_InvalidPdf_HandledGracefully()
+    public async Task InvalidPdf_HandledGracefully()
     {
         // Arrange - Create invalid PDF (corrupted header)
         var invalidPdfBytes = System.Text.Encoding.UTF8.GetBytes("This is not a PDF file");
@@ -306,7 +306,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test09_LargeMultiPagePdf_ProcessesSuccessfully()
+    public async Task LargeMultiPagePdf_ProcessesSuccessfully()
     {
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages)
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
@@ -327,7 +327,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test10_SemanticChunking_ProducesPagedResults()
+    public async Task SemanticChunking_ProducesPagedResults()
     {
         // Arrange
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
@@ -354,7 +354,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test11_MetadataExtraction_IncludesPageNumbers()
+    public async Task MetadataExtraction_IncludesPageNumbers()
     {
         // Arrange
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
@@ -385,7 +385,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test12_EndToEnd_Pipeline_WithRealPdf()
+    public async Task EndToEnd_Pipeline_WithRealPdf()
     {
         // Arrange - Full E2E test simulating actual usage
         if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");

@@ -109,7 +109,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     #region Test 1: Ollama Primary Success
 
     [Fact]
-    public async Task Test01_OllamaPrimarySuccess_GeneratesCompletion()
+    public async Task OllamaPrimarySuccess_GeneratesCompletion()
     {
         // Arrange - Force deterministic Ollama routing by setting PreferredProvider
         var aiSettings = CreateAiSettings(
@@ -164,7 +164,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     #region Test 2: Ollama Fails → OpenRouter Fallback
 
     [Fact]
-    public async Task Test02_OllamaFails_FallsBackToOpenRouter()
+    public async Task OllamaFails_FallsBackToOpenRouter()
     {
         // Arrange
         var aiSettings = CreateAiSettings(
@@ -217,7 +217,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     #region Test 3: Both Providers Down → Error Handling
 
     [Fact]
-    public async Task Test03_BothProvidersDown_ReturnsError()
+    public async Task BothProvidersDown_ReturnsError()
     {
         // Arrange
         var aiSettings = CreateAiSettings(
@@ -259,7 +259,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     #region Test 4: Feature Flag Toggle
 
     [Fact]
-    public async Task Test04_FeatureFlag_DisableOllama_FallsBackToOpenRouter()
+    public async Task FeatureFlag_DisableOllama_FallsBackToOpenRouter()
     {
         // Arrange - Ollama disabled via feature flag
         var aiSettings = CreateAiSettings(
@@ -308,7 +308,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test05_FeatureFlag_PreferredProvider_OverridesRouting()
+    public async Task FeatureFlag_PreferredProvider_OverridesRouting()
     {
         // Arrange - PreferredProvider set to OpenRouter
         var aiSettings = CreateAiSettings(
@@ -350,7 +350,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     #region Test 5: Cost Tracking Accuracy
 
     [Fact]
-    public async Task Test06_CostTracking_OllamaIsFree()
+    public async Task CostTracking_OllamaIsFree()
     {
         // Arrange
         var aiSettings = CreateAiSettings(
@@ -395,7 +395,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test07_CostTracking_OpenRouterHasCost()
+    public async Task CostTracking_OpenRouterHasCost()
     {
         // Arrange
         var aiSettings = CreateAiSettings(
@@ -442,7 +442,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     #region Test 6: Latency Comparison
 
     [Fact]
-    public async Task Test08_LatencyTracking_RecordsLatency()
+    public async Task LatencyTracking_RecordsLatency()
     {
         // Arrange
         var aiSettings = CreateAiSettings(
@@ -490,7 +490,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Test09_LatencyComparison_MultipleProviders()
+    public async Task LatencyComparison_MultipleProviders()
     {
         // Arrange
         var aiSettings = CreateAiSettings(

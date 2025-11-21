@@ -20,7 +20,7 @@ public class OpenRouterLlmClientTests
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     [Fact]
-    public void Test01_SupportsModel_OpenRouterModel_ReturnsTrue()
+    public void SupportsModel_OpenRouterModel_ReturnsTrue()
     {
         // Arrange
         var client = CreateClient();
@@ -32,7 +32,7 @@ public class OpenRouterLlmClientTests
     }
 
     [Fact]
-    public void Test02_SupportsModel_LocalModel_ReturnsFalse()
+    public void SupportsModel_LocalModel_ReturnsFalse()
     {
         // Arrange
         var client = CreateClient();
@@ -43,7 +43,7 @@ public class OpenRouterLlmClientTests
     }
 
     [Fact]
-    public void Test03_ProviderName_ReturnsOpenRouter()
+    public void ProviderName_ReturnsOpenRouter()
     {
         // Arrange & Act
         var client = CreateClient();
@@ -53,7 +53,7 @@ public class OpenRouterLlmClientTests
     }
 
     [Fact]
-    public async Task Test04_GenerateCompletion_Success_ReturnsResult()
+    public async Task GenerateCompletion_Success_ReturnsResult()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -104,7 +104,7 @@ public class OpenRouterLlmClientTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Test05_GenerateCompletion_ApiError_ReturnsFailure()
+    public async Task GenerateCompletion_ApiError_ReturnsFailure()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -131,7 +131,7 @@ public class OpenRouterLlmClientTests
     }
 
     [Fact]
-    public async Task Test06_GenerateCompletion_Timeout_ReturnsFailure()
+    public async Task GenerateCompletion_Timeout_ReturnsFailure()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -155,7 +155,7 @@ public class OpenRouterLlmClientTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Test07_GenerateCompletionStream_Success_YieldsChunks()
+    public async Task GenerateCompletionStream_Success_YieldsChunks()
     {
         // Arrange - SSE format streaming
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -194,7 +194,7 @@ public class OpenRouterLlmClientTests
     }
 
     [Fact]
-    public async Task Test08_ItalianQuery_ReturnsItalianResponse()
+    public async Task ItalianQuery_ReturnsItalianResponse()
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
@@ -245,7 +245,7 @@ public class OpenRouterLlmClientTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Test09_ConcurrentRequests_HandledCorrectly()
+    public async Task ConcurrentRequests_HandledCorrectly()
     {
         // Arrange
         var responseJson = JsonSerializer.Serialize(new

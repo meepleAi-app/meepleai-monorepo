@@ -82,7 +82,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     #region Test 1: Happy Path - Stage 1 Succeeds
 
     [Fact]
-    public async Task Test01_HappyPath_Stage1HighQuality_ReturnsStage1Result()
+    public async Task HappyPath_Stage1HighQuality_ReturnsStage1Result()
     {
         // Arrange - Stage 1 succeeds with high quality (0.85 ≥ 0.80)
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.High, name: "Unstructured");
@@ -118,7 +118,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     #region Test 2: Fallback to Stage 2
 
     [Fact]
-    public async Task Test02_Fallback_Stage1LowQuality_FallsBackToStage2()
+    public async Task Fallback_Stage1LowQuality_FallsBackToStage2()
     {
         // Arrange - Stage 1 low quality (0.50 < 0.80), Stage 2 high quality (0.85 ≥ 0.70)
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, name: "Unstructured");
@@ -153,7 +153,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     #region Test 3: Fallback to Stage 3
 
     [Fact]
-    public async Task Test03_Fallback_Stage1And2Fail_FallsBackToStage3()
+    public async Task Fallback_Stage1And2Fail_FallsBackToStage3()
     {
         // Arrange - Stages 1-2 fail, Stage 3 succeeds
         var stage1 = new FakeExtractor(success: false, name: "Unstructured", errorMsg: "Service timeout");
@@ -187,7 +187,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     #region Test 4: Quality Gate Enforcement
 
     [Fact]
-    public async Task Test04_QualityGate_Stage1LowToStage2High_EnforcesThreshold()
+    public async Task QualityGate_Stage1LowToStage2High_EnforcesThreshold()
     {
         // Arrange - Test quality gate logic explicitly
         var stage1 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, name: "Unstructured"); // 0.50 < 0.80
@@ -221,7 +221,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     #region Test 5: All Stages Fail
 
     [Fact]
-    public async Task Test05_AllStagesFail_ReturnsStage3ErrorResult()
+    public async Task AllStagesFail_ReturnsStage3ErrorResult()
     {
         // Arrange - All stages fail
         var stage1 = new FakeExtractor(success: false, name: "Unstructured", errorMsg: "Connection refused");
@@ -256,7 +256,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     #region Test 6: Performance P95 with Real Services
 
     [Fact]
-    public async Task Test06_Performance_P95Latency_WithRealServices()
+    public async Task Performance_P95Latency_WithRealServices()
     {
         // This test uses real Testcontainers for performance measurement
         if (!File.Exists(BarragePdfPath))

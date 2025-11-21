@@ -77,7 +77,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// This tests the primary RAG question-answering flow.
     /// </summary>
     [Fact]
-    public async Task Test01_AskAsync_WithHybridLlmService_ReturnsValidQaResponse()
+    public async Task AskAsync_WithHybridLlmService_ReturnsValidQaResponse()
     {
         // Arrange
         var ragService = CreateRagService();
@@ -110,7 +110,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// This tests the structured explanation generation flow.
     /// </summary>
     [Fact]
-    public async Task Test02_ExplainAsync_WithHybridLlmService_ReturnsValidExplainResponse()
+    public async Task ExplainAsync_WithHybridLlmService_ReturnsValidExplainResponse()
     {
         // Arrange
         var ragService = CreateRagService();
@@ -141,7 +141,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// This tests the hybrid search (vector + keyword) integration.
     /// </summary>
     [Fact]
-    public async Task Test03_AskWithHybridSearchAsync_WithHybridMode_ReturnsValidResponse()
+    public async Task AskWithHybridSearchAsync_WithHybridMode_ReturnsValidResponse()
     {
         // Arrange
         var ragService = CreateRagService();
@@ -172,7 +172,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// Test04: Verify error handling when query is empty
     /// </summary>
     [Fact]
-    public async Task Test04_AskAsync_WithEmptyQuery_ReturnsErrorMessage()
+    public async Task AskAsync_WithEmptyQuery_ReturnsErrorMessage()
     {
         // Arrange
         var ragService = CreateRagService();
@@ -191,7 +191,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// Test05: Verify error handling when embedding service fails
     /// </summary>
     [Fact]
-    public async Task Test05_AskAsync_WhenEmbeddingFails_ReturnsErrorMessage()
+    public async Task AskAsync_WhenEmbeddingFails_ReturnsErrorMessage()
     {
         // Arrange
         var ragService = CreateRagService();
@@ -216,7 +216,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// Test06: Verify cache hit scenario
     /// </summary>
     [Fact]
-    public async Task Test06_AskAsync_WithCacheHit_ReturnsCachedResponse()
+    public async Task AskAsync_WithCacheHit_ReturnsCachedResponse()
     {
         // Arrange
         var ragService = CreateRagService();
@@ -485,7 +485,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// This ensures the service is properly using the configuration provider.
     /// </summary>
     [Fact]
-    public async Task Test07_AskAsync_RequestsTopKConfiguration()
+    public async Task AskAsync_RequestsTopKConfiguration()
     {
         // Arrange
         var customMock = RagTestHelpers.CreateCustomConfigProvider(topK: 10);
@@ -511,7 +511,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// Test08: Verify that RagService requests TopK configuration
     /// </summary>
     [Fact]
-    public async Task Test08_AskAsync_RequestsTopKConfiguration()
+    public async Task AskAsync_RequestsTopKConfiguration()
     {
         // Arrange
         var customMock = RagTestHelpers.CreateCustomConfigProvider(minScore: 0.8);
@@ -543,7 +543,7 @@ public class RagServiceIntegrationTests : IDisposable
     [InlineData(5)]
     [InlineData(10)]
     [InlineData(20)]
-    public async Task Test09_AskAsync_WithDifferentTopKValues_ReturnsValidResponse(int topK)
+    public async Task AskAsync_WithDifferentTopKValues_ReturnsValidResponse(int topK)
     {
         // Arrange
         var customMock = RagTestHelpers.CreateCustomConfigProvider(topK: topK);
@@ -578,7 +578,7 @@ public class RagServiceIntegrationTests : IDisposable
     [InlineData(0.5)]
     [InlineData(0.7)]
     [InlineData(0.9)]
-    public async Task Test10_AskAsync_WithDifferentMinScoreValues_ReturnsValidResponse(double minScore)
+    public async Task AskAsync_WithDifferentMinScoreValues_ReturnsValidResponse(double minScore)
     {
         // Arrange
         var customMock = RagTestHelpers.CreateCustomConfigProvider(minScore: minScore);
@@ -607,7 +607,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// Ensures the service handles edge cases gracefully.
     /// </summary>
     [Fact]
-    public async Task Test11_AskAsync_WithExtremeConfigValues_HandlesGracefully()
+    public async Task AskAsync_WithExtremeConfigValues_HandlesGracefully()
     {
         // Arrange - Test with extreme but valid values
         var customMock = RagTestHelpers.CreateCustomConfigProvider(
@@ -647,7 +647,7 @@ public class RagServiceIntegrationTests : IDisposable
     [InlineData(1000, 5)]    // TopK way above max (50) should get clamped
     [InlineData(0, 5)]       // TopK below min (1) should get clamped
     [InlineData(-10, 5)]     // Negative TopK should get clamped
-    public async Task Test12_AskAsync_WithOutOfRangeTopK_HandlesGracefully(int outOfRangeTopK, int expectedClamped)
+    public async Task AskAsync_WithOutOfRangeTopK_HandlesGracefully(int outOfRangeTopK, int expectedClamped)
     {
         // Arrange - Simulate values that would be clamped by RagConfigurationProvider
         var customMock = RagTestHelpers.CreateCustomConfigProvider(topK: expectedClamped);
@@ -681,7 +681,7 @@ public class RagServiceIntegrationTests : IDisposable
     [InlineData(50, 1.0, 100, 10)]   // All maximums
     [InlineData(1, 1.0, 1, 10)]      // Mixed boundaries
     [InlineData(50, 0.0, 100, 1)]    // Mixed boundaries (opposite)
-    public async Task Test13_AskAsync_WithBoundaryValues_ReturnsValidResponse(
+    public async Task AskAsync_WithBoundaryValues_ReturnsValidResponse(
         int topK, double minScore, int rrfK, int maxQueryVariations)
     {
         // Arrange
@@ -725,7 +725,7 @@ public class RagServiceIntegrationTests : IDisposable
     [InlineData(0.5)]   // Medium threshold
     [InlineData(0.7)]   // Default threshold
     [InlineData(1.0)]   // Maximum score
-    public async Task Test14_AskAsync_WithMinScoreEdgeCases_FiltersResultsCorrectly(double minScore)
+    public async Task AskAsync_WithMinScoreEdgeCases_FiltersResultsCorrectly(double minScore)
     {
         // Arrange
         var customMock = RagTestHelpers.CreateCustomConfigProvider(minScore: minScore);
@@ -759,7 +759,7 @@ public class RagServiceIntegrationTests : IDisposable
     /// Verifies that the ConfigKeys helper class can be used in tests.
     /// </summary>
     [Fact]
-    public async Task Test15_AskAsync_UsingConfigKeysConstants_VerifiesCorrectly()
+    public async Task AskAsync_UsingConfigKeysConstants_VerifiesCorrectly()
     {
         // Arrange - Use ConfigKeys constants for readability
         var customMock = RagTestHelpers.CreateCustomConfigProvider(topK: 8, minScore: 0.75);

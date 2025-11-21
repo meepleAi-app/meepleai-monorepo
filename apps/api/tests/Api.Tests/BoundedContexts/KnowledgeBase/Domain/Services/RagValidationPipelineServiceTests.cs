@@ -43,7 +43,7 @@ public class RagValidationPipelineServiceTests
     #region ValidateResponseAsync Tests (Standard Mode - 3 Layers)
 
     [Fact]
-    public async Task Test01_ValidateResponseAsync_AllLayersPass_ReturnsValid()
+    public async Task ValidateResponseAsync_AllLayersPass_ReturnsValid()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -65,7 +65,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test02_ValidateResponseAsync_ConfidenceFails_ReturnsWarning()
+    public async Task ValidateResponseAsync_ConfidenceFails_ReturnsWarning()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.55); // Below threshold
@@ -117,7 +117,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test03_ValidateResponseAsync_CitationFails_ReturnsWarning()
+    public async Task ValidateResponseAsync_CitationFails_ReturnsWarning()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -177,7 +177,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test04_ValidateResponseAsync_HallucinationDetected_ReturnsWarning()
+    public async Task ValidateResponseAsync_HallucinationDetected_ReturnsWarning()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -230,7 +230,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test05_ValidateResponseAsync_NullResponse_ThrowsArgumentNullException()
+    public async Task ValidateResponseAsync_NullResponse_ThrowsArgumentNullException()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
@@ -238,7 +238,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test06_ValidateResponseAsync_EmptyGameId_ThrowsArgumentException()
+    public async Task ValidateResponseAsync_EmptyGameId_ThrowsArgumentException()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -249,7 +249,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test07_ValidateResponseAsync_NullLanguage_DefaultsToEnglish()
+    public async Task ValidateResponseAsync_NullLanguage_DefaultsToEnglish()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -272,7 +272,7 @@ public class RagValidationPipelineServiceTests
     #region ValidateWithMultiModelAsync Tests (Multi-Model Mode - 4 Layers)
 
     [Fact]
-    public async Task Test08_ValidateWithMultiModelAsync_AllLayersPass_ReturnsValid()
+    public async Task ValidateWithMultiModelAsync_AllLayersPass_ReturnsValid()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -299,7 +299,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test09_ValidateWithMultiModelAsync_MultiModelFails_ReturnsWarning()
+    public async Task ValidateWithMultiModelAsync_MultiModelFails_ReturnsWarning()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -371,7 +371,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test10_ValidateWithMultiModelAsync_UsesConsensusResponseForHallucinationCheck()
+    public async Task ValidateWithMultiModelAsync_UsesConsensusResponseForHallucinationCheck()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -396,7 +396,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test11_ValidateWithMultiModelAsync_NoConsensusResponse_UseOriginalAnswer()
+    public async Task ValidateWithMultiModelAsync_NoConsensusResponse_UseOriginalAnswer()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -466,7 +466,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test12_ValidateWithMultiModelAsync_EmptySystemPrompt_ThrowsArgumentException()
+    public async Task ValidateWithMultiModelAsync_EmptySystemPrompt_ThrowsArgumentException()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -478,7 +478,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test13_ValidateWithMultiModelAsync_EmptyUserPrompt_ThrowsArgumentException()
+    public async Task ValidateWithMultiModelAsync_EmptyUserPrompt_ThrowsArgumentException()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);
@@ -490,7 +490,7 @@ public class RagValidationPipelineServiceTests
     }
 
     [Fact]
-    public async Task Test14_ValidateWithMultiModelAsync_HighHallucinationSeverity_ReturnsCritical()
+    public async Task ValidateWithMultiModelAsync_HighHallucinationSeverity_ReturnsCritical()
     {
         // Arrange
         var response = CreateQaResponse(confidence: 0.85);

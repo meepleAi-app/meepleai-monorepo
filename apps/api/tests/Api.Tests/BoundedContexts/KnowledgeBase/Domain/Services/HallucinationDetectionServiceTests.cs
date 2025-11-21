@@ -24,7 +24,7 @@ public class HallucinationDetectionServiceTests
     // ========== English Tests ==========
 
     [Fact]
-    public async Task Test01_English_NoHallucination_ReturnsValid()
+    public async Task English_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "The game supports 2-4 players.", "en", TestCancellationToken);
@@ -36,7 +36,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test02_English_ContainsDontKnow_ReturnsInvalid()
+    public async Task English_ContainsDontKnow_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "I don't know how many players can play.", "en", TestCancellationToken);
@@ -47,7 +47,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test03_English_ContainsNotSure_ReturnsInvalid()
+    public async Task English_ContainsNotSure_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "I'm not sure about the setup rules.", "en", TestCancellationToken);
@@ -59,7 +59,7 @@ public class HallucinationDetectionServiceTests
     // ========== Italian Tests (Primary language) ==========
 
     [Fact]
-    public async Task Test04_Italian_NoHallucination_ReturnsValid()
+    public async Task Italian_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "Il gioco supporta da 2 a 4 giocatori.", "it", TestCancellationToken);
@@ -70,7 +70,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test05_Italian_ContainsNonLoSo_ReturnsInvalid()
+    public async Task Italian_ContainsNonLoSo_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "Non lo so quanti giocatori possono giocare.", "it", TestCancellationToken);
@@ -81,7 +81,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test06_Italian_ContainsPocoChiaro_ReturnsInvalid()
+    public async Task Italian_ContainsPocoChiaro_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "La regola è poco chiaro nel manuale.", "it", TestCancellationToken);
@@ -93,7 +93,7 @@ public class HallucinationDetectionServiceTests
     // ========== German Tests ==========
 
     [Fact]
-    public async Task Test07_German_NoHallucination_ReturnsValid()
+    public async Task German_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "Das Spiel unterstützt 2-4 Spieler.", "de", TestCancellationToken);
@@ -103,7 +103,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test08_German_ContainsIchWeissNicht_ReturnsInvalid()
+    public async Task German_ContainsIchWeissNicht_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "Ich weiß nicht wie viele Spieler.", "de", TestCancellationToken);
@@ -115,7 +115,7 @@ public class HallucinationDetectionServiceTests
     // ========== French Tests ==========
 
     [Fact]
-    public async Task Test09_French_NoHallucination_ReturnsValid()
+    public async Task French_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "Le jeu supporte 2-4 joueurs.", "fr", TestCancellationToken);
@@ -125,7 +125,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test10_French_ContainsJeNeSaisPas_ReturnsInvalid()
+    public async Task French_ContainsJeNeSaisPas_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "Je ne sais pas combien de joueurs.", "fr", TestCancellationToken);
@@ -137,7 +137,7 @@ public class HallucinationDetectionServiceTests
     // ========== Spanish Tests ==========
 
     [Fact]
-    public async Task Test11_Spanish_NoHallucination_ReturnsValid()
+    public async Task Spanish_NoHallucination_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "El juego admite de 2 a 4 jugadores.", "es", TestCancellationToken);
@@ -147,7 +147,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test12_Spanish_ContainsNoLoSe_ReturnsInvalid()
+    public async Task Spanish_ContainsNoLoSe_ReturnsInvalid()
     {
         var result = await _service.DetectHallucinationsAsync(
             "No lo sé cuántos jugadores pueden jugar.", "es", TestCancellationToken);
@@ -159,7 +159,7 @@ public class HallucinationDetectionServiceTests
     // ========== Edge Cases ==========
 
     [Fact]
-    public async Task Test13_EmptyText_ReturnsValid()
+    public async Task EmptyText_ReturnsValid()
     {
         var result = await _service.DetectHallucinationsAsync("", "en", TestCancellationToken);
 
@@ -168,7 +168,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test14_NullLanguage_DefaultsToEnglish()
+    public async Task NullLanguage_DefaultsToEnglish()
     {
         var result = await _service.DetectHallucinationsAsync(
             "Valid response", language: null, TestCancellationToken);
@@ -177,7 +177,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test15_MultipleKeywords_CalculatesSeverity()
+    public async Task MultipleKeywords_CalculatesSeverity()
     {
         var text = "I'm not sure, unclear, and possibly incorrect.";
         var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
@@ -188,7 +188,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test16_CaseInsensitive_DetectsKeywords()
+    public async Task CaseInsensitive_DetectsKeywords()
     {
         var result = await _service.DetectHallucinationsAsync(
             "I DON'T KNOW the answer.", "en", TestCancellationToken);
@@ -198,7 +198,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test17_GetKeywordCount_ReturnsCorrectCount()
+    public async Task GetKeywordCount_ReturnsCorrectCount()
     {
         var enCount = _service.GetForbiddenKeywordCount("en");
         var itCount = _service.GetForbiddenKeywordCount("it");
@@ -210,7 +210,7 @@ public class HallucinationDetectionServiceTests
     // ========== Additional Comprehensive Tests (BGAI-031) ==========
 
     [Fact]
-    public async Task Test18_Portuguese_UnsupportedLanguage_FallbacksToEnglish()
+    public async Task Portuguese_UnsupportedLanguage_FallbacksToEnglish()
     {
         // Arrange - Portuguese is not supported, should fallback to English
         var result = await _service.DetectHallucinationsAsync(
@@ -223,7 +223,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test19_Severity_ExactlyOneKeyword_ReturnsLow()
+    public async Task Severity_ExactlyOneKeyword_ReturnsLow()
     {
         // Arrange - Exactly 1 keyword
         var result = await _service.DetectHallucinationsAsync(
@@ -236,7 +236,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test20_Severity_ExactlyThreeKeywords_ReturnsMedium()
+    public async Task Severity_ExactlyThreeKeywords_ReturnsMedium()
     {
         // Arrange - Exactly 3 keywords
         var text = "I'm not sure, unclear, and ambiguous about the rules.";
@@ -249,7 +249,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test21_Severity_ExactlyFiveKeywords_ReturnsHigh()
+    public async Task Severity_ExactlyFiveKeywords_ReturnsHigh()
     {
         // Arrange - Exactly 5 keywords
         var text = "I'm not sure, unclear, ambiguous, possibly incorrect, and perhaps wrong.";
@@ -262,7 +262,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test22_PartialMatch_DoesNotTrigger()
+    public async Task PartialMatch_DoesNotTrigger()
     {
         // Arrange - "known" contains "know" but should not trigger "I don't know"
         var text = "The well-known rules are clear.";
@@ -274,7 +274,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test23_AllSupportedLanguages_GetKeywordCount()
+    public async Task AllSupportedLanguages_GetKeywordCount()
     {
         // Arrange & Act
         var languages = new[] { "en", "it", "de", "fr", "es" };
@@ -285,7 +285,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test24_VeryLongText_DetectsKeywords()
+    public async Task VeryLongText_DetectsKeywords()
     {
         // Arrange - Long text with keyword buried inside
         var longText = string.Join(" ", Enumerable.Repeat("Valid game rule text.", 100))
@@ -301,7 +301,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test25_Italian_MultipleKeywords_DetectsAll()
+    public async Task Italian_MultipleKeywords_DetectsAll()
     {
         // Arrange - Multiple Italian keywords
         var text = "Non lo so e non sono sicuro della regola. È poco chiaro.";
@@ -316,7 +316,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test26_German_CaseSensitivity_DetectsUpperAndLower()
+    public async Task German_CaseSensitivity_DetectsUpperAndLower()
     {
         // Arrange - Test case insensitivity for German
         var text1 = "ich weiß nicht wie viele."; // lowercase
@@ -332,7 +332,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test27_French_GenderVariations_DetectsBoth()
+    public async Task French_GenderVariations_DetectsBoth()
     {
         // Arrange - French has gendered "sûr/sûre"
         var text1 = "Je ne suis pas sûr.";
@@ -348,7 +348,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test28_Spanish_AccentVariations_Detects()
+    public async Task Spanish_AccentVariations_Detects()
     {
         // Arrange
         var text = "No lo sé cuántos jugadores.";
@@ -360,7 +360,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test29_MessageFormat_ReflectsKeywordCount()
+    public async Task MessageFormat_ReflectsKeywordCount()
     {
         // Arrange - Test message formatting
         var text = "I'm not sure and unclear.";
@@ -372,7 +372,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test30_TotalKeywordsChecked_ReflectsLanguage()
+    public async Task TotalKeywordsChecked_ReflectsLanguage()
     {
         // Arrange & Act
         var resultEn = await _service.DetectHallucinationsAsync("Valid text.", "en", TestCancellationToken);
@@ -384,7 +384,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test31_CriticalPhrases_AlwaysReturnHigh()
+    public async Task CriticalPhrases_AlwaysReturnHigh()
     {
         // Arrange - Test critical phrases that force High severity
         var criticalTexts = new[]
@@ -408,7 +408,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test32_NullText_ThrowsOrReturnsValid()
+    public async Task NullText_ThrowsOrReturnsValid()
     {
         // Arrange & Act
         var result = await _service.DetectHallucinationsAsync(null!, "en", TestCancellationToken);
@@ -419,7 +419,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test33_WhitespaceOnlyText_ReturnsValid()
+    public async Task WhitespaceOnlyText_ReturnsValid()
     {
         // Arrange
         var result = await _service.DetectHallucinationsAsync("   \t\n   ", "en", TestCancellationToken);
@@ -430,7 +430,7 @@ public class HallucinationDetectionServiceTests
     }
 
     [Fact]
-    public async Task Test34_MultipleInvocations_ReturnsConsistentResults()
+    public async Task MultipleInvocations_ReturnsConsistentResults()
     {
         // Arrange
         var text = "I'm not sure about this.";
@@ -455,7 +455,7 @@ public class HallucinationDetectionServiceTests
     [InlineData("de", "Ich weiß nicht")]
     [InlineData("fr", "Je ne sais pas")]
     [InlineData("es", "No lo sé")]
-    public async Task Test35_PrimaryKeywords_AllLanguages_Detected(string language, string keyword)
+    public async Task PrimaryKeywords_AllLanguages_Detected(string language, string keyword)
     {
         // Arrange
         var text = $"The rule says: {keyword} how many players.";

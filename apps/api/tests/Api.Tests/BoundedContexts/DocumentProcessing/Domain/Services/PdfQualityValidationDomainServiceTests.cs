@@ -36,7 +36,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test01_HighQuality_PassesThreshold()
+    public void HighQuality_PassesThreshold()
     {
         // Arrange - High quality extraction (0.85 ≥ 0.80)
         var result = TextExtractionResult.CreateSuccess(
@@ -58,7 +58,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test02_MediumQuality_FailsThreshold()
+    public void MediumQuality_FailsThreshold()
     {
         // Arrange - Medium quality (0.70 < 0.80)
         var result = TextExtractionResult.CreateSuccess(
@@ -79,7 +79,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test03_LowQuality_FailsWithPoorRating()
+    public void LowQuality_FailsWithPoorRating()
     {
         // Arrange - Low quality (0.50 < 0.80)
         var result = TextExtractionResult.CreateSuccess(
@@ -100,7 +100,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test04_VeryLowQuality_FailsWithCriticalRating()
+    public void VeryLowQuality_FailsWithCriticalRating()
     {
         // Arrange - Very low quality (0.25 < 0.80)
         var result = TextExtractionResult.CreateSuccess(
@@ -121,7 +121,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test05_FailedExtraction_ReturnsFailedValidation()
+    public void FailedExtraction_ReturnsFailedValidation()
     {
         // Arrange - Extraction failed
         var result = TextExtractionResult.CreateFailure("Service unavailable");
@@ -137,7 +137,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test06_QualityMetrics_CalculatedCorrectly()
+    public void QualityMetrics_CalculatedCorrectly()
     {
         // Arrange - 1000 chars/page (good coverage)
         var result = TextExtractionResult.CreateSuccess(
@@ -159,7 +159,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test07_MeetsMinimumQuality_EnumVersion()
+    public void MeetsMinimumQuality_EnumVersion()
     {
         // Test helper method with enum
         Assert.True(_service.MeetsMinimumQuality(ExtractionQuality.High)); // 0.85 ≥ 0.80
@@ -169,7 +169,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test08_MeetsMinimumQuality_NumericVersion()
+    public void MeetsMinimumQuality_NumericVersion()
     {
         // Test helper method with numeric score
         Assert.True(_service.MeetsMinimumQuality(0.85)); // ≥ 0.80
@@ -180,7 +180,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test09_QualityReport_ContainsAllFields()
+    public void QualityReport_ContainsAllFields()
     {
         // Arrange
         var result = TextExtractionResult.CreateSuccess(
@@ -204,7 +204,7 @@ public class PdfQualityValidationDomainServiceTests
     }
 
     [Fact]
-    public void Test10_TextCoverage_LowCharsPerPage()
+    public void TextCoverage_LowCharsPerPage()
     {
         // Arrange - Low chars/page (300 chars/page < 500 min)
         var result = TextExtractionResult.CreateSuccess(

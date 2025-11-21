@@ -21,7 +21,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test01_CalculateCost_GptMini_ReturnsCorrectCost()
+    public void CalculateCost_GptMini_ReturnsCorrectCost()
     {
         // Arrange - GPT-4o-mini: $0.15/$0.60 per 1M tokens
         var modelId = "openai/gpt-4o-mini";
@@ -46,7 +46,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test02_CalculateCost_ClaudeHaiku_ReturnsCorrectCost()
+    public void CalculateCost_ClaudeHaiku_ReturnsCorrectCost()
     {
         // Arrange - Claude 3.5 Haiku: $0.80/$4.00 per 1M tokens
         var modelId = "anthropic/claude-3.5-haiku";
@@ -66,7 +66,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test03_CalculateCost_FreeTierModel_ReturnsZeroCost()
+    public void CalculateCost_FreeTierModel_ReturnsZeroCost()
     {
         // Arrange - Llama 3.3 70B free tier
         var modelId = "meta-llama/llama-3.3-70b-instruct:free";
@@ -84,7 +84,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test04_CalculateCost_OllamaModel_ReturnsZeroCost()
+    public void CalculateCost_OllamaModel_ReturnsZeroCost()
     {
         // Arrange - Local Ollama model (self-hosted)
         var modelId = "llama3:8b";
@@ -102,7 +102,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test05_CalculateCost_UnknownModel_ReturnsFreeAndWarnsUser()
+    public void CalculateCost_UnknownModel_ReturnsFreeAndWarnsUser()
     {
         // Arrange - Model not in pricing database
         var modelId = "unknown/model";
@@ -119,7 +119,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test06_CalculateCost_NegativeTokens_ReturnsEmpty()
+    public void CalculateCost_NegativeTokens_ReturnsEmpty()
     {
         // Arrange
         var modelId = "openai/gpt-4o-mini";
@@ -135,7 +135,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test07_CalculateCost_ZeroTokens_ReturnsZeroCost()
+    public void CalculateCost_ZeroTokens_ReturnsZeroCost()
     {
         // Arrange
         var modelId = "openai/gpt-4o-mini";
@@ -149,7 +149,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test08_CalculateCost_LargeTokenCount_HandlesCorrectly()
+    public void CalculateCost_LargeTokenCount_HandlesCorrectly()
     {
         // Arrange - 1M tokens (exact 1M boundary)
         var modelId = "openai/gpt-4o-mini";
@@ -167,7 +167,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test09_GetModelPricing_ExistingModel_ReturnsCorrectPricing()
+    public void GetModelPricing_ExistingModel_ReturnsCorrectPricing()
     {
         // Act
         var pricing = _calculator.GetModelPricing("openai/gpt-4o-mini");
@@ -182,7 +182,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test10_GetModelPricing_NonExistentModel_ReturnsNull()
+    public void GetModelPricing_NonExistentModel_ReturnsNull()
     {
         // Act
         var pricing = _calculator.GetModelPricing("nonexistent/model");
@@ -192,7 +192,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test11_CalculateCost_RoundingPrecision_SixDecimalPlaces()
+    public void CalculateCost_RoundingPrecision_SixDecimalPlaces()
     {
         // Arrange - Test micro-dollar precision
         var modelId = "openai/gpt-4o-mini";
@@ -211,7 +211,7 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void Test12_CalculateCost_AllSupportedModels_HavePricing()
+    public void CalculateCost_AllSupportedModels_HavePricing()
     {
         // Arrange - Test all configured models
         var models = new[]

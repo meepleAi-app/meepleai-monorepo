@@ -379,11 +379,21 @@ We follow **Behavior-Driven Development (BDD)** principles with comprehensive te
 
 ### Test Naming Convention (BDD Style)
 
-**Format**: `MethodName_WhenCondition_ThenExpectedBehavior`
+**Format**: `MethodName_Scenario_ExpectedResult`
+
+⚠️ **IMPORTANT**: Do NOT use `Test##_` prefixes (e.g., `Test01_`, `Test02_`). These were deprecated as of 2025-11-20 (Issue #1499).
+
+**Why This Standard?**
+- ✅ **Self-documenting**: Name describes the complete test scenario
+- ✅ **IDE-friendly**: Alphabetical sorting by method name, not by number
+- ✅ **xUnit standard**: Pattern recommended by Microsoft and xUnit documentation
+- ✅ **Refactoring-safe**: Numbers become obsolete when tests are reordered
+- ✅ **Readability**: Easier to understand what the test does without reading the code
 
 **Examples**:
 ```csharp
 // C# - xUnit
+// ✅ CORRECT: No Test## prefix
 [Fact]
 public async Task SearchAsync_WhenQueryMatchesDocuments_ReturnsRankedResults()
 {
@@ -411,6 +421,10 @@ public async Task GenerateApiKeyAsync_WhenUserNotFound_ThrowsNotFoundException()
         () => _apiKeyService.GenerateApiKeyAsync(nonExistentUserId, "test-key")
     );
 }
+
+// ❌ INCORRECT: Don't use Test## prefix (deprecated)
+[Fact]
+public async Task Test01_SearchAsync_WhenQueryMatchesDocuments_ReturnsRankedResults() { } // ❌
 ```
 
 ```typescript

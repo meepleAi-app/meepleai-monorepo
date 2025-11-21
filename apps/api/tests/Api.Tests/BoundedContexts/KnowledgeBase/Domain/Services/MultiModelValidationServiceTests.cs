@@ -33,14 +33,14 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public void Test01_ConsensusThreshold_Returns090()
+    public void ConsensusThreshold_Returns090()
     {
         // Act & Assert
         Assert.Equal(0.90, _service.ConsensusThreshold);
     }
 
     [Fact]
-    public void Test02_CalculateSimilarity_IdenticalTexts_Returns100()
+    public void CalculateSimilarity_IdenticalTexts_Returns100()
     {
         // Arrange
         var text = "The knight moves in an L-shape: two squares in one direction and one square perpendicular.";
@@ -53,7 +53,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public void Test03_CalculateSimilarity_HighlySimilarTexts_ReturnsHighScore()
+    public void CalculateSimilarity_HighlySimilarTexts_ReturnsHighScore()
     {
         // Arrange - Same topic, mostly same words (cosine similarity should be very high)
         var text1 = "The knight moves two squares vertically and one square horizontally.";
@@ -67,7 +67,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public void Test04_CalculateSimilarity_DifferentTexts_ReturnsLowScore()
+    public void CalculateSimilarity_DifferentTexts_ReturnsLowScore()
     {
         // Arrange
         var text1 = "The knight moves in an L-shape.";
@@ -81,7 +81,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public void Test05_CalculateSimilarity_EmptyText_ReturnsZero()
+    public void CalculateSimilarity_EmptyText_ReturnsZero()
     {
         // Arrange
         var text = "Some text";
@@ -98,7 +98,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test06_ValidateWithConsensusAsync_HighSimilarity_ReturnsConsensus()
+    public async Task ValidateWithConsensusAsync_HighSimilarity_ReturnsConsensus()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -124,7 +124,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test07_ValidateWithConsensusAsync_ModerateSimilarity_NoConsensus()
+    public async Task ValidateWithConsensusAsync_ModerateSimilarity_NoConsensus()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -160,7 +160,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test08_ValidateWithConsensusAsync_LowSimilarity_NoConsensus()
+    public async Task ValidateWithConsensusAsync_LowSimilarity_NoConsensus()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -181,7 +181,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test09_ValidateWithConsensusAsync_Gpt4Fails_ReturnsError()
+    public async Task ValidateWithConsensusAsync_Gpt4Fails_ReturnsError()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -220,7 +220,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test10_ValidateWithConsensusAsync_ClaudeFails_ReturnsError()
+    public async Task ValidateWithConsensusAsync_ClaudeFails_ReturnsError()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -259,7 +259,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test11_ValidateWithConsensusAsync_BothFail_ReturnsError()
+    public async Task ValidateWithConsensusAsync_BothFail_ReturnsError()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -288,7 +288,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test12_ValidateWithConsensusAsync_EmptyPrompt_ReturnsError()
+    public async Task ValidateWithConsensusAsync_EmptyPrompt_ReturnsError()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -304,7 +304,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public void Test13_CalculateSimilarity_CaseInsensitive()
+    public void CalculateSimilarity_CaseInsensitive()
     {
         // Arrange
         var text1 = "The KNIGHT moves in an L-shape.";
@@ -318,7 +318,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public void Test14_CalculateSimilarity_PunctuationIgnored()
+    public void CalculateSimilarity_PunctuationIgnored()
     {
         // Arrange
         var text1 = "The knight moves in an L-shape!";
@@ -332,7 +332,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test15_ValidateWithConsensusAsync_CancellationToken_ThrowsOperationCanceledException()
+    public async Task ValidateWithConsensusAsync_CancellationToken_ThrowsOperationCanceledException()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -355,7 +355,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test16_ValidateWithConsensusAsync_ParallelExecution_BothModelsQueried()
+    public async Task ValidateWithConsensusAsync_ParallelExecution_BothModelsQueried()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -405,7 +405,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test17_ValidateWithConsensusAsync_PerformanceMetrics_RecordedCorrectly()
+    public async Task ValidateWithConsensusAsync_PerformanceMetrics_RecordedCorrectly()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -431,7 +431,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test18_ValidateWithConsensusAsync_SeverityLevels_CalculatedCorrectly()
+    public async Task ValidateWithConsensusAsync_SeverityLevels_CalculatedCorrectly()
     {
         // Arrange
         var systemPrompt = "You are a board game rules expert.";
@@ -490,7 +490,7 @@ public class MultiModelValidationServiceTests
     // ========== BGAI-038: Empty/Whitespace Response Validation ==========
 
     [Fact]
-    public async Task Test19_ValidateWithConsensusAsync_Gpt4EmptyResponse_ReturnsError()
+    public async Task ValidateWithConsensusAsync_Gpt4EmptyResponse_ReturnsError()
     {
         // Arrange - BGAI-038: Test empty GPT-4 response handling
         SetupMockSuccessWithEmptyResponse("", "Valid Claude response");
@@ -508,7 +508,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test20_ValidateWithConsensusAsync_ClaudeEmptyResponse_ReturnsError()
+    public async Task ValidateWithConsensusAsync_ClaudeEmptyResponse_ReturnsError()
     {
         // Arrange - BGAI-038: Test empty Claude response handling
         SetupMockSuccessWithEmptyResponse("Valid GPT-4 response", "");
@@ -526,7 +526,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test21_ValidateWithConsensusAsync_Gpt4WhitespaceOnlyResponse_ReturnsError()
+    public async Task ValidateWithConsensusAsync_Gpt4WhitespaceOnlyResponse_ReturnsError()
     {
         // Arrange - BGAI-038: Test whitespace-only GPT-4 response handling
         SetupMockSuccessWithEmptyResponse("   \n\t  ", "Valid Claude response");
@@ -544,7 +544,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test22_ValidateWithConsensusAsync_ClaudeWhitespaceOnlyResponse_ReturnsError()
+    public async Task ValidateWithConsensusAsync_ClaudeWhitespaceOnlyResponse_ReturnsError()
     {
         // Arrange - BGAI-038: Test whitespace-only Claude response handling
         SetupMockSuccessWithEmptyResponse("Valid GPT-4 response", "   \n\t  ");
@@ -562,7 +562,7 @@ public class MultiModelValidationServiceTests
     }
 
     [Fact]
-    public async Task Test23_ValidateWithConsensusAsync_BothEmptyResponses_ReturnsError()
+    public async Task ValidateWithConsensusAsync_BothEmptyResponses_ReturnsError()
     {
         // Arrange - BGAI-038: Test both models returning empty responses
         SetupMockSuccessWithEmptyResponse("", "");

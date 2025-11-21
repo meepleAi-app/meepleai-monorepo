@@ -1,11 +1,12 @@
 /**
  * Unit tests for useChatOptimistic hook
  * Issue #1167: Chat Optimistic Updates
+ * Issue #1436: Fixed SWR + Zustand State Duplication
  *
  * Test scenarios:
  * - Optimistic message creation with isOptimistic flag
  * - Automatic rollback on error
- * - SWR cache management
+ * - Zustand-only state management (single source of truth)
  * - isOptimisticUpdate state tracking
  *
  * Migration: Issue #1083 - Migrated to Zustand store pattern
@@ -14,7 +15,6 @@
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useChatOptimistic } from '../useChatOptimistic';
-import { useSWRConfig } from 'swr';
 import {
   ChatStoreTestProvider,
   createMockStoreState,
@@ -22,30 +22,16 @@ import {
 } from '@/__tests__/utils/zustand-test-utils';
 import { useChatStore } from '@/store/chat/store';
 
-// Mock dependencies
-jest.mock('swr', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({ data: undefined })),
-  useSWRConfig: jest.fn(),
-}));
-
-const mockUseSWRConfig = useSWRConfig as jest.MockedFunction<typeof useSWRConfig>;
-
 describe('useChatOptimistic', () => {
   const mockSendMessage = jest.fn();
-  const mockMutate = jest.fn();
+  const mockAddOptimisticMessage = jest.fn();
+  const mockRemoveOptimisticMessage = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
     resetChatStore();
 
-    // Mock SWR config
-    mockUseSWRConfig.mockReturnValue({
-      mutate: mockMutate,
-      cache: new Map(),
-    } as any);
-
-    // Initialize store with mock sendMessage
+    // Initialize store with mock functions
     useChatStore.setState({
       ...createMockStoreState({
         selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
@@ -54,6 +40,8 @@ describe('useChatOptimistic', () => {
         messagesByChat: { 'chat-123': [] },
       }),
       sendMessage: mockSendMessage,
+      addOptimisticMessage: mockAddOptimisticMessage,
+      removeOptimisticMessage: mockRemoveOptimisticMessage,
     } as any);
   });
 
@@ -71,19 +59,19 @@ describe('useChatOptimistic', () => {
         await result.current.sendMessageOptimistic('Test message');
       });
 
-      // Verify mutate was called with optimistic message
-      expect(mockMutate).toHaveBeenCalled();
-      const mutateCall = mockMutate.mock.calls[0];
-      const optimisticMessages = mutateCall[1];
+      // Verify addOptimisticMessage was called with optimistic message
+      expect(mockAddOptimisticMessage).toHaveBeenCalled();
+      const addCall = mockAddOptimisticMessage.mock.calls[0];
+      const optimisticMessage = addCall[0];
+      const threadId = addCall[1];
 
-      expect(Array.isArray(optimisticMessages)).toBe(true);
-      expect(optimisticMessages.length).toBe(1);
-      expect(optimisticMessages[0]).toMatchObject({
+      expect(threadId).toBe('chat-123');
+      expect(optimisticMessage).toMatchObject({
         role: 'user',
         content: 'Test message',
         isOptimistic: true,
       });
-      expect(optimisticMessages[0].id).toMatch(/^temp-/);
+      expect(optimisticMessage.id).toMatch(/^temp-/);
     });
 
     it('should call backend sendMessage after optimistic update', async () => {
@@ -120,7 +108,7 @@ describe('useChatOptimistic', () => {
       });
     });
 
-    it('should re-throw error on send failure', async () => {
+    it('should re-throw error on send failure and rollback optimistic message', async () => {
       const error = new Error('Network error');
       mockSendMessage.mockRejectedValueOnce(error);
 
@@ -136,6 +124,15 @@ describe('useChatOptimistic', () => {
           await result.current.sendMessageOptimistic('Test message');
         })
       ).rejects.toThrow('Network error');
+
+      // Verify removeOptimisticMessage was called for rollback
+      expect(mockRemoveOptimisticMessage).toHaveBeenCalled();
+      const removeCall = mockRemoveOptimisticMessage.mock.calls[0];
+      const messageId = removeCall[0];
+      const threadId = removeCall[1];
+
+      expect(threadId).toBe('chat-123');
+      expect(messageId).toMatch(/^temp-/);
 
       // Verify optimistic state is cleared after error
       expect(result.current.isOptimisticUpdate).toBe(false);
@@ -153,6 +150,8 @@ describe('useChatOptimistic', () => {
         selectedGameId: null,
         selectedAgentId: null,
         sendMessage: mockSendMessage,
+        addOptimisticMessage: mockAddOptimisticMessage,
+        removeOptimisticMessage: mockRemoveOptimisticMessage,
       } as any, true);
 
       const { result } = renderHook(() => useChatOptimistic(), {
@@ -165,7 +164,7 @@ describe('useChatOptimistic', () => {
         await result.current.sendMessageOptimistic('Test message');
       });
 
-      expect(mockMutate).not.toHaveBeenCalled();
+      expect(mockAddOptimisticMessage).not.toHaveBeenCalled();
       expect(mockSendMessage).not.toHaveBeenCalled();
     });
 
@@ -180,7 +179,7 @@ describe('useChatOptimistic', () => {
         await result.current.sendMessageOptimistic('   ');
       });
 
-      expect(mockMutate).not.toHaveBeenCalled();
+      expect(mockAddOptimisticMessage).not.toHaveBeenCalled();
       expect(mockSendMessage).not.toHaveBeenCalled();
     });
 
@@ -197,11 +196,12 @@ describe('useChatOptimistic', () => {
         await result.current.sendMessageOptimistic('  Test message  ');
       });
 
-      // Check optimistic message
-      const optimisticMessages = mockMutate.mock.calls[0][1];
-      expect(optimisticMessages[0].content).toBe('Test message');
+      // Check optimistic message has trimmed content
+      const addCall = mockAddOptimisticMessage.mock.calls[0];
+      const optimisticMessage = addCall[0];
+      expect(optimisticMessage.content).toBe('Test message');
 
-      // Check backend call
+      // Check backend call (receives original untrimmed content as per implementation)
       expect(mockSendMessage).toHaveBeenCalledWith('  Test message  ');
     });
   });

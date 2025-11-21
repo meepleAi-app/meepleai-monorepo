@@ -2,11 +2,12 @@
  * useChatOptimistic - Optimistic UI updates for chat messages
  *
  * Issue #1167: Chat Optimistic Updates
+ * Issue #1436: Fixed SWR + Zustand State Duplication
  *
  * Provides optimistic message sending with:
  * - Temporary message states with loading indicators
  * - Automatic rollback on error
- * - SWR integration for cache management
+ * - Zustand-only state management (single source of truth)
  * - Smooth UX without blocking spinners
  *
  * Usage:
@@ -15,7 +16,6 @@
  */
 
 import { useCallback, useState } from 'react';
-import useSWR, { useSWRConfig } from 'swr';
 import { Message } from '@/types';
 import { useChatStore, useActiveMessages } from '@/store/chat';
 
@@ -39,48 +39,35 @@ export interface UseChatOptimisticResult {
 
 /**
  * Hook for optimistic chat message updates
- * Integrates SWR for cache management and automatic rollback
+ * Uses Zustand as single source of truth (Issue #1436)
  */
 export function useChatOptimistic(): UseChatOptimisticResult {
-  // Use Zustand store instead of context
+  // Zustand store - single source of truth
   const selectedGameId = useChatStore((state) => state.selectedGameId);
   const selectedAgentId = useChatStore((state) => state.selectedAgentId);
   const activeChatIds = useChatStore((state) => state.activeChatIds);
   const sendMessage = useChatStore((state) => state.sendMessage);
+  const addOptimisticMessage = useChatStore((state) => state.addOptimisticMessage);
+  const removeOptimisticMessage = useChatStore((state) => state.removeOptimisticMessage);
 
   const activeChatId = selectedGameId ? activeChatIds[selectedGameId] : null;
-  const contextMessages = useActiveMessages();
+  const messages = useActiveMessages();
 
-  const { mutate } = useSWRConfig();
   const [optimisticId, setOptimisticId] = useState<string | null>(null);
-
-  const swrKey = activeChatId ? `/api/v1/chats/${activeChatId}/messages` : null;
-
-  const { data: swrMessages } = useSWR<Message[]>(
-    swrKey,
-    null,
-    {
-      fallbackData: contextMessages,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
-  );
-
-  const messages = swrMessages ?? contextMessages;
   const isOptimisticUpdate = optimisticId !== null;
 
   /**
    * Send message with optimistic update
-   * Pattern from Issue #1167:
+   * Pattern from Issue #1167 (Simplified for #1436):
    * 1. Create temporary optimistic message
-   * 2. Optimistically update UI (SWR mutate without revalidate)
+   * 2. Optimistically update Zustand store
    * 3. Send to backend
-   * 4. Revalidate with real data
+   * 4. Backend updates store with real data
    * 5. Rollback on error
    */
   const sendMessageOptimistic = useCallback(
     async (content: string) => {
-      if (!selectedGameId || !selectedAgentId || !content.trim()) {
+      if (!selectedGameId || !selectedAgentId || !content.trim() || !activeChatId) {
         return;
       }
 
@@ -97,38 +84,22 @@ export function useChatOptimistic(): UseChatOptimisticResult {
       // Track optimistic update (reactive state)
       setOptimisticId(tempId);
 
-      // 2. Optimistically update UI
-      // mutate with false = update cache without revalidation
-      if (swrKey) {
-        await mutate(
-          swrKey,
-          [...messages, tempMessage],
-          false // Don't revalidate yet
-        );
-      }
+      // 2. Optimistically update Zustand store
+      addOptimisticMessage(tempMessage, activeChatId);
 
       try {
-        // 3. Send to backend (Zustand store handles thread creation)
+        // 3. Send to backend (Zustand store handles thread creation and updates)
         await sendMessage(content);
 
         // 4. Clear optimistic state (reactive)
+        // Backend updates are handled by Zustand store's sendMessage
         setOptimisticId(null);
-
-        // 5. Revalidate to get real message from backend
-        // Zustand store will reload messages, which updates our fallbackData
-        // SWR will reflect this automatically
       } catch (err) {
         console.error('Failed to send message (optimistic):', err);
 
         // 5. Rollback on error
-        // Remove the optimistic message from cache
-        if (swrKey) {
-          await mutate(
-            swrKey,
-            messages.filter((m) => m.id !== tempId),
-            false
-          );
-        }
+        // Remove the optimistic message from Zustand store
+        removeOptimisticMessage(tempId, activeChatId);
 
         // Clear optimistic state on error (reactive)
         setOptimisticId(null);
@@ -138,12 +109,12 @@ export function useChatOptimistic(): UseChatOptimisticResult {
       }
     },
     [
-      swrKey,
-      messages,
-      mutate,
-      sendMessage,
       selectedGameId,
       selectedAgentId,
+      activeChatId,
+      sendMessage,
+      addOptimisticMessage,
+      removeOptimisticMessage,
     ]
   );
 

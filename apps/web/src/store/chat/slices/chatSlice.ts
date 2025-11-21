@@ -52,7 +52,7 @@ export const createChatSlice: StateCreator<
   },
 
   createChat: async () => {
-    const { selectedGameId, selectedAgentId, setLoading, setError, chatsByGame, activeChatIds } = get();
+    const { selectedGameId, selectedAgentId, setLoading, setError } = get();
 
     if (!selectedGameId || !selectedAgentId) {
       setError('Seleziona un gioco e un agente');
@@ -70,22 +70,30 @@ export const createChatSlice: StateCreator<
       });
 
       if (newThread) {
+        // Save the previous active ID before updating state
+        const previousActiveId = get().activeChatIds[selectedGameId];
+
         set((state) => {
-          const currentThreads = state.chatsByGame[selectedGameId] ?? [];
-          state.chatsByGame[selectedGameId] = [newThread, ...currentThreads];
+          if (!state.chatsByGame[selectedGameId]) {
+            state.chatsByGame[selectedGameId] = [];
+          }
+          state.chatsByGame[selectedGameId].unshift(newThread);
           state.activeChatIds[selectedGameId] = newThread.id;
           state.messagesByChat[newThread.id] = [];
         });
 
         // Auto-archive oldest thread if limit exceeded
-        const activeThreads = (chatsByGame[selectedGameId] ?? []).filter(t => t.status !== 'Closed');
+        // Get fresh state after mutation, but exclude the newly created thread from archive check
+        const { chatsByGame } = get();
+        const activeThreads = (chatsByGame[selectedGameId] ?? [])
+          .filter(t => t.status !== 'Closed' && t.id !== newThread.id);
         if (activeThreads.length > MAX_THREADS_PER_GAME) {
           const sorted = [...activeThreads].sort((a, b) =>
             new Date(a.lastMessageAt ?? a.createdAt).getTime() -
             new Date(b.lastMessageAt ?? b.createdAt).getTime()
           );
-          const currentActiveId = activeChatIds[selectedGameId];
-          const toArchive = sorted.find(t => t.id !== currentActiveId);
+          // Use the previous active ID (before creating new thread) to avoid archiving it
+          const toArchive = sorted.find(t => t.id !== previousActiveId);
 
           if (toArchive) {
             try {

@@ -182,9 +182,8 @@ public static class WorkflowEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // Extract userId from authenticated session
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session.User.Id, id);
 
@@ -199,6 +198,7 @@ public static class WorkflowEndpoints
             logger.LogInformation("Template {TemplateId} imported successfully as workflow {WorkflowId}", id, result.WorkflowId);
             return Results.Ok(result);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("ImportN8nTemplate")
         .WithTags("N8N")

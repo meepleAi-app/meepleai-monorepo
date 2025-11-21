@@ -22,8 +22,8 @@ public static class AdminUserEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             logger.LogInformation("User {UserId} searching for users with query: {Query}", session.User.Id, query);
 
@@ -33,7 +33,7 @@ public static class AdminUserEndpoints
 
             return Results.Ok(users);
         })
-        .RequireAuthorization()
+        .RequireSession() // Issue #1446: Automatic session validation
         .WithName("SearchUsers")
         .WithTags("Users")
         .WithDescription("Search users by display name or email for @mention autocomplete (max 10 results)")

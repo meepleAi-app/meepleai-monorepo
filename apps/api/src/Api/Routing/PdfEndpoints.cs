@@ -107,9 +107,8 @@ public static class PdfEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // Authentication required
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Validate query parameter
             if (string.IsNullOrWhiteSpace(q))
@@ -120,7 +119,8 @@ public static class PdfEndpoints
             var results = await bggService.SearchGamesAsync(q, exact, ct);
             logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
             return Results.Json(new { results });
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapGet("/bgg/games/{bggId:int}", async (
             int bggId,
@@ -129,9 +129,8 @@ public static class PdfEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // Authentication required
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Validate BGG ID
             if (bggId <= 0)
@@ -149,21 +148,23 @@ public static class PdfEndpoints
 
             logger.LogInformation("BGG game details retrieved: {BggId}, {Name}", bggId, details.Name);
             return Results.Json(details);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapGet("/games/{gameId:guid}/pdfs", async (Guid gameId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             var pdfs = await mediator.Send(new GetPdfDocumentsByGameQuery(gameId), ct);
             return Results.Json(new { pdfs });
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         group.MapGet("/pdfs/{pdfId:guid}/text", async (Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Use CQRS Query to get PDF text
             var pdf = await mediator.Send(new GetPdfTextQuery(pdfId), ct);
@@ -174,13 +175,14 @@ public static class PdfEndpoints
             }
 
             return Results.Json(pdf);
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // BGAI-074: Download/view PDF file
         group.MapGet("/pdfs/{pdfId:guid}/download", async (Guid pdfId, HttpContext context, MeepleAiDbContext db, IBlobStorageService blobStorageService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Get PDF metadata from database
             var pdf = await db.PdfDocuments
@@ -224,14 +226,15 @@ public static class PdfEndpoints
             // Return file as inline (viewable in browser) with proper content type
             return Results.Stream(fileStream, contentType: pdf.ContentType ?? "application/pdf", fileDownloadName: pdf.FileName, enableRangeProcessing: true);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("DownloadPdf");
 
         // SEC-02: Delete PDF with Row-Level Security
         group.MapDelete("/pdf/{pdfId:guid}", async (Guid pdfId, HttpContext context, AuditService auditService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Use CQRS Query to check ownership
             var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct);
@@ -294,13 +297,14 @@ public static class PdfEndpoints
                 ct);
 
             return Results.NoContent();
-        });
+        })
+        .RequireSession(); // Issue #1446: Automatic session validation
 
         // PDF-08: Get PDF processing progress
         group.MapGet("/pdfs/{pdfId:guid}/progress", async (Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Use CQRS Query to get PDF progress
             var pdf = await mediator.Send(new GetPdfProgressQuery(pdfId), ct);
@@ -346,14 +350,15 @@ public static class PdfEndpoints
 
             return Results.Ok(progress);
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("GetPdfProcessingProgress");
 
         // PDF-08: Cancel PDF processing
         group.MapDelete("/pdfs/{pdfId:guid}/processing", async (Guid pdfId, HttpContext context, IMediator mediator, IBackgroundTaskService backgroundTaskService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authenticated, session, error) = context.TryGetActiveSession();
-            if (!authenticated) return error!;
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
 
             // Use CQRS Query to check ownership and status
             var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct);
@@ -394,6 +399,7 @@ public static class PdfEndpoints
 
             return Results.Ok(new { message = "Processing cancellation requested" });
         })
+        .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("CancelPdfProcessing");
 

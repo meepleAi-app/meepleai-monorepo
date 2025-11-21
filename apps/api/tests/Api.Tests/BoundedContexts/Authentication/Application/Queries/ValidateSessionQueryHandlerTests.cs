@@ -71,7 +71,7 @@ public class ValidateSessionQueryHandlerTests
         Assert.NotNull(result.ExpiresAt);
         Assert.NotNull(result.LastSeenAt);
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(session.Id, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class ValidateSessionQueryHandlerTests
         Assert.NotNull(session.LastSeenAt);
         Assert.NotEqual(initialLastSeen, session.LastSeenAt);
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(session.Id, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -137,7 +137,7 @@ public class ValidateSessionQueryHandlerTests
         Assert.Null(result.ExpiresAt);
         Assert.Null(result.LastSeenAt);
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class ValidateSessionQueryHandlerTests
         Assert.Equal(session.ExpiresAt, result.ExpiresAt); // Handler returns session timestamps
         Assert.Equal(session.LastSeenAt, result.LastSeenAt);
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public class ValidateSessionQueryHandlerTests
         Assert.False(result.IsValid);
         Assert.Null(result.User);
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     #endregion
@@ -252,7 +252,7 @@ public class ValidateSessionQueryHandlerTests
         Assert.False(result.IsValid);
         Assert.Null(result.User);
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(session.Id, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -515,7 +515,7 @@ public class ValidateSessionQueryHandlerTests
         // Assert
         _sessionRepositoryMock.Verify(x => x.GetByTokenHashAsync(tokenHash, token), Times.Once);
         _userRepositoryMock.Verify(x => x.GetByIdAsync(user.Id, token), Times.Once);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, token), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(session.Id, It.IsAny<DateTime>(), token), Times.Once);
     }
 
     [Fact]
@@ -547,8 +547,8 @@ public class ValidateSessionQueryHandlerTests
         // Act
         await _handler.Handle(query, CancellationToken.None);
 
-        // Assert - Query handlers don't call SaveChanges, but they do call UpdateAsync
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
+        // Assert - Query handlers don't call SaveChanges, but they do call UpdateLastSeenAsync
+        _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(session.Id, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion

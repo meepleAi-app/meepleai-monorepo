@@ -1,0 +1,49 @@
+name: 'Setup Backend Environment'
+description: 'Sets up .NET SDK, NuGet caching, and restores dependencies'
+inputs:
+  dotnet-version:
+    description: '.NET SDK version to use'
+    required: false
+    default: '9.0.x'
+  working-directory:
+    description: 'Working directory for dotnet operations'
+    required: false
+    default: 'apps/api'
+  cache-nuget:
+    description: 'Enable NuGet package caching'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Cache NuGet packages
+      if: ${{ inputs.cache-nuget == 'true' }}
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Cache .NET build outputs
+      if: ${{ inputs.cache-nuget == 'true' }}
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ inputs.working-directory }}/src/**/bin
+          ${{ inputs.working-directory }}/src/**/obj
+        key: ${{ runner.os }}-dotnet-build-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}
+        restore-keys: |
+          ${{ runner.os }}-dotnet-build-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-
+          ${{ runner.os }}-dotnet-build-
+
+    - name: Restore .NET dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: dotnet restore

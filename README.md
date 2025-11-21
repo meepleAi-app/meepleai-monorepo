@@ -1,6 +1,10 @@
 # MeepleAI
 
 [![CI](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/ci.yml/badge.svg)](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/ci.yml)
+[![Security Scan](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/security-scan.yml/badge.svg)](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/security-scan.yml)
+[![K6 Performance](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/k6-performance.yml/badge.svg)](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/k6-performance.yml)
+[![Lighthouse CI](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/lighthouse-ci.yml/badge.svg)](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/lighthouse-ci.yml)
+[![Storybook](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/storybook-deploy.yml/badge.svg)](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/storybook-deploy.yml)
 [![codecov](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo/branch/main/graph/badge.svg)](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo)
 [![Frontend Coverage](https://img.shields.io/badge/coverage%20(frontend)-90%25-brightgreen)](./docs/code-coverage.md)
 [![Backend Coverage](https://img.shields.io/badge/coverage%20(backend)-90%25-brightgreen)](./docs/code-coverage.md)

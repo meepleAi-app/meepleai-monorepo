@@ -168,6 +168,7 @@ curl http://meepleai-api:8080/health
 | Document | Description | Priority |
 |----------|-------------|----------|
 | [Logging & Audit](./monitoring/logging-and-audit.md) | Serilog → Seq, correlation IDs, audit trails | ⭐ Essential |
+| [Slack Notifications](./monitoring/slack-notifications.md) | CI/CD failure alerts via Slack webhooks | Recommended |
 
 **Observability Stack** (15 services total):
 

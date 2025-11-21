@@ -12,7 +12,9 @@ import {
   NotFoundError,
   ServerError,
   SchemaValidationError,
+  NetworkError,
 } from '../core/errors';
+import { resetRetryMetrics, getRetryMetrics } from '../core/metrics';
 import { globalRequestCache } from '../core/requestCache';
 
 describe('getApiBase', () => {
@@ -531,6 +533,194 @@ describe('HttpClient', () => {
     });
   });
 
+  describe('retry logic (Issue #1453)', () => {
+    beforeEach(() => {
+      resetRetryMetrics();
+    });
+
+    it('should retry on 500 error and succeed', async () => {
+      mockFetch
+        .mockRejectedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Server error' }),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ data: 'success' }),
+          headers: new Headers(),
+        });
+
+      // First call fails, second call succeeds
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Server error' }),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ data: 'success' }),
+          headers: new Headers(),
+        });
+
+      const result = await client.get('/api/v1/test', undefined, {
+        retry: {
+          retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+        },
+      });
+
+      expect(result).toEqual({ data: 'success' });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should retry on 503 error', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          json: async () => ({ error: 'Service Unavailable' }),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ data: 'success' }),
+          headers: new Headers(),
+        });
+
+      const result = await client.get('/api/v1/test', undefined, {
+        retry: {
+          retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+        },
+      });
+
+      expect(result).toEqual({ data: 'success' });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not retry on 404 error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'Not Found' }),
+        headers: new Headers(),
+      });
+
+      await expect(
+        client.get('/api/v1/test', undefined, {
+          retry: {
+            retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+          },
+        })
+      ).rejects.toThrow(NotFoundError);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not retry on 401 error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
+        headers: new Headers(),
+      });
+
+      const result = await client.get('/api/v1/test', undefined, {
+        retry: {
+          retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+        },
+      });
+
+      // GET returns null for 401
+      expect(result).toBeNull();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should skip retry when skipRetry is true', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Server error' }),
+        headers: new Headers(),
+      });
+
+      await expect(
+        client.get('/api/v1/test', undefined, {
+          retry: { skipRetry: true },
+        })
+      ).rejects.toThrow(ServerError);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should record retry metrics', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Server error' }),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ data: 'success' }),
+          headers: new Headers(),
+        });
+
+      await client.get('/api/v1/test', undefined, {
+        retry: {
+          retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+        },
+      });
+
+      const metrics = getRetryMetrics();
+      expect(metrics.totalRetries).toBeGreaterThan(0);
+      expect(metrics.successAfterRetry).toBe(1);
+    });
+
+    it('should call onRetry callback', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Server error' }),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ data: 'success' }),
+          headers: new Headers(),
+        });
+
+      const onRetry = jest.fn();
+
+      await client.get('/api/v1/test', undefined, {
+        retry: {
+          retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+          onRetry,
+        },
+      });
+
+      expect(onRetry).toHaveBeenCalledTimes(1);
+      expect(onRetry).toHaveBeenCalledWith(1, expect.any(ServerError), expect.any(Number));
+    });
+
+    it('should work with POST requests', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 502,
+          json: async () => ({ error: 'Bad Gateway' }),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
   describe('Request Deduplication (Issue #1454)', () => {
     beforeEach(() => {
       // Clear cache before each test
@@ -707,6 +897,88 @@ describe('HttpClient', () => {
           status: 200,
           json: async () => ({ success: true }),
           headers: new Headers(),
+        });
+
+      const result = await client.post('/api/v1/test', { data: 'test' }, undefined, {
+        retry: {
+          retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+        },
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should work with PUT requests', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          json: async () => ({ error: 'Service Unavailable' }),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ updated: true }),
+          headers: new Headers(),
+        });
+
+      const result = await client.put('/api/v1/test', { data: 'updated' }, undefined, {
+        retry: {
+          retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+        },
+      });
+
+      expect(result).toEqual({ updated: true });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should work with DELETE requests', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Server error' }),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 204,
+          headers: new Headers(),
+        });
+
+      await client.delete('/api/v1/test', {
+        retry: {
+          retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+        },
+      });
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should exhaust retries and throw last error', async () => {
+      mockFetch
+        .mockResolvedValue({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Server error' }),
+          headers: new Headers(),
+        });
+
+      await expect(
+        client.get('/api/v1/test', undefined, {
+          retry: {
+            retryConfig: { maxAttempts: 2, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+          },
+        })
+      ).rejects.toThrow(ServerError);
+
+      // 1 initial attempt + 2 retries = 3 total
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      const metrics = getRetryMetrics();
+      expect(metrics.failedAfterRetry).toBe(1);
         };
       });
 

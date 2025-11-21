@@ -80,7 +80,7 @@ public class RequireSessionFilterTests
         Assert.True(context.HttpContext.Items.ContainsKey(nameof(ActiveSession)));
         var sessionInContext = context.HttpContext.Items[nameof(ActiveSession)] as ActiveSession;
         Assert.NotNull(sessionInContext);
-        Assert.Equal(testSession.Session.Id, sessionInContext.Session.Id);
+        Assert.Equal(testSession.User.Id, sessionInContext.User.Id);
         Assert.Equal(testSession.User.Id, sessionInContext.User.Id);
     }
 
@@ -141,25 +141,16 @@ public class RequireSessionFilterTests
 
     private ActiveSession CreateTestSession()
     {
-        return new ActiveSession
-        {
-            Session = new Session
-            {
-                Id = Guid.NewGuid().ToString(),
-                UserId = "test-user-id",
-                Token = "test-token",
-                CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddHours(1),
-                LastActivityAt = DateTime.UtcNow
-            },
-            User = new User
-            {
-                Id = "test-user-id",
-                Email = "test@example.com",
-                DisplayName = "Test User",
-                Role = "User",
-                CreatedAt = DateTime.UtcNow
-            }
-        };
+        var authUser = new AuthUser(
+            Id: "test-user-id",
+            Email: "test@example.com",
+            DisplayName: "Test User",
+            Role: "User"
+        );
+        return new ActiveSession(
+            User: authUser,
+            ExpiresAt: DateTime.UtcNow.AddHours(1),
+            LastSeenAt: DateTime.UtcNow
+        );
     }
 }

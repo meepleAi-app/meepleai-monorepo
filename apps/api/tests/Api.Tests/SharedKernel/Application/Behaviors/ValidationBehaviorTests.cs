@@ -24,7 +24,7 @@ public sealed class ValidationBehaviorTests
         );
 
         var nextCalled = false;
-        RequestHandlerDelegate<object> next = () =>
+        RequestHandlerDelegate<object> next = (ct) =>
         {
             nextCalled = true;
             return Task.FromResult<object>(new object());
@@ -52,11 +52,11 @@ public sealed class ValidationBehaviorTests
 
         var mockValidator = new Mock<IValidator<LoginCommand>>();
         mockValidator
-            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default))
             .ReturnsAsync(new ValidationResult());
 
         var nextCalled = false;
-        RequestHandlerDelegate<object> next = () =>
+        RequestHandlerDelegate<object> next = (ct) =>
         {
             nextCalled = true;
             return Task.FromResult<object>(new object());
@@ -90,11 +90,11 @@ public sealed class ValidationBehaviorTests
 
         var mockValidator = new Mock<IValidator<LoginCommand>>();
         mockValidator
-            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default))
             .ReturnsAsync(new ValidationResult(validationFailures));
 
         var nextCalled = false;
-        RequestHandlerDelegate<object> next = () =>
+        RequestHandlerDelegate<object> next = (ct) =>
         {
             nextCalled = true;
             return Task.FromResult<object>(new object());
@@ -123,16 +123,16 @@ public sealed class ValidationBehaviorTests
 
         var mockValidator1 = new Mock<IValidator<LoginCommand>>();
         mockValidator1
-            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default))
             .ReturnsAsync(new ValidationResult());
 
         var mockValidator2 = new Mock<IValidator<LoginCommand>>();
         mockValidator2
-            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default))
             .ReturnsAsync(new ValidationResult());
 
         var nextCalled = false;
-        RequestHandlerDelegate<object> next = () =>
+        RequestHandlerDelegate<object> next = (ct) =>
         {
             nextCalled = true;
             return Task.FromResult<object>(new object());
@@ -147,11 +147,11 @@ public sealed class ValidationBehaviorTests
         // Assert
         Assert.NotNull(result);
         mockValidator1.Verify(
-            x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()),
+            x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default),
             Times.Once
         );
         mockValidator2.Verify(
-            x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()),
+            x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default),
             Times.Once
         );
         Assert.True(nextCalled);
@@ -178,16 +178,16 @@ public sealed class ValidationBehaviorTests
 
         var mockValidator1 = new Mock<IValidator<LoginCommand>>();
         mockValidator1
-            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default))
             .ReturnsAsync(new ValidationResult(validationFailures1));
 
         var mockValidator2 = new Mock<IValidator<LoginCommand>>();
         mockValidator2
-            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default))
             .ReturnsAsync(new ValidationResult(validationFailures2));
 
         var nextCalled = false;
-        RequestHandlerDelegate<object> next = () =>
+        RequestHandlerDelegate<object> next = (ct) =>
         {
             nextCalled = true;
             return Task.FromResult<object>(new object());
@@ -221,11 +221,11 @@ public sealed class ValidationBehaviorTests
 
         var mockValidator = new Mock<IValidator<LoginCommand>>();
         mockValidator
-            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default))
             .ThrowsAsync(new OperationCanceledException());
 
         var nextCalled = false;
-        RequestHandlerDelegate<object> next = () =>
+        RequestHandlerDelegate<object> next = (ct) =>
         {
             nextCalled = true;
             return Task.FromResult<object>(new object());

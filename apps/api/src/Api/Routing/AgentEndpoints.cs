@@ -5,6 +5,7 @@ using Api.Infrastructure.Entities;
 using Api.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Api.Models;
 
 namespace Api.Routing;
 

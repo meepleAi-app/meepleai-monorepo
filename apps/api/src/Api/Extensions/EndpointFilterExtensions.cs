@@ -29,8 +29,8 @@ public static class EndpointFilterExtensions
     /// .RequireSession();
     /// </code>
     /// </example>
-    public static TBuilder RequireSession<TBuilder>(this TBuilder builder)
-        where TBuilder : IEndpointConventionBuilder
+    public static RouteHandlerBuilder RequireSession(this RouteHandlerBuilder builder)
+        
     {
         return builder.AddEndpointFilter<RequireSessionFilter>();
     }
@@ -56,8 +56,8 @@ public static class EndpointFilterExtensions
     /// .RequireAdminSession();
     /// </code>
     /// </example>
-    public static TBuilder RequireAdminSession<TBuilder>(this TBuilder builder)
-        where TBuilder : IEndpointConventionBuilder
+    public static RouteHandlerBuilder RequireAdminSession(this RouteHandlerBuilder builder)
+        
     {
         return builder.AddEndpointFilter<RequireAdminSessionFilter>();
     }
@@ -90,8 +90,8 @@ public static class EndpointFilterExtensions
     /// .RequireAuthenticatedUser();
     /// </code>
     /// </example>
-    public static TBuilder RequireAuthenticatedUser<TBuilder>(this TBuilder builder)
-        where TBuilder : IEndpointConventionBuilder
+    public static RouteHandlerBuilder RequireAuthenticatedUser(this RouteHandlerBuilder builder)
+        
     {
         return builder.AddEndpointFilter<RequireAuthenticatedUserFilter>();
     }

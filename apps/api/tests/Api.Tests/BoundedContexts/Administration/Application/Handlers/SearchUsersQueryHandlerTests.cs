@@ -4,6 +4,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
+using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -75,21 +76,9 @@ public class SearchUsersQueryHandlerTests
         // Arrange
         var users = new List<User>
         {
-            new UserBuilder()
-                .WithEmail("admin1@example.com")
-                .WithDisplayName("Admin One")
-                .AsAdmin()
-                .Build(),
-            new UserBuilder()
-                .WithEmail("admin2@example.com")
-                .WithDisplayName("Admin Two")
-                .AsAdmin()
-                .Build(),
-            new UserBuilder()
-                .WithEmail("admin3@example.com")
-                .WithDisplayName("Admin Three")
-                .AsAdmin()
-                .Build()
+            TestDataFactory.CreateAdmin("admin1@example.com"),
+            TestDataFactory.CreateAdmin("admin2@example.com"),
+            TestDataFactory.CreateAdmin("admin3@example.com")
         };
 
         _userRepositoryMock
@@ -114,9 +103,9 @@ public class SearchUsersQueryHandlerTests
         // Arrange
         var users = new List<User>
         {
-            new UserBuilder().WithDisplayName("User 1").Build(),
-            new UserBuilder().WithDisplayName("User 2").Build(),
-            new UserBuilder().WithDisplayName("User 3").Build()
+            TestDataFactory.CreateUser(displayName: "User 1"),
+            TestDataFactory.CreateUser(displayName: "User 2"),
+            TestDataFactory.CreateUser(displayName: "User 3")
         };
 
         _userRepositoryMock

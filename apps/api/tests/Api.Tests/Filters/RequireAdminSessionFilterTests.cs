@@ -127,25 +127,16 @@ public class RequireAdminSessionFilterTests
 
     private ActiveSession CreateTestSession(string role = "User")
     {
-        return new ActiveSession
-        {
-            Session = new Session
-            {
-                Id = Guid.NewGuid().ToString(),
-                UserId = "test-user-id",
-                Token = "test-token",
-                CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddHours(1),
-                LastActivityAt = DateTime.UtcNow
-            },
-            User = new User
-            {
-                Id = "test-user-id",
-                Email = "test@example.com",
-                DisplayName = "Test User",
-                Role = role,
-                CreatedAt = DateTime.UtcNow
-            }
-        };
+        var authUser = new AuthUser(
+            Id: "test-user-id",
+            Email: "test@example.com",
+            DisplayName: "Test User",
+            Role: role
+        );
+        return new ActiveSession(
+            User: authUser,
+            ExpiresAt: DateTime.UtcNow.AddHours(1),
+            LastSeenAt: DateTime.UtcNow
+        );
     }
 }

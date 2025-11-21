@@ -17,22 +17,29 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Tests PDF deletion with cascade cleanup (document, vectors, blob storage, cache).
 /// NOTE: Complex handler with many dependencies - focused on construction and error handling.
 /// TODO: Add integration tests for full deletion workflow.
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class DeletePdfCommandHandlerTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
-    private readonly Mock<IBlobStorageService> _blobStorageServiceMock;
-    private readonly Mock<IAiResponseCacheService> _cacheServiceMock;
-    private readonly Mock<ILogger<DeletePdfCommandHandler>> _loggerMock;
-
-    public DeletePdfCommandHandlerTests()
+    /// <summary>
+    /// Creates a fresh DbContext for each test to ensure complete isolation
+    /// </summary>
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext();
-        _scopeFactoryMock = new Mock<IServiceScopeFactory>();
-        _blobStorageServiceMock = new Mock<IBlobStorageService>();
-        _cacheServiceMock = new Mock<IAiResponseCacheService>();
-        _loggerMock = new Mock<ILogger<DeletePdfCommandHandler>>();
+        return DbContextHelper.CreateInMemoryDbContext();
+    }
+
+    /// <summary>
+    /// Creates a fresh set of mocks for each test
+    /// </summary>
+    private static (Mock<IServiceScopeFactory>, Mock<IBlobStorageService>, Mock<IAiResponseCacheService>, Mock<ILogger<DeletePdfCommandHandler>>) CreateMocks()
+    {
+        var scopeFactoryMock = new Mock<IServiceScopeFactory>();
+        var blobStorageServiceMock = new Mock<IBlobStorageService>();
+        var cacheServiceMock = new Mock<IAiResponseCacheService>();
+        var loggerMock = new Mock<ILogger<DeletePdfCommandHandler>>();
+
+        return (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, loggerMock);
     }
 
     #region Construction Tests
@@ -40,13 +47,17 @@ public class DeletePdfCommandHandlerTests
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
+
         // Act
         var handler = new DeletePdfCommandHandler(
-            _dbContext,
-            _scopeFactoryMock.Object,
-            _blobStorageServiceMock.Object,
-            _cacheServiceMock.Object,
-            _loggerMock.Object);
+            context,
+            scopeFactoryMock.Object,
+            blobStorageServiceMock.Object,
+            cacheServiceMock.Object,
+            loggerMock.Object);
 
         // Assert
         Assert.NotNull(handler);
@@ -55,14 +66,17 @@ public class DeletePdfCommandHandlerTests
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
+        // Arrange - fresh mocks per test
+        var (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
+
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new DeletePdfCommandHandler(
                 null!,
-                _scopeFactoryMock.Object,
-                _blobStorageServiceMock.Object,
-                _cacheServiceMock.Object,
-                _loggerMock.Object));
+                scopeFactoryMock.Object,
+                blobStorageServiceMock.Object,
+                cacheServiceMock.Object,
+                loggerMock.Object));
 
         Assert.Equal("db", exception.ParamName);
     }
@@ -70,14 +84,18 @@ public class DeletePdfCommandHandlerTests
     [Fact]
     public void Constructor_WithNullScopeFactory_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (_, blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
+
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new DeletePdfCommandHandler(
-                _dbContext,
+                context,
                 null!,
-                _blobStorageServiceMock.Object,
-                _cacheServiceMock.Object,
-                _loggerMock.Object));
+                blobStorageServiceMock.Object,
+                cacheServiceMock.Object,
+                loggerMock.Object));
 
         Assert.Equal("scopeFactory", exception.ParamName);
     }
@@ -85,14 +103,18 @@ public class DeletePdfCommandHandlerTests
     [Fact]
     public void Constructor_WithNullBlobStorageService_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, _, cacheServiceMock, loggerMock) = CreateMocks();
+
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new DeletePdfCommandHandler(
-                _dbContext,
-                _scopeFactoryMock.Object,
+                context,
+                scopeFactoryMock.Object,
                 null!,
-                _cacheServiceMock.Object,
-                _loggerMock.Object));
+                cacheServiceMock.Object,
+                loggerMock.Object));
 
         Assert.Equal("blobStorageService", exception.ParamName);
     }
@@ -100,14 +122,18 @@ public class DeletePdfCommandHandlerTests
     [Fact]
     public void Constructor_WithNullCacheService_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, blobStorageServiceMock, _, loggerMock) = CreateMocks();
+
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new DeletePdfCommandHandler(
-                _dbContext,
-                _scopeFactoryMock.Object,
-                _blobStorageServiceMock.Object,
+                context,
+                scopeFactoryMock.Object,
+                blobStorageServiceMock.Object,
                 null!,
-                _loggerMock.Object));
+                loggerMock.Object));
 
         Assert.Equal("cacheService", exception.ParamName);
     }
@@ -115,13 +141,17 @@ public class DeletePdfCommandHandlerTests
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, _) = CreateMocks();
+
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new DeletePdfCommandHandler(
-                _dbContext,
-                _scopeFactoryMock.Object,
-                _blobStorageServiceMock.Object,
-                _cacheServiceMock.Object,
+                context,
+                scopeFactoryMock.Object,
+                blobStorageServiceMock.Object,
+                cacheServiceMock.Object,
                 null!));
 
         Assert.Equal("logger", exception.ParamName);

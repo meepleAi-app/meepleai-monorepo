@@ -13,14 +13,16 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests comment deletion with ownership and admin authorization.
 /// NOTE: Uses DbContext directly - simplified tests due to complex EF Core relationships.
 /// TODO: Add integration tests for full comment deletion workflow with authorization.
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class DeleteRuleCommentCommandHandlerTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public DeleteRuleCommentCommandHandlerTests()
+    /// <summary>
+    /// Creates a fresh DbContext for each test to ensure complete isolation
+    /// </summary>
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext();
+        return DbContextHelper.CreateInMemoryDbContext();
     }
 
     #region Construction Tests
@@ -28,13 +30,13 @@ public class DeleteRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
-        // Arrange
-        var dbContext = DbContextHelper.CreateInMemoryDbContext();
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var loggerMock = new Mock<ILogger<DeleteRuleCommentCommandHandler>>();
 
         // Act
         var handler = new DeleteRuleCommentCommandHandler(
-            dbContext,
+            context,
             loggerMock.Object);
 
         // Assert
@@ -44,7 +46,7 @@ public class DeleteRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
-        // Arrange
+        // Arrange - fresh resources per test
         var loggerMock = new Mock<ILogger<DeleteRuleCommentCommandHandler>>();
 
         // Act & Assert
@@ -57,13 +59,13 @@ public class DeleteRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
-        // Arrange
-        var dbContext = DbContextHelper.CreateInMemoryDbContext();
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new DeleteRuleCommentCommandHandler(
-                dbContext,
+                context,
                 null!));
     }
 

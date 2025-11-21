@@ -16,45 +16,50 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// <summary>
 /// Unit tests for CitationValidationService
 /// ISSUE-971: BGAI-029 - Citation validation (verify source references)
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
-public class CitationValidationServiceTests : IDisposable
+public class CitationValidationServiceTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly CitationValidationService _service;
-    private readonly Guid _gameId;
-    private readonly Guid _pdf1Id;
-    private readonly Guid _pdf2Id;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    public CitationValidationServiceTests()
+    /// <summary>
+    /// Creates a fresh DbContext for each test to ensure complete isolation
+    /// </summary>
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        // Setup in-memory database
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(databaseName: $"CitationValidationTestDb_{Guid.NewGuid()}")
             .Options;
 
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<IDomainEventCollector>();
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
-
-        var mockLogger = new Mock<ILogger<CitationValidationService>>();
-        _service = new CitationValidationService(_dbContext, mockLogger.Object);
-
-        // Seed test data
-        _gameId = Guid.NewGuid();
-        _pdf1Id = Guid.NewGuid();
-        _pdf2Id = Guid.NewGuid();
-
-        SeedTestData();
+        return new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
     }
 
-    private void SeedTestData()
+    /// <summary>
+    /// Creates a CitationValidationService instance with the given context
+    /// </summary>
+    private static CitationValidationService CreateService(MeepleAiDbContext context)
     {
-        _dbContext.PdfDocuments.AddRange(
+        var mockLogger = new Mock<ILogger<CitationValidationService>>();
+        return new CitationValidationService(context, mockLogger.Object);
+    }
+
+    /// <summary>
+    /// Seeds test data into the given context and returns the IDs
+    /// </summary>
+    private static async Task<(Guid gameId, Guid pdf1Id, Guid pdf2Id)> SeedTestDataAsync(
+        MeepleAiDbContext context)
+    {
+        var gameId = Guid.NewGuid();
+        var pdf1Id = Guid.NewGuid();
+        var pdf2Id = Guid.NewGuid();
+
+        context.PdfDocuments.AddRange(
             new PdfDocumentEntity
             {
-                Id = _pdf1Id,
-                GameId = _gameId,
+                Id = pdf1Id,
+                GameId = gameId,
                 FileName = "test-rules.pdf",
                 FilePath = "/test/rules.pdf",
                 FileSizeBytes = 1000,
@@ -64,8 +69,8 @@ public class CitationValidationServiceTests : IDisposable
             },
             new PdfDocumentEntity
             {
-                Id = _pdf2Id,
-                GameId = _gameId,
+                Id = pdf2Id,
+                GameId = gameId,
                 FileName = "test-expansion.pdf",
                 FilePath = "/test/expansion.pdf",
                 FileSizeBytes = 2000,
@@ -74,12 +79,8 @@ public class CitationValidationServiceTests : IDisposable
                 UploadedAt = DateTime.UtcNow
             });
 
-        _dbContext.SaveChanges();
-    }
-
-    public void Dispose()
-    {
-        _dbContext?.Dispose();
+        await context.SaveChangesAsync();
+        return (gameId, pdf1Id, pdf2Id);
     }
 
     [Fact]
@@ -91,7 +92,7 @@ public class CitationValidationServiceTests : IDisposable
             .ToList();
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -106,11 +107,15 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_Empty_ReturnsValid()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, _, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>();
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -123,7 +128,11 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_DocumentNotFound_ReturnsInvalid()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, _, _) = await SeedTestDataAsync(context);
+
         var nonExistentPdfId = Guid.NewGuid();
         var snippets = new List<Snippet>
         {
@@ -131,7 +140,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -145,14 +154,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_InvalidPageNumber_ReturnsInvalid()
     {
-        // Arrange - PDF1 has 10 pages, try page 15
+        // Arrange - fresh context per test - PDF1 has 10 pages, try page 15
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
-            new Snippet("text", $"PDF:{_pdf1Id}", page: 15, line: 0, score: 0.9f)
+            new Snippet("text", $"PDF:{pdf1Id}", page: 15, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -170,7 +183,7 @@ public class CitationValidationServiceTests : IDisposable
         var snippets = TestDataFactory.CreateSnippetsWithInvalidPages(_pdf1Id).Take(1).ToList();
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -181,14 +194,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_MalformedSource_ReturnsInvalid()
     {
-        // Arrange - Invalid source format (not "PDF:guid")
+        // Arrange - fresh context per test - Invalid source format (not "PDF:guid")
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, _, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
             new Snippet("text", "INVALID_FORMAT", page: 1, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -200,14 +217,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_NullSource_ReturnsInvalid()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, _, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
             new Snippet("text", source: null!, page: 1, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -218,17 +239,21 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_MixedValidInvalid_ReturnsPartiallyValid()
     {
-        // Arrange - 2 valid, 1 invalid
+        // Arrange - fresh context per test - 2 valid, 1 invalid
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, pdf2Id) = await SeedTestDataAsync(context);
+
         var nonExistentPdfId = Guid.NewGuid();
         var snippets = new List<Snippet>
         {
-            new Snippet("text1", $"PDF:{_pdf1Id}", page: 1, line: 0, score: 0.9f), // Valid
+            new Snippet("text1", $"PDF:{pdf1Id}", page: 1, line: 0, score: 0.9f), // Valid
             new Snippet("text2", $"PDF:{nonExistentPdfId}", page: 1, line: 0, score: 0.8f), // Invalid
-            new Snippet("text3", $"PDF:{_pdf2Id}", page: 2, line: 0, score: 0.7f)  // Valid
+            new Snippet("text3", $"PDF:{pdf2Id}", page: 2, line: 0, score: 0.7f)  // Valid
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid); // Not all valid
@@ -243,17 +268,21 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_BoundaryPages_ValidatesCorrectly()
     {
-        // Arrange - Test boundary pages (first and last)
+        // Arrange - fresh context per test - Test boundary pages (first and last)
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, pdf2Id) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
-            new Snippet("text1", $"PDF:{_pdf1Id}", page: 1, line: 0, score: 0.9f),   // First page (valid)
-            new Snippet("text2", $"PDF:{_pdf1Id}", page: 10, line: 0, score: 0.8f),  // Last page (valid)
-            new Snippet("text3", $"PDF:{_pdf2Id}", page: 1, line: 0, score: 0.7f),   // First page (valid)
-            new Snippet("text4", $"PDF:{_pdf2Id}", page: 5, line: 0, score: 0.6f)    // Last page (valid)
+            new Snippet("text1", $"PDF:{pdf1Id}", page: 1, line: 0, score: 0.9f),   // First page (valid)
+            new Snippet("text2", $"PDF:{pdf1Id}", page: 10, line: 0, score: 0.8f),  // Last page (valid)
+            new Snippet("text3", $"PDF:{pdf2Id}", page: 1, line: 0, score: 0.7f),   // First page (valid)
+            new Snippet("text4", $"PDF:{pdf2Id}", page: 5, line: 0, score: 0.6f)    // Last page (valid)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -264,11 +293,15 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateSingleCitation_Valid_ReturnsTrue()
     {
-        // Arrange
-        var snippet = new Snippet("text", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.9f);
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+
+        var snippet = new Snippet("text", $"PDF:{pdf1Id}", page: 5, line: 0, score: 0.9f);
 
         // Act
-        var result = await _service.ValidateSingleCitationAsync(snippet, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateSingleCitationAsync(snippet, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result);
@@ -277,12 +310,16 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateSingleCitation_Invalid_ReturnsFalse()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, _, _) = await SeedTestDataAsync(context);
+
         var nonExistentPdfId = Guid.NewGuid();
         var snippet = new Snippet("text", $"PDF:{nonExistentPdfId}", page: 1, line: 0, score: 0.9f);
 
         // Act
-        var result = await _service.ValidateSingleCitationAsync(snippet, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateSingleCitationAsync(snippet, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result);
@@ -291,14 +328,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_InvalidGameId_ReturnsInvalid()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (_, pdf1Id, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
-            new Snippet("text", $"PDF:{_pdf1Id}", page: 1, line: 0, score: 0.9f)
+            new Snippet("text", $"PDF:{pdf1Id}", page: 1, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, "invalid-game-id", TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, "invalid-game-id", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -312,14 +353,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_NegativePageNumber_ReturnsInvalid()
     {
-        // Arrange - Negative page number
+        // Arrange - fresh context per test - Negative page number
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
-            new Snippet("text", $"PDF:{_pdf1Id}", page: -5, line: 0, score: 0.9f)
+            new Snippet("text", $"PDF:{pdf1Id}", page: -5, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -330,16 +375,20 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_LargeCollection_ValidatesAll()
     {
-        // Arrange - Large collection of valid citations
+        // Arrange - fresh context per test - Large collection of valid citations
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>();
         for (int i = 1; i <= 100; i++)
         {
             var page = (i % 10) + 1; // Pages 1-10 for pdf1
-            snippets.Add(new Snippet($"text{i}", $"PDF:{_pdf1Id}", page: page, line: 0, score: 0.9f));
+            snippets.Add(new Snippet($"text{i}", $"PDF:{pdf1Id}", page: page, line: 0, score: 0.9f));
         }
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -352,8 +401,11 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_ValidationAccuracy_CalculatesCorrectly()
     {
-        // Arrange - 7 valid, 3 invalid = 70% accuracy
-        var validPdfId = _pdf1Id;
+        // Arrange - fresh context per test - 7 valid, 3 invalid = 70% accuracy
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, validPdfId, _) = await SeedTestDataAsync(context);
+
         var invalidPdfId = Guid.NewGuid();
         var snippets = new List<Snippet>
         {
@@ -370,7 +422,7 @@ public class CitationValidationServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -383,16 +435,20 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_DuplicateCitations_ValidatesEach()
     {
-        // Arrange - Same citation repeated
+        // Arrange - fresh context per test - Same citation repeated
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
-            new Snippet("text", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.9f),
-            new Snippet("text", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.9f),
-            new Snippet("text", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.9f)
+            new Snippet("text", $"PDF:{pdf1Id}", page: 5, line: 0, score: 0.9f),
+            new Snippet("text", $"PDF:{pdf1Id}", page: 5, line: 0, score: 0.9f),
+            new Snippet("text", $"PDF:{pdf1Id}", page: 5, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -403,14 +459,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_WhitespaceSource_ReturnsInvalid()
     {
-        // Arrange - Whitespace-only source
+        // Arrange - fresh context per test - Whitespace-only source
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, _, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
             new Snippet("text", "   ", page: 1, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -421,14 +481,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_EmptyStringSource_ReturnsInvalid()
     {
-        // Arrange - Empty string source
+        // Arrange - fresh context per test - Empty string source
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, _, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
             new Snippet("text", "", page: 1, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -439,14 +503,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_InvalidGuidInSource_ReturnsInvalid()
     {
-        // Arrange - Invalid GUID format
+        // Arrange - fresh context per test - Invalid GUID format
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, _, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
             new Snippet("text", "PDF:not-a-valid-guid", page: 1, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -457,18 +525,22 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_MultiplePdfDocuments_ValidatesCrossDocument()
     {
-        // Arrange - Citations from both PDFs
+        // Arrange - fresh context per test - Citations from both PDFs
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, pdf2Id) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
-            new Snippet("text1", $"PDF:{_pdf1Id}", page: 1, line: 0, score: 0.9f),
-            new Snippet("text2", $"PDF:{_pdf1Id}", page: 5, line: 0, score: 0.8f),
-            new Snippet("text3", $"PDF:{_pdf2Id}", page: 1, line: 0, score: 0.7f),
-            new Snippet("text4", $"PDF:{_pdf2Id}", page: 3, line: 0, score: 0.6f),
-            new Snippet("text5", $"PDF:{_pdf1Id}", page: 10, line: 0, score: 0.5f)
+            new Snippet("text1", $"PDF:{pdf1Id}", page: 1, line: 0, score: 0.9f),
+            new Snippet("text2", $"PDF:{pdf1Id}", page: 5, line: 0, score: 0.8f),
+            new Snippet("text3", $"PDF:{pdf2Id}", page: 1, line: 0, score: 0.7f),
+            new Snippet("text4", $"PDF:{pdf2Id}", page: 3, line: 0, score: 0.6f),
+            new Snippet("text5", $"PDF:{pdf1Id}", page: 10, line: 0, score: 0.5f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -479,14 +551,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_SourceWithoutColon_ReturnsInvalid()
     {
-        // Arrange - Source missing colon separator
+        // Arrange - fresh context per test - Source missing colon separator
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, _, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
             new Snippet("text", "PDF123456", page: 1, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -497,14 +573,18 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_SourceWithWrongPrefix_ReturnsInvalid()
     {
-        // Arrange - Wrong prefix (not "PDF:")
+        // Arrange - fresh context per test - Wrong prefix (not "PDF:")
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+
         var snippets = new List<Snippet>
         {
-            new Snippet("text", $"DOC:{_pdf1Id}", page: 1, line: 0, score: 0.9f)
+            new Snippet("text", $"DOC:{pdf1Id}", page: 1, line: 0, score: 0.9f)
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -515,11 +595,15 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateSingleCitation_NegativePage_ReturnsFalse()
     {
-        // Arrange
-        var snippet = new Snippet("text", $"PDF:{_pdf1Id}", page: -1, line: 0, score: 0.9f);
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+
+        var snippet = new Snippet("text", $"PDF:{pdf1Id}", page: -1, line: 0, score: 0.9f);
 
         // Act
-        var result = await _service.ValidateSingleCitationAsync(snippet, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateSingleCitationAsync(snippet, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result);
@@ -528,17 +612,21 @@ public class CitationValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateCitations_AllErrorTypes_ReturnsMultipleErrors()
     {
-        // Arrange - Create one of each error type
+        // Arrange - fresh context per test - Create one of each error type
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+
         var nonExistentPdfId = Guid.NewGuid();
         var snippets = new List<Snippet>
         {
             new Snippet("text1", $"PDF:{nonExistentPdfId}", page: 1, line: 0, score: 0.9f), // DocumentNotFound
-            new Snippet("text2", $"PDF:{_pdf1Id}", page: 100, line: 0, score: 0.8f),        // InvalidPageNumber
+            new Snippet("text2", $"PDF:{pdf1Id}", page: 100, line: 0, score: 0.8f),        // InvalidPageNumber
             new Snippet("text3", "INVALID", page: 1, line: 0, score: 0.7f)                 // MalformedSource
         };
 
         // Act
-        var result = await _service.ValidateCitationsAsync(snippets, _gameId.ToString(), TestCancellationToken);
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);

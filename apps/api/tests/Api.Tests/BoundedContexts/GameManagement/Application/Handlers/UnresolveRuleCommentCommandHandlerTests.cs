@@ -13,17 +13,20 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests comment unresolve with optional parent unresolve and authorization.
 /// NOTE: Uses DbContext directly - simplified tests due to complex parent unresolve logic.
 /// TODO: Add integration tests for full unresolve workflow with parent cascading.
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class UnresolveRuleCommentCommandHandlerTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<TimeProvider> _timeProviderMock;
-
-    public UnresolveRuleCommentCommandHandlerTests()
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext();
-        _timeProviderMock = new Mock<TimeProvider>();
-        _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        return DbContextHelper.CreateInMemoryDbContext();
+    }
+
+    private static Mock<TimeProvider> CreateTimeProviderMock()
+    {
+        var timeProviderMock = new Mock<TimeProvider>();
+        timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        return timeProviderMock;
     }
 
     #region Construction Tests
@@ -31,13 +34,15 @@ public class UnresolveRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
-        // Arrange
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var timeProviderMock = CreateTimeProviderMock();
         var loggerMock = new Mock<ILogger<UnresolveRuleCommentCommandHandler>>();
 
         // Act
         var handler = new UnresolveRuleCommentCommandHandler(
-            _dbContext,
-            _timeProviderMock.Object,
+            context,
+            timeProviderMock.Object,
             loggerMock.Object);
 
         // Assert
@@ -47,27 +52,29 @@ public class UnresolveRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
-        // Arrange
+        // Arrange - fresh resources per test
+        var timeProviderMock = CreateTimeProviderMock();
         var loggerMock = new Mock<ILogger<UnresolveRuleCommentCommandHandler>>();
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UnresolveRuleCommentCommandHandler(
                 null!,
-                _timeProviderMock.Object,
+                timeProviderMock.Object,
                 loggerMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullTimeProvider_ThrowsArgumentNullException()
     {
-        // Arrange
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var loggerMock = new Mock<ILogger<UnresolveRuleCommentCommandHandler>>();
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UnresolveRuleCommentCommandHandler(
-                _dbContext,
+                context,
                 null!,
                 loggerMock.Object));
     }
@@ -75,11 +82,15 @@ public class UnresolveRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var timeProviderMock = CreateTimeProviderMock();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new UnresolveRuleCommentCommandHandler(
-                _dbContext,
-                _timeProviderMock.Object,
+                context,
+                timeProviderMock.Object,
                 null!));
     }
 

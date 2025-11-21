@@ -13,17 +13,20 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests threaded comment replies with depth validation and @mention support.
 /// NOTE: Uses DbContext directly - simplified tests due to complex thread depth calculation.
 /// TODO: Add integration tests for full reply workflow with thread depth limits.
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class ReplyToRuleCommentCommandHandlerTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<TimeProvider> _timeProviderMock;
-
-    public ReplyToRuleCommentCommandHandlerTests()
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext();
-        _timeProviderMock = new Mock<TimeProvider>();
-        _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        return DbContextHelper.CreateInMemoryDbContext();
+    }
+
+    private static Mock<TimeProvider> CreateTimeProviderMock()
+    {
+        var timeProviderMock = new Mock<TimeProvider>();
+        timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        return timeProviderMock;
     }
 
     #region Construction Tests
@@ -31,13 +34,15 @@ public class ReplyToRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
-        // Arrange
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var timeProviderMock = CreateTimeProviderMock();
         var loggerMock = new Mock<ILogger<ReplyToRuleCommentCommandHandler>>();
 
         // Act
         var handler = new ReplyToRuleCommentCommandHandler(
-            _dbContext,
-            _timeProviderMock.Object,
+            context,
+            timeProviderMock.Object,
             loggerMock.Object);
 
         // Assert
@@ -47,27 +52,29 @@ public class ReplyToRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
-        // Arrange
+        // Arrange - fresh resources per test
+        var timeProviderMock = CreateTimeProviderMock();
         var loggerMock = new Mock<ILogger<ReplyToRuleCommentCommandHandler>>();
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new ReplyToRuleCommentCommandHandler(
                 null!,
-                _timeProviderMock.Object,
+                timeProviderMock.Object,
                 loggerMock.Object));
     }
 
     [Fact]
     public void Constructor_WithNullTimeProvider_ThrowsArgumentNullException()
     {
-        // Arrange
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var loggerMock = new Mock<ILogger<ReplyToRuleCommentCommandHandler>>();
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new ReplyToRuleCommentCommandHandler(
-                _dbContext,
+                context,
                 null!,
                 loggerMock.Object));
     }
@@ -75,11 +82,15 @@ public class ReplyToRuleCommentCommandHandlerTests
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
+        // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
+        var timeProviderMock = CreateTimeProviderMock();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new ReplyToRuleCommentCommandHandler(
-                _dbContext,
-                _timeProviderMock.Object,
+                context,
+                timeProviderMock.Object,
                 null!));
     }
 

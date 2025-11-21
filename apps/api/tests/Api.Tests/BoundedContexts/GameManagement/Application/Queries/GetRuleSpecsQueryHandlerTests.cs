@@ -14,13 +14,14 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 /// Comprehensive tests for GetRuleSpecsQueryHandler.
 /// Tests rule specification retrieval for games.
 /// Note: Uses in-memory database since RuleSpec is in infrastructure layer.
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
-public class GetRuleSpecsQueryHandlerTests : IDisposable
+public class GetRuleSpecsQueryHandlerTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly GetRuleSpecsQueryHandler _handler;
-
-    public GetRuleSpecsQueryHandlerTests()
+    /// <summary>
+    /// Creates a fresh DbContext for each test to ensure complete isolation
+    /// </summary>
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -30,13 +31,16 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
         var mockEventCollector = new Mock<IDomainEventCollector>();
         mockEventCollector.Setup(x => x.GetAndClearEvents())
             .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
-        _handler = new GetRuleSpecsQueryHandler(_dbContext);
+
+        return new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
     }
 
-    public void Dispose()
+    /// <summary>
+    /// Creates a GetRuleSpecsQueryHandler instance with the given context
+    /// </summary>
+    private static GetRuleSpecsQueryHandler CreateHandler(MeepleAiDbContext context)
     {
-        _dbContext.Dispose();
+        return new GetRuleSpecsQueryHandler(context);
     }
 
     #region Happy Path Tests
@@ -44,19 +48,21 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithExistingRuleSpecs_ReturnsOrderedByCreatedAt()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var ruleSpec1 = CreateRuleSpec(gameId, "1.0", DateTime.UtcNow.AddDays(-7));
         var ruleSpec2 = CreateRuleSpec(gameId, "1.1", DateTime.UtcNow.AddDays(-3));
         var ruleSpec3 = CreateRuleSpec(gameId, "2.0", DateTime.UtcNow);
 
-        await _dbContext.RuleSpecs.AddRangeAsync(ruleSpec1, ruleSpec2, ruleSpec3);
-        await _dbContext.SaveChangesAsync();
+        await context.RuleSpecs.AddRangeAsync(ruleSpec1, ruleSpec2, ruleSpec3);
+        await context.SaveChangesAsync();
 
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -69,7 +75,9 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithRuleAtoms_IncludesAtoms()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var ruleSpec = CreateRuleSpec(gameId, "1.0", DateTime.UtcNow);
 
@@ -99,13 +107,13 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
 
         ruleSpec.Atoms = new List<RuleAtomEntity> { atom1, atom2 };
 
-        await _dbContext.RuleSpecs.AddAsync(ruleSpec);
-        await _dbContext.SaveChangesAsync();
+        await context.RuleSpecs.AddAsync(ruleSpec);
+        await context.SaveChangesAsync();
 
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -128,12 +136,14 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithNoRuleSpecs_ReturnsEmptyList()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -143,20 +153,22 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithMultipleGames_FiltersCorrectly()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
 
         var ruleSpec1 = CreateRuleSpec(gameId1, "1.0", DateTime.UtcNow);
         var ruleSpec2 = CreateRuleSpec(gameId2, "1.0", DateTime.UtcNow);
 
-        await _dbContext.RuleSpecs.AddRangeAsync(ruleSpec1, ruleSpec2);
-        await _dbContext.SaveChangesAsync();
+        await context.RuleSpecs.AddRangeAsync(ruleSpec1, ruleSpec2);
+        await context.SaveChangesAsync();
 
         var query = new GetRuleSpecsQuery(gameId1);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -167,21 +179,23 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithVersionHierarchy_IncludesParentId()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var parentSpec = CreateRuleSpec(gameId, "1.0", DateTime.UtcNow.AddDays(-7));
-        await _dbContext.RuleSpecs.AddAsync(parentSpec);
-        await _dbContext.SaveChangesAsync();
+        await context.RuleSpecs.AddAsync(parentSpec);
+        await context.SaveChangesAsync();
 
         var childSpec = CreateRuleSpec(gameId, "1.1", DateTime.UtcNow);
         childSpec.ParentVersionId = parentSpec.Id;
-        await _dbContext.RuleSpecs.AddAsync(childSpec);
-        await _dbContext.SaveChangesAsync();
+        await context.RuleSpecs.AddAsync(childSpec);
+        await context.SaveChangesAsync();
 
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -201,7 +215,9 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithCancellationToken_Cancels()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var query = new GetRuleSpecsQuery(gameId);
 
@@ -211,14 +227,16 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
-            await _handler.Handle(query, cts.Token);
+            await handler.Handle(query, cts.Token);
         });
     }
 
     [Fact]
     public async Task Handle_WithNullAtomFields_HandlesGracefully()
     {
-        // Arrange
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+        var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var ruleSpec = CreateRuleSpec(gameId, "1.0", DateTime.UtcNow);
 
@@ -236,13 +254,13 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
 
         ruleSpec.Atoms = new List<RuleAtomEntity> { atom };
 
-        await _dbContext.RuleSpecs.AddAsync(ruleSpec);
-        await _dbContext.SaveChangesAsync();
+        await context.RuleSpecs.AddAsync(ruleSpec);
+        await context.SaveChangesAsync();
 
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -258,7 +276,7 @@ public class GetRuleSpecsQueryHandlerTests : IDisposable
 
     #region Helper Methods
 
-    private RuleSpecEntity CreateRuleSpec(Guid gameId, string version, DateTime createdAt)
+    private static RuleSpecEntity CreateRuleSpec(Guid gameId, string version, DateTime createdAt)
     {
         return new RuleSpecEntity
         {

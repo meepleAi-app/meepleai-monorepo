@@ -13,14 +13,16 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests user listing with pagination, filtering, and sorting.
 /// NOTE: Uses DbContext directly - simplified tests due to mocking complexity.
 /// TODO: Add integration tests for full pagination/filtering workflow.
+/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class GetAllUsersQueryHandlerTests
 {
-    private readonly MeepleAiDbContext _dbContext;
-
-    public GetAllUsersQueryHandlerTests()
+    /// <summary>
+    /// Creates a fresh DbContext for each test to ensure complete isolation
+    /// </summary>
+    private static MeepleAiDbContext CreateFreshDbContext()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext();
+        return DbContextHelper.CreateInMemoryDbContext();
     }
 
     #region Construction Tests
@@ -28,8 +30,11 @@ public class GetAllUsersQueryHandlerTests
     [Fact]
     public void Constructor_WithValidDbContext_CreatesInstance()
     {
+        // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
+
         // Act
-        var handler = new GetAllUsersQueryHandler(_dbContext);
+        var handler = new GetAllUsersQueryHandler(context);
 
         // Assert
         Assert.NotNull(handler);

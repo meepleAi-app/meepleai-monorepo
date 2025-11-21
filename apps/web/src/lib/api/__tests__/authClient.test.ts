@@ -16,6 +16,7 @@ import type {
   ChangePasswordResponse,
   UserPreferences,
 } from '../schemas';
+import { globalRequestCache } from '../core/requestCache';
 
 describe('AuthClient', () => {
   let mockFetch: jest.Mock;
@@ -23,6 +24,9 @@ describe('AuthClient', () => {
   let authClient: ReturnType<typeof createAuthClient>;
 
   beforeEach(() => {
+    // Clear request cache before each test
+    globalRequestCache.clear();
+
     mockFetch = jest.fn();
     httpClient = new HttpClient({ fetchImpl: mockFetch });
     authClient = createAuthClient({ httpClient });

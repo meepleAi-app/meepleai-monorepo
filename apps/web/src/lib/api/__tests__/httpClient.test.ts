@@ -13,6 +13,7 @@ import {
   ServerError,
   SchemaValidationError,
 } from '../core/errors';
+import { globalRequestCache } from '../core/requestCache';
 
 describe('getApiBase', () => {
   let originalEnv: NodeJS.ProcessEnv;
@@ -58,6 +59,9 @@ describe('HttpClient', () => {
   let mockSessionStorage: { [key: string]: string };
 
   beforeEach(() => {
+    // Clear request cache before each test
+    globalRequestCache.clear();
+
     mockFetch = jest.fn();
     client = new HttpClient({ baseUrl: 'http://localhost:5080', fetchImpl: mockFetch });
 
@@ -524,6 +528,273 @@ describe('HttpClient', () => {
           }),
         })
       );
+    });
+  });
+
+  describe('Request Deduplication (Issue #1454)', () => {
+    beforeEach(() => {
+      // Clear cache before each test
+      globalRequestCache.clear();
+    });
+
+    afterEach(() => {
+      globalRequestCache.clear();
+    });
+
+    it('should deduplicate identical GET requests by default', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: `result-${callCount}` }),
+          headers: new Headers(),
+        };
+      });
+
+      // Execute three simultaneous GET requests
+      const promises = [
+        client.get('/api/v1/users'),
+        client.get('/api/v1/users'),
+        client.get('/api/v1/users'),
+      ];
+
+      const results = await Promise.all(promises);
+
+      // All should return same result
+      expect(results).toEqual([
+        { data: 'result-1' },
+        { data: 'result-1' },
+        { data: 'result-1' },
+      ]);
+
+      // Fetch should only be called once
+      expect(callCount).toBe(1);
+    });
+
+    it('should not deduplicate GET requests when skipDedup is true', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: `result-${callCount}` }),
+          headers: new Headers(),
+        };
+      });
+
+      // Execute three requests with skipDedup
+      await client.get('/api/v1/users', undefined, { skipDedup: true });
+      await client.get('/api/v1/users', undefined, { skipDedup: true });
+      await client.get('/api/v1/users', undefined, { skipDedup: true });
+
+      // Fetch should be called three times
+      expect(callCount).toBe(3);
+    });
+
+    it('should not deduplicate POST requests by default', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true, count: callCount }),
+          headers: new Headers(),
+        };
+      });
+
+      // Execute three POST requests
+      await client.post('/api/v1/users', { name: 'John' });
+      await client.post('/api/v1/users', { name: 'John' });
+      await client.post('/api/v1/users', { name: 'John' });
+
+      // Fetch should be called three times (not deduplicated)
+      expect(callCount).toBe(3);
+    });
+
+    it('should deduplicate POST requests when skipDedup is false', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true, count: callCount }),
+          headers: new Headers(),
+        };
+      });
+
+      // Execute three POST requests with skipDedup=false
+      const promises = [
+        client.post('/api/v1/users', { name: 'John' }, undefined, { skipDedup: false }),
+        client.post('/api/v1/users', { name: 'John' }, undefined, { skipDedup: false }),
+        client.post('/api/v1/users', { name: 'John' }, undefined, { skipDedup: false }),
+      ];
+
+      await Promise.all(promises);
+
+      // Fetch should be called once (deduplicated)
+      expect(callCount).toBe(1);
+    });
+
+    it('should not deduplicate PUT requests by default', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ updated: true, count: callCount }),
+          headers: new Headers(),
+        };
+      });
+
+      await client.put('/api/v1/users/1', { name: 'Updated' });
+      await client.put('/api/v1/users/1', { name: 'Updated' });
+
+      expect(callCount).toBe(2);
+    });
+
+    it('should not deduplicate DELETE requests by default', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 204,
+          headers: new Headers(),
+        };
+      });
+
+      await client.delete('/api/v1/users/1');
+      await client.delete('/api/v1/users/1');
+
+      expect(callCount).toBe(2);
+    });
+
+    it('should generate different cache keys for different URLs', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: `result-${callCount}` }),
+          headers: new Headers(),
+        };
+      });
+
+      const promises = [
+        client.get('/api/v1/users'),
+        client.get('/api/v1/games'),
+      ];
+
+      await Promise.all(promises);
+
+      // Different URLs should not be deduplicated
+      expect(callCount).toBe(2);
+    });
+
+    it('should generate different cache keys for different request bodies', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true }),
+          headers: new Headers(),
+        };
+      });
+
+      const promises = [
+        client.post('/api/v1/users', { name: 'John' }, undefined, { skipDedup: false }),
+        client.post('/api/v1/users', { name: 'Jane' }, undefined, { skipDedup: false }),
+      ];
+
+      await Promise.all(promises);
+
+      // Different bodies should not be deduplicated
+      expect(callCount).toBe(2);
+    });
+
+    it('should generate different cache keys for different auth contexts', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: `result-${callCount}` }),
+          headers: new Headers(),
+        };
+      });
+
+      // First request without API key
+      await client.get('/api/v1/profile');
+
+      // Second request with API key
+      setStoredApiKey('mpl_test_demo');
+      await client.get('/api/v1/profile');
+      clearStoredApiKey();
+
+      // Different auth contexts should not be deduplicated
+      expect(callCount).toBe(2);
+    });
+
+    it('should handle failed requests and allow retry', async () => {
+      let callCount = 0;
+      mockFetch.mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            ok: false,
+            status: 500,
+            json: async () => ({ error: 'Server error' }),
+            headers: new Headers(),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: 'success' }),
+          headers: new Headers(),
+        };
+      });
+
+      // First request should fail
+      await expect(client.get('/api/v1/users')).rejects.toThrow();
+
+      // Second request should retry (cache cleared on failure)
+      const result = await client.get('/api/v1/users');
+      expect(result).toEqual({ data: 'success' });
+      expect(callCount).toBe(2);
+    });
+
+    it('should track cache metrics', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: 'test' }),
+        headers: new Headers(),
+      });
+
+      const initialMetrics = globalRequestCache.getMetrics();
+      const initialHits = initialMetrics.hits;
+      const initialMisses = initialMetrics.misses;
+
+      // First request - cache miss
+      await client.get('/api/v1/test');
+
+      // Second request - cache hit
+      await client.get('/api/v1/test');
+
+      const finalMetrics = globalRequestCache.getMetrics();
+      expect(finalMetrics.misses).toBe(initialMisses + 1);
+      expect(finalMetrics.hits).toBe(initialHits + 1);
     });
   });
 });

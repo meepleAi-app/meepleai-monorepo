@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { createApiError, NetworkError, SchemaValidationError } from './errors';
 import { logApiError } from './logger';
 import { getStoredApiKey } from './apiKeyStore';
+import { globalRequestCache } from './requestCache';
 
 export interface HttpClientConfig {
   baseUrl: string;
@@ -17,6 +18,11 @@ export interface HttpClientConfig {
 
 export interface RequestOptions extends RequestInit {
   skipErrorLogging?: boolean;
+  /**
+   * Skip request deduplication for this request
+   * @default false for GET requests, true for POST/PUT/DELETE
+   */
+  skipDedup?: boolean;
 }
 
 /**
@@ -51,30 +57,45 @@ export class HttpClient {
     schema?: z.ZodSchema<T>,
     options?: RequestOptions
   ): Promise<T | null> {
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: this.getHeaders(),
-      ...options,
-    });
+    // Generate cache key for deduplication (opt-in by default for GET)
+    const cacheKey = globalRequestCache.generateKey(
+      'GET',
+      `${this.baseUrl}${path}`,
+      undefined,
+      this.getAuthContext()
+    );
 
-    // 401 returns null for optional authentication
-    if (response.status === 401) {
-      return null;
-    }
+    // Use request cache for deduplication
+    return globalRequestCache.dedupe(
+      cacheKey,
+      async () => {
+        const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: this.getHeaders(),
+          ...options,
+        });
 
-    if (!response.ok) {
-      await this.handleError(path, response, options);
-    }
+        // 401 returns null for optional authentication
+        if (response.status === 401) {
+          return null;
+        }
 
-    const data = await response.json();
+        if (!response.ok) {
+          await this.handleError(path, response, options);
+        }
 
-    // Validate response with Zod if schema provided
-    if (schema) {
-      return this.validateResponse(path, data, schema);
-    }
+        const data = await response.json();
 
-    return data as T;
+        // Validate response with Zod if schema provided
+        if (schema) {
+          return this.validateResponse(path, data, schema);
+        }
+
+        return data as T;
+      },
+      options?.skipDedup ?? false // Default: deduplication enabled for GET
+    );
   }
 
   /**
@@ -86,42 +107,57 @@ export class HttpClient {
     schema?: z.ZodSchema<T>,
     options?: RequestOptions
   ): Promise<T> {
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        ...this.getHeaders(),
-        'Content-Type': 'application/json',
+    // Generate cache key for deduplication (opt-out by default for POST)
+    const cacheKey = globalRequestCache.generateKey(
+      'POST',
+      `${this.baseUrl}${path}`,
+      body,
+      this.getAuthContext()
+    );
+
+    // Use request cache for deduplication
+    return globalRequestCache.dedupe(
+      cacheKey,
+      async () => {
+        const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            ...this.getHeaders(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body ?? {}),
+          ...options,
+        });
+
+        if (response.status === 401) {
+          const error = await createApiError(path, response);
+          if (!options?.skipErrorLogging) {
+            logApiError(error);
+          }
+          throw error;
+        }
+
+        if (!response.ok) {
+          await this.handleError(path, response, options);
+        }
+
+        // Handle 204 No Content (no body to parse)
+        if (response.status === 204) {
+          return undefined as T;
+        }
+
+        const data = await response.json();
+
+        // Validate response with Zod if schema provided
+        if (schema) {
+          return this.validateResponse(path, data, schema);
+        }
+
+        return data as T;
       },
-      body: JSON.stringify(body ?? {}),
-      ...options,
-    });
-
-    if (response.status === 401) {
-      const error = await createApiError(path, response);
-      if (!options?.skipErrorLogging) {
-        logApiError(error);
-      }
-      throw error;
-    }
-
-    if (!response.ok) {
-      await this.handleError(path, response, options);
-    }
-
-    // Handle 204 No Content (no body to parse)
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    const data = await response.json();
-
-    // Validate response with Zod if schema provided
-    if (schema) {
-      return this.validateResponse(path, data, schema);
-    }
-
-    return data as T;
+      options?.skipDedup ?? true // Default: deduplication disabled for POST
+    );
   }
 
   /**
@@ -133,63 +169,93 @@ export class HttpClient {
     schema?: z.ZodSchema<T>,
     options?: RequestOptions
   ): Promise<T> {
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: {
-        ...this.getHeaders(),
-        'Content-Type': 'application/json',
+    // Generate cache key for deduplication (opt-out by default for PUT)
+    const cacheKey = globalRequestCache.generateKey(
+      'PUT',
+      `${this.baseUrl}${path}`,
+      body,
+      this.getAuthContext()
+    );
+
+    // Use request cache for deduplication
+    return globalRequestCache.dedupe(
+      cacheKey,
+      async () => {
+        const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            ...this.getHeaders(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+          ...options,
+        });
+
+        if (response.status === 401) {
+          const error = await createApiError(path, response);
+          if (!options?.skipErrorLogging) {
+            logApiError(error);
+          }
+          throw error;
+        }
+
+        if (!response.ok) {
+          await this.handleError(path, response, options);
+        }
+
+        const data = await response.json();
+
+        // Validate response with Zod if schema provided
+        if (schema) {
+          return this.validateResponse(path, data, schema);
+        }
+
+        return data as T;
       },
-      body: JSON.stringify(body),
-      ...options,
-    });
-
-    if (response.status === 401) {
-      const error = await createApiError(path, response);
-      if (!options?.skipErrorLogging) {
-        logApiError(error);
-      }
-      throw error;
-    }
-
-    if (!response.ok) {
-      await this.handleError(path, response, options);
-    }
-
-    const data = await response.json();
-
-    // Validate response with Zod if schema provided
-    if (schema) {
-      return this.validateResponse(path, data, schema);
-    }
-
-    return data as T;
+      options?.skipDedup ?? true // Default: deduplication disabled for PUT
+    );
   }
 
   /**
    * DELETE request
    */
   async delete(path: string, options?: RequestOptions): Promise<void> {
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      method: 'DELETE',
-      credentials: 'include',
-      headers: this.getHeaders(),
-      ...options,
-    });
+    // Generate cache key for deduplication (opt-out by default for DELETE)
+    const cacheKey = globalRequestCache.generateKey(
+      'DELETE',
+      `${this.baseUrl}${path}`,
+      undefined,
+      this.getAuthContext()
+    );
 
-    if (response.status === 401) {
-      const error = await createApiError(path, response);
-      if (!options?.skipErrorLogging) {
-        logApiError(error);
-      }
-      throw error;
-    }
+    // Use request cache for deduplication
+    return globalRequestCache.dedupe(
+      cacheKey,
+      async () => {
+        const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: this.getHeaders(),
+          ...options,
+        });
 
-    if (!response.ok) {
-      await this.handleError(path, response, options);
-    }
+        if (response.status === 401) {
+          const error = await createApiError(path, response);
+          if (!options?.skipErrorLogging) {
+            logApiError(error);
+          }
+          throw error;
+        }
 
-    // DELETE returns 204 NoContent, no body to parse
+        if (!response.ok) {
+          await this.handleError(path, response, options);
+        }
+
+        // DELETE returns 204 NoContent, no body to parse
+      },
+      options?.skipDedup ?? true // Default: deduplication disabled for DELETE
+    );
   }
 
   /**
@@ -260,6 +326,14 @@ export class HttpClient {
     }
 
     return headers;
+  }
+
+  /**
+   * Get authentication context for cache key generation
+   */
+  private getAuthContext(): string | undefined {
+    const apiKey = getStoredApiKey();
+    return apiKey ? `apikey:${apiKey}` : undefined;
   }
 
   /**

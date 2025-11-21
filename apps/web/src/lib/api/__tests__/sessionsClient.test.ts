@@ -8,6 +8,7 @@
 import { createSessionsClient } from '../clients/sessionsClient';
 import { HttpClient } from '../core/httpClient';
 import type { GameSessionDto, PaginatedSessionsResponse } from '../schemas';
+import { globalRequestCache } from '../core/requestCache';
 
 describe('SessionsClient', () => {
   let mockFetch: jest.Mock;
@@ -15,6 +16,9 @@ describe('SessionsClient', () => {
   let sessionsClient: ReturnType<typeof createSessionsClient>;
 
   beforeEach(() => {
+    // Clear request cache before each test
+    globalRequestCache.clear();
+
     mockFetch = jest.fn();
     httpClient = new HttpClient({ fetchImpl: mockFetch });
     sessionsClient = createSessionsClient({ httpClient });

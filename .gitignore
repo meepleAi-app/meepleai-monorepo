@@ -12,6 +12,7 @@ build/
 .next/
 out/
 *.tsbuildinfo
+storybook-static/
 
 # IDE
 .vscode/

@@ -11,10 +11,11 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { loadConfig, getHeaders, validateResponse, getLoadProfile, getTestType } from '../utils/common.js';
 import { setupTestUser, teardownTestUser } from '../utils/auth.js';
-import { thresholds } from '../config/thresholds.js';
+import getThresholds from '../config/thresholds.js';
 
 const config = loadConfig();
 const testType = getTestType();
+const thresholds = getThresholds(testType); // Dynamic thresholds based on test type
 
 export const options = {
   ...getLoadProfile(testType, 100), // Base 100 VUs for high throughput

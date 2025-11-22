@@ -1,4 +1,3 @@
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Services;
@@ -6,6 +5,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
+using UserTier = Api.BoundedContexts.Authentication.Domain.ValueObjects.UserTier;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 
@@ -42,7 +43,7 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Free;
-        var userRole = Role.Admin;
+        var userRole = AuthRole.Admin;
 
         // Act
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
@@ -68,7 +69,7 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Normal;
-        var userRole = Role.Editor;
+        var userRole = AuthRole.Editor;
 
         // Act
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
@@ -90,14 +91,14 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Free;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         _timeProvider.SetUtcNow(new DateTime(2025, 11, 22, 10, 0, 0, DateTimeKind.Utc));
 
         // Setup config: Free tier = 5 daily, 20 weekly
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:free:DailyLimit", It.IsAny<CancellationToken>()))
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:free:DailyLimit", null, null))
             .ReturnsAsync((int?)null); // Use defaults
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:free:WeeklyLimit", It.IsAny<CancellationToken>()))
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:free:WeeklyLimit", null, null))
             .ReturnsAsync((int?)null);
 
         // Setup Redis: daily = 5 (limit reached), weekly = 10
@@ -132,12 +133,12 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Free;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         _timeProvider.SetUtcNow(new DateTime(2025, 11, 22, 10, 0, 0, DateTimeKind.Utc));
 
         // Setup config to use defaults
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null);
 
         // Setup Redis: daily = 3, weekly = 20 (limit reached)
@@ -170,12 +171,12 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Normal;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         _timeProvider.SetUtcNow(new DateTime(2025, 11, 22, 10, 0, 0, DateTimeKind.Utc));
 
         // Setup config to use defaults (Normal: 20 daily, 100 weekly)
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:normal:DailyLimit", null, null))
             .ReturnsAsync((int?)null);
 
         // Setup Redis: daily = 10, weekly = 50 (both within limits)
@@ -210,7 +211,7 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Premium;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         // Setup Redis to throw exception
         _databaseMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
@@ -233,14 +234,14 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Premium;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         _timeProvider.SetUtcNow(new DateTime(2025, 11, 22, 10, 0, 0, DateTimeKind.Utc));
 
         // Setup custom config: Premium = 200 daily, 1000 weekly (overriding defaults)
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:premium:DailyLimit", It.IsAny<CancellationToken>()))
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:premium:DailyLimit", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(200);
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:premium:WeeklyLimit", It.IsAny<CancellationToken>()))
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:premium:WeeklyLimit", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(1000);
 
         // Setup Redis: daily = 150, weekly = 800
@@ -301,7 +302,7 @@ public class PdfUploadQuotaServiceTests
                 }
                 callCount++;
             })
-            .ReturnsAsync(RedisResult.Create(new RedisValue(1)));
+            .ReturnsAsync(RedisResult.Create(new RedisValue("1")));
 
         // Act
         await _service.IncrementUploadCountAsync(userId);
@@ -376,7 +377,7 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Free;
-        var userRole = Role.Admin;
+        var userRole = AuthRole.Admin;
 
         // Act
         var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
@@ -404,7 +405,7 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Normal;
-        var userRole = Role.Editor;
+        var userRole = AuthRole.Editor;
 
         // Act
         var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
@@ -421,12 +422,12 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Normal;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         _timeProvider.SetUtcNow(new DateTime(2025, 11, 22, 10, 0, 0, DateTimeKind.Utc));
 
         // Setup config to use defaults (Normal: 20 daily, 100 weekly)
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:normal:DailyLimit", null, null))
             .ReturnsAsync((int?)null);
 
         // Setup Redis: daily = 12, weekly = 45
@@ -461,13 +462,15 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Free;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         _timeProvider.SetUtcNow(new DateTime(2025, 11, 22, 10, 0, 0, DateTimeKind.Utc));
 
         // Setup config to use defaults (Free: 5 daily, 20 weekly)
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((int?)null);
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:free:DailyLimit", 10, null))
+            .ReturnsAsync(10);
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:free:WeeklyLimit", 50, null))
+            .ReturnsAsync(50);
 
         // Setup Redis: daily = 7 (exceeds limit), weekly = 22 (exceeds limit)
         _databaseMock.Setup(db => db.StringGetAsync(
@@ -498,7 +501,7 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Premium;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         _databaseMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
@@ -555,7 +558,7 @@ public class PdfUploadQuotaServiceTests
                 }
                 callCount++;
             })
-            .ReturnsAsync(RedisResult.Create(new RedisValue(1)));
+            .ReturnsAsync(RedisResult.Create(new RedisValue("1")));
 
         // Act
         await _service.IncrementUploadCountAsync(userId);
@@ -576,12 +579,12 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Free;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         // Test at 10:30 PM on Nov 22
         _timeProvider.SetUtcNow(new DateTime(2025, 11, 22, 22, 30, 0, DateTimeKind.Utc));
 
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:free:DailyLimit", null, null))
             .ReturnsAsync((int?)null);
 
         _databaseMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
@@ -607,14 +610,14 @@ public class PdfUploadQuotaServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var userTier = UserTier.Free;
-        var userRole = Role.User;
+        var userRole = AuthRole.User;
 
         var currentDate = DateTime.Parse(currentDateString + " 10:00:00", null, System.Globalization.DateTimeStyles.AssumeUniversal);
         var expectedReset = DateTime.Parse(expectedResetDateString + " 00:00:00", null, System.Globalization.DateTimeStyles.AssumeUniversal);
 
         _timeProvider.SetUtcNow(currentDate);
 
-        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:free:DailyLimit", null, null))
             .ReturnsAsync((int?)null);
 
         _databaseMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))

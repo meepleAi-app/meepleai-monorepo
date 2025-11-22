@@ -20,7 +20,7 @@
 import { group } from 'k6';
 import { loadConfig, getTestType } from '../utils/common.js';
 import { setupTestUser, teardownTestUser } from '../utils/auth.js';
-import { thresholds } from '../config/thresholds.js';
+import getThresholds from '../config/thresholds.js';
 
 // Import test scenarios
 import { default as ragSearchTest } from './rag-search.js';
@@ -30,6 +30,7 @@ import { default as sessionsTest } from './sessions.js';
 
 const config = loadConfig();
 const testType = getTestType();
+const thresholds = getThresholds(testType); // Dynamic thresholds based on test type
 
 export const options = {
   scenarios: {

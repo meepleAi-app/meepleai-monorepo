@@ -1,65 +1,92 @@
 # Docker Compose - Test/CI Environment
+# Extends docker-compose.yml with test-specific optimizations
 # Optimized for CI pipelines with in-memory storage and minimal observability
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f compose.test.yml up -d
+#   docker compose -f docker-compose.yml -f compose.test.yml down
 
 services:
+  # ============================================================================
   # Core Services - Optimized for Speed
-  meepleai-postgres:
+  # ============================================================================
+
+  postgres:
     restart: "no"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      POSTGRES_PASSWORD: testpassword  # Simple password for testing
+      POSTGRES_DB: ${POSTGRES_DB:-meepleai_test}
+    secrets: []  # Disable secrets in test
     volumes: []  # Clear base volumes before using tmpfs
     tmpfs:
       - /var/lib/postgresql/data  # In-memory for speed in CI
-    environment:
-      POSTGRES_PASSWORD: testpassword  # Simple password for testing
     healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 3s
       timeout: 2s
       retries: 5
 
-  meepleai-redis:
+  redis:
     restart: "no"
-    volumes: []  # Clear base volumes before using tmpfs
     tmpfs:
       - /data  # In-memory for speed
 
-  meepleai-qdrant:
+  qdrant:
     restart: "no"
     # Keep persistent storage for test data consistency
     healthcheck:
+      test: ["CMD-SHELL", "kill -0 1 || exit 1"]
       interval: 3s
       timeout: 2s
       retries: 5
 
-  # Disable observability services in test environment (use profiles)
-  meepleai-grafana:
+  # ============================================================================
+  # Application Services
+  # ============================================================================
+
+  api:
+    restart: "no"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Test
+      # Use plain connection string for test
+      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-meepleai_test};Username=${POSTGRES_USER:-meeple};Password=testpassword"
+    secrets: []  # Disable secrets in test
+
+  web:
+    restart: "no"
+    environment:
+      NODE_ENV: test
+      NEXT_PUBLIC_API_BASE: http://api:8080
+
+  # ============================================================================
+  # Disable observability services in test (use profiles)
+  # ============================================================================
+
+  grafana:
     profiles:
       - observability  # Won't start unless --profile observability is used
 
-  meepleai-jaeger:
+  jaeger:
     profiles:
       - observability
 
-  meepleai-prometheus:
+  prometheus:
     profiles:
       - observability
 
-  meepleai-alertmanager:
+  alertmanager:
     profiles:
       - observability
 
-  meepleai-seq:
+  seq:
     profiles:
       - observability
 
-  # Minimal services for testing
-  meepleai-api:
-    environment:
-      ASPNETCORE_ENVIRONMENT: Test
-      ConnectionStrings__Postgres: "Host=meepleai-postgres;Database=meepleai_test;Username=meepleai;Password=testpassword"
-    restart: "no"
+  # ============================================================================
+  # Optional services - disable in test
+  # ============================================================================
 
-  meepleai-web:
-    environment:
-      NODE_ENV: test
-    restart: "no"
-
-
+  n8n:
+    profiles:
+      - optional

@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// </summary>
 public sealed class YearPublished : ValueObject
 {
-    private const int MinYear = 1800; // Modern board games started ~1800s
+    private const int MinYear = 1000; // Historical games support (e.g., Chess 1475, medieval games)
     private static readonly int MaxYear = DateTime.UtcNow.Year + 5; // Allow future releases
 
     public int Value { get; }

@@ -223,7 +223,7 @@ public class QueryValidatorTests
         var exception = Assert.Throws<ValidationException>(() =>
             QueryValidator.ValidateQueryOrThrow(nullQuery, customParamName));
 
-        Assert.Contains(customParamName, exception.Message.ToLower());
+        Assert.Contains(customParamName.ToLower(), exception.Message.ToLower());
     }
 
     #endregion

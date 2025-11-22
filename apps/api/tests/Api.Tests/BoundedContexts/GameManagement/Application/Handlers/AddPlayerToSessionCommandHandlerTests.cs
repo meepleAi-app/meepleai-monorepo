@@ -416,11 +416,11 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerName: "Player 101",
             PlayerOrder: 101);
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        // Act & Assert - Domain validation throws ValidationException for player order > 100
+        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        Assert.Contains("Session cannot have more than 100 players", exception.Message);
+        Assert.Contains("Player order cannot exceed 100", exception.Message);
     }
 
     #endregion

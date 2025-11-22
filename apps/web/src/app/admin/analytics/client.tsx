@@ -9,6 +9,8 @@ import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
 import { LoadingButton } from "@/components/loading/LoadingButton";
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 
 // Types
 type DashboardMetrics = {
@@ -50,7 +52,7 @@ export function AdminPageClient() {
   if (!user) return null;
   // State
   const [stats, setStats] = useState<DashboardStatsDto | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [days, setDays] = useState(30);
@@ -75,7 +77,7 @@ export function AdminPageClient() {
   // Fetch dashboard stats
   const fetchStats = useCallback(async () => {
     try {
-      setLoading(true);
+      setDataLoading(true);
       setError(null);
 
       const queryParams = new URLSearchParams();
@@ -100,7 +102,7 @@ export function AdminPageClient() {
       setError(errorMessage);
       addToast("error", errorMessage);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   }, [days, gameId, roleFilter, addToast]);
 
@@ -181,41 +183,46 @@ export function AdminPageClient() {
     }));
   };
 
-  if (loading && !stats) {
+  if (dataLoading && !stats) {
     return (
-      <div className="min-h-dvh bg-gray-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-300 rounded w-1/4 mb-8"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-32 bg-gray-300 rounded"></div>
-              ))}
+      <AdminAuthGuard loading={authLoading} user={user}>
+        <div className="min-h-dvh bg-gray-50 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-300 rounded w-1/4 mb-8"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-32 bg-gray-300 rounded"></div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </AdminAuthGuard>
     );
   }
 
   if (error && !stats) {
     return (
-      <div className="min-h-dvh bg-gray-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <ErrorDisplay
-            error={categorizeError(new Error(error))}
-            onRetry={fetchStats}
-            onDismiss={() => window.location.href = '/admin'}
-            showTechnicalDetails={process.env.NODE_ENV === 'development'}
-          />
+      <AdminAuthGuard loading={authLoading} user={user}>
+        <div className="min-h-dvh bg-gray-50 p-8">
+          <div className="max-w-7xl mx-auto">
+            <ErrorDisplay
+              error={categorizeError(new Error(error))}
+              onRetry={fetchStats}
+              onDismiss={() => window.location.href = '/admin'}
+              showTechnicalDetails={process.env.NODE_ENV === 'development'}
+            />
+          </div>
         </div>
-      </div>
+      </AdminAuthGuard>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
+    <AdminAuthGuard loading={authLoading} user={user}>
+      <div className="min-h-dvh bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -274,7 +281,7 @@ export function AdminPageClient() {
             <div className="flex items-end gap-2">
               <LoadingButton
                 onClick={fetchStats}
-                isLoading={loading}
+                isLoading={dataLoading}
                 loadingText="Refreshing..."
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
@@ -416,6 +423,7 @@ export function AdminPageClient() {
         </div>
       </div>
     </div>
+    </AdminAuthGuard>
   );
 }
 

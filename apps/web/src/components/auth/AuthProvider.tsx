@@ -164,3 +164,12 @@ export function useAuth(): AuthContextValue {
   }
   return context;
 }
+
+/**
+ * Convenience hook to access just the user and loading state
+ * Useful for components that only need user data
+ */
+export function useAuthUser(): { user: AuthUser | null; loading: boolean } {
+  const { user, loading } = useAuth();
+  return { user, loading };
+}

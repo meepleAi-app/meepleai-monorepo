@@ -1,8 +1,8 @@
 # MeepleAI Documentation Index
 
 **Project**: Italian Board Game Rules AI Assistant
-**Version**: 2.0
-**Last Updated**: 2025-11-15
+**Version**: 2.1
+**Last Updated**: 2025-11-22
 
 ---
 
@@ -81,6 +81,11 @@
   - [RAG Service Migration](./02-development/implementation/bgai-023-ragservice-migration.md)
   - [Cost Tracking Verification](./02-development/implementation/bgai-026-cost-tracking.md)
 
+- **[code-review/](./02-development/code-review/)** - Code review checklists and reports (5 files)
+  - [Backend Comprehensive Review 2025-11-22](./02-development/code-review/BACKEND-COMPREHENSIVE-REVIEW-2025-11-22.md)
+  - [Infrastructure Comprehensive Review 2025-11-22](./02-development/code-review/INFRASTRUCTURE-COMPREHENSIVE-REVIEW-2025-11-22.md)
+  - [PDF Processing Checklist](./02-development/code-review/pdf-processing-checklist.md)
+
 - **[testing/](./02-development/testing/)** - Testing documentation (22 files)
   - [Test Writing Guide](./02-development/testing/test-writing-guide.md) ⭐
   - [UI Element Identification Guide](./02-development/testing/ui-element-identification-guide.md) ⭐ **NEW** - Test selector best practices
@@ -117,8 +122,7 @@
 - [**Deployment Guide**](./05-operations/deployment-guide.md) (50+ pages) ⭐ **NEW** - Complete workflow with Git/GitHub integration
 
 #### Subdirectories
-- **[deployment/](./05-operations/deployment/)** - Deployment guides (4 files)
-  - [Legacy Deployment Guide](./05-operations/deployment/board-game-ai-deployment-guide.md) (35 pages)
+- **[deployment/](./05-operations/deployment/)** - Deployment guides (3 files)
   - [Multi-Environment Strategy](./05-operations/deployment/multi-environment-strategy.md)
   - [Frontend Deployment](./05-operations/deployment/frontend-deployment.md)
   - [Disaster Recovery](./05-operations/deployment/disaster-recovery.md)
@@ -153,15 +157,14 @@
 **Purpose**: Planning, roadmap, team organization, sprint tracking
 
 #### Subdirectories
-- **[planning/](./07-project-management/planning/)** - Implementation plans (8 files)
+- **[planning/](./07-project-management/planning/)** - Implementation plans (7 files)
   - [Backend Implementation Plan](./07-project-management/planning/backend-implementation-plan.md)
   - [Frontend Implementation Plan](./07-project-management/planning/frontend-implementation-plan.md)
-  - [Executive Summary Roadmap](./07-project-management/planning/executive-summary-development-roadmap.md)
   - [Issue Status Tracker](./07-project-management/planning/issue-status-tracker.md)
   - _...and 4 more planning docs_
 
 - **[roadmap/](./07-project-management/roadmap/)** - Strategic roadmap (1 file)
-  - [Strategic Roadmap](./07-project-management/roadmap/board-game-ai-strategic-roadmap.md) (50 pages) ⭐
+  - [ROADMAP.md](./07-project-management/roadmap/ROADMAP.md) (50 pages) ⭐ - Active roadmap with 136 open issues
 
 - **[organization/](./07-project-management/organization/)** - Team & execution (12 files)
   - [Execution Calendar](./07-project-management/organization/board-game-ai-execution-calendar.md)
@@ -231,16 +234,17 @@
 
 ## 📊 Documentation Statistics
 
-- **Total Files**: 116 markdown documents
-- **Total Pages**: ~810 pages (estimated)
+- **Total Files**: ~95 markdown documents (consolidated from 116)
+- **Total Pages**: ~750 pages (estimated)
 - **Categories**: 11 numbered folders (00-10)
+- **Recent Cleanup**: Removed 20+ duplicate/obsolete files (Nov 2025)
 - **Largest Docs**:
   - Legacy Code Inventory: 150+ pages
   - System Architecture: 60+ pages
   - Strategic Roadmap: 50 pages
   - API Specification: 40 pages
   - Business Plan: 35 pages
-  - Deployment Guide: 35 pages
+  - Deployment Guide: 50+ pages
   - Testing Strategy: 30 pages
 
 ---
@@ -344,7 +348,8 @@ See [README.md - Contributing Documentation](./README.md#-contributing-documenta
 **Legend**: ⭐ = Essential reading, highly recommended
 
 **Index Metadata**:
-- **Version**: 2.0
+- **Version**: 2.1
 - **Maintainer**: Documentation Team
-- **Last Updated**: 2025-11-15
-- **Next Review**: 2025-12-15
+- **Last Updated**: 2025-11-22
+- **Next Review**: 2025-12-22
+- **Recent Changes**: Major documentation consolidation - removed duplicates, reorganized structure

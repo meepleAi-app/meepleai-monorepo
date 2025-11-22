@@ -13,7 +13,7 @@
 2. [System Architecture](./01-architecture/overview/system-architecture.md) - Understand the technical design
 3. [API Specification](./03-api/board-game-ai-api-specification.md) - Learn the API
 4. [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md) - Quality standards
-5. [Deployment Guide](./05-operations/deployment/board-game-ai-deployment-guide.md) - Deploy to production
+5. [Deployment Guide](./05-operations/deployment-guide.md) - Complete deployment workflow with Git strategy ⭐ **NEW**
 
 **Find docs by role** → See [README.md](./README.md#-finding-documentation) for role-based navigation
 
@@ -114,10 +114,12 @@
 **Audience**: DevOps, SRE, on-call engineers
 **Purpose**: Deployment, monitoring, incident response
 
+- [**Deployment Guide**](./05-operations/deployment-guide.md) (50+ pages) ⭐ **NEW** - Complete workflow with Git/GitHub integration
+
 #### Subdirectories
 - **[deployment/](./05-operations/deployment/)** - Deployment guides (4 files)
-  - [Deployment Guide](./05-operations/deployment/board-game-ai-deployment-guide.md) (35 pages) ⭐
-  - [Multi-Environment Strategy](./05-operations/deployment/multi-environment-strategy.md) ⭐ **NEW**
+  - [Legacy Deployment Guide](./05-operations/deployment/board-game-ai-deployment-guide.md) (35 pages)
+  - [Multi-Environment Strategy](./05-operations/deployment/multi-environment-strategy.md)
   - [Frontend Deployment](./05-operations/deployment/frontend-deployment.md)
   - [Disaster Recovery](./05-operations/deployment/disaster-recovery.md)
 

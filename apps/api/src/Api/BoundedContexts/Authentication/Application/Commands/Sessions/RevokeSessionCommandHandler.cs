@@ -51,12 +51,12 @@ public class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand,
         // Revoke session using domain logic
         try
         {
-            var reason = command.Reason ?? 
+            var reason = command.Reason ??
                 (command.IsRequestingUserAdmin && session.UserId != command.RequestingUserId
                     ? $"Revoked by admin {command.RequestingUserId}"
                     : "Revoked by user");
 
-            session.Revoke(reason);
+            session.Revoke(reason: reason);
 
             // Persist changes (domain events will be collected automatically)
             await _sessionRepository.UpdateAsync(session, cancellationToken);

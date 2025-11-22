@@ -13,6 +13,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -203,18 +204,26 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
 
+        // Use FakeTimeProvider to control time for expired session test
+        var fakeTimeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+
         var user = CreateTestUser("expired@meepleai.dev", "Expired User");
         await userRepository.AddAsync(user, TestCancellationToken);
 
         var sessionToken = SessionToken.Generate();
-        var expiredSession = new Session(
+        // Create session with 1 hour lifetime using fake time provider
+        var session = new Session(
             Guid.NewGuid(),
             user.Id,
             sessionToken,
-            TimeSpan.FromSeconds(-10)
+            TimeSpan.FromHours(1),
+            timeProvider: fakeTimeProvider
         );
-        await sessionRepository.AddAsync(expiredSession, TestCancellationToken);
+        await sessionRepository.AddAsync(session, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
+
+        // Clear change tracker to avoid "already tracked" error when reloading
+        _dbContext.ChangeTracker.Clear();
 
         var game = new Game(
             Guid.NewGuid(),
@@ -233,12 +242,15 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
+        // Advance time by 2 hours to expire the session
+        fakeTimeProvider.Advance(TimeSpan.FromHours(2));
+
         // Act & Assert
         var userSessions = await sessionRepository.GetByUserIdAsync(user.Id, TestCancellationToken);
         userSessions.Should().ContainSingle();
         var loadedSession = userSessions.First();
-        loadedSession.IsValid(_timeProvider).Should().BeFalse();
-        loadedSession.IsExpired(_timeProvider).Should().BeTrue();
+        loadedSession.IsValid(fakeTimeProvider).Should().BeFalse();
+        loadedSession.IsExpired(fakeTimeProvider).Should().BeTrue();
 
         var loadedGameSession = await gameSessionRepository.GetByIdAsync(gameSession.Id, TestCancellationToken);
         loadedGameSession.Should().NotBeNull();

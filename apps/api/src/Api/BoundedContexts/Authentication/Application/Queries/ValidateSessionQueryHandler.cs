@@ -56,7 +56,7 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
         }
 
         // Update last seen timestamp
-        session.UpdateLastSeen();
+        session.UpdateLastSeen(_timeProvider);
         var lastSeenAt = session.LastSeenAt ?? _timeProvider.GetUtcNow().UtcDateTime;
         await _sessionRepository.UpdateLastSeenAsync(session.Id, lastSeenAt, cancellationToken);
 

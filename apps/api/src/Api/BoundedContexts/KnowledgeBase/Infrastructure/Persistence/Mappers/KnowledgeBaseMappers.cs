@@ -37,13 +37,21 @@ public static class KnowledgeBaseMappers
     /// </summary>
     public static VectorDocument ToDomain(this VectorDocumentEntity entity)
     {
-        return new VectorDocument(
+        var domain = new VectorDocument(
             id: entity.Id,
             gameId: entity.GameId,
             pdfDocumentId: entity.PdfDocumentId,
             language: "en", // Default language (not stored in entity)
             totalChunks: entity.ChunkCount
         );
+
+        // Restore metadata using internal method
+        if (!string.IsNullOrEmpty(entity.Metadata))
+        {
+            domain.SetMetadata(entity.Metadata);
+        }
+
+        return domain;
     }
 
     /// <summary>

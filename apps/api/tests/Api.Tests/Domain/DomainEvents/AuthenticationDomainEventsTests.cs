@@ -204,7 +204,7 @@ public class AuthenticationDomainEventsTests
         );
 
         // Act
-        session.Revoke("User logged out");
+        session.Revoke(reason: "User logged out");
 
         // Assert
         session.DomainEvents.Should().HaveCount(1);

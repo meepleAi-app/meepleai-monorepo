@@ -300,7 +300,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         var loadedVectorDoc = await vectorRepository.GetByIdAsync(vectorDoc.Id, TestCancellationToken);
         loadedVectorDoc!.UpdateMetadata("{\"page\": 8, \"source\": \"pandemic-rules.pdf\", \"topic\": \"outbreak\"}");
         await vectorRepository.UpdateAsync(loadedVectorDoc, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        // Note: UpdateAsync already calls SaveChangesAsync internally, removed duplicate
 
         // Act - Create chat thread using RAG context
         var chatThread = new ChatThread(
@@ -314,6 +314,9 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
 
         await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Clear tracker before final assertion to force fresh query
+        _dbContext.ChangeTracker.Clear();
 
         // Assert
         var loadedThread = await chatThreadRepository.GetByIdAsync(chatThread.Id, TestCancellationToken);
@@ -349,6 +352,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         );
         await gameRepository.AddAsync(game, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
 
         // Act - Both users upload documents
         var pdf1 = new PdfDocument(
@@ -376,6 +380,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await pdfRepository.AddAsync(pdf1, TestCancellationToken);
         await pdfRepository.AddAsync(pdf2, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
 
         // Assert - Verify both documents exist
         var user1Doc = await pdfRepository.GetByIdAsync(pdf1.Id, TestCancellationToken);

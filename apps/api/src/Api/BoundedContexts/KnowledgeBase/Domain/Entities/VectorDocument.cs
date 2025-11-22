@@ -76,4 +76,12 @@ public sealed class VectorDocument : AggregateRoot<Guid>
         Metadata = metadata;
         AddDomainEvent(new VectorDocumentMetadataUpdatedEvent(Id, metadata));
     }
+
+    /// <summary>
+    /// Sets metadata value (internal for mapper use only).
+    /// </summary>
+    internal void SetMetadata(string? metadata)
+    {
+        Metadata = metadata;
+    }
 }

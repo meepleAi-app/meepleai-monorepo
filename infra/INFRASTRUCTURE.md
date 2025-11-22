@@ -68,19 +68,20 @@ infra/
 │   ├── staging/                    # Secrets staging
 │   └── prod/                       # Secrets production
 │
-├── dashboards/                     # Grafana dashboards (7 files)
+├── dashboards/                     # Grafana dashboards (8 files)
 │   ├── api-performance.json       # API metrics
 │   ├── error-monitoring.json      # Error rates, 5xx
 │   ├── cache-optimization.json    # Redis cache stats
 │   ├── ai-quality-monitoring.json # LLM quality metrics
 │   ├── ai-rag-operations.json     # RAG pipeline
 │   ├── infrastructure.json        # Resource usage
-│   └── quality-metrics-gauges.json
+│   ├── quality-metrics-gauges.json
+│   └── http-retry-metrics.json    # HTTP retry monitoring
 │
 ├── prometheus/                     # Prometheus configuration
 │   ├── prometheus.yml             # Main config
 │   ├── prometheus-rules.yml       # Recording rules
-│   └── alerts/                    # Alert rules (8 files)
+│   └── alerts/                    # Alert rules (9 files)
 │       ├── api-performance.yml
 │       ├── database-health.yml
 │       ├── cache-performance.yml
@@ -88,7 +89,8 @@ infra/
 │       ├── pdf-processing.yml
 │       ├── quality-metrics.yml
 │       ├── vector-search.yml
-│       └── prompt-management.yml
+│       ├── prompt-management.yml
+│       └── http-retry-alerts.yaml # HTTP retry alerting
 │
 ├── n8n/                            # n8n workflow automation
 │   ├── templates/                  # Workflow templates (14 files)
@@ -108,14 +110,6 @@ infra/
 │   └── workflows/                  # Active workflows
 │       └── agent-explain-orchestrator.json
 │
-├── observability/                  # Monitoring config avanzata
-│   └── grafana/
-│       ├── dashboards/
-│       │   └── http-retry-metrics.json
-│       └── provisioning/
-│           └── alerting/
-│               └── http-retry-alerts.yaml
-│
 ├── scripts/                        # Utility scripts
 │   └── load-secrets-env.sh        # Load secrets into environment
 │
@@ -128,14 +122,19 @@ infra/
 ├── grafana-datasources.yml        # Prometheus + Jaeger datasources
 ├── grafana-dashboards.yml         # Dashboard provisioning
 ├── alertmanager.yml               # Alert routing config
+├── docs/                           # Documentation
+│   └── archive/                   # Archived/outdated docs
+│       ├── README.md              # Archive index
+│       ├── README-dev.md          # Archived dev guide
+│       └── OPS-05-SETUP.md        # Archived setup guide
 ├── INFRASTRUCTURE.md              # Questo file
 └── README.md                       # Quick start guide
 
 TOTALE:
 - 5 docker-compose files
 - 12+ env file examples
-- 7 Grafana dashboards
-- 8 Prometheus alert groups
+- 8 Grafana dashboards
+- 9 Prometheus alert groups
 - 14 n8n workflow templates
 ```
 

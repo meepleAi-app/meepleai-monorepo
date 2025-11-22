@@ -8,7 +8,7 @@
  */
 export interface Game {
   id: string;
-  name: string;
+  title: string;
   createdAt?: string;
 }
 

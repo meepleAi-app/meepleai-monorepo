@@ -92,7 +92,7 @@ export interface ChatFeedback {
 
 export interface Game {
   id: string;
-  name: string;
+  title: string;
   description?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -701,7 +701,7 @@ export function isGame(obj: any): obj is Game {
   return (
     typeof obj === 'object' &&
     typeof obj.id === 'string' &&
-    typeof obj.name === 'string'
+    typeof obj.title === 'string'
   );
 }
 

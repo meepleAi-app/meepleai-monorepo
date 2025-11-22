@@ -12,7 +12,7 @@ import { createErrorContext } from '@/lib/errors';
 
 type Game = {
   id: string;
-  name: string;
+  title: string;
 };
 
 type ToastMessage = {
@@ -106,15 +106,15 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
   }, [fetchStats]);
 
   // Cache invalidation handlers
-  const handleInvalidateGameCache = (gameId: string, gameName: string) => {
+  const handleInvalidateGameCache = (gameId: string, gameTitle: string) => {
     setConfirmation({
       isOpen: true,
       title: "Invalidate Game Cache",
-      message: `Are you sure you want to invalidate all cached responses for "${gameName}"? This action cannot be undone.`,
+      message: `Are you sure you want to invalidate all cached responses for "${gameTitle}"? This action cannot be undone.`,
       onConfirm: async () => {
         try {
           await (api.chat as any).invalidateGameCache(gameId);
-          addToast("success", `Cache invalidated successfully for "${gameName}"`);
+          addToast("success", `Cache invalidated successfully for "${gameTitle}"`);
           setConfirmation({ ...confirmation, isOpen: false });
           // Refresh stats after invalidation
           await fetchStats();
@@ -312,7 +312,7 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
           <option value="all">All Games</option>
           {games.map((game) => (
             <option key={game.id} value={game.id}>
-              {game.name}
+              {game.title}
             </option>
           ))}
         </select>
@@ -386,12 +386,12 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
               onClick={() => {
                 const game = games.find((g) => g.id === selectedGameId);
                 if (game) {
-                  handleInvalidateGameCache(game.id, game.name);
+                  handleInvalidateGameCache(game.id, game.title);
                 }
               }}
               className="w-full px-5 py-2 bg-red-600 text-white border-none rounded cursor-pointer text-sm font-semibold hover:bg-red-700"
             >
-              Invalidate Cache for {games.find((g) => g.id === selectedGameId)?.name}
+              Invalidate Cache for {games.find((g) => g.id === selectedGameId)?.title}
             </button>
           ) : (
             <p className="text-sm text-gray-500 italic">

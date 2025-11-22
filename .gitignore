@@ -6,6 +6,7 @@ node_modules/
 # Build outputs
 **/bin/
 **/obj/
+**/publish/
 dist/
 build/
 .next/

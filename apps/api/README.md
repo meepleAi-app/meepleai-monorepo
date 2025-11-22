@@ -121,9 +121,9 @@ cd infra && docker compose up -d meepleai-postgres meepleai-qdrant meepleai-redi
 cd apps/api/src/Api
 dotnet run
 
-# API available at: http://localhost:5080
-# Swagger UI: http://localhost:5080/swagger
-# Health check: http://localhost:5080/health
+# API available at: http://localhost:8080
+# Swagger UI: http://localhost:8080/swagger
+# Health check: http://localhost:8080/health
 ```
 
 ### Build

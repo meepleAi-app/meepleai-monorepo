@@ -187,7 +187,7 @@ if (app.Environment.IsDevelopment())
  * Regenerate openapi.json when API changes:
  * 1. Fix build errors (ActiveSession, EndpointFilter issues)
  * 2. Run API: cd apps/api && dotnet run
- * 3. Download: curl http://localhost:5080/swagger/v1/swagger.json -o src/Api/openapi.json
+ * 3. Download: curl http://localhost:8080/swagger/v1/swagger.json -o src/Api/openapi.json
  */
 ```
 
@@ -363,7 +363,7 @@ pnpm generate:api
 **Development Mode**:
 ```bash
 cd apps/api && dotnet run
-# Browser auto-opens to http://localhost:5080/scalar/v1
+# Browser auto-opens to http://localhost:8080/scalar/v1
 ```
 
 **Features**:
@@ -376,8 +376,8 @@ cd apps/api && dotnet run
 ### Swagger UI (Legacy)
 
 **Still Available**:
-- http://localhost:5080/api/docs (Swagger UI)
-- http://localhost:5080/swagger/v1/swagger.json (JSON spec)
+- http://localhost:8080/api/docs (Swagger UI)
+- http://localhost:8080/swagger/v1/swagger.json (JSON spec)
 
 ---
 

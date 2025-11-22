@@ -90,7 +90,7 @@ builder.Services.AddCors(options =>
 
 **Valid Request (Whitelisted Headers)**:
 ```typescript
-const response = await fetch('http://localhost:5080/api/v1/games', {
+const response = await fetch('http://localhost:8080/api/v1/games', {
   method: 'GET',
   headers: {
     'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ const response = await fetch('http://localhost:5080/api/v1/games', {
 **Invalid Request (Non-whitelisted Header)**:
 ```typescript
 // ❌ This will be rejected by CORS
-const response = await fetch('http://localhost:5080/api/v1/games', {
+const response = await fetch('http://localhost:8080/api/v1/games', {
   method: 'GET',
   headers: {
     'Content-Type': 'application/json',
@@ -158,7 +158,7 @@ dotnet test --filter "FullyQualifiedName~CorsHeaderWhitelistTests"
 
 **Test Preflight**:
 ```bash
-curl -X OPTIONS http://localhost:5080/api/v1/games \
+curl -X OPTIONS http://localhost:8080/api/v1/games \
   -H "Origin: http://localhost:3000" \
   -H "Access-Control-Request-Method: GET" \
   -H "Access-Control-Request-Headers: Content-Type, Authorization" \
@@ -169,7 +169,7 @@ curl -X OPTIONS http://localhost:5080/api/v1/games \
 
 **Test Non-whitelisted Header**:
 ```bash
-curl -X OPTIONS http://localhost:5080/api/v1/games \
+curl -X OPTIONS http://localhost:8080/api/v1/games \
   -H "Origin: http://localhost:3000" \
   -H "Access-Control-Request-Method: GET" \
   -H "Access-Control-Request-Headers: X-Malicious-Header" \

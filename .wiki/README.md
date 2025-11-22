@@ -73,7 +73,7 @@ Welcome to the MeepleAI Wiki - your comprehensive guide to understanding, using,
 - **Issues**: [GitHub Issues](https://github.com/DegrassiAaron/meepleai-monorepo/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/DegrassiAaron/meepleai-monorepo/discussions)
 - **Documentation**: See [docs/INDEX.md](../docs/INDEX.md)
-- **Health Check**: `http://localhost:5080/health`
+- **Health Check**: `http://localhost:8080/health`
 
 ## 🔄 Wiki Maintenance
 

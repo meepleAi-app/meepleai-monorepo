@@ -1480,7 +1480,7 @@ export interface ApiClient {
 }
 
 export function createApiClient(config?: { fetchImpl?: typeof fetch }): ApiClient {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:5080';
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8080';
 
   const httpClient = new HttpClient({
     baseUrl,

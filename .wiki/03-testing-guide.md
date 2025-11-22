@@ -979,7 +979,7 @@ export const options = {
 }
 
 export default function () {
-  const res = http.get('http://localhost:5080/api/v1/games')
+  const res = http.get('http://localhost:8080/api/v1/games')
 
   check(res, {
     'status is 200': (r) => r.status === 200,

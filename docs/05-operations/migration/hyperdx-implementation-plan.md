@@ -362,7 +362,7 @@ pnpm add @hyperdx/browser
 import { HyperDX } from '@hyperdx/browser';
 
 const isProduction = process.env.NODE_ENV === 'production';
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 export function initializeHyperDX() {
   if (typeof window === 'undefined') {
@@ -375,7 +375,7 @@ export function initializeHyperDX() {
 
     // Trace Propagation (correlate frontend → backend)
     tracePropagationTargets: [
-      /localhost:5080/,
+      /localhost:8080/,
       /api\.meepleai\.dev/,
       new RegExp(apiBase.replace(/https?:\/\//, '')),
     ],
@@ -498,7 +498,7 @@ Add HyperDX configuration:
 
 ```bash
 # Existing variables
-NEXT_PUBLIC_API_BASE=http://localhost:5080
+NEXT_PUBLIC_API_BASE=http://localhost:8080
 NEXT_PUBLIC_DEMO_EMAIL=user@meepleai.dev
 
 # HyperDX Observability (NEW)
@@ -660,7 +660,7 @@ groups:
 **Test Logs Ingestion**:
 ```bash
 # Generate test logs from API
-curl -X POST http://localhost:5080/api/v1/test-error
+curl -X POST http://localhost:8080/api/v1/test-error
 
 # Verify in HyperDX UI (http://localhost:8180)
 # Search: service.name:meepleai-api AND level:error
@@ -669,7 +669,7 @@ curl -X POST http://localhost:5080/api/v1/test-error
 **Test Trace Correlation**:
 ```bash
 # Make API request with tracing
-curl -X GET http://localhost:5080/api/v1/games
+curl -X GET http://localhost:8080/api/v1/games
 
 # In HyperDX:
 # 1. Find log entry for GET /games
@@ -719,7 +719,7 @@ export const options = {
 
 export default function () {
   // Generate API traffic to create logs/traces
-  const res = http.get('http://localhost:5080/api/v1/games');
+  const res = http.get('http://localhost:8080/api/v1/games');
 
   check(res, {
     'status is 200': (r) => r.status === 200,
@@ -748,7 +748,7 @@ k6 run hyperdx-ingestion-test.js
 ```bash
 # Generate 100+ errors in 5 minutes
 for i in {1..150}; do
-  curl -X POST http://localhost:5080/api/v1/test-error &
+  curl -X POST http://localhost:8080/api/v1/test-error &
   sleep 2
 done
 ```

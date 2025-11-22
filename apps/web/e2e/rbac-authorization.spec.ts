@@ -18,7 +18,7 @@
 import { test, expect } from '@playwright/test';
 import { setupMockAuth, setupMockAuthWithForbidden } from './fixtures/auth';
 
-const API_BASE = process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const API_BASE = process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('RBAC Authorization Tests - E2E-004', () => {
 

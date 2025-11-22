@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 
-const API_BASE = 'http://localhost:5080';
+const API_BASE = 'http://localhost:8080';
 
 /**
  * Mock 2FA Status Response

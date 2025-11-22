@@ -73,7 +73,7 @@ Generate errors to trigger the `HighErrorRate` alert:
 ```bash
 # Generate 100 errors over 30 seconds
 for i in {1..100}; do
-  curl -X POST http://localhost:5080/api/v1/test-error 2>/dev/null &
+  curl -X POST http://localhost:8080/api/v1/test-error 2>/dev/null &
   sleep 0.3
 done
 
@@ -110,7 +110,7 @@ curl -X POST http://localhost:9093/api/v1/alerts -d '[{
 | **Alertmanager** | http://localhost:9093 | - |
 | **Seq Logs** | http://localhost:8081 | - |
 | **Jaeger Traces** | http://localhost:16686 | - |
-| **API Metrics** | http://localhost:5080/metrics | - |
+| **API Metrics** | http://localhost:8080/metrics | - |
 
 ## 📧 Email Format
 

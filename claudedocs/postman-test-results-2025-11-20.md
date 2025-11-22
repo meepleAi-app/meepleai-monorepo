@@ -13,7 +13,7 @@ Test execution dei test Postman per l'API MeepleAI condotti il 20 novembre 2025.
 2. **MeepleAI-API.postman_collection.json** - Test generali dell'API
 
 ### Environment
-- **baseUrl**: `http://localhost:5080`
+- **baseUrl**: `http://localhost:8080`
 - **apiVersion**: `v1`
 - **Environment File**: `Local-Development.postman_environment.json`
 
@@ -112,7 +112,7 @@ A causa del fallimento del login, tutti gli endpoint protetti falliscono:
 L'API è operativa e risponde correttamente:
 
 ```bash
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 ```
 
 **Response**:
@@ -226,7 +226,7 @@ L'API correntemente in esecuzione (PID 47228) potrebbe essere:
 ## Environment Information
 
 - **Date**: 2025-11-20 13:15:00 UTC
-- **API Port**: 5080
+- **API Port**: 8080
 - **API Process**: PID 47228 (pre-existing)
 - **Newman Version**: Latest (globally installed)
 - **Node.js**: Present

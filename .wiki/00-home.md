@@ -22,7 +22,7 @@ docker compose up -d  # Start all services
 
 # Terminal 2: Start API
 cd apps/api/src/Api
-dotnet run  # http://localhost:5080
+dotnet run  # http://localhost:8080
 
 # Terminal 3: Start Web
 cd apps/web
@@ -197,7 +197,7 @@ Domain (pure logic)
 ### Health Checks
 ```bash
 # API health
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 
 # Service status
 docker compose ps

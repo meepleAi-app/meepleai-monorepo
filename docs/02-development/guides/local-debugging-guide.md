@@ -159,7 +159,7 @@ Press `F5` or click **Run and Debug** (Ctrl+Shift+D) and select:
   "cwd": "${workspaceFolder}/apps/api/src/Api",
   "env": {
     "ASPNETCORE_ENVIRONMENT": "Development",
-    "ASPNETCORE_URLS": "http://localhost:5080"
+    "ASPNETCORE_URLS": "http://localhost:8080"
   }
 }
 ```
@@ -200,7 +200,7 @@ public async Task<Result<LoginResponse>> Handle(
 #### 3. Start Debugging
 
 1. Press `F5` or select **`.NET API: Launch`**
-2. Wait for "Now listening on: http://localhost:5080"
+2. Wait for "Now listening on: http://localhost:8080"
 3. VSCode will auto-open browser or attach debugger
 
 #### 4. Trigger the Endpoint
@@ -208,7 +208,7 @@ public async Task<Result<LoginResponse>> Handle(
 Use any HTTP client (curl, Postman, or frontend):
 
 ```bash
-curl -X POST http://localhost:5080/api/v1/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "admin@meepleai.dev", "password": "Demo123!"}'
 ```
@@ -537,7 +537,7 @@ export async function updateProfile(formData: FormData) {
   const email = formData.get('email')
 
   // Set breakpoint here
-  const response = await fetch('http://localhost:5080/api/v1/users/profile', {
+  const response = await fetch('http://localhost:8080/api/v1/users/profile', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, email }),
@@ -1330,10 +1330,10 @@ module.exports = {
 **Solution**:
 ```bash
 # Check API is running
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 
-# Check no other process on port 5080
-lsof -i :5080
+# Check no other process on port 8080
+lsof -i :8080
 
 # Kill conflicting process
 kill -9 <PID>
@@ -1443,7 +1443,7 @@ kill -9 <PID>
 **Frontend** (check `.env.local`):
 ```bash
 # apps/web/.env.local
-NEXT_PUBLIC_API_BASE=http://localhost:5080
+NEXT_PUBLIC_API_BASE=http://localhost:8080
 ```
 
 **Verify in Debug Console**:

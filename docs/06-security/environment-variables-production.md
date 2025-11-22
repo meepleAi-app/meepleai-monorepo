@@ -169,7 +169,7 @@ Questa guida fornisce un elenco completo di tutte le variabili d'ambiente da val
 - **Descrizione**: URL di ascolto del server Kestrel
 - **Dove**: Variabile d'ambiente Docker
 - **Obbligatorio**: ✅ Sì
-- **Default**: `http://localhost:5080`
+- **Default**: `http://localhost:8080`
 - **Esempio**:
   - HTTP: `ASPNETCORE_URLS=http://+:8080`
   - HTTPS: `ASPNETCORE_URLS=https://+:8080;http://+:8081`
@@ -200,7 +200,7 @@ Questa guida fornisce un elenco completo di tutte le variabili d'ambiente da val
 - **Descrizione**: Issuer per token JWT (per API key validation)
 - **Dove**: `appsettings.json` o variabile d'ambiente
 - **Obbligatorio**: ✅ Sì
-- **Default**: `http://localhost:5080`
+- **Default**: `http://localhost:8080`
 - **Esempio**: `JwtIssuer=https://api.meepleai.dev`
 - **Note**: Deve corrispondere al dominio pubblico dell'API
 
@@ -743,7 +743,7 @@ Questa guida fornisce un elenco completo di tutte le variabili d'ambiente da val
 - **Descrizione**: URL base per callback OAuth (redirect URI)
 - **Dove**: `appsettings.Production.json` o variabile d'ambiente
 - **Obbligatorio**: ✅ Sì se si usa OAuth
-- **Default**: `http://localhost:5080`
+- **Default**: `http://localhost:8080`
 - **Esempio**: `https://api.meepleai.dev`
 - **Note**: Deve essere registrato nelle console OAuth providers
 

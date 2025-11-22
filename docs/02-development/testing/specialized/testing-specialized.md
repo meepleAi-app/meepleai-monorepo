@@ -301,7 +301,7 @@ public async Task OptimisticConcurrencyHandlesConflicts()
 1. Import collections from: `tests/postman/collections/` (DDD bounded contexts)
 2. Import environment: `tests/postman/environments/local.postman_environment.json`
 3. Set environment variables:
-   - `API_BASE_URL`: `http://localhost:5080`
+   - `API_BASE_URL`: `http://localhost:8080`
    - `ADMIN_EMAIL`: `admin@meepleai.dev`
    - `ADMIN_PASSWORD`: `Demo123!`
 

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE = 'http://localhost:5080';
+const API_BASE = 'http://localhost:8080';
 const WEB_BASE = 'http://localhost:3000';
 
 /**

@@ -59,7 +59,7 @@ script-src 'self' 'unsafe-inline' 'unsafe-eval';
 style-src 'self' 'unsafe-inline';
 img-src 'self' data: https:;
 font-src 'self' data:;
-connect-src 'self' http://localhost:3000 http://localhost:5080;
+connect-src 'self' http://localhost:3000 http://localhost:8080;
 frame-ancestors 'none';
 ```
 
@@ -197,7 +197,7 @@ public class SecurityHeadersMiddleware
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: https:",
             "font-src 'self' data:",
-            "connect-src 'self' http://localhost:3000 http://localhost:5080",
+            "connect-src 'self' http://localhost:3000 http://localhost:8080",
             "frame-ancestors 'none'"
         };
 
@@ -219,7 +219,7 @@ public class SecurityHeadersMiddleware
       "StyleSrc": ["'self'", "'unsafe-inline'"],
       "ImgSrc": ["'self'", "data:", "https:"],
       "FontSrc": ["'self'", "data:"],
-      "ConnectSrc": ["'self'", "http://localhost:3000", "http://localhost:5080"],
+      "ConnectSrc": ["'self'", "http://localhost:3000", "http://localhost:8080"],
       "FrameAncestors": ["'none'"]
     },
     "StrictTransportSecurity": {

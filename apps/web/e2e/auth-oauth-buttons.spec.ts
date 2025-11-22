@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { getTextMatcher } from './fixtures/i18n';
 
-const API_BASE = 'http://localhost:5080';
+const API_BASE = 'http://localhost:8080';
 
 /**
  * E2E Tests for OAuth Authentication Flow (AUTH-06)

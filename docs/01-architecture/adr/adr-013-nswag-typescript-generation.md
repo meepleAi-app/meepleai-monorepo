@@ -64,7 +64,7 @@ Implement **NSwag-based automatic TypeScript client and Zod schema generation** 
                        ▼ (Swagger/OpenAPI generation)
 ┌─────────────────────────────────────────────────────────────┐
 │  OpenAPI Specification (swagger.json)                       │
-│  http://localhost:5080/swagger/v1/swagger.json              │
+│  http://localhost:8080/swagger/v1/swagger.json              │
 └──────────────────────┬──────────────────────────────────────┘
                        │
                        ▼ (NSwag CLI / MSBuild)
@@ -94,7 +94,7 @@ Implement **NSwag-based automatic TypeScript client and Zod schema generation** 
   "defaultVariables": null,
   "documentGenerator": {
     "fromDocument": {
-      "url": "http://localhost:5080/swagger/v1/swagger.json",
+      "url": "http://localhost:8080/swagger/v1/swagger.json",
       "output": null
     }
   },
@@ -137,7 +137,7 @@ Since NSwag doesn't natively generate Zod schemas, we'll use a two-step process:
 {
   "$schema": "https://openapi-ts.dev/schema.json",
   "client": "@hey-api/client-fetch",
-  "input": "http://localhost:5080/swagger/v1/swagger.json",
+  "input": "http://localhost:8080/swagger/v1/swagger.json",
   "output": {
     "path": "apps/web/src/lib/api/generated",
     "format": "prettier",
@@ -595,7 +595,7 @@ pnpm generate:api
 cd apps/api && dotnet run
 
 # 3. Download updated spec
-curl http://localhost:5080/swagger/v1/swagger.json -o src/Api/openapi.json
+curl http://localhost:8080/swagger/v1/swagger.json -o src/Api/openapi.json
 
 # 4. Commit updated spec
 git add src/Api/openapi.json
@@ -700,7 +700,7 @@ const OPENAPI_URL = 'http://localhost:8080/openapi/v1.json';
 cd apps/api && dotnet run
 
 # 2. Download new spec
-curl http://localhost:5080/openapi/v1.json -o src/Api/openapi.json
+curl http://localhost:8080/openapi/v1.json -o src/Api/openapi.json
 
 # 3. Generate TypeScript types + Zod schemas
 cd apps/web && pnpm generate:api

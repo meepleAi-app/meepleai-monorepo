@@ -73,6 +73,7 @@ public class HallucinationDetectionService : IHallucinationDetectionService
         ["de"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "Ich weiß nicht",
+            "Ich weiss nicht",  // Add SS variant for uppercase compatibility
             "Ich bin nicht sicher",
             "Ich kann nicht finden",
             "nicht angegeben",
@@ -148,6 +149,12 @@ public class HallucinationDetectionService : IHallucinationDetectionService
             _logger.LogDebug("Auto-detected language: {Language}", language);
         }
 
+        // If still null, try to detect from critical phrases before defaulting to English
+        if (string.IsNullOrWhiteSpace(language) && _languageDetection == null)
+        {
+            language = DetectLanguageFromCriticalPhrases(responseText);
+        }
+
         // Default to English if still null
         language ??= "en";
 
@@ -161,13 +168,28 @@ public class HallucinationDetectionService : IHallucinationDetectionService
             language = "en";
         }
 
+        // Normalize text for German ß/SS handling
+        string normalizedText = responseText;
+        if (language == "de")
+        {
+            // Normalize ß to ss for case-insensitive matching
+            normalizedText = responseText.Replace("ß", "ss", StringComparison.Ordinal);
+        }
+
         // Detect forbidden keywords in response
         var detectedKeywords = new List<string>();
         foreach (var keyword in keywords)
         {
-            if (responseText.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            string normalizedKeyword = keyword;
+            if (language == "de")
             {
-                detectedKeywords.Add(keyword);
+                // Normalize keyword for German ß/SS equivalence
+                normalizedKeyword = keyword.Replace("ß", "ss", StringComparison.Ordinal);
+            }
+
+            if (normalizedText.Contains(normalizedKeyword, StringComparison.OrdinalIgnoreCase))
+            {
+                detectedKeywords.Add(keyword); // Keep original keyword for reporting
                 _logger.LogDebug(
                     "Detected forbidden keyword '{Keyword}' in response (language: {Language})",
                     keyword, language);
@@ -205,6 +227,38 @@ public class HallucinationDetectionService : IHallucinationDetectionService
         return ForbiddenKeywordsByLanguage.TryGetValue(language, out var keywords)
             ? keywords.Count
             : ForbiddenKeywordsByLanguage["en"].Count;
+    }
+
+    /// <summary>
+    /// Detect language from critical phrases when language detection service is unavailable
+    /// </summary>
+    private string? DetectLanguageFromCriticalPhrases(string text)
+    {
+        // Map of critical phrases to languages
+        var criticalPhrasesMap = new Dictionary<string, string[]>
+        {
+            ["en"] = new[] { "don't know", "cannot find", "can't find", "not sure" },
+            ["it"] = new[] { "non lo so", "non riesco", "non sono sicuro", "non sono sicura" },
+            ["fr"] = new[] { "ne sais pas", "ne trouve pas", "ne suis pas sûr", "ne suis pas sûre" },
+            ["de"] = new[] { "weiß nicht", "weiss nicht", "kann nicht", "bin nicht sicher" },
+            ["es"] = new[] { "no lo sé", "no puedo", "no estoy seguro", "no estoy segura" }
+        };
+
+        foreach (var (lang, phrases) in criticalPhrasesMap)
+        {
+            foreach (var phrase in phrases)
+            {
+                if (text.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug(
+                        "Detected language '{Language}' from critical phrase '{Phrase}'",
+                        lang, phrase);
+                    return lang;
+                }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

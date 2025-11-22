@@ -41,7 +41,7 @@ public class RedisOAuthStateStoreTests
 
         _mockDatabase.Setup(db => db.StringSetAsync(
                 expectedKey,
-                It.IsAny<RedisValue>(),
+                It.Is<RedisValue>(v => !v.IsNullOrEmpty), // Accept any non-empty value (DateTime string)
                 expiration,
                 It.IsAny<When>(),
                 It.IsAny<CommandFlags>()))
@@ -50,10 +50,10 @@ public class RedisOAuthStateStoreTests
         // Act
         await _stateStore.StoreStateAsync(state, expiration);
 
-        // Assert
+        // Assert - Verify the call was made with correct key, TTL, and a timestamp value
         _mockDatabase.Verify(db => db.StringSetAsync(
             expectedKey,
-            It.IsAny<RedisValue>(),
+            It.Is<RedisValue>(v => !v.IsNullOrEmpty),
             expiration,
             It.IsAny<When>(),
             It.IsAny<CommandFlags>()), Times.Once);

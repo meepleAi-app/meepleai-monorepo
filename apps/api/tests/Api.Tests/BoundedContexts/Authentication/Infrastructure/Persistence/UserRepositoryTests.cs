@@ -539,10 +539,13 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
 
         var email = new Email("concurrentemail@example.com");
 
-        // Act - Multiple concurrent email lookups
-        var tasks = Enumerable.Range(0, 10)
-            .Select(_ => Repository.GetByEmailAsync(email))
-            .ToArray();
+        // Act - Multiple concurrent email lookups using independent repositories
+        // FIX: Use CreateIndependentRepository() to avoid DbContext concurrency issues
+        var tasks = Enumerable.Range(0, 10).Select(async _ =>
+        {
+            var repo = CreateIndependentRepository();
+            return await repo.GetByEmailAsync(email);
+        }).ToArray();
 
         var results = await Task.WhenAll(tasks);
 

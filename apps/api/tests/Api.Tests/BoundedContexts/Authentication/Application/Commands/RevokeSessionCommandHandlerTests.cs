@@ -101,7 +101,8 @@ public class RevokeSessionCommandHandlerTests
         // Assert
         Assert.False(result.Success);
         Assert.Contains("Unauthorized", result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), default), Times.Once);
+        // Session should NOT be updated when unauthorized (early return)
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), default), Times.Never);
     }
 
     [Fact]

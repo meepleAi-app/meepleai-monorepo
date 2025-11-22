@@ -70,9 +70,9 @@ public class YearPublishedTests
     [Fact]
     public void YearPublished_BelowMinimum_ThrowsValidationException()
     {
-        // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new YearPublished(1799));
-        Assert.Contains("cannot be before 1800", exception.Message);
+        // Act & Assert (MinYear = 1000 for historical games support)
+        var exception = Assert.Throws<ValidationException>(() => new YearPublished(999));
+        Assert.Contains("cannot be before 1000", exception.Message);
     }
 
     [Fact]

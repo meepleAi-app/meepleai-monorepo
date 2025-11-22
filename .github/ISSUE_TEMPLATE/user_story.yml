@@ -1,0 +1,68 @@
+---
+name: User Story
+about: User story formato agile
+title: '[STORY] '
+labels: user-story, needs-estimation
+---
+
+## User Story
+Come [persona/ruolo]
+Voglio [obiettivo/desiderio]
+Così che [beneficio/valore]
+
+## Acceptance Criteria
+Feature: [Nome feature]
+
+Scenario: [Scenario principale]
+  Given [contesto iniziale]
+  And [precondizione]
+  When [azione utente]
+  Then [risultato atteso]
+  And [effetto collaterale]
+
+Scenario: [Edge case]
+  Given [contesto alternativo]
+  When [azione]
+  Then [risultato alternativo]
+
+Scenario: [Gestione errori]
+  Given [contesto]
+  When [azione non valida]
+  Then [messaggio errore]
+  And [stato sistema]
+
+## Contesto Business
+Perché questa story è importante
+
+## Dipendenze Tecniche
+- Backend: [API/service necessari]
+- Frontend: [componenti/page]
+- Database: [entity/migration]
+- Infra: [servizi docker]
+
+## Note per lo Sviluppo
+Dettagli tecnici utili
+
+## Design/UX
+Link a mockup/wireframe
+
+## Story Points
+- [ ] 1
+- [ ] 2
+- [ ] 3
+- [ ] 5
+- [ ] 8
+- [ ] 13
+
+## Epic
+EPIC-XX: [nome epic]
+
+## Definition of Done
+- [ ] Codice implementato seguendo standard
+- [ ] Test automatici (unit + integration)
+- [ ] Coverage >90%
+- [ ] Code review approvata
+- [ ] Documentazione aggiornata
+- [ ] Acceptance criteria verificati
+- [ ] Nessuna regressione
+- [ ] Deploy su environment di test

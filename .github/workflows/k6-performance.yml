@@ -1,0 +1,373 @@
+name: K6 Performance Tests
+
+on:
+  schedule:
+    # Run nightly at 2 AM UTC (only on main branch)
+    - cron: '0 2 * * *'
+
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test type (smoke, load, stress, spike)'
+        required: false
+        default: 'load'
+        type: choice
+        options:
+          - smoke
+          - load
+          - stress
+          - spike
+
+# Explicit permissions (Least Privilege Principle - Issue #1455)
+# https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+permissions:
+  contents: read        # Required: Checkout code
+  actions: write        # Required: Upload/download artifacts (actions/upload-artifact@v4)
+
+env:
+  API_BASE_URL: http://localhost:5080
+  TEST_GAME_ID: '00000000-0000-0000-0000-000000000001'
+  # Database credentials - use secrets in CI, fallback to defaults for local runs
+  TEST_POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
+  TEST_POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}
+  TEST_DB_NAME: meepleai_test
+
+jobs:
+  k6-performance-tests:
+    name: K6 Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Only run scheduled tests on main branch
+    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}
+          POSTGRES_DB: meepleai_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      qdrant:
+        image: qdrant/qdrant:v1.12.5
+        ports:
+          - 6333:6333
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup backend environment
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Build API
+        working-directory: apps/api/src/Api
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Create test database
+        run: |
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -c "CREATE DATABASE meepleai_test;" || true
+
+      - name: Apply migrations
+        working-directory: apps/api/src/Api
+        run: |
+          dotnet ef database update --configuration Release
+        env:
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+
+      - name: Seed test data
+        working-directory: apps/api/src/Api
+        run: |
+          # Run integration tests that seed the database with test data
+          dotnet test --filter "FullyQualifiedName~SeedTestData" --no-build --configuration Release || echo "Test seed not found, database will be seeded on first request"
+        env:
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+
+      - name: Start API server
+        working-directory: apps/api/src/Api
+        run: |
+          nohup dotnet run --configuration Release > ../../api.log 2>&1 &
+          echo $! > ../../api.pid
+        env:
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          ConnectionStrings__Redis: 'localhost:6379'
+          ConnectionStrings__Qdrant: 'http://localhost:6333'
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: 'http://0.0.0.0:5080'
+
+      - name: Wait for API to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:5080/health; then
+              echo "✅ API is ready"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 2
+          done
+          echo "❌ API failed to start"
+          cat api.log
+          exit 1
+
+      - name: Run k6 performance tests
+        working-directory: tests/k6
+        run: |
+          TEST_TYPE="${{ github.event.inputs.test_type || 'load' }}"
+
+          # Create reports directory
+          mkdir -p reports
+
+          # Run tests (scheduled or manual)
+          k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/all.js
+        env:
+          API_BASE_URL: ${{ env.API_BASE_URL }}
+          TEST_USER_EMAIL: 'test@meepleai.dev'
+          TEST_USER_PASSWORD: 'Test123!'
+          TEST_GAME_ID: ${{ env.TEST_GAME_ID }}
+          WEBSOCKET_URL: 'ws://localhost:5080/ws'
+
+      - name: Generate HTML report
+        if: always()
+        working-directory: tests/k6
+        run: |
+          node utils/generate-report.js reports/summary.json
+
+      - name: Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-performance-reports-${{ github.run_number }}
+          path: tests/k6/reports/
+          retention-days: 30
+
+      - name: Save baseline report
+        if: github.ref == 'refs/heads/main' && github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-performance-reports-latest
+          path: tests/k6/reports/summary.json
+          retention-days: 90
+
+      - name: Archive API logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-logs-${{ github.run_number }}
+          path: api.log
+          retention-days: 7
+
+      - name: Cleanup resources
+        if: always()
+        run: |
+          # Stop API server
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) 2>/dev/null || true
+            rm api.pid
+          fi
+
+          # Cleanup any remaining dotnet processes
+          pkill -f "dotnet.*Api" 2>/dev/null || true
+
+          # Clean database
+          PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -c "DROP DATABASE IF EXISTS meepleai_test;" 2>/dev/null || true
+
+          # Flush Redis
+          redis-cli FLUSHALL 2>/dev/null || true
+
+          echo "✅ Cleanup complete"
+
+  notify:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: k6-performance-tests
+    if: failure() && github.event_name == 'schedule'
+    permissions:
+      contents: read  # Required: Checkout code
+      issues: write   # Required: Create GitHub issues
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Send Slack notification
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        uses: actions/github-script@v8
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          script: |
+            const webhook = process.env.SLACK_WEBHOOK_URL;
+            if (!webhook) {
+              console.log('⚠️ SLACK_WEBHOOK_URL not configured, skipping Slack notification');
+              return;
+            }
+
+            const payload = {
+              text: '🚨 K6 Performance Tests Failed',
+              blocks: [
+                {
+                  type: 'header',
+                  text: {
+                    type: 'plain_text',
+                    text: '🚨 K6 Performance Tests Failed',
+                    emoji: true
+                  }
+                },
+                {
+                  type: 'section',
+                  fields: [
+                    {
+                      type: 'mrkdwn',
+                      text: `*Repository:*\n${context.repo.owner}/${context.repo.repo}`
+                    },
+                    {
+                      type: 'mrkdwn',
+                      text: `*Branch:*\n${context.ref.replace('refs/heads/', '')}`
+                    },
+                    {
+                      type: 'mrkdwn',
+                      text: `*Trigger:*\nScheduled (nightly)`
+                    },
+                    {
+                      type: 'mrkdwn',
+                      text: `*Run ID:*\n${context.runId}`
+                    }
+                  ]
+                },
+                {
+                  type: 'actions',
+                  elements: [
+                    {
+                      type: 'button',
+                      text: {
+                        type: 'plain_text',
+                        text: 'View Workflow Run',
+                        emoji: true
+                      },
+                      url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+                    }
+                  ]
+                }
+              ]
+            };
+
+            const response = await fetch(webhook, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+              console.error(`❌ Failed to send Slack notification: ${response.statusText}`);
+            } else {
+              console.log('✅ Slack notification sent successfully');
+            }
+
+      - name: Check for existing performance issue
+        id: check-issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'performance,automated',
+              per_page: 100
+            });
+
+            const performanceIssue = issues.data.find(issue =>
+              issue.title.includes('K6 Performance Tests Failed')
+            );
+
+            if (performanceIssue) {
+              core.setOutput('issue-exists', 'true');
+              core.setOutput('issue-number', performanceIssue.number);
+              console.log(`Found existing issue: #${performanceIssue.number}`);
+            } else {
+              core.setOutput('issue-exists', 'false');
+              console.log('No existing performance issue found');
+            }
+
+      - name: Create or update GitHub issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issueExists = '${{ steps.check-issue.outputs.issue-exists }}' === 'true';
+            const issueNumber = '${{ steps.check-issue.outputs.issue-number }}';
+
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const timestamp = new Date().toISOString();
+
+            const comment = `## 🔴 Performance Test Failure - ${timestamp}
+
+            **Run:** [#${context.runId}](${runUrl})
+            **Branch:** ${context.ref.replace('refs/heads/', '')}
+            **Trigger:** Scheduled (nightly)
+
+            ### Action Required
+            The nightly K6 performance tests have failed. Please investigate the workflow run for details.
+
+            ### Common Issues to Check
+            - [ ] API response times exceeding thresholds
+            - [ ] Increased error rates
+            - [ ] Database connection issues
+            - [ ] Memory or resource constraints
+            - [ ] Breaking changes in recent commits
+
+            ### Next Steps
+            1. Review the [workflow run](${runUrl}) logs
+            2. Check the performance reports artifact
+            3. Investigate and fix the root cause
+            4. Re-run the workflow to verify the fix
+            5. Close this issue once resolved`.replace(/^            /gm, '');
+
+            if (issueExists) {
+              // Add comment to existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(issueNumber),
+                body: comment
+              });
+              console.log(`✅ Added comment to existing issue #${issueNumber}`);
+            } else {
+              // Create new issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🚨 K6 Performance Tests Failed - Investigation Required',
+                body: comment,
+                labels: ['performance', 'automated', 'bug', 'priority: high']
+              });
+              console.log(`✅ Created new issue #${issue.data.number}`);
+            }

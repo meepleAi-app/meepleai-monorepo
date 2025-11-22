@@ -1,0 +1,27 @@
+{
+  "recommendations": [
+    // Frontend
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "Orta.vscode-jest",
+    
+    // C# / .NET Backend
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "jongrant.csharpsortusings",
+    "kreativ-software.csharpextensions",
+    
+    // General Development
+    "usernamehw.errorlens",
+    "eamodio.gitlens",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+    
+    // Database / Infrastructure
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+    "ms-azuretools.vscode-docker"
+  ]
+}

@@ -1,0 +1,24 @@
+namespace Api.BoundedContexts.SystemConfiguration.Application.DTOs;
+
+public record ConfigurationDto(
+    Guid Id,
+    string Key,
+    string Value,
+    string ValueType,
+    string? Description,
+    string Category,
+    bool IsActive,
+    bool RequiresRestart,
+    string Environment,
+    int Version,
+    DateTime CreatedAt,
+    DateTime UpdatedAt
+);
+
+public record FeatureFlagDto(
+    Guid Id,
+    string Name,
+    bool IsEnabled,
+    string? Description,
+    DateTime UpdatedAt
+);

@@ -1,0 +1,78 @@
+# Codecov Configuration for MeepleAI
+# https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 90%               # Project coverage must be >= 90%
+        threshold: 1%             # Allow 1% decrease without failing
+        if_ci_failed: error       # Fail if CI fails
+
+    patch:
+      default:
+        target: 80%               # New code must have >= 80% coverage
+        threshold: 5%             # Allow 5% decrease for patches
+        if_not_found: success     # Don't fail if no patch coverage
+        only_pulls: true          # Only check patches on PRs
+
+  ignore:
+    - "apps/api/src/Api/Migrations/**"
+    - "apps/api/src/Api/Program.cs"
+    - "apps/web/.next/**"
+    - "apps/web/coverage/**"
+    - "**/*.g.cs"
+    - "**/obj/**"
+    - "**/bin/**"
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false          # Comment on every PR
+  require_base: no                # Don't require base commit
+  require_head: yes               # Require head commit
+
+flags:
+  backend-unit:
+    paths:
+      - apps/api/src/Api/
+    carryforward: true
+    carryforward_mode: "all"
+
+  backend-integration:
+    paths:
+      - apps/api/src/Api/
+    carryforward: true
+    carryforward_mode: "all"
+
+  frontend-unit:
+    paths:
+      - apps/web/src/
+    carryforward: true
+    carryforward_mode: "all"
+
+  e2e-tests:
+    paths:
+      - apps/web/src/
+    carryforward: false             # E2E doesn't generate coverage in same format
+
+github_checks:
+  annotations: true                 # Add inline annotations to PRs
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    after_n_builds: 3               # Wait for backend-unit, backend-integration, frontend-unit
+    wait_for_ci: yes

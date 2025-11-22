@@ -1,0 +1,38 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "MeepleAI API",
+    "description": "AI-powered board game rules assistant API with RAG-based question answering, rule explanations, and chess analysis",
+    "contact": {
+      "name": "MeepleAI Support",
+      "email": "support@meepleai.dev"
+    },
+    "version": "v1"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {},
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "description": "API key authentication via Authorization: ApiKey <key> header. Browser clients can also rely on the secure meeple_apikey cookie issued during API key login.",
+        "name": "Authorization",
+        "in": "header"
+      },
+      "Cookie": {
+        "type": "apiKey",
+        "description": "Cookie-based session authentication for web clients",
+        "name": "meepleai_session",
+        "in": "cookie"
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKey": []
+    },
+    {
+      "Cookie": []
+    }
+  ]
+}

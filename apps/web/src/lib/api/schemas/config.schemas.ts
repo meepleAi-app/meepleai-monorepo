@@ -1,0 +1,83 @@
+/**
+ * System Configuration API Schemas (FE-IMP-005)
+ *
+ * Zod schemas for validating SystemConfiguration bounded context responses.
+ * Covers: Dynamic configuration, feature flags, config history, validation
+ */
+
+import { z } from 'zod';
+
+// ========== System Configuration ==========
+
+export const SystemConfigurationDtoSchema = z.object({
+  id: z.string().uuid(),
+  key: z.string().min(1),
+  value: z.string(),
+  valueType: z.string().min(1),
+  description: z.string().nullable(),
+  category: z.string().min(1),
+  isActive: z.boolean(),
+  requiresRestart: z.boolean(),
+  environment: z.string().min(1),
+  version: z.number().int().positive(),
+  previousValue: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  createdByUserId: z.string().uuid(),
+  updatedByUserId: z.string().uuid().nullable(),
+  lastToggledAt: z.string().datetime().nullable(),
+});
+
+export type SystemConfigurationDto = z.infer<typeof SystemConfigurationDtoSchema>;
+
+// ========== Paged Results ==========
+
+export const PagedResultSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
+  z.object({
+    items: z.array(itemSchema),
+    total: z.number().int().nonnegative(),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+  });
+
+export type PagedResult<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+// ========== Configuration History ==========
+
+export const ConfigurationHistoryDtoSchema = z.object({
+  id: z.string().uuid(),
+  configurationId: z.string().uuid(),
+  key: z.string().min(1),
+  oldValue: z.string(),
+  newValue: z.string(),
+  version: z.number().int().positive(),
+  changedAt: z.string().datetime(),
+  changedByUserId: z.string().uuid(),
+  changeReason: z.string().min(1),
+});
+
+export type ConfigurationHistoryDto = z.infer<typeof ConfigurationHistoryDtoSchema>;
+
+// ========== Configuration Validation ==========
+
+export const ConfigurationValidationResultSchema = z.object({
+  isValid: z.boolean(),
+  errors: z.array(z.string()),
+});
+
+export type ConfigurationValidationResult = z.infer<typeof ConfigurationValidationResultSchema>;
+
+// ========== Configuration Export/Import ==========
+
+export const ConfigurationExportDtoSchema = z.object({
+  configurations: z.array(SystemConfigurationDtoSchema),
+  exportedAt: z.string().datetime(),
+  environment: z.string().min(1),
+});
+
+export type ConfigurationExportDto = z.infer<typeof ConfigurationExportDtoSchema>;

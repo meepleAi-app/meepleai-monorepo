@@ -1,0 +1,444 @@
+name: lighthouse-ci
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/lighthouse-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/lighthouse-ci.yml'
+
+# Explicit permissions (Least Privilege Principle - Issue #1455)
+# https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+permissions:
+  contents: read        # Required: Checkout code
+  pull-requests: write  # Required: Comment on PRs with performance results
+  checks: write         # Required: Report Lighthouse CI results
+  actions: write        # Required: Upload/download artifacts (actions/upload-artifact@v6)
+
+# Cancel previous runs on same PR/branch to avoid piling up
+concurrency:
+  group: lighthouse-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Paths Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            web:
+              - 'apps/web/**'
+
+  # Build Next.js once and share across jobs (saves ~2-3min)
+  build-nextjs:
+    needs: changes
+    name: Build Next.js (Shared)
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/web/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('apps/web/pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('apps/web/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nextjs-
+
+      - name: Build Next.js for Production
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Upload Next.js Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build-${{ github.sha }}
+          path: |
+            apps/web/.next/
+            apps/web/.env.test
+            apps/web/node_modules/.cache/
+          retention-days: 1
+
+  lighthouse-performance:
+    needs: build-nextjs
+    name: Lighthouse - Performance Testing
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Setup Playwright browsers
+        uses: ./.github/actions/setup-playwright
+        with:
+          working-directory: apps/web
+
+      - name: Download Next.js Build
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build-${{ github.sha }}
+          path: apps/web
+
+      - name: Run Lighthouse Performance Tests (Playwright)
+        run: pnpm test:e2e e2e/performance.spec.ts
+        env:
+          CI: true
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-playwright-report-${{ github.run_number }}
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - name: Check if Lighthouse Reports exist
+        if: always()
+        id: check-reports
+        run: |
+          if [ -d "lighthouse-reports" ] && [ "$(ls -A lighthouse-reports 2>/dev/null)" ]; then
+            echo "reports_exist=true" >> $GITHUB_OUTPUT
+            echo "✅ Lighthouse reports directory exists and contains files"
+          else
+            echo "reports_exist=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Lighthouse reports directory is empty or does not exist"
+          fi
+
+      - name: Upload Lighthouse Reports
+        if: always() && steps.check-reports.outputs.reports_exist == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports-${{ github.run_number }}
+          path: apps/web/lighthouse-reports/
+          retention-days: 7
+
+  lighthouse-cli:
+    needs: build-nextjs
+    name: Lighthouse CI - Core Web Vitals
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Download Next.js Build
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build-${{ github.sha }}
+          path: apps/web
+
+      - name: Run Lighthouse CI
+        run: |
+          pnpm exec lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Upload Lighthouse CI Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-ci-results-${{ github.run_number }}
+          path: apps/web/.lighthouseci/
+          retention-days: 7
+
+      - name: Comment PR with Performance Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Try to read Lighthouse CI results
+            try {
+              const lhciDir = path.join(process.env.GITHUB_WORKSPACE, 'apps/web/.lighthouseci');
+
+              // Create a simple comment
+              const comment = `## 🔦 Lighthouse CI Performance Report
+
+              Performance tests have been executed for this PR.
+
+              **Core Web Vitals Targets:**
+              - ✅ LCP (Largest Contentful Paint) < 2.5s
+              - ✅ FID (First Input Delay) < 100ms
+              - ✅ CLS (Cumulative Layout Shift) < 0.1
+
+              **Performance Scores:**
+              - Performance: >= 85%
+              - Accessibility: >= 95%
+              - Best Practices: >= 90%
+              - SEO: >= 90%
+
+              📊 Full reports are available in the workflow artifacts.
+              `;
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Could not create detailed comment:', error);
+            }
+
+  performance-regression-check:
+    needs: [build-nextjs, lighthouse-cli]
+    name: Check Performance Regression
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Download PR Lighthouse Results
+        uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-ci-results-${{ github.run_number }}
+          path: apps/web/.lighthouseci-pr
+
+      - name: Checkout Base Branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }}
+
+      - name: Setup pnpm (Base)
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies (Base)
+        run: pnpm install
+
+      - name: Setup Test Environment (Base)
+        run: cp .env.test.example .env.test || echo "NEXT_PUBLIC_API_BASE=http://localhost:5080" > .env.test
+
+      - name: Build Next.js for Production (Base)
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Run Lighthouse CI (Base Branch)
+        run: |
+          pnpm exec lhci autorun || echo "Base branch Lighthouse completed"
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Compare Performance Metrics
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const REGRESSION_THRESHOLD = 0.10; // 10% degradation threshold
+
+            // Helper function to parse Lighthouse manifest
+            function getLatestReport(lhciDir) {
+              const manifestPath = path.join(lhciDir, 'manifest.json');
+              if (!fs.existsSync(manifestPath)) {
+                console.log(`Manifest not found at ${manifestPath}`);
+                return null;
+              }
+
+              const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+              if (!manifest || manifest.length === 0) {
+                console.log('Empty manifest');
+                return null;
+              }
+
+              // Get the first report (averaged across runs)
+              const reportPath = path.join(lhciDir, manifest[0].jsonPath);
+              return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            }
+
+            // Load PR and base reports
+            const prReport = getLatestReport(path.join(process.env.GITHUB_WORKSPACE, 'apps/web/.lighthouseci-pr'));
+            const baseReport = getLatestReport(path.join(process.env.GITHUB_WORKSPACE, 'apps/web/.lighthouseci'));
+
+            if (!prReport || !baseReport) {
+              console.log('⚠️ Unable to load Lighthouse reports for comparison');
+              console.log('Skipping regression check...');
+              return;
+            }
+
+            // Extract metrics
+            const metrics = {
+              'Performance Score': {
+                pr: prReport.categories.performance.score * 100,
+                base: baseReport.categories.performance.score * 100,
+                unit: '%'
+              },
+              'LCP (Largest Contentful Paint)': {
+                pr: prReport.audits['largest-contentful-paint'].numericValue,
+                base: baseReport.audits['largest-contentful-paint'].numericValue,
+                unit: 'ms'
+              },
+              'FCP (First Contentful Paint)': {
+                pr: prReport.audits['first-contentful-paint'].numericValue,
+                base: baseReport.audits['first-contentful-paint'].numericValue,
+                unit: 'ms'
+              },
+              'TBT (Total Blocking Time)': {
+                pr: prReport.audits['total-blocking-time'].numericValue,
+                base: baseReport.audits['total-blocking-time'].numericValue,
+                unit: 'ms'
+              },
+              'CLS (Cumulative Layout Shift)': {
+                pr: prReport.audits['cumulative-layout-shift'].numericValue,
+                base: baseReport.audits['cumulative-layout-shift'].numericValue,
+                unit: ''
+              },
+              'Speed Index': {
+                pr: prReport.audits['speed-index'].numericValue,
+                base: baseReport.audits['speed-index'].numericValue,
+                unit: 'ms'
+              }
+            };
+
+            // Calculate regressions
+            let hasRegression = false;
+            let regressionDetails = [];
+
+            for (const [metricName, values] of Object.entries(metrics)) {
+              let change, changePercent;
+
+              // For scores, higher is better; for timings, lower is better
+              if (metricName.includes('Score')) {
+                change = values.pr - values.base;
+                changePercent = (change / values.base) * 100;
+                // Regression if score decreased by >10%
+                if (changePercent < -REGRESSION_THRESHOLD * 100) {
+                  hasRegression = true;
+                  regressionDetails.push(`- **${metricName}**: ${values.base.toFixed(1)}${values.unit} → ${values.pr.toFixed(1)}${values.unit} (${changePercent.toFixed(1)}% ⚠️ REGRESSION)`);
+                } else {
+                  regressionDetails.push(`- ${metricName}: ${values.base.toFixed(1)}${values.unit} → ${values.pr.toFixed(1)}${values.unit} (${changePercent.toFixed(1)}%)`);
+                }
+              } else {
+                // For metrics like LCP, TBT, CLS, lower is better
+                change = values.pr - values.base;
+                changePercent = (change / values.base) * 100;
+                // Regression if timing increased by >10%
+                if (changePercent > REGRESSION_THRESHOLD * 100) {
+                  hasRegression = true;
+                  regressionDetails.push(`- **${metricName}**: ${values.base.toFixed(0)}${values.unit} → ${values.pr.toFixed(0)}${values.unit} (+${changePercent.toFixed(1)}% ⚠️ REGRESSION)`);
+                } else {
+                  regressionDetails.push(`- ${metricName}: ${values.base.toFixed(0)}${values.unit} → ${values.pr.toFixed(0)}${values.unit} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(1)}%)`);
+                }
+              }
+            }
+
+            // Create PR comment
+            const comment = `## ${hasRegression ? '⚠️' : '✅'} Performance Regression Check
+
+            **Threshold:** >10% degradation in any Core Web Vital = Build failure
+
+            ### Comparison with Base Branch (\`${context.payload.pull_request.base.ref}\`)
+
+            ${regressionDetails.join('\n')}
+
+            ${hasRegression ? `
+            ### ⚠️ Performance Regression Detected!
+
+            One or more metrics have degraded by more than 10% compared to the base branch.
+
+            **Action Required:**
+            - Review the Lighthouse reports in the artifacts
+            - Optimize the affected components/pages
+            - Consider code splitting, lazy loading, or image optimization
+            - Run \`pnpm lighthouse:ci\` locally to debug
+
+            **Tips for improving performance:**
+            - Minimize JavaScript bundle size (\`pnpm analyze\`)
+            - Optimize images (use next/image with proper sizing)
+            - Defer non-critical CSS/JS
+            - Implement code splitting for large components
+            - Use SSG/ISR instead of SSR where possible
+            - Optimize font loading (preload critical fonts)
+            ` : `
+            ### ✅ No Performance Regression
+
+            All performance metrics are within acceptable thresholds.
+            `}
+
+            📊 Full Lighthouse reports are available in the workflow artifacts.
+            `;
+
+            // Post comment to PR
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+            // Fail the build if regression detected
+            if (hasRegression) {
+              core.setFailed('Performance regression detected! One or more metrics degraded by >10%.');
+            } else {
+              console.log('✅ Performance regression check passed');
+            }

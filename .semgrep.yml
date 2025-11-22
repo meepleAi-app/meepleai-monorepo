@@ -1,0 +1,340 @@
+# Semgrep Custom Rules for MeepleAI
+#
+# These rules are specific to the MeepleAI codebase and complement
+# the default Semgrep rulesets (p/security-audit, p/owasp-top-ten, etc.)
+#
+# Documentation: https://semgrep.dev/docs/writing-rules/rule-syntax/
+
+rules:
+  # ============================================================================
+  # Secrets Detection
+  # ============================================================================
+
+  - id: hardcoded-openrouter-api-key
+    pattern-either:
+      - pattern: |
+          "sk-or-v1-$..."
+      - pattern: |
+          'sk-or-v1-$...'
+      - pattern: |
+          OPENROUTER_API_KEY = "$..."
+    message: |
+      Hardcoded OpenRouter API key detected. This is a security risk.
+      Use environment variables or GitHub Secrets instead.
+
+      Fix:
+      - Remove the hardcoded key
+      - Use: Environment.GetEnvironmentVariable("OPENROUTER_API_KEY")
+      - Or inject via IConfiguration
+    severity: ERROR
+    languages: [csharp, javascript, typescript]
+    metadata:
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+
+  - id: hardcoded-connection-string
+    pattern-either:
+      - pattern: |
+          "Host=$...;Port=$...;Database=$...;Password=$..."
+      - pattern: |
+          "Server=$...;Database=$...;User Id=$...;Password=$..."
+    message: |
+      Hardcoded database connection string with credentials detected.
+
+      Fix:
+      - Move to appsettings.json: "ConnectionStrings:Postgres"
+      - Use environment variables in production
+      - Never commit credentials to Git
+    severity: ERROR
+    languages: [csharp]
+    metadata:
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+
+  # ============================================================================
+  # SQL Injection
+  # ============================================================================
+
+  - id: sql-injection-string-concatenation
+    pattern-either:
+      - pattern: |
+          $DB.ExecuteSqlRaw($SQL + ...)
+      - pattern: |
+          $DB.ExecuteSqlRaw($"... {$VAR} ...")
+      - pattern: |
+          $DB.FromSqlRaw($SQL + ...)
+    message: |
+      Potential SQL injection via string concatenation or interpolation.
+
+      Fix:
+      - Use parameterized queries: ExecuteSqlRaw("SELECT * FROM users WHERE id = {0}", userId)
+      - Or use LINQ queries instead of raw SQL
+    severity: ERROR
+    languages: [csharp]
+    metadata:
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+
+  # ============================================================================
+  # XSS (Cross-Site Scripting)
+  # ============================================================================
+
+  - id: react-dangerously-set-inner-html
+    pattern: |
+      dangerouslySetInnerHTML={{ __html: $USER_INPUT }}
+    message: |
+      Potential XSS vulnerability via dangerouslySetInnerHTML.
+
+      Fix:
+      - Sanitize user input with DOMPurify before rendering
+      - Or use React children/text content instead
+    severity: WARNING
+    languages: [javascript, typescript, tsx, jsx]
+    metadata:
+      cwe: "CWE-79: Cross-site Scripting (XSS)"
+      owasp: "A03:2021 - Injection"
+
+  # ============================================================================
+  # Authentication & Authorization
+  # ============================================================================
+
+  - id: missing-authorization-attribute
+    pattern: |
+      public async Task<IResult> $FUNC(...) { ... }
+    pattern-not: |
+      [Authorize]
+      public async Task<IResult> $FUNC(...) { ... }
+    paths:
+      include:
+        - apps/api/src/Api/Program.cs
+    message: |
+      Endpoint appears to be missing [Authorize] attribute.
+
+      Review:
+      - Should this endpoint require authentication?
+      - If yes, add [Authorize] or .RequireAuthorization()
+      - If no, add comment explaining why it's public
+    severity: WARNING
+    languages: [csharp]
+    metadata:
+      cwe: "CWE-862: Missing Authorization"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: MEDIUM
+
+  - id: insecure-password-hashing
+    pattern-either:
+      - pattern: |
+          new MD5CryptoServiceProvider()
+      - pattern: |
+          MD5.Create()
+      - pattern: |
+          new SHA1Managed()
+    message: |
+      Insecure password hashing algorithm detected (MD5 or SHA1).
+
+      Fix:
+      - Use PBKDF2 (Rfc2898DeriveBytes) with 210,000+ iterations
+      - Or use BCrypt/Argon2 for password hashing
+      - See: apps/api/src/Api/Services/AuthService.cs for reference
+    severity: ERROR
+    languages: [csharp]
+    metadata:
+      cwe: "CWE-327: Use of Broken Cryptographic Algorithm"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  # ============================================================================
+  # Path Traversal
+  # ============================================================================
+
+  - id: path-traversal-file-access
+    pattern-either:
+      - pattern: |
+          File.ReadAllText($USER_INPUT)
+      - pattern: |
+          File.WriteAllText($USER_INPUT, ...)
+      - pattern: |
+          new FileStream($USER_INPUT, ...)
+    message: |
+      Potential path traversal vulnerability via unsanitized user input.
+
+      Fix:
+      - Validate file paths against allowed directories
+      - Use Path.GetFullPath() and verify it starts with allowed base path
+      - See: apps/api/src/Api/Services/PdfStorageService.cs for safe patterns
+    severity: ERROR
+    languages: [csharp]
+    metadata:
+      cwe: "CWE-22: Path Traversal"
+      owasp: "A01:2021 - Broken Access Control"
+
+  # ============================================================================
+  # Command Injection
+  # ============================================================================
+
+  - id: command-injection-process-start
+    pattern: |
+      Process.Start($USER_INPUT)
+    message: |
+      Potential command injection via Process.Start with user input.
+
+      Fix:
+      - Avoid using user input in shell commands
+      - If necessary, use allowlist validation for inputs
+      - Use ProcessStartInfo with Arguments property (not shell execution)
+    severity: ERROR
+    languages: [csharp]
+    metadata:
+      cwe: "CWE-78: OS Command Injection"
+      owasp: "A03:2021 - Injection"
+
+  # ============================================================================
+  # Insecure Deserialization
+  # ============================================================================
+
+  - id: insecure-json-deserialization
+    pattern-either:
+      - pattern: |
+          JsonConvert.DeserializeObject($USER_INPUT)
+      - pattern: |
+          JsonSerializer.Deserialize($USER_INPUT)
+    pattern-not-inside: |
+      try {
+        ...
+        JsonConvert.DeserializeObject<$TYPE>($USER_INPUT)
+      } catch { ... }
+    message: |
+      JSON deserialization without type constraint or error handling.
+
+      Fix:
+      - Use strongly-typed deserialization: JsonSerializer.Deserialize<T>()
+      - Wrap in try-catch for untrusted input
+      - Validate schema before deserialization
+    severity: WARNING
+    languages: [csharp]
+    metadata:
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+
+  # ============================================================================
+  # Logging Sensitive Data
+  # ============================================================================
+
+  - id: logging-sensitive-data
+    pattern-either:
+      - pattern: |
+          _logger.LogInformation($"... {password} ...")
+      - pattern: |
+          _logger.LogDebug($"... {apiKey} ...")
+      - pattern: |
+          _logger.LogWarning($"... {token} ...")
+      - pattern: |
+          console.log($"Password: $...")
+    message: |
+      Potential logging of sensitive data (password, API key, token).
+
+      Fix:
+      - Remove sensitive data from logs
+      - Use [SensitiveData] attribute or sanitize before logging
+      - Log only non-sensitive identifiers (user ID, not password)
+    severity: WARNING
+    languages: [csharp, javascript, typescript]
+    metadata:
+      cwe: "CWE-532: Insertion of Sensitive Information into Log File"
+      owasp: "A09:2021 - Security Logging and Monitoring Failures"
+
+  # ============================================================================
+  # CORS Misconfiguration
+  # ============================================================================
+
+  - id: cors-allow-any-origin
+    pattern: |
+      .AllowAnyOrigin()
+    message: |
+      CORS configured to allow any origin (*). This is insecure for production.
+
+      Fix:
+      - Specify allowed origins explicitly: .WithOrigins("https://example.com")
+      - Use environment-specific configuration
+      - See: apps/api/src/Api/Program.cs CORS setup
+    severity: WARNING
+    languages: [csharp]
+    metadata:
+      cwe: "CWE-942: Permissive Cross-domain Policy"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: HIGH
+
+  # ============================================================================
+  # Insecure Random Number Generation
+  # ============================================================================
+
+  - id: insecure-random-cryptographic
+    pattern-either:
+      - pattern: |
+          new Random()
+      - pattern: |
+          Random.Next()
+    paths:
+      include:
+        - "**/Services/AuthService.cs"
+        - "**/Services/SessionManagementService.cs"
+        - "**/Services/ApiKeyAuthenticationService.cs"
+    message: |
+      Using non-cryptographic Random() in security-sensitive code.
+
+      Fix:
+      - Use RandomNumberGenerator.GetBytes() for cryptographic randomness
+      - Or use System.Security.Cryptography.RandomNumberGenerator
+    severity: ERROR
+    languages: [csharp]
+    metadata:
+      cwe: "CWE-338: Use of Cryptographically Weak PRNG"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  # ============================================================================
+  # React Security Best Practices
+  # ============================================================================
+
+  - id: react-direct-dom-manipulation
+    pattern-either:
+      - pattern: |
+          document.getElementById($ID).innerHTML = $VAR
+      - pattern: |
+          element.innerHTML = $VAR
+    message: |
+      Direct DOM manipulation with innerHTML can lead to XSS.
+
+      Fix:
+      - Use React state and JSX rendering
+      - If you must use innerHTML, sanitize with DOMPurify
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      cwe: "CWE-79: Cross-site Scripting (XSS)"
+
+  # ============================================================================
+  # API Route Validation
+  # ============================================================================
+
+  - id: missing-api-versioning
+    pattern: |
+      app.MapGet("/$PATH", ...)
+    pattern-not: |
+      app.MapGet("/api/v1/$PATH", ...)
+    pattern-not: |
+      app.MapGet("/health$...", ...)
+    paths:
+      include:
+        - apps/api/src/Api/Program.cs
+    message: |
+      API endpoint missing versioning prefix (/api/v1/).
+
+      Fix:
+      - Use versioned API groups: v1Api.MapGet("/resource", ...)
+      - See CLAUDE.md API Versioning section
+    severity: INFO
+    languages: [csharp]
+    metadata:
+      category: "best-practice"
+      confidence: MEDIUM

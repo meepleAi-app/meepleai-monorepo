@@ -1,0 +1,100 @@
+{
+  // Monorepo Configuration - Frontend + Backend
+  "files.exclude": {
+    // Build artifacts only
+    "**/*.dll": true,
+    "**/bin": true,
+    "**/obj": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.next": true,
+    "**/node_modules": true
+  },
+  "search.exclude": {
+    // Build and dependency directories
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/bin": true,
+    "**/obj": true,
+    "**/__pycache__": true
+  },
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  // TypeScript / JavaScript / React
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // C# / .NET
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp",
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  // Python (services)
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.formatOnSave": true
+  },
+  // Tailwind CSS
+  "typescript.tsdk": "apps/web/node_modules/typescript/lib",
+  "tailwindCSS.experimental.classRegex": [
+    [
+      "cva\\(([^)]*)\\)",
+      "[\"'`]([^\"'`]*).*?[\"'`]"
+    ]
+  ],
+  // C# IntelliSense
+  "omnisharp.enableRoslynAnalyzers": true,
+  "omnisharp.enableEditorConfigSupport": true,
+  // UI Customization
+  "workbench.colorCustomizations": {
+    "statusBar.background": "#5b21b6",
+    "statusBar.foreground": "#ffffff",
+    "statusBar.noFolderBackground": "#5b21b6",
+    "statusBar.debuggingBackground": "#7c3aed"
+  },
+  "window.title": "MeepleAI Monorepo - ${activeEditorShort}${separator}${dirty}",
+  // Performance
+  "git.ignoreLimitWarning": true,
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/bin/**": true,
+    "**/obj/**": true,
+    "**/__pycache__/**": true
+  },
+  // Workspace-specific tools
+  "eslint.workingDirectories": [
+    "apps/web"
+  ],
+  "jest.autoRun": "off",
+  // .NET and C# settings
+  "dotnet.defaultSolution": "apps/api/MeepleAI.sln",
+  "csharp.inlayHints.enableInlayHintsForParameters": true,
+  "csharp.inlayHints.enableInlayHintsForLiteralParameters": true,
+  "csharp.inlayHints.enableInlayHintsForIndexerParameters": true,
+  "csharp.inlayHints.enableInlayHintsForTypes": true,
+  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+  "dotnet.formatting.organizeImportsOnFormat": true
+}

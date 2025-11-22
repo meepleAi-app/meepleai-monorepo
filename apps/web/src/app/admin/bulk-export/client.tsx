@@ -15,7 +15,7 @@ type AuthResponse = {
 
 type Game = {
   id: string;
-  name: string;
+  title: string;
   description?: string | null;
   createdAt: string;
 };
@@ -222,10 +222,10 @@ export function AdminPageClient({ user }: AdminPageClientProps) {
                   checked={selectedGameIds.has(game.id)}
                   onChange={() => toggleGameSelection(game.id)}
                   className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-2 focus:ring-blue-500"
-                  aria-label={`Select ${game.name}`}
+                  aria-label={`Select ${game.title}`}
                 />
                 <div className="flex-1">
-                  <h3 className="font-semibold text-white">{game.name}</h3>
+                  <h3 className="font-semibold text-white">{game.title}</h3>
                   {game.description && (
                     <p className="text-sm text-slate-400 mt-1">{game.description}</p>
                   )}

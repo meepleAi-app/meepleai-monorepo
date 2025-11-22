@@ -34,7 +34,7 @@ const API_BASE = 'http://localhost:8080';
 const MOCK_GAMES = [
   {
     id: 'chess-001',
-    name: 'Chess',
+    title: 'Chess',
     description: 'Classic strategy board game',
     category: 'strategy',
     createdAt: '2025-01-15T00:00:00Z',
@@ -42,7 +42,7 @@ const MOCK_GAMES = [
   },
   {
     id: 'catan-002',
-    name: 'Settlers of Catan',
+    title: 'Settlers of Catan',
     description: 'Resource management and trading game',
     category: 'strategy',
     createdAt: '2025-01-10T00:00:00Z',
@@ -50,7 +50,7 @@ const MOCK_GAMES = [
   },
   {
     id: 'uno-003',
-    name: 'UNO',
+    title: 'UNO',
     description: 'Fast-paced card game',
     category: 'card',
     createdAt: '2025-01-20T00:00:00Z',
@@ -58,7 +58,7 @@ const MOCK_GAMES = [
   },
   {
     id: 'monopoly-004',
-    name: 'Monopoly',
+    title: 'Monopoly',
     description: 'Property trading board game',
     category: 'family',
     createdAt: '2025-01-05T00:00:00Z',
@@ -66,7 +66,7 @@ const MOCK_GAMES = [
   },
   {
     id: 'scrabble-005',
-    name: 'Scrabble',
+    title: 'Scrabble',
     description: 'Word-building tile game',
     category: 'word',
     createdAt: '2025-01-12T00:00:00Z',
@@ -113,7 +113,7 @@ test.describe('Game Search & Browse', () => {
       // Apply search filter
       if (search) {
         filteredGames = filteredGames.filter((game) =>
-          game.name.toLowerCase().includes(search)
+          game.title.toLowerCase().includes(search)
         );
       }
 
@@ -126,9 +126,9 @@ test.describe('Game Search & Browse', () => {
       filteredGames.sort((a, b) => {
         switch (sortBy) {
           case 'name-asc':
-            return a.name.localeCompare(b.name);
+            return a.title.localeCompare(b.title);
           case 'name-desc':
-            return b.name.localeCompare(a.name);
+            return b.title.localeCompare(a.title);
           case 'date-asc':
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           case 'date-desc':

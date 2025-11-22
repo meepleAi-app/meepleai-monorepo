@@ -26,12 +26,12 @@ export interface AuthPresetOptions {
 export interface GamePresetOptions {
   games?: Array<{
     id: string;
-    name: string;
+    title: string;
     createdAt?: string;
   }>;
   createResponse?: {
     id: string;
-    name: string;
+    title: string;
     createdAt?: string;
   };
   createError?: { status: number; message: string };

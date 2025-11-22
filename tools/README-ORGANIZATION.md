@@ -50,6 +50,22 @@ Scripts for setting up the development environment:
 
 ---
 
+### 🚀 **deployment/** - Deployment & Release Scripts
+Production-ready deployment automation for staging and production:
+- `deploy-staging.sh` - Deploy to staging with tests and health checks
+- `deploy-production.sh` - Deploy to production with safety confirmations
+- `health-check.sh` - Verify all services are healthy
+- `smoke-test.sh` - Test critical user journeys
+- `rollback.sh` - Rollback to previous deployment
+- `backup-database.sh` - Create database backups
+- `view-logs.sh` - Stream logs from deployed services
+
+**Usage**: See [deployment/README.md](./deployment/README.md)
+
+**Workflow:** Development → `deploy-staging.sh` → Test on staging → `deploy-production.sh` → Monitor
+
+---
+
 ### 🛠️ **development/** - Developer Utilities
 Tools for improving the development experience:
 - `open-dual-vscode.{sh,ps1}` - Open VS Code with backend/frontend workspaces
@@ -111,6 +127,12 @@ bash tools/coverage/run-frontend-coverage.sh
 **Clean caches:**
 ```bash
 bash tools/cleanup/cleanup-caches.sh --dry-run
+```
+
+**Deploy to staging/production:**
+```bash
+bash tools/deployment/deploy-staging.sh
+bash tools/deployment/deploy-production.sh
 ```
 
 **Setup development environment:**

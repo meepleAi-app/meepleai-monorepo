@@ -21,11 +21,21 @@ import { Message, ChatThread } from '@/types';
 import { api } from '@/lib/api';
 
 // Mock API
-jest.mock('@/lib/api');
-const mockApi = api as jest.Mocked<typeof api>;
+jest.mock('@/lib/api', () => ({
+  api: {
+    chat: {
+      getThreadById: jest.fn(),
+      createThread: jest.fn(),
+      addMessage: jest.fn(),
+      updateMessage: jest.fn(),
+      deleteMessage: jest.fn(),
+      submitAgentFeedback: jest.fn(),
+    },
+  },
+}));
 
-// Explicitly cast nested mock objects for TypeScript
-const mockChat = mockApi.chat as jest.Mocked<typeof api.chat>;
+const mockApi = api as jest.Mocked<typeof api>;
+const mockChat = mockApi.chat;
 
 // Create test store with minimal slices
 const createTestStore = () => {
@@ -247,6 +257,18 @@ describe('messagesSlice', () => {
       expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toEqual([]);
     });
 
+    it('should handle non-Error rejections', async () => {
+      mockChat.getThreadById.mockRejectedValue('String error');
+
+      await store.getState().loadMessages('aa0e8400-e29b-41d4-a716-000000000001');
+
+      expect(setError).toHaveBeenCalledWith('Errore nel caricamento dei messaggi');
+      expect(setLoading).toHaveBeenCalledWith('messages', false);
+
+      const state = store.getState();
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toEqual([]);
+    });
+
     it('should convert timestamps to Date objects', async () => {
       mockChat.getThreadById.mockResolvedValue(mockThread);
 
@@ -389,6 +411,22 @@ describe('messagesSlice', () => {
       );
     });
 
+    it('should initialize messagesByChat for existing thread without messages', async () => {
+      store.setState({
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'thread-existing' },
+        messagesByChat: {}, // Thread ID exists in activeChatIds but not in messagesByChat
+      });
+
+      mockChat.addMessage.mockResolvedValue(createMockThread());
+
+      await store.getState().sendMessage('First message to existing thread');
+
+      // Should initialize the messages array
+      const state = store.getState();
+      expect(state.messagesByChat['thread-existing']).toBeDefined();
+      expect(Array.isArray(state.messagesByChat['thread-existing'])).toBe(true);
+    });
+
     it('should add optimistic message before API call', async () => {
       mockChat.createThread.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({
@@ -436,6 +474,22 @@ describe('messagesSlice', () => {
       });
 
       mockChat.addMessage.mockRejectedValue(new Error('API Error'));
+
+      await store.getState().sendMessage('Test message');
+
+      expect(setError).toHaveBeenCalledWith("Errore nell'invio del messaggio");
+
+      const state = store.getState();
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001']).toEqual([]);
+    });
+
+    it('should handle non-Error rejections on send', async () => {
+      store.setState({
+        activeChatIds: { '770e8400-e29b-41d4-a716-000000000001': 'aa0e8400-e29b-41d4-a716-000000000001' },
+        messagesByChat: { 'aa0e8400-e29b-41d4-a716-000000000001': [] },
+      });
+
+      mockChat.addMessage.mockRejectedValue('String error');
 
       await store.getState().sendMessage('Test message');
 
@@ -633,6 +687,18 @@ describe('messagesSlice', () => {
       expect(setError).toHaveBeenCalledWith("Errore nell'aggiornamento del messaggio");
       expect(setLoading).toHaveBeenCalledWith('updating', false);
     });
+
+    it('should handle non-Error rejections on edit', async () => {
+      const mockLoadMessages = jest.fn();
+      store.setState({ loadMessages: mockLoadMessages });
+
+      mockChat.updateMessage.mockRejectedValue('String error');
+
+      await store.getState().editMessage('msg-1', 'Updated message');
+
+      expect(setError).toHaveBeenCalledWith("Errore nell'aggiornamento del messaggio");
+      expect(setLoading).toHaveBeenCalledWith('updating', false);
+    });
   });
 
   // ============================================================================
@@ -692,6 +758,18 @@ describe('messagesSlice', () => {
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.deleteMessage.mockRejectedValue(new Error('API Error'));
+
+      await store.getState().deleteMessage('msg-1');
+
+      expect(setError).toHaveBeenCalledWith("Errore nell'eliminazione del messaggio");
+      expect(setLoading).toHaveBeenCalledWith('deleting', false);
+    });
+
+    it('should handle non-Error rejections on delete', async () => {
+      const mockLoadMessages = jest.fn();
+      store.setState({ loadMessages: mockLoadMessages });
+
+      mockChat.deleteMessage.mockRejectedValue('String error');
 
       await store.getState().deleteMessage('msg-1');
 
@@ -831,6 +909,15 @@ describe('messagesSlice', () => {
 
     it('should revert on API error', async () => {
       mockChat.submitAgentFeedback.mockRejectedValue(new Error('API Error'));
+
+      await store.getState().setMessageFeedback('msg-1', 'helpful');
+
+      const state = store.getState();
+      expect(state.messagesByChat['aa0e8400-e29b-41d4-a716-000000000001'][0].feedback).toBeNull();
+    });
+
+    it('should revert on non-Error rejections', async () => {
+      mockChat.submitAgentFeedback.mockRejectedValue('String error');
 
       await store.getState().setMessageFeedback('msg-1', 'helpful');
 

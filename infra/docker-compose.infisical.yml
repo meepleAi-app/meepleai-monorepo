@@ -1,0 +1,310 @@
+# Infisical Secrets Management Platform
+# Phase 2 implementation for Issue #708
+#
+# IMPORTANT: This is a DRAFT for POC (Issue #936). Not production-ready.
+#
+# Features:
+# - Automatic secret rotation (PostgreSQL, MySQL, AWS IAM, etc.)
+# - Unlimited secret versioning
+# - Self-hosted (MIT license, FREE)
+# - Compatible stack: PostgreSQL + Redis (already in use)
+#
+# Prerequisites:
+# 1. Generate encryption keys:
+#    ENCRYPTION_KEY: openssl rand -hex 16
+#    AUTH_SECRET: openssl rand -base64 32
+# 2. Create env file: infra/env/infisical.env
+# 3. Configure PostgreSQL access for rotation testing
+#
+# Usage:
+#   docker compose -f docker-compose.infisical.yml up -d
+#   Access UI: http://localhost:8080
+#
+# Documentation:
+# - Setup: https://infisical.com/docs/self-hosting/deployment-options/docker-compose
+# - Rotation: https://infisical.com/docs/documentation/platform/secret-rotation/overview
+
+services:
+  # Infisical Backend
+  infisical:
+    image: infisical/infisical:latest-postgres
+    container_name: infisical
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./env/infisical.env
+    environment:
+      # Core Configuration
+      - NODE_ENV=production
+      - SITE_URL=http://localhost:8080
+
+      # Database Connection (Infisical's own DB)
+      - DB_CONNECTION_URI=postgresql://infisical:${INFISICAL_DB_PASSWORD:-infisical_password}@infisical-db:5432/infisical
+
+      # Redis Cache
+      - REDIS_URL=redis://redis:6379
+
+      # Encryption (REQUIRED - generate with: openssl rand -hex 16)
+      - ENCRYPTION_KEY=${INFISICAL_ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+
+      # JWT Secret (REQUIRED - generate with: openssl rand -base64 32)
+      - AUTH_SECRET=${INFISICAL_AUTH_SECRET:?AUTH_SECRET is required}
+
+      # Email Configuration (optional for MVP)
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-true}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-noreply@meepleai.local}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-MeepleAI Infisical}
+
+      # Telemetry (disable for privacy)
+      - TELEMETRY_ENABLED=${TELEMETRY_ENABLED:-false}
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+    depends_on:
+      infisical-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      infisical-migration:
+        condition: service_completed_successfully
+
+    networks:
+      - infisical-network
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Database Migration Runner
+  infisical-migration:
+    image: infisical/infisical:latest-postgres
+    container_name: infisical-migration
+    env_file:
+      - ./env/infisical.env
+    environment:
+      - DB_CONNECTION_URI=postgresql://infisical:${INFISICAL_DB_PASSWORD:-infisical_password}@infisical-db:5432/infisical
+      - ENCRYPTION_KEY=${INFISICAL_ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      - AUTH_SECRET=${INFISICAL_AUTH_SECRET:?AUTH_SECRET is required}
+
+    command: npm run migration:latest
+
+    depends_on:
+      infisical-db:
+        condition: service_healthy
+
+    networks:
+      - infisical-network
+
+  # PostgreSQL Database (Infisical's own database)
+  infisical-db:
+    image: postgres:16-alpine
+    container_name: infisical-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=infisical
+      - POSTGRES_PASSWORD=${INFISICAL_DB_PASSWORD:-infisical_password}
+      - POSTGRES_DB=infisical
+
+    volumes:
+      - infisical-db-data:/var/lib/postgresql/data
+
+    networks:
+      - infisical-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infisical -d infisical"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: infisical-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+    volumes:
+      - infisical-redis-data:/data
+
+    networks:
+      - infisical-network
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+networks:
+  infisical-network:
+    name: infisical-network
+    driver: bridge
+
+volumes:
+  infisical-db-data:
+    name: infisical-db-data
+    driver: local
+
+  infisical-redis-data:
+    name: infisical-redis-data
+    driver: local
+
+# ==============================================================================
+# CONFIGURATION NOTES
+# ==============================================================================
+#
+# Required Environment Variables (create infra/env/infisical.env):
+#
+# INFISICAL_ENCRYPTION_KEY=<generate with: openssl rand -hex 16>
+# INFISICAL_AUTH_SECRET=<generate with: openssl rand -base64 32>
+# INFISICAL_DB_PASSWORD=<strong password for Infisical's PostgreSQL>
+#
+# Optional Environment Variables:
+#
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_SECURE=true
+# SMTP_USERNAME=<Gmail email address>
+# SMTP_PASSWORD=<Gmail App Password>
+# SMTP_FROM_ADDRESS=noreply@meepleai.local
+# SMTP_FROM_NAME=MeepleAI Infisical
+# TELEMETRY_ENABLED=false
+# LOG_LEVEL=info
+#
+# ==============================================================================
+# SETUP INSTRUCTIONS
+# ==============================================================================
+#
+# 1. Create environment file:
+#    cp infra/env/infisical.env.example infra/env/infisical.env
+#
+# 2. Generate required secrets:
+#    openssl rand -hex 16    # Copy to INFISICAL_ENCRYPTION_KEY
+#    openssl rand -base64 32 # Copy to INFISICAL_AUTH_SECRET
+#
+# 3. Update infra/env/infisical.env with generated keys
+#
+# 4. Start Infisical:
+#    docker compose -f infra/docker-compose.infisical.yml up -d
+#
+# 5. Access UI:
+#    http://localhost:8080
+#
+# 6. Initial Setup (First Login):
+#    - Create admin account
+#    - Create project "meepleai-secrets"
+#    - Configure integrations (PostgreSQL, Redis, etc.)
+#
+# 7. Configure Secret Rotation (via UI):
+#    Settings → Integrations → Add Integration → PostgreSQL
+#    - Host: postgres (or target database)
+#    - Port: 5432
+#    - Database: meepleai
+#    - Rotation User: infisical_rotator (create this user first)
+#    - Rotation Interval: 30 days
+#    - Keep Active Versions: 2
+#
+# ==============================================================================
+# ROTATION EXAMPLE (PostgreSQL)
+# ==============================================================================
+#
+# 1. Create dedicated rotation user in target database:
+#    CREATE USER infisical_rotator WITH PASSWORD 'secure_password';
+#    GRANT CREATE ON DATABASE meepleai TO infisical_rotator;
+#    GRANT pg_write_all_data TO infisical_rotator;
+#
+# 2. Configure rotation in Infisical UI:
+#    Projects → meepleai-secrets → Integrations → Add → PostgreSQL
+#    - Name: meepleai-postgres
+#    - Host: postgres
+#    - Port: 5432
+#    - Database: meepleai
+#    - Username: infisical_rotator
+#    - Password: secure_password
+#    - Rotation Interval: P30D (ISO 8601 duration)
+#    - Active Versions: 2
+#
+# 3. Test manual rotation:
+#    Settings → Secret Rotation → meepleai-postgres → Rotate Now
+#
+# 4. Verify new credentials:
+#    Secrets → meepleai-postgres → Versions (should show v1, v2)
+#
+# ==============================================================================
+# API INTEGRATION (MeepleAI)
+# ==============================================================================
+#
+# C# Example (apps/api/src/Api/Services/InfisicalClient.cs):
+#
+# public class InfisicalClient
+# {
+#     private readonly HttpClient _httpClient;
+#     private readonly string _apiKey;
+#
+#     public async Task<string> GetSecretAsync(string key)
+#     {
+#         var response = await _httpClient.GetAsync(
+#             $"/api/v3/secrets/raw/{key}?environment=production"
+#         );
+#         var secret = await response.Content.ReadFromJsonAsync<InfisicalSecret>();
+#         return secret.SecretValue;
+#     }
+#
+#     public async Task<SecretVersion[]> GetSecretHistoryAsync(string key)
+#     {
+#         var response = await _httpClient.GetAsync(
+#             $"/api/v3/secrets/{key}/versions"
+#         );
+#         return await response.Content.ReadFromJsonAsync<SecretVersion[]>();
+#     }
+# }
+#
+# ==============================================================================
+# HEALTHCHECKS
+# ==============================================================================
+#
+# Check service status:
+#   docker compose -f infra/docker-compose.infisical.yml ps
+#
+# Check Infisical health:
+#   curl http://localhost:8080/api/status
+#
+# Check logs:
+#   docker compose -f infra/docker-compose.infisical.yml logs -f infisical
+#
+# ==============================================================================
+# PRODUCTION CONSIDERATIONS
+# ==============================================================================
+#
+# Before production deployment:
+# 1. Use strong, unique passwords (generate with password manager)
+# 2. Enable HTTPS (use reverse proxy like Traefik or nginx)
+# 3. Configure SMTP for email notifications
+# 4. Set up regular database backups (Infisical's PostgreSQL)
+# 5. Configure monitoring (Prometheus + Grafana)
+# 6. Review access controls and RBAC
+# 7. Test disaster recovery procedures
+# 8. Document rotation runbooks
+# 9. Configure alert webhooks for rotation failures
+# 10. Implement secret access audit logging
+#
+# ==============================================================================
+# REFERENCES
+# ==============================================================================
+#
+# - Infisical Docs: https://infisical.com/docs
+# - Docker Setup: https://infisical.com/docs/self-hosting/deployment-options/docker-compose
+# - Rotation Guide: https://infisical.com/docs/documentation/platform/secret-rotation/overview
+# - GitHub: https://github.com/Infisical/infisical
+# - Issue #708: Secrets management strategy (parent)
+# - Issue #936: POC Infisical rotation (spike)
+#
+# ==============================================================================

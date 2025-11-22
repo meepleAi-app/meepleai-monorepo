@@ -1,0 +1,31 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`MessageAnimator Snapshot tests should match snapshot for left direction 1`] = `
+<div
+  animate="animate"
+  data-animation-complete="false"
+  data-message-id="msg-13"
+  initial="initial"
+  transition="[object Object]"
+  variants="[object Object]"
+>
+  <div>
+    AI Message
+  </div>
+</div>
+`;
+
+exports[`MessageAnimator Snapshot tests should match snapshot for right direction 1`] = `
+<div
+  animate="animate"
+  data-animation-complete="false"
+  data-message-id="msg-14"
+  initial="initial"
+  transition="[object Object]"
+  variants="[object Object]"
+>
+  <div>
+    User Message
+  </div>
+</div>
+`;

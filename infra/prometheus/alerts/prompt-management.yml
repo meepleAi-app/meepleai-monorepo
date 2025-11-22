@@ -1,0 +1,78 @@
+# Prometheus Alert Rules for Prompt Management
+# ADMIN-01 Phase 5: Deployment & Monitoring
+
+groups:
+  - name: prompt_management
+    interval: 30s
+    rules:
+      # Cache Performance Alerts
+      - alert: PromptCacheHitRateLow
+        expr: |
+          (
+            rate(meepleai_prompt_cache_hits_total[10m]) /
+            (rate(meepleai_prompt_cache_hits_total[10m]) + rate(meepleai_prompt_cache_misses_total[10m]))
+          ) < 0.90
+        for: 10m
+        labels:
+          severity: warning
+          component: prompt_management
+        annotations:
+          summary: "Prompt cache hit rate below 90%"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}. Expected > 90%. Check Redis health."
+
+      - alert: PromptCacheUnavailable
+        expr: rate(meepleai_prompt_cache_misses_total[5m]) > 0 and rate(meepleai_prompt_cache_hits_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: prompt_management
+        annotations:
+          summary: "Prompt cache completely unavailable"
+          description: "All prompt retrievals are missing cache (100% miss rate). Redis may be down."
+
+      # Retrieval Performance Alerts
+      - alert: PromptRetrievalSlow
+        expr: histogram_quantile(0.95, rate(meepleai_prompt_retrieval_duration_bucket[5m])) > 20
+        for: 10m
+        labels:
+          severity: warning
+          component: prompt_management
+        annotations:
+          summary: "Prompt retrieval p95 latency above 20ms"
+          description: "95th percentile prompt retrieval is {{ $value }}ms. Target: < 10ms."
+
+      # Activation Alerts
+      - alert: PromptActivationFailed
+        expr: rate(meepleai_prompt_activation_total{success="false"}[5m]) > 0
+        for: 2m
+        labels:
+          severity: high
+          component: prompt_management
+        annotations:
+          summary: "Prompt activation failures detected"
+          description: "{{ $value }} prompt activations per second are failing. Check logs for errors."
+
+      # Evaluation Alerts
+      - alert: PromptEvaluationHighFailureRate
+        expr: |
+          (
+            rate(meepleai_prompt_evaluation_total{passed="false"}[30m]) /
+            rate(meepleai_prompt_evaluation_total[30m])
+          ) > 0.30
+        for: 30m
+        labels:
+          severity: warning
+          component: prompt_management
+        annotations:
+          summary: "High prompt evaluation failure rate"
+          description: "{{ $value | humanizePercentage }} of evaluations are failing quality thresholds."
+
+      - alert: PromptEvaluationSlow
+        expr: histogram_quantile(0.95, rate(meepleai_prompt_evaluation_duration_bucket[10m])) > 300000
+        for: 15m
+        labels:
+          severity: warning
+          component: prompt_management
+        annotations:
+          summary: "Prompt evaluations taking too long"
+          description: "95th percentile evaluation duration is {{ $value }}ms (> 5 minutes)."

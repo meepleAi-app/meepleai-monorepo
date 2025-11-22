@@ -1,0 +1,117 @@
+/**
+ * MessageActions - Message action buttons (edit, delete, feedback)
+ *
+ * Displays appropriate action buttons based on message role:
+ * - User messages: Edit and delete buttons (shown on hover)
+ * - Assistant messages: Helpful/Not-helpful feedback buttons
+ *
+ * Simplified version for Phase 3 - will be enhanced in Phase 4 with:
+ * - Hover state management
+ * - Loading states during operations
+ * - Confirmation dialogs
+ */
+
+import React from 'react';
+import { Message } from '@/types';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+interface MessageActionsProps {
+  message: Message;
+  isUser: boolean;
+  onEdit?: (messageId: string, content: string) => void;
+  onDelete?: (messageId: string) => void;
+  onFeedback?: (messageId: string, feedback: 'helpful' | 'not-helpful') => void;
+  isEditing?: boolean;
+  isUpdating?: boolean;
+}
+
+export function MessageActions({
+  message,
+  isUser,
+  onEdit,
+  onDelete,
+  onFeedback,
+  isEditing = false,
+  isUpdating = false
+}: MessageActionsProps) {
+  // User message actions (edit/delete)
+  if (isUser && !isEditing) {
+    return (
+      <div
+        className={cn(
+          "message-actions flex gap-1 opacity-0 transition-opacity duration-200"
+        )}
+      >
+        <Button
+          onClick={() => onEdit?.(message.id, message.content)}
+          disabled={isUpdating}
+          aria-label="Edit message"
+          title="Modifica messaggio"
+          variant="secondary"
+          size="sm"
+          className="h-6 px-2 text-[10px]"
+        >
+          ✏️
+        </Button>
+        <Button
+          onClick={() => onDelete?.(message.id)}
+          disabled={isUpdating}
+          aria-label="Delete message"
+          title="Elimina messaggio"
+          variant="secondary"
+          size="sm"
+          className="h-6 px-2 text-[10px]"
+        >
+          🗑️
+        </Button>
+      </div>
+    );
+  }
+
+  // Assistant message actions (feedback)
+  if (!isUser) {
+    return (
+      <div
+        role="group"
+        aria-label="Message feedback"
+        className="flex gap-2 mt-2"
+      >
+        <Button
+          onClick={() => onFeedback?.(message.id, 'helpful')}
+          aria-label="Mark as helpful"
+          aria-pressed={message.feedback === 'helpful'}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-auto px-2 py-1 text-xs gap-1",
+            message.feedback === 'helpful'
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+          )}
+        >
+          <span>👍</span>
+          <span>Utile</span>
+        </Button>
+        <Button
+          onClick={() => onFeedback?.(message.id, 'not-helpful')}
+          aria-label="Mark as not helpful"
+          aria-pressed={message.feedback === 'not-helpful'}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-auto px-2 py-1 text-xs gap-1",
+            message.feedback === 'not-helpful'
+              ? "bg-red-600 text-white hover:bg-red-700"
+              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+          )}
+        >
+          <span>👎</span>
+          <span>Non utile</span>
+        </Button>
+      </div>
+    );
+  }
+
+  return null;
+}

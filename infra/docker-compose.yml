@@ -1,0 +1,464 @@
+services:
+  postgres:
+    image: postgres:16.4-alpine3.20
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_DB: ${POSTGRES_DB:-meepleai}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    secrets:
+      - postgres-password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - meepleai
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    restart: unless-stopped
+    ports:
+      - "6333:6333"  # HTTP REST API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrantdata:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - meepleai
+
+  redis:
+    image: redis:7.4.1-alpine3.20
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - meepleai
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollamadata:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - meepleai
+    # Uncomment if you have NVIDIA GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  ollama-pull:
+    image: curlimages/curl:latest
+    container_name: ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    command: >
+      sh -c '
+        echo "Pulling nomic-embed-text model..." &&
+        curl -X POST http://ollama:11434/api/pull -d "{\"name\":\"nomic-embed-text\"}" &&
+        echo "Model pull initiated!"
+      '
+    networks:
+      - meepleai
+
+  # AI-09: Local multilingual embedding service
+  embedding-service:
+    build:
+      context: ../apps/embedding-service
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - meepleai
+    # Uncomment if you have NVIDIA GPU support for faster embeddings
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # BGAI-001-v2: Unstructured PDF extraction service (Stage 1)
+  unstructured-service:
+    build:
+      context: ../apps/unstructured-service
+      dockerfile: ./Dockerfile
+    container_name: meepleai-unstructured
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - LOG_LEVEL=INFO
+      - MAX_FILE_SIZE=52428800  # 50MB
+      - TIMEOUT=30
+      - UNSTRUCTURED_STRATEGY=fast
+      - LANGUAGE=ita
+      - CHUNK_MAX_CHARACTERS=2000
+      - CHUNK_OVERLAP=200
+      - QUALITY_THRESHOLD=0.80
+      - MIN_CHARS_PER_PAGE=500
+      - ENABLE_METRICS=true
+      - ENABLE_STRUCTURED_LOGGING=true
+    volumes:
+      - unstructured-temp:/tmp/pdf-extraction
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - meepleai
+
+  # BGAI-005: SmolDocling VLM service (Stage 2 - complex layouts fallback)
+  smoldocling-service:
+    build:
+      context: ../apps/smoldocling-service
+      dockerfile: ./Dockerfile
+    container_name: meepleai-smoldocling
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      - LOG_LEVEL=INFO
+      - MAX_FILE_SIZE=52428800  # 50MB
+      - MAX_PAGES_PER_REQUEST=20
+      - TIMEOUT=60
+      - DEVICE=cpu  # Use cpu for development (set to cuda in production with GPU)
+      - MODEL_NAME=docling-project/SmolDocling-256M-preview
+      - MAX_NEW_TOKENS=2048
+      - TORCH_DTYPE=bfloat16
+      - IMAGE_DPI=300
+      - IMAGE_FORMAT=PNG
+      - QUALITY_THRESHOLD=0.70
+      - MIN_CHARS_PER_PAGE=300
+      - ENABLE_METRICS=true
+      - ENABLE_STRUCTURED_LOGGING=true
+      - ENABLE_MODEL_WARMUP=false  # Disable warmup in dev (slow startup)
+    volumes:
+      - smoldocling-temp:/tmp/pdf-processing
+      - smoldocling-models:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 120s  # Long startup for model download
+    networks:
+      - meepleai
+    # Uncomment for GPU support (requires NVIDIA Docker runtime)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  seq:
+    image: datalust/seq:2025.1
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "5341:5341"  # Ingestion port
+      - "8081:80"    # Web UI port
+    volumes:
+      - seqdata:/data
+    networks:
+      - meepleai
+
+  # OPS-02: OpenTelemetry Observability Stack
+  jaeger:
+    image: jaegertracing/all-in-one:1.74.0
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: "badger"
+      BADGER_EPHEMERAL: "true"  # Use in-memory storage for development (no persistence needed)
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4318:4318"    # OTLP HTTP receiver
+      - "4317:4317"    # OTLP gRPC receiver (optional)
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - meepleai
+
+  prometheus:
+    image: prom/prometheus:v3.7.0
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
+      - prometheusdata:/prometheus
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - meepleai
+
+  # OPS-05: Error Monitoring & Alerting
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    env_file:
+      - ./env/alertmanager.env
+    secrets:
+      - gmail-app-password
+    volumes:
+      - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanagerdata:/alertmanager
+    entrypoint: ["/scripts/load-secrets-env.sh"]
+    command:
+      - '/bin/alertmanager'
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    ports:
+      - "9093:9093"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - meepleai
+
+  # NOTE: Grafana OnCall is commented out for now as it requires manual setup
+  # To add on-call management, follow the setup guide at:
+  # https://grafana.com/docs/oncall/latest/set-up/open-source/
+  # You can use Alertmanager directly with Slack/Email notifications in the meantime
+  #
+  # grafana-oncall:
+  #   image: grafana/oncall:latest
+  #   restart: unless-stopped
+  #   environment:
+  #     BASE_URL: http://localhost:8082
+  #     SECRET_KEY: ${ONCALL_SECRET_KEY:-changeme-generate-secure-secret}
+  #     DATABASE_TYPE: sqlite3
+  #   volumes:
+  #     - oncalldata:/var/lib/oncall
+  #   ports:
+  #     - "8082:8080"
+  #   depends_on:
+  #     - redis
+  #     - alertmanager
+  #   networks:
+  #     - meepleai
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin-password
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "http://localhost:3001"
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+    secrets:
+      - grafana-admin-password
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - jaeger
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - meepleai
+
+  n8n:
+    image: n8nio/n8n:1.114.4
+    restart: unless-stopped
+    env_file:
+      - ./env/n8n.env.dev
+    secrets:
+      - postgres-password
+      - n8n-encryption-key
+      - n8n-basic-auth-password
+    volumes:
+      - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
+    entrypoint: ["/scripts/load-secrets-env.sh"]
+    command: ["n8n"]
+    ports:
+      - "5678:5678"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - meepleai
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: ./src/Api/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./env/api.env.dev
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      # SEC-708: Connection string will be built from secret file
+      # Password read from /run/secrets/postgres-password
+      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      POSTGRES_DB: ${POSTGRES_DB:-meepleai}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      QDRANT_URL: http://qdrant:6333
+      REDIS_URL: redis:6379
+      OLLAMA_URL: http://ollama:11434
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_MODEL: nomic-embed-text
+      # AI-09: Local embedding service configuration
+      LOCAL_EMBEDDING_URL: http://embedding-service:8000
+      EMBEDDING_FALLBACK_ENABLED: "true"
+      # SEC-708: OpenRouter API key from secret file
+      OPENROUTER_API_KEY_FILE: /run/secrets/openrouter-api-key
+      # Bootstrap: Initial admin user configuration (password from secret)
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_PASSWORD_FILE: /run/secrets/initial-admin-password
+      INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-System Admin}
+    secrets:
+      - postgres-password
+      - openrouter-api-key
+      - initial-admin-password
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - meepleai
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./env/web.env.dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - meepleai
+
+volumes:
+  pgdata:
+  qdrantdata:
+  seqdata:
+  ollamadata:
+  # OPS-02: OpenTelemetry volumes
+  # jaegerdata removed - using ephemeral storage for development
+  prometheusdata:
+  grafanadata:
+  # OPS-05: Error Monitoring & Alerting volumes
+  alertmanagerdata:
+  # BGAI-001-v2: Unstructured PDF extraction temporary storage
+  unstructured-temp:
+  # BGAI-005: SmolDocling VLM service storage
+  smoldocling-temp:
+  smoldocling-models:  # Hugging Face model cache
+
+networks:
+  meepleai:
+    driver: bridge
+
+# SEC-708: Docker Secrets for sensitive credentials
+# Secret files are stored in ./secrets/ directory (gitignored)
+# Initialize secrets with: tools/secrets/init-secrets.sh
+secrets:
+  postgres-password:
+    file: ./secrets/postgres-password.txt
+  openrouter-api-key:
+    file: ./secrets/openrouter-api-key.txt
+  n8n-encryption-key:
+    file: ./secrets/n8n-encryption-key.txt
+  n8n-basic-auth-password:
+    file: ./secrets/n8n-basic-auth-password.txt
+  gmail-app-password:
+    file: ./secrets/gmail-app-password.txt
+  grafana-admin-password:
+    file: ./secrets/grafana-admin-password.txt
+  initial-admin-password:
+    file: ./secrets/initial-admin-password.txt

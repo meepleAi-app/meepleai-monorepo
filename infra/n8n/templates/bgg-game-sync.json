@@ -1,0 +1,164 @@
+{
+  "id": "bgg-game-sync",
+  "name": "BGG Game Metadata Sync",
+  "version": "1.0.0",
+  "description": "Automatically sync game metadata from BoardGameGeek API to your database. Keeps game information up-to-date with scheduled syncs.",
+  "category": "integration",
+  "author": "MeepleAI",
+  "tags": ["bgg", "sync", "games", "api", "automation"],
+  "icon": "📊",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/bgg-game-sync.md",
+  "parameters": [
+    {
+      "name": "bggUsername",
+      "type": "string",
+      "label": "BGG Username",
+      "description": "Your BoardGameGeek username for collection access",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "syncInterval",
+      "type": "select",
+      "label": "Sync Interval",
+      "description": "How often to sync game data from BGG",
+      "required": true,
+      "default": "0 2 * * *",
+      "options": ["0 * * * *", "0 */6 * * *", "0 2 * * *", "0 2 * * 0"],
+      "sensitive": false
+    },
+    {
+      "name": "apiBaseUrl",
+      "type": "string",
+      "label": "MeepleAI API URL",
+      "description": "Your MeepleAI API base URL",
+      "required": true,
+      "default": "http://api:8080",
+      "options": null,
+      "sensitive": false
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "trigger-schedule",
+        "name": "Schedule Trigger",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "cronExpression": "{{syncInterval}}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "fetch-bgg-collection",
+        "name": "Fetch BGG Collection",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [450, 300],
+        "parameters": {
+          "url": "https://boardgamegeek.com/xmlapi2/collection?username={{bggUsername}}&stats=1",
+          "method": "GET",
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "xml"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "parse-xml",
+        "name": "Parse BGG XML",
+        "type": "n8n-nodes-base.xml",
+        "typeVersion": 1,
+        "position": [650, 300],
+        "parameters": {
+          "mode": "xmlToJson",
+          "options": {}
+        }
+      },
+      {
+        "id": "process-games",
+        "name": "Process Each Game",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [850, 300],
+        "parameters": {
+          "batchSize": 10
+        }
+      },
+      {
+        "id": "update-game-metadata",
+        "name": "Update Game in Database",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [1050, 300],
+        "parameters": {
+          "url": "={{apiBaseUrl}}/api/v1/games/sync-bgg",
+          "method": "POST",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "bggId",
+                "value": "={{ $json.objectid }}"
+              },
+              {
+                "name": "name",
+                "value": "={{ $json.name }}"
+              },
+              {
+                "name": "yearPublished",
+                "value": "={{ $json.yearpublished }}"
+              },
+              {
+                "name": "thumbnail",
+                "value": "={{ $json.thumbnail }}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "log-success",
+        "name": "Log Completion",
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [1250, 300],
+        "parameters": {}
+      }
+    ],
+    "connections": {
+      "trigger-schedule": {
+        "main": [[{"node": "fetch-bgg-collection", "type": "main", "index": 0}]]
+      },
+      "fetch-bgg-collection": {
+        "main": [[{"node": "parse-xml", "type": "main", "index": 0}]]
+      },
+      "parse-xml": {
+        "main": [[{"node": "process-games", "type": "main", "index": 0}]]
+      },
+      "process-games": {
+        "main": [[{"node": "update-game-metadata", "type": "main", "index": 0}]]
+      },
+      "update-game-metadata": {
+        "main": [[{"node": "log-success", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

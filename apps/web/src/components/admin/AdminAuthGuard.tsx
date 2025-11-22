@@ -22,6 +22,7 @@
 
 import Link from 'next/link';
 import type { AuthUser } from '@/types/auth';
+import { hasRole } from '@/types/auth';
 
 interface AdminAuthGuardProps {
   children: React.ReactNode;
@@ -53,7 +54,8 @@ export function AdminAuthGuard({
     );
   }
 
-  if (!user) {
+  // Unauthorized state (no user or not admin)
+  if (!user || !hasRole(user, 'Admin')) {
     return (
       <div className={backgroundClass}>
         <div className="max-w-7xl mx-auto">
@@ -68,7 +70,7 @@ export function AdminAuthGuard({
             </div>
             <Link
               href="/login"
-              className="block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Go to Login
             </Link>

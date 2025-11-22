@@ -170,11 +170,11 @@ public class StreamExplainQueryHandlerTests
     {
         // Arrange
         var query = new StreamExplainQuery("game123", "scoring");
-        var searchResults = Enumerable.Range(1, 5).Select(i => new SearchResultItem
+        var searchResults = Enumerable.Range(0, 5).Select(i => new SearchResultItem
         {
-            Text = $"Scoring rule {i}",
+            Text = $"Scoring rule {i + 1}",
             PdfId = Guid.NewGuid().ToString(),
-            Page = i,
+            Page = i + 1,
             Score = 0.9f - (i * 0.1f)
         }).ToList();
 
@@ -480,17 +480,39 @@ public class StreamExplainQueryHandlerTests
     {
         // Arrange
         var query = new StreamExplainQuery("game123", "test topic");
-        SetupHappyPathMocks();
+
+        // Create long text to force multiple chunks and ensure cancellation happens during chunking
+        var longText = string.Join("\n\n", Enumerable.Range(1, 20).Select(i =>
+            $"Section {i}: " + new string('a', 100)));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new SearchResultItem
+            {
+                Text = longText,
+                PdfId = Guid.NewGuid().ToString(),
+                Page = 1,
+                Score = 0.95f
+            }
+        };
+
+        SetupEmbeddingMock("test topic");
+        SetupQdrantMock("game123", searchResults);
 
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromMilliseconds(100)); // Cancel quickly
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
+            var eventCount = 0;
             await foreach (var evt in _handler.Handle(query, cts.Token))
             {
-                // Process events until cancellation
+                eventCount++;
+                // Cancel after a few events to ensure we're in the chunking phase
+                if (eventCount == 5)
+                {
+                    cts.Cancel();
+                }
             }
         });
     }
@@ -653,7 +675,7 @@ public class StreamExplainQueryHandlerTests
     {
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(topic, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,

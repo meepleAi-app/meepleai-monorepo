@@ -678,11 +678,11 @@ graph TB
     SysConfig -.->|Dynamic Config| RAG
     SysConfig -.->|Dynamic Config| Pipeline
 
-    style Auth fill:#ab47bc
-    style Game fill:#66bb6a
-    style Doc fill:#ffa726
-    style KB fill:#29b6f6
-    style Config fill:#ef5350
+    style Auth fill:#ab47bc,color:#000
+    style Game fill:#66bb6a,color:#000
+    style Doc fill:#ffa726,color:#000
+    style KB fill:#29b6f6,color:#000
+    style Config fill:#ef5350,color:#000
 ```
 
 ---

@@ -25,18 +25,6 @@ public class LoginPayload
     public string Password { get; set; } = default!;
 }
 
-/// <summary>
-/// Demo login payload - only requires email (no password).
-/// Used for passwordless authentication of demo accounts.
-/// </summary>
-public class DemoLoginPayload
-{
-    /// <summary>
-    /// Demo user email address. Accepts both "email" (camelCase) and "Email" (PascalCase) in JSON.
-    /// </summary>
-    public string Email { get; set; } = default!;
-}
-
 public record RegisterCommand(
     string Email,
     string Password,

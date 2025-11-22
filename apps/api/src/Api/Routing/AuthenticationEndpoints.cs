@@ -19,7 +19,6 @@ using RevokeSessionCommand = Api.BoundedContexts.Authentication.Application.Comm
 using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
 using LoginWithApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginWithApiKeyCommand;
 using LogoutApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutApiKeyCommand;
-using DemoLoginCommand = Api.BoundedContexts.Authentication.Application.Commands.DemoLoginCommand;
 
 namespace Api.Routing;
 
@@ -127,84 +126,6 @@ public static class AuthenticationEndpoints
 
             return Results.Json(new AuthResponse(legacyUser, expiresAt));
         });
-
-        // Demo login - DDD CQRS (no password required)
-        group.MapPost("/auth/demo-login", async (DemoLoginPayload payload, HttpContext context, IMediator mediator, IConfigurationService configService, IRateLimitService rateLimiter, ILogger<Program> logger, CancellationToken ct) =>
-        {
-            if (payload == null || string.IsNullOrWhiteSpace(payload.Email))
-            {
-                logger.LogWarning("Demo login failed: email is empty");
-                return Results.BadRequest(new { error = "Email is required" });
-            }
-
-            // Rate limiting: 10 requests per minute per IP (configurable)
-            var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var maxTokens = await configService.GetValueAsync<int?>("RateLimit:DemoLogin:MaxTokens", 10) ?? 10;
-            var refillRate = await configService.GetValueAsync<double?>("RateLimit:DemoLogin:RefillRate", 0.16667) ?? 0.16667; // 10 per minute
-
-            var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
-                $"demo:login:{ipAddress}",
-                maxTokens,
-                refillRate);
-
-            if (!rateLimitResult.Allowed)
-            {
-                logger.LogWarning("Demo login rate limited for IP {IpAddress}", ipAddress);
-                context.Response.Headers["Retry-After"] = "60";
-                return Results.StatusCode(429); // Too Many Requests
-            }
-
-            var command = new DemoLoginCommand(
-                Email: payload.Email,
-                IpAddress: ipAddress,
-                UserAgent: context.Request.Headers.UserAgent.ToString());
-
-            logger.LogInformation("Demo login attempt for {Email}", payload.Email);
-            var result = await mediator.Send(command, ct);
-
-            if (result.User == null || result.SessionToken == null)
-            {
-                logger.LogWarning("Demo login failed for {Email}: missing user or session token", payload.Email);
-                removeSessionCookie(context);
-                return Results.Unauthorized();
-            }
-
-            // Calculate session expiration for demo accounts (shorter TTL: 1 hour vs 30 days for regular users)
-            var demoSessionExpirationHours = await configService.GetValueAsync<int?>("Authentication:DemoSessionExpirationHours", 1) ?? 1;
-            var expiresAt = DateTime.UtcNow.AddHours(demoSessionExpirationHours);
-            writeSessionCookie(context, result.SessionToken, expiresAt);
-            logger.LogInformation("Demo user {UserId} logged in successfully with {ExpirationHours}h session TTL", result.User.Id, demoSessionExpirationHours);
-
-            // Map to legacy AuthResponse for backward compatibility
-            var legacyUser = new AuthUser(
-                Id: result.User.Id.ToString(),
-                Email: result.User.Email,
-                DisplayName: result.User.DisplayName,
-                Role: result.User.Role);
-
-            return Results.Json(new AuthResponse(legacyUser, expiresAt));
-        })
-        .WithName("DemoLogin")
-        .WithTags("Authentication", "Demo")
-        .WithSummary("Authenticate demo user without password")
-        .WithDescription(@"Allows demo users to login without password validation.
-Only works for users with IsDemoAccount flag set to true.
-This is intended for demonstration purposes and quick access to demo accounts.
-
-**Security**:
-- Only users marked as demo accounts can use this endpoint
-- Demo sessions have shorter TTL (1 hour vs 30 days for regular users)
-
-**Rate Limiting**: 10 requests per minute per IP address (configurable).
-
-**Configuration**:
-- `Authentication:DemoSessionExpirationHours` - Demo session TTL in hours (default: 1)
-- `RateLimit:DemoLogin:MaxTokens` - Maximum requests per window (default: 10)
-- `RateLimit:DemoLogin:RefillRate` - Token refill rate (default: 0.16667 = 10/min)")
-        .Produces<AuthResponse>(200)
-        .Produces(400)
-        .Produces(401)
-        .Produces(429);
 
         // User logout - DDD CQRS
         group.MapPost("/auth/logout", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>

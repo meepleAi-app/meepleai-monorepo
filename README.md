@@ -119,6 +119,8 @@ apps/api/src/Api/BoundedContexts/
 - **[DDD Quick Reference](./docs/01-architecture/ddd/quick-reference.md)** - DDD patterns and bounded contexts
 - **[Testing Guidelines](./docs/02-development/testing/test-writing-guide.md)** - BDD-style test naming conventions
 - **[API Specification](./docs/03-api/board-game-ai-api-specification.md)** - Complete REST API specification
+- **[Multi-Environment Strategy](./docs/05-operations/deployment/multi-environment-strategy.md)** - Development, Staging, Production configuration guide
+- **[Environment Variables](./docs/06-security/environment-variables-production.md)** - Complete production variables reference
 
 ## 🧪 Testing
 

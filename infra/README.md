@@ -512,8 +512,17 @@ docker compose logs meepleai-grafana
 
 ## 📚 Documentation
 
-- **[OPS-05-SETUP.md](./OPS-05-SETUP.md)** - Detailed infrastructure setup guide
+- **[INFRASTRUCTURE.md](./INFRASTRUCTURE.md)** - Complete infrastructure reference (50+ pages) ⭐ **NEW**
+  - Detailed directory structure
+  - Docker Compose files explained
+  - Environment files guide (dev, staging, prod)
+  - Secrets management
+  - Observability stack  - n8n workflows
+  - Troubleshooting
+- **[env/README.md](./env/README.md)** - Environment variables guide
+- **[OPS-05-SETUP.md](./OPS-05-SETUP.md)** - Infrastructure setup guide
 - **[README-dev.md](./README-dev.md)** - Development environment guide
+- **[Multi-Environment Strategy](../docs/05-operations/deployment/multi-environment-strategy.md)** - 3-tier deployment strategy ⭐ **NEW**
 - **[Deployment Guide](../docs/05-operations/deployment/board-game-ai-deployment-guide.md)** - Production deployment
 - **[Disaster Recovery](../docs/05-operations/deployment/disaster-recovery.md)** - DR procedures
 - **[Runbooks](../docs/05-operations/runbooks/)** - Incident response guides

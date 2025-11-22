@@ -285,6 +285,7 @@ cd apps/web && pnpm dev                                        # T3 (3000)
 | **ADR Hybrid RAG** | `docs/01-architecture/adr/adr-001-hybrid-rag.md` |
 | **ADR PDF Processing** | `docs/01-architecture/adr/adr-003b-unstructured-pdf.md` |
 | **Security** | `SECURITY.md`, `docs/06-security/code-scanning-remediation-summary.md` |
+| **Environment Variables** | `docs/06-security/environment-variables-production.md` |
 | **OAuth Security** | `docs/06-security/oauth-security.md` |
 | **Testing** | `docs/02-development/testing/test-writing-guide.md` |
 | **Shadcn/UI** | `docs/04-frontend/shadcn-ui-installation.md` |

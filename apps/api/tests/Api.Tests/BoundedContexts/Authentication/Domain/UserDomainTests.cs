@@ -703,15 +703,145 @@ public class UserDomainTests
 
     #endregion
 
+    #region UpdateTier Tests
+
+    [Fact]
+    public void User_UpdateTier_ByAdmin_UpdatesTierSuccessfully()
+    {
+        // Arrange
+        var user = CreateTestUser(tier: UserTier.Free);
+
+        // Act
+        user.UpdateTier(UserTier.Premium, Role.Admin);
+
+        // Assert
+        Assert.Equal(UserTier.Premium, user.Tier);
+    }
+
+    [Fact]
+    public void User_UpdateTier_ByNonAdmin_ThrowsDomainException()
+    {
+        // Arrange
+        var user = CreateTestUser(tier: UserTier.Free);
+
+        // Act & Assert
+        var exception = Assert.Throws<DomainException>(() =>
+            user.UpdateTier(UserTier.Premium, Role.User));
+        Assert.Contains("Only administrators can change user tiers", exception.Message);
+    }
+
+    [Fact]
+    public void User_UpdateTier_ByEditor_ThrowsDomainException()
+    {
+        // Arrange
+        var user = CreateTestUser(tier: UserTier.Free);
+
+        // Act & Assert
+        var exception = Assert.Throws<DomainException>(() =>
+            user.UpdateTier(UserTier.Normal, Role.Editor));
+        Assert.Contains("Only administrators can change user tiers", exception.Message);
+    }
+
+    [Fact]
+    public void User_UpdateTier_WithNullTier_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var user = CreateTestUser();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            user.UpdateTier(null!, Role.Admin));
+    }
+
+    [Fact]
+    public void User_UpdateTier_WithNullRequesterRole_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var user = CreateTestUser();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            user.UpdateTier(UserTier.Premium, null!));
+    }
+
+    [Fact]
+    public void User_UpdateTier_WithSameTier_NoChange()
+    {
+        // Arrange
+        var user = CreateTestUser(tier: UserTier.Normal);
+        var originalTier = user.Tier;
+
+        // Act
+        user.UpdateTier(UserTier.Normal, Role.Admin);
+
+        // Assert
+        Assert.Equal(originalTier, user.Tier);
+    }
+
+    [Fact]
+    public void User_UpdateTier_FromFreeToNormal_UpdatesSuccessfully()
+    {
+        // Arrange
+        var user = CreateTestUser(tier: UserTier.Free);
+
+        // Act
+        user.UpdateTier(UserTier.Normal, Role.Admin);
+
+        // Assert
+        Assert.Equal(UserTier.Normal, user.Tier);
+    }
+
+    [Fact]
+    public void User_UpdateTier_FromPremiumToFree_Downgrade_UpdatesSuccessfully()
+    {
+        // Arrange
+        var user = CreateTestUser(tier: UserTier.Premium);
+
+        // Act
+        user.UpdateTier(UserTier.Free, Role.Admin);
+
+        // Assert
+        Assert.Equal(UserTier.Free, user.Tier);
+    }
+
+    [Fact]
+    public void User_Constructor_DefaultsToFreeTier()
+    {
+        // Arrange & Act
+        var user = CreateTestUser();
+
+        // Assert
+        Assert.Equal(UserTier.Free, user.Tier);
+    }
+
+    [Fact]
+    public void User_Constructor_WithSpecificTier_SetsTierCorrectly()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var email = new Email("test@example.com");
+        var passwordHash = PasswordHash.Create("Password123!");
+
+        // Act
+        var user = new User(id, email, "Test User", passwordHash, Role.User, UserTier.Premium);
+
+        // Assert
+        Assert.Equal(UserTier.Premium, user.Tier);
+    }
+
+    #endregion
+
     private static User CreateTestUser(
         string password = "TestPassword123!",
-        Role? role = null)
+        Role? role = null,
+        UserTier? tier = null)
     {
         var id = Guid.NewGuid();
         var email = new Email("test@example.com");
         var passwordHash = PasswordHash.Create(password);
         var userRole = role ?? Role.User;
+        var userTier = tier ?? UserTier.Free;
 
-        return new User(id, email, "Test User", passwordHash, userRole);
+        return new User(id, email, "Test User", passwordHash, userRole, userTier);
     }
 }

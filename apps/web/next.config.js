@@ -24,7 +24,14 @@
  *
  * @see https://nextjs.org/docs/app/building-your-application/routing
  */
-const { withSentryConfig } = require('@sentry/nextjs');
+// Conditionally require Sentry only if DSN is set
+let withSentryConfig;
+try {
+  withSentryConfig = require('@sentry/nextjs').withSentryConfig;
+} catch (e) {
+  // Sentry not installed, disable it
+  withSentryConfig = null;
+}
 
 const nextConfig = {
   reactStrictMode: true,
@@ -62,7 +69,7 @@ const sentryOptions = {
   disableLogger: true,
 };
 
-// Export with Sentry configuration
-module.exports = process.env.NEXT_PUBLIC_SENTRY_DSN
+// Export with Sentry configuration (only if Sentry is available and configured)
+module.exports = (process.env.NEXT_PUBLIC_SENTRY_DSN && withSentryConfig)
   ? withSentryConfig(nextConfig, sentryOptions)
   : nextConfig;

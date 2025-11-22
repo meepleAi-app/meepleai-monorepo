@@ -10,29 +10,45 @@ if (process.env.CI) {
 
 /**
  * Safely converts a route pattern to a RegExp pattern string
- * Escapes all special regex characters to prevent injection attacks (CWE-94, CWE-116)
+ * Escapes ALL special regex characters to prevent injection attacks (CWE-94, CWE-116)
  *
  * @security This function addresses CodeQL warning js/incomplete-sanitization
- * by properly escaping backslashes BEFORE other replacements
+ * by escaping ALL regex metacharacters (not just backslashes, *, and /)
  *
  * @param routePattern - Route pattern with wildcards (e.g., '/admin/**')
  * @returns Escaped regex pattern string safe for use in new RegExp()
  *
  * @example
- * escapeRoutePattern('/admin/**')  // => '\\/admin\\/.*'
- * escapeRoutePattern('/user/*')    // => '\\/user\\/[^/]*'
- * escapeRoutePattern('/api\\/v1')  // => '\\/api\\\\\\/v1' (backslash escaped)
+ * escapeRoutePattern('/admin/**')     // => '\\/admin\\/.*'
+ * escapeRoutePattern('/user/*')       // => '\\/user\\/[^/]*'
+ * escapeRoutePattern('/api.v1')       // => '\\/api\\.v1' (dot escaped)
+ * escapeRoutePattern('/admin?.*')     // => '\\/admin\\?\\.\\*' (metacharacters escaped)
+ * escapeRoutePattern('/api[v1]')      // => '\\/api\\[v1\\]' (brackets escaped)
+ * escapeRoutePattern('/path+/test')   // => '\\/path\\+\\/test' (plus escaped)
  *
  * @see https://codeql.github.com/codeql-query-help/javascript/js-incomplete-sanitization/
  */
 function escapeRoutePattern(routePattern: string): string {
-  // SECURITY FIX: Escape backslashes FIRST to prevent injection
-  // Order matters! Backslashes must be escaped before other characters
+  // SECURITY FIX: Use placeholder approach to safely handle wildcards
+  // 1. Save wildcards with placeholders
+  // 2. Escape ALL regex metacharacters
+  // 3. Restore wildcards as their regex equivalents
+
+  const DOUBLE_WILDCARD = '__DOUBLE_WILDCARD_PLACEHOLDER__';
+  const SINGLE_WILDCARD = '__SINGLE_WILDCARD_PLACEHOLDER__';
+
   return routePattern
-    .replace(/\\/g, '\\\\')     // 1. Escape backslashes FIRST (security fix)
-    .replace(/\*\*/g, '.*')     // 2. Replace ** with .* (match any path)
-    .replace(/\*/g, '[^/]*')    // 3. Replace * with [^/]* (match within segment)
-    .replace(/\//g, '\\/');     // 4. Escape forward slashes last
+    // 1. Replace wildcards with placeholders (before escaping)
+    .replace(/\*\*/g, DOUBLE_WILDCARD)
+    .replace(/\*/g, SINGLE_WILDCARD)
+
+    // 2. Escape ALL regex metacharacters: . + ? ( ) [ ] { } | ^ $ \ /
+    // This prevents injection via ANY regex special character
+    .replace(/[.+?()[\]{}|^$\\/]/g, '\\$&')
+
+    // 3. Restore wildcards as their regex equivalents
+    .replace(new RegExp(DOUBLE_WILDCARD, 'g'), '.*')      // ** → .* (match any path)
+    .replace(new RegExp(SINGLE_WILDCARD, 'g'), '[^/]*');  // * → [^/]* (match within segment)
 }
 
 /**

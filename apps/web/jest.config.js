@@ -14,6 +14,7 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   globalTeardown: '<rootDir>/jest.teardown.js',
   testEnvironment: 'jest-environment-jsdom',
+  testTimeout: 30000, // Global timeout 30s for slow worker/async tests
   coverageProvider: 'v8', // Fix babel-plugin-istanbul schema error (test-exclude@6.0.0)
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',

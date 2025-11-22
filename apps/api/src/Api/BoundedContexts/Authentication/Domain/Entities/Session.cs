@@ -47,11 +47,12 @@ public sealed class Session : AggregateRoot<Guid>
         SessionToken token,
         TimeSpan? lifetime = null,
         string? ipAddress = null,
-        string? userAgent = null) : base(id)
+        string? userAgent = null,
+        TimeProvider? timeProvider = null) : base(id)
     {
         UserId = userId;
         TokenHash = token.ComputeHash();
-        CreatedAt = DateTime.UtcNow;
+        CreatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         ExpiresAt = CreatedAt.Add(lifetime ?? DefaultLifetime);
         IpAddress = ipAddress;
         // Truncate UserAgent to 256 chars to match database column constraint
@@ -74,20 +75,20 @@ public sealed class Session : AggregateRoot<Guid>
     /// <summary>
     /// Updates the last seen timestamp.
     /// </summary>
-    public void UpdateLastSeen()
+    public void UpdateLastSeen(TimeProvider? timeProvider = null)
     {
-        LastSeenAt = DateTime.UtcNow;
+        LastSeenAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
     }
 
     /// <summary>
     /// Revokes this session.
     /// </summary>
-    public void Revoke(string? reason = null)
+    public void Revoke(TimeProvider? timeProvider = null, string? reason = null)
     {
         if (RevokedAt != null)
             throw new DomainException("Session is already revoked");
 
-        RevokedAt = DateTime.UtcNow;
+        RevokedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         AddDomainEvent(new SessionRevokedEvent(Id, UserId, reason));
     }
 

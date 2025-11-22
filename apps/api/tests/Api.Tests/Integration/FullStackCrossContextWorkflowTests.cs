@@ -250,6 +250,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         );
         await gameRepository.AddAsync(game, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
 
         // Act - Shared game session + individual chat threads
         var players = userNames.Select((name, idx) => new SessionPlayer(name, idx + 1)).ToList();
@@ -264,6 +265,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
             await chatThreadRepository.AddAsync(thread, TestCancellationToken);
         }
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
 
         // Assert
         var allSessions = await sessionRepository.GetActiveSessionsByUserIdAsync(users[0].Id, TestCancellationToken);

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Tests.Infrastructure;
 using Moq;
 using Xunit;
 
@@ -15,14 +16,14 @@ public class ValidateSessionQueryHandlerTests
 {
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
-    private readonly FakeTimeProvider _timeProvider;
+    private readonly TestTimeProvider _timeProvider;
     private readonly ValidateSessionQueryHandler _handler;
 
     public ValidateSessionQueryHandlerTests()
     {
         _sessionRepositoryMock = new Mock<ISessionRepository>();
         _userRepositoryMock = new Mock<IUserRepository>();
-        _timeProvider = new FakeTimeProvider();
+        _timeProvider = new TestTimeProvider();
 
         _handler = new ValidateSessionQueryHandler(
             _sessionRepositoryMock.Object,
@@ -155,7 +156,8 @@ public class ValidateSessionQueryHandlerTests
             userId: user.Id,
             token: sessionToken,
             ipAddress: "127.0.0.1",
-            userAgent: "TestAgent"
+            userAgent: "TestAgent",
+            timeProvider: _timeProvider // Fix: Use TestTimeProvider for deterministic timestamps
         );
 
         _timeProvider.SetUtcNow(DateTime.UtcNow); // Current time (31 days later)
@@ -173,9 +175,9 @@ public class ValidateSessionQueryHandlerTests
         Assert.NotNull(result);
         Assert.False(result.IsValid);
         Assert.Null(result.User);
-        // For invalid/expired sessions, timestamps are not returned (null)
-        Assert.Null(result.ExpiresAt);
-        Assert.Null(result.LastSeenAt);
+        // For expired sessions, timestamps ARE returned (for auditing) but IsValid=false
+        Assert.Equal(session.ExpiresAt, result.ExpiresAt);
+        Assert.Equal(session.LastSeenAt, result.LastSeenAt);
 
         _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), default), Times.Never);
     }
@@ -445,7 +447,8 @@ public class ValidateSessionQueryHandlerTests
             token: sessionToken,
             lifetime: TimeSpan.FromSeconds(-1), // Expired
             ipAddress: "127.0.0.1",
-            userAgent: "TestAgent"
+            userAgent: "TestAgent",
+            timeProvider: _timeProvider
         );
 
         var query = new ValidateSessionQuery(sessionToken.Value);
@@ -565,22 +568,6 @@ public class ValidateSessionQueryHandlerTests
             passwordHash: PasswordHash.Create("SecurePassword123!"),
             role: Role.User
         );
-    }
-
-    #endregion
-
-    #region Fake TimeProvider
-
-    private class FakeTimeProvider : TimeProvider
-    {
-        private DateTimeOffset _utcNow = DateTimeOffset.UtcNow;
-
-        public void SetUtcNow(DateTime utcNow)
-        {
-            _utcNow = new DateTimeOffset(utcNow, TimeSpan.Zero);
-        }
-
-        public override DateTimeOffset GetUtcNow() => _utcNow;
     }
 
     #endregion

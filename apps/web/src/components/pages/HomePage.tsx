@@ -38,7 +38,7 @@ const TestimonialsSection = dynamic(() => import("@/components/landing/Testimoni
 
 export default function HomePage() {
   const router = useRouter();
-  const { user: authUser, logout, demoLogin } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const { t } = useTranslation();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
@@ -47,22 +47,6 @@ export default function HomePage() {
     triggerOnce: true,
     threshold: [0.1, 0.5, 0.9],
   });
-
-  // Handler for "Try Demo" button - uses demo login endpoint
-  const handleTryDemo = async () => {
-    const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL || "user@meepleai.dev";
-    try {
-      await demoLogin({ email: demoEmail });
-      router.push("/chat");
-    } catch (error) {
-      logger.error(
-        'Demo login failed',
-        error instanceof Error ? error : new Error(String(error)),
-        createErrorContext('HomePage', 'handleTryDemo', { demoEmail })
-      );
-      // Optionally show an error toast/notification
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -141,16 +125,6 @@ export default function HomePage() {
               >
                 {authUser ? t('home.hero.cta.goToChat') : t('home.hero.cta.getStarted')}
               </MotionButton>
-              {!authUser && (
-                <MotionButton
-                  variant="outline"
-                  className="text-lg border-white/70 text-white hover:bg-white hover:text-slate-900 focus-visible:ring-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                  onClick={handleTryDemo}
-                  data-testid="hero-try-demo"
-                >
-                  {t('home.hero.cta.tryDemo')}
-                </MotionButton>
-              )}
               <MotionButton
                 variant="outline"
                 className="text-lg border-white/70 text-white hover:bg-white hover:text-slate-900 focus-visible:ring-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
@@ -274,15 +248,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <h4 className="font-semibold">{t('home.footer.demoAccounts')}</h4>
-            <div className="text-sm text-slate-300 space-y-1">
-              <p>admin@meepleai.dev</p>
-              <p>editor@meepleai.dev</p>
-              <p>user@meepleai.dev</p>
-              <p className="text-xs italic">Click &quot;Try Demo&quot; for instant access</p>
-            </div>
-          </div>
         </div>
 
         <div className="max-w-6xl mx-auto pt-8 border-t border-white/10 text-center text-sm text-slate-300">
@@ -297,7 +262,6 @@ export default function HomePage() {
           setShowAuthModal(false);
         }}
         defaultMode="login"
-        showDemoCredentials={!authUser}
       />
     </div>
   );

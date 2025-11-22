@@ -147,9 +147,10 @@ Console.WriteLine($"Reset settimanale: {quotaInfo.WeeklyResetAt}");
 ### Modificare Tier Utente
 
 ```csharp
-// Solo admin possono cambiare tier
+// Solo admin possono cambiare tier (requesterRole viene verificato)
+var requesterRole = Role.Admin; // Role del richiedente (deve essere Admin)
 var user = await _userRepository.GetByIdAsync(userId, ct);
-user.UpdateTier(UserTier.Premium);
+user.UpdateTier(UserTier.Premium, requesterRole);
 await _userRepository.UpdateAsync(user, ct);
 await _unitOfWork.SaveChangesAsync(ct);
 ```
@@ -230,10 +231,12 @@ Testare:
 
 ## Sicurezza
 
-1. **Nessun privilege escalation**: Solo admin possono cambiare tier utente
+1. **Nessun privilege escalation**: Solo admin possono cambiare tier utente (verificato in `UpdateTier` con parametro `requesterRole`)
 2. **Fail-open**: Se Redis è down, l'upload è permesso (priorità availability)
 3. **Rate limiting separato**: Il rate limiting (token bucket) rimane indipendente
 4. **Validazione input**: UserTier validato con whitelist (free/normal/premium)
+5. **Atomic operations**: Redis increment+TTL eseguito atomicamente con Lua script (previene race conditions)
+6. **Null safety**: User validation in UploadPdfCommandHandler previene null reference exceptions
 
 ## Performance
 
@@ -241,6 +244,17 @@ Testare:
 - **TTL automatico**: Nessuna pulizia manuale necessaria
 - **Caching configurazione**: Limiti cachati dal ConfigurationService
 - **Fail-open**: Non blocca upload se Redis è irraggiungibile
+
+## Bug Fixes (2025-11-22)
+
+### Critical Fixes
+1. ✅ **GetWeekKey ISO 8601 Year Transition**: Fixed edge case for Dec 29-31 (week 1 of next year)
+2. ✅ **UpdateTier Authorization**: Added `requesterRole` parameter with admin-only check
+3. ✅ **Redis Race Condition**: Made increment+TTL atomic using Lua script
+4. ✅ **Null User Handling**: Added null check in UploadPdfCommandHandler
+
+### Code Quality Improvements
+5. ✅ **Default Quotas Constants**: Extracted hardcoded limits to `DefaultQuotas` nested class
 
 ## Roadmap Future
 
@@ -250,6 +264,8 @@ Testare:
 - [ ] Dashboard utente con visualizzazione quota
 - [ ] Notifiche email quando si avvicina al limite
 - [ ] Analytics: tracking tier usage per ottimizzare limiti
+- [ ] Unit tests per PdfUploadQuotaService
+- [ ] Integration tests per quota enforcement
 
 ## References
 

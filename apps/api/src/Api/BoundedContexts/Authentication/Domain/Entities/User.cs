@@ -351,10 +351,21 @@ public sealed class User : AggregateRoot<Guid>
     /// Updates the user's subscription tier.
     /// Only admins can change user tiers.
     /// </summary>
-    public void UpdateTier(UserTier newTier)
+    /// <param name="newTier">The new tier to assign.</param>
+    /// <param name="requesterRole">The role of the user requesting the tier change.</param>
+    /// <exception cref="ArgumentNullException">Thrown when newTier or requesterRole is null.</exception>
+    /// <exception cref="DomainException">Thrown when requester is not an admin.</exception>
+    public void UpdateTier(UserTier newTier, Role requesterRole)
     {
         if (newTier == null)
             throw new ArgumentNullException(nameof(newTier));
+
+        if (requesterRole == null)
+            throw new ArgumentNullException(nameof(requesterRole));
+
+        // Only admins can change user tiers
+        if (!requesterRole.IsAdmin())
+            throw new DomainException("Only administrators can change user tiers");
 
         if (Tier == newTier)
             return; // No change

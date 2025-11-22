@@ -11,6 +11,27 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 /// </summary>
 public class PdfUploadQuotaService : IPdfUploadQuotaService
 {
+    #region Constants
+
+    /// <summary>
+    /// Default upload quotas for each tier.
+    /// </summary>
+    private static class DefaultQuotas
+    {
+        // Free Tier
+        public const int FreeDailyLimit = 5;
+        public const int FreeWeeklyLimit = 20;
+
+        // Normal Tier
+        public const int NormalDailyLimit = 20;
+        public const int NormalWeeklyLimit = 100;
+
+        // Premium Tier
+        public const int PremiumDailyLimit = 100;
+        public const int PremiumWeeklyLimit = 500;
+    }
+
+    #endregion
     private readonly IConnectionMultiplexer _redis;
     private readonly IConfigurationService _configService;
     private readonly TimeProvider _timeProvider;
@@ -103,15 +124,26 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
             var dailyKey = $"pdf:upload:daily:{userId}:{GetDateKey(now)}";
             var weeklyKey = $"pdf:upload:weekly:{userId}:{GetWeekKey(now)}";
 
-            // Increment counters with TTL
             var dailyTtl = TimeSpan.FromHours(25); // 24h + 1h buffer
             var weeklyTtl = TimeSpan.FromDays(8); // 7 days + 1 day buffer
 
-            await db.StringIncrementAsync(dailyKey);
-            await db.KeyExpireAsync(dailyKey, dailyTtl);
+            // Use Lua script for atomic increment + TTL operation
+            // This prevents race condition where process could crash between INCR and EXPIRE
+            var script = @"
+                local key = KEYS[1]
+                local ttl = tonumber(ARGV[1])
+                local count = redis.call('INCR', key)
+                redis.call('EXPIRE', key, ttl)
+                return count
+            ";
 
-            await db.StringIncrementAsync(weeklyKey);
-            await db.KeyExpireAsync(weeklyKey, weeklyTtl);
+            var dailyKeys = new RedisKey[] { dailyKey };
+            var dailyValues = new RedisValue[] { (int)dailyTtl.TotalSeconds };
+            await db.ScriptEvaluateAsync(script, dailyKeys, dailyValues);
+
+            var weeklyKeys = new RedisKey[] { weeklyKey };
+            var weeklyValues = new RedisValue[] { (int)weeklyTtl.TotalSeconds };
+            await db.ScriptEvaluateAsync(script, weeklyKeys, weeklyValues);
 
             _logger.LogDebug("Incremented PDF upload count for user {UserId}", userId);
         }
@@ -217,10 +249,10 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
     {
         return tier.Value switch
         {
-            "free" => (5, 20),
-            "normal" => (20, 100),
-            "premium" => (100, 500),
-            _ => (5, 20) // Default to Free tier limits
+            "free" => (DefaultQuotas.FreeDailyLimit, DefaultQuotas.FreeWeeklyLimit),
+            "normal" => (DefaultQuotas.NormalDailyLimit, DefaultQuotas.NormalWeeklyLimit),
+            "premium" => (DefaultQuotas.PremiumDailyLimit, DefaultQuotas.PremiumWeeklyLimit),
+            _ => (DefaultQuotas.FreeDailyLimit, DefaultQuotas.FreeWeeklyLimit) // Default to Free tier limits
         };
     }
 
@@ -240,10 +272,16 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         var year = date.Year;
         var week = calendar.GetWeekOfYear(date, weekRule, firstDayOfWeek);
 
-        // Handle edge case: week 53 might belong to next year
+        // Handle ISO 8601 year transitions
+        // Jan 1-3 might be in week 52/53 of previous year
         if (week >= 52 && date.Month == 1)
         {
             year--;
+        }
+        // Dec 29-31 might be in week 1 of next year
+        else if (week == 1 && date.Month == 12)
+        {
+            year++;
         }
 
         return $"{year}-W{week:D2}";

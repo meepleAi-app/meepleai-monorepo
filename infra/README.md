@@ -2,137 +2,309 @@
 
 **Infrastructure as Code** - Docker Compose, monitoring, secrets management, and observability stack configuration.
 
-## Compose Stack Overview
+## 🎯 Quick Start Guide
 
-- `docker-compose.yml` è la base con tutti i servizi; si usa sempre come primo file.
-- I file `docker-compose.dev.yml`, `compose.test.yml`, `compose.staging.yml`, `compose.prod.yml` sono overlay che sovrascrivono/estendono la base per il relativo ambiente (mount locali in dev, volumi persistenti e immagini pre-build in staging/prod, storage in-memory in test).
-- File speciali come `docker-compose.infisical.yml` abilitano integrazioni opzionali (es. gestione segreti).
-
-Esempi:
+### Development (Recommended)
 
 ```bash
-# Sviluppo (stack completo con override dev)
+cd infra
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
 
-# Staging (overlay dedicato)
+### Test/CI (Fast, In-Memory)
+
+```bash
+cd infra
+docker compose -f docker-compose.yml -f compose.test.yml up -d
+```
+
+### Staging (Production-Like)
+
+```bash
+cd infra
 docker compose -f docker-compose.yml -f compose.staging.yml up -d
+```
 
-# Produzione (usa immagini pubblicate e volumi persistenti)
+### Production (Full Security)
+
+```bash
+cd infra
+# Ensure secrets are configured first!
+./tools/secrets/init-secrets.sh
+
 docker compose -f docker-compose.yml -f compose.prod.yml up -d
 ```
 
-Per forzare la ricompilazione dei container (testare l’ultima versione) eseguire:
+### MCP Servers (Optional)
 
 ```bash
-docker compose build --no-cache            # ricompila tutto
-docker compose build --no-cache meepleai-api  # ricompila solo il servizio indicato
-docker compose up -d                       # riavvia con le nuove immagini
+cd docker/mcp
+docker compose up -d
 ```
 
 ---
 
-## 📁 Directory Structure
+## 📁 File Structure
 
 ```
 infra/
-├── docker-compose.yml              # Base service definitions
-├── docker-compose.dev.yml          # Development override
-├── docker-compose.infisical.yml    # Infisical secrets management
-├── compose.test.yml                # Test/CI environment (NEW)
-├── compose.staging.yml             # Staging environment (NEW)
-├── compose.prod.yml                # Production environment (NEW)
+├── docker-compose.yml              # Base configuration (production-ready with secrets)
+├── docker-compose.dev.yml          # Development overrides (85 lines, extends base) ⭐ REFACTORED
+├── compose.test.yml                # Test/CI overrides (in-memory, minimal) ⭐ FIXED
+├── compose.staging.yml             # Staging overrides (production-like) ⭐ FIXED
+├── compose.prod.yml                # Production overrides (resource limits) ⭐ FIXED
+├── experimental/                   # Experimental features ⭐ NEW
+│   └── docker-compose.infisical.yml  # POC: Infisical secrets management
 ├── prometheus.yml                  # Prometheus configuration
+├── prometheus-rules.yml            # Alert rules
 ├── alertmanager.yml                # Alert routing configuration
 ├── grafana-datasources.yml         # Grafana data sources
 ├── grafana-dashboards.yml          # Grafana dashboard config
-├── OPS-05-SETUP.md                # Infrastructure setup guide
-├── README-dev.md                   # Development environment guide
 ├── dashboards/                     # Grafana dashboard JSON
 ├── env/                            # Environment configuration files
 ├── init/                           # Initialization scripts
+│   ├── postgres-init.sql
 │   └── n8n/                        # n8n workflow initialization
 ├── n8n/                            # n8n workflow definitions
 │   ├── templates/                  # Workflow templates
 │   └── workflows/                  # Production workflows
-├── prometheus/                     # Prometheus configurations (NEW)
-│   └── alerts/                     # Modular alert rule files (NEW)
-│       ├── api-performance.yml     # API metrics & alerts
-│       ├── database-health.yml     # PostgreSQL alerts
-│       ├── cache-performance.yml   # Redis alerts
-│       ├── vector-search.yml       # Qdrant alerts
-│       ├── infrastructure.yml      # Memory, CPU, resources
-│       ├── quality-metrics.yml     # AI quality monitoring
-│       └── pdf-processing.yml      # PDF pipeline alerts
+├── prometheus/                     # Prometheus configurations
+│   └── alerts/                     # Modular alert rule files
 ├── scripts/                        # Infrastructure utility scripts
-└── secrets/                        # Secret templates (gitignored)
+└── secrets/                        # Docker secrets (gitignored)
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🏗️ Architecture Changes (2025-11-22 Refactor)
 
-### Multi-Environment Support (NEW)
+### What Changed
 
-MeepleAI infrastructure supports multiple environments with hierarchical compose files:
+#### ✅ Fixed: docker-compose.dev.yml
 
-#### Development
+**Before** (647 lines):
+- Duplicated ALL services from base file
+- Difficult to maintain (changes needed in 2 places)
+- Included redundant MCP servers
 
+**After** (85 lines, **87% reduction**):
+- Extends `docker-compose.yml` via Docker Compose merge
+- Only overrides necessary for development
+- No more duplication
+
+**Migration**:
 ```bash
-cd infra
+# Old way (deprecated)
+docker compose -f docker-compose.dev.yml up -d
+
+# New way (required)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
-Development mode includes:
-- Hot reload enabled
-- Debug ports exposed
-- Verbose logging
-- Simpler authentication
+#### ✅ Fixed: compose.{test,staging,prod}.yml
 
-#### Test/CI
+**Issue**: Used incorrect service names (`meepleai-postgres` instead of `postgres`)
 
+**Fix**: All override files now use correct base service names
+
+**Impact**: Override files now actually work for their intended environments
+
+#### ✅ Moved: docker-compose.infisical.yml
+
+**Before**: `infra/docker-compose.infisical.yml`
+
+**After**: `infra/experimental/docker-compose.infisical.yml`
+
+**Reason**: Clarifies that this is a POC (Issue #936), not production-ready
+
+### Migration Guide
+
+If you were using the old files:
+
+1. **docker-compose.dev.yml users**:
+   ```bash
+   # Replace this:
+   docker compose -f docker-compose.dev.yml up -d
+
+   # With this:
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+   ```
+
+2. **Infisical users**:
+   ```bash
+   # Replace this:
+   docker compose -f docker-compose.infisical.yml up -d
+
+   # With this:
+   cd experimental
+   docker compose -f docker-compose.infisical.yml up -d
+   ```
+
+3. **No changes needed** for test/staging/prod (just fixed internally)
+
+---
+
+## 🗂️ Compose Files Reference
+
+### Base: `docker-compose.yml`
+
+**Purpose**: Production-ready base with all 15 services
+
+**Features**:
+- ✅ Docker secrets for sensitive data
+- ✅ Full observability stack
+- ✅ AI/ML services (Ollama, Embedding, Unstructured, SmolDocling)
+- ✅ Core infrastructure (PostgreSQL, Qdrant, Redis, n8n)
+
+**Services**: postgres, qdrant, redis, ollama, ollama-pull, embedding-service, unstructured-service, smoldocling-service, seq, jaeger, prometheus, alertmanager, grafana, n8n, api, web
+
+**Secrets Required**:
+- `./secrets/postgres-password.txt`
+- `./secrets/openrouter-api-key.txt`
+- `./secrets/n8n-encryption-key.txt`
+- `./secrets/n8n-basic-auth-password.txt`
+- `./secrets/gmail-app-password.txt`
+- `./secrets/grafana-admin-password.txt`
+- `./secrets/initial-admin-password.txt`
+
+**Usage**:
 ```bash
-cd infra
-docker compose -f docker-compose.yml -f compose.test.yml up
+# Initialize secrets first
+./tools/secrets/init-secrets.sh
+
+# Start stack
+docker compose up -d
 ```
 
-Test mode optimizations:
-- In-memory storage (PostgreSQL, Redis)
-- Minimal observability (use `--profile observability` if needed)
-- Fast startup for CI pipelines
-- No auto-restart
+---
 
-#### Staging
+### Development: `docker-compose.dev.yml`
 
+**Purpose**: Local development with simplified auth
+
+**Overrides**:
+- ❌ No Docker secrets (uses plain env vars)
+- ✅ Simple passwords (postgres: `meeplepass`, grafana: `admin`)
+- ✅ Only 85 lines (vs 647 before refactor)
+
+**Usage**:
 ```bash
-cd infra
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+**Env Vars** (optional, has defaults):
+```bash
+POSTGRES_PASSWORD=meeplepass
+GRAFANA_ADMIN_PASSWORD=admin
+OPENROUTER_API_KEY=your_key_here
+INITIAL_ADMIN_EMAIL=admin@meepleai.dev
+INITIAL_ADMIN_PASSWORD=Demo123!
+```
+
+---
+
+### Test/CI: `compose.test.yml`
+
+**Purpose**: Fast CI/CD pipelines
+
+**Optimizations**:
+- 🚀 PostgreSQL on tmpfs (in-memory)
+- 🚀 Redis on tmpfs (in-memory)
+- 🚫 Observability disabled (use `--profile observability` if needed)
+- ⏱️ Faster healthchecks (3s vs 10s)
+
+**Usage**:
+```bash
+# Minimal test stack
+docker compose -f docker-compose.yml -f compose.test.yml up -d
+
+# With observability (if needed)
+docker compose -f docker-compose.yml -f compose.test.yml --profile observability up -d
+```
+
+---
+
+### Staging: `compose.staging.yml`
+
+**Purpose**: Production-like pre-release testing
+
+**Features**:
+- ✅ Docker secrets enabled
+- ✅ Persistent volumes (staging-specific)
+- ✅ Log rotation (10MB, 3 files)
+- ⏰ Prometheus retention: 60 days
+
+**Usage**:
+```bash
 docker compose -f docker-compose.yml -f compose.staging.yml up -d
 ```
 
-Staging includes:
-- Production-like configuration
-- Full observability stack
-- 60-day metrics retention
-- Logging with rotation
+**Volumes**:
+- `meepleai-pgdata-staging`
+- `meepleai-qdrantdata-staging`
+- `meepleai-redisdata-staging`
+- `meepleai-seqdata-staging`
+- `meepleai-prometheus-staging`
+- `meepleai-grafana-staging`
 
-#### Production
+---
 
+### Production: `compose.prod.yml`
+
+**Purpose**: Production deployment with full security
+
+**Features**:
+- 🔐 Mandatory secrets (errors if missing)
+- 🏋️ CPU/Memory limits enforced
+- 📊 Prometheus retention: 90 days, 50GB max
+- 💾 Persistent Jaeger storage
+- 📝 Log rotation (50MB, 10 files)
+
+**Resource Limits**:
+| Service | CPU | Memory | Reserved CPU | Reserved Mem |
+|---------|-----|--------|--------------|--------------|
+| postgres | 2 | 4GB | 1 | 2GB |
+| qdrant | 2 | 8GB | 1 | 4GB |
+| api | 4 | 8GB | 2 | 4GB |
+| web | 2 | 4GB | 1 | 2GB |
+
+**Required Env Vars**:
 ```bash
-cd infra
+REDIS_PASSWORD=<required>
+PRODUCTION_API_URL=<required>
+GRAFANA_ROOT_URL=<required>
+SEQ_PASSWORD_HASH=<required>
+```
+
+**Usage**:
+```bash
+# Validate secrets
+ls -la ./secrets/prod/
+
+# Deploy
 docker compose -f docker-compose.yml -f compose.prod.yml up -d
 ```
 
-Production features:
-- Resource limits and reservations
-- 90-day metrics retention
-- Enhanced security
-- High availability settings
+---
 
-### Start with Infisical (Secrets Management)
+### Experimental: Infisical POC
 
+**Location**: `experimental/docker-compose.infisical.yml`
+
+**Purpose**: POC for automatic secrets rotation (Issue #936)
+
+**Status**: ⚠️ Experimental, not production-ready
+
+**Usage**:
 ```bash
-cd infra
-docker compose -f docker-compose.yml -f docker-compose.infisical.yml up -d
+cd experimental
+docker compose -f docker-compose.infisical.yml up -d
+
+# Access UI
+open http://localhost:8080
 ```
+
+See file for detailed setup instructions.
 
 ---
 
@@ -142,220 +314,36 @@ docker compose -f docker-compose.yml -f docker-compose.infisical.yml up -d
 
 | Service | Port | Description | Health Check |
 |---------|------|-------------|--------------|
-| **postgres** | 5432 | PostgreSQL 16 database | `curl localhost:5432` |
-| **qdrant** | 6333 | Vector database for embeddings | `curl http://localhost:6333/healthz` |
-| **redis** | 6379 | Cache and session store | `redis-cli ping` |
+| **postgres** | 5432 | PostgreSQL 16 database | `pg_isready` |
+| **qdrant** | 6333 | Vector database | `curl localhost:6333/healthz` |
+| **redis** | 6379 | Cache & sessions | `redis-cli ping` |
 
 ### AI/ML Services
 
-| Service | Port | Description | Docker Image |
-|---------|------|-------------|--------------|
-| **ollama** | 11434 | Local LLM runtime | `ollama/ollama:latest` |
-| **embedding** | 8000 | BGE-M3 multilingual embedding | Custom (apps/embedding-service) |
-| **unstructured** | 8001 | PDF text extraction (Stage 1) | Custom (apps/unstructured-service) |
-| **smoldocling** | 8002 | VLM PDF extraction (Stage 2) | Custom (apps/smoldocling-service) |
+| Service | Port | Description |
+|---------|------|-------------|
+| **ollama** | 11434 | Local LLM runtime |
+| **embedding-service** | 8000 | BGE-M3 multilingual embeddings |
+| **unstructured-service** | 8001 | PDF extraction (Stage 1) |
+| **smoldocling-service** | 8002 | VLM PDF extraction (Stage 2) |
 
 ### Observability Services
 
-| Service | Port | Description | Access URL |
-|---------|------|-------------|------------|
+| Service | Port | Description | URL |
+|---------|------|-------------|-----|
 | **seq** | 8081 | Centralized logging | http://localhost:8081 |
 | **jaeger** | 16686 | Distributed tracing | http://localhost:16686 |
 | **prometheus** | 9090 | Metrics collection | http://localhost:9090 |
 | **alertmanager** | 9093 | Alert routing | http://localhost:9093 |
-| **grafana** | 3001 | Dashboards & visualization | http://localhost:3001 (admin/admin) |
+| **grafana** | 3001 | Dashboards | http://localhost:3001 (admin/admin) |
 
-### Workflow & App Services
+### Workflow & App
 
-| Service | Port | Description | Access URL |
-|---------|------|-------------|------------|
+| Service | Port | Description | URL |
+|---------|------|-------------|-----|
 | **n8n** | 5678 | Workflow automation | http://localhost:5678 |
-| **api** | 8080 | ASP.NET Core API | http://localhost:5080 |
+| **api** | 8080 | ASP.NET Core API | http://localhost:8080 |
 | **web** | 3000 | Next.js frontend | http://localhost:3000 |
-
----
-
-## 🔧 Configuration Files
-
-### Docker Compose
-
-- **docker-compose.yml**: Base service definitions
-  - All 15 services defined
-  - Environment-agnostic configuration
-  - Health checks configured
-
-- **docker-compose.dev.yml**: Development overrides
-  - Hot reload volumes
-  - Debug ports exposed
-  - Verbose logging enabled
-
-- **compose.test.yml**: Test/CI environment (NEW)
-  - In-memory storage for speed
-  - Minimal observability stack
-  - Optimized for CI pipelines
-
-- **compose.staging.yml**: Staging environment (NEW)
-  - Production-like settings
-  - Full observability enabled
-  - Longer metrics retention (60d)
-
-- **compose.prod.yml**: Production environment (NEW)
-  - Resource limits and reservations
-  - Enhanced security settings
-  - 90-day metrics retention
-  - High availability configuration
-
-- **docker-compose.infisical.yml**: Secrets management
-  - Infisical integration
-  - Secret injection
-  - Environment variable management
-
-### Monitoring & Observability
-
-- **prometheus.yml**: Prometheus scrape configuration
-  - Scrape intervals (15s default)
-  - Service discovery
-  - Modular alert rules loading
-
-- **prometheus/alerts/** (NEW - Modular Organization):
-  - **api-performance.yml**: API errors, response times, request rates
-  - **database-health.yml**: PostgreSQL availability and performance
-  - **cache-performance.yml**: Redis health monitoring
-  - **vector-search.yml**: Qdrant vector database alerts
-  - **infrastructure.yml**: Memory, CPU, and resource alerts
-  - **quality-metrics.yml**: AI quality and confidence monitoring
-  - **pdf-processing.yml**: PDF extraction pipeline alerts
-
-  Benefits:
-  - 40+ alert rules organized by category
-  - Easier navigation and maintenance
-  - Cleaner PR diffs
-  - Modular enable/disable by category
-
-- **alertmanager.yml**: Alert routing
-  - Email notifications
-  - Slack webhooks
-  - PagerDuty integration
-  - Alert grouping/throttling
-
-- **grafana-datasources.yml**: Grafana data sources
-  - Prometheus
-  - Jaeger
-  - PostgreSQL (future)
-
-- **grafana-dashboards.yml**: Dashboard provisioning
-  - System overview
-  - RAG performance
-  - PDF processing metrics
-  - API latency
-
----
-
-## 📂 Subdirectories
-
-### dashboards/
-
-**Grafana dashboard JSON definitions**
-
-Contains dashboard templates for:
-- System health overview
-- RAG pipeline performance
-- PDF processing metrics
-- API endpoint latency
-- Database query performance
-- Redis cache hit rates
-
-**Usage**:
-```bash
-# Dashboards auto-loaded on Grafana startup
-# Access at http://localhost:3001/dashboards
-```
-
-### env/
-
-**Environment configuration files**
-
-- `.env.example` - Template for environment variables
-- `.env.dev` - Development configuration (gitignored)
-- `.env.prod` - Production configuration (gitignored)
-- `.env.test` - Test environment (gitignored)
-
-**Required variables**:
-- `OPENROUTER_API_KEY` - LLM provider API key
-- `ConnectionStrings__Postgres` - PostgreSQL connection string
-- `QDRANT_URL` - Qdrant vector DB URL
-- `REDIS_URL` - Redis connection string
-- `INITIAL_ADMIN_EMAIL` - Bootstrap admin user
-- `INITIAL_ADMIN_PASSWORD` - Bootstrap admin password
-
-### init/
-
-**Initialization scripts** (run on container startup)
-
-- **n8n/**: n8n workflow initialization
-  - Workflow templates
-  - Credential setup
-  - Webhook configuration
-
-### n8n/
-
-**n8n workflow definitions**
-
-- **templates/**: Reusable workflow templates
-  - PDF processing workflow
-  - RAG quality monitoring
-  - Error notification workflow
-
-- **workflows/**: Production workflows (JSON)
-  - Automated quality checks
-  - Alert routing
-  - Batch processing jobs
-
-**Usage**:
-```bash
-# Import workflows via n8n UI
-# Or mount as volume in docker-compose.yml
-```
-
-### prometheus/
-
-**Prometheus configurations**
-
-- **alerts/**: Alert rule files (organized by category)
-  - `api-alerts.yml` - API endpoint alerts
-  - `db-alerts.yml` - Database alerts
-  - `rag-alerts.yml` - RAG quality alerts
-  - `infrastructure-alerts.yml` - Infrastructure health
-
-### scripts/
-
-**Infrastructure utility scripts**
-
-- Database backup scripts
-- Secret rotation scripts
-- Health check scripts
-- Cleanup scripts
-
-**Example**:
-```bash
-# Backup PostgreSQL
-./scripts/backup-postgres.sh
-
-# Rotate secrets
-./scripts/rotate-secrets.sh
-```
-
-### secrets/
-
-**Secret templates** (gitignored in production)
-
-Contains templates for:
-- API keys
-- Database passwords
-- OAuth client secrets
-- JWT signing keys
-
-**IMPORTANT**: Never commit actual secrets to git!
 
 ---
 
@@ -368,68 +356,58 @@ Contains templates for:
 docker compose logs -f
 
 # Specific service
-docker compose logs -f meepleai-api
-docker compose logs -f meepleai-web
+docker compose logs -f api
+docker compose logs -f postgres
 
 # Last 100 lines
-docker compose logs --tail=100 meepleai-api
+docker compose logs --tail=100 api
 ```
 
 ### Restart Services
 
 ```bash
-# All services
+# All
 docker compose restart
 
-# Specific service
-docker compose restart meepleai-api
-docker compose restart meepleai-postgres
+# Specific
+docker compose restart api
+docker compose restart postgres
 ```
 
 ### Stop Stack
 
 ```bash
-# Stop all
+# Stop (keep volumes)
 docker compose down
 
-# Stop and remove volumes (CAUTION: data loss)
+# Stop and remove volumes (⚠️ data loss)
 docker compose down -v
 ```
 
-### Scale Services
+### Rebuild Services
 
 ```bash
-# Scale API to 3 replicas
-docker compose up -d --scale meepleai-api=3
+# Rebuild all
+docker compose build --no-cache
 
-# Scale web to 2 replicas
-docker compose up -d --scale meepleai-web=2
-```
+# Rebuild specific
+docker compose build --no-cache api
 
-### Update Images
-
-```bash
-# Pull latest images
-docker compose pull
-
-# Rebuild custom images
-docker compose build
-
-# Pull and rebuild
-docker compose up -d --build
+# Rebuild and restart
+docker compose up -d --build api
 ```
 
 ### Health Checks
 
 ```bash
 # API health
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 
 # Qdrant health
 curl http://localhost:6333/healthz
 
 # Redis health
-redis-cli ping
+docker compose exec redis redis-cli ping
 
 # Prometheus targets
 curl http://localhost:9090/api/v1/targets
@@ -439,90 +417,65 @@ curl http://localhost:9090/api/v1/targets
 
 ## 🔍 Troubleshooting
 
-### Service Won't Start
+### Issue: Secrets Not Found
 
+**Error**: `postgres-password secret not found`
+
+**Fix**:
+```bash
+./tools/secrets/init-secrets.sh
+```
+
+### Issue: Port Already in Use
+
+**Error**: `port 5432 already allocated`
+
+**Fix**:
+```bash
+# Find process
+lsof -i :5432
+
+# Stop system PostgreSQL
+sudo systemctl stop postgresql
+```
+
+### Issue: Out of Disk Space
+
+**Fix**:
+```bash
+# Clean volumes
+docker volume prune
+
+# Clean images
+docker image prune -a
+
+# Check usage
+docker system df -v
+```
+
+### Issue: Service Won't Start
+
+**Diagnosis**:
 ```bash
 # Check logs
-docker compose logs service-name
+docker compose logs <service_name>
 
-# Check resource usage
-docker stats
+# Validate compose file
+docker compose config
 
-# Check networks
-docker network ls
-docker network inspect infra_default
-```
-
-### Database Connection Issues
-
-```bash
-# Check PostgreSQL logs
-docker compose logs meepleai-postgres
-
-# Connect to database
-docker compose exec meepleai-postgres psql -U meeple -d meepleai
-
-# Check connections
-docker compose exec meepleai-postgres psql -U meeple -c "SELECT * FROM pg_stat_activity;"
-```
-
-### Qdrant Issues
-
-```bash
-# Check Qdrant logs
-docker compose logs meepleai-qdrant
-
-# Check collections
-curl http://localhost:6333/collections
-
-# Check cluster info
-curl http://localhost:6333/cluster
-```
-
-### Redis Issues
-
-```bash
-# Connect to Redis CLI
-docker compose exec meepleai-redis meepleai-redis-cli
-
-# Check memory usage
-docker compose exec meepleai-redis meepleai-redis-cli INFO memory
-
-# Monitor commands
-docker compose exec meepleai-redis meepleai-redis-cli MONITOR
-```
-
-### Prometheus/Grafana Issues
-
-```bash
-# Check Prometheus targets
-curl http://localhost:9090/api/v1/targets | jq
-
-# Check Prometheus config
-docker compose exec meepleai-prometheus promtool check config /etc/meepleai-prometheus/meepleai-prometheus.yml
-
-# Reload Prometheus config
-curl -X POST http://localhost:9090/-/reload
-
-# Check Grafana logs
-docker compose logs meepleai-grafana
+# Check container details
+docker inspect <container_id>
 ```
 
 ---
 
 ## 📚 Documentation
 
-- **[INFRASTRUCTURE.md](./INFRASTRUCTURE.md)** - Complete infrastructure reference (50+ pages) ⭐ **NEW**
-  - Detailed directory structure
-  - Docker Compose files explained
-  - Environment files guide (dev, staging, prod)
-  - Secrets management
-  - Observability stack  - n8n workflows
-  - Troubleshooting
+- **[INFRASTRUCTURE.md](./INFRASTRUCTURE.md)** - Complete infrastructure reference (50+ pages)
 - **[env/README.md](./env/README.md)** - Environment variables guide
 - **[OPS-05-SETUP.md](./OPS-05-SETUP.md)** - Infrastructure setup guide
 - **[README-dev.md](./README-dev.md)** - Development environment guide
-- **[Multi-Environment Strategy](../docs/05-operations/deployment/multi-environment-strategy.md)** - 3-tier deployment strategy ⭐ **NEW**
+- **[Multi-Environment Strategy](../docs/05-operations/deployment/multi-environment-strategy.md)** - 3-tier deployment strategy
 - **[Deployment Guide](../docs/05-operations/deployment/board-game-ai-deployment-guide.md)** - Production deployment
 - **[Disaster Recovery](../docs/05-operations/deployment/disaster-recovery.md)** - DR procedures
 - **[Runbooks](../docs/05-operations/runbooks/)** - Incident response guides
@@ -533,21 +486,21 @@ docker compose logs meepleai-grafana
 
 ### Secret Management
 
-- **Development**: Use `.env.dev` (gitignored)
-- **Production**: Use Infisical or HashiCorp Vault
-- **Never**: Commit secrets to git
+- **Development**: Plain env vars (`.env.dev`)
+- **Staging/Production**: Docker secrets (`./secrets/`)
+- **Never**: Commit secrets to git!
 
 ### Network Security
 
-- All services on isolated Docker network
+- Isolated Docker network
 - Only necessary ports exposed
-- TLS/SSL for production (via reverse proxy)
+- TLS/SSL via reverse proxy (production)
 
 ### Access Control
 
-- Grafana: Default admin/admin (CHANGE IN PRODUCTION!)
-- n8n: Configure OAuth in production
-- Seq: Configure API keys for production
+- Grafana: Default admin/admin (**CHANGE IN PRODUCTION**)
+- n8n: Configure OAuth (production)
+- Seq: Configure API keys (production)
 
 ---
 
@@ -558,49 +511,29 @@ docker compose logs meepleai-grafana
 - **API Latency**: P50, P95, P99 (target: <500ms P95)
 - **Error Rate**: 5xx errors (target: <1%)
 - **RAG Quality**: Confidence scores (target: ≥0.70)
-- **Database**: Query time, connection pool usage
+- **Database**: Query time, connection pool
 - **Cache**: Redis hit rate (target: >80%)
 
 ### Dashboards
 
 Access Grafana at http://localhost:3001:
 
-1. **System Overview**: Overall health, resource usage
-2. **API Performance**: Endpoint latency, throughput, errors
-3. **RAG Pipeline**: Retrieval quality, generation latency
-4. **PDF Processing**: Success rate, processing time
-5. **Infrastructure**: CPU, memory, disk, network
+1. System Overview
+2. API Performance
+3. RAG Pipeline
+4. PDF Processing
+5. Infrastructure
 
-### Alerts
+### Alerts (40+ Rules)
 
-Configured alerts (via Prometheus + Alertmanager):
-
-- High error rate (>5% for 5 minutes)
-- High latency (P95 >2s for 5 minutes)
-- RAG quality degradation (confidence <0.60)
-- Database connection pool exhausted
-- Redis cache unavailable
-- Disk usage >85%
-
----
-
-## 🚀 Production Deployment
-
-For production deployment, see:
-- [Deployment Guide](../docs/05-operations/deployment/board-game-ai-deployment-guide.md)
-- [Kubernetes Manifests](./k8s/) (if applicable)
-
-**Production Checklist**:
-- [ ] Use Infisical/Vault for secrets
-- [ ] Configure TLS/SSL certificates
-- [ ] Set resource limits (CPU, memory)
-- [ ] Enable authentication on all services
-- [ ] Configure backup schedules
-- [ ] Set up monitoring alerts
-- [ ] Configure log retention
-- [ ] Enable audit logging
-- [ ] Review security settings
-- [ ] Test disaster recovery
+Organized in `prometheus/alerts/`:
+- `api-performance.yml` - API errors, latency
+- `database-health.yml` - PostgreSQL alerts
+- `cache-performance.yml` - Redis monitoring
+- `vector-search.yml` - Qdrant alerts
+- `infrastructure.yml` - Resource alerts
+- `quality-metrics.yml` - AI quality
+- `pdf-processing.yml` - PDF pipeline
 
 ---
 
@@ -608,15 +541,33 @@ For production deployment, see:
 
 When modifying infrastructure:
 
-1. **Test locally first** with `docker-compose.dev.yml`
-2. **Update documentation** (this README, OPS-05-SETUP.md)
-3. **Test health checks** after changes
-4. **Update Prometheus alerts** if adding new services
-5. **Add Grafana dashboards** for new metrics
-6. **Create PR** with `[INFRA]` prefix
+1. Test locally with `docker-compose.dev.yml`
+2. Update this README
+3. Test health checks
+4. Update Prometheus alerts (if adding services)
+5. Add Grafana dashboards (if adding metrics)
+6. Create PR with `[INFRA]` prefix
 
 ---
 
-**Last Updated**: 2025-11-15
+## 📝 Changelog
+
+### 2025-11-22: Compose Files Refactor
+
+**Changes**:
+- ✅ Reduced `docker-compose.dev.yml` from 647 to 85 lines (87% reduction)
+- ✅ Fixed service naming in `compose.{test,staging,prod}.yml`
+- ✅ Moved `docker-compose.infisical.yml` to `experimental/`
+- ✅ Added comprehensive README documentation
+
+**Impact**:
+- Easier maintenance (no duplication)
+- Override files now work correctly
+- Clear separation of experimental features
+
+---
+
+**Last Updated**: 2025-11-22
 **Maintainer**: Infrastructure Team
 **Total Services**: 15
+**Version**: 2.0 (Post-Refactor)

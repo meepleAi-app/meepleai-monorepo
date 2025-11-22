@@ -1,6 +1,6 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -44,9 +44,10 @@ type ToastMessage = {
   message: string;
 };
 
-interface AdminPageClientProps { user: AuthUser; }
+export function AdminPageClient() {
+  const { user } = useAuthUser();
 
-export function AdminPageClient({ user }: AdminPageClientProps) {
+  if (!user) return null;
   // State
   const [stats, setStats] = useState<DashboardStatsDto | null>(null);
   const [loading, setLoading] = useState(true);

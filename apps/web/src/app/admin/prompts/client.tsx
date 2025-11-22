@@ -1,6 +1,6 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -50,10 +50,11 @@ const CATEGORIES = [
   "streaming-qa-prompt",
 ];
 
-interface AdminPageClientProps { user: AuthUser; }
-
-export function AdminPageClient({ user }: AdminPageClientProps) {
+export function AdminPageClient() {
   const router = useRouter();
+  const { user } = useAuthUser();
+
+  if (!user) return null;
 
   // Data state
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);

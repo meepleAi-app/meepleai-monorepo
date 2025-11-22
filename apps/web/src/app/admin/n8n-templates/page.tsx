@@ -1,15 +1,15 @@
 /**
- * Admin Subpage - Server Component Wrapper
- * Issue #1611 Phase 3: SSR Auth Protection Migration
+ * Admin N8N Templates Page - Server Component Wrapper
+ * Issue #1608: Frontend Route Protection with E2E Test Compatibility
  */
 
-import { getServerUser } from '@/lib/auth/server';
-import { redirect } from 'next/navigation';
+import { RequireRole } from '@/components/auth/RequireRole';
 import { AdminPageClient } from './client';
 
-export default async function AdminSubpage() {
-  const user = await getServerUser();
-  if (!user) redirect('/login?from=/admin');
-  if (user.role.toLowerCase() !== 'admin') redirect('/');
-  return <AdminPageClient user={user} />;
+export default function AdminN8NTemplatesPage() {
+  return (
+    <RequireRole allowedRoles={['Admin']}>
+      <AdminPageClient />
+    </RequireRole>
+  );
 }

@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/utils/errorHandler";
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 type RuleAtom = {
   id: string;
@@ -56,11 +57,8 @@ type HistoryEntry = {
 
 type ViewMode = "rich" | "json";
 
-interface EditorClientProps {
-  user: AuthUser; // Provided by Server Component (authenticated + authorized)
-}
-
-export function EditorClient({ user }: EditorClientProps) {
+export function EditorClient() {
+  const { user } = useAuthUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const gameId = searchParams?.get('gameId') ?? null;
@@ -362,7 +360,8 @@ export function EditorClient({ user }: EditorClientProps) {
     );
   }
 
-  if (user.role !== "Admin" && user.role !== "Editor") {
+  // RequireRole already checked permissions, this is redundant but kept for safety
+  if (user && user.role !== "Admin" && user.role !== "Editor") {
     return (
       <main className="p-6 font-sans">
         <h1>Editor RuleSpec</h1>

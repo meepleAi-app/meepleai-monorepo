@@ -1,6 +1,6 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { ErrorDisplay } from '@/components/errors';
@@ -47,9 +47,10 @@ const categories = [
   { value: 'data-processing', label: 'Data Processing' }
 ];
 
-interface AdminPageClientProps { user: AuthUser; }
+export function AdminPageClient() {
+  const { user } = useAuthUser();
 
-export function AdminPageClient({ user }: AdminPageClientProps) {
+  if (!user) return null;
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplateDetail | null>(null);
   const [category, setCategory] = useState<string>('');

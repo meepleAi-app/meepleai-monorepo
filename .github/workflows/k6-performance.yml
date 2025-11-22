@@ -69,6 +69,7 @@ jobs:
         image: qdrant/qdrant:v1.12.5
         ports:
           - 6333:6333
+          - 6334:6334
 
     steps:
       - name: Checkout code
@@ -92,6 +93,9 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet build --configuration Release --no-restore
 
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef --version 9.0.11
+
       - name: Create test database
         run: |
           PGPASSWORD="${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}" psql -h localhost -U "${{ secrets.TEST_POSTGRES_USER || 'postgres' }}" -c "CREATE DATABASE meepleai_test;" || true
@@ -101,7 +105,7 @@ jobs:
         run: |
           dotnet ef database update --configuration Release
         env:
-          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
+          CONNECTIONSTRINGS__POSTGRES: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres' }}
 
       - name: Seed test data
         working-directory: apps/api/src/Api

@@ -1,0 +1,577 @@
+using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Services;
+using Api.Services.Pdf;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
+using FluentAssertions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Moq;
+using StackExchange.Redis;
+using Xunit;
+
+namespace Api.Tests.Integration;
+
+/// <summary>
+/// Integration tests for PDF upload quota enforcement.
+/// Tests the complete quota system: tracking, limits, tier-based quotas, admin bypass.
+/// Uses Testcontainers for PostgreSQL and Redis.
+/// </summary>
+[Collection("QuotaEnforcement")]
+public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
+{
+    private IContainer? _postgresContainer;
+    private IContainer? _redisContainer;
+    private MeepleAiDbContext? _dbContext;
+    private IServiceProvider? _serviceProvider;
+    private IConnectionMultiplexer? _redis;
+    private IPdfUploadQuotaService? _quotaService;
+
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
+    public async ValueTask InitializeAsync()
+    {
+        // Start PostgreSQL container
+        _postgresContainer = new ContainerBuilder()
+            .WithImage("postgres:16-alpine")
+            .WithEnvironment("POSTGRES_USER", "postgres")
+            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+            .WithEnvironment("POSTGRES_DB", "quota_test")
+            .WithPortBinding(5432, true)
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+            .Build();
+
+        await _postgresContainer.StartAsync(TestCancellationToken);
+
+        // Start Redis container
+        _redisContainer = new ContainerBuilder()
+            .WithImage("redis:7-alpine")
+            .WithPortBinding(6379, true)
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .UntilCommandIsCompleted("redis-cli", "ping"))
+            .Build();
+
+        await _redisContainer.StartAsync(TestCancellationToken);
+
+        // Setup services
+        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+        var redisPort = _redisContainer.GetMappedPublicPort(6379);
+        var connectionString = $"Host=localhost;Port={postgresPort};Database=quota_test;Username=postgres;Password=postgres;";
+        var redisConnectionString = $"localhost:{redisPort}";
+
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+
+        services.AddDbContext<MeepleAiDbContext>(options =>
+        {
+            options.UseNpgsql(connectionString);
+            options.ConfigureWarnings(w =>
+                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        });
+
+        // Register Redis
+        _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
+        services.AddSingleton<IConnectionMultiplexer>(_redis);
+
+        // Register repositories
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IGameRepository, GameRepository>();
+        services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+
+        // Register domain event infrastructure
+        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+
+        // Register MediatR
+        services.AddMediatR(config =>
+            config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
+
+        // Register configuration service mock
+        var configServiceMock = new Mock<IConfigurationService>();
+        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int?)null); // Use default limits
+        services.AddSingleton(configServiceMock.Object);
+
+        // Register quota service
+        services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
+
+        _serviceProvider = services.BuildServiceProvider();
+        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+        _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
+
+        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+
+        // Clear Redis
+        var db = _redis.GetDatabase();
+        var endpoints = _redis.GetEndPoints();
+        var server = _redis.GetServer(endpoints[0]);
+        await server.FlushDatabaseAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _dbContext?.Dispose();
+        _redis?.Dispose();
+
+        if (_serviceProvider is IAsyncDisposable asyncDisposable)
+            await asyncDisposable.DisposeAsync();
+        else
+            (_serviceProvider as IDisposable)?.Dispose();
+
+        if (_postgresContainer != null)
+        {
+            await _postgresContainer.StopAsync(TestCancellationToken);
+            await _postgresContainer.DisposeAsync();
+        }
+
+        if (_redisContainer != null)
+        {
+            await _redisContainer.StopAsync(TestCancellationToken);
+            await _redisContainer.DisposeAsync();
+        }
+    }
+
+    #region Helper Methods
+
+    private async Task<User> CreateUserAsync(UserTier tier, Role role = null!)
+    {
+        var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
+        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+
+        var user = new User(
+            id: Guid.NewGuid(),
+            email: $"user-{Guid.NewGuid()}@test.com",
+            displayName: "Test User",
+            passwordHash: "hash",
+            role: role ?? Role.User,
+            tier: tier);
+
+        await userRepo.AddAsync(user, TestCancellationToken);
+        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        return user;
+    }
+
+    private async Task<Game> CreateGameAsync()
+    {
+        var gameRepo = _serviceProvider!.GetRequiredService<IGameRepository>();
+        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+
+        var game = Game.Create(
+            title: "Test Game",
+            description: "Test Description",
+            minPlayers: PlayerCount.Create(2),
+            maxPlayers: PlayerCount.Create(4),
+            minAge: MinimumAge.Create(10),
+            playTimeMinutes: null,
+            complexity: Complexity.Medium,
+            categories: new List<string> { "Strategy" },
+            mechanics: new List<string> { "Dice Rolling" });
+
+        await gameRepo.AddAsync(game, TestCancellationToken);
+        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        return game;
+    }
+
+    private async Task<PdfUploadQuotaInfo> GetQuotaInfoAsync(Guid userId, UserTier tier, Role role)
+    {
+        return await _quotaService!.GetQuotaInfoAsync(userId, tier, role, TestCancellationToken);
+    }
+
+    private async Task IncrementUploadAsync(Guid userId)
+    {
+        await _quotaService!.IncrementUploadCountAsync(userId, TestCancellationToken);
+    }
+
+    #endregion
+
+    #region Free Tier Quota Tests
+
+    [Fact]
+    public async Task FreeTier_FiveUploadsInDay_SixthUploadDenied()
+    {
+        // Arrange - Create free tier user
+        var user = await CreateUserAsync(UserTier.Free);
+
+        // Act - Upload 5 PDFs (daily limit)
+        for (int i = 0; i < 5; i++)
+        {
+            var quotaCheck = await _quotaService!.CheckQuotaAsync(
+                user.Id, user.Tier, user.Role, TestCancellationToken);
+
+            quotaCheck.Allowed.Should().BeTrue($"Upload {i + 1} should be allowed");
+
+            await _quotaService.IncrementUploadCountAsync(user.Id, TestCancellationToken);
+        }
+
+        // Verify quota info
+        var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
+        info.DailyUploadsUsed.Should().Be(5);
+        info.DailyLimit.Should().Be(5);
+        info.DailyRemaining.Should().Be(0);
+
+        // Act - Attempt 6th upload (should be denied)
+        var deniedCheck = await _quotaService!.CheckQuotaAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+
+        // Assert
+        deniedCheck.Allowed.Should().BeFalse();
+        deniedCheck.ErrorMessage.Should().Contain("Daily upload limit reached");
+        deniedCheck.ErrorMessage.Should().Contain("5 PDF/day");
+        deniedCheck.ErrorMessage.Should().Contain("free tier");
+    }
+
+    [Fact]
+    public async Task FreeTier_TwentyUploadsInWeek_TwentyFirstUploadDenied()
+    {
+        // Arrange - Create free tier user
+        var user = await CreateUserAsync(UserTier.Free);
+
+        // Act - Upload 20 PDFs (weekly limit)
+        for (int i = 0; i < 20; i++)
+        {
+            await IncrementUploadAsync(user.Id);
+        }
+
+        // Verify quota info
+        var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
+        info.WeeklyUploadsUsed.Should().Be(20);
+        info.WeeklyLimit.Should().Be(20);
+        info.WeeklyRemaining.Should().Be(0);
+
+        // Act - Attempt 21st upload (should be denied)
+        var deniedCheck = await _quotaService!.CheckQuotaAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+
+        // Assert
+        deniedCheck.Allowed.Should().BeFalse();
+        deniedCheck.ErrorMessage.Should().Contain("Weekly upload limit reached");
+        deniedCheck.ErrorMessage.Should().Contain("20 PDF/week");
+        deniedCheck.ErrorMessage.Should().Contain("free tier");
+    }
+
+    #endregion
+
+    #region Normal Tier Quota Tests
+
+    [Fact]
+    public async Task NormalTier_TwentyUploadsInDay_AllAllowed()
+    {
+        // Arrange - Create normal tier user
+        var user = await CreateUserAsync(UserTier.Normal);
+
+        // Act - Upload 20 PDFs (daily limit)
+        for (int i = 0; i < 20; i++)
+        {
+            var quotaCheck = await _quotaService!.CheckQuotaAsync(
+                user.Id, user.Tier, user.Role, TestCancellationToken);
+
+            quotaCheck.Allowed.Should().BeTrue($"Upload {i + 1} should be allowed");
+
+            await IncrementUploadAsync(user.Id);
+        }
+
+        // Verify quota info
+        var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
+        info.DailyUploadsUsed.Should().Be(20);
+        info.DailyLimit.Should().Be(20);
+        info.DailyRemaining.Should().Be(0);
+
+        // Act - Attempt 21st upload (should be denied)
+        var deniedCheck = await _quotaService!.CheckQuotaAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+
+        // Assert
+        deniedCheck.Allowed.Should().BeFalse();
+        deniedCheck.ErrorMessage.Should().Contain("Daily upload limit reached");
+        deniedCheck.ErrorMessage.Should().Contain("20 PDF/day");
+        deniedCheck.ErrorMessage.Should().Contain("normal tier");
+    }
+
+    [Fact]
+    public async Task NormalTier_HundredUploadsInWeek_AllAllowed()
+    {
+        // Arrange - Create normal tier user
+        var user = await CreateUserAsync(UserTier.Normal);
+
+        // Act - Upload 100 PDFs (weekly limit) - simulate by incrementing directly
+        for (int i = 0; i < 100; i++)
+        {
+            await IncrementUploadAsync(user.Id);
+        }
+
+        // Verify quota info
+        var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
+        info.WeeklyUploadsUsed.Should().Be(100);
+        info.WeeklyLimit.Should().Be(100);
+        info.WeeklyRemaining.Should().Be(0);
+
+        // Act - Attempt 101st upload (should be denied)
+        var deniedCheck = await _quotaService!.CheckQuotaAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+
+        // Assert
+        deniedCheck.Allowed.Should().BeFalse();
+        deniedCheck.ErrorMessage.Should().Contain("Weekly upload limit reached");
+        deniedCheck.ErrorMessage.Should().Contain("100 PDF/week");
+        deniedCheck.ErrorMessage.Should().Contain("normal tier");
+    }
+
+    #endregion
+
+    #region Premium Tier Quota Tests
+
+    [Fact]
+    public async Task PremiumTier_HundredUploadsInDay_AllAllowed()
+    {
+        // Arrange - Create premium tier user
+        var user = await CreateUserAsync(UserTier.Premium);
+
+        // Act - Upload 100 PDFs (daily limit)
+        for (int i = 0; i < 100; i++)
+        {
+            await IncrementUploadAsync(user.Id);
+        }
+
+        // Verify quota info
+        var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
+        info.DailyUploadsUsed.Should().Be(100);
+        info.DailyLimit.Should().Be(100);
+        info.DailyRemaining.Should().Be(0);
+
+        // Act - Attempt 101st upload (should be denied)
+        var deniedCheck = await _quotaService!.CheckQuotaAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+
+        // Assert
+        deniedCheck.Allowed.Should().BeFalse();
+        deniedCheck.ErrorMessage.Should().Contain("Daily upload limit reached");
+        deniedCheck.ErrorMessage.Should().Contain("100 PDF/day");
+    }
+
+    #endregion
+
+    #region Admin/Editor Bypass Tests
+
+    [Fact]
+    public async Task AdminUser_UnlimitedUploads_NoQuotaCheck()
+    {
+        // Arrange - Create admin user (tier doesn't matter for admin)
+        var user = await CreateUserAsync(UserTier.Free, Role.Admin);
+
+        // Act - Upload 1000 PDFs (way beyond any limit)
+        for (int i = 0; i < 1000; i++)
+        {
+            await IncrementUploadAsync(user.Id);
+        }
+
+        // Verify quota check - admin always has unlimited quota
+        var quotaCheck = await _quotaService!.CheckQuotaAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+
+        // Assert - Admin bypasses quota completely
+        quotaCheck.Allowed.Should().BeTrue();
+        quotaCheck.DailyLimit.Should().Be(int.MaxValue);
+        quotaCheck.WeeklyLimit.Should().Be(int.MaxValue);
+
+        // Verify quota info
+        var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
+        info.IsUnlimited.Should().BeTrue();
+        info.DailyRemaining.Should().Be(int.MaxValue);
+        info.WeeklyRemaining.Should().Be(int.MaxValue);
+    }
+
+    [Fact]
+    public async Task EditorUser_UnlimitedUploads_NoQuotaCheck()
+    {
+        // Arrange - Create editor user
+        var user = await CreateUserAsync(UserTier.Normal, Role.Editor);
+
+        // Act - Upload 500 PDFs (beyond normal tier limits)
+        for (int i = 0; i < 500; i++)
+        {
+            await IncrementUploadAsync(user.Id);
+        }
+
+        // Verify quota check - editor always has unlimited quota
+        var quotaCheck = await _quotaService!.CheckQuotaAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+
+        // Assert - Editor bypasses quota completely
+        quotaCheck.Allowed.Should().BeTrue();
+        quotaCheck.DailyLimit.Should().Be(int.MaxValue);
+        quotaCheck.WeeklyLimit.Should().Be(int.MaxValue);
+
+        // Verify quota info
+        var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
+        info.IsUnlimited.Should().BeTrue();
+    }
+
+    #endregion
+
+    #region Tier Upgrade Tests
+
+    [Fact]
+    public async Task UserUpgrade_FreeToPremium_QuotaLimitIncreases()
+    {
+        // Arrange - Create free tier user and upload 5 PDFs (at limit)
+        var user = await CreateUserAsync(UserTier.Free);
+
+        for (int i = 0; i < 5; i++)
+        {
+            await IncrementUploadAsync(user.Id);
+        }
+
+        // Verify at limit
+        var quotaCheckBefore = await _quotaService!.CheckQuotaAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+        quotaCheckBefore.Allowed.Should().BeFalse();
+
+        // Act - Upgrade to Premium
+        var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
+        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+
+        user.UpdateTier(UserTier.Premium, Role.Admin);
+        await userRepo.UpdateAsync(user, TestCancellationToken);
+        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        // Assert - Now has higher limits (usage is still 5, but limit is 100)
+        var quotaCheckAfter = await _quotaService!.CheckQuotaAsync(
+            user.Id, UserTier.Premium, user.Role, TestCancellationToken);
+
+        quotaCheckAfter.Allowed.Should().BeTrue();
+        quotaCheckAfter.DailyUploadsUsed.Should().Be(5);
+        quotaCheckAfter.DailyLimit.Should().Be(100);
+        quotaCheckAfter.DailyRemaining.Should().Be(95);
+    }
+
+    [Fact]
+    public async Task UserDowngrade_PremiumToFree_QuotaLimitDecreases()
+    {
+        // Arrange - Create premium tier user and upload 10 PDFs
+        var user = await CreateUserAsync(UserTier.Premium);
+
+        for (int i = 0; i < 10; i++)
+        {
+            await IncrementUploadAsync(user.Id);
+        }
+
+        // Verify still allowed (10 < 100)
+        var quotaCheckBefore = await _quotaService!.CheckQuotaAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+        quotaCheckBefore.Allowed.Should().BeTrue();
+
+        // Act - Downgrade to Free
+        var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
+        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+
+        user.UpdateTier(UserTier.Free, Role.Admin);
+        await userRepo.UpdateAsync(user, TestCancellationToken);
+        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        // Assert - Now exceeds free tier limit (usage 10 > limit 5)
+        var quotaCheckAfter = await _quotaService!.CheckQuotaAsync(
+            user.Id, UserTier.Free, user.Role, TestCancellationToken);
+
+        quotaCheckAfter.Allowed.Should().BeFalse();
+        quotaCheckAfter.DailyUploadsUsed.Should().Be(10);
+        quotaCheckAfter.DailyLimit.Should().Be(5);
+        quotaCheckAfter.ErrorMessage.Should().Contain("Daily upload limit reached");
+    }
+
+    #endregion
+
+    #region Multiple Users Isolation Tests
+
+    [Fact]
+    public async Task MultipleUsers_QuotaTrackedIndependently()
+    {
+        // Arrange - Create 3 users with different tiers
+        var user1 = await CreateUserAsync(UserTier.Free);
+        var user2 = await CreateUserAsync(UserTier.Normal);
+        var user3 = await CreateUserAsync(UserTier.Premium);
+
+        // Act - Upload different amounts for each user
+        // User1: 3 uploads
+        for (int i = 0; i < 3; i++)
+            await IncrementUploadAsync(user1.Id);
+
+        // User2: 10 uploads
+        for (int i = 0; i < 10; i++)
+            await IncrementUploadAsync(user2.Id);
+
+        // User3: 50 uploads
+        for (int i = 0; i < 50; i++)
+            await IncrementUploadAsync(user3.Id);
+
+        // Assert - Each user has independent quota
+        var info1 = await GetQuotaInfoAsync(user1.Id, user1.Tier, user1.Role);
+        info1.DailyUploadsUsed.Should().Be(3);
+        info1.DailyRemaining.Should().Be(2);
+
+        var info2 = await GetQuotaInfoAsync(user2.Id, user2.Tier, user2.Role);
+        info2.DailyUploadsUsed.Should().Be(10);
+        info2.DailyRemaining.Should().Be(10);
+
+        var info3 = await GetQuotaInfoAsync(user3.Id, user3.Tier, user3.Role);
+        info3.DailyUploadsUsed.Should().Be(50);
+        info3.DailyRemaining.Should().Be(50);
+    }
+
+    #endregion
+
+    #region Redis Persistence Tests
+
+    [Fact]
+    public async Task QuotaTracking_PersistsInRedis_AcrossServiceInstances()
+    {
+        // Arrange - Create user and upload 3 PDFs with first service instance
+        var user = await CreateUserAsync(UserTier.Free);
+
+        for (int i = 0; i < 3; i++)
+            await IncrementUploadAsync(user.Id);
+
+        // Act - Create new quota service instance (simulates service restart)
+        var configServiceMock = new Mock<IConfigurationService>();
+        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int?)null);
+
+        var newQuotaService = new PdfUploadQuotaService(
+            _redis!,
+            configServiceMock.Object,
+            _serviceProvider!.GetRequiredService<ILogger<PdfUploadQuotaService>>(),
+            TimeProvider.System);
+
+        // Assert - New service instance can read quota from Redis
+        var info = await newQuotaService.GetQuotaInfoAsync(
+            user.Id, user.Tier, user.Role, TestCancellationToken);
+
+        info.DailyUploadsUsed.Should().Be(3);
+        info.DailyRemaining.Should().Be(2);
+        info.WeeklyUploadsUsed.Should().Be(3);
+        info.WeeklyRemaining.Should().Be(17);
+    }
+
+    #endregion
+}

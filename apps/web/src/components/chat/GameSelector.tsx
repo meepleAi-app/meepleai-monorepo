@@ -62,7 +62,7 @@ export function GameSelector() {
         <SelectContent>
           {games.map((game: Game) => (
             <SelectItem key={game.id} value={game.id}>
-              {game.name}
+              {game.title}
             </SelectItem>
           ))}
         </SelectContent>

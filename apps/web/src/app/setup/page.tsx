@@ -364,7 +364,7 @@ export default function SetupPage() {
                 <option value="">Select a game...</option>
                 {games.map((game) => (
                   <option key={game.id} value={game.id}>
-                    {game.name}
+                    {game.title}
                   </option>
                 ))}
               </select>

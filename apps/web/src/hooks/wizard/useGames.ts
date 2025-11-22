@@ -4,7 +4,7 @@ import type { AuthUser } from '@/types/auth';
 
 interface GameSummary {
   id: string;
-  name: string;
+  title: string;
   createdAt: string;
 }
 

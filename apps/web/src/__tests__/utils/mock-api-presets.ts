@@ -134,7 +134,7 @@ export class MockApiPresets {
   static games(router: MockApiRouter, options: GamePresetOptions = {}): MockApiRouter {
     const {
       games = [],
-      createResponse = { id: 'game-new', name: 'New Game', createdAt: new Date().toISOString() },
+      createResponse = { id: 'game-new', title: 'New Game', createdAt: new Date().toISOString() },
       createError
     } = options;
 

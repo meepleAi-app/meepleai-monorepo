@@ -14,8 +14,8 @@ jest.mock('@/lib/api', () => ({
 
 describe('useGames', () => {
   const mockGames = [
-    { id: '1', name: 'Gloomhaven', createdAt: '2024-01-01' },
-    { id: '2', name: 'Wingspan', createdAt: '2024-01-02' }
+    { id: '1', title: 'Gloomhaven', createdAt: '2024-01-01' },
+    { id: '2', title: 'Wingspan', createdAt: '2024-01-02' }
   ];
 
   beforeEach(() => {

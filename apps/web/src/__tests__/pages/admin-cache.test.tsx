@@ -58,8 +58,8 @@ describe('CacheDashboard', () => {
   });
 
   const mockGamesResponse = [
-    { id: 'game-1', name: 'Chess' },
-    { id: 'game-2', name: 'Tic-Tac-Toe' }
+    { id: 'game-1', title: 'Chess' },
+    { id: 'game-2', title: 'Tic-Tac-Toe' }
   ];
 
   const mockStatsResponse = {

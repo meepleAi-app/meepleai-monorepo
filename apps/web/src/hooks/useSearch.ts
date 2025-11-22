@@ -44,7 +44,7 @@ const FUSE_OPTIONS: IFuseOptions<SearchResult> = {
     { name: 'subtitle', weight: 1.5 },
     { name: 'message.content', weight: 1.8 },
     { name: 'chat.title', weight: 1.5 },
-    { name: 'game.name', weight: 1.5 },
+    { name: 'game.title', weight: 1.5 },
     { name: 'agent.name', weight: 1.5 },
   ],
   threshold: 0.3, // 0.0 = perfect match, 1.0 = match anything
@@ -96,7 +96,7 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
     const result: GameSearchResult = {
       id: game.id,
       type: 'game',
-      title: game.name,
+      title: game.title,
       subtitle: 'Board Game',
       timestamp: game.createdAt ? new Date(game.createdAt) : undefined,
       game,

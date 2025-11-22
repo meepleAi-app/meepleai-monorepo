@@ -51,8 +51,8 @@ export const createChatTestData = () => ({
   }),
 
   mockGames: [
-    createMockGame({ id: 'game-1', name: 'Chess' }),
-    createMockGame({ id: 'game-2', name: 'Catan' })
+    createMockGame({ id: 'game-1', title: 'Chess' }),
+    createMockGame({ id: 'game-2', title: 'Catan' })
   ],
 
   mockAgents: [

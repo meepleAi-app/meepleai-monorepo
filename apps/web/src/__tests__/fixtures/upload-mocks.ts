@@ -191,7 +191,7 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
     );
   } else {
     router.post('/api/v1/games', () =>
-      createJsonResponse(createGameResponse ?? createGameMock({ id: 'game-new', name: 'New Game' }), 201)
+      createJsonResponse(createGameResponse ?? createGameMock({ id: 'game-new', title: 'New Game' }), 201)
     );
   }
 

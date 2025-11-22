@@ -57,7 +57,7 @@ global.localStorage = {
 };
 
 describe('FE-TEST-010: Worker-Specific Tests', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     Object.keys(localStorageMock).forEach(key => delete localStorageMock[key]);
     MockBroadcastChannel.clearAll();
@@ -79,8 +79,8 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
     uploadQueueStore.clearAll();
 
     // Wait a tick for the clear to process
-    return new Promise(resolve => setTimeout(resolve, 10));
-  });
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }, 10000); // Increase timeout to 10s for beforeEach
 
   afterEach(() => {
     // Clean up after each test

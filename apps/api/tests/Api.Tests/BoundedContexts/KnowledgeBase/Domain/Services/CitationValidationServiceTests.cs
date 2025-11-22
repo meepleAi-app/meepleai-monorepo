@@ -33,6 +33,13 @@ public class CitationValidationServiceTests
 
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<IDomainEventCollector>();
+        
+        // FIX: Configure GetAndClearEvents() to return empty collection instead of null
+        // This prevents NullReferenceException in MeepleAiDbContext.SaveChangesAsync() line 90
+        mockEventCollector
+            .Setup(ec => ec.GetAndClearEvents())
+            .Returns(Array.Empty<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
+        
         return new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
     }
 

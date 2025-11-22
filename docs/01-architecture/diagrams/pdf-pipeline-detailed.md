@@ -116,15 +116,15 @@ flowchart TD
 
     Complete --> End([Pipeline Complete])
 
-    style Stage1Start fill:#81c784
-    style S1Success fill:#66bb6a
-    style Stage2Start fill:#64b5f6
-    style S2Success fill:#42a5f5
-    style Stage3Start fill:#ffb74d
-    style S3Done fill:#ffa726
-    style Excellent fill:#66bb6a
-    style Critical fill:#ef5350
-    style Complete fill:#ab47bc
+    style Stage1Start fill:#81c784,color:#000
+    style S1Success fill:#66bb6a,color:#000
+    style Stage2Start fill:#64b5f6,color:#000
+    style S2Success fill:#42a5f5,color:#000
+    style Stage3Start fill:#ffb74d,color:#000
+    style S3Done fill:#ffa726,color:#000
+    style Excellent fill:#66bb6a,color:#000
+    style Critical fill:#ef5350,color:#000
+    style Complete fill:#ab47bc,color:#000
 ```
 
 ## Stage Decision Tree
@@ -147,9 +147,9 @@ flowchart TD
     Done2 --> Report
     Done3 --> Report
 
-    style Done1 fill:#66bb6a
-    style Done2 fill:#42a5f5
-    style Done3 fill:#ffa726
+    style Done1 fill:#66bb6a,color:#000
+    style Done2 fill:#42a5f5,color:#000
+    style Done3 fill:#ffa726,color:#000
 ```
 
 ## Quality Scoring Formula
@@ -198,8 +198,8 @@ flowchart LR
     Thresholds -->|0.50-0.70| Low[Low Quality]
     Thresholds -->|< 0.50| VeryLow[Very Low Quality]
 
-    style Weighted fill:#ffa726
-    style Total fill:#66bb6a
+    style Weighted fill:#ffa726,color:#000
+    style Total fill:#66bb6a,color:#000
 ```
 
 ## Text Processing Domain Service
@@ -245,9 +245,9 @@ flowchart TD
     MapL --> Result
     MapVL --> Result
 
-    style Normalize fill:#4fc3f7
-    style Assess fill:#ffa726
-    style Result fill:#66bb6a
+    style Normalize fill:#4fc3f7,color:#000
+    style Assess fill:#ffa726,color:#000
+    style Result fill:#66bb6a,color:#000
 ```
 
 ## OCR Decision Logic (Stage 3)
@@ -284,9 +284,9 @@ flowchart TD
     UseDocnet --> Output[Final Extraction Result]
     UseOCR --> Output
 
-    style TriggerOCR fill:#ffa726
-    style UseOCR fill:#66bb6a
-    style UseDocnet fill:#81c784
+    style TriggerOCR fill:#ffa726,color:#000
+    style UseOCR fill:#66bb6a,color:#000
+    style UseDocnet fill:#81c784,color:#000
 ```
 
 ## Concurrency Control (Docnet Semaphore)
@@ -385,10 +385,10 @@ graph TB
     S3Metric1 --> Aggregate
     Aggregate --> OMetric1
 
-    style S1Metric1 fill:#66bb6a
-    style S2Metric1 fill:#42a5f5
-    style S3Metric1 fill:#ffa726
-    style OMetric1 fill:#ab47bc
+    style S1Metric1 fill:#66bb6a,color:#000
+    style S2Metric1 fill:#42a5f5,color:#000
+    style S3Metric1 fill:#ffa726,color:#000
+    style OMetric1 fill:#ab47bc,color:#000
 ```
 
 ## Error Handling Strategy
@@ -440,9 +440,9 @@ flowchart TD
 
     UpdateFailed --> NotifyAdmin[Send Alert<br/>Admin notification]
 
-    style Done fill:#66bb6a
-    style UpdateFailed fill:#ef5350
-    style NotifyAdmin fill:#ffa726
+    style Done fill:#66bb6a,color:#000
+    style UpdateFailed fill:#ef5350,color:#000
+    style NotifyAdmin fill:#ffa726,color:#000
 ```
 
 ## Configuration Options

@@ -196,16 +196,16 @@ graph TB
     Handlers -->|Return| DTOs
     DTOs -->|Mapped to| Endpoints
 
-    style Endpoints fill:#4fc3f7
-    style Commands fill:#66bb6a
-    style Queries fill:#81c784
-    style Handlers fill:#29b6f6
-    style Aggregates fill:#ab47bc
-    style ValueObjects fill:#ba68c8
-    style DomainServices fill:#9c27b0
-    style RepoImpl fill:#ef5350
-    style DbContext fill:#f44336
-    style Mediator fill:#ffa726
+    style Endpoints fill:#4fc3f7,color:#000
+    style Commands fill:#66bb6a,color:#000
+    style Queries fill:#81c784,color:#000
+    style Handlers fill:#29b6f6,color:#000
+    style Aggregates fill:#ab47bc,color:#000
+    style ValueObjects fill:#ba68c8,color:#000
+    style DomainServices fill:#9c27b0,color:#000
+    style RepoImpl fill:#ef5350,color:#000
+    style DbContext fill:#f44336,color:#000
+    style Mediator fill:#ffa726,color:#000
 ```
 
 ## Command vs Query Pattern
@@ -223,10 +223,10 @@ graph LR
     Repo -->|Persist| DB[(Database)]
     Handler -->|4. Return| Response[Response DTO]
 
-    style Command fill:#66bb6a
-    style Handler fill:#29b6f6
-    style Domain fill:#ab47bc
-    style Repo fill:#ef5350
+    style Command fill:#66bb6a,color:#000
+    style Handler fill:#29b6f6,color:#000
+    style Domain fill:#ab47bc,color:#000
+    style Repo fill:#ef5350,color:#000
 ```
 
 **Caratteristiche**:
@@ -248,10 +248,10 @@ graph LR
     Handler -->|Projection| DTO[Response DTO]
     Handler -->|Return| Response[Response]
 
-    style Query fill:#81c784
-    style Handler fill:#29b6f6
-    style Repo fill:#ef5350
-    style DTO fill:#ffa726
+    style Query fill:#81c784,color:#000
+    style Handler fill:#29b6f6,color:#000
+    style Repo fill:#ef5350,color:#000
+    style DTO fill:#ffa726,color:#000
 ```
 
 **Caratteristiche**:
@@ -287,12 +287,12 @@ graph TB
     LogSuccess --> Response[Return Response]
     LogError --> Error3[500 Internal Error]
 
-    style Pipeline fill:#ffa726
-    style Auth fill:#ab47bc
-    style Validation fill:#66bb6a
-    style Logging fill:#29b6f6
-    style Transaction fill:#ef5350
-    style Handler fill:#4fc3f7
+    style Pipeline fill:#ffa726,color:#000
+    style Auth fill:#ab47bc,color:#000
+    style Validation fill:#66bb6a,color:#000
+    style Logging fill:#29b6f6,color:#000
+    style Transaction fill:#ef5350,color:#000
+    style Handler fill:#4fc3f7,color:#000
 ```
 
 ## Bounded Context Interactions
@@ -329,10 +329,10 @@ graph TB
     DocCmd -->|Extracted Text| KBCmd
     DocCmd -->|PDF Chunks| KBCmd
 
-    style Authentication fill:#ab47bc
-    style GameManagement fill:#66bb6a
-    style DocumentProcessing fill:#ffa726
-    style KnowledgeBase fill:#29b6f6
+    style Authentication fill:#ab47bc,color:#000
+    style GameManagement fill:#66bb6a,color:#000
+    style DocumentProcessing fill:#ffa726,color:#000
+    style KnowledgeBase fill:#29b6f6,color:#000
 ```
 
 ## Dependency Injection Flow
@@ -361,9 +361,9 @@ graph TB
 
     Provider -->|Resolve at runtime| Endpoint[HTTP Endpoints]
 
-    style Program fill:#4fc3f7
-    style Services fill:#ffa726
-    style Provider fill:#66bb6a
+    style Program fill:#4fc3f7,color:#000
+    style Services fill:#ffa726,color:#000
+    style Provider fill:#66bb6a,color:#000
 ```
 
 ---

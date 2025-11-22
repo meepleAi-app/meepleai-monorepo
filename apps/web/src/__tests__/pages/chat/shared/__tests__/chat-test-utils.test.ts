@@ -467,11 +467,11 @@ describe('Chat Test Utilities', () => {
 
       it('should use game ID fallback', () => {
         const env = setupFullChatEnvironment({
-          game: { name: 'Custom Game' },
+          game: { title: 'Custom Game' },
         });
 
         expect(env.game.id).toBe('game-1');
-        expect(env.game.name).toBe('Custom Game');
+        expect(env.game.title).toBe('Custom Game');
       });
     });
 
@@ -838,14 +838,14 @@ describe('Chat Test Utilities', () => {
 
       it('should support multiple test setups in sequence', () => {
         // First test
-        const env1 = setupFullChatEnvironment({ game: { name: 'Chess' } });
-        expect(env1.game.name).toBe('Chess');
+        const env1 = setupFullChatEnvironment({ game: { title: 'Chess' } });
+        expect(env1.game.title).toBe('Chess');
 
         resetAllMocks();
 
         // Second test
-        const env2 = setupFullChatEnvironment({ game: { name: 'Catan' } });
-        expect(env2.game.name).toBe('Catan');
+        const env2 = setupFullChatEnvironment({ game: { title: 'Catan' } });
+        expect(env2.game.title).toBe('Catan');
       });
     });
 

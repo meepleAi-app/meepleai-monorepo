@@ -205,7 +205,7 @@ export const createMockApiClient = (): MockApiClient => ({
  */
 export type MockGame = {
   id: string;
-  name: string;
+  title: string;
   createdAt: string;
   updatedAt?: string;
 };
@@ -214,21 +214,21 @@ export type MockGame = {
  * Creates a mock game
  *
  * @example
- * const chess = createMockGame({ id: 'demo-chess', name: 'Chess' });
+ * const chess = createMockGame({ id: 'demo-chess', title: 'Chess' });
  */
 export const createMockGame = (overrides?: Partial<MockGame>): MockGame => ({
   id: overrides?.id || 'game-1',
-  name: overrides?.name || 'Test Game',
+  title: overrides?.title || 'Test Game',
   createdAt: overrides?.createdAt || new Date().toISOString(),
   updatedAt: overrides?.updatedAt,
 });
 
 // Preset games
 export const mockChessGame = (): MockGame =>
-  createMockGame({ id: 'demo-chess', name: 'Chess' });
+  createMockGame({ id: 'demo-chess', title: 'Chess' });
 
 export const mockTicTacToeGame = (): MockGame =>
-  createMockGame({ id: 'demo-tictactoe', name: 'Tic-Tac-Toe' });
+  createMockGame({ id: 'demo-tictactoe', title: 'Tic-Tac-Toe' });
 
 // =============================================================================
 // RULESPEC FIXTURES

@@ -204,7 +204,7 @@ export default function BoardGameAskClient() {
                 <SelectContent>
                   {games.map((game) => (
                     <SelectItem key={game.id} value={game.id}>
-                      {game.name}
+                      {game.title}
                     </SelectItem>
                   ))}
                 </SelectContent>

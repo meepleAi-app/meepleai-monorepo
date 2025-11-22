@@ -139,7 +139,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               <SelectItem value="all">All games</SelectItem>
               {games.map((game) => (
                 <SelectItem key={game.id} value={game.id}>
-                  {game.name}
+                  {game.title}
                 </SelectItem>
               ))}
             </SelectContent>

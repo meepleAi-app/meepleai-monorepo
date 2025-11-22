@@ -10,7 +10,7 @@ import { LoadingButton } from '@/components/loading';
 
 interface GameSummary {
   id: string;
-  name: string;
+  title: string;
   createdAt: string;
 }
 
@@ -86,7 +86,7 @@ export function GamePicker({
           <SelectContent>
             {games.map((game) => (
               <SelectItem key={game.id} value={game.id}>
-                {game.name}
+                {game.title}
               </SelectItem>
             ))}
           </SelectContent>
@@ -126,7 +126,7 @@ export function GamePicker({
         <Alert>
           <CheckCircle2 className="h-4 w-4" />
           <AlertDescription>
-            Selected: <span className="font-semibold">{selectedGame.name}</span>
+            Selected: <span className="font-semibold">{selectedGame.title}</span>
           </AlertDescription>
         </Alert>
       )}

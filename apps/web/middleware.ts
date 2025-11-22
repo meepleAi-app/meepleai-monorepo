@@ -52,6 +52,52 @@ const SESSION_COOKIE_NAME = 'meepleai_session';
 // ============================================================================
 
 /**
+ * Security headers configuration
+ * Applied to all responses for defense-in-depth protection
+ *
+ * See: docs/06-security/client-side-encryption.md
+ */
+const SECURITY_HEADERS = {
+  // Content Security Policy - XSS protection
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for Next.js hydration
+    "style-src 'self' 'unsafe-inline'", // Required for Tailwind CSS
+    "img-src 'self' data: https:", // Allow images from data URIs and HTTPS
+    "font-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'", // Prevent clickjacking
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; '),
+
+  // Prevent MIME sniffing
+  'X-Content-Type-Options': 'nosniff',
+
+  // Clickjacking protection
+  'X-Frame-Options': 'DENY',
+
+  // XSS filter for legacy browsers
+  'X-XSS-Protection': '1; mode=block',
+
+  // Referrer policy
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+
+  // Permissions policy
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+};
+
+/**
+ * Add security headers to the response
+ */
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+  return response;
+}
+
+/**
  * Middleware function that runs on every request
  * Checks authentication status and redirects as needed
  */
@@ -71,7 +117,8 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL('/login', request.url);
     // Preserve the intended destination for redirect after login
     loginUrl.searchParams.set('from', pathname);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    return addSecurityHeaders(response);
   }
 
   // Redirect authenticated users from login/register pages to chat
@@ -81,11 +128,13 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
       ? new URL(fromParam, request.url)
       : new URL('/chat', request.url);
-    return NextResponse.redirect(redirectUrl);
+    const response = NextResponse.redirect(redirectUrl);
+    return addSecurityHeaders(response);
   }
 
-  // Allow the request to continue
-  return NextResponse.next();
+  // Allow the request to continue with security headers
+  const response = NextResponse.next();
+  return addSecurityHeaders(response);
 }
 
 // ============================================================================

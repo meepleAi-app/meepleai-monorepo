@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import { createApiError, NetworkError, SchemaValidationError, ApiError } from './errors';
 import { logApiError } from './logger';
-import { getStoredApiKey } from './apiKeyStore';
+import { getStoredApiKeySync } from './apiKeyStore';
 import { withRetry, RetryOptions, parseRetryAfter } from './retryPolicy';
 import {
   recordRetryAttempt,
@@ -710,7 +710,7 @@ export class HttpClient {
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {};
 
-    const apiKey = getStoredApiKey();
+    const apiKey = getStoredApiKeySync();
     if (apiKey) {
       headers['Authorization'] = `ApiKey ${apiKey}`;
     }
@@ -732,7 +732,7 @@ export class HttpClient {
    * Get authentication context for cache key generation
    */
   private getAuthContext(): string | undefined {
-    const apiKey = getStoredApiKey();
+    const apiKey = getStoredApiKeySync();
     return apiKey ? `apikey:${apiKey}` : undefined;
   }
 

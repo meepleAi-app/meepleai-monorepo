@@ -238,7 +238,7 @@ export default async function AdminDashboard() {
 ## 🔗 Related Issues
 
 - **Issue #1490**: RBAC E2E Tests (completed, revealed this gap)
-- **Issue #TBD**: Implement Frontend Route Protection (to be created)
+- **Issue #1608**: 🛡️ Implement Frontend Route Protection (created 2025-11-22)
 
 ---
 

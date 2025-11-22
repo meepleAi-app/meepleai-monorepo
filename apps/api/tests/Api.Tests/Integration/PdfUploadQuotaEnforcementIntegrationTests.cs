@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
@@ -24,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration;
 
@@ -108,7 +108,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Register configuration service mock
         var configServiceMock = new Mock<IConfigurationService>();
-        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null); // Use default limits
         services.AddSingleton(configServiceMock.Object);
 
@@ -153,17 +153,17 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Helper Methods
 
-    private async Task<User> CreateUserAsync(UserTier tier, Role? role = null)
+    private async Task<User> CreateUserAsync(UserTier tier, AuthRole? role = null)
     {
         var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
         var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
 
         var user = new User(
             id: Guid.NewGuid(),
-            email: $"user-{Guid.NewGuid()}@test.com",
+            email: Email.Parse($"user-{Guid.NewGuid()}@test.com"),
             displayName: "Test User",
-            passwordHash: "hash",
-            role: role ?? Role.User,
+            passwordHash: PasswordHash.Create("TestPassword123!"),
+            role: role ?? AuthRole.User,
             tier: tier);
 
         await userRepo.AddAsync(user, TestCancellationToken);
@@ -172,7 +172,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         return user;
     }
 
-    private async Task<PdfUploadQuotaInfo> GetQuotaInfoAsync(Guid userId, UserTier tier, Role role)
+    private async Task<PdfUploadQuotaInfo> GetQuotaInfoAsync(Guid userId, UserTier tier, AuthRole role)
     {
         return await _quotaService!.GetQuotaInfoAsync(userId, tier, role, TestCancellationToken);
     }
@@ -233,7 +233,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
         info.DailyUploadsUsed.Should().Be(5);
         info.DailyLimit.Should().Be(5);
-        info.DailyRemaining.Should().Be(0);
+        (info.DailyLimit - info.DailyUploadsUsed).Should().Be(0); // DailyRemaining computed
 
         // Act - Attempt 6th upload (should be denied)
         var deniedCheck = await _quotaService!.CheckQuotaAsync(
@@ -262,7 +262,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
         info.WeeklyUploadsUsed.Should().Be(20);
         info.WeeklyLimit.Should().Be(20);
-        info.WeeklyRemaining.Should().Be(0);
+        (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(0); // WeeklyRemaining computed
 
         // Act - Attempt 21st upload (should be denied)
         var deniedCheck = await _quotaService!.CheckQuotaAsync(
@@ -300,7 +300,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
         info.DailyUploadsUsed.Should().Be(20);
         info.DailyLimit.Should().Be(20);
-        info.DailyRemaining.Should().Be(0);
+        (info.DailyLimit - info.DailyUploadsUsed).Should().Be(0); // DailyRemaining computed
 
         // Act - Attempt 21st upload (should be denied)
         var deniedCheck = await _quotaService!.CheckQuotaAsync(
@@ -332,7 +332,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
         info.WeeklyUploadsUsed.Should().Be(100);
         info.WeeklyLimit.Should().Be(100);
-        info.WeeklyRemaining.Should().Be(0);
+        (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(0); // WeeklyRemaining computed
 
         // Act - Attempt 101st upload (should be denied)
         var deniedCheck = await _quotaService!.CheckQuotaAsync(
@@ -368,7 +368,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
         info.DailyUploadsUsed.Should().Be(100);
         info.DailyLimit.Should().Be(100);
-        info.DailyRemaining.Should().Be(0);
+        (info.DailyLimit - info.DailyUploadsUsed).Should().Be(0); // DailyRemaining computed
 
         // Act - Attempt 101st upload (should be denied)
         var deniedCheck = await _quotaService!.CheckQuotaAsync(
@@ -388,7 +388,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     public async Task AdminUser_UnlimitedUploads_NoQuotaCheck()
     {
         // Arrange - Create admin user (tier doesn't matter for admin)
-        var user = await CreateUserAsync(UserTier.Free, Role.Admin);
+        var user = await CreateUserAsync(UserTier.Free, AuthRole.Admin);
 
         // Act - Simulate high usage by setting Redis directly (1000 uploads)
         // This is much faster than actually incrementing 1000 times
@@ -411,15 +411,15 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         // Verify quota info
         var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
         info.IsUnlimited.Should().BeTrue();
-        info.DailyRemaining.Should().Be(int.MaxValue);
-        info.WeeklyRemaining.Should().Be(int.MaxValue);
+        (info.DailyLimit - info.DailyUploadsUsed).Should().Be(int.MaxValue); // DailyRemaining computed
+        (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(int.MaxValue); // WeeklyRemaining computed
     }
 
     [Fact]
     public async Task EditorUser_UnlimitedUploads_NoQuotaCheck()
     {
         // Arrange - Create editor user
-        var user = await CreateUserAsync(UserTier.Normal, Role.Editor);
+        var user = await CreateUserAsync(UserTier.Normal, AuthRole.Editor);
 
         // Act - Simulate high usage by setting Redis directly (500 uploads, beyond normal tier limits)
         // This is much faster than actually incrementing 500 times
@@ -468,7 +468,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
         var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
 
-        user.UpdateTier(UserTier.Premium, Role.Admin);
+        user.UpdateTier(UserTier.Premium, AuthRole.Admin);
         await userRepo.UpdateAsync(user, TestCancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
@@ -479,7 +479,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         quotaCheckAfter.Allowed.Should().BeTrue();
         quotaCheckAfter.DailyUploadsUsed.Should().Be(5);
         quotaCheckAfter.DailyLimit.Should().Be(100);
-        quotaCheckAfter.DailyRemaining.Should().Be(95);
+        (quotaCheckAfter.DailyLimit - quotaCheckAfter.DailyUploadsUsed).Should().Be(95); // DailyRemaining computed
     }
 
     [Fact]
@@ -502,7 +502,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var userRepo = _serviceProvider!.GetRequiredService<IUserRepository>();
         var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
 
-        user.UpdateTier(UserTier.Free, Role.Admin);
+        user.UpdateTier(UserTier.Free, AuthRole.Admin);
         await userRepo.UpdateAsync(user, TestCancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
@@ -544,15 +544,15 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         // Assert - Each user has independent quota
         var info1 = await GetQuotaInfoAsync(user1.Id, user1.Tier, user1.Role);
         info1.DailyUploadsUsed.Should().Be(3);
-        info1.DailyRemaining.Should().Be(2);
+        (info1.DailyLimit - info1.DailyUploadsUsed).Should().Be(2); // DailyRemaining computed
 
         var info2 = await GetQuotaInfoAsync(user2.Id, user2.Tier, user2.Role);
         info2.DailyUploadsUsed.Should().Be(10);
-        info2.DailyRemaining.Should().Be(10);
+        (info2.DailyLimit - info2.DailyUploadsUsed).Should().Be(10); // DailyRemaining computed
 
         var info3 = await GetQuotaInfoAsync(user3.Id, user3.Tier, user3.Role);
         info3.DailyUploadsUsed.Should().Be(50);
-        info3.DailyRemaining.Should().Be(50);
+        (info3.DailyLimit - info3.DailyUploadsUsed).Should().Be(50); // DailyRemaining computed
     }
 
     #endregion
@@ -570,7 +570,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Act - Create new quota service instance (simulates service restart)
         var configServiceMock = new Mock<IConfigurationService>();
-        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null);
 
         var newQuotaService = new PdfUploadQuotaService(
@@ -584,9 +584,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
             user.Id, user.Tier, user.Role, TestCancellationToken);
 
         info.DailyUploadsUsed.Should().Be(3);
-        info.DailyRemaining.Should().Be(2);
+        (info.DailyLimit - info.DailyUploadsUsed).Should().Be(2); // DailyRemaining computed
         info.WeeklyUploadsUsed.Should().Be(3);
-        info.WeeklyRemaining.Should().Be(17);
+        (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(17); // WeeklyRemaining computed
     }
 
     #endregion

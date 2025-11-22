@@ -1,4 +1,4 @@
-name: K6 Performance Tests
+name: K6 Performance Tests (Smoke - Fast)
 
 on:
   schedule:
@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       test_type:
-        description: 'Test type (smoke, load, stress, spike)'
+        description: 'Test type (smoke recommended, load/stress/spike may fail without external services)'
         required: false
-        default: 'load'
+        default: 'smoke'
         type: choice
         options:
           - smoke

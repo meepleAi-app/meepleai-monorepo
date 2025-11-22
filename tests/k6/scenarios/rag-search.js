@@ -12,10 +12,11 @@ import { check, sleep } from 'k6';
 import { loadConfig, getHeaders, getRandomQuery, validateResponse, getLoadProfile, getTestType } from '../utils/common.js';
 import { setupTestUser, teardownTestUser } from '../utils/auth.js';
 import { recordRagMetrics } from '../utils/metrics.js';
-import { thresholds } from '../config/thresholds.js';
+import getThresholds from '../config/thresholds.js';
 
 const config = loadConfig();
 const testType = getTestType();
+const thresholds = getThresholds(testType); // Dynamic thresholds based on test type
 
 export const options = {
   ...getLoadProfile(testType, 100), // Base 100 VUs for high throughput
@@ -23,7 +24,7 @@ export const options = {
   thresholds: {
     'http_req_duration{endpoint:rag-search}': thresholds['http_req_duration{endpoint:rag-search}'],
     'http_req_failed': thresholds['http_req_failed'],
-    'rag_confidence': thresholds['rag_confidence'],
+    ...(thresholds['rag_confidence'] && { 'rag_confidence': thresholds['rag_confidence'] }), // Conditional (smoke tests skip)
   },
 
   tags: {

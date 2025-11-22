@@ -135,24 +135,31 @@ npm run test:spike
 
 ## Thresholds
 
-**Updated (Issue #1599)**: Thresholds have been relaxed for CI/CD environments to account for limited resources in GitHub Actions.
+**Updated (Issue #1629)**: Dynamic thresholds based on TEST_TYPE environment variable.
 
-All tests enforce the following thresholds (fail if exceeded):
+### Smoke Tests (Default for Nightly CI/CD)
+Quick infrastructure validation without external services (Ollama, n8n):
 
 ```javascript
-thresholds: {
-  // Relaxed for CI/CD environment stability
-  'http_req_duration{endpoint:rag-search}': ['p(95)<3000', 'p(99)<5000'],
-  'http_req_duration{endpoint:chat}': ['p(95)<1500', 'p(99)<2500'],
-  'http_req_duration{endpoint:games}': ['p(95)<800', 'p(99)<1200'],
-  'http_req_duration{endpoint:sessions}': ['p(95)<200', 'p(99)<400'],
-  'http_req_failed': ['rate<0.02'], // < 2% errors (relaxed)
-  'rag_confidence': ['avg>0.65'], // 65% confidence (relaxed)
-  'cache_hit_rate': ['rate>0.70'], // 70% cache hit (relaxed)
+{
+  'http_req_failed': ['rate<0.10'], // 10% tolerable (external services may fail)
+  // rag_confidence: SKIPPED (requires Ollama embeddings)
+  // ...other latency thresholds unchanged
 }
 ```
 
-**Note**: These are CI/CD thresholds. Production targets remain more stringent.
+### Load/Stress/Spike Tests (Strict Quality Gates)
+Comprehensive testing with all external services:
+
+```javascript
+{
+  'http_req_failed': ['rate<0.02'], // < 2% error rate (strict)
+  'rag_confidence': ['avg>0.65'],   // 65% confidence (strict, requires Ollama)
+  // ...other latency thresholds enforced
+}
+```
+
+**Configuration**: Thresholds automatically adjust via `getThresholds(__ENV.TEST_TYPE)` in `config/thresholds.js`.
 
 ## Configuration
 
@@ -185,34 +192,74 @@ npm run report
 
 ## CI/CD Integration
 
-**Updated (Issue #1599)**: Improved workflow with smoke tests for nightly runs.
+**Updated (Issue #1629)**: Two-workflow strategy for different testing needs.
 
-GitHub Actions workflow runs:
+### Workflow 1: K6 Performance Tests (Smoke - Fast) ⚡
+**File**: `.github/workflows/k6-performance.yml`
 
-### Nightly Automated Runs (2 AM UTC)
-- **Test Type**: Smoke (30 seconds, minimal load)
-- **Purpose**: Quick validation, catch breaking changes early
-- **Uploads**: Reports as artifacts (30-day retention)
-- **Notifications**:
-  - Creates/updates GitHub issue on failure
-  - Sends Slack notification (if configured)
-- **Workflow**: `.github/workflows/k6-performance.yml`
+**Schedule**: Nightly at 2 AM UTC (automated on main branch)
+**Services**: Postgres, Redis, Qdrant only
+**Test Type**: Smoke (default), manual: smoke/load/stress/spike
+**Duration**: ~2 minutes
+**Thresholds**: Relaxed (10% error rate, no RAG confidence)
 
-### Manual Runs (On-Demand)
-- **Test Type**: Choose from smoke/load/stress/spike
-- **Purpose**: Comprehensive performance testing before releases
-- **Trigger**: GitHub Actions > K6 Performance Tests > Run workflow
-- **Use Cases**:
-  - Load tests before major releases
-  - Stress tests for capacity planning
-  - Spike tests before high-traffic events
+**Purpose**:
+- ✅ Fast infrastructure validation
+- ✅ Catch breaking changes early
+- ✅ No external service dependencies (Ollama, n8n)
+- ✅ Ideal for CI/CD fast feedback loop
 
-### Debug Features (Issue #1599)
-When tests fail, the workflow now:
-- Outputs API logs automatically
-- Shows health check status
-- Lists running processes
-- Provides detailed error context
+**When to Use**:
+- Nightly automated validation
+- Quick pre-merge checks
+- Infrastructure smoke tests
+
+---
+
+### Workflow 2: K6 Full Load Tests (Comprehensive) 🔴
+**File**: `.github/workflows/k6-full-load.yml`
+
+**Trigger**: Manual only (workflow_dispatch)
+**Services**: Postgres, Redis, Qdrant, **Ollama**, **n8n**
+**Test Type**: Load (default), manual: load/stress/spike
+**Duration**: ~5-10 minutes (includes Ollama model download)
+**Thresholds**: Strict (2% error rate, 65% RAG confidence)
+
+**Purpose**:
+- ✅ Comprehensive RAG testing with embeddings
+- ✅ Workflow integration testing (n8n)
+- ✅ Strict quality gates enforced
+- ✅ Production-like environment
+
+**When to Use**:
+- Before major releases
+- Capacity planning (stress tests)
+- Pre-production validation
+- RAG performance benchmarking
+
+---
+
+### Feature Comparison
+
+| Feature | Smoke Workflow ⚡ | Full Load Workflow 🔴 |
+|---------|-------------------|------------------------|
+| **Ollama** | ❌ Not included | ✅ Included |
+| **n8n** | ❌ Not included | ✅ Included |
+| **RAG Confidence** | ⏭️ Skipped | ✅ Enforced (>65%) |
+| **Error Rate** | 🟡 Relaxed (10%) | 🔴 Strict (2%) |
+| **Duration** | ~2min | ~5-10min |
+| **Schedule** | 🔄 Nightly automated | 🖱️ Manual only |
+| **Use Case** | Infrastructure check | Comprehensive testing |
+
+---
+
+### Debug Features (Issue #1599, #1629)
+Both workflows provide detailed debugging on failure:
+- API logs output
+- Health check status
+- Running processes list
+- Service connectivity verification
+- Artifact uploads (reports, logs)
 
 ## Metrics Collected
 
@@ -281,6 +328,6 @@ tests/k6/
 
 ---
 
-**Issues**: #873 (Initial Implementation), #1599 (CI/CD Optimization)
+**Issues**: #873 (Initial Implementation), #1599 (CI/CD Optimization), #1629 (Dynamic Thresholds & Hybrid Strategy)
 **Maintained by**: Engineering Team
 **Last Updated**: 2025-11-22

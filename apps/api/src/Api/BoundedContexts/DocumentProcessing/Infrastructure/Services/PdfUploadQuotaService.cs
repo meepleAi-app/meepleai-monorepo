@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.Services;
 using StackExchange.Redis;
+using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 
@@ -52,7 +53,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
     public async Task<PdfUploadQuotaResult> CheckQuotaAsync(
         Guid userId,
         UserTier userTier,
-        Role userRole,
+        AuthRole userRole,
         CancellationToken ct = default)
     {
         // Admin and Editor bypass quota checks (unlimited)
@@ -157,7 +158,7 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
     public async Task<PdfUploadQuotaInfo> GetQuotaInfoAsync(
         Guid userId,
         UserTier userTier,
-        Role userRole,
+        AuthRole userRole,
         CancellationToken ct = default)
     {
         // Admin and Editor have unlimited quota
@@ -216,8 +217,8 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         var weeklyKey = $"UploadLimits:{tierValue}:WeeklyLimit";
 
         // Get from configuration service (with fallback to defaults)
-        var dailyLimit = await _configService.GetValueAsync<int?>(dailyKey, ct);
-        var weeklyLimit = await _configService.GetValueAsync<int?>(weeklyKey, ct);
+        var dailyLimit = await _configService.GetValueAsync<int?>(dailyKey, defaultValue: null);
+        var weeklyLimit = await _configService.GetValueAsync<int?>(weeklyKey, defaultValue: null);
 
         // Default limits if not configured
         var defaultLimits = GetDefaultLimits(tier);

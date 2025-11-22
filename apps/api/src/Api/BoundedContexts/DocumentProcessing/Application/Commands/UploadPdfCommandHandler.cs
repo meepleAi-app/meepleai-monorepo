@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -133,10 +134,14 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             return new PdfUploadResult(false, "User not found. Please ensure you are authenticated.", null);
         }
 
+        // Parse string properties to ValueObjects for quota service
+        var userTier = UserTier.Parse(user.Tier);
+        var userRole = Role.Parse(user.Role);
+
         var quotaResult = await _quotaService.CheckQuotaAsync(
             user.Id,
-            user.Tier,
-            user.Role,
+            userTier,
+            userRole,
             cancellationToken);
 
         if (!quotaResult.Allowed)

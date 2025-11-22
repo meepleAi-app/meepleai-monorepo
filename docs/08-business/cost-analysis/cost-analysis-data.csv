@@ -1,0 +1,28 @@
+Categoria,Provider,Ambiente,vCPU,RAM_GB,Storage_GB,Costo_Mensile_EUR,Costo_Annuale_EUR,Note
+GitHub,GitHub,Free Plan,N/A,N/A,N/A,0,0,2000 Actions minutes
+GitHub,GitHub,Team Plan (per user),N/A,N/A,N/A,4,48,3000 Actions minutes
+GitHub,GitHub,Enterprise (per user),N/A,N/A,N/A,21,252,50000 Actions minutes
+Infra,Dev Locale,Locale,N/A,N/A,N/A,0,0,Docker Compose locale
+Infra,AWS Fargate,Staging,14.5,30,135,486,5832,50% Production resources
+Infra,AWS Fargate,Production,29,61.5,270,972,11664,Full stack 15 services
+Infra,AWS Fargate Spot,Production,29,61.5,270,292,3499,70% discount interrupt-tolerant
+Infra,Azure Container Apps,Staging,14.5,30,135,525,6300,Consumption plan
+Infra,Azure Container Apps,Production,29,61.5,270,1050,12600,Consumption plan
+Infra,GCP GKE Autopilot,Staging,14.5,30,135,700,8400,Auto-scaling
+Infra,GCP GKE Autopilot,Production,29,61.5,270,1400,16800,Auto-scaling
+Infra,Hetzner Cloud,Staging,14.5,30,135,150,1800,EU servers
+Infra,Hetzner Dedicated,Production,29,61.5,270,350,4200,AX52 EU servers
+Infra,DigitalOcean,Staging,14.5,30,135,200,2400,Managed Kubernetes
+Infra,DigitalOcean,Production,29,61.5,270,400,4800,Managed Kubernetes
+Storage,AWS EBS gp3,Production,N/A,N/A,270,29,348,0.106 EUR/GB/month
+Storage,AWS RDS PostgreSQL,Production,2,8,100,115,1380,db.m6g.large + storage
+Storage,Backup S3,Production,N/A,N/A,100,2,24,Standard storage
+AI,OpenRouter,Low Traffic,N/A,N/A,N/A,50,600,~1000 queries/month
+AI,OpenRouter,Medium Traffic,N/A,N/A,N/A,150,1800,~10000 queries/month
+AI,OpenRouter,High Traffic,N/A,N/A,N/A,500,6000,~50000 queries/month
+Banda,AWS,Production 10K MAU,N/A,N/A,N/A,31,372,500 GB/month
+Banda,Azure,Production 10K MAU,N/A,N/A,N/A,30,360,500 GB/month
+Banda,GCP,Production 10K MAU,N/A,N/A,N/A,44,528,500 GB/month Premium
+Scenario,MVP Alpha,Total,N/A,N/A,N/A,145,1740,GitHub Free + Hetzner + AI Low
+Scenario,Beta,Total,N/A,N/A,N/A,1390,16680,GitHub Team + Hetzner Staging + AWS Prod + AI Med
+Scenario,Production,Total,N/A,N/A,N/A,2485,29820,GitHub Team + AWS Full + AI High + Banda

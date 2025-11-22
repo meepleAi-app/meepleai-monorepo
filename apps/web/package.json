@@ -5,6 +5,7 @@
     "dev": "node ./node_modules/next/dist/bin/next dev -p 3000",
     "build": "node ./node_modules/next/dist/bin/next build",
     "start": "node ./node_modules/next/dist/bin/next start -p 3000",
+    "generate:api": "tsx scripts/generate-api-client.ts",
     "test": "jest --passWithNoTests",
     "posttest": "node -e \"try { require('child_process').execSync('powershell.exe -ExecutionPolicy Bypass -File ../../tools/cleanup-test-processes.ps1', { stdio: 'inherit' }); } catch (e) { console.log('Cleanup skipped (Windows-only)'); }\"",
     "test:watch": "jest --watch",
@@ -17,7 +18,8 @@
     "audit:a11y": "tsx scripts/run-accessibility-audit.ts",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e:groups": "dotenv -e .env.test -- playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

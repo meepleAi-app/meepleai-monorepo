@@ -20,6 +20,8 @@
  *   </AuthProvider>
  */
 
+'use client';
+
 import { PropsWithChildren, useEffect } from 'react';
 import { useChatStore } from './store';
 

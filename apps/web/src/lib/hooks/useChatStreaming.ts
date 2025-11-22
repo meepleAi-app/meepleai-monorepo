@@ -47,8 +47,8 @@ export type StreamingState = {
   state: string | null;
   currentAnswer: string;
   snippets: Snippet[];
+  citations: Citation[]; // Issue #859: RAG citations with relevance scoring
   followUpQuestions: string[]; // CHAT-02
-  citations: Citation[]; // Source citations
   totalTokens: number;
   confidence: number | null;
   isStreaming: boolean;
@@ -65,8 +65,8 @@ const INITIAL_STATE: StreamingState = {
   state: null,
   currentAnswer: '',
   snippets: [],
+  citations: [], // Issue #859: RAG citations with relevance scoring
   followUpQuestions: [], // CHAT-02
-  citations: [], // Source citations
   totalTokens: 0,
   confidence: null,
   isStreaming: false,

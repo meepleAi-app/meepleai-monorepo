@@ -2,7 +2,7 @@
  * Error handling utilities for type-safe error processing
  */
 
-import { isApiError } from '@/types/api';
+import { ApiError } from '@/lib/api';
 
 /**
  * Extract a user-friendly error message from an unknown error
@@ -11,7 +11,7 @@ import { isApiError } from '@/types/api';
  * @returns User-friendly error message string
  */
 export function getErrorMessage(error: unknown, fallbackMessage: string = 'An unexpected error occurred'): string {
-  if (isApiError(error)) {
+  if (error instanceof ApiError) {
     return error.message;
   }
 
@@ -32,7 +32,7 @@ export function getErrorMessage(error: unknown, fallbackMessage: string = 'An un
  * @returns Object with error details
  */
 export function getErrorDetails(error: unknown): { message: string; statusCode?: number; correlationId?: string } {
-  if (isApiError(error)) {
+  if (error instanceof ApiError) {
     return {
       message: error.message,
       statusCode: error.statusCode,

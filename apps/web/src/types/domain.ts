@@ -99,16 +99,6 @@ export interface RuleAtom {
 }
 
 /**
- * Citation - reference to a source document
- */
-export interface Citation {
-  documentId: string;
-  pageNumber: number;
-  snippet: string;
-  relevanceScore: number;
-}
-
-/**
  * RuleSpec - complete game rules specification
  */
 export interface RuleSpec {
@@ -144,6 +134,16 @@ export interface Snippet {
 }
 
 /**
+ * Citation from RAG response with relevance scoring (Issue #859, BGAI-074)
+ */
+export interface Citation {
+  documentId: string;
+  pageNumber: number;
+  snippet: string;
+  relevanceScore: number;
+}
+
+/**
  * Message in chat UI (combines user/assistant messages)
  */
 export interface Message {
@@ -151,6 +151,7 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   snippets?: Snippet[];
+  citations?: Citation[]; // Issue #859: RAG citations with relevance scoring
   followUpQuestions?: string[];
   feedback?: 'helpful' | 'not-helpful' | null;
   endpoint?: string;
@@ -160,7 +161,7 @@ export interface Message {
   updatedAt?: string | null;
   isDeleted?: boolean;
   isInvalidated?: boolean;
-  isOptimistic?: boolean; // Client-side flag for optimistic UI updates
+  isOptimistic?: boolean; // Flag for optimistically added messages awaiting confirmation
 }
 
 /**

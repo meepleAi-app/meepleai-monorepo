@@ -132,8 +132,8 @@ export default function SettingsPage() {
       const user: UserProfile = data.user;
 
       setProfile(user);
-      setDisplayName(user.displayName);
-      setEmail(user.email);
+      setDisplayName(user.DisplayName);
+      setEmail(user.Email);
       setError(null);
     } catch (err) {
       logger.error(
@@ -149,7 +149,7 @@ export default function SettingsPage() {
 
   const load2FAStatus = async () => {
     try {
-      const status = await api.auth.getTwoFactorStatus();
+      const status = await (api.auth as any).getTwoFactorStatus();
       setTwoFactorStatus(status);
     } catch (err) {
       logger.error(
@@ -180,7 +180,7 @@ export default function SettingsPage() {
     }
   };
 
-  // Profile update handler (placeholder - backend not implemented)
+  // Profile update handler
   const handleUpdateProfile = async () => {
     setSuccess(null);
     setError(null);
@@ -190,11 +190,32 @@ export default function SettingsPage() {
       return;
     }
 
-    // TODO: Implement UpdateUserProfileCommand when backend is ready
-    setError('Profile update not yet implemented (backend pending)');
+    try {
+      setLoading(true);
+      await api.put('/api/v1/users/profile', {
+        displayName: displayName.trim(),
+        email: email.trim(),
+      });
+      setSuccess('Profile updated successfully');
+      await loadProfile(); // Refresh profile data
+    } catch (err) {
+      const errorMsg = getErrorMessage(err);
+      logger.error(
+        'Failed to update profile',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'handleUpdateProfile', {
+          operation: 'update_profile',
+          displayName,
+          email
+        })
+      );
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Password change handler (placeholder - backend not implemented)
+  // Password change handler
   const handleChangePassword = async () => {
     setSuccess(null);
     setError(null);
@@ -214,8 +235,30 @@ export default function SettingsPage() {
       return;
     }
 
-    // TODO: Implement ChangePasswordCommand when backend is ready
-    setError('Password change not yet implemented (backend pending)');
+    try {
+      setLoading(true);
+      await api.put('/api/v1/users/profile/password', {
+        currentPassword,
+        newPassword,
+      });
+      setSuccess('Password changed successfully');
+      // Clear password fields on success
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      const errorMsg = getErrorMessage(err);
+      logger.error(
+        'Failed to change password',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'handleChangePassword', {
+          operation: 'change_password'
+        })
+      );
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Preferences update handler (mock - backend not implemented)
@@ -233,7 +276,7 @@ export default function SettingsPage() {
   const handleSetup2FA = async () => {
     try {
       setLoading(true);
-      const setupResponse = await api.auth.setup2FA();
+      const setupResponse = await (api.auth as any).setup2FA();
       setSetup(setupResponse);
       setShowBackupCodes(true);
       setError(null);
@@ -252,7 +295,7 @@ export default function SettingsPage() {
   const handleEnable2FA = async () => {
     try {
       setLoading(true);
-      await api.auth.enable2FA(verificationCode);
+      await (api.auth as any).enable2FA(verificationCode);
       setSuccess('Two-factor authentication enabled successfully!');
       setSetup(null);
       setShowBackupCodes(false);
@@ -277,7 +320,7 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
-      await api.auth.disable2FA(disablePassword, disableCode);
+      await (api.auth as any).disable2FA(disablePassword, disableCode);
       setSuccess('Two-factor authentication disabled.');
       setDisablePassword('');
       setDisableCode('');
@@ -295,9 +338,9 @@ export default function SettingsPage() {
   };
 
   const downloadBackupCodes = () => {
-    if (!setup?.backupCodes) return;
+    if (!setup?.BackupCodes) return;
 
-    const text = `MeepleAI Backup Codes\n\n${setup.backupCodes.join('\n')}\n\nKeep these codes in a secure location. Each code can only be used once.`;
+    const text = `MeepleAI Backup Codes\n\n${setup.BackupCodes.join('\n')}\n\nKeep these codes in a secure location. Each code can only be used once.`;
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -360,7 +403,7 @@ export default function SettingsPage() {
     setSuccess(null);
 
     try {
-      await api.auth.loginWithApiKey(apiKeyInput);
+      await (api.auth as any).loginWithApiKey(apiKeyInput);
       setApiKeyAuthenticated(true);
       setApiKeyInput(''); // Clear input for security
       setSuccess('API key stored for this browser session.');
@@ -386,7 +429,7 @@ export default function SettingsPage() {
     setError(null);
 
     try {
-      await api.auth.logoutApiKey();
+      await (api.auth as any).logoutApiKey();
       setApiKeyAuthenticated(false);
       setSuccess('API key removed from this session');
     } catch (error) {
@@ -405,7 +448,7 @@ export default function SettingsPage() {
   const loadUserSessions = async () => {
     try {
       setSessionsLoading(true);
-      const userSessions = await api.auth.getUserSessions();
+      const userSessions = await (api.auth as any).getUserSessions();
       setSessions(userSessions);
     } catch (error) {
       logger.error(
@@ -428,7 +471,7 @@ export default function SettingsPage() {
     setSuccess(null);
 
     try {
-      await api.auth.revokeSession(sessionId);
+      await (api.auth as any).revokeSession(sessionId);
       setSuccess('Session revoked successfully');
       // Reload sessions list
       await loadUserSessions();
@@ -464,7 +507,7 @@ export default function SettingsPage() {
   const isCurrentSession = (session: UserSessionInfo) => {
     // Simple heuristic: the most recently seen session is likely the current one
     const now = new Date();
-    const lastSeen = session.lastSeenAt ? new Date(session.lastSeenAt) : new Date(session.createdAt);
+    const lastSeen = session.LastSeenAt ? new Date(session.LastSeenAt) : new Date(session.CreatedAt);
     const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
     return diffMinutes < 5; // Consider sessions active within last 5 minutes as "current"
   };
@@ -549,14 +592,14 @@ export default function SettingsPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
-                    <Input id="role" value={profile?.role || ''} disabled />
+                    <Input id="role" value={profile?.Role || ''} disabled />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="memberSince">Member Since</Label>
                     <Input
                       id="memberSince"
-                      value={profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : ''}
+                      value={profile?.CreatedAt ? new Date(profile.CreatedAt).toLocaleDateString() : ''}
                       disabled
                     />
                   </div>
@@ -723,20 +766,20 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {twoFactorStatus?.isEnabled ? (
+                  {twoFactorStatus?.IsEnabled ? (
                     <div className="space-y-4">
                       <Alert className="border-green-500 bg-green-50 dark:bg-green-900/20">
                         <AlertDescription className="text-green-800 dark:text-green-200">
                           ✓ Two-factor authentication is enabled
                           <br />
-                          Backup codes remaining: {twoFactorStatus.unusedBackupCodesCount}
+                          Backup codes remaining: {twoFactorStatus.UnusedBackupCodesCount}
                         </AlertDescription>
                       </Alert>
 
-                      {twoFactorStatus.unusedBackupCodesCount < 3 && (
+                      {twoFactorStatus.UnusedBackupCodesCount < 3 && (
                         <Alert variant="destructive">
                           <AlertDescription>
-                            ⚠️ Warning: You have only {twoFactorStatus.unusedBackupCodesCount} backup codes remaining.
+                            ⚠️ Warning: You have only {twoFactorStatus.UnusedBackupCodesCount} backup codes remaining.
                             Consider disabling and re-enabling 2FA to generate new backup codes.
                           </AlertDescription>
                         </Alert>
@@ -802,14 +845,14 @@ export default function SettingsPage() {
                                 Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
                               </p>
                               <div className="flex justify-center bg-white p-4 rounded border">
-                                <QRCodeSVG value={setup.qrCodeUri} size={256} />
+                                <QRCodeSVG value={setup.QrCodeUrl} size={256} />
                               </div>
                               <details className="text-sm">
                                 <summary className="cursor-pointer text-slate-600 hover:text-slate-900">
                                   Can't scan? Enter manually
                                 </summary>
                                 <div className="mt-2 p-3 bg-slate-100 dark:bg-slate-800 rounded">
-                                  <code className="text-xs font-mono">{setup.secret}</code>
+                                  <code className="text-xs font-mono">{setup.Secret}</code>
                                 </div>
                               </details>
                             </CardContent>
@@ -823,7 +866,7 @@ export default function SettingsPage() {
                                   ⚠️ Save these codes in a secure location. Each code can only be used once.
                                 </p>
                                 <div className="grid grid-cols-2 gap-2 mb-4">
-                                  {setup.backupCodes.map((code: string, i: number) => (
+                                  {setup.BackupCodes.map((code: string, i: number) => (
                                     <div
                                       key={i}
                                       className="bg-white px-3 py-2 rounded font-mono text-sm text-center text-black"
@@ -1038,17 +1081,17 @@ export default function SettingsPage() {
                     <div className="space-y-4">
                       {sessions.map((session) => {
                         const isCurrent = isCurrentSession(session);
-                        const isRevoking = revokingSessionId === session.sessionId;
+                        const isRevoking = revokingSessionId === session.Id;
 
                         return (
                           <div
-                            key={session.sessionId}
+                            key={session.Id}
                             className="flex items-start justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
                           >
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2">
                                 <div className="font-medium text-slate-900 dark:text-white">
-                                  {getDeviceInfo(session.userAgent)}
+                                  {getDeviceInfo(session.UserAgent)}
                                 </div>
                                 {isCurrent && (
                                   <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded">
@@ -1060,29 +1103,29 @@ export default function SettingsPage() {
                               <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
                                 <div>
                                   <span className="font-medium">IP Address:</span>{' '}
-                                  {session.ipAddress || 'Unknown'}
+                                  {session.IpAddress || 'Unknown'}
                                 </div>
                                 <div>
                                   <span className="font-medium">Created:</span>{' '}
-                                  {formatDateTime(session.createdAt)}
+                                  {formatDateTime(session.CreatedAt)}
                                 </div>
                                 <div>
                                   <span className="font-medium">Last Seen:</span>{' '}
-                                  {session.lastSeenAt
-                                    ? formatDateTime(session.lastSeenAt)
+                                  {session.LastSeenAt
+                                    ? formatDateTime(session.LastSeenAt)
                                     : 'Never'}
                                 </div>
                                 <div>
                                   <span className="font-medium">Expires:</span>{' '}
-                                  {formatDateTime(session.expiresAt)}
+                                  {formatDateTime(session.ExpiresAt)}
                                 </div>
-                                {session.userAgent && (
+                                {session.UserAgent && (
                                   <details className="mt-2">
                                     <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
                                       Show user agent
                                     </summary>
                                     <div className="mt-1 p-2 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono break-all">
-                                      {session.userAgent}
+                                      {session.UserAgent}
                                     </div>
                                   </details>
                                 )}
@@ -1092,7 +1135,7 @@ export default function SettingsPage() {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleRevokeSession(session.sessionId)}
+                              onClick={() => handleRevokeSession(session.Id)}
                               disabled={isRevoking || isCurrent}
                               className="ml-4"
                             >
@@ -1149,4 +1192,3 @@ export default function SettingsPage() {
       </div>
   );
 }
-

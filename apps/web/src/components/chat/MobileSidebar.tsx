@@ -24,6 +24,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { Game } from '@/types';
 
 interface MobileSidebarProps {
   open: boolean;
@@ -61,10 +62,10 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
             {selectedGameId && (
               <div
                 className="px-3 py-1 bg-[#e8f0fe] text-[#1a73e8] rounded-xl text-[11px] font-semibold border border-[#1a73e8]"
-                title={`Currently chatting about: ${games.find(g => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
-                aria-label={`Active game context: ${games.find(g => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
+                title={`Currently chatting about: ${games.find((g: Game) => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
+                aria-label={`Active game context: ${games.find((g: Game) => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
               >
-                {games.find(g => g.id === selectedGameId)?.name ?? '...'}
+                {games.find((g: Game) => g.id === selectedGameId)?.name ?? '...'}
               </div>
             )}
           </div>

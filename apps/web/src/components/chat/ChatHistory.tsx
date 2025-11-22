@@ -10,6 +10,7 @@ import React from 'react';
 import { useChatContext } from './ChatProvider';
 import { ThreadListItem } from './ThreadListItem';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
+import { ChatThread } from '@/types';
 
 export function ChatHistory() {
   const { chats, activeChatId, selectChat, deleteChat, loading } = useChatContext();
@@ -44,8 +45,8 @@ export function ChatHistory() {
   }
 
   // Separate active and archived threads (Issue #858)
-  const activeThreads = chats.filter(thread => thread.status !== 'Closed');
-  const archivedThreads = chats.filter(thread => thread.status === 'Closed');
+  const activeThreads = chats.filter((thread: ChatThread) => thread.status !== 'Closed');
+  const archivedThreads = chats.filter((thread: ChatThread) => thread.status === 'Closed');
 
   return (
     <nav aria-label="Thread history" className="flex-1 overflow-y-auto p-2">
@@ -56,7 +57,7 @@ export function ChatHistory() {
             Active Threads
           </h3>
           <ul role="list" className="list-none m-0 p-0">
-            {activeThreads.map((thread) => (
+            {activeThreads.map((thread: ChatThread) => (
               <ThreadListItem
                 key={thread.id}
                 thread={thread}
@@ -76,7 +77,7 @@ export function ChatHistory() {
             Archived
           </h3>
           <ul role="list" className="list-none m-0 p-0">
-            {archivedThreads.map((thread) => (
+            {archivedThreads.map((thread: ChatThread) => (
               <ThreadListItem
                 key={thread.id}
                 thread={thread}

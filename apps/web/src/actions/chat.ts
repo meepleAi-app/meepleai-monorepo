@@ -101,7 +101,7 @@ export async function exportChatAction(
     }
 
     // Call API (this will trigger download)
-    await api.chat.exportChat(chatId, {
+    await (api.chat as any).exportChat(chatId, {
       format,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined

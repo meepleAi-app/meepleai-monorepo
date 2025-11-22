@@ -96,6 +96,7 @@ export default function CategoryConfigTab({
 
     try {
       await api.config.updateConfiguration(config.id, {
+        value: config.value,
         isActive: !config.isActive,
       });
 

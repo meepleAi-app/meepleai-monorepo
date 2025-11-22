@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import type { AuthUser } from '@/types/auth';
 
 interface GameSummary {
   id: string;
@@ -7,31 +8,21 @@ interface GameSummary {
   createdAt: string;
 }
 
-interface AuthUser {
-  id: string;
-  email: string;
-  displayName?: string | null;
-  role: string;
-}
-
-interface AuthResponse {
-  user: AuthUser;
-  expiresAt: string;
-}
-
 /**
  * useGames - Game data fetching and management
  *
+ * Issue #1611: Updated to accept user prop from SSR auth
+ * 
  * Features:
  * - Fetch games list
  * - Create new games
- * - Authentication check
  * - Loading and error states
  * - Automatic refresh on create
+ * 
+ * @param user - Authenticated user from server-side props (optional for backward compat)
  */
-export function useGames() {
+export function useGames(user?: AuthUser) {
   const [games, setGames] = useState<GameSummary[]>([]);
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,15 +32,12 @@ export function useGames() {
     setError(null);
 
     try {
-      const me = await api.get<AuthResponse>('/api/v1/auth/me');
-      if (!me) {
-        setAuthUser(null);
-        setGames([]);
-        return;
-      }
-
-      setAuthUser(me.user);
-      const fetchedGames = (await api.get<GameSummary[]>('/api/v1/games')) ?? [];
+      const response = await api.games.getAll();
+      const fetchedGames = (response?.games ?? []).map(game => ({
+        id: game.id,
+        name: game.title, // Map title → name for GameSummary
+        createdAt: game.createdAt
+      }));
       setGames(fetchedGames);
     } catch (err) {
       console.error('Failed to load games', err);
@@ -65,8 +53,13 @@ export function useGames() {
       setError(null);
 
       try {
-        const newGame = await api.post<GameSummary>('/api/v1/games', { name });
-        if (newGame) {
+        const createdGame = await api.post<{ id: string; title: string; createdAt: string }>('/api/v1/games', { name });
+        if (createdGame) {
+          const newGame: GameSummary = {
+            id: createdGame.id,
+            name: createdGame.title, // Map title → name
+            createdAt: createdGame.createdAt
+          };
           setGames((prev) => [...prev, newGame]);
           return newGame;
         }
@@ -87,11 +80,9 @@ export function useGames() {
 
   return {
     games,
-    authUser,
     loading,
     creating,
     error,
-    refetch: fetchGames,
-    createGame
+    createGame,
   };
 }

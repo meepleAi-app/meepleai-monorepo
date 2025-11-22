@@ -21,6 +21,7 @@
 
 import { test, expect } from '@playwright/test';
 import { setupMockAuth } from '../fixtures/auth';
+import { mockApiForbidden } from '../helpers/mocks';
 
 const API_BASE = process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -39,19 +40,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
 
     test('Editor cannot call GET /api/v1/admin/users', async ({ page }) => {
       await setupMockAuth(page, 'Editor');
-
-      // Setup route to return 403 for Editor role
-      await page.context().route(`${API_BASE}/api/v1/admin/users**`, async (route) => {
-        await route.fulfill({
-          status: 403,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            error: 'Forbidden',
-            message: 'User with role Editor is not authorized',
-            statusCode: 403
-          })
-        });
-      });
+      await mockApiForbidden(page, '/api/v1/admin/users', 'GET', 'Editor');
 
       const response = await page.request.get(`${API_BASE}/api/v1/admin/users`);
 
@@ -60,18 +49,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
 
     test('User cannot call GET /api/v1/admin/users', async ({ page }) => {
       await setupMockAuth(page, 'User');
-
-      await page.context().route(`${API_BASE}/api/v1/admin/users**`, async (route) => {
-        await route.fulfill({
-          status: 403,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            error: 'Forbidden',
-            message: 'User with role User is not authorized',
-            statusCode: 403
-          })
-        });
-      });
+      await mockApiForbidden(page, '/api/v1/admin/users', 'GET', 'User');
 
       const response = await page.request.get(`${API_BASE}/api/v1/admin/users`);
 
@@ -94,18 +72,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
 
     test('Editor cannot call POST /api/v1/admin/configuration', async ({ page }) => {
       await setupMockAuth(page, 'Editor');
-
-      await page.context().route(`${API_BASE}/api/v1/admin/configuration**`, async (route) => {
-        await route.fulfill({
-          status: 403,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            error: 'Forbidden',
-            message: 'Editor role cannot modify system configuration',
-            statusCode: 403
-          })
-        });
-      });
+      await mockApiForbidden(page, '/api/v1/admin/configuration', 'POST', 'Editor');
 
       const response = await page.request.post(`${API_BASE}/api/v1/admin/configuration`, {
         data: {
@@ -119,17 +86,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
 
     test('User cannot call POST /api/v1/admin/configuration', async ({ page }) => {
       await setupMockAuth(page, 'User');
-
-      await page.context().route(`${API_BASE}/api/v1/admin/configuration**`, async (route) => {
-        await route.fulfill({
-          status: 403,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            error: 'Forbidden',
-            statusCode: 403
-          })
-        });
-      });
+      await mockApiForbidden(page, '/api/v1/admin/configuration', 'POST', 'User');
 
       const response = await page.request.post(`${API_BASE}/api/v1/admin/configuration`, {
         data: {
@@ -151,14 +108,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
 
     test('Non-admin cannot call GET /api/v1/admin/stats', async ({ page }) => {
       await setupMockAuth(page, 'User');
-
-      await page.context().route(`${API_BASE}/api/v1/admin/stats**`, async (route) => {
-        await route.fulfill({
-          status: 403,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Forbidden', statusCode: 403 })
-        });
-      });
+      await mockApiForbidden(page, '/api/v1/admin/stats', 'GET', 'User');
 
       const response = await page.request.get(`${API_BASE}/api/v1/admin/stats`);
 
@@ -197,22 +147,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
 
     test('User cannot call POST /api/v1/games', async ({ page }) => {
       await setupMockAuth(page, 'User');
-
-      await page.context().route(`${API_BASE}/api/v1/games`, async (route) => {
-        if (route.request().method() === 'POST') {
-          await route.fulfill({
-            status: 403,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              error: 'Forbidden',
-              message: 'User role cannot create games',
-              statusCode: 403
-            })
-          });
-        } else {
-          await route.continue();
-        }
-      });
+      await mockApiForbidden(page, '/api/v1/games', 'POST', 'User');
 
       const response = await page.request.post(`${API_BASE}/api/v1/games`, {
         data: {
@@ -256,18 +191,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
       await setupMockAuth(page, 'User');
 
       const gameId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-
-      await page.context().route(`${API_BASE}/api/v1/games/${gameId}/rulespec**`, async (route) => {
-        await route.fulfill({
-          status: 403,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            error: 'Forbidden',
-            message: 'User role cannot edit game rules',
-            statusCode: 403
-          })
-        });
-      });
+      await mockApiForbidden(page, `/api/v1/games/${gameId}/rulespec`, 'PUT', 'User');
 
       const response = await page.request.put(`${API_BASE}/api/v1/games/${gameId}/rulespec`, {
         data: {

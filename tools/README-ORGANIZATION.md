@@ -27,18 +27,6 @@ Scripts for cleaning up caches, processes, and duplicate resources:
 
 ---
 
-### 🐙 **github/** - GitHub Issue & Label Management
-Scripts for creating and managing GitHub issues, labels, and milestones:
-- `create-*-issues.{sh,ps1,js}` - Issue creation scripts for various epics
-- `lock-closed-issues.{sh,ps1}` - Lock closed issues to prevent spam
-- `assign-infrastructure-milestones.sh` - Assign milestones to infrastructure issues
-- `phase-2-issue-labels.sh` - Apply phase-specific labels
-- `run-issue-triage.sh` - Run issue triage analysis
-
-**Usage**: See [README-admin-console-issues.md](./README-admin-console-issues.md) and [TRIAGE_QUICKREF.md](./TRIAGE_QUICKREF.md)
-
----
-
 ### 📚 **docs/** - Documentation Tools
 Scripts for generating and maintaining documentation:
 - `generate-api-docs.js` - Generate API documentation from OpenAPI spec
@@ -62,15 +50,6 @@ Scripts for setting up the development environment:
 
 ---
 
-### 📋 **project/** - Project Management Tools
-Scripts for project planning and roadmap management:
-- `apply-project-roadmap.py` - Apply roadmap to GitHub Project board
-- `generate-project-import.py` - Generate CSV for GitHub Project import
-
-**Usage**: `python tools/project/apply-project-roadmap.py`
-
----
-
 ### 🛠️ **development/** - Developer Utilities
 Tools for improving the development experience:
 - `open-dual-vscode.{sh,ps1}` - Open VS Code with backend/frontend workspaces
@@ -83,13 +62,6 @@ Tools for improving the development experience:
 ### 🔄 **n8n/** - Workflow Automation
 Scripts for n8n workflow integration:
 - `register-n8n-webhook.ps1` - Register webhooks with n8n
-
----
-
-### 🗄️ **database/** - Database Management
-Scripts for database operations:
-- `seed-demo-data.sql` - Seed demo data
-- `delete-qdrant-collection.ps1` - Delete Qdrant vector collections
 
 ---
 
@@ -139,12 +111,6 @@ bash tools/coverage/run-frontend-coverage.sh
 **Clean caches:**
 ```bash
 bash tools/cleanup/cleanup-caches.sh --dry-run
-```
-
-**Create GitHub issues:**
-```bash
-bash tools/github/create-frontend-issues.sh
-bash tools/github/create-bgai-issues.sh
 ```
 
 **Setup development environment:**

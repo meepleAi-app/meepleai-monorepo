@@ -1,279 +1,333 @@
-# 🚀 API Improvements Initiative - Quick Start Guide
+# Backend Refactoring Issues - Master Tracking Document
 
-**Status**: 🟡 In Progress (0/12 completed)
-**DDD Progress**: 99% → Target: 100%
-**Estimated Effort**: 78-110 hours
-
----
-
-## 📍 START HERE
-
-👉 **Prima volta qui?** Leggi **[INDEX.md](./INDEX.md)** per orientarti nella documentazione!
+**Created**: 2025-11-19
+**Total Issues**: 8 (3 Critical + 2 High + 3 Quick Wins)
+**Total Effort**: 170-230 hours (4-6 weeks)
+**Status**: Not Started
 
 ---
 
-## 📚 Documentation
+## 📊 Progress Overview
 
-| Document | Description | Location |
-|----------|-------------|----------|
-| **INDEX** | 📍 Indice generale e guida alla documentazione | [INDEX.md](./INDEX.md) |
-| **Issue Tracker** | ⭐ Tracking operativo di tutte le 12 issues | [ISSUE_TRACKER.md](./ISSUE_TRACKER.md) |
-| **Issue Templates** | 📋 Template dettagliati per GitHub issues | [issues-templates.md](./issues-templates.md) |
-| **Executive Summary** | 📊 Report esecutivo per stakeholder | [executive-summary.md](./executive-summary.md) |
-| **Creation Script** | 🤖 Script automatico (richiede gh CLI) | `../../tools/create-api-improvement-issues.sh` |
+| Priority | Issues | Completed | In Progress | Not Started |
+|----------|--------|-----------|-------------|-------------|
+| 🔴 Critical | 3 | 0 | 0 | 3 |
+| 🟠 High | 2 | 0 | 0 | 2 |
+| ⚡ Quick Wins | 3 | 0 | 0 | 3 |
+| **Total** | **8** | **0** | **0** | **8** |
+
+**Overall Progress**: 0% (0/8 issues completed)
 
 ---
 
-## 🎯 Quick Start
+## 🎯 Issues by Priority
 
-### Step 1: Review Documentation
+### 🔴 CRITICAL Priority (Weeks 1-2)
+
+| # | Issue | Effort | Impact | Status |
+|---|-------|--------|--------|--------|
+| #001 | [Split AdminEndpoints (2031 LOC → 6 files)](critical/issue-001-split-admin-endpoints.md) | 40-50h | ⭐⭐⭐ | ⬜ Not Started |
+| #002 | [Migrate ConfigurationService to CQRS](critical/issue-002-migrate-configuration-service-cqrs.md) | 50-60h | ⭐⭐⭐ | ⬜ Not Started |
+| #003 | [Refactor RagService Exception Handling](critical/issue-003-refactor-rag-service.md) | 40-50h | ⭐⭐⭐ | ⬜ Not Started |
+
+**Subtotal**: 130-160 hours
+
+---
+
+### 🟠 HIGH Priority (Weeks 3-4)
+
+| # | Issue | Effort | Impact | Status |
+|---|-------|--------|--------|--------|
+| #004 | [Create ValidationExtensions Framework](high-priority/issue-004-create-validation-extensions.md) | 20-30h | ⭐⭐ | ⬜ Not Started |
+| #005 | [Split AuthEndpoints (1077 LOC → 4 files)](high-priority/issue-005-split-auth-endpoints.md) | 20-30h | ⭐⭐ | ⬜ Not Started |
+
+**Subtotal**: 40-60 hours
+
+---
+
+### ⚡ QUICK WINS (Start Immediately!)
+
+| # | Issue | Effort | Impact | Status |
+|---|-------|--------|--------|--------|
+| QW-1 | [Extract RagExceptionHandler Pattern](quick-wins/qw-001-extract-exception-handler.md) | 4h | ⭐⭐ | ⬜ Not Started |
+| QW-2 | [Create Query Validation Helper](quick-wins/qw-002-query-validation-helper.md) | 2-3h | ⭐⭐ | ⬜ Not Started |
+| QW-3 | [Session Validation Middleware](quick-wins/qw-003-session-validation-middleware.md) | 3h | ⭐ | ⬜ Not Started |
+
+**Subtotal**: 9-10 hours
+
+---
+
+## 📅 Recommended Implementation Roadmap
+
+```
+PHASE 1: WEEKS 1-2 (CRITICAL) - 130-160 hours
+├─ Week 1
+│  ├─ Issue #001: Split AdminEndpoints (40-50h)
+│  └─ Issue #002: ConfigurationService CQRS (start, 25-30h)
+│
+└─ Week 2
+   ├─ Issue #002: ConfigurationService CQRS (complete, 25-30h)
+   └─ Issue #003: Refactor RagService (40-50h)
+
+PHASE 2: WEEKS 3-4 (HIGH) - 40-60 hours
+├─ Week 3
+│  ├─ Issue #004: ValidationExtensions Framework (20-30h)
+│  └─ Issue #005: Split AuthEndpoints (start, 10-15h)
+│
+└─ Week 4
+   └─ Issue #005: Split AuthEndpoints (complete, 10-15h)
+
+QUICK WINS: ONGOING (can be done anytime) - 9-10 hours
+├─ QW-1: RagExceptionHandler Pattern (4h)
+├─ QW-2: Query Validation Helper (2-3h)
+└─ QW-3: Session Validation Middleware (3h)
+```
+
+**Total Timeline**: 4-6 weeks (assuming 40 hours/week)
+
+---
+
+## 📈 Expected Outcomes
+
+### Code Quality Metrics
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| **Largest file** | 2,031 LOC | ~350 LOC | -83% |
+| **Monolithic services (>500 LOC)** | 4 | 0 | -100% |
+| **Validation duplication** | 399 instances | ~50 instances | -87% |
+| **Exception handling duplication** | 24 patterns | 4 handlers | -83% |
+| **CQRS compliance** | 224 handlers | 240 handlers | +7% |
+| **Average handler size** | 150 LOC | 120 LOC | -20% |
+
+### Architecture Alignment
+
+- ✅ **100% CQRS compliance** for business logic services
+- ✅ **No files >600 LOC** (improved code navigation)
+- ✅ **Consistent validation** framework across codebase
+- ✅ **Standardized error handling** patterns
+- ✅ **Domain-driven design** fully aligned
+
+### Developer Experience
+
+- ⚡ **Faster onboarding** (clearer file structure)
+- 🔍 **Easier code navigation** (smaller, focused files)
+- 🧪 **Better testability** (smaller units, clearer dependencies)
+- 📝 **Reduced merge conflicts** (smaller files)
+- 🔄 **Easier refactoring** (better separation of concerns)
+
+---
+
+## 📁 Issue Files Structure
+
+```
+docs/issues/backend-refactoring/
+├── README.md                                    # This file
+│
+├── critical/
+│   ├── issue-001-split-admin-endpoints.md       # 2031 LOC → 6 files
+│   ├── issue-002-migrate-configuration-service-cqrs.md  # 805 LOC → CQRS
+│   └── issue-003-refactor-rag-service.md        # 995 LOC → 400 LOC
+│
+├── high-priority/
+│   ├── issue-004-create-validation-extensions.md  # 399 duplications → framework
+│   └── issue-005-split-auth-endpoints.md          # 1077 LOC → 4 files
+│
+└── quick-wins/
+    ├── qw-001-extract-exception-handler.md      # Standardize error handling
+    ├── qw-002-query-validation-helper.md        # Common validation utility
+    └── qw-003-session-validation-middleware.md  # Centralize session validation
+```
+
+---
+
+## 🚀 Getting Started
+
+### Step 1: Choose a Starting Point
+
+**Option A - Maximum Impact First**:
+1. Start with Issue #001 (Split AdminEndpoints)
+2. Then Issue #002 (ConfigurationService CQRS)
+3. Follow critical priority order
+
+**Option B - Quick Wins First** (recommended for learning):
+1. Start with Quick Wins (9-10 hours total)
+2. Learn patterns on smaller scope
+3. Apply to larger refactoring
+
+**Option C - Incremental Approach**:
+1. QW-1: RagExceptionHandler Pattern (4h)
+2. Issue #003: Refactor RagService (builds on QW-1)
+3. QW-2: Validation Helper (2-3h)
+4. Issue #004: ValidationExtensions (builds on QW-2)
+5. Continue with remaining issues
+
+---
+
+### Step 2: Set Up Development Branch
+
 ```bash
-# Leggi l'indice generale (consigliato!)
-cat docs/improve-backend/INDEX.md
+# Create feature branch for refactoring work
+git checkout -b refactor/backend-code-quality
 
-# Leggi il report esecutivo
-cat docs/improve-backend/executive-summary.md
-
-# Apri il tracker operativo
-code docs/improve-backend/ISSUE_TRACKER.md
-
-# Vedi i template delle issue
-cat docs/improve-backend/issues-templates.md
-```
-
-### Step 2: Create GitHub Issues
-
-**Option A: Manual Creation** (Recommended - gh CLI not available)
-1. Open `docs/improve-backend/issues-templates.md`
-2. Copy each issue template
-3. Create new GitHub issue
-4. Paste template as description
-5. Add labels and milestone
-6. Update `docs/improve-backend/ISSUE_TRACKER.md` with issue number
-
-**Option B: Automated Script** (If gh CLI becomes available)
-```bash
-bash tools/create-api-improvement-issues.sh
-```
-
-### Step 3: Start Working
-
-1. **Priority Order**: P0 → P1 → P2 → P3
-2. **First Task**: Issue #1 (Fix Deadlock Risk - CRITICAL)
-3. **Update Tracker**: Mark status in `docs/ISSUE_TRACKER.md`
-4. **Commit Progress**: Regular commits with tracker updates
-
----
-
-## 🔴 CRITICAL - Start Here
-
-### Issue #1: Fix Deadlock Risk in RateLimitService
-
-**⚠️ THIS MUST BE FIXED BEFORE PRODUCTION DEPLOYMENT**
-
-**File**: `apps/api/src/Api/Services/RateLimitService.cs:160-161`
-
-**Problem**:
-```csharp
-// DEADLOCK RISK!
-var maxTokens = GetRateLimitValueAsync<int>("MaxTokens", normalizedRole).Result;
-var refillRate = GetRateLimitValueAsync<double>("RefillRate", normalizedRole).Result;
-```
-
-**Impact**: All rate-limited endpoints (auth, 2FA, OAuth) can deadlock under load
-
-**Time**: 2-3 hours
-
-**Quick Fix**:
-```csharp
-// Make method async
-public async Task<RateLimitConfig> GetConfigForRoleAsync(string? role, CancellationToken ct = default)
-{
-    // ...
-    var maxTokens = await GetRateLimitValueAsync<int>("MaxTokens", normalizedRole, ct);
-    var refillRate = await GetRateLimitValueAsync<double>("RefillRate", normalizedRole, ct);
-    return new RateLimitConfig(maxTokens, refillRate);
-}
+# Or create separate branches per issue
+git checkout -b refactor/split-admin-endpoints     # Issue #001
+git checkout -b refactor/configuration-service-cqrs # Issue #002
+# etc.
 ```
 
 ---
 
-## 📋 Issue Summary
+### Step 3: Track Progress
 
-### 🔴 Phase 1 - CRITICAL (1 issue, 2-3h)
-- **#1**: Fix Deadlock Risk in RateLimitService
-
-### 🟠 Phase 2 - HIGH (4 issues, 34-48h)
-- **#2**: Migrate ChatService to CQRS (12-16h)
-- **#3**: Migrate RuleSpecService to CQRS (10-14h)
-- **#4**: Implement Streaming Query Handlers (8-12h)
-- **#5**: Replace Hardcoded Configuration (4-6h)
-
-### 🟡 Phase 3 - MEDIUM (4 issues, 30-42h)
-- **#6**: Migrate Agent Services to CQRS (10-14h)
-- **#7**: Migrate Comment/Diff Services (6-8h)
-- **#8**: Implement 42 Domain Events (8-12h)
-- **#9**: Complete OAuth CQRS Migration (6-8h)
-
-### 🟢 Phase 4 - LOW (3 issues, 12-17h)
-- **#10**: Add AsNoTracking for Performance (2-3h)
-- **#11**: Session Authorization Improvements (4-6h)
-- **#12**: Centralize Error Handling (6-8h)
-
----
-
-## 📊 Progress Tracking
-
-Update `docs/ISSUE_TRACKER.md` as you work:
+Update this README as you complete issues:
 
 ```markdown
-### ✅ Issue #1: [P0] Fix Deadlock Risk in RateLimitService
-
-**Status**: 🟡 In Progress  ← Update this
-**Assignee**: John Doe       ← Add name
-**GitHub Issue**: #1234      ← Add issue number
-**PR**: #1235                ← Add PR number
-**Started**: 2025-11-15      ← Add date
-**Actual**: 2.5h             ← Track time
-
-**Notes**:
-- Fixed blocking async calls
-- Updated all callers
-- Load tested successfully
+| #001 | Split AdminEndpoints | 40-50h | ⭐⭐⭐ | ✅ Completed |
 ```
 
 ---
 
-## 🎓 Learning Resources
+## 🧪 Testing Strategy
 
-### CQRS Pattern
-- **MediatR Docs**: https://github.com/jbogard/MediatR
-- **Internal Guide**: `docs/02-development/cqrs-guidelines.md`
-- **DDD Patterns**: `docs/01-architecture/ddd-patterns.md`
+### Before Starting Any Issue
 
-### Streaming with MediatR
-```csharp
-// IStreamRequestHandler pattern
-public class StreamExplainQueryHandler : IStreamRequestHandler<StreamExplainQuery, string>
-{
-    public async IAsyncEnumerable<string> Handle(
-        StreamExplainQuery request,
-        [EnumeratorCancellation] CancellationToken ct)
-    {
-        await foreach (var chunk in _ragService.StreamAsync(request, ct))
-        {
-            yield return chunk;
-        }
-    }
-}
-```
+1. Run full test suite and record baseline:
+   ```bash
+   dotnet test > baseline-tests.log
+   pnpm test >> baseline-tests.log
+   ```
 
-### Domain Events
-```csharp
-// Publishing events from aggregates
-public static ChatThread Create(...)
-{
-    var thread = new ChatThread(...);
-    thread.AddDomainEvent(new ChatThreadCreatedEvent(thread.Id));
-    return thread;
-}
-```
+2. Export Postman collection for manual testing
+
+3. Document current API contracts
 
 ---
 
-## ✅ Checklist for Each Issue
+### During Implementation
 
-Before starting:
-- [ ] Read full issue template in `ISSUES_API_IMPROVEMENTS.md`
-- [ ] Understand acceptance criteria
-- [ ] Review related code files
-- [ ] Create GitHub issue (if not automated)
-- [ ] Update tracker with issue number
-
-During work:
-- [ ] Update tracker status to "In Progress"
-- [ ] Follow task checklist in tracker
-- [ ] Write tests (maintain 90%+ coverage)
-- [ ] Update documentation
-- [ ] Commit frequently with clear messages
-
-Before completing:
-- [ ] All tasks checked off
-- [ ] Tests pass
-- [ ] Code review completed
-- [ ] Update tracker with actual hours
-- [ ] Mark status as "Completed"
-- [ ] Update progress overview
+1. Run tests after each file change
+2. Integration tests for each completed phase
+3. Manual testing via Postman/Swagger
 
 ---
 
-## 🔄 Workflow
+### After Completing Each Issue
+
+1. Full regression test suite
+2. Code coverage verification (maintain 90%+)
+3. Performance testing (no regressions)
+4. API contract verification (no breaking changes)
+
+---
+
+## 📚 Reference Documents
+
+| Document | Description |
+|----------|-------------|
+| [Backend Analysis](../02-development/backend-codebase-analysis.md) | Detailed technical analysis (633 lines) |
+| [Action Items](../02-development/refactoring-action-items.md) | Actionable implementation steps (252 lines) |
+| [Analysis Summary](../02-development/ANALYSIS-SUMMARY.txt) | Quick reference (plain text) |
+| [CLAUDE.md](../../CLAUDE.md) | Project architecture and standards |
+
+---
+
+## 🔗 Dependencies Between Issues
+
+### Dependency Graph
 
 ```
-1. Pick Next Issue (Priority Order)
-   ↓
-2. Create GitHub Issue (if not exists)
-   ↓
-3. Update Tracker (Status → In Progress, Assignee, Issue #)
-   ↓
-4. Create Branch (e.g., fix/issue-1-deadlock)
-   ↓
-5. Work on Tasks (Check off in tracker)
-   ↓
-6. Write Tests (90%+ coverage)
-   ↓
-7. Create PR (Reference issue)
-   ↓
-8. Code Review
-   ↓
-9. Merge PR
-   ↓
-10. Update Tracker (Status → Completed, Actual Hours)
-    ↓
-11. Next Issue
+Issue #001 (AdminEndpoints)
+    ↓ (provides ConfigurationEndpoints.cs)
+Issue #002 (ConfigurationService CQRS)
+    ↓ (MediatR endpoints)
+    ✓ Complete
+
+QW-1 (RagExceptionHandler)
+    ↓ (pattern for exception handling)
+Issue #003 (RagService)
+    ↓ (uses RagExceptionHandler)
+    ✓ Complete
+
+QW-2 (Query Validation)
+    ↓ (pattern for validation framework)
+Issue #004 (ValidationExtensions)
+    ↓ (framework applied everywhere)
+    ✓ Complete
+
+Issue #005 (AuthEndpoints)
+    ↓ (independent, can be done anytime)
+    ✓ Complete
 ```
 
----
+### Recommended Parallel Work
 
-## 🎯 Success Metrics
+Can be done in parallel:
+- Issue #001 + QW-1
+- Issue #003 + QW-2
+- Issue #004 + Issue #005
 
-Track these in `docs/ISSUE_TRACKER.md`:
-
-| Metric | Baseline | Target | Current |
-|--------|----------|--------|---------|
-| DDD Completion | 99% | 100% | 99% |
-| Legacy Code | 2,500 lines | 0 lines | 2,500 lines |
-| CQRS Endpoints | 85% | 100% | 85% |
-| Domain Events | 0 published | 42 published | 0 |
-| Blocking Async | 2 locations | 0 locations | 2 |
-| Test Coverage | 90% | 90%+ | 90% |
+Must be sequential:
+- Issue #001 → Issue #002 (ConfigurationEndpoints needs MediatR)
+- QW-1 → Issue #003 (RagService uses exception handler)
+- QW-2 → Issue #004 (ValidationExtensions builds on pattern)
 
 ---
 
-## 📞 Support
+## ⚠️ Risk Management
 
-**Questions?**
-- See `docs/architecture/api-improvements-summary.md` for detailed context
-- Review `CLAUDE.md` for project architecture
-- Check `docs/02-development/` for development guides
+### High Risk Areas
 
-**Issues?**
-- Update tracker with blockers
-- Document decisions in issue notes
-- Commit tracker frequently
-
----
-
-## 🚦 Status Legend
-
-- ⬜ **Not Started**: Issue not yet begun
-- 🟡 **In Progress**: Actively being worked on
-- ✅ **Completed**: All tasks done, merged to main
-- 🔴 **Blocked**: Waiting on dependency/decision
-- ⏸️ **Paused**: Temporarily stopped
+| Risk | Mitigation | Verification |
+|------|------------|--------------|
+| Breaking API changes | Keep route paths identical | Integration tests + Postman |
+| Test failures | Run tests after each change | CI pipeline |
+| Merge conflicts | Complete in dedicated branch, merge quickly | Git conflict resolution |
+| Performance regression | Benchmark before/after | k6 performance tests |
+| Missing functionality | Document all endpoints/methods before migration | Functional testing checklist |
 
 ---
 
-**Created**: 2025-11-15
-**Last Updated**: 2025-11-15
-**Owner**: Engineering Team
+## 💡 Tips for Success
+
+### 1. Start Small
+Begin with Quick Wins to learn patterns before tackling Critical issues.
+
+### 2. Test Frequently
+Run tests after every file change. Catch regressions early.
+
+### 3. Commit Often
+Commit after each logical step. Makes rollback easier.
+
+### 4. Document as You Go
+Update architecture docs as you refactor.
+
+### 5. Pair Review
+Have another developer review before merging critical changes.
+
+### 6. Monitor Metrics
+Track LOC reduction, test coverage, complexity metrics.
+
+---
+
+## 📞 Questions?
+
+For questions about:
+- **Architecture decisions**: See `docs/01-architecture/`
+- **Testing strategy**: See `docs/02-development/testing/`
+- **CQRS pattern**: See existing handlers in `BoundedContexts/*/Application/Handlers/`
+- **Domain events**: See Issue #1190 implementation
+
+---
+
+## 📝 Update Log
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2025-11-19 | Created master tracking document with 8 issues | Claude |
+| - | - | - |
+
+---
+
+**Last Updated**: 2025-11-19
+**Next Review**: After completing first issue

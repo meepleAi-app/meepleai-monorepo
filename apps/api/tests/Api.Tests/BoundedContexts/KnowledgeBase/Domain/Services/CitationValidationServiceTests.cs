@@ -87,8 +87,12 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_AllValid_ReturnsValid()
     {
         // Arrange
-        var snippets = TestDataFactory.CreateValidSnippets(_pdf1Id, count: 2)
-            .Concat(TestDataFactory.CreateValidSnippets(_pdf2Id, count: 1).Select(s => new Snippet(s.text, s.source, page: 3, s.line, score: 0.7f)))
+        await using var context = CreateFreshDbContext();
+        var (gameId, pdf1Id, pdf2Id) = await SeedTestDataAsync(context);
+        var service = CreateService(context);
+
+        var snippets = TestDataFactory.CreateValidSnippets(pdf1Id, count: 2)
+            .Concat(TestDataFactory.CreateValidSnippets(pdf2Id, count: 1).Select(s => new Snippet(s.text, s.source, page: 3, s.line, score: 0.7f)))
             .ToList();
 
         // Act
@@ -180,7 +184,11 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_PageZero_ReturnsInvalid()
     {
         // Arrange - Page 0 is invalid (pages start at 1)
-        var snippets = TestDataFactory.CreateSnippetsWithInvalidPages(_pdf1Id).Take(1).ToList();
+        await using var context = CreateFreshDbContext();
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+        var service = CreateService(context);
+
+        var snippets = TestDataFactory.CreateSnippetsWithInvalidPages(pdf1Id).Take(1).ToList();
 
         // Act
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);

@@ -254,7 +254,7 @@ describe('Logger', () => {
      * - The sanitization logic is tested implicitly through integration tests
      * - Production error handling has different requirements (may use different services)
      * - The regex patterns for sanitization are simple and low-risk
-     * - Real-world error sanitization is verified through observability tools (Seq, Sentry)
+     * - Real-world error sanitization is verified through observability tools (Seq)
      * - The core logging functionality (batching, remote sending, error handling) is fully tested
      *
      * Related: AccessibleButton.a11y.test.tsx and AccessibleSkipLink.a11y.test.tsx have similar skipped tests

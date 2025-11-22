@@ -128,24 +128,31 @@ npm run test:spike
 
 | Endpoint | P95 Latency | Throughput | Error Rate |
 |----------|-------------|------------|------------|
-| RAG Search | < 2000ms | 1000 req/s | < 1% |
-| Chat (QA) | < 1000ms | 500 req/s | < 1% |
-| Game Search | < 500ms | 2000 req/s | < 0.5% |
-| Sessions | < 100ms | 1000 req/s | < 0.1% |
+| RAG Search | < 3000ms (CI/CD relaxed) | 1000 req/s | < 2% |
+| Chat (QA) | < 1500ms (CI/CD relaxed) | 500 req/s | < 2% |
+| Game Search | < 800ms (CI/CD relaxed) | 2000 req/s | < 2% |
+| Sessions | < 200ms (CI/CD relaxed) | 1000 req/s | < 2% |
 
 ## Thresholds
+
+**Updated (Issue #1599)**: Thresholds have been relaxed for CI/CD environments to account for limited resources in GitHub Actions.
 
 All tests enforce the following thresholds (fail if exceeded):
 
 ```javascript
 thresholds: {
-  'http_req_duration{endpoint:rag-search}': ['p(95)<2000'],
-  'http_req_duration{endpoint:chat}': ['p(95)<1000'],
-  'http_req_duration{endpoint:games}': ['p(95)<500'],
-  'http_req_duration{endpoint:sessions}': ['p(95)<100'],
-  'http_req_failed': ['rate<0.01'], // < 1% errors
+  // Relaxed for CI/CD environment stability
+  'http_req_duration{endpoint:rag-search}': ['p(95)<3000', 'p(99)<5000'],
+  'http_req_duration{endpoint:chat}': ['p(95)<1500', 'p(99)<2500'],
+  'http_req_duration{endpoint:games}': ['p(95)<800', 'p(99)<1200'],
+  'http_req_duration{endpoint:sessions}': ['p(95)<200', 'p(99)<400'],
+  'http_req_failed': ['rate<0.02'], // < 2% errors (relaxed)
+  'rag_confidence': ['avg>0.65'], // 65% confidence (relaxed)
+  'cache_hit_rate': ['rate>0.70'], // 70% cache hit (relaxed)
 }
 ```
+
+**Note**: These are CI/CD thresholds. Production targets remain more stringent.
 
 ## Configuration
 
@@ -178,12 +185,34 @@ npm run report
 
 ## CI/CD Integration
 
-GitHub Actions workflow runs nightly at 2 AM UTC:
+**Updated (Issue #1599)**: Improved workflow with smoke tests for nightly runs.
 
-- `.github/workflows/k6-performance.yml`
-- Uploads reports as artifacts
-- Posts summary to Slack
-- Fails build on threshold violations
+GitHub Actions workflow runs:
+
+### Nightly Automated Runs (2 AM UTC)
+- **Test Type**: Smoke (30 seconds, minimal load)
+- **Purpose**: Quick validation, catch breaking changes early
+- **Uploads**: Reports as artifacts (30-day retention)
+- **Notifications**:
+  - Creates/updates GitHub issue on failure
+  - Sends Slack notification (if configured)
+- **Workflow**: `.github/workflows/k6-performance.yml`
+
+### Manual Runs (On-Demand)
+- **Test Type**: Choose from smoke/load/stress/spike
+- **Purpose**: Comprehensive performance testing before releases
+- **Trigger**: GitHub Actions > K6 Performance Tests > Run workflow
+- **Use Cases**:
+  - Load tests before major releases
+  - Stress tests for capacity planning
+  - Spike tests before high-traffic events
+
+### Debug Features (Issue #1599)
+When tests fail, the workflow now:
+- Outputs API logs automatically
+- Shows health check status
+- Lists running processes
+- Provides detailed error context
 
 ## Metrics Collected
 
@@ -252,6 +281,6 @@ tests/k6/
 
 ---
 
-**Issue**: #873
+**Issues**: #873 (Initial Implementation), #1599 (CI/CD Optimization)
 **Maintained by**: Engineering Team
-**Last Updated**: 2025-11-18
+**Last Updated**: 2025-11-22

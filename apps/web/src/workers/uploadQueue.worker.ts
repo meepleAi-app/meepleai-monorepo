@@ -13,7 +13,7 @@
  * - Workers run in a separate thread context without window/document access
  * - console.error is retained for local debugging in development
  * - All errors are also sent to the main thread via postMessage (WORKER_ERROR)
- * - Main thread logs these errors to Sentry with structured logging
+ * - Main thread logs these errors with structured logging
  */
 
 import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';

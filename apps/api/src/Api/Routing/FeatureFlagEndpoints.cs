@@ -167,6 +167,9 @@ public static class FeatureFlagEndpoints
 
             logger.LogInformation("Admin {AdminId} creating feature flag '{Key}'", session.User.Id, request.Key);
 
+            // Default to "All" if no environment specified
+            var environment = request.Environment ?? "All";
+
             var command = new CreateConfigurationCommand(
                 Key: request.Key,
                 Value: request.Enabled.ToString().ToLowerInvariant(),
@@ -174,7 +177,7 @@ public static class FeatureFlagEndpoints
                 CreatedByUserId: Guid.Parse(session.User.Id),
                 Description: request.Description,
                 Category: "Features",
-                Environment: request.Environment,
+                Environment: environment,
                 RequiresRestart: request.RequiresRestart
             );
 

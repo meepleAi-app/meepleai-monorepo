@@ -139,8 +139,16 @@ jobs:
 
       - name: Run k6 performance tests
         working-directory: tests/k6
+        timeout-minutes: 15
         run: |
-          TEST_TYPE="${{ github.event.inputs.test_type || 'load' }}"
+          # Use smoke test for scheduled runs, load for manual runs (Issue #1599)
+          if [ "${{ github.event_name }}" == "schedule" ]; then
+            TEST_TYPE="smoke"
+          else
+            TEST_TYPE="${{ github.event.inputs.test_type || 'load' }}"
+          fi
+
+          echo "Running K6 tests with TEST_TYPE=${TEST_TYPE}"
 
           # Create reports directory
           mkdir -p reports
@@ -154,11 +162,34 @@ jobs:
           TEST_GAME_ID: ${{ env.TEST_GAME_ID }}
           WEBSOCKET_URL: 'ws://localhost:5080/ws'
 
+      - name: Debug API logs on failure
+        if: failure()
+        working-directory: apps/api
+        run: |
+          echo "========================================="
+          echo "API Logs"
+          echo "========================================="
+          cat api.log 2>/dev/null || echo "⚠️ No API logs found at api.log"
+          echo ""
+          echo "========================================="
+          echo "Health Check Status"
+          echo "========================================="
+          curl -v http://localhost:5080/health 2>&1 || echo "⚠️ Health check failed"
+          echo ""
+          echo "========================================="
+          echo "Process Status"
+          echo "========================================="
+          ps aux | grep -i dotnet || echo "⚠️ No dotnet processes found"
+
       - name: Generate HTML report
         if: always()
         working-directory: tests/k6
         run: |
-          node utils/generate-report.js reports/summary.json
+          if [ -f reports/summary.json ]; then
+            node utils/generate-report.js reports/summary.json
+          else
+            echo "⚠️ No summary.json found, skipping HTML report generation"
+          fi
 
       - name: Upload performance reports
         if: always()

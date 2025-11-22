@@ -771,14 +771,17 @@ public static class AiEndpoints
                 return Results.BadRequest(new { error = queryError });
             }
 
+            // After validation, q is guaranteed to be non-null
+            var validatedQuery = q!;
+
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             var query = new Api.BoundedContexts.GameManagement.Application.Queries.BggApi.SearchBggGamesQuery
             {
-                Query = q,
+                Query = validatedQuery,
                 Exact = exact
             };
             var results = await mediator.Send(query, ct);
-            logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
+            logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, validatedQuery);
             return Results.Json(new { results });
         })
         .RequireSession(); // Issue #1446: Automatic session validation

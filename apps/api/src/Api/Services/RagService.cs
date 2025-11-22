@@ -84,7 +84,6 @@ public class RagService : IRagService
 
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
-        var success = false;
 
         var queryError = QueryValidator.ValidateQuery(query);
         if (queryError != null)
@@ -266,7 +265,6 @@ public class RagService : IRagService
 
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
-        var success = false;
 
         if (string.IsNullOrWhiteSpace(topic))
         {
@@ -545,7 +543,6 @@ public class RagService : IRagService
 
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
-        var success = false;
 
         var queryError = QueryValidator.ValidateQuery(query);
         if (queryError != null)
@@ -718,7 +715,6 @@ public class RagService : IRagService
         activity?.SetTag("language", language);
 
         var stopwatch = Stopwatch.StartNew();
-        var success = false;
 
         var queryError = QueryValidator.ValidateQuery(query);
         if (queryError != null)

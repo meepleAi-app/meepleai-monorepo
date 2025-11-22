@@ -164,7 +164,7 @@ test.describe('API Smoke Tests (Newman + Postman)', () => {
   });
 
   test('API should be healthy before running tests', async ({ request }) => {
-    const response = await request.get('http://localhost:5080/health');
+    const response = await request.get('http://localhost:8080/health');
     expect(response.ok()).toBeTruthy();
 
     const data = await response.json();

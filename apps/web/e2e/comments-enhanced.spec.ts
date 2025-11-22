@@ -13,7 +13,7 @@ import { getTextMatcher, t } from './fixtures/i18n';
  * - Edit/delete permissions
  *
  * Prerequisites:
- * - Backend API must be running at http://localhost:5080
+ * - Backend API must be running at http://localhost:8080
  * - Demo users seeded (editor@meepleai.dev, admin@meepleai.dev, user@meepleai.dev)
  * - Demo games seeded (demo-chess, demo-tictactoe)
  *

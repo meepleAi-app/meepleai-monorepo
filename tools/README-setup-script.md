@@ -109,7 +109,7 @@ Utile quando Docker è già configurato correttamente.
 ### Step 4: API Build & Start
 - Build con `dotnet build --configuration Release`
 - Avvio in background con log in `api.log`
-- Health check su `http://localhost:5080/health`
+- Health check su `http://localhost:8080/health`
 - **Applica automaticamente le migrations EF Core**
 - **Carica dati demo (admin/editor/user@meepleai.dev)**
 
@@ -130,8 +130,8 @@ Al termine dello script, vengono mostrati:
 
 ### URLs dei Servizi
 - **Frontend:** http://localhost:3000
-- **API:** http://localhost:5080
-- **Health Check:** http://localhost:5080/health
+- **API:** http://localhost:8080
+- **Health Check:** http://localhost:8080/health
 - **Seq (Logs):** http://localhost:8081
 - **Qdrant Dashboard:** http://localhost:6333/dashboard
 
@@ -182,7 +182,7 @@ docker compose restart meepleai-postgres
 tail -f api.log
 
 # Verifica manualmente
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 ```
 
 ### Frontend non si avvia

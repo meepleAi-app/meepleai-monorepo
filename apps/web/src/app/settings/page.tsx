@@ -115,7 +115,7 @@ export default function SettingsPage() {
   const loadProfile = async () => {
     try {
       setLoading(true);
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
       const res = await fetch(`${apiBase}/api/v1/auth/me`, {
         credentials: 'include',
       });
@@ -162,7 +162,7 @@ export default function SettingsPage() {
 
   const loadOAuthAccounts = async () => {
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
       const res = await fetch(`${apiBase}/api/v1/users/me/oauth-accounts`, {
         credentials: 'include',
       });
@@ -309,7 +309,7 @@ export default function SettingsPage() {
 
   // OAuth handlers
   const handleLinkOAuth = (provider: string) => {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
     window.location.href = `${apiBase}/api/v1/auth/oauth/${provider}/login`;
   };
 
@@ -321,7 +321,7 @@ export default function SettingsPage() {
     setUnlinking(provider);
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
       const res = await fetch(`${apiBase}/api/v1/auth/oauth/${provider}/unlink`, {
         method: 'DELETE',
         credentials: 'include',

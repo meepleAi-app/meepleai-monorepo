@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
-const apiBase = 'http://localhost:5080';
+const apiBase = 'http://localhost:8080';
 
 async function mockAuth(page: Page, shouldAuthenticate = true) {
   await page.route(`${apiBase}/auth/me`, async (route) => {

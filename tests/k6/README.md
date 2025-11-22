@@ -160,7 +160,7 @@ Edit `config/env.json`:
 
 ```json
 {
-  "apiBaseUrl": "http://localhost:5080",
+  "apiBaseUrl": "http://localhost:8080",
   "testUser": {
     "email": "test@meepleai.dev",
     "password": "Test123!"
@@ -226,7 +226,7 @@ When tests fail, the workflow now:
 ## Troubleshooting
 
 ### "Connection refused"
-- Ensure API is running: `curl http://localhost:5080/health`
+- Ensure API is running: `curl http://localhost:8080/health`
 - Check `config/env.json` has correct `apiBaseUrl`
 
 ### "Authentication failed"

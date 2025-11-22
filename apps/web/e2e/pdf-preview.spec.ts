@@ -27,7 +27,7 @@ import { getTextMatcher, t } from './fixtures/i18n';
  * - Upload button is enabled after successful preview
  */
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 /**
  * Sets up mock API routes for authentication flow

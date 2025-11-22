@@ -127,7 +127,7 @@ export default function AnalyticsDashboard() {
         gameId: gameId || undefined,
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5080"}/api/v1/admin/analytics/export`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080"}/api/v1/admin/analytics/export`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

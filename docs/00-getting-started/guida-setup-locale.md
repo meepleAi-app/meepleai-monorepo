@@ -313,7 +313,7 @@ nano web.env.dev
 # ============================================
 # API BACKEND
 # ============================================
-NEXT_PUBLIC_API_BASE=http://localhost:5080
+NEXT_PUBLIC_API_BASE=http://localhost:8080
 
 # ============================================
 # AMBIENTE
@@ -447,7 +447,7 @@ dotnet run
 
 # Output atteso:
 # info: Microsoft.Hosting.Lifetime[14]
-#       Now listening on: http://localhost:5080
+#       Now listening on: http://localhost:8080
 # info: Microsoft.Hosting.Lifetime[0]
 #       Application started. Press Ctrl+C to shut down.
 ```
@@ -490,7 +490,7 @@ docker exec -it ollama ollama list
 
 ```bash
 # Verifica endpoint di health
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 
 # Output atteso (JSON):
 {
@@ -530,10 +530,10 @@ Dovresti vedere la homepage di MeepleAI.
 
 ```bash
 # Test endpoint pubblico
-curl http://localhost:5080/api/v1/health
+curl http://localhost:8080/api/v1/health
 
 # Test endpoint autenticato (dopo login, usa il cookie di sessione)
-curl -b cookies.txt http://localhost:5080/api/v1/games
+curl -b cookies.txt http://localhost:8080/api/v1/games
 ```
 
 ### 5. Verifica Servizi Osservabilità
@@ -969,17 +969,17 @@ QDRANT_URL=http://meepleai-qdrant:6333     # se API gira in Docker
 
 **Sintomo**:
 ```
-NetworkError: Failed to fetch http://localhost:5080
+NetworkError: Failed to fetch http://localhost:8080
 ```
 
 **Soluzione**:
 ```bash
 # Verifica che API sia running
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 
 # Verifica NEXT_PUBLIC_API_BASE in web.env.dev
 echo $NEXT_PUBLIC_API_BASE
-# Deve essere: http://localhost:5080
+# Deve essere: http://localhost:8080
 
 # Riavvia frontend
 cd apps/web
@@ -1256,7 +1256,7 @@ pnpm install
 - [ ] Ollama running (porta 11434) - se usi Ollama
 
 **Verifica**:
-- [ ] `/health` endpoint risponde (http://localhost:5080/health)
+- [ ] `/health` endpoint risponde (http://localhost:8080/health)
 - [ ] Frontend carica (http://localhost:3000)
 - [ ] Login admin funziona
 - [ ] Test backend passano (`dotnet test`)

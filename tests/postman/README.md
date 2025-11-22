@@ -179,7 +179,7 @@ BoardGameGeek API integration for game metadata and ratings.
 
 ```json
 {
-  "base_url": "http://localhost:5080",
+  "base_url": "http://localhost:8080",
   "api_key": "",
   "user_id": "",
   "game_id": "",
@@ -440,8 +440,8 @@ Examples:
 
 **3. Connection refused**
 
-- Check API is running: `curl http://localhost:5080/health`
-- Verify port `5080` is correct (check `appsettings.json`)
+- Check API is running: `curl http://localhost:8080/health`
+- Verify port `8080` is correct (check `appsettings.json`)
 
 **4. CORS errors (browser)**
 

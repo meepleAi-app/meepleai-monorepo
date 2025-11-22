@@ -53,7 +53,7 @@ const mockWorker = setupWorkerMock({
   autoUpload: true,        // Auto-start uploads when files are added
   uploadDelay: 0,          // Delay in ms for upload simulation (0 for instant)
   simulateErrors: {},      // Map of item ID to error message
-  apiBase: 'http://localhost:5080'  // API base URL
+  apiBase: 'http://localhost:8080'  // API base URL
 });
 ```
 

@@ -388,10 +388,10 @@ await page.waitForResponse(`${apiBase}/api/v1/rulespecs/demo-chess/v2/comments`)
 **Lines 301, 323**: Update URLs in assertions
 ```typescript
 // OLD
-`http://localhost:5080/api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=true`
+`http://localhost:8080/api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=true`
 
 // NEW
-`http://localhost:5080/api/v1/rulespecs/${gameId}/${version}/comments?includeResolved=true`
+`http://localhost:8080/api/v1/rulespecs/${gameId}/${version}/comments?includeResolved=true`
 ```
 
 ---

@@ -126,7 +126,7 @@ export class MockUploadWorker {
       autoUpload: true,
       uploadDelay: 10,
       simulateErrors: {},
-      apiBase: 'http://localhost:5080',
+      apiBase: 'http://localhost:8080',
       ...config
     };
 

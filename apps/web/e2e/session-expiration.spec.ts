@@ -14,7 +14,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
-const apiBase = 'http://localhost:5080';
+const apiBase = 'http://localhost:8080';
 
 /**
  * Setup authentication routes for session expiration testing

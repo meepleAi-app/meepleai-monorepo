@@ -412,7 +412,7 @@ sudo cp k6-v0.47.0-linux-amd64/k6 /usr/local/bin/
 #### API Not Running
 ```bash
 # Check API health
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 
 # Start API if needed
 cd apps/api/src/Api
@@ -423,7 +423,7 @@ dotnet run
 ```bash
 # Verify test user exists
 # If not, create via API:
-curl -X POST http://localhost:5080/api/v1/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"test@meepleai.dev","password":"Test123!","displayName":"Test User"}'
 
@@ -447,7 +447,7 @@ curl -X POST http://localhost:5080/api/v1/auth/register \
 #### WebSocket Connection Failures
 ```bash
 # Check WebSocket endpoint
-wscat -c ws://localhost:5080/ws
+wscat -c ws://localhost:8080/ws
 
 # Verify session token is valid
 # Check firewall/proxy settings

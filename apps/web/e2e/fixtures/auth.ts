@@ -1,7 +1,7 @@
 import { test as base, Page, Route } from '@playwright/test';
 
 // Issue #841: Make API_BASE configurable via environment variables
-const API_BASE = process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const API_BASE = process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 // Log configuration in CI for debugging
 if (process.env.CI) {

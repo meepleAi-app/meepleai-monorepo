@@ -248,11 +248,11 @@ grep -r "headers\[" apps/web/src/
 # Test with allowed headers
 curl -H "Content-Type: application/json" \
      -H "X-Correlation-ID: test-123" \
-     http://localhost:5080/api/v1/games
+     http://localhost:8080/api/v1/games
 
 # Test with non-allowed header (should fail preflight)
 curl -H "X-Custom-Header: evil" \
-     http://localhost:5080/api/v1/games
+     http://localhost:8080/api/v1/games
 ```
 
 3. **CORS Preflight Tests**:
@@ -262,7 +262,7 @@ curl -X OPTIONS \
      -H "Origin: http://localhost:3000" \
      -H "Access-Control-Request-Method: POST" \
      -H "Access-Control-Request-Headers: Content-Type,X-Correlation-ID" \
-     http://localhost:5080/api/v1/auth/login
+     http://localhost:8080/api/v1/auth/login
 ```
 
 ### Integration Tests

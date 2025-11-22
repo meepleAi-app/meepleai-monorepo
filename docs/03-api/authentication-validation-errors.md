@@ -261,7 +261,7 @@ Frontend applications should implement client-side validation matching these rul
 ### Valid Request
 
 ```bash
-curl -X POST http://localhost:5080/api/v1/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -272,7 +272,7 @@ curl -X POST http://localhost:5080/api/v1/auth/login \
 ### Invalid Request (Validation Errors)
 
 ```bash
-curl -X POST http://localhost:5080/api/v1/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "invalidemail",

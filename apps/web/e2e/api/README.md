@@ -75,7 +75,7 @@ pnpm test:e2e:full               # API smoke tests → Playwright E2E
 
 ### Prerequisites
 
-API must be running on `http://localhost:5080`:
+API must be running on `http://localhost:8080`:
 
 ```bash
 # Terminal 1: Start API
@@ -83,7 +83,7 @@ cd apps/api/src/Api
 dotnet run
 
 # Terminal 2: Verify health
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 
 # Terminal 3: Run tests
 cd apps/web
@@ -255,7 +255,7 @@ Create new file in `apps/web/e2e/api/`:
 // apps/web/e2e/api/my-feature.api.spec.ts
 import { test, expect, APIRequestContext } from '@playwright/test';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('My Feature API', () => {
   let apiContext: APIRequestContext;
@@ -332,7 +332,7 @@ test.describe('My New Collection', () => {
 **Fix**:
 ```bash
 # Check if API is running
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 
 # If not, start it
 cd apps/api/src/Api

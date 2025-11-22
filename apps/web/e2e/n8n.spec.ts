@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
-const apiBase = 'http://localhost:5080';
+const apiBase = 'http://localhost:8080';
 
 type N8nConfig = {
   id: string;

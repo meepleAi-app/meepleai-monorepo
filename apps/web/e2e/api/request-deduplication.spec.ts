@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-const API_BASE = 'http://localhost:5080';
+const API_BASE = 'http://localhost:8080';
 const WEB_BASE = 'http://localhost:3000';
 
 /**
@@ -51,15 +51,15 @@ test.describe('Request Deduplication Cache', () => {
 
       // Simulate 3 React components mounting and fetching /api/v1/games
       const promises = [
-        fetch('http://localhost:5080/api/v1/games', {
+        fetch('http://localhost:8080/api/v1/games', {
           method: 'GET',
           credentials: 'include',
         }),
-        fetch('http://localhost:5080/api/v1/games', {
+        fetch('http://localhost:8080/api/v1/games', {
           method: 'GET',
           credentials: 'include',
         }),
-        fetch('http://localhost:5080/api/v1/games', {
+        fetch('http://localhost:8080/api/v1/games', {
           method: 'GET',
           credentials: 'include',
         }),
@@ -102,7 +102,7 @@ test.describe('Request Deduplication Cache', () => {
     const metrics = await page.evaluate(async () => {
       // Make 5 identical requests
       const promises = Array.from({ length: 5 }, () =>
-        fetch('http://localhost:5080/api/v1/games', {
+        fetch('http://localhost:8080/api/v1/games', {
           method: 'GET',
           credentials: 'include',
         })
@@ -140,19 +140,19 @@ test.describe('Request Deduplication Cache', () => {
       const searchBody = { query: 'Catan', filters: { minPlayers: 2 } };
 
       const promises = [
-        fetch('http://localhost:5080/api/v1/games/search', {
+        fetch('http://localhost:8080/api/v1/games/search', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(searchBody),
         }),
-        fetch('http://localhost:5080/api/v1/games/search', {
+        fetch('http://localhost:8080/api/v1/games/search', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(searchBody),
         }),
-        fetch('http://localhost:5080/api/v1/games/search', {
+        fetch('http://localhost:8080/api/v1/games/search', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -177,7 +177,7 @@ test.describe('Request Deduplication Cache', () => {
 
     // Execute requests without auth
     const unauthResults = await page.evaluate(async () => {
-      const response = await fetch('http://localhost:5080/api/v1/games', {
+      const response = await fetch('http://localhost:8080/api/v1/games', {
         method: 'GET',
         credentials: 'include',
       });
@@ -195,7 +195,7 @@ test.describe('Request Deduplication Cache', () => {
 
     // Make first request
     await page.evaluate(async () => {
-      await fetch('http://localhost:5080/api/v1/games', {
+      await fetch('http://localhost:8080/api/v1/games', {
         method: 'GET',
         credentials: 'include',
       });
@@ -206,7 +206,7 @@ test.describe('Request Deduplication Cache', () => {
 
     // Make second request (should be cache miss due to expiration)
     await page.evaluate(async () => {
-      await fetch('http://localhost:5080/api/v1/games', {
+      await fetch('http://localhost:8080/api/v1/games', {
         method: 'GET',
         credentials: 'include',
       });
@@ -223,15 +223,15 @@ test.describe('Request Deduplication Cache', () => {
     // Execute multiple requests to non-existent endpoint
     const results = await page.evaluate(async () => {
       const promises = [
-        fetch('http://localhost:5080/api/v1/nonexistent', {
+        fetch('http://localhost:8080/api/v1/nonexistent', {
           method: 'GET',
           credentials: 'include',
         }).catch(e => ({ error: true })),
-        fetch('http://localhost:5080/api/v1/nonexistent', {
+        fetch('http://localhost:8080/api/v1/nonexistent', {
           method: 'GET',
           credentials: 'include',
         }).catch(e => ({ error: true })),
-        fetch('http://localhost:5080/api/v1/nonexistent', {
+        fetch('http://localhost:8080/api/v1/nonexistent', {
           method: 'GET',
           credentials: 'include',
         }).catch(e => ({ error: true })),
@@ -258,7 +258,7 @@ test.describe('Request Deduplication Cache', () => {
 
       // Simulate 3 React components with useEffect
       const component1 = async () => {
-        const res = await fetch('http://localhost:5080/api/v1/games', {
+        const res = await fetch('http://localhost:8080/api/v1/games', {
           method: 'GET',
           credentials: 'include',
         });
@@ -267,7 +267,7 @@ test.describe('Request Deduplication Cache', () => {
       };
 
       const component2 = async () => {
-        const res = await fetch('http://localhost:5080/api/v1/games', {
+        const res = await fetch('http://localhost:8080/api/v1/games', {
           method: 'GET',
           credentials: 'include',
         });
@@ -276,7 +276,7 @@ test.describe('Request Deduplication Cache', () => {
       };
 
       const component3 = async () => {
-        const res = await fetch('http://localhost:5080/api/v1/games', {
+        const res = await fetch('http://localhost:8080/api/v1/games', {
           method: 'GET',
           credentials: 'include',
         });
@@ -315,7 +315,7 @@ test.describe('Request Deduplication Performance', () => {
       const startTime = performance.now();
 
       const promises = Array.from({ length: 10 }, () =>
-        fetch('http://localhost:5080/api/v1/games', {
+        fetch('http://localhost:8080/api/v1/games', {
           method: 'GET',
           credentials: 'include',
         })
@@ -356,7 +356,7 @@ test.describe('HttpClient Integration', () => {
 
       // Test GET (dedupe by default)
       try {
-        const getRes = await fetch('http://localhost:5080/api/v1/games', {
+        const getRes = await fetch('http://localhost:8080/api/v1/games', {
           method: 'GET',
           credentials: 'include',
         });
@@ -367,7 +367,7 @@ test.describe('HttpClient Integration', () => {
 
       // Test POST (no dedupe by default)
       try {
-        const postRes = await fetch('http://localhost:5080/api/v1/games/search', {
+        const postRes = await fetch('http://localhost:8080/api/v1/games/search', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },

@@ -8,7 +8,7 @@
 
 import { test, expect, APIRequestContext } from '@playwright/test';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('RAG API (KnowledgeBase)', () => {
   let apiContext: APIRequestContext;

@@ -25,7 +25,7 @@ permissions:
   actions: write        # Required: Upload/download artifacts (actions/upload-artifact@v4)
 
 env:
-  API_BASE_URL: http://localhost:5080
+  API_BASE_URL: http://localhost:8080
   TEST_GAME_ID: '00000000-0000-0000-0000-000000000001'
   # Database credentials - use secrets in CI, fallback to defaults for local runs
   TEST_POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
@@ -125,12 +125,12 @@ jobs:
           ConnectionStrings__Redis: 'localhost:6379'
           ConnectionStrings__Qdrant: 'http://localhost:6333'
           ASPNETCORE_ENVIRONMENT: Development
-          ASPNETCORE_URLS: 'http://0.0.0.0:5080'
+          ASPNETCORE_URLS: 'http://0.0.0.0:8080'
 
       - name: Wait for API to be ready
         run: |
           for i in {1..30}; do
-            if curl -f http://localhost:5080/health; then
+            if curl -f http://localhost:8080/health; then
               echo "✅ API is ready"
               exit 0
             fi
@@ -164,7 +164,7 @@ jobs:
           TEST_USER_EMAIL: 'test@meepleai.dev'
           TEST_USER_PASSWORD: 'Test123!'
           TEST_GAME_ID: ${{ env.TEST_GAME_ID }}
-          WEBSOCKET_URL: 'ws://localhost:5080/ws'
+          WEBSOCKET_URL: 'ws://localhost:8080/ws'
 
       - name: Debug API logs on failure
         if: failure()
@@ -178,7 +178,7 @@ jobs:
           echo "========================================="
           echo "Health Check Status"
           echo "========================================="
-          curl -v http://localhost:5080/health 2>&1 || echo "⚠️ Health check failed"
+          curl -v http://localhost:8080/health 2>&1 || echo "⚠️ Health check failed"
           echo ""
           echo "========================================="
           echo "Process Status"

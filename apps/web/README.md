@@ -55,7 +55,7 @@ apps/web/
 
 - Node.js 20+ (LTS)
 - pnpm 9+
-- Backend API running (http://localhost:5080)
+- Backend API running (http://localhost:8080)
 
 ### Install Dependencies
 
@@ -323,7 +323,7 @@ pnpm build-storybook
 # .env.local (create from .env.example)
 
 # API Base URL
-NEXT_PUBLIC_API_BASE=http://localhost:5080
+NEXT_PUBLIC_API_BASE=http://localhost:8080
 
 # Public configuration
 NEXT_PUBLIC_APP_NAME="MeepleAI"
@@ -338,7 +338,7 @@ NEXT_PUBLIC_ENABLE_2FA=true
 
 **lib/api.ts**:
 ```typescript
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -626,7 +626,7 @@ pnpm typecheck
 echo $NEXT_PUBLIC_API_BASE
 
 # Test API health
-curl http://localhost:5080/health
+curl http://localhost:8080/health
 
 # Check CORS (browser DevTools Network tab)
 # Should see Access-Control-Allow-Origin header

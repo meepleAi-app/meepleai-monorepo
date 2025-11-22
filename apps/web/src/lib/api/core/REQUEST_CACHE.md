@@ -27,7 +27,7 @@ Cache keys are generated from:
 
 **Example**:
 ```
-GET::http://localhost:5080/api/v1/users::apikey:mpl_dev_abc123
+GET::http://localhost:8080/api/v1/users::apikey:mpl_dev_abc123
 ```
 
 ### TTL-Based Cleanup

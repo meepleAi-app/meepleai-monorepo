@@ -171,7 +171,7 @@ PASS: ☐ Cookie-based authentication funzionante
 6. Copia API key
 
 7. Test API key con curl:
-   curl -X GET http://localhost:5080/api/v1/games \
+   curl -X GET http://localhost:8080/api/v1/games \
      -H "X-API-Key: [YOUR_API_KEY]"
 
 8. ✅ VERIFICA:
@@ -180,7 +180,7 @@ PASS: ☐ Cookie-based authentication funzionante
    - Seq logs mostrano richiesta autenticata via API key
 
 9. Test API key invalida:
-   curl -X GET http://localhost:5080/api/v1/games \
+   curl -X GET http://localhost:8080/api/v1/games \
      -H "X-API-Key: invalid_key"
 
    ✅ VERIFICA: HTTP 401 Unauthorized
@@ -525,13 +525,13 @@ PASS: ☐ User management CRUD funzionante
    - Mostrata una volta con warning
 
 7. Copia key, testa:
-   curl -H "X-API-Key: [KEY]" http://localhost:5080/api/v1/games
+   curl -H "X-API-Key: [KEY]" http://localhost:8080/api/v1/games
    ✅ VERIFICA: HTTP 200
 
 8. In /admin/api-keys, click "Revoke" sulla key appena creata
 9. Conferma
 10. Test key revocata:
-    curl -H "X-API-Key: [KEY]" http://localhost:5080/api/v1/games
+    curl -H "X-API-Key: [KEY]" http://localhost:8080/api/v1/games
     ✅ VERIFICA: HTTP 401 Unauthorized
 
 PASS: ☐ API Keys management funzionante
@@ -1057,7 +1057,7 @@ PASS: ☐ Session validation funziona
 cat > test-rate-limit.sh << 'EOF'
 #!/bin/bash
 for i in {1..150}; do
-  curl -X POST http://localhost:5080/api/v1/chat \
+  curl -X POST http://localhost:8080/api/v1/chat \
     -H "Content-Type: application/json" \
     -d '{"question":"Test '$i'","gameId":1}' \
     -b "meepleai-session=YOUR_SESSION_COOKIE" \
@@ -1075,7 +1075,7 @@ EOF
 
 5. Attendi 1 minuto
 6. Singola richiesta:
-   curl -X POST http://localhost:5080/api/v1/chat ...
+   curl -X POST http://localhost:8080/api/v1/chat ...
 7. ✅ VERIFICA: HTTP 200 (rate limit resettato)
 
 PASS: ☐ Rate limiting attivo (100 req/min)
@@ -1087,7 +1087,7 @@ PASS: ☐ Rate limiting attivo (100 req/min)
 2. Esegui 200 richieste NON autenticate:
 
 for i in {1..200}; do
-  curl http://localhost:5080/api/v1/games -w "%{http_code}\n"
+  curl http://localhost:8080/api/v1/games -w "%{http_code}\n"
 done
 
 3. ✅ VERIFICA:
@@ -1406,7 +1406,7 @@ export const options = {
 };
 
 export default function () {
-  const res = http.post('http://localhost:5080/api/v1/chat', JSON.stringify({
+  const res = http.post('http://localhost:8080/api/v1/chat', JSON.stringify({
     question: 'Come si gioca a Catan?',
     gameId: 1
   }), { headers: { 'Content-Type': 'application/json' } });

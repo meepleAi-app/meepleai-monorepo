@@ -11,7 +11,7 @@ import { getTextMatcher, t } from './fixtures/i18n';
  * Then: The PDF should appear in the "Uploaded PDFs" table with correct details
  */
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 /**
  * Sets up mock API routes for authentication flow

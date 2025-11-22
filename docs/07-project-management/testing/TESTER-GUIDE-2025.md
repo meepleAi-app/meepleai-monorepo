@@ -192,7 +192,7 @@ pnpm dev
    ✅ VERIFICA: {"status":"ok"}
 
 9. API (Backend):
-   curl http://localhost:5080/health
+   curl http://localhost:8080/health
    ✅ VERIFICA: {"status":"Healthy"}
 
 10. Web (Frontend):
@@ -249,7 +249,7 @@ PASS: ☐ Cookie-based authentication OK
    - Mostrata una sola volta (warning di copiare)
 
 5. Test API key con curl:
-   curl -X GET http://localhost:5080/api/v1/games \
+   curl -X GET http://localhost:8080/api/v1/games \
      -H "X-API-Key: [YOUR_API_KEY]"
 
 6. ✅ VERIFICA:
@@ -257,7 +257,7 @@ PASS: ☐ Cookie-based authentication OK
    - Response JSON con lista games
 
 7. Test API key invalida:
-   curl -X GET http://localhost:5080/api/v1/games \
+   curl -X GET http://localhost:8080/api/v1/games \
      -H "X-API-Key: invalid_key"
    ✅ VERIFICA: HTTP 401 Unauthorized
 
@@ -836,7 +836,7 @@ cat > test-rate-limit.sh << 'EOF'
 SESSION_COOKIE="meepleai-session=YOUR_SESSION_COOKIE_HERE"
 
 for i in {1..120}; do
-  curl -X POST http://localhost:5080/api/v1/chat \
+  curl -X POST http://localhost:8080/api/v1/chat \
     -H "Content-Type: application/json" \
     -H "Cookie: $SESSION_COOKIE" \
     -d "{\"question\":\"Test $i\",\"gameId\":1}" \
@@ -866,7 +866,7 @@ chmod +x test-rate-limit.sh
 4. Attendi 1 minuto
 
 5. Singola richiesta:
-   curl -X POST http://localhost:5080/api/v1/chat ...
+   curl -X POST http://localhost:8080/api/v1/chat ...
 
 6. ✅ VERIFICA:
    - Status 200 (rate limit resettato)
@@ -877,7 +877,7 @@ PASS: ☐ Per-user rate limiting attivo (100 req/min)
 #### Scenario C0.2.2: IP-Based Rate Limiting (Unauthenticated)
 ```bash
 for i in {1..150}; do
-  curl http://localhost:5080/api/v1/games \
+  curl http://localhost:8080/api/v1/games \
     -w "Status: %{http_code}\n" \
     -s -o /dev/null
 done
@@ -1190,7 +1190,7 @@ export default function () {
     },
   };
 
-  const res = http.post('http://localhost:5080/api/v1/chat', payload, params);
+  const res = http.post('http://localhost:8080/api/v1/chat', payload, params);
 
   check(res, {
     'status is 200': (r) => r.status === 200,

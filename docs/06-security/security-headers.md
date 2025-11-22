@@ -446,7 +446,7 @@ Target rating: **A** (meets OWASP security standards)
 2. Run OWASP ZAP scan:
    ```bash
    docker run -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable zap-baseline.py \
-     -t http://host.docker.internal:5080 \
+     -t http://host.docker.internal:8080 \
      -r security-headers-report.html
    ```
 3. Review report for security header validation
@@ -457,7 +457,7 @@ Test security headers manually:
 
 ```bash
 # Test all headers
-curl -I http://localhost:5080/api/v1/games
+curl -I http://localhost:8080/api/v1/games
 
 # Expected headers:
 # Content-Security-Policy: default-src 'self'; ...

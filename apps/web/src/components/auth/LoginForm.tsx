@@ -123,9 +123,9 @@ export function LoginForm({
         type="submit"
         className="w-full"
         isLoading={isLoading}
-        loadingText="Signing in..."
+        loadingText="Accesso in corso..."
       >
-        Sign In
+        Accedi
       </LoadingButton>
     </form>
   );

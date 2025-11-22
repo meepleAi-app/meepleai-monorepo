@@ -164,12 +164,12 @@ describe('MockApiPresets', () => {
 
         const response = await router.handle('/games', {
           method: 'POST',
-          body: JSON.stringify({ name: 'Chess' }),
+          body: JSON.stringify({ title: 'Chess' }),
         });
         const data = await response.json();
 
         expect(data).toHaveProperty('id');
-        expect(data).toHaveProperty('name');
+        expect(data).toHaveProperty('title');
         expect(data).toHaveProperty('createdAt');
         expect(response.status).toBe(201);
       });
@@ -178,8 +178,8 @@ describe('MockApiPresets', () => {
     describe('Custom games list', () => {
       it('should return custom games array', async () => {
         const customGames = [
-          { id: 'game-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
-          { id: 'game-2', name: 'Catan', createdAt: '2025-01-02T00:00:00Z' },
+          { id: 'game-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+          { id: 'game-2', title: 'Catan', createdAt: '2025-01-02T00:00:00Z' },
         ];
 
         MockApiPresets.games(router, { games: customGames });
@@ -195,7 +195,7 @@ describe('MockApiPresets', () => {
       it('should return custom create response', async () => {
         const customResponse = {
           id: 'custom-game-id',
-          name: 'Monopoly',
+          title: 'Monopoly',
           createdAt: '2025-05-01T00:00:00Z',
         };
 
@@ -613,7 +613,7 @@ describe('MockApiPresets', () => {
     it('should pass options to individual presets', async () => {
       MockApiPresets.uploadWorkflow(router, {
         auth: { userId: 'custom-user' },
-        games: { games: [{ id: 'game-1', name: 'Chess' }] },
+        games: { games: [{ id: 'game-1', title: 'Chess' }] },
       });
 
       const authResponse = await router.handle('/auth/me');

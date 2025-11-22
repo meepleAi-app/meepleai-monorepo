@@ -8,7 +8,7 @@
  * ```typescript
  * const router = new MockApiRouter();
  * MockApiPresets.auth(router, { userId: 'user-1', role: 'Admin' });
- * MockApiPresets.games(router, [{ id: 'game-1', name: 'Chess' }]);
+ * MockApiPresets.games(router, { games: [{ id: 'game-1', title: 'Chess' }] });
  * ```
  */
 

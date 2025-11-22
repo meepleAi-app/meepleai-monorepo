@@ -126,6 +126,8 @@
   - [Multi-Environment Strategy](./05-operations/deployment/multi-environment-strategy.md)
   - [Frontend Deployment](./05-operations/deployment/frontend-deployment.md)
   - [Disaster Recovery](./05-operations/deployment/disaster-recovery.md)
+  - **[infrastructure/](./05-operations/deployment/infrastructure/)** - Infrastructure provider comparison ⭐ **NEW**
+    - [EU Hosting Providers Comparison](./05-operations/deployment/infrastructure/EU_HOSTING_COMPARISON_2025.md) (700+ pages) - Top 10 EU providers analyzed
 
 - **[runbooks/](./05-operations/runbooks/)** - Incident runbooks (6 files)
   - [High Error Rate](./05-operations/runbooks/high-error-rate.md)
@@ -181,6 +183,13 @@
 **Purpose**: Business strategy, revenue model, market analysis
 
 - [Business Plan](./08-business/board-game-ai-business-plan.md) (35 pages) ⭐
+
+#### Subdirectories
+- **[cost-analysis/](./08-business/cost-analysis/)** - Infrastructure cost analysis & budget planning ⭐ **NEW**
+  - [Cost Analysis 2025](./08-business/cost-analysis/COST_ANALYSIS_2025.md) (600+ pages) - Full-scale analysis (10K+ users)
+  - [Cost Analysis Optimized 2025](./08-business/cost-analysis/COST_ANALYSIS_OPTIMIZED_2025.md) (800+ pages) - Right-sized for 2-5K users ⭐ **RECOMMENDED**
+  - [Cost Data Export](./08-business/cost-analysis/cost-analysis-data.csv) - CSV export for analysis
+  - [Optimized Cost Data Export](./08-business/cost-analysis/cost-analysis-optimized-2025.csv) - CSV export
 
 ### [09 - Research](./09-research/)
 **Audience**: Research team, technical leadership

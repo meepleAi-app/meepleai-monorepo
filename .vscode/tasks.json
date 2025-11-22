@@ -1,0 +1,193 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // .NET API Tasks
+    {
+      "label": "build-api",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["build", "--configuration", "Debug"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "clean-api",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["clean"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "test-api",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["test"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "watch-api",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["watch", "run"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api/src/Api"
+      },
+      "isBackground": true,
+      "problemMatcher": "$msCompile"
+    },
+    
+    // Frontend Tasks
+    {
+      "label": "dev",
+      "type": "shell",
+      "command": "pnpm dev",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web"
+      },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "pnpm build",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test",
+      "type": "shell",
+      "command": "pnpm test",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "pnpm lint",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web"
+      },
+      "problemMatcher": "$eslint-stylish"
+    },
+    
+    // Database Tasks
+    {
+      "label": "ef-migrations-add",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "ef", "migrations", "add",
+        "${input:migrationName}",
+        "--project", "src/Api"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "ef-database-update",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["ef", "database", "update", "--project", "src/Api"],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/api"
+      },
+      "problemMatcher": "$msCompile"
+    },
+
+    // Docker Tasks
+    {
+      "label": "docker-up",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "up", "-d"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-down",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "down"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-logs",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "logs", "-f"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+
+    // Compound Tasks
+    {
+      "label": "build-all",
+      "dependsOn": ["build-api", "build"],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test-all",
+      "dependsOn": ["test-api", "test"],
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "start-all-dev",
+      "dependsOn": ["docker-up", "watch-api", "dev"],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "migrationName",
+      "type": "promptString",
+      "description": "Migration name (e.g., AddUserTable)"
+    }
+  ]
+}

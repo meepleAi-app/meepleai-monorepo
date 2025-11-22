@@ -1,0 +1,425 @@
+# EditorConfig for MeepleAI API project
+# https://editorconfig.org/
+
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# files
+[*.cs]
+indent_style = space
+indent_size = 4
+
+# Code quality - Production code (strict enforcement)
+[src/**/*.cs]
+# CA1062: Validate arguments of public methods (SUGGESTION - constructor validation complete, method validation TBD)
+# Constructor validation: All CommandHandler constructors now enforce null-coalescing pattern
+# Method validation: Requires architectural decision on Handle() method parameter validation strategy
+# Pattern: _field = param ?? throw new ArgumentNullException(nameof(param));
+dotnet_diagnostic.CA1062.severity = suggestion
+
+# CA2000: Dispose objects before losing scope (ERROR in production)
+dotnet_diagnostic.CA2000.severity = error
+
+# CA1031: Do not catch general exception types (SUGGESTION in production - allow for graceful degradation patterns)
+dotnet_diagnostic.CA1031.severity = suggestion
+
+# CA1063: Implement IDisposable correctly (ERROR in production)
+dotnet_diagnostic.CA1063.severity = error
+
+# CA1816: Call GC.SuppressFinalize correctly (WARNING in production)
+dotnet_diagnostic.CA1816.severity = warning
+
+# CA1416: Platform compatibility (WARNING in production)
+dotnet_diagnostic.CA1416.severity = warning
+
+# Code quality - Migrations (suppress CA1062 - EF Core generated code)
+[src/**/Migrations/**/*.cs]
+dotnet_diagnostic.CA1062.severity = none
+
+# Code quality - Services (suppress CA1062 temporarily - legacy code to be migrated)
+[src/**/Services/**/*.cs]
+dotnet_diagnostic.CA1062.severity = suggestion
+
+# Code quality - Test code (relaxed enforcement)
+[tests/**/*.cs]
+# CA2000: Dispose objects - SUGGESTION in tests (test fixtures often manage lifetime differently)
+dotnet_diagnostic.CA2000.severity = suggestion
+
+# CA1031: Do not catch general exception types - SILENT in tests (tests often validate exception handling)
+dotnet_diagnostic.CA1031.severity = silent
+
+# CA1063: Implement IDisposable correctly - SUGGESTION in tests
+dotnet_diagnostic.CA1063.severity = suggestion
+
+# CA1816: Call GC.SuppressFinalize correctly - SUGGESTION in tests
+dotnet_diagnostic.CA1816.severity = suggestion
+
+# CA1416: Platform compatibility - SILENT in tests (tests may target specific platforms)
+dotnet_diagnostic.CA1416.severity = silent
+
+# CA2022: Avoid inexact read with Stream.ReadAsync - SILENT in tests (test code can be less strict)
+dotnet_diagnostic.CA2022.severity = silent
+
+# xUnit1026: Unused theory parameter - SILENT in tests (parameters may be for documentation)
+dotnet_diagnostic.xUnit1026.severity = silent
+
+# xUnit1012: Null should not be used for value type - SILENT in tests (testing null scenarios)
+dotnet_diagnostic.xUnit1012.severity = silent
+
+# CS0169: Field is never used - SILENT in tests (test fixtures may have fields for future use)
+dotnet_diagnostic.CS0169.severity = silent
+
+# CS0108: Member hides inherited member - SILENT in tests (intentional override in test context)
+dotnet_diagnostic.CS0108.severity = silent
+
+# CS0109: Member does not hide accessible member - SILENT in tests
+dotnet_diagnostic.CS0109.severity = silent
+
+# CS1998: Async method lacks await - SILENT in tests (testing async signatures)
+dotnet_diagnostic.CS1998.severity = silent
+
+# CS0219: Variable assigned but never used - SILENT in tests (test setup variables)
+dotnet_diagnostic.CS0219.severity = silent
+
+# CS8605: Unboxing possibly null value - SILENT in tests (test assertions handle nulls)
+dotnet_diagnostic.CS8605.severity = silent
+
+# CS8618: Non-nullable field must contain non-null value - SILENT in tests (xUnit initializes via reflection)
+dotnet_diagnostic.CS8618.severity = silent
+
+# ==================================================================================================
+# SECURITY RULES (Issue #1455 - 60+ rules configured as errors)
+# ==================================================================================================
+# References:
+# - Microsoft.CodeAnalysis.NetAnalyzers: https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/
+# - SonarAnalyzer.CSharp: https://rules.sonarsource.com/csharp
+# - Meziantou.Analyzer: https://github.com/meziantou/Meziantou.Analyzer/tree/main/docs
+
+# --------------------------------------------------------------------------------------------------
+# Microsoft Security Rules (CA - Code Analysis) - Critical Security Issues
+# --------------------------------------------------------------------------------------------------
+
+# CA2100: Review SQL queries for security vulnerabilities
+dotnet_diagnostic.CA2100.severity = error
+
+# CA3001: Review code for SQL injection vulnerabilities
+dotnet_diagnostic.CA3001.severity = error
+
+# CA3002: Review code for XSS vulnerabilities
+dotnet_diagnostic.CA3002.severity = error
+
+# CA3003: Review code for file path injection vulnerabilities
+dotnet_diagnostic.CA3003.severity = error
+
+# CA3004: Review code for information disclosure vulnerabilities
+dotnet_diagnostic.CA3004.severity = error
+
+# CA3005: Review code for LDAP injection vulnerabilities
+dotnet_diagnostic.CA3005.severity = error
+
+# CA3006: Review code for process command injection vulnerabilities
+dotnet_diagnostic.CA3006.severity = error
+
+# CA3007: Review code for open redirect vulnerabilities
+dotnet_diagnostic.CA3007.severity = error
+
+# CA3008: Review code for XPath injection vulnerabilities
+dotnet_diagnostic.CA3008.severity = error
+
+# CA3009: Review code for XML injection vulnerabilities
+dotnet_diagnostic.CA3009.severity = error
+
+# CA3010: Review code for XAML injection vulnerabilities
+dotnet_diagnostic.CA3010.severity = error
+
+# CA3011: Review code for DLL injection vulnerabilities
+dotnet_diagnostic.CA3011.severity = error
+
+# CA3012: Review code for regex injection vulnerabilities
+dotnet_diagnostic.CA3012.severity = error
+
+# CA5350: Do Not Use Weak Cryptographic Algorithms
+dotnet_diagnostic.CA5350.severity = error
+
+# CA5351: Do Not Use Broken Cryptographic Algorithms
+dotnet_diagnostic.CA5351.severity = error
+
+# CA5359: Do Not Disable Certificate Validation
+dotnet_diagnostic.CA5359.severity = error
+
+# CA5360: Do Not Call Dangerous Methods In Deserialization
+dotnet_diagnostic.CA5360.severity = error
+
+# CA5361: Do Not Disable SChannel Use of Strong Crypto
+dotnet_diagnostic.CA5361.severity = error
+
+# CA5363: Do Not Disable Request Validation
+dotnet_diagnostic.CA5363.severity = error
+
+# CA5364: Do Not Use Deprecated Security Protocols
+dotnet_diagnostic.CA5364.severity = error
+
+# CA5365: Do Not Disable HTTP Header Checking
+dotnet_diagnostic.CA5365.severity = error
+
+# CA5373: Do not use obsolete key derivation function
+dotnet_diagnostic.CA5373.severity = error
+
+# CA5374: Do Not Use XslTransform
+dotnet_diagnostic.CA5374.severity = error
+
+# CA5378: Do not disable ServicePointManagerSecurityProtocols
+dotnet_diagnostic.CA5378.severity = error
+
+# CA5379: Ensure Key Derivation Function algorithm is sufficiently strong
+dotnet_diagnostic.CA5379.severity = error
+
+# CA5380: Do Not Add Certificates To Root Store
+dotnet_diagnostic.CA5380.severity = error
+
+# CA5381: Ensure Certificates Are Not Added To Root Store
+dotnet_diagnostic.CA5381.severity = error
+
+# CA5382: Use Secure Cookies In ASP.NET Core
+dotnet_diagnostic.CA5382.severity = error
+
+# CA5383: Ensure Use Secure Cookies In ASP.NET Core
+dotnet_diagnostic.CA5383.severity = error
+
+# CA5384: Do Not Use Digital Signature Algorithm (DSA)
+dotnet_diagnostic.CA5384.severity = error
+
+# CA5385: Use Rivest-Shamir-Adleman (RSA) Algorithm With Sufficient Key Size
+dotnet_diagnostic.CA5385.severity = error
+
+# CA5386: Avoid hardcoding SecurityProtocolType value
+dotnet_diagnostic.CA5386.severity = error
+
+# CA5387: Do Not Use Weak Key Derivation Function With Insufficient Iteration Count
+dotnet_diagnostic.CA5387.severity = error
+
+# CA5388: Ensure Sufficient Iteration Count When Using Weak Key Derivation Function
+dotnet_diagnostic.CA5388.severity = error
+
+# CA5389: Do Not Add Archive Item's Path To The Target File System Path
+dotnet_diagnostic.CA5389.severity = error
+
+# CA5390: Do not hard-code encryption key
+dotnet_diagnostic.CA5390.severity = error
+
+# CA5391: Use antiforgery tokens in ASP.NET Core MVC controllers
+dotnet_diagnostic.CA5391.severity = error
+
+# CA5392: Use DefaultDllImportSearchPaths attribute for P/Invokes
+dotnet_diagnostic.CA5392.severity = error
+
+# CA5393: Do not use unsafe DllImportSearchPath value
+dotnet_diagnostic.CA5393.severity = error
+
+# CA5394: Do not use insecure randomness
+dotnet_diagnostic.CA5394.severity = error
+
+# CA5395: Miss HttpVerb attribute for action methods
+dotnet_diagnostic.CA5395.severity = error
+
+# CA5396: Set HttpOnly to true for HttpCookie
+dotnet_diagnostic.CA5396.severity = error
+
+# CA5397: Do not use deprecated SslProtocols values
+dotnet_diagnostic.CA5397.severity = error
+
+# CA5398: Avoid hardcoded SslProtocols values
+dotnet_diagnostic.CA5398.severity = error
+
+# CA5399: HttpClients should enable certificate revocation list checks
+dotnet_diagnostic.CA5399.severity = error
+
+# CA5400: Ensure HttpClient certificate revocation list check is not disabled
+dotnet_diagnostic.CA5400.severity = error
+
+# CA5401: Do not use CreateEncryptor with non-default IV
+dotnet_diagnostic.CA5401.severity = error
+
+# CA5402: Use CreateEncryptor with the default IV
+dotnet_diagnostic.CA5402.severity = error
+
+# CA5403: Do not hard-code certificate
+dotnet_diagnostic.CA5403.severity = error
+
+# --------------------------------------------------------------------------------------------------
+# Deserialization Security Rules (CA23xx, CA53xx)
+# --------------------------------------------------------------------------------------------------
+
+# CA2300: Do not use insecure deserializer BinaryFormatter
+dotnet_diagnostic.CA2300.severity = error
+
+# CA2301: Do not call BinaryFormatter.Deserialize without first setting BinaryFormatter.Binder
+dotnet_diagnostic.CA2301.severity = error
+
+# CA2302: Ensure BinaryFormatter.Binder is set before calling BinaryFormatter.Deserialize
+dotnet_diagnostic.CA2302.severity = error
+
+# CA2305: Do not use insecure deserializer LosFormatter
+dotnet_diagnostic.CA2305.severity = error
+
+# CA2310: Do not use insecure deserializer NetDataContractSerializer
+dotnet_diagnostic.CA2310.severity = error
+
+# CA2311: Do not deserialize without first setting NetDataContractSerializer.Binder
+dotnet_diagnostic.CA2311.severity = error
+
+# CA2312: Ensure NetDataContractSerializer.Binder is set before deserializing
+dotnet_diagnostic.CA2312.severity = error
+
+# CA2315: Do not use insecure deserializer ObjectStateFormatter
+dotnet_diagnostic.CA2315.severity = error
+
+# CA2321: Do not deserialize with JavaScriptSerializer using a SimpleTypeResolver
+dotnet_diagnostic.CA2321.severity = error
+
+# CA2322: Ensure JavaScriptSerializer is not initialized with SimpleTypeResolver before deserializing
+dotnet_diagnostic.CA2322.severity = error
+
+# CA2326: Do not use TypeNameHandling values other than None
+dotnet_diagnostic.CA2326.severity = error
+
+# CA2327: Do not use insecure JsonSerializerSettings
+dotnet_diagnostic.CA2327.severity = error
+
+# CA2328: Ensure that JsonSerializerSettings are secure
+dotnet_diagnostic.CA2328.severity = error
+
+# CA2329: Do not deserialize with JsonSerializer using an insecure configuration
+dotnet_diagnostic.CA2329.severity = error
+
+# CA2330: Ensure that JsonSerializer has a secure configuration when deserializing
+dotnet_diagnostic.CA2330.severity = error
+
+# CA2350: Do not use DataTable.ReadXml() with untrusted data
+dotnet_diagnostic.CA2350.severity = error
+
+# CA2351: Do not use DataSet.ReadXml() with untrusted data
+dotnet_diagnostic.CA2351.severity = error
+
+# CA2352: Unsafe DataSet or DataTable in serializable type can be vulnerable to RCE attacks
+dotnet_diagnostic.CA2352.severity = error
+
+# CA2353: Unsafe DataSet or DataTable in serializable type
+dotnet_diagnostic.CA2353.severity = error
+
+# CA2354: Unsafe DataSet or DataTable in deserialized object graph can be vulnerable to RCE attacks
+dotnet_diagnostic.CA2354.severity = error
+
+# CA2355: Unsafe DataSet or DataTable in deserialized object graph
+dotnet_diagnostic.CA2355.severity = error
+
+# CA2356: Unsafe DataSet or DataTable type in web deserialized object graph
+dotnet_diagnostic.CA2356.severity = error
+
+# CA2361: Ensure auto-generated class containing DataSet.ReadXml() is not used with untrusted data
+dotnet_diagnostic.CA2361.severity = error
+
+# CA2362: Unsafe DataSet or DataTable in auto-generated serializable type can be vulnerable to RCE
+dotnet_diagnostic.CA2362.severity = error
+
+# CA5362: Potential reference cycle in deserialized object graph
+dotnet_diagnostic.CA5362.severity = error
+
+# CA5366: Use XmlReader for 'DataSet.ReadXml()'
+dotnet_diagnostic.CA5366.severity = error
+
+# CA5369: Use XmlReader for 'XmlSerializer.Deserialize()'
+dotnet_diagnostic.CA5369.severity = error
+
+# CA5370: Use XmlReader for XmlValidatingReader constructor
+dotnet_diagnostic.CA5370.severity = error
+
+# CA5371: Use XmlReader for 'XmlSchema.Read()'
+dotnet_diagnostic.CA5371.severity = error
+
+# CA5372: Use XmlReader for XPathDocument constructor
+dotnet_diagnostic.CA5372.severity = error
+
+# --------------------------------------------------------------------------------------------------
+# SonarAnalyzer Security Rules (S - Sonar)
+# --------------------------------------------------------------------------------------------------
+
+# S2068: Credentials should not be hard-coded
+dotnet_diagnostic.S2068.severity = error
+
+# S2245: Using pseudorandom number generators (PRNGs) is security-sensitive
+dotnet_diagnostic.S2245.severity = error
+
+# S2255: Writing cookies is security-sensitive
+dotnet_diagnostic.S2255.severity = error
+
+# S2257: Using non-standard cryptographic algorithms is security-sensitive
+dotnet_diagnostic.S2257.severity = error
+
+# S2278: Neither DES (Data Encryption Standard) nor DESede (3DES) should be used
+dotnet_diagnostic.S2278.severity = error
+
+# S2612: Setting loose POSIX file permissions is security-sensitive
+dotnet_diagnostic.S2612.severity = error
+
+# S2631: Regular expressions should not be vulnerable to Denial of Service attacks
+dotnet_diagnostic.S2631.severity = error
+
+# S3330: Creating cookies without the "HttpOnly" flag is security-sensitive
+dotnet_diagnostic.S3330.severity = error
+
+# S3649: User-provided values should be sanitized before use in SQL statements
+dotnet_diagnostic.S3649.severity = error
+
+# S4426: Cryptographic keys should be robust
+dotnet_diagnostic.S4426.severity = error
+
+# S4507: Delivering code in production with debug features activated is security-sensitive
+dotnet_diagnostic.S4507.severity = error
+
+# S4790: Using weak hashing algorithms is security-sensitive
+dotnet_diagnostic.S4790.severity = error
+
+# S5042: Expanding archive files without controlling resource consumption is security-sensitive
+dotnet_diagnostic.S5042.severity = error
+
+# S5122: Having a permissive Cross-Origin Resource Sharing policy is security-sensitive
+dotnet_diagnostic.S5122.severity = error
+
+# S5131: Endpoints should not be vulnerable to reflected cross-site scripting (XSS) attacks
+dotnet_diagnostic.S5131.severity = error
+
+# S5144: Server-side requests should be validated
+dotnet_diagnostic.S5144.severity = error
+
+# S5145: Log injection vulnerabilities should be avoided
+dotnet_diagnostic.S5145.severity = error
+
+# S5334: ASP.NET HTTP request validation feature should not be disabled
+dotnet_diagnostic.S5334.severity = error
+
+# S5693: Allowing requests with excessive content length is security-sensitive
+dotnet_diagnostic.S5693.severity = error
+
+# S5766: Deserializing objects without performing data validation is security-sensitive
+dotnet_diagnostic.S5766.severity = error
+
+# S5773: Types allowed to be deserialized should be restricted
+dotnet_diagnostic.S5773.severity = error
+
+# S6377: XML parsers should not be vulnerable to XXE attacks
+dotnet_diagnostic.S6377.severity = error
+
+# ==================================================================================================
+# SUMMARY
+# ==================================================================================================
+# Total Security Rules Configured: 90+ (CA: 70+, S: 20+)
+# Severity: error (blocks build on violation)
+# Replaced: SecurityCodeScan.VS2019 (deprecated) with modern analyzers
+# ==================================================================================================

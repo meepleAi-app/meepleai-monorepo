@@ -1,0 +1,14 @@
+// Barrel exports for diff module
+export { CollapsibleUnchangedSection } from './CollapsibleUnchangedSection';
+export { DiffCodeBlock } from './DiffCodeBlock';
+export { DiffCodePanel } from './DiffCodePanel';
+export { DiffLineNumberGutter } from './DiffLineNumberGutter';
+export { DiffNavigationControls } from './DiffNavigationControls';
+export { DiffSearchInput } from './DiffSearchInput';
+export { DiffStatistics } from './DiffStatistics';
+export { DiffSummary } from './DiffSummary';
+export { DiffToolbar } from './DiffToolbar';
+export { DiffViewModeToggle } from './DiffViewModeToggle';
+export { DiffViewerEnhanced } from './DiffViewerEnhanced';
+export { PrismHighlighter } from './PrismHighlighter';
+export { SideBySideDiffView } from './SideBySideDiffView';

@@ -1,0 +1,32 @@
+using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.Infrastructure;
+using Api.SharedKernel.Application.EventHandlers;
+using Microsoft.Extensions.Logging;
+
+namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
+
+public sealed class GameSessionCreatedEventHandler : DomainEventHandlerBase<GameSessionCreatedEvent>
+{
+    public GameSessionCreatedEventHandler(
+        MeepleAiDbContext dbContext,
+        ILogger<DomainEventHandlerBase<GameSessionCreatedEvent>> logger)
+        : base(dbContext, logger)
+    {
+    }
+
+    protected override async Task HandleEventAsync(GameSessionCreatedEvent domainEvent, CancellationToken cancellationToken)
+    {
+        await Task.CompletedTask;
+    }
+
+    protected override Dictionary<string, object?>? GetAuditMetadata(GameSessionCreatedEvent domainEvent)
+    {
+        return new Dictionary<string, object?>
+        {
+            ["SessionId"] = domainEvent.SessionId,
+            ["GameId"] = domainEvent.GameId,
+            ["PlayerCount"] = domainEvent.PlayerCount,
+            ["Action"] = "GameSessionCreated"
+        };
+    }
+}

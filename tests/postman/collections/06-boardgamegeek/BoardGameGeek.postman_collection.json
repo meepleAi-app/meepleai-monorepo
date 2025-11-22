@@ -1,0 +1,102 @@
+{
+  "info": {
+    "_postman_id": "boardgamegeek-collection",
+    "name": "MeepleAI - BoardGameGeek API",
+    "description": "BoardGameGeek API integration endpoints for MeepleAI.\n\n**Includes**:\n- Game search via BGG API\n- Game metadata retrieval\n- BGG ratings and rankings\n\n**External API**: BoardGameGeek XML API 2\n**Proxy**: MeepleAI API wraps BGG API calls\n\n**Base URL**: `{{base_url}}/api/v1/bgg`\n\n**Version**: 1.0.0\n**Last Updated**: 2025-11-20",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "Search BGG Games",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Results are returned', function() {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.results).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Results have BGG IDs', function() {",
+              "    const jsonData = pm.response.json();",
+              "    if (jsonData.results.length > 0) {",
+              "        pm.expect(jsonData.results[0].id).to.be.a('number');",
+              "        pm.expect(jsonData.results[0].name).to.be.a('string');",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/bgg/search?q=Catan&exact=false",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "bgg", "search"],
+          "query": [
+            {
+              "key": "q",
+              "value": "Catan"
+            },
+            {
+              "key": "exact",
+              "value": "false"
+            }
+          ]
+        },
+        "description": "Search BoardGameGeek for games. Requires authentication.\n\n**Query**: SearchBggGamesQuery\n**Handler**: SearchBggGamesQueryHandler\n**External API**: BGG XML API 2 /search"
+      },
+      "response": []
+    },
+    {
+      "name": "Get BGG Game Details",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Game details are returned', function() {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.Name).to.exist;",
+              "    pm.expect(jsonData.BggId).to.be.a('number');",
+              "});",
+              "",
+              "pm.test('Rating information is present', function() {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.AverageRating).to.be.a('number');",
+              "    pm.expect(jsonData.BggRank).to.be.a('number');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/bgg/games/13",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "bgg", "games", "13"]
+        },
+        "description": "Get game details from BoardGameGeek by BGG ID. Example: 13 = Catan. Requires authentication.\n\n**Query**: GetBggGameDetailsQuery\n**Handler**: GetBggGameDetailsQueryHandler\n**External API**: BGG XML API 2 /thing\n\n**Common BGG IDs**:\n- 13: Catan\n- 174430: Gloomhaven\n- 167791: Terraforming Mars\n- 173346: 7 Wonders Duel\n- 182028: Through the Ages: A New Story of Civilization"
+      },
+      "response": []
+    }
+  ]
+}

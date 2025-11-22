@@ -1,0 +1,22 @@
+using Api.SharedKernel.Application.Interfaces;
+
+namespace Api.BoundedContexts.Authentication.Application.Commands;
+
+/// <summary>
+/// Command to enable two-factor authentication for a user.
+/// Requires verification of TOTP code before enabling.
+/// DDD CQRS: Uses TotpCode parameter (matching handler).
+/// </summary>
+public record Enable2FACommand(
+    Guid UserId,
+    string TotpCode
+) : ICommand<Enable2FAResult>;
+
+/// <summary>
+/// Result of enabling 2FA.
+/// </summary>
+public sealed record Enable2FAResult(
+    bool Success,
+    List<string>? BackupCodes = null,
+    string? ErrorMessage = null
+);

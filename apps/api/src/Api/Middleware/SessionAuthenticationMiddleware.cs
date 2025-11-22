@@ -1,0 +1,97 @@
+using System.Security.Claims;
+using Api.BoundedContexts.Authentication.Application.Queries;
+using Api.Models;
+using Api.Routing;
+using MediatR;
+
+namespace Api.Middleware;
+
+/// <summary>
+/// Middleware that authenticates requests using the session cookie written by auth endpoints.
+/// When a valid session token is found, stores an ActiveSession in HttpContext.Items
+/// and enriches HttpContext.User with basic identity claims.
+/// </summary>
+public class SessionAuthenticationMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger<SessionAuthenticationMiddleware> _logger;
+
+    public SessionAuthenticationMiddleware(RequestDelegate next, ILogger<SessionAuthenticationMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
+
+    public async Task InvokeAsync(HttpContext context, IMediator mediator)
+    {
+        // Process only API routes
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            try
+            {
+                var cookieName = CookieHelpers.GetSessionCookieName(context);
+                if (context.Request.Cookies.TryGetValue(cookieName, out var token) && !string.IsNullOrWhiteSpace(token))
+                {
+                    // Validate session via DDD CQRS ValidateSessionQuery
+                    var query = new ValidateSessionQuery(SessionToken: token);
+                    var result = await mediator.Send(query);
+
+                    if (result.IsValid && result.User != null)
+                    {
+                        // Convert DDD DTO to legacy ActiveSession for backward compatibility
+                        var legacyUser = new AuthUser(
+                            Id: result.User.Id.ToString(),
+                            Email: result.User.Email,
+                            DisplayName: result.User.DisplayName,
+                            Role: result.User.Role);
+
+                        var activeSession = new ActiveSession(legacyUser, result.ExpiresAt!.Value, result.LastSeenAt);
+
+                        // Make session available to endpoints expecting it
+                        context.Items[nameof(ActiveSession)] = activeSession;
+
+                        // If no authenticated user is set, populate ClaimsPrincipal for observability and helpers
+                        if (context.User?.Identity?.IsAuthenticated != true)
+                        {
+                            var claims = new List<Claim>
+                            {
+                                new(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
+                                new(ClaimTypes.Email, result.User.Email),
+                                new(ClaimTypes.Role, result.User.Role)
+                            };
+
+                            if (!string.IsNullOrWhiteSpace(result.User.DisplayName))
+                            {
+                                claims.Add(new Claim(ClaimTypes.Name, result.User.DisplayName));
+                            }
+
+                            context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "SessionCookie"));
+                        }
+                    }
+                }
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            catch (Exception ex)
+            {
+                // MIDDLEWARE BOUNDARY PATTERN: Authentication middleware must not block requests on validation errors
+                // Rationale: This middleware validates session cookies but must not crash the request pipeline if
+                // validation fails (DB errors, crypto errors, malformed tokens). Failed authentication simply means
+                // the request proceeds as unauthenticated. We log the error for monitoring but allow the request.
+                // Context: Session validation involves DB queries and crypto operations that can fail
+                _logger.LogWarning(ex, "Session cookie validation failed");
+            }
+#pragma warning restore CA1031 // Do not catch general exception types
+        }
+
+        await _next(context);
+    }
+}
+
+public static class SessionAuthenticationMiddlewareExtensions
+{
+    public static IApplicationBuilder UseSessionAuthentication(this IApplicationBuilder app)
+    {
+        return app.UseMiddleware<SessionAuthenticationMiddleware>();
+    }
+}
+

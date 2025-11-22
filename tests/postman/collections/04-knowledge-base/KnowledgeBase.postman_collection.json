@@ -1,0 +1,510 @@
+{
+  "info": {
+    "_postman_id": "knowledge-base-collection",
+    "name": "MeepleAI - Knowledge Base",
+    "description": "KnowledgeBase bounded context endpoints for MeepleAI API.\n\n**Includes**:\n- Hybrid RAG search (vector + keyword RRF fusion)\n- Q&A agent with streaming support\n- Explain agent (detailed topic explanations)\n- Setup guide agent\n- Chess agent (move suggestions, position analysis)\n- Agent feedback collection\n\n**Architecture**: CQRS/MediatR with KnowledgeBase bounded context\n**RAG Pipeline**: Hybrid Search (70% vector + 30% keyword) → Multi-model LLM → 5-layer validation\n\n**Base URL**: `{{base_url}}/api/v1`\n\n**Version**: 1.0.0\n**Last Updated**: 2025-11-20",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "Search & Retrieval",
+      "item": [
+        {
+          "name": "Hybrid Search (Vector + Keyword)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success flag', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response has results array', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.results).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Search mode is hybrid', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.searchMode).to.equal('hybrid');",
+                  "});",
+                  "",
+                  "pm.test('Results have relevance scores', function() {",
+                  "    const response = pm.response.json();",
+                  "    if (response.results.length > 0) {",
+                  "        pm.expect(response.results[0]).to.have.property('relevanceScore');",
+                  "        pm.expect(response.results[0].relevanceScore).to.be.a('number');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{game_id}}\",\n  \"query\": \"How do you win?\",\n  \"topK\": 5,\n  \"minScore\": 0.7,\n  \"searchMode\": \"hybrid\",\n  \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/knowledge-base/search",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "knowledge-base", "search"]
+            },
+            "description": "Test hybrid search (vector + keyword fusion via RRF).\n\n**Query**: SearchQuery\n**Handler**: SearchQueryHandler\n**Context**: KnowledgeBase\n**Services**: VectorSearchDomainService + RrfFusionDomainService\n**Algorithm**: RRF (Reciprocal Rank Fusion) with 70/30 weighting"
+          },
+          "response": []
+        },
+        {
+          "name": "Vector Only Search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Search mode is vector', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.searchMode).to.equal('vector');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{game_id}}\",\n  \"query\": \"setup phase\",\n  \"topK\": 3,\n  \"minScore\": 0.6,\n  \"searchMode\": \"vector\",\n  \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/knowledge-base/search",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "knowledge-base", "search"]
+            },
+            "description": "Test pure vector search (semantic similarity only).\n\n**Uses**: VectorSearchDomainService with cosine similarity"
+          },
+          "response": []
+        }
+      ],
+      "description": "Hybrid search endpoints (ADR-001: Hybrid RAG)"
+    },
+    {
+      "name": "Q&A Agent",
+      "item": [
+        {
+          "name": "Ask Question (Non-Streaming)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answer is returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.answer).to.exist;",
+                  "    pm.expect(jsonData.snippets).to.be.an('array');",
+                  "    pm.expect(jsonData.confidence).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Confidence scores are present', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.searchConfidence).to.be.a('number');",
+                  "    pm.expect(jsonData.llmConfidence).to.be.a('number');",
+                  "    pm.expect(jsonData.overallConfidence).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Confidence scores in valid range (0-1)', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.searchConfidence).to.be.within(0, 1);",
+                  "    pm.expect(jsonData.llmConfidence).to.be.within(0, 1);",
+                  "    pm.expect(jsonData.overallConfidence).to.be.within(0, 1);",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable', function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{game_id}}\",\n  \"query\": \"How do you win the game?\",\n  \"searchMode\": \"Hybrid\",\n  \"chatId\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/qa?generateFollowUps=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "qa"],
+              "query": [
+                {
+                  "key": "generateFollowUps",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Ask a question about game rules using RAG (Retrieval-Augmented Generation).\n\n**Query**: QaAgentQuery\n**Handler**: QaAgentQueryHandler\n**Context**: KnowledgeBase\n**Pipeline**: Search → Build Prompt → LLM → Quality Tracking\n**Validation**: 5-layer (confidence ≥0.70, citation verify, forbidden keywords)"
+          },
+          "response": []
+        },
+        {
+          "name": "Ask Question (Streaming SSE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Content-Type is text/event-stream', function() {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/event-stream');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{game_id}}\",\n  \"query\": \"How do you win the game?\",\n  \"searchMode\": \"Hybrid\",\n  \"chatId\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/qa/stream?generateFollowUps=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "qa", "stream"],
+              "query": [
+                {
+                  "key": "generateFollowUps",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Streaming version of QA agent using Server-Sent Events (SSE).\n\n**Command**: QaAgentStreamingCommand\n**Handler**: QaAgentStreamingCommandHandler (IAsyncEnumerable)\n**Context**: KnowledgeBase\n**Feature Flag**: Features.StreamingResponses"
+          },
+          "response": []
+        },
+        {
+          "name": "Ask - Complex Multi-Part Question",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answer is comprehensive', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.answer.length).to.be.above(50);",
+                  "});",
+                  "",
+                  "pm.test('Multiple sources cited', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.snippets.length).to.be.above(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{game_id}}\",\n  \"query\": \"What are the different phases of the game and what actions can you take in each phase?\",\n  \"searchMode\": \"Hybrid\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/qa",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "qa"]
+            },
+            "description": "Test complex question requiring multiple sources.\n\nShould demonstrate RRF fusion and quality tracking."
+          },
+          "response": []
+        },
+        {
+          "name": "Ask - Confidence Score Validation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Overall confidence is weighted average (70/30)', function() {",
+                  "    const response = pm.response.json();",
+                  "    const searchConf = response.searchConfidence;",
+                  "    const llmConf = response.llmConfidence;",
+                  "    const overallConf = response.overallConfidence;",
+                  "    ",
+                  "    // Calculate expected: 70% search + 30% LLM",
+                  "    const expected = (searchConf * 0.7) + (llmConf * 0.3);",
+                  "    const tolerance = 0.01;",
+                  "    ",
+                  "    pm.expect(overallConf).to.be.closeTo(expected, tolerance);",
+                  "    console.log('Search:', searchConf, '| LLM:', llmConf, '| Overall:', overallConf);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{game_id}}\",\n  \"query\": \"What are the rules?\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/qa",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "qa"]
+            },
+            "description": "Test QualityTrackingDomainService confidence calculation.\n\nVerifies 70/30 weighting formula (ADR-005: Cosine Similarity Consensus)."
+          },
+          "response": []
+        }
+      ],
+      "description": "Q&A agent with RAG pipeline and quality tracking"
+    },
+    {
+      "name": "Other AI Agents",
+      "item": [
+        {
+          "name": "Explain Agent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Explanation is returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.script).to.exist;",
+                  "    pm.expect(jsonData.estimatedReadingTimeMinutes).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{game_id}}\",\n  \"topic\": \"setup\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/explain",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "explain"]
+            },
+            "description": "Generate a detailed explanation on a game topic.\n\n**Command**: ExplainAgentCommand\n**Handler**: ExplainAgentCommandHandler\n**Context**: KnowledgeBase"
+          },
+          "response": []
+        },
+        {
+          "name": "Setup Guide Agent (Streaming)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Content-Type is text/event-stream', function() {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/event-stream');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{game_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/setup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "setup"]
+            },
+            "description": "Generate step-by-step setup guide (streaming).\n\n**Command**: SetupGuideAgentStreamingCommand\n**Handler**: SetupGuideAgentStreamingCommandHandler\n**Context**: KnowledgeBase\n**Feature Flag**: Features.SetupGuideGeneration"
+          },
+          "response": []
+        },
+        {
+          "name": "Chess Agent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Chess answer is returned', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.answer).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"What is a fork in chess?\",\n  \"fenPosition\": null,\n  \"chatId\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/chess",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "chess"]
+            },
+            "description": "Chess conversational agent with move suggestions and position analysis.\n\n**Command**: ChessAgentCommand\n**Handler**: ChessAgentCommandHandler\n**Context**: KnowledgeBase"
+          },
+          "response": []
+        }
+      ],
+      "description": "Specialized AI agents (Explain, Setup, Chess)"
+    },
+    {
+      "name": "Agent Feedback",
+      "item": [
+        {
+          "name": "Provide Agent Feedback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Feedback is recorded', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageId\": \"msg_123\",\n  \"endpoint\": \"qa\",\n  \"userId\": \"{{user_id}}\",\n  \"outcome\": \"thumbs_up\",\n  \"gameId\": \"{{game_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agents/feedback",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "agents", "feedback"]
+            },
+            "description": "Provide feedback on AI agent responses (thumbs up/down).\n\n**Command**: ProvideFeedbackCommand\n**Handler**: ProvideFeedbackCommandHandler\n**Context**: KnowledgeBase"
+          },
+          "response": []
+        }
+      ],
+      "description": "User feedback collection for AI responses"
+    }
+  ]
+}

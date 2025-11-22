@@ -1,0 +1,65 @@
+# Docker Compose - Test/CI Environment
+# Optimized for CI pipelines with in-memory storage and minimal observability
+
+services:
+  # Core Services - Optimized for Speed
+  meepleai-postgres:
+    restart: "no"
+    volumes: []  # Clear base volumes before using tmpfs
+    tmpfs:
+      - /var/lib/postgresql/data  # In-memory for speed in CI
+    environment:
+      POSTGRES_PASSWORD: testpassword  # Simple password for testing
+    healthcheck:
+      interval: 3s
+      timeout: 2s
+      retries: 5
+
+  meepleai-redis:
+    restart: "no"
+    volumes: []  # Clear base volumes before using tmpfs
+    tmpfs:
+      - /data  # In-memory for speed
+
+  meepleai-qdrant:
+    restart: "no"
+    # Keep persistent storage for test data consistency
+    healthcheck:
+      interval: 3s
+      timeout: 2s
+      retries: 5
+
+  # Disable observability services in test environment (use profiles)
+  meepleai-grafana:
+    profiles:
+      - observability  # Won't start unless --profile observability is used
+
+  meepleai-jaeger:
+    profiles:
+      - observability
+
+  meepleai-prometheus:
+    profiles:
+      - observability
+
+  meepleai-alertmanager:
+    profiles:
+      - observability
+
+  meepleai-seq:
+    profiles:
+      - observability
+
+  # Minimal services for testing
+  meepleai-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Test
+      ConnectionStrings__Postgres: "Host=meepleai-postgres;Database=meepleai_test;Username=meepleai;Password=testpassword"
+    restart: "no"
+
+  meepleai-web:
+    environment:
+      NODE_ENV: test
+    restart: "no"
+
+

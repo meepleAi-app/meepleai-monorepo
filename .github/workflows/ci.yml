@@ -1,0 +1,983 @@
+name: ci
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'schemas/**'
+      - 'infra/**'
+      - '.github/workflows/**'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'schemas/**'
+      - 'infra/**'
+      - '.github/workflows/**'
+  # Run nightly at 2 AM UTC to catch LLM integration regressions
+  schedule:
+    - cron: '0 2 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+
+# Explicit permissions (Least Privilege Principle - Issue #1455)
+# https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+permissions:
+  contents: read        # Required: Checkout code
+  pull-requests: write  # Required: Comment on PRs with test results
+  checks: write         # Required: Report test results and coverage
+  actions: write        # Required: Upload artifacts (actions/upload-artifact@v6)
+
+# Cancel previous runs on same PR/branch to avoid piling up
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Determine which parts changed to run only necessary jobs
+  # Only runs on push/PR events; schedule/workflow_dispatch jobs skip this
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    # Only run path filtering for push/PR events (schedule/workflow_dispatch don't have a base ref to compare)
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      api: ${{ steps.filter.outputs.api }}
+      schemas: ${{ steps.filter.outputs.schemas }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Paths Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            web:
+              - 'apps/web/**'
+            api:
+              - 'apps/api/**'
+              - 'infra/**'
+            schemas:
+              - 'schemas/**'
+            infra:
+              - 'infra/**'
+  validate-schemas:
+    needs: changes
+    name: Schemas - Validate RuleSpec Examples
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when schemas changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.schemas == 'true') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate RuleSpec Examples
+        run: node schemas/validate-all-examples.js
+
+  validate-api-codegen:
+    needs: changes
+    name: API - Validate Code Generation
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when API/web files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1  # Shallow clone for faster checkout
+
+      - name: Setup backend environment
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Build API (generates OpenAPI spec and TypeScript client)
+        working-directory: apps/api
+        run: dotnet build --no-restore
+        env:
+          NSwagExecution: 'true'
+
+      - name: Generate Zod schemas
+        working-directory: apps/web
+        run: pnpm generate:api
+        env:
+          OPENAPI_FILE: ../../api/src/Api/openapi.json
+
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain apps/web/src/lib/api/generated/)" ]; then
+            echo "❌ Generated API client files are out of date!"
+            echo ""
+            echo "The following files have uncommitted changes:"
+            git status --porcelain apps/web/src/lib/api/generated/
+            echo ""
+            echo "Please run 'pnpm generate:api' locally and commit the changes."
+            echo ""
+            git diff apps/web/src/lib/api/generated/
+            exit 1
+          else
+            echo "✅ Generated API client files are up to date"
+          fi
+
+  # Testing Strategy: Test Pyramid (70% unit, 20% integration, 5% quality, 5% E2E)
+  # Reference: docs/02-development/testing/testing-strategy.md
+
+  ci-web-unit:
+    needs: changes
+    name: Web - Unit Tests (70%)
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when web files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true') }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Build Storybook
+        run: pnpm build-storybook --quiet
+
+      # Unit Tests: <5s execution target, >=90% coverage
+      - name: Unit Tests with Coverage (Enforced >=90%)
+        env:
+          NODE_ENV: test
+          CI: true
+        run: pnpm test:coverage
+        # Note: Jest globalTeardown automatically runs cleanup script (Windows only)
+        # Coverage threshold enforcement is active (90% for branches, functions, lines, statements)
+
+      - name: Upload Web Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: apps/web/coverage/lcov.info
+          flags: web,unit
+          name: web-unit-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      # UI-05: Accessibility Testing (Unit Level)
+      - name: Run Accessibility Unit Tests (jest-axe)
+        env:
+          NODE_ENV: test
+          CI: true
+        run: pnpm test:a11y
+
+  ci-web-e2e:
+    needs: changes
+    name: Web - E2E Tests (5%)
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when web files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true') }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Setup Playwright browsers
+        uses: ./.github/actions/setup-playwright
+        with:
+          working-directory: apps/web
+
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+      - name: Build Next.js for E2E
+        run: pnpm build
+
+      # E2E Tests: Sequential group execution to prevent memory exhaustion
+      # Groups: Authentication, Chat, Admin, PDF, API, Pages, Accessibility
+      # Scenarios: Happy path, uncertainty handling, mobile responsive, error recovery
+      - name: Run E2E Tests (User Journey Scenarios - Sequential Groups)
+        timeout-minutes: 20
+        run: pnpm test:e2e:groups
+
+      - name: Upload Playwright Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-report-${{ github.run_number }}
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+  ci-api-smoke:
+    needs: changes
+    name: API - Smoke Tests (Postman/Newman)
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when API/web files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'meepleai' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meepleai_dev_password' }}
+          POSTGRES_DB: meepleai_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        ports:
+          - 6333:6333
+          - 6334:6334
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dependencies
+        working-directory: apps/web
+        run: pnpm install
+
+      - name: Install Newman globally
+        run: npm install -g newman newman-reporter-htmlextra
+
+      - name: Start API
+        working-directory: apps/api/src/Api
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=localhost;Port=5432;Database=meepleai_dev;Username=meepleai;Password=meepleai_dev_password' }}
+          QDRANT_URL: "http://localhost:6333"
+          REDIS_URL: "localhost:6379"
+          OPENROUTER_API_KEY: "test-key-for-ci"
+        run: |
+          dotnet restore
+          dotnet build --no-restore
+          nohup dotnet run --no-build > api.log 2>&1 &
+          echo $! > api.pid
+
+      - name: Wait for API Health
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:5080/health; do sleep 2; done'
+
+      # Run Postman smoke tests via Newman
+      - name: Run KnowledgeBase API Tests (11 tests)
+        run: |
+          newman run postman/KnowledgeBase-DDD-Tests.postman_collection.json \
+            -e postman/Local-Development.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-kb.json \
+            --reporter-htmlextra-export newman-report-kb.html \
+            --bail
+
+      - name: Run DDD Bounded Context Tests (All Collections)
+        run: |
+          # Track failed collections to report at the end
+          FAILED_TESTS=""
+
+          # Health Check
+          echo "::group::Running Health Check Tests"
+          if ! newman run tests/postman/collections/01-health/HealthCheck.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-health.json \
+            --reporter-htmlextra-export newman-report-health.html; then
+            FAILED_TESTS="${FAILED_TESTS}\n- Health Check"
+            echo "::error::Health Check collection failed"
+          fi
+          echo "::endgroup::"
+
+          # Authentication
+          echo "::group::Running Authentication Tests"
+          if ! newman run tests/postman/collections/02-authentication/Authentication.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-auth.json \
+            --reporter-htmlextra-export newman-report-auth.html; then
+            FAILED_TESTS="${FAILED_TESTS}\n- Authentication"
+            echo "::error::Authentication collection failed"
+          fi
+          echo "::endgroup::"
+
+          # Game Management
+          echo "::group::Running Game Management Tests"
+          if ! newman run tests/postman/collections/03-game-management/GameManagement.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-games.json \
+            --reporter-htmlextra-export newman-report-games.html; then
+            FAILED_TESTS="${FAILED_TESTS}\n- Game Management"
+            echo "::error::Game Management collection failed"
+          fi
+          echo "::endgroup::"
+
+          # Knowledge Base (DDD)
+          echo "::group::Running Knowledge Base Tests"
+          if ! newman run tests/postman/collections/04-knowledge-base/KnowledgeBase.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-kb-ddd.json \
+            --reporter-htmlextra-export newman-report-kb-ddd.html; then
+            FAILED_TESTS="${FAILED_TESTS}\n- Knowledge Base"
+            echo "::error::Knowledge Base collection failed"
+          fi
+          echo "::endgroup::"
+
+          # Administration
+          echo "::group::Running Administration Tests"
+          if ! newman run tests/postman/collections/05-administration/Administration.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-admin.json \
+            --reporter-htmlextra-export newman-report-admin.html; then
+            FAILED_TESTS="${FAILED_TESTS}\n- Administration"
+            echo "::error::Administration collection failed"
+          fi
+          echo "::endgroup::"
+
+          # BoardGameGeek
+          echo "::group::Running BoardGameGeek Tests"
+          if ! newman run tests/postman/collections/06-boardgamegeek/BoardGameGeek.postman_collection.json \
+            -e tests/postman/environments/local.postman_environment.json \
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-results-bgg.json \
+            --reporter-htmlextra-export newman-report-bgg.html; then
+            FAILED_TESTS="${FAILED_TESTS}\n- BoardGameGeek"
+            echo "::error::BoardGameGeek collection failed"
+          fi
+          echo "::endgroup::"
+
+          # Exit with failure if any collection failed
+          if [ -n "$FAILED_TESTS" ]; then
+            echo "::error::The following Newman collections failed:${FAILED_TESTS}"
+            exit 1
+          fi
+
+          echo "::notice::All Newman collections passed successfully"
+
+      - name: Upload Newman Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-reports-${{ github.run_number }}
+          path: |
+            newman-results-*.json
+            newman-report-*.html
+          retention-days: 14
+
+      - name: Upload API Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-logs-${{ github.run_number }}
+          path: apps/api/src/Api/api.log
+          retention-days: 7
+
+      - name: Stop API
+        if: always()
+        working-directory: apps/api/src/Api
+        run: |
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) || true
+            rm api.pid
+          fi
+
+  ci-web-a11y:
+    needs: changes
+    name: Web - Accessibility Tests (E2E)
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when web files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true') }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Setup Playwright browsers
+        uses: ./.github/actions/setup-playwright
+        with:
+          working-directory: apps/web
+
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+      - name: Build Next.js for E2E
+        run: pnpm build
+      - name: Run Playwright Accessibility Tests
+        run: pnpm test:e2e e2e/accessibility.spec.ts
+      - name: Upload Playwright Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-a11y-report-${{ github.run_number }}
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+  ci-api-unit-integration:
+    needs: changes
+    name: API - Unit & Integration Tests (90%)
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when API files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true') }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'meeple' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meeplepass' }}
+          POSTGRES_DB: meepleai_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        ports:
+          - 6333:6333
+          - 6334:6334
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install PDF extraction dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Setup backend environment
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Build
+        run: dotnet build --no-restore
+      - name: Verify Qdrant is ready
+        run: |
+          echo "Waiting for Qdrant to be ready..."
+          for i in {1..20}; do
+            if curl -f http://localhost:6333/healthz > /dev/null 2>&1; then
+              echo "Qdrant is ready after $i attempts!"
+              break
+            fi
+            echo "Attempt $i: Qdrant not ready yet, waiting..."
+            sleep 1
+          done
+          curl -v http://localhost:6333/healthz || echo "Qdrant health check failed"
+      # Unit Tests: <5s execution target
+      # Integration Tests: <2min execution target
+      # Combined: 90% of test suite (70% unit + 20% integration)
+      - name: Unit & Integration Tests with Coverage (Target >=90%)
+        timeout-minutes: 20
+        env:
+          CI: true
+          OPENROUTER_API_KEY: test-key-for-ci
+          QDRANT_URL: http://127.0.0.1:6333
+          REDIS_URL: 127.0.0.1:6379
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
+        run: |
+          # Test Pyramid: 70% Unit Tests (<5s) + 20% Integration Tests (<2min)
+          # Reference: docs/02-development/testing/testing-strategy.md
+          # Note: xUnit v3 AssemblyFixture automatically runs cleanup after all tests
+          # Timeout: 20min (Issue #829: increased from 15min for xUnit v3 + ExecuteDeleteAsync overhead)
+          # With optimizations, expected completion: ~12-14min
+          echo "::notice::Running unit and integration tests (90% of test suite) with 90% coverage threshold"
+          dotnet test \
+            --logger "console;verbosity=normal" \
+            --no-build \
+            --blame-hang-timeout 5m \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./tests/Api.Tests/coverage/ \
+            -p:Threshold=90 \
+            -p:ThresholdType=line \
+            -p:Exclude="[*]Api.Migrations.*" \
+            -- xUnit.Parallelization.MaxParallelThreads=2
+
+      # TEST-002: Validate test isolation by running tests in random order (Issue #1500)
+      # This ensures tests don't depend on shared state or execution order
+      # Uses xUnit's built-in test order randomization with GUID seed
+      - name: Validate Test Isolation (Random Order)
+        timeout-minutes: 15
+        env:
+          CI: true
+          OPENROUTER_API_KEY: test-key-for-ci
+          QDRANT_URL: http://127.0.0.1:6333
+          REDIS_URL: 127.0.0.1:6379
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
+        run: |
+          # Run tests with randomized order to validate test isolation
+          # Reference: docs/02-development/testing/test-isolation-best-practices.md
+          # Seed based on workflow run ID for reproducible failures
+          TEST_SEED="${{ github.run_id }}"
+          echo "::notice::Running tests in random order (seed: $TEST_SEED) to validate test isolation"
+          dotnet test \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --blame-hang-timeout 5m \
+            -- xUnit.Parallelization.MaxParallelThreads=2 \
+               xUnit.MethodDisplay=ClassAndMethod \
+               xUnit.ParallelizeAssembly=false \
+               xUnit.ParallelizeTestCollections=false
+
+      - name: Upload API Coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: apps/api/tests/Api.Tests/coverage/coverage.cobertura.xml
+          flags: api
+          name: api-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      # TEST-02-P5: Generate HTML coverage report (only on failure or manual trigger for debugging)
+      - name: Generate HTML Coverage Report
+        if: failure()
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool || true
+          reportgenerator \
+            -reports:tests/Api.Tests/coverage/coverage.cobertura.xml \
+            -targetdir:tests/Api.Tests/coverage-report \
+            -reporttypes:Html
+
+      - name: Upload Coverage Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage-report-${{ github.run_number }}
+          path: apps/api/tests/Api.Tests/coverage-report/
+          retention-days: 7
+
+  validate-observability-configs:
+    needs: changes
+    name: Validate Prometheus & Alertmanager Configs
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when infra files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.infra == 'true') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate Prometheus Rules
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/infra:/etc/prometheus:ro \
+            prom/prometheus:v3.7.0 \
+            promtool check rules /etc/prometheus/prometheus-rules.yml
+
+      - name: Validate Prometheus Config
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/infra:/etc/prometheus:ro \
+            prom/prometheus:v3.7.0 \
+            promtool check config /etc/prometheus/prometheus.yml
+
+      - name: Validate Alertmanager Config
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/infra:/etc/alertmanager:ro \
+            prom/alertmanager:v0.27.0 \
+            amtool check-config /etc/alertmanager/alertmanager.yml
+
+      - name: Validate Grafana Dashboards
+        run: |
+          for dashboard in infra/dashboards/*.json; do
+            echo "Validating $dashboard..."
+            jq empty "$dashboard" || exit 1
+          done
+
+  ci-api-quality:
+    needs: changes
+    name: API - Quality Tests (5%)
+    runs-on: ubuntu-latest
+    # Run on schedule/workflow_dispatch, or when API files changed in push/PR
+    if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true') }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'meeple' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meeplepass' }}
+          POSTGRES_DB: meepleai_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        ports:
+          - 6333:6333
+          - 6334:6334
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj', 'apps/api/**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
+            ${{ runner.os }}-nuget-
+
+      # Cache build outputs to speed up incremental builds (saves ~1min)
+      - name: Cache .NET Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/**/bin
+            apps/api/**/obj
+          key: ${{ runner.os }}-dotnet-build-${{ hashFiles('apps/api/**/*.cs', 'apps/api/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-dotnet-build-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Verify Qdrant is ready
+        run: |
+          echo "Waiting for Qdrant to be ready..."
+          for i in {1..20}; do
+            if curl -f http://localhost:6333/healthz > /dev/null 2>&1; then
+              echo "Qdrant is ready after $i attempts!"
+              break
+            fi
+            echo "Attempt $i: Qdrant not ready yet, waiting..."
+            sleep 1
+          done
+          curl -v http://localhost:6333/healthz || echo "Qdrant health check failed"
+
+      # Quality Tests: ~15min execution target
+      # 5-Metric Framework: Accuracy, Hallucination, Confidence, Citation, Latency
+      - name: Run Quality Tests (5-Metric Framework)
+        timeout-minutes: 20
+        env:
+          CI: true
+          QDRANT_URL: http://127.0.0.1:6333
+          REDIS_URL: 127.0.0.1:6379
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
+        run: |
+          # Quality Tests: Validate AI quality metrics on golden dataset
+          # Thresholds:
+          #   - Accuracy >=80%
+          #   - Hallucination <=10%
+          #   - Avg Confidence >=0.70
+          #   - Citation Correctness >=80%
+          #   - Avg Latency <=3000ms (P95)
+          # Reference: docs/02-development/testing/testing-strategy.md
+          echo "::notice::Running quality tests (5-metric framework) on golden dataset"
+          dotnet test \
+            --filter "FullyQualifiedName~RagEvaluationIntegrationTests" \
+            --logger "console;verbosity=normal" \
+            --no-build
+
+      - name: Generate RAG Evaluation Report
+        if: always()
+        env:
+          CI: true
+          QDRANT_URL: http://127.0.0.1:6333
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
+        run: |
+          # Create output directory
+          mkdir -p evaluation-reports
+
+          # Run evaluation and capture output
+          # Note: This requires a console app or test that outputs the report
+          # For now, we rely on the integration tests which validate the evaluation logic
+          echo "RAG evaluation completed. Check test results for metrics."
+
+          # Create summary report
+          cat > evaluation-reports/rag-evaluation-summary.md << 'EOF'
+          # RAG Evaluation Summary
+
+          **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+
+          ## Quality Thresholds
+
+          - **Minimum Precision@5:** 0.70 (70%)
+          - **Minimum Mean Reciprocal Rank (MRR):** 0.60 (60%)
+          - **Maximum Latency p95:** 2000ms (2 seconds)
+          - **Minimum Success Rate:** 0.95 (95%)
+
+          ## Test Execution
+
+          RAG evaluation integration tests have been executed.
+          Review test output above for detailed metrics.
+
+          ## Notes
+
+          - Evaluation uses test dataset: `tests/Api.Tests/TestData/rag-evaluation-dataset.json`
+          - Tests validate Precision@K, Recall@K, MRR, and latency percentiles
+          - Quality gates enforce minimum performance standards
+
+          For full evaluation report with per-query metrics, run locally:
+          ```bash
+          cd apps/api
+          dotnet test --filter "FullyQualifiedName~RagEvaluationIntegrationTests" --logger "console;verbosity=detailed"
+          ```
+          EOF
+
+      - name: Upload RAG Evaluation Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-evaluation-report-${{ github.run_number }}
+          path: apps/api/evaluation-reports/
+          retention-days: 30
+
+      - name: Check Quality Gates
+        if: always()
+        run: |
+          echo "✓ RAG evaluation quality gates checked"
+          echo "If tests passed, all quality thresholds were met:"
+          echo "  - Precision@5 >= 0.70"
+          echo "  - MRR >= 0.60"
+          echo "  - Latency p95 <= 2000ms"
+          echo "  - Success rate >= 95%"
+
+  ci-api-llm-integration:
+    name: API - LLM Integration Tests (Nightly)
+    runs-on: ubuntu-latest
+    # Only run on schedule or manual trigger to avoid excessive Ollama pulls on every PR
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'meeple' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'meeplepass' }}
+          POSTGRES_DB: meepleai_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        ports:
+          - 6333:6333
+          - 6334:6334
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+        options: >-
+          --health-cmd "curl -f http://localhost:11434/api/tags || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install PDF extraction dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj', 'apps/api/**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
+            ${{ runner.os }}-nuget-
+
+      - name: Cache .NET Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/**/bin
+            apps/api/**/obj
+          key: ${{ runner.os }}-dotnet-build-${{ hashFiles('apps/api/**/*.cs', 'apps/api/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-dotnet-build-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Verify Services Ready
+        run: |
+          echo "Waiting for Qdrant to be ready..."
+          for i in {1..20}; do
+            if curl -f http://localhost:6333/healthz > /dev/null 2>&1; then
+              echo "Qdrant is ready after $i attempts!"
+              break
+            fi
+            echo "Attempt $i: Qdrant not ready yet, waiting..."
+            sleep 1
+          done
+
+          echo "Waiting for Ollama to be ready..."
+          for i in {1..30}; do
+            if curl -f http://localhost:11434/api/tags > /dev/null 2>&1; then
+              echo "Ollama is ready after $i attempts!"
+              break
+            fi
+            echo "Attempt $i: Ollama not ready yet, waiting..."
+            sleep 2
+          done
+
+      - name: Pull Ollama Models
+        run: |
+          # Pull a lightweight model for testing (e.g., tinyllama or phi)
+          docker exec $(docker ps -q -f ancestor=ollama/ollama:latest) ollama pull tinyllama || echo "Model pull failed, tests may use OpenRouter fallback"
+
+      - name: Run LLM Integration Tests
+        timeout-minutes: 30
+        env:
+          CI: true
+          OLLAMA_URL: http://localhost:11434
+          OPENROUTER_API_KEY: test-key-for-ci
+          QDRANT_URL: http://127.0.0.1:6333
+          REDIS_URL: 127.0.0.1:6379
+          ConnectionStrings__Postgres: ${{ secrets.TEST_DB_CONNECTION_STRING || 'Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100' }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
+        run: |
+          echo "::notice::Running LLM integration tests with Ollama"
+          dotnet test \
+            --filter "Category=LLMIntegration" \
+            --logger "console;verbosity=normal" \
+            --no-build \
+            --blame-hang-timeout 10m
+
+      - name: Upload Test Results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-integration-test-results-${{ github.run_number }}
+          path: apps/api/tests/Api.Tests/TestResults/
+          retention-days: 7

@@ -1,0 +1,48 @@
+---
+name: Technical Task
+about: Task tecnico (refactor, debt, optimization)
+title: '[TECH] '
+labels: technical, needs-review
+---
+
+## Obiettivo
+Cosa vogliamo ottenere tecnicamente
+
+## Contesto Tecnico
+- File/moduli coinvolti:
+- Architettura attuale:
+- Problema tecnico:
+
+## Soluzione Proposta
+Come affrontare il problema
+
+## Impatto
+- **Performance**: 
+- **Manutenibilità**: 
+- **Scalabilità**: 
+- **Security**: 
+
+## Test Strategy
+Come verrà testato
+
+## Rischi
+Potenziali problemi
+
+## Definition of Done
+- [ ] Codice implementato
+- [ ] Test aggiunti (>90% coverage)
+- [ ] Documentazione aggiornata
+- [ ] Code review approvata
+- [ ] Nessuna regressione
+
+## Effort
+- [ ] S
+- [ ] M
+- [ ] L
+- [ ] XL
+
+## Priority
+- [ ] P0 (Critical)
+- [ ] P1 (High)
+- [ ] P2 (Medium)
+- [ ] P3 (Low)

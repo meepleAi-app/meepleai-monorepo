@@ -1,0 +1,26 @@
+# Files and directories to ignore in Docker build context
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+.next
+out
+coverage
+.vscode
+.env
+.env.*
+
+# Test files and directories
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.test.jsx
+**/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+**/*.spec.jsx
+jest.config.js
+jest.setup.js

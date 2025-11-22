@@ -1,0 +1,19 @@
+* text=auto eol=lf
+
+# Enforce LF for source files that previously flipped to CRLF
+*.cs text eol=lf
+*.csproj text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+*.sln text eol=lf
+
+# Scripts and configs shared between services
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+
+# Generated API client files (Issue #1450)
+apps/web/src/lib/api/generated/*.ts text eol=lf
+apps/web/src/lib/api/generated/*.json text eol=lf
+apps/web/src/lib/api/generated/*.md text eol=lf

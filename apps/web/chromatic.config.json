@@ -1,0 +1,22 @@
+{
+  "$schema": "https://www.chromatic.com/config-schema.json",
+  "buildScriptName": "build-storybook",
+  "projectId": "Project:meepleai",
+  "onlyChanged": true,
+  "exitZeroOnChanges": true,
+  "exitOnceUploaded": true,
+  "autoAcceptChanges": "main",
+  "ignoreLastBuildOnBranch": "main",
+  "skip": "dependabot/**",
+  "externals": [
+    "public/**"
+  ],
+  "untraced": [
+    ".next/**",
+    "node_modules/**",
+    "storybook-static/**",
+    "coverage/**",
+    ".storybook/public/**"
+  ],
+  "zip": true
+}

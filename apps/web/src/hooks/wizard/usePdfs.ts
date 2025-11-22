@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-interface PdfDocument {
+export interface PdfDocument {
   id: string;
   fileName: string;
   fileSizeBytes: number;

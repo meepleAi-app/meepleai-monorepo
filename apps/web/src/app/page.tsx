@@ -18,6 +18,9 @@
 import { Metadata } from 'next';
 import HomePage from '@/components/pages/HomePage';
 
+// Force dynamic rendering (no static generation) due to client-side auth state
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'MeepleAI - AI-Powered Board Game Rules Assistant',
   description: 'Never argue about rules again. Get instant, accurate answers from any game\'s rulebook with AI-powered semantic search.',

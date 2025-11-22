@@ -1,5 +1,6 @@
 'use client';
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Game, GameFilters, GameSortOptions, PaginatedGamesResponse, api } from '@/lib/api';
 import { GameSearchBar } from '@/components/games/GameSearchBar';

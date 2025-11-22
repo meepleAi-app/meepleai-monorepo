@@ -29,6 +29,7 @@ export type {
   ChatThreadMessage,
   ChatWithHistory,
   RuleAtom,
+  Citation,
   RuleSpec,
   RuleSpecComment,
   Snippet,
@@ -70,3 +71,19 @@ export {
 export type {
   ProcessingProgress
 } from './pdf';
+
+// Search Types
+export type {
+  SearchResultType,
+  BaseSearchResult,
+  MessageSearchResult,
+  ChatSearchResult,
+  GameSearchResult,
+  AgentSearchResult,
+  PdfSearchResult,
+  SearchResult,
+  SearchFilters,
+  SearchOptions,
+  RecentSearch,
+  SearchState
+} from './search';

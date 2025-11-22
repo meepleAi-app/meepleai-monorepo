@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import type { Citation } from '@/types';
 
 // Event types that match the backend
 type StreamingEventType = 'token' | 'stateUpdate' | 'citations' | 'complete' | 'error' | 'heartbeat' | 'followUpQuestions';
@@ -47,6 +48,7 @@ export type StreamingState = {
   currentAnswer: string;
   snippets: Snippet[];
   followUpQuestions: string[]; // CHAT-02
+  citations: Citation[]; // Source citations
   totalTokens: number;
   confidence: number | null;
   isStreaming: boolean;
@@ -64,6 +66,7 @@ const INITIAL_STATE: StreamingState = {
   currentAnswer: '',
   snippets: [],
   followUpQuestions: [], // CHAT-02
+  citations: [], // Source citations
   totalTokens: 0,
   confidence: null,
   isStreaming: false,
@@ -92,7 +95,7 @@ const INITIAL_STATE: StreamingState = {
  * ```
  */
 export function useChatStreaming(callbacks?: {
-  onComplete?: (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[] }) => void;
+  onComplete?: (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[]; citations?: Citation[] }) => void;
   onError?: (error: string) => void;
 }): [StreamingState, StreamingControls] {
   const [state, setState] = useState<StreamingState>(INITIAL_STATE);

@@ -107,9 +107,7 @@ export function MultiFileUpload({
     clearCompleted,
     clearAll,
     getStats,
-    startUpload,
-    isWorkerReady,
-    workerError
+    startUpload
   } = useUploadQueue({
     onUploadComplete: () => {
       onUploadComplete?.();
@@ -241,29 +239,7 @@ export function MultiFileUpload({
         </Badge>
       </div>
 
-      {/* Worker Error */}
-      {workerError && (
-        <div
-          role="alert"
-          className="p-3 bg-red-50 border border-red-600 rounded-md mb-4"
-          data-testid="worker-error"
-        >
-          <div className="text-sm font-semibold text-red-600 mb-2">
-            Upload System Error:
-          </div>
-          <p className="text-xs text-red-600 mb-2">
-            {workerError.message}
-          </p>
-          <Button
-            onClick={() => window.location.reload()}
-            variant="outline"
-            size="sm"
-            className="text-red-600 border-red-600"
-          >
-            Reload Page
-          </Button>
-        </div>
-      )}
+      {/* Worker Error - removed as useUploadQueue no longer exposes workerError */}
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (

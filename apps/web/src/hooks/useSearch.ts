@@ -111,7 +111,7 @@ function buildSearchIndex(sources: SearchDataSources): SearchResult[] {
       id: agent.id,
       type: 'agent',
       title: agent.name,
-      subtitle: `${agent.type} Agent (${agent.strategyName})`, // Issue #868: Use type and strategyName
+      subtitle: `${agent.kind} Agent`, // Issue #868: Use agent kind
       timestamp: new Date(agent.createdAt),
       agent,
       gameId: undefined, // Issue #868: Agents are global, not tied to games

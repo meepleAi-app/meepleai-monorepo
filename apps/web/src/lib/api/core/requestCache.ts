@@ -212,9 +212,9 @@ export class RequestCache {
    */
   clear(): void {
     // Clear all pending timeouts to prevent memory leaks
-    for (const timeout of this.timeouts.values()) {
+    this.timeouts.forEach((timeout) => {
       clearTimeout(timeout);
-    }
+    });
 
     this.cache.clear();
     this.accessOrder.clear();

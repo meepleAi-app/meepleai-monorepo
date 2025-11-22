@@ -1,3 +1,5 @@
+import type { Agent } from '@/types';
+
 export const API_BASE_FALLBACK = "http://localhost:8080";
 
 export const getApiBase = (): string => {
@@ -200,6 +202,31 @@ export interface UpdatePreferencesRequest {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+}
+
+// Session info
+export interface UserSessionInfo {
+  sessionId: string;
+  userId: string;
+  createdAt: string;
+  lastSeenAt: string | null;
+  expiresAt: string;
+  revokedAt: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+}
+
+// PDF Document types
+export interface PdfDocumentDto {
+  id: string;
+  gameId: string;
+  fileName: string;
+  filePath: string;
+  fileSizeBytes: number;
+  processingStatus: string;
+  uploadedAt: string;
+  processedAt: string | null;
+  pageCount: number | null;
 }
 
 // AI-13: BoardGameGeek API types
@@ -512,6 +539,47 @@ export const api = {
 
     async extendSession(): Promise<SessionStatusResponse> {
       return api.post<SessionStatusResponse>('/api/v1/auth/session/extend');
+    },
+
+    // 2FA methods
+    async getTwoFactorStatus(): Promise<TwoFactorStatusDto> {
+      const result = await api.get<TwoFactorStatusDto>('/api/v1/auth/2fa/status');
+      return result ?? { isEnabled: false, enabledAt: null, unusedBackupCodesCount: 0 };
+    },
+
+    async setup2FA(): Promise<TotpSetupResponse> {
+      const result = await api.post<TotpSetupResponse>('/api/v1/auth/2fa/setup', {});
+      if (!result) throw new Error('Failed to setup 2FA');
+      return result;
+    },
+
+    async enable2FA(code: string, backupCodes?: string[]): Promise<Enable2FAResult> {
+      const result = await api.post<Enable2FAResult>('/api/v1/auth/2fa/enable', { code, backupCodes: backupCodes || [] });
+      return result ?? { success: false, errorMessage: 'Failed to enable 2FA' };
+    },
+
+    async disable2FA(password: string, code: string): Promise<Disable2FAResult> {
+      const result = await api.post<Disable2FAResult>('/api/v1/auth/2fa/disable', { password, code });
+      return result ?? { success: false, errorMessage: 'Failed to disable 2FA' };
+    },
+
+    // Session management
+    async getUserSessions(): Promise<UserSessionInfo[]> {
+      const result = await api.get<UserSessionInfo[]>('/api/v1/auth/sessions');
+      return result ?? [];
+    },
+
+    async revokeSession(sessionId: string): Promise<{ ok: boolean; message: string }> {
+      return api.post('/api/v1/auth/sessions/revoke', { sessionId });
+    },
+
+    // API Key auth (for settings page)
+    async loginWithApiKey(apiKey: string): Promise<void> {
+      return api.post('/api/v1/auth/api-key/login', { apiKey });
+    },
+
+    async logoutApiKey(): Promise<void> {
+      return api.post('/api/v1/auth/api-key/logout', {});
     }
   },
 
@@ -736,6 +804,134 @@ export const api = {
 
     async deleteMessage(chatId: string, messageId: string): Promise<void> {
       return api.delete(`/api/v1/chats/${chatId}/messages/${messageId}`);
+    },
+
+    // Submit agent feedback (FE-IMP-005)
+    async submitAgentFeedback(request: {
+      messageId: string;
+      endpoint?: string;
+      gameId?: string;
+      feedback: 'helpful' | 'not-helpful';
+    }): Promise<void> {
+      return api.post('/api/v1/chat/feedback', request);
+    },
+
+    // Bulk export of multiple RuleSpecs
+    async bulkExportRuleSpecs(request: { ruleSpecIds: string[] }): Promise<void> {
+      const res = await fetch(`${getApiBase()}/api/v1/rulespecs/bulk/export`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request)
+      });
+
+      if (res.status === 401) {
+        const correlationId = res.headers.get('X-Correlation-Id') || undefined;
+        throw new ApiError('Unauthorized', 401, correlationId, res);
+      }
+
+      if (!res.ok) {
+        throw await createApiError('/api/v1/rulespecs/bulk/export', res);
+      }
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = res.headers.get('Content-Disposition');
+      let filename = 'rulespecs-export.zip';
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+
+      // Convert response to blob
+      const blob = await res.blob();
+
+      // Create download link and trigger download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+
+    // Cache statistics (PERF-03)
+    async getCacheStats(gameId?: string): Promise<CacheStats | null> {
+      const path = gameId
+        ? `/api/v1/admin/cache/stats?gameId=${encodeURIComponent(gameId)}`
+        : '/api/v1/admin/cache/stats';
+      return api.get<CacheStats>(path);
+    },
+
+    // Cache invalidation
+    async invalidateGameCache(gameId: string): Promise<void> {
+      return api.delete(`/api/v1/admin/cache/games/${encodeURIComponent(gameId)}`);
+    },
+
+    async invalidateCacheByTag(tag: string): Promise<void> {
+      return api.delete(`/api/v1/admin/cache/tags/${encodeURIComponent(tag)}`);
+    },
+
+    // Chat threads
+    async getThreadsByGame(gameId: string): Promise<ChatThreadDto[]> {
+      const response = await api.get<ChatThreadDto[]>(`/api/v1/knowledge-base/chat-threads?gameId=${encodeURIComponent(gameId)}`);
+      return response ?? [];
+    },
+
+    async getThreadById(threadId: string): Promise<ChatThreadDto | null> {
+      return api.get<ChatThreadDto>(`/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}`);
+    },
+
+    async createThread(request: { gameId?: string | null; title?: string | null; initialMessage?: string | null }): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>('/api/v1/knowledge-base/chat-threads', request);
+    },
+
+    async addMessage(threadId: string, request: { content: string; role: string }): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>(`/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/messages`, request);
+    },
+
+    async closeThread(threadId: string): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>(`/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/close`, {});
+    },
+
+    async reopenThread(threadId: string): Promise<ChatThreadDto> {
+      return api.post<ChatThreadDto>(`/api/v1/knowledge-base/chat-threads/${encodeURIComponent(threadId)}/reopen`, {});
+    },
+
+    // RuleSpec comments
+    async getRuleSpecComments(gameId: string, version: string, includeResolved: boolean = true): Promise<RuleSpecCommentsResponse | null> {
+      const resolved = includeResolved ? 'true' : 'false';
+      return api.get<RuleSpecCommentsResponse>(`/api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=${resolved}`);
+    },
+
+    async createRuleSpecComment(gameId: string, version: string, request: CreateRuleSpecCommentRequest): Promise<RuleSpecComment> {
+      return api.post<RuleSpecComment>(`/api/v1/games/${gameId}/rulespec/versions/${version}/comments`, request);
+    },
+
+    async updateRuleSpecComment(gameId: string, commentId: string, request: UpdateRuleSpecCommentRequest): Promise<RuleSpecComment> {
+      return api.put<RuleSpecComment>(`/api/v1/games/${gameId}/rulespec/comments/${commentId}`, request);
+    },
+
+    async deleteRuleSpecComment(gameId: string, commentId: string): Promise<void> {
+      return api.delete(`/api/v1/games/${gameId}/rulespec/comments/${commentId}`);
+    },
+
+    async createCommentReply(parentCommentId: string, request: CreateReplyRequest): Promise<RuleSpecComment> {
+      return api.post<RuleSpecComment>(`/api/v1/rulespec/comments/${parentCommentId}/replies`, request);
+    },
+
+    async resolveComment(commentId: string): Promise<void> {
+      return api.post(`/api/v1/rulespec/comments/${commentId}/resolve`, {});
+    },
+
+    async unresolveComment(commentId: string): Promise<void> {
+      return api.post(`/api/v1/rulespec/comments/${commentId}/unresolve`, {});
     }
   },
 
@@ -1170,6 +1366,27 @@ export const api = {
      */
     async getById(id: string): Promise<Game | null> {
       return api.get<Game>(`/api/v1/games/${id}`);
+    },
+
+    /**
+     * Get PDF documents for a game
+     * @param gameId Game ID
+     */
+    async getDocuments(gameId: string): Promise<PdfDocumentDto[]> {
+      const response = await api.get<PdfDocumentDto[]>(`/api/v1/games/${gameId}/documents`);
+      return response ?? [];
+    }
+  },
+
+  // Issue #868: Agents API (global agents, not tied to games)
+  agents: {
+    /**
+     * Get all available (active) agents
+     * Agents are global and not tied to specific games
+     */
+    async getAvailable(): Promise<Agent[]> {
+      const response = await api.get<Agent[]>('/api/v1/agents');
+      return response ?? [];
     }
   },
 

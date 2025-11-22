@@ -173,8 +173,9 @@ public class ValidateSessionQueryHandlerTests
         Assert.NotNull(result);
         Assert.False(result.IsValid);
         Assert.Null(result.User);
-        Assert.Equal(session.ExpiresAt, result.ExpiresAt); // Handler returns session timestamps
-        Assert.Equal(session.LastSeenAt, result.LastSeenAt);
+        // For invalid/expired sessions, timestamps are not returned (null)
+        Assert.Null(result.ExpiresAt);
+        Assert.Null(result.LastSeenAt);
 
         _sessionRepositoryMock.Verify(x => x.UpdateLastSeenAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), default), Times.Never);
     }

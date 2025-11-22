@@ -300,6 +300,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         var loadedVectorDoc = await vectorRepository.GetByIdAsync(vectorDoc.Id, TestCancellationToken);
         loadedVectorDoc!.UpdateMetadata("{\"page\": 8, \"source\": \"pandemic-rules.pdf\", \"topic\": \"outbreak\"}");
         await vectorRepository.UpdateAsync(loadedVectorDoc, TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Create chat thread using RAG context
         var chatThread = new ChatThread(

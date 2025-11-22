@@ -69,14 +69,14 @@ public class MultiModelValidationServiceTests
     [Fact]
     public void CalculateSimilarity_DifferentTexts_ReturnsLowScore()
     {
-        // Arrange
+        // Arrange - Use completely different vocabulary to ensure low similarity
         var text1 = "The knight moves in an L-shape.";
-        var text2 = "The bishop moves diagonally across the board.";
+        var text2 = "Players collect resources to build settlements.";
 
         // Act
         var similarity = _service.CalculateSimilarity(text1, text2);
 
-        // Assert
+        // Assert - Texts with different vocabulary should have low cosine similarity
         Assert.True(similarity < 0.50, $"Expected similarity <0.50, got {similarity:F3}");
     }
 

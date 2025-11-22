@@ -182,6 +182,32 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         await _quotaService!.IncrementUploadCountAsync(userId, TestCancellationToken);
     }
 
+    private static string GetWeekKey(DateTime date)
+    {
+        // ISO 8601 week: yyyy-Www (e.g., 2025-W47)
+        // Same logic as PdfUploadQuotaService.GetWeekKey
+        var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
+        var weekRule = System.Globalization.CalendarWeekRule.FirstFourDayWeek;
+        var firstDayOfWeek = DayOfWeek.Monday;
+
+        var year = date.Year;
+        var week = calendar.GetWeekOfYear(date, weekRule, firstDayOfWeek);
+
+        // Handle ISO 8601 year transitions
+        // Jan 1-3 might be in week 52/53 of previous year
+        if (week >= 52 && date.Month == 1)
+        {
+            year--;
+        }
+        // Dec 29-31 might be in week 1 of next year
+        else if (week == 1 && date.Month == 12)
+        {
+            year++;
+        }
+
+        return $"{year}-W{week:D2}";
+    }
+
     #endregion
 
     #region Free Tier Quota Tests
@@ -296,8 +322,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         // Act - Simulate 100 uploads (weekly limit) by setting Redis directly
         // This is much faster than actually incrementing 100 times
         var db = _redis!.GetDatabase();
-        var today = TimeProvider.System.GetUtcNow().ToString("yyyy-MM-dd");
-        var weekKey = $"pdf:upload:weekly:{user.Id}:2025-W47"; // Current week
+        var now = TimeProvider.System.GetUtcNow().DateTime;
+        var today = now.ToString("yyyy-MM-dd");
+        var weekKey = $"pdf:upload:weekly:{user.Id}:{GetWeekKey(now)}";
         await db.StringSetAsync($"pdf:upload:daily:{user.Id}:{today}", 100);
         await db.StringSetAsync(weekKey, 100);
 
@@ -331,8 +358,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         // Act - Simulate 100 uploads (daily limit) by setting Redis directly
         // This is much faster than actually incrementing 100 times
         var db = _redis!.GetDatabase();
-        var today = TimeProvider.System.GetUtcNow().ToString("yyyy-MM-dd");
-        var weekKey = $"pdf:upload:weekly:{user.Id}:2025-W47"; // Current week
+        var now = TimeProvider.System.GetUtcNow().DateTime;
+        var today = now.ToString("yyyy-MM-dd");
+        var weekKey = $"pdf:upload:weekly:{user.Id}:{GetWeekKey(now)}";
         await db.StringSetAsync($"pdf:upload:daily:{user.Id}:{today}", 100);
         await db.StringSetAsync(weekKey, 100);
 
@@ -365,8 +393,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         // Act - Simulate high usage by setting Redis directly (1000 uploads)
         // This is much faster than actually incrementing 1000 times
         var db = _redis!.GetDatabase();
-        var today = TimeProvider.System.GetUtcNow().ToString("yyyy-MM-dd");
-        var weekKey = $"pdf:upload:weekly:{user.Id}:2025-W47"; // Current week
+        var now = TimeProvider.System.GetUtcNow().DateTime;
+        var today = now.ToString("yyyy-MM-dd");
+        var weekKey = $"pdf:upload:weekly:{user.Id}:{GetWeekKey(now)}";
         await db.StringSetAsync($"pdf:upload:daily:{user.Id}:{today}", 1000);
         await db.StringSetAsync(weekKey, 1000);
 
@@ -395,8 +424,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         // Act - Simulate high usage by setting Redis directly (500 uploads, beyond normal tier limits)
         // This is much faster than actually incrementing 500 times
         var db = _redis!.GetDatabase();
-        var today = TimeProvider.System.GetUtcNow().ToString("yyyy-MM-dd");
-        var weekKey = $"pdf:upload:weekly:{user.Id}:2025-W47"; // Current week
+        var now = TimeProvider.System.GetUtcNow().DateTime;
+        var today = now.ToString("yyyy-MM-dd");
+        var weekKey = $"pdf:upload:weekly:{user.Id}:{GetWeekKey(now)}";
         await db.StringSetAsync($"pdf:upload:daily:{user.Id}:{today}", 500);
         await db.StringSetAsync(weekKey, 500);
 

@@ -581,8 +581,13 @@ describe('ActiveSessionsPage', () => {
       render(<ActiveSessionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-        expect(screen.getByText(/API Error/i)).toBeInTheDocument();
+        // Verify ErrorDisplay component is rendered with role="alert"
+        const alertElement = screen.getByRole('alert');
+        expect(alertElement).toBeInTheDocument();
+        expect(alertElement).toHaveAttribute('aria-live', 'assertive');
+
+        // Verify retry button is present for retryable errors
+        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
       });
     });
 
@@ -615,7 +620,13 @@ describe('ActiveSessionsPage', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/pause failed/i)).toBeInTheDocument();
+        // Verify ErrorDisplay component appears after pause failure
+        const alertElement = screen.getByRole('alert');
+        expect(alertElement).toBeInTheDocument();
+        expect(alertElement).toHaveAttribute('aria-live', 'assertive');
+
+        // Verify retry button is present
+        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
       });
     });
   });

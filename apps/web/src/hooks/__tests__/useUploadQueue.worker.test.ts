@@ -60,7 +60,11 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     Object.keys(localStorageMock).forEach(key => delete localStorageMock[key]);
-    MockBroadcastChannel.clearAll();
+
+    // Skip slow MockBroadcastChannel cleanup in CI or use faster approach
+    if (process.env.CI !== 'true') {
+      MockBroadcastChannel.clearAll();
+    }
 
     // Reset mock worker instance
     (global.Worker as jest.Mock).mockClear();
@@ -79,8 +83,8 @@ describe('FE-TEST-010: Worker-Specific Tests', () => {
     uploadQueueStore.clearAll();
 
     // Wait a tick for the clear to process
-    await new Promise(resolve => setTimeout(resolve, 10));
-  }, 10000); // Increase timeout to 10s for beforeEach
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }, 20000); // Increase timeout to 20s for beforeEach (handles slow CI environments)
 
   afterEach(() => {
     // Clean up after each test

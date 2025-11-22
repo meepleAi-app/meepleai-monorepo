@@ -23,7 +23,7 @@ type AuthResponse = {
 
 type Game = {
   id: string;
-  name: string;
+  title: string;
 };
 
 type Snippet = {

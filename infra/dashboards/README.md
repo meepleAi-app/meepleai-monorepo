@@ -30,6 +30,30 @@ This directory contains Grafana dashboard JSON files for the MeepleAI observabil
    - Cache operations (hits, misses, evictions)
    - PDF processing metrics
 
+4. **error-monitoring.json** - Error monitoring and alerting
+   - Error rates and spikes
+   - Error type distribution
+   - 5xx status codes
+
+5. **cache-optimization.json** - Cache performance metrics
+   - Redis cache hit/miss rates
+   - Cache memory usage
+   - Eviction rates
+
+6. **ai-quality-monitoring.json** - AI quality metrics
+   - LLM response quality scores
+   - Hallucination detection rates
+   - Confidence scores
+
+7. **quality-metrics-gauges.json** - System quality indicators
+   - Overall system quality gauges
+   - SLA compliance metrics
+
+8. **http-retry-metrics.json** - HTTP retry monitoring
+   - HTTP retry patterns and success rates
+   - Retry backoff effectiveness
+   - Failed retry tracking
+
 ## Auto-Provisioning
 
 Dashboards in this directory are automatically provisioned to Grafana on startup via the `grafana-dashboards.yml` configuration.

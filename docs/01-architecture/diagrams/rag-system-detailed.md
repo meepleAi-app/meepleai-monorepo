@@ -102,15 +102,15 @@ graph TB
     RagService -.-> Tracing
     RagService -.-> Metrics
 
-    style Client fill:#e1f5ff
-    style RagService fill:#4fc3f7
-    style Hybrid fill:#29b6f6
-    style LLM fill:#ab47bc
-    style V1 fill:#66bb6a
-    style V2 fill:#81c784
-    style V3 fill:#a5d6a7
-    style V4 fill:#c8e6c9
-    style V5 fill:#dcedc8
+    style Client fill:#e1f5ff,color:#000
+    style RagService fill:#4fc3f7,color:#000
+    style Hybrid fill:#29b6f6,color:#000
+    style LLM fill:#ab47bc,color:#000
+    style V1 fill:#66bb6a,color:#000
+    style V2 fill:#81c784,color:#000
+    style V3 fill:#a5d6a7,color:#000
+    style V4 fill:#c8e6c9,color:#000
+    style V5 fill:#dcedc8,color:#000
 ```
 
 ## RRF Fusion Algorithm (Reciprocal Rank Fusion)
@@ -143,10 +143,10 @@ flowchart TD
 
     TopN --> Return([Return<br/>HybridSearchResult[]])
 
-    style Start fill:#4fc3f7
-    style RRF fill:#ffa726
-    style Normalize fill:#66bb6a
-    style Return fill:#ab47bc
+    style Start fill:#4fc3f7,color:#000
+    style RRF fill:#ffa726,color:#000
+    style Normalize fill:#66bb6a,color:#000
+    style Return fill:#ab47bc,color:#000
 ```
 
 ### RRF Formula Breakdown
@@ -203,9 +203,9 @@ flowchart LR
 
     Output --> Embedding[Parallel Embedding<br/>Generation]
 
-    style Original fill:#4fc3f7
-    style Limit fill:#ffa726
-    style Output fill:#66bb6a
+    style Original fill:#4fc3f7,color:#000
+    style Limit fill:#ffa726,color:#000
+    style Output fill:#66bb6a,color:#000
 ```
 
 **Impact**: 15-25% recall improvement (PERF-08)
@@ -260,10 +260,10 @@ flowchart TD
     RecordSuccess --> Return[Return LlmCompletionResult]
     Retry --> Return
 
-    style Request fill:#4fc3f7
-    style CircuitCheck fill:#ffa726
-    style TrackMetrics fill:#66bb6a
-    style Return fill:#ab47bc
+    style Request fill:#4fc3f7,color:#000
+    style CircuitCheck fill:#ffa726,color:#000
+    style TrackMetrics fill:#66bb6a,color:#000
+    style Return fill:#ab47bc,color:#000
 ```
 
 ## Circuit Breaker State Machine
@@ -366,13 +366,13 @@ flowchart TD
     Flag --> Return
     Reject --> Return
 
-    style Layer1 fill:#e3f2fd
-    style Layer2 fill:#f3e5f5
-    style Layer3 fill:#fff3e0
-    style Layer4 fill:#e8f5e9
-    style Layer5 fill:#fce4ec
-    style Accept fill:#66bb6a
-    style Reject fill:#ef5350
+    style Layer1 fill:#e3f2fd,color:#000
+    style Layer2 fill:#f3e5f5,color:#000
+    style Layer3 fill:#fff3e0,color:#000
+    style Layer4 fill:#e8f5e9,color:#000
+    style Layer5 fill:#fce4ec,color:#000
+    style Accept fill:#66bb6a,color:#000
+    style Reject fill:#ef5350,color:#000
 ```
 
 ## Hallucination Detection - Multilingual Support
@@ -423,13 +423,13 @@ graph TB
     CheckCount -->|3-4| Medium[Severity: MEDIUM]
     CheckCount -->|5+| High
 
-    style IT fill:#81c784
-    style EN fill:#64b5f6
-    style DE fill:#ffb74d
-    style FR fill:#e57373
-    style ES fill:#9575cd
-    style High fill:#ef5350
-    style None fill:#66bb6a
+    style IT fill:#81c784,color:#000
+    style EN fill:#64b5f6,color:#000
+    style DE fill:#ffb74d,color:#000
+    style FR fill:#e57373,color:#000
+    style ES fill:#9575cd,color:#000
+    style High fill:#ef5350,color:#000
+    style None fill:#66bb6a,color:#000
 ```
 
 ## Cost Tracking Architecture
@@ -469,9 +469,9 @@ flowchart TD
     Alert -->|Yes| Notify[Send Alert<br/>Email/Slack/PagerDuty]
     Alert -->|No| Monitor[Continue Monitoring]
 
-    style Calculate fill:#ffa726
-    style Store fill:#66bb6a
-    style Alert fill:#ef5350
+    style Calculate fill:#ffa726,color:#000
+    style Store fill:#66bb6a,color:#000
+    style Alert fill:#ef5350,color:#000
 ```
 
 ## Quality Metrics Dashboard
@@ -515,12 +515,12 @@ graph TB
     Target -->|Yes| GoodQuality[Good Quality]
     Target -->|No| Investigation[Investigate<br/>prompt templates]
 
-    style PAT10 fill:#81c784
-    style Confidence fill:#64b5f6
-    style HallucinationRate fill:#ffb74d
-    style CostPerQuery fill:#e57373
-    style Green fill:#66bb6a
-    style Red fill:#ef5350
+    style PAT10 fill:#81c784,color:#000
+    style Confidence fill:#64b5f6,color:#000
+    style HallucinationRate fill:#ffb74d,color:#000
+    style CostPerQuery fill:#e57373,color:#000
+    style Green fill:#66bb6a,color:#000
+    style Red fill:#ef5350,color:#000
 ```
 
 ---

@@ -54,7 +54,10 @@ public sealed class Session : AggregateRoot<Guid>
         CreatedAt = DateTime.UtcNow;
         ExpiresAt = CreatedAt.Add(lifetime ?? DefaultLifetime);
         IpAddress = ipAddress;
-        UserAgent = userAgent;
+        // Truncate UserAgent to 256 chars to match database column constraint
+        UserAgent = userAgent != null && userAgent.Length > 256
+            ? userAgent.Substring(0, 256)
+            : userAgent;
     }
 
     /// <summary>

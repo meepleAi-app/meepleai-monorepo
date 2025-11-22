@@ -270,7 +270,8 @@ public class ConfidenceValidationServiceTests
         Assert.NotNull(result.ValidationMessage);
         Assert.NotEqual(default(bool), result.IsValid);
         Assert.NotEqual(default(double), result.RequiredThreshold);
-        Assert.NotEqual(default(ValidationSeverity), result.Severity);
+        // Severity is set to Pass (enum value 0), which is valid and intentional
+        Assert.Equal(ValidationSeverity.Pass, result.Severity);
     }
 
     [Theory]

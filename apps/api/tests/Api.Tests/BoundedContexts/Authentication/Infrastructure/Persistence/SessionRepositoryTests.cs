@@ -615,10 +615,11 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await Repository.AddAsync(session);
         await DbContext.SaveChangesAsync();
 
-        // Assert
+        // Assert - UserAgent is truncated to 256 chars (database column limit)
         var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id);
         Assert.NotNull(persisted);
-        Assert.Equal(longUserAgent, persisted.UserAgent);
+        Assert.Equal(256, persisted.UserAgent?.Length);
+        Assert.Equal(longUserAgent.Substring(0, 256), persisted.UserAgent);
     }
 
     [Fact]

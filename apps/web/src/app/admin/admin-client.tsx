@@ -23,6 +23,7 @@ import type { AuthUser } from "@/types/auth";
 import { api } from "@/lib/api";
 import { EndpointDistributionChart, LatencyDistributionChart, RequestsTimeSeriesChart, FeedbackChart } from "@/components/admin";
 import { cn } from "@/lib/utils";
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 type AiRequest = {
   id: string;
@@ -55,11 +56,8 @@ type Stats = {
   totalFeedback: number;
 };
 
-interface AdminClientProps {
-  user: AuthUser; // Provided by Server Component (authenticated as admin)
-}
-
-export function AdminClient({ user }: AdminClientProps) {
+export function AdminClient() {
+  const { user, loading: userLoading } = useAuthUser();
   const [requests, setRequests] = useState<AiRequest[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<string>("");

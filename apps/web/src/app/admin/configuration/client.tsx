@@ -1,6 +1,6 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 /**
  * CONFIG-06: Admin Configuration Management Page - App Router
@@ -60,9 +60,10 @@ const TABS: Tab[] = [
   },
 ];
 
-interface AdminPageClientProps { user: AuthUser; }
+export function AdminPageClient() {
+  const { user } = useAuthUser();
 
-export function AdminPageClient({ user }: AdminPageClientProps) {
+  if (!user) return null;
   // State
   const [activeTab, setActiveTab] = useState<TabId>("feature-flags");
   const [configurations, setConfigurations] = useState<SystemConfigurationDto[]>([]);

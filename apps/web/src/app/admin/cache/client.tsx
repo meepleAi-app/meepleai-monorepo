@@ -1,6 +1,6 @@
 'use client';
 
-import type { AuthUser } from '@/types/auth';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, CacheStats } from "@/lib/api";
@@ -28,9 +28,10 @@ type ConfirmationDialog = {
   onConfirm: () => void;
 };
 
-interface AdminPageClientProps { user: AuthUser; }
+export function AdminPageClient() {
+  const { user } = useAuthUser();
 
-export function AdminPageClient({ user }: AdminPageClientProps) {
+  if (!user) return null;
   const [stats, setStats] = useState<CacheStats | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string>("all");

@@ -39,6 +39,7 @@ import { usePdfs, type PdfDocument } from '@/hooks/wizard/usePdfs';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { LoadingButton } from '@/components/loading';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 // Types
 interface RuleAtom {
@@ -59,23 +60,23 @@ interface RuleSpec {
 const enableProcessingProgress = process.env.NEXT_PUBLIC_ENABLE_PROGRESS_UI === 'true';
 
 interface UploadClientProps {
-  user: AuthUser; // Provided by Server Component (authenticated + authorized)
   autoUpload?: boolean;
   onUploadStart?: () => void;
   onUploadError?: () => void;
 }
 
 export function UploadClient({
-  user,
   autoUpload = true,
   onUploadStart,
   onUploadError
-}: UploadClientProps) {
+}: UploadClientProps = {}) {
+  const { user } = useAuthUser();
+
   // Wizard state management
   const { state: wizardState, dispatch: wizardDispatch } = useWizard();
 
-  // Data fetching hooks - pass user from server
-  const { games, loading: loadingGames, createGame } = useGames(user);
+  // Data fetching hooks - use user from hook
+  const { games, loading: loadingGames, createGame } = useGames(user!);
   const [confirmedGameId, setConfirmedGameId] = useState<string | null>(null);
   const { pdfs, loading: loadingPdfs, error: pdfsError, refetch: refetchPdfs } = usePdfs(confirmedGameId);
 

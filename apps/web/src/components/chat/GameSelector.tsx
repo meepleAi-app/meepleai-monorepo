@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Game } from '@/types';
 
 export function GameSelector() {
   const { games, selectedGameId, selectGame, loading } = useChatContext();
@@ -59,7 +60,7 @@ export function GameSelector() {
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {games.map((game) => (
+          {games.map((game: Game) => (
             <SelectItem key={game.id} value={game.id}>
               {game.name}
             </SelectItem>

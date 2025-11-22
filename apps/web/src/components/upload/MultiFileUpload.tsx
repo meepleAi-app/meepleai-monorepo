@@ -239,7 +239,7 @@ export function MultiFileUpload({
         </Badge>
       </div>
 
-      {/* Worker Error - removed as useUploadQueue no longer exposes workerError */}
+      {/* Worker Error - Removed: useUploadQueue no longer exposes worker state */}
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (

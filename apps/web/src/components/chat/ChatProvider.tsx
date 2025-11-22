@@ -196,7 +196,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       // SPRINT-3 #858: Use DDD KnowledgeBase ChatThread API
-      const chatThreads = await api.chatThreads.getByGame(gameId);
+      const chatThreads = await api.chat.getThreadsByGame(gameId);
       setState((prev) => ({
         ...prev,
         chatsByGame: {
@@ -224,9 +224,9 @@ export function ChatProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       // SPRINT-3 #858: Messages come with ChatThread, convert to UI format
-      const thread = await api.chatThreads.getById(threadId);
+      const thread = await api.chat.getThreadById(threadId);
       if (thread) {
-        const uiMessages: Message[] = thread.messages.map((msg, index) => ({
+        const uiMessages: Message[] = thread.messages.map((msg: any, index: number) => ({
           id: `${threadId}-${index}`, // Generate temp ID (backend messages don't have IDs yet)
           role: msg.role as 'user' | 'assistant',
           content: msg.content,
@@ -307,7 +307,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
       if (threadToArchive) {
         try {
           console.log(`Auto-archiving oldest thread: ${threadToArchive.id}`);
-          await api.chatThreads.close(threadToArchive.id);
+          await api.chat.closeThread(threadToArchive.id);
 
           // Reload threads to reflect archived state
           await loadChats(gameId);
@@ -340,7 +340,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
 
     try {
       // SPRINT-3 #858: Use DDD CreateChatThreadCommand
-      const newThread = await api.chatThreads.create({
+      const newThread = await api.chat.createThread({
         gameId: selectedGameId,
         title: null, // Let backend generate default title
         initialMessage: null, // No initial message for now
@@ -458,7 +458,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
           const autoTitle = generateTitleFromMessage(content.trim());
 
           // SPRINT-3 #858: Create thread using DDD
-          const newThread = await api.chatThreads.create({
+          const newThread = await api.chat.createThread({
             gameId: selectedGameId,
             title: autoTitle,
             initialMessage: null,
@@ -500,7 +500,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         }));
 
         // SPRINT-3 #858: Add message using DDD AddMessageCommand
-        await api.chatThreads.addMessage(threadId, {
+        await api.chat.addMessage(threadId, {
           content: content.trim(),
           role: 'user',
         });
@@ -542,7 +542,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
       setError(null);
 
       try {
-        await api.chat.updateMessage(activeChatId, messageId, content.trim());
+        await (api.chat as any).updateMessage(activeChatId, messageId, content.trim());
 
         // Reload messages to get updated state
         await loadMessages(activeChatId);
@@ -565,7 +565,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
       setError(null);
 
       try {
-        await api.chat.deleteMessage(activeChatId, messageId);
+        await (api.chat as any).deleteMessage(activeChatId, messageId);
 
         // Reload messages to get updated state
         await loadMessages(activeChatId);

@@ -61,11 +61,68 @@ export interface BulkExportRequest {
   ruleSpecIds: string[];
 }
 
+export interface ChatClient {
+  // Chat Threads
+  getThreadsByGame(gameId: string): Promise<ChatThreadDto[]>;
+  getThreadById(threadId: string): Promise<ChatThreadDto | null>;
+  createThread(request: CreateChatThreadRequest): Promise<ChatThreadDto>;
+  addMessage(threadId: string, request: AddMessageRequest): Promise<ChatThreadDto>;
+  closeThread(threadId: string): Promise<ChatThreadDto>;
+  reopenThread(threadId: string): Promise<ChatThreadDto>;
+
+  // Chat Messages
+  updateMessage(chatId: string, messageId: string, content: string): Promise<ChatMessageResponse>;
+  deleteMessage(chatId: string, messageId: string): Promise<void>;
+
+  // Chat Export
+  exportChat(chatId: string, request: ExportChatRequest): Promise<void>;
+
+  // RuleSpec Comments
+  getRuleSpecComments(
+    gameId: string,
+    version: string,
+    includeResolved?: boolean
+  ): Promise<RuleSpecCommentsResponse | null>;
+  createRuleSpecComment(
+    gameId: string,
+    version: string,
+    request: CreateRuleSpecCommentRequest
+  ): Promise<RuleSpecComment>;
+  updateRuleSpecComment(
+    gameId: string,
+    commentId: string,
+    request: UpdateRuleSpecCommentRequest
+  ): Promise<RuleSpecComment>;
+  deleteRuleSpecComment(gameId: string, commentId: string): Promise<void>;
+  createCommentReply(
+    parentCommentId: string,
+    request: CreateReplyRequest
+  ): Promise<RuleSpecComment>;
+  resolveComment(commentId: string): Promise<void>;
+  unresolveComment(commentId: string): Promise<void>;
+
+  // Bulk Operations
+  bulkExportRuleSpecs(request: BulkExportRequest): Promise<void>;
+
+  // Cache Management
+  getCacheStats(gameId?: string): Promise<CacheStats | null>;
+  invalidateGameCache(gameId: string): Promise<void>;
+  invalidateCacheByTag(tag: string): Promise<void>;
+
+  // Agent Feedback
+  submitAgentFeedback(request: {
+    messageId: string;
+    endpoint: string;
+    gameId: string;
+    feedback: 'helpful' | 'not-helpful';
+  }): Promise<void>;
+}
+
 /**
  * Create Chat API client with Zod validation
  */
-export function createChatClient({ httpClient }: CreateChatClientParams) {
-  return {
+export function createChatClient({ httpClient }: CreateChatClientParams): ChatClient {
+  const client: ChatClient = {
     // ========== Chat Threads ==========
 
     async getThreadsByGame(gameId: string): Promise<ChatThreadDto[]> {
@@ -241,6 +298,6 @@ export function createChatClient({ httpClient }: CreateChatClientParams) {
       return httpClient.post('/api/v1/agents/feedback', request);
     },
   };
-}
 
-export type ChatClient = ReturnType<typeof createChatClient>;
+  return client;
+}

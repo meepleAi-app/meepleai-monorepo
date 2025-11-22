@@ -24,6 +24,7 @@ import { useMemo } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useChatStore } from './store';
 import { ChatThread, Message, Game, Agent } from '@/types';
+import { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 export interface ChatContextValue {
   // Authentication (from AuthProvider - not migrated)
@@ -32,7 +33,7 @@ export interface ChatContextValue {
   // Game & Agent Selection (from Zustand GameSlice)
   games: Game[];
   selectedGameId: string | null;
-  agents: Agent[];
+  agents: AgentDto[];
   selectedAgentId: string | null;
   selectGame: (gameId: string | null) => void;
   selectAgent: (agentId: string | null) => void;

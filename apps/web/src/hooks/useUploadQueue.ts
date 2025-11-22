@@ -242,7 +242,12 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
               const errorBody = await res.json().catch(() => ({}));
               const errorMessage = errorBody.error ?? res.statusText;
 
-              const apiError = new ApiError(errorMessage, res.status, correlationId, res);
+              const apiError = new ApiError({
+                message: errorMessage,
+                statusCode: res.status,
+                correlationId,
+                response: res,
+              });
               throw apiError;
             }
 

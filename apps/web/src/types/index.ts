@@ -29,10 +29,10 @@ export type {
   ChatThreadMessage,
   ChatWithHistory,
   RuleAtom,
-  Citation,
   RuleSpec,
   RuleSpecComment,
   Snippet,
+  Citation,
   Message,
   QaResponse,
   SetupStep,
@@ -74,15 +74,14 @@ export type {
 
 // Search Types
 export type {
+  SearchFilters,
+  SearchResult,
   SearchResultType,
-  BaseSearchResult,
   MessageSearchResult,
   ChatSearchResult,
   GameSearchResult,
   AgentSearchResult,
   PdfSearchResult,
-  SearchResult,
-  SearchFilters,
   SearchOptions,
   RecentSearch,
   SearchState

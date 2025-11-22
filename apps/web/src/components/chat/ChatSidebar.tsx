@@ -18,6 +18,7 @@ import { GameSelector } from './GameSelector';
 import { AgentSelector } from './AgentSelector';
 import { ChatHistory } from './ChatHistory';
 import { LoadingButton } from '../loading/LoadingButton';
+import { ChatThread, Game } from '@/types';
 
 const MAX_THREADS_PER_GAME = 5; // Issue #858: Thread limit constant
 
@@ -39,7 +40,7 @@ export function ChatSidebar() {
   const isDisabled = !selectedGameId || !selectedAgentId || loading.creating;
 
   // Calculate active thread count for current game (Issue #858)
-  const activeThreadCount = chats.filter(t => t.status !== 'Closed').length;
+  const activeThreadCount = chats.filter((t: ChatThread) => t.status !== 'Closed').length;
   const isAtThreadLimit = activeThreadCount >= MAX_THREADS_PER_GAME;
 
   return (
@@ -58,10 +59,10 @@ export function ChatSidebar() {
           {selectedGameId && (
             <div
               className="px-3 py-1 bg-[#e8f0fe] text-[#1a73e8] rounded-xl text-[11px] font-semibold border border-[#1a73e8]"
-              title={`Currently chatting about: ${games.find(g => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
-              aria-label={`Active game context: ${games.find(g => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
+              title={`Currently chatting about: ${games.find((g: Game) => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
+              aria-label={`Active game context: ${games.find((g: Game) => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
             >
-              {games.find(g => g.id === selectedGameId)?.name ?? '...'}
+              {games.find((g: Game) => g.id === selectedGameId)?.name ?? '...'}
             </div>
           )}
         </div>

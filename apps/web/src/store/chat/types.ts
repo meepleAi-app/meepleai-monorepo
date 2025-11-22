@@ -10,6 +10,7 @@
  */
 
 import { ChatThread, Message, Game, Agent } from '@/types';
+import { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 // ============================================================================
 // Loading State
@@ -51,12 +52,12 @@ export type SessionSlice = SessionState & SessionActions;
 
 export interface GameState {
   games: Game[];
-  agents: Agent[];
+  agents: AgentDto[];
 }
 
 export interface GameActions {
   setGames: (games: Game[]) => void;
-  setAgents: (agents: Agent[]) => void;
+  setAgents: (agents: AgentDto[]) => void;
   loadGames: () => Promise<void>;
   loadAgents: () => Promise<void>; // Issue #868: Agents are global, not per-game
 }

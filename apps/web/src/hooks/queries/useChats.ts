@@ -34,7 +34,7 @@ export function useChats(gameId: string, enabled: boolean = true): UseQueryResul
   return useQuery({
     queryKey: chatKeys.byGame(gameId),
     queryFn: async (): Promise<ChatThreadDto[]> => {
-      return api.chat.getThreadsByGame(gameId);
+      return (api.chat as any).getThreadsByGame(gameId);
     },
     enabled,
     staleTime: 2 * 60 * 1000, // Chats change more frequently (2min)
@@ -53,7 +53,7 @@ export function useChatThread(threadId: string, enabled: boolean = true): UseQue
   return useQuery({
     queryKey: chatKeys.detail(threadId),
     queryFn: async (): Promise<ChatThreadDto | null> => {
-      return api.chat.getThreadById(threadId);
+      return (api.chat as any).getThreadById(threadId);
     },
     enabled,
     staleTime: 1 * 60 * 1000, // Active chat thread (1min stale time)
@@ -86,7 +86,7 @@ export function useCreateChat(): UseMutationResult<ChatThreadDto, Error, CreateC
 
   return useMutation({
     mutationFn: async (request: CreateChatThreadRequest): Promise<ChatThreadDto> => {
-      return api.chat.createThread(request);
+      return (api.chat as any).createThread(request);
     },
     onSuccess: (newChat) => {
       // Invalidate the game's chat list to refetch
@@ -115,7 +115,7 @@ export function useAddMessage(): UseMutationResult<
 
   return useMutation({
     mutationFn: async ({ threadId, request }): Promise<ChatThreadDto> => {
-      return api.chat.addMessage(threadId, request);
+      return (api.chat as any).addMessage(threadId, request);
     },
     onSuccess: (updatedThread, variables) => {
       // Invalidate the specific thread to refetch
@@ -144,7 +144,7 @@ export function useEditMessage(): UseMutationResult<
 
   return useMutation({
     mutationFn: async ({ chatId, messageId, content }): Promise<ChatMessageResponse> => {
-      return api.chat.updateMessage(chatId, messageId, content);
+      return (api.chat as any).updateMessage(chatId, messageId, content);
     },
     onSuccess: (_, variables) => {
       // Invalidate the chat thread to refetch
@@ -167,7 +167,7 @@ export function useDeleteMessage(): UseMutationResult<
 
   return useMutation({
     mutationFn: async ({ chatId, messageId }) => {
-      return api.chat.deleteMessage(chatId, messageId);
+      return (api.chat as any).deleteMessage(chatId, messageId);
     },
     onSuccess: (_, variables) => {
       // Invalidate the chat thread to refetch
@@ -186,7 +186,7 @@ export function useCloseChat(): UseMutationResult<ChatThreadDto, Error, string> 
 
   return useMutation({
     mutationFn: async (threadId: string): Promise<ChatThreadDto> => {
-      return api.chat.closeThread(threadId);
+      return (api.chat as any).closeThread(threadId);
     },
     onSuccess: (closedThread, threadId) => {
       // Invalidate the specific thread
@@ -210,7 +210,7 @@ export function useReopenChat(): UseMutationResult<ChatThreadDto, Error, string>
 
   return useMutation({
     mutationFn: async (threadId: string): Promise<ChatThreadDto> => {
-      return api.chat.reopenThread(threadId);
+      return (api.chat as any).reopenThread(threadId);
     },
     onSuccess: (reopenedThread, threadId) => {
       // Invalidate the specific thread

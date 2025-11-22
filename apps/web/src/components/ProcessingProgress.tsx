@@ -6,7 +6,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef, type CSSProperties } from 'react';
-import { api } from '../lib/api';
+import { api, type ProcessingProgress as ApiProcessingProgress } from '../lib/api';
 import {
   ProcessingStep,
   type ProcessingProgress as ProcessingProgressType,
@@ -24,6 +24,27 @@ interface ProcessingProgressProps {
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_DURATION_MS = 600000; // 10 minutes max
+
+/**
+ * Transform API ProcessingProgress to component ProcessingProgress
+ */
+function transformApiProgress(apiProgress: ApiProcessingProgress): ProcessingProgressType {
+  const stepMap: Record<string, ProcessingStep> = {
+    'Pending': ProcessingStep.Uploading, // Map Pending to Uploading step
+    'Processing': ProcessingStep.Extracting, // Map Processing to Extracting step
+    'Completed': ProcessingStep.Completed,
+    'Failed': ProcessingStep.Failed
+  };
+
+  return {
+    currentStep: stepMap[apiProgress.status] || ProcessingStep.Uploading,
+    percentComplete: apiProgress.percentComplete,
+    estimatedTimeRemaining: undefined,
+    errorMessage: apiProgress.error || undefined,
+    updatedAt: new Date().toISOString()
+  };
+}
+
 
 /**
  * Formats seconds into human-readable time (e.g., "2 min 30 sec")
@@ -90,22 +111,24 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
         return;
       }
 
-      latestProgressRef.current = data;
-      setProgress(data);
+      const transformedProgress = transformApiProgress(data);
+
+      latestProgressRef.current = transformedProgress;
+      setProgress(transformedProgress);
       setNetworkError(null);
       setLoading(false);
 
       // Check for completion
-      if (isProcessingComplete(data.currentStep)) {
+      if (isProcessingComplete(transformedProgress.currentStep)) {
         if (
-          data.currentStep === ProcessingStep.Completed &&
+          transformedProgress.currentStep === ProcessingStep.Completed &&
           onComplete &&
           !hasNotifiedCompletionRef.current
         ) {
           hasNotifiedCompletionRef.current = true;
           onComplete();
-        } else if (data.currentStep === ProcessingStep.Failed && onError && data.errorMessage) {
-          onError(data.errorMessage);
+        } else if (transformedProgress.currentStep === ProcessingStep.Failed && onError && transformedProgress.errorMessage) {
+          onError(transformedProgress.errorMessage);
         }
       }
     } catch (error) {

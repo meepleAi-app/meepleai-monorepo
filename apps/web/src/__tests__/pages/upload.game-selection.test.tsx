@@ -10,12 +10,13 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import UploadPage from '../../pages/upload';
+import { UploadClient } from '@/app/upload/upload-client';
 import {
   setupUploadMocks,
   createAuthMock,
   createGameMock
 } from '../../pages/../__tests__/fixtures/upload-mocks';
+import { getDefaultUserProps } from '../helpers/renderWithUser';
 
 describe('UploadPage - Game Selection', () => {
   const originalFetch = global.fetch;
@@ -66,7 +67,7 @@ describe('UploadPage - Game Selection', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
@@ -86,7 +87,7 @@ describe('UploadPage - Game Selection', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
@@ -116,7 +117,7 @@ describe('UploadPage - Game Selection', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByRole('combobox', { name: /select.*game/i })).toBeInTheDocument());
 
@@ -145,7 +146,7 @@ describe('UploadPage - Game Selection', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByLabelText(/Create New Game/i)).toBeInTheDocument());
 
@@ -185,7 +186,7 @@ describe('UploadPage - Game Selection', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByLabelText(/Create New Game/i)).toBeInTheDocument());
 
@@ -207,7 +208,7 @@ describe('UploadPage - Game Selection', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => {
           expect(screen.getByLabelText(/Create New Game/i)).toBeInTheDocument();

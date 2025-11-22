@@ -22,6 +22,7 @@ import { useChatContext } from './ChatProvider';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { MobileSidebar } from './MobileSidebar';
+import { Game, ChatThread } from '@/types';
 
 export function ChatContent() {
   const {
@@ -37,8 +38,8 @@ export function ChatContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const selectedGame = games.find(g => g.id === selectedGameId);
-  const activeThread = chats.find(c => c.id === activeChatId);
+  const selectedGame = games.find((g: Game) => g.id === selectedGameId);
+  const activeThread = chats.find((c: ChatThread) => c.id === activeChatId);
   const isArchived = activeThread?.status === 'Closed';
 
   // Track mobile viewport with matchMedia

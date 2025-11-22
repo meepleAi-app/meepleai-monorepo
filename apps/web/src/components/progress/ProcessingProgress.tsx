@@ -6,11 +6,13 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef, type CSSProperties } from 'react';
-import { api } from '@/lib/api';
+import { api, type ProcessingProgress as ApiProcessingProgress } from '@/lib/api';
 import {
-  type ProcessingProgress as ProcessingProgressType,
   ProcessingStep,
+  type ProcessingProgress as ProcessingProgressType,
   isProcessingComplete,
+  getStepLabel,
+  getStepOrder
 } from '@/types/pdf';
 import { SkeletonLoader } from '../loading';
 
@@ -22,6 +24,49 @@ interface ProcessingProgressProps {
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_DURATION_MS = 600000; // 10 minutes max
+
+/**
+ * Transform API ProcessingProgress to component ProcessingProgress
+ */
+function transformApiProgress(apiProgress: ApiProcessingProgress): ProcessingProgressType {
+  const stepMap: Record<string, ProcessingStep> = {
+    'Pending': ProcessingStep.Uploading, // Map Pending to Uploading step
+    'Processing': ProcessingStep.Extracting, // Map Processing to Extracting step
+    'Completed': ProcessingStep.Completed,
+    'Failed': ProcessingStep.Failed
+  };
+
+  return {
+    currentStep: stepMap[apiProgress.status] || ProcessingStep.Uploading,
+    percentComplete: apiProgress.percentComplete,
+    estimatedTimeRemaining: undefined,
+    errorMessage: apiProgress.error || undefined,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+
+/**
+ * Formats seconds into human-readable time (e.g., "2 min 30 sec")
+ */
+function formatTimeRemaining(seconds: number): string {
+  if (seconds <= 0) {
+    return 'Less than a minute';
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (minutes === 0) {
+    return `${remainingSeconds} sec`;
+  }
+
+  if (remainingSeconds === 0) {
+    return `${minutes} min`;
+  }
+
+  return `${minutes} min ${remainingSeconds} sec`;
+}
 
 export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingProgressProps) {
   const [progress, setProgress] = useState<ProcessingProgressType | null>(null);
@@ -66,22 +111,24 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
         return;
       }
 
-      latestProgressRef.current = data;
-      setProgress(data);
+      const transformedProgress = transformApiProgress(data);
+
+      latestProgressRef.current = transformedProgress;
+      setProgress(transformedProgress);
       setNetworkError(null);
       setLoading(false);
 
       // Check for completion
-      if (isProcessingComplete(data.currentStep)) {
+      if (isProcessingComplete(transformedProgress.currentStep)) {
         if (
-          data.currentStep === ProcessingStep.Completed &&
+          transformedProgress.currentStep === ProcessingStep.Completed &&
           onComplete &&
           !hasNotifiedCompletionRef.current
         ) {
           hasNotifiedCompletionRef.current = true;
           onComplete();
-        } else if (data.currentStep === ProcessingStep.Failed && onError && data.errorMessage) {
-          onError(data.errorMessage);
+        } else if (transformedProgress.currentStep === ProcessingStep.Failed && onError && transformedProgress.errorMessage) {
+          onError(transformedProgress.errorMessage);
         }
       }
     } catch (error) {
@@ -210,14 +257,39 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     width: `${progress?.percentComplete ?? 0}%`,
     height: '100%',
     backgroundColor:
-      progress?.currentStep === 'Completed'
+      progress?.currentStep === ProcessingStep.Completed
         ? '#34a853'
-        : progress?.currentStep === 'Failed'
+        : progress?.currentStep === ProcessingStep.Failed
           ? '#d93025'
           : '#0070f3',
     transition: 'width 0.6s ease'
   };
 
+  const stepIndicatorContainerStyle: CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: '20px',
+    gap: '8px'
+  };
+
+  const stepIndicatorStyle = (step: ProcessingStep): CSSProperties => {
+    const currentStepOrder = progress ? getStepOrder(progress.currentStep) : -1;
+    const stepOrder = getStepOrder(step);
+    const isActive = progress?.currentStep === step;
+    const isCompleted = stepOrder < currentStepOrder;
+
+    return {
+      flex: 1,
+      textAlign: 'center',
+      padding: '8px 4px',
+      borderRadius: '4px',
+      fontSize: '12px',
+      backgroundColor: isActive ? '#e3f2fd' : isCompleted ? '#e8f5e9' : '#f5f5f5',
+      border: `2px solid ${isActive ? '#0070f3' : isCompleted ? '#34a853' : '#ddd'}`,
+      color: isActive ? '#0070f3' : isCompleted ? '#34a853' : '#666',
+      fontWeight: isActive ? 600 : 400
+    };
+  };
 
   const statusTextStyle: CSSProperties = {
     marginBottom: '12px',
@@ -332,6 +404,14 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     cursor: 'pointer'
   };
 
+  // Non-terminal steps for step indicator
+  const steps = [
+    ProcessingStep.Uploading,
+    ProcessingStep.Extracting,
+    ProcessingStep.Chunking,
+    ProcessingStep.Embedding,
+    ProcessingStep.Indexing
+  ];
 
   if (loading && !progress) {
     return (
@@ -358,6 +438,15 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
         <div style={progressBarFillStyle} />
       </div>
 
+      {/* Step Indicators */}
+      <div style={stepIndicatorContainerStyle} aria-label="Processing steps">
+        {steps.map((step) => (
+          <div key={step} style={stepIndicatorStyle(step)} title={getStepLabel(step)}>
+            {step}
+          </div>
+        ))}
+      </div>
+
       {/* Network Error - Display even when progress is null */}
       {/* This allows errors to be shown during initial fetch failures */}
       {networkError && (
@@ -370,8 +459,18 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       {progress && (
         <div>
           <p style={statusTextStyle}>
-            <strong>Processing status:</strong> {progress.currentStep}
+            <strong>Processing status:</strong> {getStepLabel(progress.currentStep)}
           </p>
+
+          {/* Time Remaining */}
+          {progress.estimatedTimeRemaining !== undefined &&
+            progress.estimatedTimeRemaining !== null &&
+            !isProcessingComplete(progress.currentStep) && (
+              <p style={timeRemainingStyle}>
+                <strong>Estimated time remaining:</strong>{' '}
+                {formatTimeRemaining(progress.estimatedTimeRemaining)}
+              </p>
+            )}
 
           {/* Progress Percentage */}
           <p style={timeRemainingStyle}>
@@ -379,7 +478,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
           </p>
 
           {/* Error Message - Processing failure errors */}
-          {progress.currentStep === 'Failed' && progress.errorMessage && (
+          {progress.currentStep === ProcessingStep.Failed && progress.errorMessage && (
             <div style={errorMessageStyle} role="alert">
               <strong>Error:</strong> {progress.errorMessage}
             </div>

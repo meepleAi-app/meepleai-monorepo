@@ -15,6 +15,7 @@ import React from 'react';
 import { useChatContext } from './ChatProvider';
 import { Message } from './Message';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
+import { Message as MessageType } from '@/types';
 
 export function MessageList() {
   const { messages, activeChatId, loading } = useChatContext();
@@ -70,7 +71,7 @@ export function MessageList() {
         aria-atomic="false"
         className="list-none m-0 p-0"
       >
-        {messages.map((msg) => (
+        {messages.map((msg: MessageType) => (
           <Message
             key={msg.id}
             message={msg}

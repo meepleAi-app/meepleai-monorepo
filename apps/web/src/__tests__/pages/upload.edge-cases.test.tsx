@@ -8,12 +8,13 @@
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import UploadPage from '../../pages/upload';
+import { UploadClient } from '@/app/upload/upload-client';
 import {
   setupUploadMocks,
   createAuthMock,
   createGameMock
 } from '../../pages/../__tests__/fixtures/upload-mocks';
+import { getDefaultUserProps } from '../helpers/renderWithUser';
 
 describe('UploadPage - Edge Cases', () => {
   const originalFetch = global.fetch;
@@ -44,7 +45,7 @@ describe('UploadPage - Edge Cases', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() =>
           expect(screen.getByText(/You need admin or editor privileges to access this page/i)).toBeInTheDocument()
@@ -61,7 +62,7 @@ describe('UploadPage - Edge Cases', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => {
           // When not authenticated, the page renders normally (no auth check for null user)
@@ -76,7 +77,7 @@ describe('UploadPage - Edge Cases', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => {
           // When not authenticated, the page renders normally
@@ -110,7 +111,7 @@ describe('UploadPage - Edge Cases', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         // Wait for the games to load and the Confirm button to appear
         await waitFor(() => {

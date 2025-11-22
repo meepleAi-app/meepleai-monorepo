@@ -9,7 +9,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import UploadPage from '../../pages/upload';
+import { UploadClient } from '@/app/upload/upload-client';
 import {
   setupUploadMocks,
   createAuthMock,
@@ -17,6 +17,7 @@ import {
   createPdfMock,
   createRuleSpecMock
 } from '../../pages/../__tests__/fixtures/upload-mocks';
+import { getDefaultUserProps } from '../helpers/renderWithUser';
 import userEvent from '@testing-library/user-event';
 
 describe('UploadPage - PDF Upload', () => {
@@ -87,7 +88,7 @@ describe('UploadPage - PDF Upload', () => {
 
           global.fetch = mockFetch as unknown as typeof fetch;
 
-          render(<UploadPage />);
+          render(<UploadClient {...getDefaultUserProps()} />);
 
           // Wait for Shadcn Select trigger button
           const selectTrigger = await waitFor(() => {
@@ -218,7 +219,7 @@ describe('UploadPage - PDF Upload', () => {
 
           global.fetch = mockFetch;
 
-          render(<UploadPage />);
+          render(<UploadClient {...getDefaultUserProps()} />);
 
           // Wait for Shadcn Select trigger button
           const selectTrigger = await waitFor(() => {
@@ -292,7 +293,8 @@ describe('UploadPage - PDF Upload', () => {
         // Session 9: Using observability hooks for reliable error state tracking
         const uploadEvents: string[] = [];
         const UploadPageWithHooks = () => (
-          <UploadPage
+          <UploadClient
+            {...getDefaultUserProps()}
             autoUpload={false}
             onUploadStart={() => uploadEvents.push('upload_start')}
             onUploadError={() => uploadEvents.push('upload_error')}
@@ -363,7 +365,8 @@ describe('UploadPage - PDF Upload', () => {
         // Session 9: Using observability hooks for reliable error state tracking
         const uploadEvents: string[] = [];
         const UploadPageWithHooks = () => (
-          <UploadPage
+          <UploadClient
+            {...getDefaultUserProps()}
             autoUpload={false}
             onUploadStart={() => uploadEvents.push('upload_start')}
             onUploadError={() => uploadEvents.push('upload_error')}
@@ -458,7 +461,7 @@ describe('UploadPage - PDF Upload', () => {
 
         global.fetch = mockFetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
@@ -503,7 +506,7 @@ describe('UploadPage - PDF Upload', () => {
 
         global.fetch = mockFetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
@@ -548,7 +551,7 @@ describe('UploadPage - PDF Upload', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
@@ -592,7 +595,7 @@ describe('UploadPage - PDF Upload', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
@@ -643,7 +646,7 @@ describe('UploadPage - PDF Upload', () => {
 
           global.fetch = mockFetch as unknown as typeof fetch;
 
-          render(<UploadPage />);
+          render(<UploadClient {...getDefaultUserProps()} />);
 
           // Wait for Shadcn Select trigger button
           const selectTrigger = await waitFor(() => {
@@ -705,7 +708,7 @@ describe('UploadPage - PDF Upload', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
@@ -787,7 +790,7 @@ describe('UploadPage - PDF Upload', () => {
 
         global.fetch = mockFetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument());
 
@@ -846,7 +849,7 @@ describe('UploadPage - PDF Upload', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => {
           expect(screen.getByText(/Create one to get started/i)).toBeInTheDocument();

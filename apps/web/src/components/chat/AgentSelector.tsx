@@ -9,6 +9,7 @@ import React from 'react';
 import { useChatContext } from './ChatProvider';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 export function AgentSelector() {
   const { agents, selectedAgentId, selectAgent, selectedGameId, loading } = useChatContext();
@@ -51,7 +52,7 @@ export function AgentSelector() {
           <SelectValue placeholder={placeholderText} />
         </SelectTrigger>
         <SelectContent>
-          {selectedGameId && hasAgents && agents.map((agent) => (
+          {selectedGameId && hasAgents && agents.map((agent: AgentDto) => (
             <SelectItem key={agent.id} value={agent.id}>
               {agent.name}
             </SelectItem>

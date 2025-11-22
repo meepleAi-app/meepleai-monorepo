@@ -18,13 +18,14 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import UploadPage from '@/pages/upload';
+import { UploadClient } from '@/app/upload/upload-client';
 import {
   setupUploadMocks,
   createAuthMock,
   createGameMock,
   createRuleSpecMock
 } from '../fixtures/upload-mocks';
+import { getDefaultUserProps } from '../helpers/renderWithUser';
 
 // Mock next/dynamic for PdfPreview SSR handling
 jest.mock('next/dynamic', () => ({

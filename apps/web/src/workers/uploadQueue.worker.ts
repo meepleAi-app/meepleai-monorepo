@@ -276,12 +276,12 @@ async function uploadFile(item: UploadQueueItem, fileData: ArrayBuffer): Promise
           const errorBody = await res.json().catch(() => ({}));
           const errorMessage = errorBody.error ?? res.statusText;
 
-          const apiError = new ApiError(
-            errorMessage,
-            res.status,
+          const apiError = new ApiError({
+            message: errorMessage,
+            statusCode: res.status,
             correlationId,
-            res
-          );
+            response: res
+          });
           throw apiError;
         }
 

@@ -20,7 +20,7 @@
 
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import UploadPage from '@/pages/upload';
+import { UploadClient } from '@/app/upload/upload-client';
 import {
   setupUploadMocks,
   createAuthMock,
@@ -29,6 +29,7 @@ import {
   createRuleSpecMock,
   createErrorResponse
 } from '../fixtures/upload-mocks';
+import { getDefaultUserProps } from '../helpers/renderWithUser';
 
 // Mock next/dynamic for PdfPreview SSR handling
 jest.mock('next/dynamic', () => ({
@@ -153,7 +154,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         // Page renders normally when not authenticated (no auth check for null user)
@@ -168,7 +169,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         // Check for the exact text from the component
@@ -184,7 +185,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         expect(screen.getByText(/PDF Import Wizard/i)).toBeInTheDocument();
@@ -199,7 +200,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         expect(screen.getByText(/PDF Import Wizard/i)).toBeInTheDocument();
@@ -214,7 +215,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         // Check for role info display
@@ -230,7 +231,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         // Component shows "Back to Home" link for unauthorized users
@@ -245,7 +246,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         // Unauthorized users see the unauthorized message
@@ -262,7 +263,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         // Check for the exact unauthorized message in the UI
@@ -285,7 +286,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       // Wait for and click the select trigger to open dropdown
       const selectTrigger = await waitFor(() => {
@@ -313,7 +314,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         const selectTrigger = screen.getByRole('combobox', { name: /select.*game/i });
@@ -329,7 +330,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       // Confirm game selection
       await confirmGameSelection();
@@ -348,7 +349,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       // Wait for the form to be ready
       await waitFor(() => screen.getByLabelText(/Create New Game/i));
@@ -376,7 +377,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       // Wait for the form to be ready
       await waitFor(() => screen.getByLabelText(/Create New Game/i));
@@ -400,7 +401,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       // Wait for the form to be ready
       await waitFor(() => screen.getByLabelText(/Create New Game/i));
@@ -427,7 +428,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       // Open dropdown to verify initial order
       const selectTrigger = await waitFor(() => screen.getByRole('combobox', { name: /select.*game/i }));
@@ -461,7 +462,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       await waitFor(() => {
@@ -492,7 +493,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       // The component doesn't show a loading skeleton, it just disables the select while loading
       const selectTrigger = screen.getByRole('combobox', { name: /select.*game/i });
@@ -517,7 +518,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         // With no games, the select should show placeholder
@@ -539,7 +540,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       // First game is auto-selected, confirm it
       const confirmButton = screen.getByRole('button', { name: /Confirm Game Selection/i });
@@ -563,7 +564,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         expect(screen.getByLabelText(/Select Game/i)).toBeInTheDocument();
@@ -592,7 +593,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -615,7 +616,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -638,7 +639,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -661,7 +662,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -683,7 +684,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -706,7 +707,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -731,7 +732,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -754,7 +755,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -777,7 +778,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -807,7 +808,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -830,7 +831,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       // Don't confirm game selection - just wait for upload form to appear
       await waitFor(() => {
@@ -846,7 +847,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -872,7 +873,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -894,7 +895,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -919,7 +920,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await confirmGameSelection();
 
@@ -964,7 +965,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -990,7 +991,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload to render
@@ -1016,7 +1017,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1041,7 +1042,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1066,7 +1067,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1091,7 +1092,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1118,7 +1119,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1143,7 +1144,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1207,7 +1208,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       await waitFor(() => expect(screen.getByTestId('multi-file-upload')).toBeInTheDocument());
@@ -1270,7 +1271,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       await waitFor(() => expect(screen.getByTestId('multi-file-upload')).toBeInTheDocument());
@@ -1327,7 +1328,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       await waitFor(() => expect(screen.getByTestId('multi-file-upload')).toBeInTheDocument());
@@ -1356,7 +1357,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         expect(screen.getByText(/1\. Upload/i)).toBeInTheDocument();
@@ -1374,7 +1375,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         const uploadStep = screen.getByText(/1\. Upload/i);
@@ -1394,7 +1395,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1424,7 +1425,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
 
       await waitFor(() => {
         const parseStep = screen.getByText(/2\. Parse/i);
@@ -1443,7 +1444,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1468,7 +1469,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1502,7 +1503,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1532,7 +1533,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1566,7 +1567,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload
@@ -1605,7 +1606,7 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       });
       global.fetch = mockFetch as unknown as typeof fetch;
 
-      render(<UploadPage />);
+      render(<UploadClient {...getDefaultUserProps()} />);
       await confirmGameSelection();
 
       // Wait for MultiFileUpload

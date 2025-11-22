@@ -10,7 +10,7 @@
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import UploadPage from '../../pages/upload';
+import { UploadClient } from '@/app/upload/upload-client';
 
 describe('UploadPage - Review & Edit', () => {
   const originalFetch = global.fetch;
@@ -116,7 +116,7 @@ describe('UploadPage - Review & Edit', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadClient {...getDefaultUserProps()} />);
 
         await waitFor(() => {
           expect(screen.getByText(/PDF Import Wizard/i)).toBeInTheDocument();

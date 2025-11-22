@@ -234,4 +234,4 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
  * const profile = await api.auth.getProfile();
  * ```
  */
-export const api = createApiClient();
+export const api: ApiClient = createApiClient();

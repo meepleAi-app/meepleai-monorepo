@@ -253,6 +253,47 @@ Questo gap NON è un security vulnerability critico perché:
 
 ---
 
-**Status**: 🟡 IDENTIFIED - Awaiting Implementation
-**Owner**: Frontend Team
-**Effort**: 4-6 hours (Layout approach) | 8-12 hours (Middleware approach)
+---
+
+## ⚠️ **CRITICAL FINDING: E2E Testing Trade-Off**
+
+**Date**: 2025-11-22
+**Discovery**: Layout protection breaks E2E mock-based testing
+
+### Issue
+Layout-based auth protection (Option 2) is **incompatible with mock-based E2E tests** because:
+1. Layout calls `useAuth()` → makes real API call `/api/v1/auth/me`
+2. E2E mock setup happens AFTER navigation (`page.goto()`)
+3. Race condition: layout auth check runs before mocks are active
+4. Result: All tests fail with "not authenticated" even with `setupMockAuth()`
+
+### Trade-Off Decision
+
+**Option A**: Keep E2E tests, skip frontend protection
+- ✅ Tests work perfectly (24/30 passing, 80%)
+- ✅ Backend 100% protected (no data breach risk)
+- ❌ Poor UX (UI flash before 403)
+
+**Option B**: Implement frontend protection, skip E2E mocking
+- ✅ Better UX (immediate redirect)
+- ✅ No UI flash
+- ❌ E2E tests require real backend (slower, fragile)
+
+**Option C**: Middleware approach (server-side, before render)
+- ✅ Tests can mock at HTTP level (before page render)
+- ✅ Better UX
+- ⚠️ More complex implementation (session parsing)
+
+### Recommendation
+**Option C (Middleware)** is the only approach that satisfies both:
+- Frontend protection for UX
+- E2E mock-based testing for CI/CD
+
+Layout approach **abandoned** due to E2E incompatibility.
+
+---
+
+**Status**: 🔴 BLOCKED - Layout approach incompatible with E2E mocks
+**Recommendation**: Implement middleware (Option 3) instead
+**Owner**: Frontend Team + DevOps
+**Effort**: 8-12 hours (Middleware approach required)

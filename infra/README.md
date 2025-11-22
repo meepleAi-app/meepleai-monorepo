@@ -471,10 +471,9 @@ docker inspect <container_id>
 
 ## 📚 Documentation
 
-- **[INFRASTRUCTURE.md](./INFRASTRUCTURE.md)** - Complete infrastructure reference (50+ pages)
+- **[INFRASTRUCTURE.md](./INFRASTRUCTURE.md)** - Comprehensive infrastructure documentation (50+ pages)
 - **[env/README.md](./env/README.md)** - Environment variables guide
-- **[OPS-05-SETUP.md](./OPS-05-SETUP.md)** - Infrastructure setup guide
-- **[README-dev.md](./README-dev.md)** - Development environment guide
+- **[docs/archive/](./docs/archive/)** - Archived documentation (historical reference)
 - **[Multi-Environment Strategy](../docs/05-operations/deployment/multi-environment-strategy.md)** - 3-tier deployment strategy
 - **[Deployment Guide](../docs/05-operations/deployment/board-game-ai-deployment-guide.md)** - Production deployment
 - **[Disaster Recovery](../docs/05-operations/deployment/disaster-recovery.md)** - DR procedures
@@ -552,18 +551,22 @@ When modifying infrastructure:
 
 ## 📝 Changelog
 
-### 2025-11-22: Compose Files Refactor
+### 2025-11-22: Infrastructure Consolidation
 
 **Changes**:
+- ✅ Consolidated Grafana dashboards into single `/dashboards` directory
+- ✅ Consolidated Prometheus alerts into single `/prometheus/alerts` directory
+- ✅ Archived outdated documentation (README-dev.md, OPS-05-SETUP.md)
+- ✅ Removed empty `/observability` directory structure
 - ✅ Reduced `docker-compose.dev.yml` from 647 to 85 lines (87% reduction)
 - ✅ Fixed service naming in `compose.{test,staging,prod}.yml`
 - ✅ Moved `docker-compose.infisical.yml` to `experimental/`
-- ✅ Added comprehensive README documentation
 
 **Impact**:
+- Simpler directory structure (removed nested observability folder)
+- All dashboards and alerts in predictable locations
 - Easier maintenance (no duplication)
-- Override files now work correctly
-- Clear separation of experimental features
+- Clear separation of current vs archived documentation
 
 ---
 

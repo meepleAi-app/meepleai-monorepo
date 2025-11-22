@@ -24,7 +24,7 @@ public class PdfUploadQuotaServiceTests
         _configServiceMock = new Mock<IConfigurationService>();
         _timeProvider = new FakeTimeProvider();
 
-        _redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
+        _redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), null))
             .Returns(_databaseMock.Object);
 
         _service = new PdfUploadQuotaService(

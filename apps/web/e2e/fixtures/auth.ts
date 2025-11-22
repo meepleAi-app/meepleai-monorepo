@@ -224,6 +224,59 @@ export async function setupMockAuth(page: Page, role: 'Admin' | 'Editor' | 'User
 }
 
 /**
+ * Setup mock auth with 403 Forbidden for specific routes (RBAC testing)
+ * Use this for testing that users are properly denied access to protected routes
+ *
+ * @param page - Playwright page object
+ * @param role - User role (Admin, Editor, User)
+ * @param forbiddenRoutes - Array of route patterns that should return 403 (e.g., ['/admin/**'])
+ * @param email - User email
+ */
+export async function setupMockAuthWithForbidden(
+  page: Page,
+  role: 'Admin' | 'Editor' | 'User',
+  forbiddenRoutes: string[] = [],
+  email: string = `${role.toLowerCase()}@meepleai.dev`
+) {
+  const userResponse = {
+    user: {
+      id: `${role.toLowerCase()}-test-id`,
+      email,
+      displayName: `Test ${role}`,
+      role
+    },
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+  };
+
+  // Setup base auth mocking
+  await setupMockAuth(page, role, email);
+
+  // Override specific routes to return 403 Forbidden
+  for (const routePattern of forbiddenRoutes) {
+    // Convert route pattern to regex (e.g., '/admin/**' -> /\/admin\/.*/
+    const regexPattern = routePattern
+      .replace(/\*\*/g, '.*')
+      .replace(/\*/g, '[^/]*')
+      .replace(/\//g, '\\/');
+
+    await page.route(new RegExp(regexPattern), async (route) => {
+      // Return 403 Forbidden for unauthorized access
+      await route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'Forbidden',
+          message: `User with role '${role}' is not authorized to access this resource`,
+          statusCode: 403
+        })
+      });
+    });
+  }
+
+  return userResponse;
+}
+
+/**
  * Setup mock games API routes (similar to pdf-preview.spec.ts pattern)
  */
 export async function setupGamesRoutes(page: Page) {

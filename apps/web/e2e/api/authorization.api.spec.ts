@@ -12,6 +12,11 @@
  * - Public API endpoints (2 tests)
  *
  * Total: 13 API authorization tests
+ *
+ * Note: Uses page.context().route() instead of page.route() because:
+ * - page.route() only intercepts requests from the page itself
+ * - page.request (APIRequestContext) bypasses page-level routes
+ * - page.context().route() intercepts ALL requests at browser context level
  */
 
 import { test, expect } from '@playwright/test';
@@ -36,7 +41,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
       await setupMockAuth(page, 'Editor');
 
       // Setup route to return 403 for Editor role
-      await page.route(`${API_BASE}/api/v1/admin/users**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/admin/users**`, async (route) => {
         await route.fulfill({
           status: 403,
           contentType: 'application/json',
@@ -56,7 +61,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
     test('User cannot call GET /api/v1/admin/users', async ({ page }) => {
       await setupMockAuth(page, 'User');
 
-      await page.route(`${API_BASE}/api/v1/admin/users**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/admin/users**`, async (route) => {
         await route.fulfill({
           status: 403,
           contentType: 'application/json',
@@ -90,7 +95,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
     test('Editor cannot call POST /api/v1/admin/configuration', async ({ page }) => {
       await setupMockAuth(page, 'Editor');
 
-      await page.route(`${API_BASE}/api/v1/admin/configuration**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/admin/configuration**`, async (route) => {
         await route.fulfill({
           status: 403,
           contentType: 'application/json',
@@ -115,7 +120,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
     test('User cannot call POST /api/v1/admin/configuration', async ({ page }) => {
       await setupMockAuth(page, 'User');
 
-      await page.route(`${API_BASE}/api/v1/admin/configuration**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/admin/configuration**`, async (route) => {
         await route.fulfill({
           status: 403,
           contentType: 'application/json',
@@ -147,7 +152,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
     test('Non-admin cannot call GET /api/v1/admin/stats', async ({ page }) => {
       await setupMockAuth(page, 'User');
 
-      await page.route(`${API_BASE}/api/v1/admin/stats**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/admin/stats**`, async (route) => {
         await route.fulfill({
           status: 403,
           contentType: 'application/json',
@@ -193,7 +198,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
     test('User cannot call POST /api/v1/games', async ({ page }) => {
       await setupMockAuth(page, 'User');
 
-      await page.route(`${API_BASE}/api/v1/games`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/games`, async (route) => {
         if (route.request().method() === 'POST') {
           await route.fulfill({
             status: 403,
@@ -252,7 +257,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
 
       const gameId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
-      await page.route(`${API_BASE}/api/v1/games/${gameId}/rulespec**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/games/${gameId}/rulespec**`, async (route) => {
         await route.fulfill({
           status: 403,
           contentType: 'application/json',
@@ -312,7 +317,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
     test('Unauthenticated request to admin endpoint returns 401/403', async ({ page }) => {
       // No setupMockAuth = unauthenticated
 
-      await page.route(`${API_BASE}/api/v1/admin/users**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/admin/users**`, async (route) => {
         await route.fulfill({
           status: 401,
           contentType: 'application/json',
@@ -330,7 +335,7 @@ test.describe('API Authorization Tests - E2E-004', () => {
     });
 
     test('Unauthenticated request to protected chat endpoint returns 401', async ({ page }) => {
-      await page.route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
         await route.fulfill({
           status: 401,
           contentType: 'application/json',

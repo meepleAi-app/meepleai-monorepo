@@ -99,6 +99,16 @@ export interface RuleAtom {
 }
 
 /**
+ * Citation - reference to a source document
+ */
+export interface Citation {
+  documentId: string;
+  pageNumber: number;
+  snippet: string;
+  relevanceScore: number;
+}
+
+/**
  * RuleSpec - complete game rules specification
  */
 export interface RuleSpec {
@@ -150,6 +160,7 @@ export interface Message {
   updatedAt?: string | null;
   isDeleted?: boolean;
   isInvalidated?: boolean;
+  isOptimistic?: boolean; // Client-side flag for optimistic UI updates
 }
 
 /**

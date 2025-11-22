@@ -9,6 +9,7 @@ import { useEffect, useState, useCallback, useRef, type CSSProperties } from 're
 import { api } from '@/lib/api';
 import {
   type ProcessingProgress as ProcessingProgressType,
+  ProcessingStep,
   isProcessingComplete,
 } from '@/types/pdf';
 import { SkeletonLoader } from '../loading';
@@ -70,17 +71,17 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       setNetworkError(null);
       setLoading(false);
 
-      // Check for completion (FE-IMP-005: Use status instead of currentStep)
-      if (isProcessingComplete(data.status)) {
+      // Check for completion
+      if (isProcessingComplete(data.currentStep)) {
         if (
-          data.status === 'Completed' &&
+          data.currentStep === ProcessingStep.Completed &&
           onComplete &&
           !hasNotifiedCompletionRef.current
         ) {
           hasNotifiedCompletionRef.current = true;
           onComplete();
-        } else if (data.status === 'Failed' && onError && data.error) {
-          onError(data.error);
+        } else if (data.currentStep === ProcessingStep.Failed && onError && data.errorMessage) {
+          onError(data.errorMessage);
         }
       }
     } catch (error) {
@@ -124,7 +125,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       }
 
       const currentProgress = latestProgressRef.current;
-      if (currentProgress && isProcessingComplete(currentProgress.status)) {
+      if (currentProgress && isProcessingComplete(currentProgress.currentStep)) {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
@@ -209,9 +210,9 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     width: `${progress?.percentComplete ?? 0}%`,
     height: '100%',
     backgroundColor:
-      progress?.status === 'Completed'
+      progress?.currentStep === 'Completed'
         ? '#34a853'
-        : progress?.status === 'Failed'
+        : progress?.currentStep === 'Failed'
           ? '#d93025'
           : '#0070f3',
     transition: 'width 0.6s ease'
@@ -369,7 +370,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       {progress && (
         <div>
           <p style={statusTextStyle}>
-            <strong>Processing status:</strong> {progress.status}
+            <strong>Processing status:</strong> {progress.currentStep}
           </p>
 
           {/* Progress Percentage */}
@@ -378,14 +379,14 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
           </p>
 
           {/* Error Message - Processing failure errors */}
-          {progress.status === 'Failed' && progress.error && (
+          {progress.currentStep === 'Failed' && progress.errorMessage && (
             <div style={errorMessageStyle} role="alert">
-              <strong>Error:</strong> {progress.error}
+              <strong>Error:</strong> {progress.errorMessage}
             </div>
           )}
 
           {/* Cancel Button */}
-          {!isProcessingComplete(progress.status) && (
+          {!isProcessingComplete(progress.currentStep) && (
             <div style={buttonContainerStyle}>
               <button
                 onClick={handleCancelClick}

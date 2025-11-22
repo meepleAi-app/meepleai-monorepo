@@ -24,6 +24,7 @@
  *
  * @see https://nextjs.org/docs/app/building-your-application/routing
  */
+
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Enable Docker-optimized output

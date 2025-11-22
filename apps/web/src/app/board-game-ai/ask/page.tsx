@@ -14,6 +14,9 @@
  * @see https://github.com/DegrassiAaron/meepleai-monorepo/issues/1006
  */
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 import { Metadata } from 'next';
 import BoardGameAskClient from './BoardGameAskClient';
 

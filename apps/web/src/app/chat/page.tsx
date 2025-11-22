@@ -18,6 +18,9 @@
 import { Metadata } from 'next';
 import ChatPage from '@/components/pages/ChatPage';
 
+// Force dynamic rendering - chat requires client-side providers
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Chat - MeepleAI',
   description: 'Ask questions about board game rules and get instant AI-powered answers with source citations.',

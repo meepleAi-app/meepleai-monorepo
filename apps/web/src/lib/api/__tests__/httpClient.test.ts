@@ -178,7 +178,7 @@ describe('HttpClient', () => {
     });
 
     it('should include Authorization header when an API key is stored', async () => {
-      setStoredApiKey('mpl_test_demo');
+      await setStoredApiKey('mpl_test_demo');
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -991,7 +991,7 @@ describe('HttpClient', () => {
       await client.get('/api/v1/profile');
 
       // Second request with API key
-      setStoredApiKey('mpl_test_demo');
+      await setStoredApiKey('mpl_test_demo');
       await client.get('/api/v1/profile');
       clearStoredApiKey();
 

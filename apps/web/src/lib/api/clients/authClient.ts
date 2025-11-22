@@ -67,7 +67,7 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      */
     async loginWithApiKey(apiKey: string): Promise<ApiKeyLoginResponse> {
       const response = await httpClient.post('/api/v1/auth/apikey/login', { apiKey }, ApiKeyLoginResponseSchema);
-      setStoredApiKey(apiKey.trim());
+      await setStoredApiKey(apiKey.trim());
       return response;
     },
 

@@ -15,6 +15,7 @@ public sealed class User : AggregateRoot<Guid>
     public string DisplayName { get; private set; }
     public PasswordHash PasswordHash { get; private set; }
     public Role Role { get; private set; }
+    public UserTier Tier { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public bool IsDemoAccount { get; private set; }
 
@@ -52,12 +53,14 @@ public sealed class User : AggregateRoot<Guid>
         Email email,
         string displayName,
         PasswordHash passwordHash,
-        Role role) : base(id)
+        Role role,
+        UserTier? tier = null) : base(id)
     {
         Email = email ?? throw new ArgumentNullException(nameof(email));
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
         PasswordHash = passwordHash ?? throw new ArgumentNullException(nameof(passwordHash));
         Role = role ?? throw new ArgumentNullException(nameof(role));
+        Tier = tier ?? UserTier.Free; // Default to Free tier
         CreatedAt = DateTime.UtcNow;
 
         IsTwoFactorEnabled = false;
@@ -342,5 +345,22 @@ public sealed class User : AggregateRoot<Guid>
         bool hasOAuth = _oauthAccounts.Any();
 
         return hasPassword || hasOAuth;
+    }
+
+    /// <summary>
+    /// Updates the user's subscription tier.
+    /// Only admins can change user tiers.
+    /// </summary>
+    public void UpdateTier(UserTier newTier)
+    {
+        if (newTier == null)
+            throw new ArgumentNullException(nameof(newTier));
+
+        if (Tier == newTier)
+            return; // No change
+
+        var oldTier = Tier;
+        Tier = newTier;
+        AddDomainEvent(new UserTierChangedEvent(Id, oldTier, newTier));
     }
 }

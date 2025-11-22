@@ -126,34 +126,38 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             .Where(u => u.Id == userId)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (user != null)
+        if (user == null)
         {
-            var quotaResult = await _quotaService.CheckQuotaAsync(
-                user.Id,
-                user.Tier,
-                user.Role,
-                cancellationToken);
+            RecordUploadMetricSafely("user_not_found", file.Length);
+            _logger.LogError("User {UserId} not found during PDF upload", userId);
+            return new PdfUploadResult(false, "User not found. Please ensure you are authenticated.", null);
+        }
 
-            if (!quotaResult.Allowed)
-            {
-                RecordUploadMetricSafely("quota_exceeded", file.Length);
-                _logger.LogWarning(
-                    "PDF upload denied for user {UserId} ({Tier}): {Reason}",
-                    userId,
-                    user.Tier,
-                    quotaResult.ErrorMessage);
-                return new PdfUploadResult(false, quotaResult.ErrorMessage!, null);
-            }
+        var quotaResult = await _quotaService.CheckQuotaAsync(
+            user.Id,
+            user.Tier,
+            user.Role,
+            cancellationToken);
 
-            _logger.LogDebug(
-                "PDF upload quota check passed for user {UserId} ({Tier}): Daily {DailyUsed}/{DailyLimit}, Weekly {WeeklyUsed}/{WeeklyLimit}",
+        if (!quotaResult.Allowed)
+        {
+            RecordUploadMetricSafely("quota_exceeded", file.Length);
+            _logger.LogWarning(
+                "PDF upload denied for user {UserId} ({Tier}): {Reason}",
                 userId,
                 user.Tier,
-                quotaResult.DailyUploadsUsed,
-                quotaResult.DailyLimit,
-                quotaResult.WeeklyUploadsUsed,
-                quotaResult.WeeklyLimit);
+                quotaResult.ErrorMessage);
+            return new PdfUploadResult(false, quotaResult.ErrorMessage!, null);
         }
+
+        _logger.LogDebug(
+            "PDF upload quota check passed for user {UserId} ({Tier}): Daily {DailyUsed}/{DailyLimit}, Weekly {WeeklyUsed}/{WeeklyLimit}",
+            userId,
+            user.Tier,
+            quotaResult.DailyUploadsUsed,
+            quotaResult.DailyLimit,
+            quotaResult.WeeklyUploadsUsed,
+            quotaResult.WeeklyLimit);
 
         try
         {

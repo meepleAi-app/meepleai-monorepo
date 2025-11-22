@@ -57,21 +57,21 @@ graph TB
     API -->|Metrics Endpoint| Prometheus
     Prometheus -->|Data Source| Grafana
 
-    style Browser fill:#e1f5ff
-    style Web fill:#4fc3f7
-    style API fill:#29b6f6
-    style PG fill:#66bb6a
-    style Qdrant fill:#ab47bc
-    style Redis fill:#ef5350
-    style Unstructured fill:#ffa726
-    style SmolDocling fill:#ff7043
-    style Ollama fill:#8d6e63
-    style OpenRouter fill:#78909c
-    style N8N fill:#9575cd
-    style Seq fill:#ffb74d
-    style Jaeger fill:#64b5f6
-    style Prometheus fill:#81c784
-    style Grafana fill:#ff8a65
+    style Browser fill:#e1f5ff,color:#000
+    style Web fill:#4fc3f7,color:#000
+    style API fill:#29b6f6,color:#000
+    style PG fill:#66bb6a,color:#000
+    style Qdrant fill:#ab47bc,color:#000
+    style Redis fill:#ef5350,color:#000
+    style Unstructured fill:#ffa726,color:#000
+    style SmolDocling fill:#ff7043,color:#000
+    style Ollama fill:#8d6e63,color:#000
+    style OpenRouter fill:#78909c,color:#000
+    style N8N fill:#9575cd,color:#000
+    style Seq fill:#ffb74d,color:#000
+    style Jaeger fill:#64b5f6,color:#000
+    style Prometheus fill:#81c784,color:#000
+    style Grafana fill:#ff8a65,color:#000
 ```
 
 ## Porte e Servizi
@@ -157,12 +157,12 @@ graph LR
 
     API -->|Health Checks<br/>/health| Monitor[Health Monitoring]
 
-    style API fill:#29b6f6
-    style Seq fill:#ffb74d
-    style Jaeger fill:#64b5f6
-    style Prometheus fill:#81c784
-    style Grafana fill:#ff8a65
-    style Monitor fill:#4db6ac
+    style API fill:#29b6f6,color:#000
+    style Seq fill:#ffb74d,color:#000
+    style Jaeger fill:#64b5f6,color:#000
+    style Prometheus fill:#81c784,color:#000
+    style Grafana fill:#ff8a65,color:#000
+    style Monitor fill:#4db6ac,color:#000
 ```
 
 ## Stack Tecnologico Completo

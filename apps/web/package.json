@@ -120,7 +120,9 @@
   },
   "pnpm": {
     "overrides": {
-      "dompurify": ">=3.2.4"
+      "dompurify": ">=3.2.4",
+      "glob": ">=10.5.0",
+      "js-yaml": ">=4.1.1"
     }
   }
 }

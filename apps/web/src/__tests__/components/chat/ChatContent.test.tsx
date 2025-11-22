@@ -44,6 +44,7 @@ const setupMockContext = (overrides?: any) => {
     chats: [],
     errorMessage: null,
     sidebarCollapsed: false,
+    loading: { creating: false }, // Fix: Add missing loading state
     toggleSidebar: jest.fn(),
     ...overrides,
   });

@@ -80,6 +80,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             DisplayName = entity.DisplayName,
             PasswordHash = entity.PasswordHash.Value,
             Role = entity.Role.Value,
+            Tier = entity.Tier.Value,
             CreatedAt = entity.CreatedAt,
             TotpSecretEncrypted = entity.TotpSecret?.EncryptedValue,
             IsTwoFactorEnabled = entity.IsTwoFactorEnabled,
@@ -124,6 +125,7 @@ public class UserRepository : RepositoryBase, IUserRepository
         existingUser.DisplayName = entity.DisplayName;
         existingUser.PasswordHash = entity.PasswordHash.Value;
         existingUser.Role = entity.Role.Value;
+        existingUser.Tier = entity.Tier.Value;
         existingUser.TotpSecretEncrypted = entity.TotpSecret?.EncryptedValue;
         existingUser.IsTwoFactorEnabled = entity.IsTwoFactorEnabled;
         existingUser.TwoFactorEnabledAt = entity.TwoFactorEnabledAt;
@@ -195,6 +197,7 @@ public class UserRepository : RepositoryBase, IUserRepository
         var email = new Email(entity.Email);
         var passwordHash = PasswordHash.FromStored(entity.PasswordHash);
         var role = Role.Parse(entity.Role);
+        var tier = !string.IsNullOrWhiteSpace(entity.Tier) ? UserTier.Parse(entity.Tier) : UserTier.Free;
         var displayName = string.IsNullOrWhiteSpace(entity.DisplayName)
             ? entity.Email
             : entity.DisplayName ?? entity.Email;
@@ -204,7 +207,8 @@ public class UserRepository : RepositoryBase, IUserRepository
             email: email,
             displayName: displayName,
             passwordHash: passwordHash,
-            role: role
+            role: role,
+            tier: tier
         );
 
         // Reconstruct 2FA state using reflection (properties are private set)

@@ -15,6 +15,7 @@ public sealed class User : AggregateRoot<Guid>
     public string DisplayName { get; private set; }
     public PasswordHash PasswordHash { get; private set; }
     public Role Role { get; private set; }
+    public UserTier Tier { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public bool IsDemoAccount { get; private set; }
 
@@ -52,12 +53,14 @@ public sealed class User : AggregateRoot<Guid>
         Email email,
         string displayName,
         PasswordHash passwordHash,
-        Role role) : base(id)
+        Role role,
+        UserTier? tier = null) : base(id)
     {
         Email = email ?? throw new ArgumentNullException(nameof(email));
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
         PasswordHash = passwordHash ?? throw new ArgumentNullException(nameof(passwordHash));
         Role = role ?? throw new ArgumentNullException(nameof(role));
+        Tier = tier ?? UserTier.Free; // Default to Free tier
         CreatedAt = DateTime.UtcNow;
 
         IsTwoFactorEnabled = false;
@@ -342,5 +345,33 @@ public sealed class User : AggregateRoot<Guid>
         bool hasOAuth = _oauthAccounts.Any();
 
         return hasPassword || hasOAuth;
+    }
+
+    /// <summary>
+    /// Updates the user's subscription tier.
+    /// Only admins can change user tiers.
+    /// </summary>
+    /// <param name="newTier">The new tier to assign.</param>
+    /// <param name="requesterRole">The role of the user requesting the tier change.</param>
+    /// <exception cref="ArgumentNullException">Thrown when newTier or requesterRole is null.</exception>
+    /// <exception cref="DomainException">Thrown when requester is not an admin.</exception>
+    public void UpdateTier(UserTier newTier, Role requesterRole)
+    {
+        if (newTier == null)
+            throw new ArgumentNullException(nameof(newTier));
+
+        if (requesterRole == null)
+            throw new ArgumentNullException(nameof(requesterRole));
+
+        // Only admins can change user tiers
+        if (!requesterRole.IsAdmin())
+            throw new DomainException("Only administrators can change user tiers");
+
+        if (Tier == newTier)
+            return; // No change
+
+        var oldTier = Tier;
+        Tier = newTier;
+        AddDomainEvent(new UserTierChangedEvent(Id, oldTier, newTier));
     }
 }

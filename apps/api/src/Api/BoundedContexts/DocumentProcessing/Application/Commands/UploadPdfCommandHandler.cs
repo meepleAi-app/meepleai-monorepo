@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Constants;
 using Api.Infrastructure;
@@ -28,6 +29,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
     private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly IAiResponseCacheService _cacheService;
     private readonly IBlobStorageService _blobStorageService;
+    private readonly IPdfUploadQuotaService _quotaService;
     private readonly TimeProvider _timeProvider;
 
     private const long MaxFileSizeBytes = FileConstants.MaxPdfFileSizeBytes;
@@ -46,6 +48,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         IBackgroundTaskService backgroundTaskService,
         IAiResponseCacheService cacheService,
         IBlobStorageService blobStorageService,
+        IPdfUploadQuotaService quotaService,
         TimeProvider? timeProvider = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -56,6 +59,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
+        _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -117,6 +121,44 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             return new PdfUploadResult(false, "Game not found. Please select a valid game before uploading.", null);
         }
 
+        // Check upload quota (Admin and Editor bypass quota checks)
+        var user = await _db.Users
+            .Where(u => u.Id == userId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (user == null)
+        {
+            RecordUploadMetricSafely("user_not_found", file.Length);
+            _logger.LogError("User {UserId} not found during PDF upload", userId);
+            return new PdfUploadResult(false, "User not found. Please ensure you are authenticated.", null);
+        }
+
+        var quotaResult = await _quotaService.CheckQuotaAsync(
+            user.Id,
+            user.Tier,
+            user.Role,
+            cancellationToken);
+
+        if (!quotaResult.Allowed)
+        {
+            RecordUploadMetricSafely("quota_exceeded", file.Length);
+            _logger.LogWarning(
+                "PDF upload denied for user {UserId} ({Tier}): {Reason}",
+                userId,
+                user.Tier,
+                quotaResult.ErrorMessage);
+            return new PdfUploadResult(false, quotaResult.ErrorMessage!, null);
+        }
+
+        _logger.LogDebug(
+            "PDF upload quota check passed for user {UserId} ({Tier}): Daily {DailyUsed}/{DailyLimit}, Weekly {WeeklyUsed}/{WeeklyLimit}",
+            userId,
+            user.Tier,
+            quotaResult.DailyUploadsUsed,
+            quotaResult.DailyLimit,
+            quotaResult.WeeklyUploadsUsed,
+            quotaResult.WeeklyLimit);
+
         try
         {
             // Delegate file storage to BlobStorageService
@@ -170,6 +212,9 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
 
             // Extract text asynchronously (PDF-02) with cancellation support (PDF-08)
             _backgroundTaskService.ExecuteWithCancellation(storageResult.FileId!, (ct) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, ct));
+
+            // Increment upload count after successful upload
+            await _quotaService.IncrementUploadCountAsync(userId, cancellationToken);
 
             await InvalidateCacheSafelyAsync(gameId, cancellationToken, "PDF upload");
 

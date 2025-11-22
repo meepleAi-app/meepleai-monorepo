@@ -115,8 +115,9 @@
 **Purpose**: Deployment, monitoring, incident response
 
 #### Subdirectories
-- **[deployment/](./05-operations/deployment/)** - Deployment guides (3 files)
+- **[deployment/](./05-operations/deployment/)** - Deployment guides (4 files)
   - [Deployment Guide](./05-operations/deployment/board-game-ai-deployment-guide.md) (35 pages) ⭐
+  - [Multi-Environment Strategy](./05-operations/deployment/multi-environment-strategy.md) ⭐ **NEW**
   - [Frontend Deployment](./05-operations/deployment/frontend-deployment.md)
   - [Disaster Recovery](./05-operations/deployment/disaster-recovery.md)
 
@@ -136,6 +137,7 @@
 **Purpose**: Security audits, vulnerability remediation, best practices
 
 - [Security Audit 2025-11-04](./06-security/SECURITY_AUDIT_2025-11-04.md) ⭐
+- [Environment Variables Production Guide](./06-security/environment-variables-production.md) ⭐ **NEW**
 - [Code Scanning Remediation](./06-security/code-scanning-remediation-summary.md)
 - [OAuth Security](./06-security/oauth-security.md)
 - [Log Forging Prevention](./06-security/log-forging-prevention.md)

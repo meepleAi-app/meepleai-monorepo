@@ -6,45 +6,72 @@ Every file has an `.example` template - copy it, rename it without the `.example
 > **Tip**  
 > Run `tools/secrets/init-secrets.sh` first: it creates the Docker secret files in `infra/secrets/` so any `_FILE` references already work.
 
-| File | Purpose | How to create |
-|------|---------|---------------|
-| `api.env.dev` | Local ASP.NET API settings | `cp infra/env/api.env.dev.example infra/env/api.env.dev` |
-| `api.env.ci.example` | Template for CI pipelines (GitHub Actions) | Copy into GitHub repo secrets / CI variables |
-| `web.env.dev` | Next.js dev server overrides | `cp infra/env/web.env.dev.example infra/env/web.env.dev` |
-| `web.env.ci.example` | Web CI defaults | Inject into CI environment if needed |
-| `n8n.env.dev` | n8n workflow automation (dev) | `cp infra/env/n8n.env.dev.example infra/env/n8n.env.dev` |
-| `n8n.env.ci.example` | n8n CI template | Use for pipeline environments |
-| `alertmanager.env` | Alertmanager notification settings | `cp infra/env/alertmanager.env.example infra/env/alertmanager.env` |
-| `mcp.env.dev` | API keys for MCP helper services | `cp infra/env/mcp.env.dev.example infra/env/mcp.env.dev` |
-| `infisical.env` | Self-hosted Infisical POC | `cp infra/env/infisical.env.example infra/env/infisical.env` |
+| File | Environment | Service | How to create |
+|------|-------------|---------|---------------|
+| `api.env.dev.example` | Development | API | `cp api.env.dev.example api.env.dev` |
+| `api.env.staging.example` | Staging | API | `cp api.env.staging.example api.env.staging` |
+| `api.env.prod.example` | Production | API | `cp api.env.prod.example api.env.prod` |
+| `api.env.ci.example` | CI/CD | API | Copy into GitHub secrets |
+| `web.env.dev.example` | Development | Web | `cp web.env.dev.example web.env.dev` |
+| `web.env.staging.example` | Staging | Web | `cp web.env.staging.example web.env.staging` |
+| `web.env.prod.example` | Production | Web | `cp web.env.prod.example web.env.prod` |
+| `web.env.ci.example` | CI/CD | Web | Copy into GitHub secrets |
+| `n8n.env.dev.example` | Development | n8n | `cp n8n.env.dev.example n8n.env.dev` |
+| `n8n.env.staging.example` | Staging | n8n | `cp n8n.env.staging.example n8n.env.staging` |
+| `n8n.env.prod.example` | Production | n8n | `cp n8n.env.prod.example n8n.env.prod` |
+| `n8n.env.ci.example` | CI/CD | n8n | Copy into GitHub secrets |
+| `alertmanager.env.example` | All | Alertmanager | `cp alertmanager.env.example alertmanager.env` |
+| `infisical.env.example` | POC | Infisical | `cp infisical.env.example infisical.env` |
 
 ## Quick setup commands
 
-Run one of the following snippets from the repo root to generate all non-CI `.env` files in one shot.
+### Development Environment
+
+Run from the repo root to generate all development `.env` files:
 
 **macOS / Linux**
 ```bash
-cp infra/env/api.env.dev.example infra/env/api.env.dev
-cp infra/env/web.env.dev.example infra/env/web.env.dev
-cp infra/env/n8n.env.dev.example infra/env/n8n.env.dev
-cp infra/env/alertmanager.env.example infra/env/alertmanager.env
-cp infra/env/mcp.env.dev.example infra/env/mcp.env.dev
-cp infra/env/infisical.env.example infra/env/infisical.env
+cd infra/env
+cp api.env.dev.example api.env.dev
+cp web.env.dev.example web.env.dev
+cp n8n.env.dev.example n8n.env.dev
+cp alertmanager.env.example alertmanager.env
 ```
 
 **Windows PowerShell**
 ```powershell
-$envDir = "D:/Repositories/meepleai-monorepo/infra/env"
-Copy-Item "$envDir/api.env.dev.example" "$envDir/api.env.dev"
-Copy-Item "$envDir/web.env.dev.example" "$envDir/web.env.dev"
-Copy-Item "$envDir/n8n.env.dev.example" "$envDir/n8n.env.dev"
-Copy-Item "$envDir/alertmanager.env.example" "$envDir/alertmanager.env"
-Copy-Item "$envDir/mcp.env.dev.example" "$envDir/mcp.env.dev"
-Copy-Item "$envDir/infisical.env.example" "$envDir/infisical.env"
-Get-ChildItem $envDir -Filter "*.env" | Select-Object Name, Length
+cd infra/env
+Copy-Item api.env.dev.example api.env.dev
+Copy-Item web.env.dev.example web.env.dev
+Copy-Item n8n.env.dev.example n8n.env.dev
+Copy-Item alertmanager.env.example alertmanager.env
+Get-ChildItem . -Filter "*.env" | Select-Object Name, Length
 ```
 
-Confirm each file shows a non-zero `Length` so Docker sees real files instead of directories before running `docker compose up`.
+### Staging Environment
+
+```bash
+cd infra/env
+cp api.env.staging.example api.env.staging
+cp web.env.staging.example web.env.staging
+cp n8n.env.staging.example n8n.env.staging
+# Edit files to replace <REPLACE_*> placeholders
+vim api.env.staging web.env.staging n8n.env.staging
+```
+
+### Production Environment
+
+```bash
+cd infra/env
+cp api.env.prod.example api.env.prod
+cp web.env.prod.example web.env.prod
+cp n8n.env.prod.example n8n.env.prod
+# ⚠️  CRITICAL: Edit files to replace <REPLACE_*> with production values
+# ⚠️  Store in secure secret manager (AWS Secrets Manager, Azure Key Vault)
+vim api.env.prod web.env.prod n8n.env.prod
+```
+
+**Note**: Confirm each file shows a non-zero `Length` before running `docker compose up`.
 
 Below you’ll find the variables that require manual input and how to obtain each one.
 

@@ -50,6 +50,7 @@ jest.mock('../../../components/loading/LoadingButton', () => ({
 const setupMockContext = (overrides?: any) => {
   mockUseChatContext.mockReturnValue({
     games: [],
+    chats: [], // Fix: Add missing chats array
     selectedGameId: null,
     selectedAgentId: null,
     sidebarCollapsed: false,

@@ -1,0 +1,18 @@
+
+> @meepleai/web@ test:coverage D:\Repositories\meepleai-monorepo-frontend\apps\web
+> jest --coverage
+
+Error: Cannot find module '@sentry/nextjs'
+Require stack:
+- D:\Repositories\meepleai-monorepo-frontend\apps\web\next.config.js
+    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)
+    at D:\Repositories\meepleai-monorepo-frontend\apps\web\node_modules\.pnpm\next@16.0.1_@babel+core@7.2_7779bc4f0a36079d6f3befd111b873c6\node_modules\next\dist\server\require-hook.js:57:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+    at Function._load (node:internal/modules/cjs/loader:1192:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1463:12)
+    at mod.require (D:\Repositories\meepleai-monorepo-frontend\apps\web\node_modules\.pnpm\next@16.0.1_@babel+core@7.2_7779bc4f0a36079d6f3befd111b873c6\node_modules\next\dist\server\require-hook.js:68:28)
+    at require (node:internal/modules/helpers:147:16)
+ ELIFECYCLE  Command failed with exit code 1.

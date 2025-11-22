@@ -9,6 +9,33 @@ if (process.env.CI) {
 }
 
 /**
+ * Safely converts a route pattern to a RegExp pattern string
+ * Escapes all special regex characters to prevent injection attacks (CWE-94, CWE-116)
+ *
+ * @security This function addresses CodeQL warning js/incomplete-sanitization
+ * by properly escaping backslashes BEFORE other replacements
+ *
+ * @param routePattern - Route pattern with wildcards (e.g., '/admin/**')
+ * @returns Escaped regex pattern string safe for use in new RegExp()
+ *
+ * @example
+ * escapeRoutePattern('/admin/**')  // => '\\/admin\\/.*'
+ * escapeRoutePattern('/user/*')    // => '\\/user\\/[^/]*'
+ * escapeRoutePattern('/api\\/v1')  // => '\\/api\\\\\\/v1' (backslash escaped)
+ *
+ * @see https://codeql.github.com/codeql-query-help/javascript/js-incomplete-sanitization/
+ */
+function escapeRoutePattern(routePattern: string): string {
+  // SECURITY FIX: Escape backslashes FIRST to prevent injection
+  // Order matters! Backslashes must be escaped before other characters
+  return routePattern
+    .replace(/\\/g, '\\\\')     // 1. Escape backslashes FIRST (security fix)
+    .replace(/\*\*/g, '.*')     // 2. Replace ** with .* (match any path)
+    .replace(/\*/g, '[^/]*')    // 3. Replace * with [^/]* (match within segment)
+    .replace(/\//g, '\\/');     // 4. Escape forward slashes last
+}
+
+/**
  * Authenticate via real backend API and get session cookie
  * Use this for E2E tests that require real backend integration
  *
@@ -253,11 +280,8 @@ export async function setupMockAuthWithForbidden(
 
   // Override specific routes to return 403 Forbidden
   for (const routePattern of forbiddenRoutes) {
-    // Convert route pattern to regex (e.g., '/admin/**' -> /\/admin\/.*/
-    const regexPattern = routePattern
-      .replace(/\*\*/g, '.*')
-      .replace(/\*/g, '[^/]*')
-      .replace(/\//g, '\\/');
+    // Convert route pattern to regex using secure escaping function
+    const regexPattern = escapeRoutePattern(routePattern);
 
     await page.route(new RegExp(regexPattern), async (route) => {
       // Return 403 Forbidden for unauthorized access

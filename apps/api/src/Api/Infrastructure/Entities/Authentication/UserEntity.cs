@@ -11,6 +11,7 @@ public class UserEntity
     public string? DisplayName { get; set; }
     public string? PasswordHash { get; set; } // Nullable for OAuth-only users
     public string Role { get; set; } = "user"; // DDD-PHASE2: Changed from enum to string
+    public string Tier { get; set; } = "free"; // User subscription tier (free, normal, premium)
     public DateTime CreatedAt { get; set; }
 
     // Two-Factor Authentication

@@ -32,6 +32,9 @@ paths-ignore:
 paths:
   - apps/api/src
   - apps/web/src
+  # Include top-level Next.js runtime files for security scanning
+  - apps/web/middleware.ts
+  - apps/web/instrumentation.ts  # For observability/telemetry (if added)
 
 # Additional queries to run (optional)
 queries:

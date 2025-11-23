@@ -18,6 +18,9 @@ echo -e "${BLUE}═════════════════════�
 echo -e "${BLUE}   CodeQL False Positive Dismissal Helper${NC}"
 echo -e "${BLUE}════════════════════════════════════════════════════════════${NC}"
 echo ""
+echo -e "${YELLOW}Note: Bulk dismissals process alerts sequentially via GitHub API${NC}"
+echo -e "${YELLOW}      Expected runtime: ~2-5 minutes for 400+ alerts${NC}"
+echo ""
 
 # Check if gh CLI is installed
 if ! command -v gh &> /dev/null; then
@@ -52,9 +55,11 @@ dismiss_alerts() {
     echo -e "${YELLOW}Fetching alerts for rule: ${rule_id}${NC}"
 
     # Get alert numbers for the specific rule
+    # Use --paginate to fetch all pages (GitHub API returns 30 per page by default)
     alert_numbers=$(gh api \
+        --paginate \
         -H "Accept: application/vnd.github+json" \
-        "/repos/${REPO}/code-scanning/alerts?state=open&rule_id=${rule_id}" \
+        "/repos/${REPO}/code-scanning/alerts?state=open&rule_id=${rule_id}&per_page=100" \
         --jq '.[].number' 2>/dev/null || echo "")
 
     if [ -z "$alert_numbers" ]; then
@@ -105,8 +110,8 @@ dismiss_alerts() {
 # Main menu
 echo "Select category to dismiss:"
 echo ""
-echo "1. Log Forging (CWE-117) - 426 alerts"
-echo "2. Generic Exception Handling (CA1031) - 220 alerts"
+echo "1. Log Forging (CWE-117) - 426 alerts (est. 2-3 min)"
+echo "2. Generic Exception Handling (CA1031) - 220 alerts (est. 1-2 min)"
 echo "3. Show all open alerts (no dismissal)"
 echo "4. Custom rule ID"
 echo "5. Exit"
@@ -130,8 +135,9 @@ case $choice in
         echo -e "${BLUE}Fetching all open alerts...${NC}"
         echo ""
         gh api \
+            --paginate \
             -H "Accept: application/vnd.github+json" \
-            "/repos/${REPO}/code-scanning/alerts?state=open" \
+            "/repos/${REPO}/code-scanning/alerts?state=open&per_page=100" \
             --jq '.[] | "\(.number) - \(.rule.id) - \(.rule.description) - \(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)"' || true
         echo ""
         ;;

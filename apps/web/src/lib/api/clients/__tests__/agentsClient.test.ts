@@ -285,9 +285,9 @@ describe('createAgentsClient', () => {
     it('should throw error when response is null', async () => {
       mockHttpClient.post.mockResolvedValueOnce(null);
 
-      await expect(
-        agentsClient.invoke('agent-1', { query: 'test' })
-      ).rejects.toThrow('Failed to invoke agent: no response from server');
+      await expect(agentsClient.invoke('agent-1', { query: 'test' })).rejects.toThrow(
+        'Failed to invoke agent: no response from server'
+      );
     });
 
     it('should encode agentId in URL', async () => {
@@ -337,8 +337,8 @@ describe('createAgentsClient', () => {
       const request = {
         name: 'New Agent',
         type: 'chat',
-        description: 'Test agent',
-        configuration: { model: 'gpt-4' },
+        strategyName: 'default',
+        strategyParameters: { model: 'gpt-4' },
         isActive: true,
       };
 
@@ -363,6 +363,7 @@ describe('createAgentsClient', () => {
       const request = {
         name: 'Minimal Agent',
         type: 'rag',
+        strategyName: 'default',
       };
 
       mockHttpClient.post.mockResolvedValueOnce({ id: 'agent-min' });
@@ -376,7 +377,7 @@ describe('createAgentsClient', () => {
       mockHttpClient.post.mockResolvedValueOnce(null);
 
       await expect(
-        agentsClient.create({ name: 'Test', type: 'chat' })
+        agentsClient.create({ name: 'Test', type: 'chat', strategyName: 'default' })
       ).rejects.toThrow('Failed to create agent: no response from server');
     });
 
@@ -384,7 +385,8 @@ describe('createAgentsClient', () => {
       const request = {
         name: 'Complex Agent',
         type: 'advanced',
-        configuration: {
+        strategyName: 'advanced',
+        strategyParameters: {
           model: 'gpt-4',
           temperature: 0.7,
           maxTokens: 2000,
@@ -399,7 +401,7 @@ describe('createAgentsClient', () => {
 
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ configuration: request.configuration }),
+        expect.objectContaining({ strategyParameters: request.strategyParameters }),
         expect.anything()
       );
     });
@@ -408,8 +410,8 @@ describe('createAgentsClient', () => {
   describe('configure', () => {
     it('should configure agent strategy', async () => {
       const request = {
-        strategy: 'advanced',
-        parameters: {
+        strategyName: 'advanced',
+        strategyParameters: {
           temperature: 0.8,
           maxTokens: 3000,
         },
@@ -435,8 +437,8 @@ describe('createAgentsClient', () => {
 
     it('should configure with empty parameters', async () => {
       const request = {
-        strategy: 'default',
-        parameters: {},
+        strategyName: 'default',
+        strategyParameters: {},
       };
 
       mockHttpClient.put.mockResolvedValueOnce({ success: true });
@@ -449,15 +451,15 @@ describe('createAgentsClient', () => {
     it('should throw error when configuration fails', async () => {
       mockHttpClient.put.mockResolvedValueOnce(null);
 
-      await expect(
-        agentsClient.configure('agent-1', { strategy: 'test' })
-      ).rejects.toThrow('Failed to configure agent: no response from server');
+      await expect(agentsClient.configure('agent-1', { strategyName: 'test' })).rejects.toThrow(
+        'Failed to configure agent: no response from server'
+      );
     });
 
     it('should encode agentId in URL', async () => {
       mockHttpClient.put.mockResolvedValueOnce({ success: true });
 
-      await agentsClient.configure('agent with/spaces', { strategy: 'test' });
+      await agentsClient.configure('agent with/spaces', { strategyName: 'test' });
 
       expect(mockHttpClient.put).toHaveBeenCalledWith(
         expect.stringContaining('agent%20with%2Fspaces'),
@@ -468,8 +470,8 @@ describe('createAgentsClient', () => {
 
     it('should handle complex configuration parameters', async () => {
       const request = {
-        strategy: 'multi-model',
-        parameters: {
+        strategyName: 'multi-model',
+        strategyParameters: {
           primary: { model: 'gpt-4', weight: 0.7 },
           secondary: { model: 'claude-3', weight: 0.3 },
           consensus: {
@@ -485,7 +487,7 @@ describe('createAgentsClient', () => {
 
       expect(mockHttpClient.put).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ parameters: request.parameters }),
+        expect.objectContaining({ strategyParameters: request.strategyParameters }),
         expect.anything()
       );
     });
@@ -519,16 +521,16 @@ describe('createAgentsClient', () => {
       const error = new Error('Validation error');
       mockHttpClient.post.mockRejectedValueOnce(error);
 
-      await expect(agentsClient.create({ name: 'Test', type: 'chat' })).rejects.toThrow(
-        'Validation error'
-      );
+      await expect(
+        agentsClient.create({ name: 'Test', type: 'chat', strategyName: 'default' })
+      ).rejects.toThrow('Validation error');
     });
 
     it('should propagate errors from configure', async () => {
       const error = new Error('Invalid strategy');
       mockHttpClient.put.mockRejectedValueOnce(error);
 
-      await expect(agentsClient.configure('agent-1', { strategy: 'invalid' })).rejects.toThrow(
+      await expect(agentsClient.configure('agent-1', { strategyName: 'invalid' })).rejects.toThrow(
         'Invalid strategy'
       );
     });
@@ -556,6 +558,7 @@ describe('createAgentsClient', () => {
       const newAgent = await agentsClient.create({
         name: 'Test Agent',
         type: 'chat',
+        strategyName: 'default',
       });
 
       expect(newAgent.id).toBe('agent-new');
@@ -566,7 +569,7 @@ describe('createAgentsClient', () => {
         agentId: 'agent-new',
       });
 
-      await agentsClient.configure('agent-new', { strategy: 'advanced' });
+      await agentsClient.configure('agent-new', { strategyName: 'advanced' });
 
       // 4. Invoke agent
       mockHttpClient.post.mockResolvedValueOnce({
@@ -609,7 +612,7 @@ describe('createAgentsClient', () => {
     it('should handle empty agent name', async () => {
       mockHttpClient.post.mockResolvedValueOnce({ id: 'agent' });
 
-      await agentsClient.create({ name: '', type: 'chat' });
+      await agentsClient.create({ name: '', type: 'chat', strategyName: 'default' });
 
       expect(mockHttpClient.post).toHaveBeenCalled();
     });
@@ -618,7 +621,7 @@ describe('createAgentsClient', () => {
       const longName = 'A'.repeat(1000);
       mockHttpClient.post.mockResolvedValueOnce({ id: 'agent' });
 
-      await agentsClient.create({ name: longName, type: 'chat' });
+      await agentsClient.create({ name: longName, type: 'chat', strategyName: 'default' });
 
       expect(mockHttpClient.post).toHaveBeenCalled();
     });
@@ -640,7 +643,7 @@ describe('createAgentsClient', () => {
       expect(mockHttpClient.post).toHaveBeenCalledTimes(3);
     });
 
-    it('should handle null in context object', async () => {
+    it('should handle optional gameId and chatThreadId', async () => {
       mockHttpClient.post.mockResolvedValueOnce({
         agentId: 'agent-1',
         response: 'Response',
@@ -648,7 +651,8 @@ describe('createAgentsClient', () => {
 
       await agentsClient.invoke('agent-1', {
         query: 'test',
-        context: { gameId: null, userId: null },
+        gameId: undefined,
+        chatThreadId: undefined,
       });
 
       expect(mockHttpClient.post).toHaveBeenCalled();

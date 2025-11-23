@@ -22,16 +22,22 @@ const mockCrypto = {
   }),
 };
 
-const mockSessionStorage = {
+const mockSessionStorage: {
+  store: Map<string, string>;
+  getItem: jest.MockedFunction<(key: string) => string | null>;
+  setItem: jest.MockedFunction<(key: string, value: string) => void>;
+  removeItem: jest.MockedFunction<(key: string) => void>;
+  clear: jest.MockedFunction<() => void>;
+} = {
   store: new Map<string, string>(),
-  getItem: jest.fn((key: string) => mockSessionStorage.store.get(key) || null),
-  setItem: jest.fn((key: string, value: string) => {
+  getItem: jest.fn((key: string): string | null => mockSessionStorage.store.get(key) || null),
+  setItem: jest.fn((key: string, value: string): void => {
     mockSessionStorage.store.set(key, value);
   }),
-  removeItem: jest.fn((key: string) => {
+  removeItem: jest.fn((key: string): void => {
     mockSessionStorage.store.delete(key);
   }),
-  clear: jest.fn(() => {
+  clear: jest.fn((): void => {
     mockSessionStorage.store.clear();
   }),
 };
@@ -69,7 +75,7 @@ describe('secureStorage', () => {
     jest.clearAllMocks();
 
     // Setup default mock implementations
-    const mockKey = { type: 'secret' } as CryptoKey;
+    const mockKey: Partial<CryptoKey> = { type: 'secret' };
 
     mockCrypto.subtle.generateKey.mockReset().mockResolvedValue(mockKey);
     mockCrypto.subtle.exportKey.mockReset().mockResolvedValue(
@@ -78,26 +84,26 @@ describe('secureStorage', () => {
     mockCrypto.subtle.importKey.mockReset().mockResolvedValue(mockKey);
 
     // Reset to default implementations to prevent test pollution
-    mockCrypto.subtle.encrypt.mockReset().mockImplementation(
-      async (_algorithm: any, _key: any, data: BufferSource) => {
+    mockCrypto.subtle.encrypt
+      .mockReset()
+      .mockImplementation(async (_algorithm: any, _key: any, data: BufferSource) => {
         // Simple mock: return a copy of the data (in reality it would be encrypted)
         // The IV is added by the encrypt() function, not by crypto.subtle.encrypt
         const source = new Uint8Array(data as ArrayBuffer);
         const copy = new Uint8Array(source.length);
         copy.set(source);
         return copy.buffer;
-      }
-    );
-    mockCrypto.subtle.decrypt.mockReset().mockImplementation(
-      async (_algorithm: any, _key: any, data: BufferSource) => {
+      });
+    mockCrypto.subtle.decrypt
+      .mockReset()
+      .mockImplementation(async (_algorithm: any, _key: any, data: BufferSource) => {
         // Simple mock: return the data as-is (in reality it would be decrypted)
         // The IV has already been stripped by decrypt() before calling crypto.subtle.decrypt
         const source = new Uint8Array(data as ArrayBuffer);
         const copy = new Uint8Array(source.length);
         copy.set(source);
         return copy.buffer;
-      }
-    );
+      });
   });
 
   describe('encrypt', () => {
@@ -141,11 +147,9 @@ describe('secureStorage', () => {
 
     it('should handle encryption errors gracefully', async () => {
       // Temporarily replace encrypt implementation
-      mockCrypto.subtle.encrypt.mockImplementationOnce(
-        async () => {
-          throw new Error('Encryption failed');
-        }
-      );
+      mockCrypto.subtle.encrypt.mockImplementationOnce(async () => {
+        throw new Error('Encryption failed');
+      });
 
       await expect(encrypt('test')).rejects.toThrow('Failed to encrypt data');
     });
@@ -166,22 +170,18 @@ describe('secureStorage', () => {
       const encrypted = await encrypt('test');
 
       // Temporarily replace decrypt implementation for this single call
-      mockCrypto.subtle.decrypt.mockImplementationOnce(
-        async () => {
-          throw new Error('Decryption failed');
-        }
-      );
+      mockCrypto.subtle.decrypt.mockImplementationOnce(async () => {
+        throw new Error('Decryption failed');
+      });
 
       await expect(decrypt(encrypted)).rejects.toThrow('Failed to decrypt data');
     });
 
     it('should handle corrupted data gracefully', async () => {
       // Temporarily replace decrypt implementation
-      mockCrypto.subtle.decrypt.mockImplementationOnce(
-        async () => {
-          throw new Error('Invalid data');
-        }
-      );
+      mockCrypto.subtle.decrypt.mockImplementationOnce(async () => {
+        throw new Error('Invalid data');
+      });
 
       await expect(decrypt('corrupted-base64-data')).rejects.toThrow('Failed to decrypt data');
     });
@@ -201,11 +201,7 @@ describe('secureStorage', () => {
     });
 
     it('should handle multiple encryption/decryption cycles', async () => {
-      const testData = [
-        'mpl_dev_key1',
-        'mpl_prod_key2',
-        'mpl_test_key3',
-      ];
+      const testData = ['mpl_dev_key1', 'mpl_prod_key2', 'mpl_test_key3'];
 
       for (const data of testData) {
         const encrypted = await encrypt(data);

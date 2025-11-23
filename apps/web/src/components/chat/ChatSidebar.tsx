@@ -59,10 +59,10 @@ export function ChatSidebar() {
           {selectedGameId && (
             <div
               className="px-3 py-1 bg-[#e8f0fe] text-[#1a73e8] rounded-xl text-[11px] font-semibold border border-[#1a73e8]"
-              title={`Currently chatting about: ${games.find((g: Game) => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
-              aria-label={`Active game context: ${games.find((g: Game) => g.id === selectedGameId)?.name ?? 'Unknown game'}`}
+              title={`Currently chatting about: ${games.find((g: Game) => g.id === selectedGameId)?.title ?? 'Unknown game'}`}
+              aria-label={`Active game context: ${games.find((g: Game) => g.id === selectedGameId)?.title ?? 'Unknown game'}`}
             >
-              {games.find((g: Game) => g.id === selectedGameId)?.name ?? '...'}
+              {games.find((g: Game) => g.id === selectedGameId)?.title ?? '...'}
             </div>
           )}
         </div>

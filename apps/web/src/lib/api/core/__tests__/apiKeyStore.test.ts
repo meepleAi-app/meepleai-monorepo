@@ -25,18 +25,26 @@ jest.mock('../secureStorage');
 
 const mockEncrypt = secureStorage.encrypt as jest.MockedFunction<typeof secureStorage.encrypt>;
 const mockDecrypt = secureStorage.decrypt as jest.MockedFunction<typeof secureStorage.decrypt>;
-const mockClearEncryptionKey = secureStorage.clearEncryptionKey as jest.MockedFunction<typeof secureStorage.clearEncryptionKey>;
+const mockClearEncryptionKey = secureStorage.clearEncryptionKey as jest.MockedFunction<
+  typeof secureStorage.clearEncryptionKey
+>;
 
-const mockSessionStorage = {
+const mockSessionStorage: {
+  store: Map<string, string>;
+  getItem: jest.MockedFunction<(key: string) => string | null>;
+  setItem: jest.MockedFunction<(key: string, value: string) => void>;
+  removeItem: jest.MockedFunction<(key: string) => void>;
+  clear: jest.MockedFunction<() => void>;
+} = {
   store: new Map<string, string>(),
-  getItem: jest.fn((key: string) => mockSessionStorage.store.get(key) || null),
-  setItem: jest.fn((key: string, value: string) => {
+  getItem: jest.fn((key: string): string | null => mockSessionStorage.store.get(key) || null),
+  setItem: jest.fn((key: string, value: string): void => {
     mockSessionStorage.store.set(key, value);
   }),
-  removeItem: jest.fn((key: string) => {
+  removeItem: jest.fn((key: string): void => {
     mockSessionStorage.store.delete(key);
   }),
-  clear: jest.fn(() => {
+  clear: jest.fn((): void => {
     mockSessionStorage.store.clear();
   }),
 };
@@ -317,7 +325,7 @@ describe('apiKeyStore', () => {
 
       mockDecrypt.mockImplementation(async (encrypted: string) => {
         // Simulate slow decryption
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         hydrationComplete = true;
         return encrypted.replace('encrypted:', '');
       });
@@ -404,7 +412,7 @@ describe('apiKeyStore', () => {
 
         // Clear on the first call (simulating logout)
         if (decryptCallCount === 1) {
-          await new Promise((resolve) => setTimeout(resolve, 5));
+          await new Promise(resolve => setTimeout(resolve, 5));
           clearStoredApiKey();
         }
 

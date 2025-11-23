@@ -651,9 +651,7 @@ describe('RequestCache', () => {
         enabled: true,
       });
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('maxSize must be >= 1')
-      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('maxSize must be >= 1'));
 
       const config = invalidCache.getConfig();
       expect(config.maxSize).toBe(100); // Should use default
@@ -702,8 +700,8 @@ describe('RequestCache', () => {
 
       // Both requests should execute (not deduplicated)
       expect(callCount).toBe(2);
-      expect(result1.data).toBe('result-1');
-      expect(result2.data).toBe('result-2');
+      expect((result1 as { data: string }).data).toBe('result-1');
+      expect((result2 as { data: string }).data).toBe('result-2');
     });
 
     it('should NOT deduplicate requests with different retry config', async () => {
@@ -729,8 +727,8 @@ describe('RequestCache', () => {
 
       // Both requests should execute (not deduplicated)
       expect(callCount).toBe(2);
-      expect(result1.data).toBe('result-1');
-      expect(result2.data).toBe('result-2');
+      expect((result1 as { data: string }).data).toBe('result-1');
+      expect((result2 as { data: string }).data).toBe('result-2');
     });
 
     it('should deduplicate requests with identical options', async () => {
@@ -757,8 +755,8 @@ describe('RequestCache', () => {
 
       // Only one request should execute (deduplicated)
       expect(callCount).toBe(1);
-      expect(result1.data).toBe('result-1');
-      expect(result2.data).toBe('result-1');
+      expect((result1 as { data: string }).data).toBe('result-1');
+      expect((result2 as { data: string }).data).toBe('result-1');
     });
   });
 
@@ -773,14 +771,12 @@ describe('RequestCache', () => {
       const cacheKey = 'concurrent-test';
 
       // Fire 50 concurrent requests
-      const promises = Array.from({ length: 50 }, () =>
-        cache.dedupe(cacheKey, requestFn)
-      );
+      const promises = Array.from({ length: 50 }, () => cache.dedupe(cacheKey, requestFn));
 
       const results = await Promise.all(promises);
 
       // All should return same result
-      expect(results.every((r) => r.data === 'result-1')).toBe(true);
+      expect((results as Array<{ data: string }>).every(r => r.data === 'result-1')).toBe(true);
 
       // Request function should only be called once
       expect(callCount).toBe(1);
@@ -893,7 +889,7 @@ describe('RequestCache', () => {
       expect(prometheus).toMatch(/\n$/);
 
       // Should have multiple lines
-      const lines = prometheus.split('\n').filter((line) => line.length > 0);
+      const lines = prometheus.split('\n').filter(line => line.length > 0);
       expect(lines.length).toBeGreaterThan(10);
     });
   });

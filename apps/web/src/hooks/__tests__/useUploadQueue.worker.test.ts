@@ -16,10 +16,7 @@
  */
 
 // Import mock classes first
-import {
-  MockUploadWorker,
-  MockBroadcastChannel
-} from '../../__tests__/helpers/uploadQueueMocks';
+import { MockUploadWorker, MockBroadcastChannel } from '../../__tests__/helpers/uploadQueueMocks';
 
 // Mock Worker globally BEFORE importing store
 let mockWorkerInstance: MockUploadWorker;
@@ -39,6 +36,16 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { useUploadQueue } from '../useUploadQueue';
 import { uploadQueueStore } from '../../stores/UploadQueueStore';
 
+/**
+ * Type extension for worker-specific properties being tested
+ * These properties are planned for future worker implementation
+ * @see Issue #TBD - Web Worker Integration for Upload Queue
+ */
+type UseUploadQueueWithWorker = ReturnType<typeof useUploadQueue> & {
+  isWorkerReady?: boolean;
+  workerError?: Error | null;
+};
+
 // Mock localStorage
 const localStorageMock: { [key: string]: string } = {};
 global.localStorage = {
@@ -53,11 +60,16 @@ global.localStorage = {
     Object.keys(localStorageMock).forEach(key => delete localStorageMock[key]);
   }),
   length: 0,
-  key: jest.fn()
+  key: jest.fn(),
 };
 
 // TODO: Fix MockBroadcastChannel.clearAll() performance (takes >30s)
 // See: claudedocs/TEST_FIXES_SUMMARY_2025-11-22.md for optimization strategies
+/**
+ * NOTE: Worker properties (isWorkerReady, workerError) are planned features
+ * Type errors are expected until worker integration is complete
+ * Use UseUploadQueueWithWorker type for assertions in this test suite
+ */
 describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -72,7 +84,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({ documentId: 'pdf-123' }),
-      headers: new Headers()
+      headers: new Headers(),
     });
 
     // CRITICAL FIX: Do NOT call uploadQueueStore.destroy() here!
@@ -147,9 +159,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const itemId = result.current.queue[0].id;
       mockWorkerInstance.setUploadError(itemId, 'Error');
 
-      await waitFor(() => {
-        return result.current.queue[0]?.status === 'failed';
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          return result.current.queue[0]?.status === 'failed';
+        },
+        { timeout: 5000 }
+      );
 
       mockWorkerInstance.clearAllErrors();
 
@@ -192,9 +207,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        return result.current.queue[0]?.status === 'success';
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          return result.current.queue[0]?.status === 'success';
+        },
+        { timeout: 5000 }
+      );
 
       act(() => {
         result.current.clearCompleted();
@@ -209,7 +227,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
       const files = [
         new File(['1'], '1.pdf', { type: 'application/pdf' }),
-        new File(['2'], '2.pdf', { type: 'application/pdf' })
+        new File(['2'], '2.pdf', { type: 'application/pdf' }),
       ];
 
       await act(async () => {
@@ -277,10 +295,13 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        const item = result.current.queue[0];
-        return item?.status === 'success';
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          const item = result.current.queue[0];
+          return item?.status === 'success';
+        },
+        { timeout: 5000 }
+      );
 
       expect(result.current.queue[0].status).toBe('success');
     });
@@ -304,9 +325,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         }
       }
 
-      await waitFor(() => {
-        return result.current.queue[0]?.status === 'success';
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          return result.current.queue[0]?.status === 'success';
+        },
+        { timeout: 5000 }
+      );
 
       // Progress tracking works
       expect(result.current.queue[0].progress).toBe(100);
@@ -320,10 +344,13 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        const item = result.current.queue[0];
-        return item?.status === 'success' && item?.pdfId !== undefined;
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          const item = result.current.queue[0];
+          return item?.status === 'success' && item?.pdfId !== undefined;
+        },
+        { timeout: 5000 }
+      );
 
       expect(result.current.queue[0].pdfId).toBeDefined();
     });
@@ -338,10 +365,13 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        const item = result.current.queue[0];
-        return item?.status === 'failed' && item?.error !== undefined;
-      }, { timeout: 10000 });
+      await waitFor(
+        () => {
+          const item = result.current.queue[0];
+          return item?.status === 'failed' && item?.error !== undefined;
+        },
+        { timeout: 10000 }
+      );
 
       expect(result.current.queue[0].error).toBeDefined();
     });
@@ -350,6 +380,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
     });
@@ -360,9 +391,13 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       // Simulate worker error
       mockWorkerInstance.simulateCrash();
 
-      await waitFor(() => {
-        expect(result.current.workerError).toBeDefined();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
+          expect(result.current.workerError).toBeDefined();
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('should handle PERSIST_REQUEST response', async () => {
@@ -403,24 +438,31 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     it('should restore queue state from localStorage', async () => {
       // Prepare saved state
       const savedState = {
-        items: [{
-          id: 'restored-1',
-          file: { name: 'restored.pdf', size: 1000, type: 'application/pdf', lastModified: Date.now() },
-          gameId: '770e8400-e29b-41d4-a716-000000000123',
-          language: 'en',
-          status: 'pending',
-          progress: 0,
-          retryCount: 0,
-          createdAt: Date.now()
-        }],
+        items: [
+          {
+            id: 'restored-1',
+            file: {
+              name: 'restored.pdf',
+              size: 1000,
+              type: 'application/pdf',
+              lastModified: Date.now(),
+            },
+            gameId: '770e8400-e29b-41d4-a716-000000000123',
+            language: 'en',
+            status: 'pending',
+            progress: 0,
+            retryCount: 0,
+            createdAt: Date.now(),
+          },
+        ],
         metrics: {
           totalUploads: 1,
           successfulUploads: 0,
           failedUploads: 0,
           cancelledUploads: 0,
-          totalBytesUploaded: 0
+          totalBytesUploaded: 0,
         },
-        savedAt: Date.now()
+        savedAt: Date.now(),
       };
 
       localStorageMock['meepleai-upload-queue'] = JSON.stringify(savedState);
@@ -431,27 +473,33 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
 
       const { result } = renderHook(() => useUploadQueue());
 
-      await waitFor(() => {
-        expect(result.current.queue.length).toBe(1);
-        expect(result.current.queue[0].file.name).toBe('restored.pdf');
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBe(1);
+          expect(result.current.queue[0].file.name).toBe('restored.pdf');
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('should only persist pending and failed items', async () => {
       const { result } = renderHook(() => useUploadQueue());
       const files = [
         new File(['1'], '1.pdf', { type: 'application/pdf' }),
-        new File(['2'], '2.pdf', { type: 'application/pdf' })
+        new File(['2'], '2.pdf', { type: 'application/pdf' }),
       ];
 
       await act(async () => {
         await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        const stats = result.current.getStats();
-        return stats.succeeded === 2;
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          const stats = result.current.getStats();
+          return stats.succeeded === 2;
+        },
+        { timeout: 5000 }
+      );
 
       // Check what was saved
       await waitFor(() => {
@@ -493,6 +541,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
 
       // Should not crash
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -519,7 +568,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
       const files = [
         new File(['1'], '1.pdf', { type: 'application/pdf' }),
-        new File(['2'], '2.pdf', { type: 'application/pdf' })
+        new File(['2'], '2.pdf', { type: 'application/pdf' }),
       ];
 
       await act(async () => {
@@ -545,6 +594,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -561,9 +611,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        return result.current.queue[0]?.status === 'failed';
-      }, { timeout: 10000 });
+      await waitFor(
+        () => {
+          return result.current.queue[0]?.status === 'failed';
+        },
+        { timeout: 10000 }
+      );
 
       await waitFor(() => {
         const lastCall = (localStorage.setItem as jest.Mock).mock.calls.slice(-1)[0];
@@ -603,6 +656,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -673,9 +727,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        return result.current.queue[0]?.status === 'success';
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          return result.current.queue[0]?.status === 'success';
+        },
+        { timeout: 5000 }
+      );
 
       // Broadcast should have been sent
       expect(true).toBe(true);
@@ -686,6 +743,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -725,6 +783,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
 
       // Should still work without BroadcastChannel
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -736,6 +795,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -752,6 +812,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
     });
@@ -760,9 +821,11 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
+      // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
       expect(result.current.workerError).toBeNull();
     });
 
@@ -770,21 +833,27 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
       // Simulate crash
       mockWorkerInstance.simulateCrash();
 
-      await waitFor(() => {
-        expect(result.current.workerError).toBeDefined();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
+          expect(result.current.workerError).toBeDefined();
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('should attempt automatic restart after crash', async () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -793,12 +862,17 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       // Simulate crash
       initialWorker.simulateCrash();
 
-      await waitFor(() => {
-        expect(result.current.workerError).toBeDefined();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
+          expect(result.current.workerError).toBeDefined();
+        },
+        { timeout: 2000 }
+      );
 
       // Worker should attempt restart (in real implementation)
       // For this test, we verify error is set
+      // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
       expect(result.current.workerError).toBeDefined();
     });
 
@@ -806,6 +880,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -815,11 +890,16 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      await waitFor(() => {
-        expect(result.current.workerError).toBeDefined();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
+          expect(result.current.workerError).toBeDefined();
+        },
+        { timeout: 3000 }
+      );
 
       // Should have error about max restarts
+      // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
       expect(result.current.workerError?.message).toBeDefined();
     });
 
@@ -841,6 +921,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -856,13 +937,14 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
       // Simulate tab hidden
       Object.defineProperty(document, 'hidden', {
         writable: true,
-        value: true
+        value: true,
       });
 
       const visibilityEvent = new Event('visibilitychange');
@@ -874,7 +956,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       // Reset
       Object.defineProperty(document, 'hidden', {
         writable: true,
-        value: false
+        value: false,
       });
     });
 
@@ -884,13 +966,14 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
       // Simulate tab hidden
       Object.defineProperty(document, 'hidden', {
         writable: true,
-        value: true
+        value: true,
       });
 
       const visibilityEvent = new Event('visibilitychange');
@@ -922,7 +1005,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       // Simulate tab hidden
       Object.defineProperty(document, 'hidden', {
         writable: true,
-        value: true
+        value: true,
       });
 
       const visibilityEvent = new Event('visibilitychange');
@@ -931,6 +1014,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       jest.advanceTimersByTime(5 * 60 * 1000);
 
       // Worker should NOT be terminated (active uploads)
+      // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
       expect(result.current.isWorkerReady).toBe(true);
 
       jest.useRealTimers();
@@ -940,6 +1024,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
@@ -947,13 +1032,14 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       uploadQueueStore.destroy();
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(false);
       });
 
       // Simulate tab visible
       Object.defineProperty(document, 'hidden', {
         writable: true,
-        value: false
+        value: false,
       });
 
       const visibilityEvent = new Event('visibilitychange');
@@ -970,12 +1056,13 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
       // Simulate message error
       const messageErrorEvent = new MessageEvent('messageerror', {
-        data: null
+        data: null,
       });
 
       if (mockWorkerInstance.onmessageerror) {
@@ -992,7 +1079,9 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result: result2 } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result1.current.isWorkerReady).toBe(true);
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result2.current.isWorkerReady).toBe(true);
       });
 
@@ -1003,9 +1092,11 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     it('should expose worker ready state', async () => {
       const { result } = renderHook(() => useUploadQueue());
 
+      // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
       expect(result.current.isWorkerReady).toBe(false);
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
     });
@@ -1014,16 +1105,22 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
 
       await waitFor(() => {
+        // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
         expect(result.current.isWorkerReady).toBe(true);
       });
 
+      // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
       expect(result.current.workerError).toBeNull();
 
       mockWorkerInstance.simulateCrash();
 
-      await waitFor(() => {
-        expect(result.current.workerError).not.toBeNull();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
+          expect(result.current.workerError).not.toBeNull();
+        },
+        { timeout: 2000 }
+      );
     });
   });
 
@@ -1044,9 +1141,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       });
 
       // Should either queue immediately or buffer until ready
-      await waitFor(() => {
-        expect(result.current.queue.length).toBeGreaterThanOrEqual(0);
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBeGreaterThanOrEqual(0);
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('should process buffered files after WORKER_READY', async () => {
@@ -1062,10 +1162,14 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        expect(result.current.isWorkerReady).toBe(true);
-        expect(result.current.queue.length).toBeGreaterThan(0);
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
+          expect(result.current.isWorkerReady).toBe(true);
+          expect(result.current.queue.length).toBeGreaterThan(0);
+        },
+        { timeout: 2000 }
+      );
     });
 
     it('should handle concurrent addFiles calls before ready', async () => {
@@ -1076,7 +1180,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const files = [
         new File(['1'], '1.pdf', { type: 'application/pdf' }),
         new File(['2'], '2.pdf', { type: 'application/pdf' }),
-        new File(['3'], '3.pdf', { type: 'application/pdf' })
+        new File(['3'], '3.pdf', { type: 'application/pdf' }),
       ];
 
       // Add files rapidly before worker is fully ready
@@ -1084,13 +1188,16 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await Promise.all([
           result.current.addFiles([files[0]], '770e8400-e29b-41d4-a716-000000000123', 'en'),
           result.current.addFiles([files[1]], '770e8400-e29b-41d4-a716-000000000123', 'en'),
-          result.current.addFiles([files[2]], '770e8400-e29b-41d4-a716-000000000123', 'en')
+          result.current.addFiles([files[2]], '770e8400-e29b-41d4-a716-000000000123', 'en'),
         ]);
       });
 
-      await waitFor(() => {
-        expect(result.current.queue.length).toBe(3);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBe(3);
+        },
+        { timeout: 3000 }
+      );
     });
 
     it('should maintain buffer order (FIFO)', async () => {
@@ -1101,7 +1208,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const files = [
         new File(['1'], 'first.pdf', { type: 'application/pdf' }),
         new File(['2'], 'second.pdf', { type: 'application/pdf' }),
-        new File(['3'], 'third.pdf', { type: 'application/pdf' })
+        new File(['3'], 'third.pdf', { type: 'application/pdf' }),
       ];
 
       await act(async () => {
@@ -1110,9 +1217,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([files[2]], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        expect(result.current.queue.length).toBe(3);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBe(3);
+        },
+        { timeout: 3000 }
+      );
 
       expect(result.current.queue[0].file.name).toBe('first.pdf');
       expect(result.current.queue[1].file.name).toBe('second.pdf');
@@ -1130,9 +1240,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        return result.current.queue[0]?.status === 'success';
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          return result.current.queue[0]?.status === 'success';
+        },
+        { timeout: 5000 }
+      );
 
       // Buffer should be cleared (file processed)
       expect(result.current.queue[0].status).toBe('success');
@@ -1147,7 +1260,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       // Add many files rapidly
       for (let i = 0; i < 10; i++) {
         const file = new File([`content ${i}`], `file-${i}.pdf`, {
-          type: 'application/pdf'
+          type: 'application/pdf',
         });
 
         await act(async () => {
@@ -1155,9 +1268,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         });
       }
 
-      await waitFor(() => {
-        expect(result.current.queue.length).toBe(10);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBe(10);
+        },
+        { timeout: 3000 }
+      );
     });
 
     it('should handle errors during buffer processing', async () => {
@@ -1173,9 +1289,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        return result.current.queue[0]?.status === 'failed';
-      }, { timeout: 10000 });
+      await waitFor(
+        () => {
+          return result.current.queue[0]?.status === 'failed';
+        },
+        { timeout: 10000 }
+      );
 
       expect(result.current.queue[0].error).toBeDefined();
     });
@@ -1187,7 +1306,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
       const files = [
         new File(['1'], '1.pdf', { type: 'application/pdf' }),
-        new File(['2'], '2.pdf', { type: 'application/pdf' })
+        new File(['2'], '2.pdf', { type: 'application/pdf' }),
       ];
 
       await act(async () => {
@@ -1195,9 +1314,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([files[1]], '770e8400-e29b-41d4-a716-000000000456', 'it');
       });
 
-      await waitFor(() => {
-        expect(result.current.queue.length).toBe(2);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBe(2);
+        },
+        { timeout: 3000 }
+      );
 
       expect(result.current.queue[0].gameId).toBe('770e8400-e29b-41d4-a716-000000000123');
       expect(result.current.queue[1].gameId).toBe('770e8400-e29b-41d4-a716-000000000456');
@@ -1233,16 +1355,19 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
       const file = new File(['test content'], 'important.pdf', {
         type: 'application/pdf',
-        lastModified: 1234567890
+        lastModified: 1234567890,
       });
 
       await act(async () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        expect(result.current.queue.length).toBe(1);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBe(1);
+        },
+        { timeout: 3000 }
+      );
 
       expect(result.current.queue[0].file.name).toBe('important.pdf');
       expect(result.current.queue[0].file.size).toBe(file.size);
@@ -1290,7 +1415,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
       const files = [
         new File(['1'], '1.pdf', { type: 'application/pdf' }),
-        new File(['2'], '2.pdf', { type: 'application/pdf' })
+        new File(['2'], '2.pdf', { type: 'application/pdf' }),
       ];
 
       await act(async () => {
@@ -1313,9 +1438,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        return result.current.queue[0]?.status === 'success';
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          return result.current.queue[0]?.status === 'success';
+        },
+        { timeout: 5000 }
+      );
 
       // ArrayBuffer should be cleaned up
       await waitFor(() => {
@@ -1364,9 +1492,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        return result.current.queue[0]?.status === 'failed';
-      }, { timeout: 10000 });
+      await waitFor(
+        () => {
+          return result.current.queue[0]?.status === 'failed';
+        },
+        { timeout: 10000 }
+      );
 
       // ArrayBuffer should NOT be cleaned up (allow retry)
       // Note: In mock implementation, we clean up on error too
@@ -1380,23 +1511,27 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       // Create a large file (simulated)
       const largeContent = new Array(100 * 1024 * 1024).fill('x').join('');
       const largeFile = new File([largeContent], 'large.pdf', {
-        type: 'application/pdf'
+        type: 'application/pdf',
       });
 
       await act(async () => {
         await result.current.addFiles([largeFile], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        expect(result.current.queue.length).toBe(1);
-        expect(result.current.queue[0].file.size).toBe(largeFile.size);
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBe(1);
+          expect(result.current.queue[0].file.size).toBe(largeFile.size);
+        },
+        { timeout: 5000 }
+      );
     }, 30000); // 30 second timeout for large file
 
     it('should handle multiple ArrayBuffers concurrently', async () => {
       const { result } = renderHook(() => useUploadQueue());
-      const files = Array.from({ length: 5 }, (_, i) =>
-        new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
+      const files = Array.from(
+        { length: 5 },
+        (_, i) => new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
       );
 
       await act(async () => {
@@ -1413,18 +1548,22 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
 
     it('should prevent memory leaks with ArrayBuffer cleanup', async () => {
       const { result } = renderHook(() => useUploadQueue());
-      const files = Array.from({ length: 10 }, (_, i) =>
-        new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
+      const files = Array.from(
+        { length: 10 },
+        (_, i) => new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
       );
 
       await act(async () => {
         await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        const stats = result.current.getStats();
-        return stats.succeeded === 10;
-      }, { timeout: 10000 });
+      await waitFor(
+        () => {
+          const stats = result.current.getStats();
+          return stats.succeeded === 10;
+        },
+        { timeout: 10000 }
+      );
 
       // All ArrayBuffers should be cleaned up
       await waitFor(() => {
@@ -1455,8 +1594,9 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
   describe('Performance & Edge Cases', () => {
     it('should handle 50+ small files efficiently', async () => {
       const { result } = renderHook(() => useUploadQueue());
-      const files = Array.from({ length: 50 }, (_, i) =>
-        new File([`small content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
+      const files = Array.from(
+        { length: 50 },
+        (_, i) => new File([`small content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
       );
 
       const startTime = Date.now();
@@ -1465,10 +1605,13 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        const stats = result.current.getStats();
-        return stats.succeeded === 50;
-      }, { timeout: 30000 });
+      await waitFor(
+        () => {
+          const stats = result.current.getStats();
+          return stats.succeeded === 50;
+        },
+        { timeout: 30000 }
+      );
 
       const duration = Date.now() - startTime;
 
@@ -1482,7 +1625,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
 
       for (let cycle = 0; cycle < 5; cycle++) {
         const file = new File([`cycle ${cycle}`], `file-${cycle}.pdf`, {
-          type: 'application/pdf'
+          type: 'application/pdf',
         });
 
         await act(async () => {
@@ -1511,21 +1654,24 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const files = [
         new File(['tiny'], 'tiny.pdf', { type: 'application/pdf' }),
         new File([new Array(1024).fill('x').join('')], 'medium.pdf', {
-          type: 'application/pdf'
+          type: 'application/pdf',
         }),
         new File([new Array(10240).fill('y').join('')], 'large.pdf', {
-          type: 'application/pdf'
-        })
+          type: 'application/pdf',
+        }),
       ];
 
       await act(async () => {
         await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        const stats = result.current.getStats();
-        return stats.succeeded === 3;
-      }, { timeout: 10000 });
+      await waitFor(
+        () => {
+          const stats = result.current.getStats();
+          return stats.succeeded === 3;
+        },
+        { timeout: 10000 }
+      );
 
       expect(result.current.queue.every(item => item.status === 'success')).toBe(true);
     });
@@ -1534,17 +1680,21 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       mockWorkerInstance.setAutoUpload(false);
 
       const { result } = renderHook(() => useUploadQueue());
-      const files = Array.from({ length: 100 }, (_, i) =>
-        new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
+      const files = Array.from(
+        { length: 100 },
+        (_, i) => new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
       );
 
       await act(async () => {
         await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        expect(result.current.queue.length).toBe(100);
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBe(100);
+        },
+        { timeout: 5000 }
+      );
 
       const stats = result.current.getStats();
       expect(stats.pending).toBe(100);
@@ -1552,8 +1702,9 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
 
     it('should handle queue stats calculation efficiently', async () => {
       const { result } = renderHook(() => useUploadQueue());
-      const files = Array.from({ length: 20 }, (_, i) =>
-        new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
+      const files = Array.from(
+        { length: 20 },
+        (_, i) => new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
       );
 
       await act(async () => {
@@ -1621,7 +1772,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const operations = [];
       for (let i = 0; i < 10; i++) {
         const file = new File([`test ${i}`], `test-${i}.pdf`, {
-          type: 'application/pdf'
+          type: 'application/pdf',
         });
 
         operations.push(
@@ -1633,9 +1784,12 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
 
       await Promise.all(operations);
 
-      await waitFor(() => {
-        expect(result.current.queue.length).toBeGreaterThan(0);
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(result.current.queue.length).toBeGreaterThan(0);
+        },
+        { timeout: 5000 }
+      );
 
       // Should handle stress without crashing
       expect(true).toBe(true);
@@ -1643,18 +1797,22 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
 
     it('should handle cleanup of large queues efficiently', async () => {
       const { result } = renderHook(() => useUploadQueue());
-      const files = Array.from({ length: 50 }, (_, i) =>
-        new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
+      const files = Array.from(
+        { length: 50 },
+        (_, i) => new File([`content ${i}`], `file-${i}.pdf`, { type: 'application/pdf' })
       );
 
       await act(async () => {
         await result.current.addFiles(files, '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
-      await waitFor(() => {
-        const stats = result.current.getStats();
-        return stats.succeeded === 50;
-      }, { timeout: 30000 });
+      await waitFor(
+        () => {
+          const stats = result.current.getStats();
+          return stats.succeeded === 50;
+        },
+        { timeout: 30000 }
+      );
 
       const startTime = Date.now();
 

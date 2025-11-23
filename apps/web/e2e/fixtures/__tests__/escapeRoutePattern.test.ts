@@ -29,7 +29,7 @@ let totalTests = 0;
 let passedTests = 0;
 let failedTests = 0;
 
-function test(name: string, fn: () => void) {
+function runTest(name: string, fn: () => void) {
   totalTests++;
   try {
     fn();
@@ -66,7 +66,7 @@ function assertFalse(condition: boolean, message?: string) {
 console.log('\n🔒 Security Tests for escapeRoutePattern\n');
 console.log('Testing wildcard handling...\n');
 
-test('should convert ** to .* (match any path)', () => {
+runTest('should convert ** to .* (match any path)', () => {
   const result = escapeRoutePattern('/admin/**');
   assertEqual(result, '\\/admin\\/.*');
 
@@ -76,7 +76,7 @@ test('should convert ** to .* (match any path)', () => {
   assertTrue(regex.test('/admin/'), 'Should match /admin/');
 });
 
-test('should convert * to [^/]* (match within segment)', () => {
+runTest('should convert * to [^/]* (match within segment)', () => {
   const result = escapeRoutePattern('/user/*');
   assertEqual(result, '\\/user\\/[^/]*');
 
@@ -86,7 +86,7 @@ test('should convert * to [^/]* (match within segment)', () => {
   assertFalse(regex.test('/user/123/profile'), 'Should NOT match nested paths');
 });
 
-test('should handle multiple wildcards in same pattern', () => {
+runTest('should handle multiple wildcards in same pattern', () => {
   const result = escapeRoutePattern('/api/*/v1/**');
   assertEqual(result, '\\/api\\/[^/]*\\/v1\\/.*');
 
@@ -97,7 +97,7 @@ test('should handle multiple wildcards in same pattern', () => {
 
 console.log('\n🛡️  Testing regex metacharacter escaping (SECURITY CRITICAL)...\n');
 
-test('should escape dots to prevent matching any character', () => {
+runTest('should escape dots to prevent matching any character', () => {
   const result = escapeRoutePattern('/api.v1');
   assertEqual(result, '\\/api\\.v1');
 
@@ -106,7 +106,7 @@ test('should escape dots to prevent matching any character', () => {
   assertFalse(regex.test('/apixv1'), 'CRITICAL: dot should NOT match any char');
 });
 
-test('should escape question marks', () => {
+runTest('should escape question marks', () => {
   const result = escapeRoutePattern('/admin?');
   assertEqual(result, '\\/admin\\?');
 
@@ -115,7 +115,7 @@ test('should escape question marks', () => {
   assertFalse(regex.test('/admin'), '? should NOT make previous char optional');
 });
 
-test('should escape plus signs', () => {
+runTest('should escape plus signs', () => {
   const result = escapeRoutePattern('/path+');
   assertEqual(result, '\\/path\\+');
 
@@ -124,7 +124,7 @@ test('should escape plus signs', () => {
   assertFalse(regex.test('/pathhh'), '+ should NOT mean "one or more"');
 });
 
-test('should escape parentheses', () => {
+runTest('should escape parentheses', () => {
   const result = escapeRoutePattern('/api(v1)');
   assertEqual(result, '\\/api\\(v1\\)');
 
@@ -133,7 +133,7 @@ test('should escape parentheses', () => {
   assertFalse(regex.test('/api'), 'Parentheses should NOT create groups');
 });
 
-test('should escape square brackets', () => {
+runTest('should escape square brackets', () => {
   const result = escapeRoutePattern('/api[v1]');
   assertEqual(result, '\\/api\\[v1\\]');
 
@@ -143,7 +143,7 @@ test('should escape square brackets', () => {
   assertFalse(regex.test('/api1'), 'Brackets should NOT match char class');
 });
 
-test('should escape curly braces', () => {
+runTest('should escape curly braces', () => {
   const result = escapeRoutePattern('/path{1,3}');
   assertEqual(result, '\\/path\\{1,3\\}');
 
@@ -152,7 +152,7 @@ test('should escape curly braces', () => {
   assertFalse(regex.test('/p'), 'Braces should NOT create quantifiers');
 });
 
-test('should escape pipe (alternation)', () => {
+runTest('should escape pipe (alternation)', () => {
   const result = escapeRoutePattern('/admin|user');
   assertEqual(result, '\\/admin\\|user');
 
@@ -162,7 +162,7 @@ test('should escape pipe (alternation)', () => {
   assertFalse(regex.test('/user'), 'Pipe should NOT mean "or"');
 });
 
-test('should escape backslashes', () => {
+runTest('should escape backslashes', () => {
   const result = escapeRoutePattern('/path\\test');
   assertEqual(result, '\\/path\\\\test');
 
@@ -172,7 +172,7 @@ test('should escape backslashes', () => {
 
 console.log('\n🚨 Testing complex injection attack vectors...\n');
 
-test('should prevent .* injection attack', () => {
+runTest('should prevent .* injection attack', () => {
   // Note: * is a wildcard, so /admin?.* becomes /admin?.[^/]* (dot + single-segment wildcard)
   const result = escapeRoutePattern('/admin?.*');
   assertEqual(result, '\\/admin\\?\\.[^/]*');
@@ -185,7 +185,7 @@ test('should prevent .* injection attack', () => {
   assertFalse(regex.test('/admin?.foo/bar'), 'Should NOT match nested paths (single wildcard)');
 });
 
-test('should prevent character class injection', () => {
+runTest('should prevent character class injection', () => {
   const result = escapeRoutePattern('/api[v1]');
   assertEqual(result, '\\/api\\[v1\\]');
 
@@ -195,7 +195,7 @@ test('should prevent character class injection', () => {
   assertFalse(regex.test('/api1'), 'CRITICAL: should NOT match char class');
 });
 
-test('should prevent alternation injection', () => {
+runTest('should prevent alternation injection', () => {
   const result = escapeRoutePattern('/admin|/user');
   assertEqual(result, '\\/admin\\|\\/user');
 
@@ -205,7 +205,7 @@ test('should prevent alternation injection', () => {
   assertFalse(regex.test('/user'), 'CRITICAL: should NOT match alternation');
 });
 
-test('should prevent quantifier injection', () => {
+runTest('should prevent quantifier injection', () => {
   const result = escapeRoutePattern('/a+');
   assertEqual(result, '\\/a\\+');
 
@@ -214,7 +214,7 @@ test('should prevent quantifier injection', () => {
   assertFalse(regex.test('/aaaa'), 'CRITICAL: + should NOT mean "one or more"');
 });
 
-test('should handle complex mixed injection attempts', () => {
+runTest('should handle complex mixed injection attempts', () => {
   // Note: * is treated as wildcard, so .* becomes .[^/]* (dot + single-segment wildcard)
   const result = escapeRoutePattern('/api.*(admin|user)?[0-9]+');
   assertEqual(result, '\\/api\\.[^/]*\\(admin\\|user\\)\\?\\[0-9\\]\\+');
@@ -230,24 +230,24 @@ test('should handle complex mixed injection attempts', () => {
 
 console.log('\n📋 Testing edge cases...\n');
 
-test('should handle empty string', () => {
+runTest('should handle empty string', () => {
   const result = escapeRoutePattern('');
   assertEqual(result, '');
 });
 
-test('should handle root path', () => {
+runTest('should handle root path', () => {
   const result = escapeRoutePattern('/');
   assertEqual(result, '\\/');
 });
 
-test('should handle path with no special characters', () => {
+runTest('should handle path with no special characters', () => {
   const result = escapeRoutePattern('/admin/users');
   assertEqual(result, '\\/admin\\/users');
 });
 
 console.log('\n🎯 Testing real-world RBAC patterns...\n');
 
-test('should correctly handle /admin/** pattern', () => {
+runTest('should correctly handle /admin/** pattern', () => {
   const result = escapeRoutePattern('/admin/**');
   const regex = new RegExp(`^${result}$`);
 
@@ -258,7 +258,7 @@ test('should correctly handle /admin/** pattern', () => {
   assertFalse(regex.test('/admin'), 'Should NOT match /admin (no trailing slash)');
 });
 
-test('should correctly handle /editor/** pattern', () => {
+runTest('should correctly handle /editor/** pattern', () => {
   const result = escapeRoutePattern('/editor/**');
   const regex = new RegExp(`^${result}$`);
 

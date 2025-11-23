@@ -1,9 +1,9 @@
 'use client';
 
 import type { AuthUser } from '@/types/auth';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from 'next/navigation';
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from '@/lib/utils/errorHandler';
@@ -19,7 +19,7 @@ type Game = {
 
 export function AdminPageClient() {
   const router = useRouter();
-  const { user: authUser } = useAuthUser();
+  const { user, loading: authLoading } = useAuthUser();
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameIds, setSelectedGameIds] = useState<Set<string>>(new Set());
   const [dataLoading, setDataLoading] = useState<boolean>(false);
@@ -27,10 +27,10 @@ export function AdminPageClient() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string>("");
 
-  if (!authUser) return null;
+  if (!user) return null;
 
   // Check if user is Editor or Admin
-  if (authUser.role !== "Editor" && authUser.role !== "Admin") {
+  if (user.role !== "Editor" && user.role !== "Admin") {
     setErrorMessage("Access denied. Editor or Admin role required.");
   }
 

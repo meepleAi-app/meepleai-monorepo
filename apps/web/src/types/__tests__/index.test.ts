@@ -43,7 +43,7 @@ describe('Type Index Exports', () => {
     it('should export game types', () => {
       const game: import('../index').Game = {
         id: 'test-game',
-        name: 'Test Game',
+        title: 'Test Game',
         createdAt: '2024-01-01',
       };
 

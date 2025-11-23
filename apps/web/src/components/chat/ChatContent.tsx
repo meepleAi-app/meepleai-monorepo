@@ -104,7 +104,7 @@ export function ChatContent() {
             <div className="mt-1 mb-0 text-[#64748b] text-[13px] flex items-center gap-2">
               <span>
                 {selectedGameId
-                  ? selectedGame?.name ?? ''
+                  ? selectedGame?.title ?? ''
                   : 'Nessun gioco selezionato'}
               </span>
               {activeThread && (

@@ -46,7 +46,7 @@ export const createGameSlice: StateCreator<
     setError(null);
 
     try {
-      const response = await api.get<Array<{ id: string; name: string; createdAt?: string }>>('/api/v1/games');
+      const response = await api.get<Array<{ id: string; title: string; createdAt?: string }>>('/api/v1/games');
       set((state) => {
         state.games = response ?? [];
       });

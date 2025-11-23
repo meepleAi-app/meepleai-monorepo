@@ -324,7 +324,7 @@ export function UploadClient({
               <>
                 <PdfUploadForm
                   gameId={confirmedGameId}
-                  gameName={confirmedGame.name}
+                  gameName={confirmedGame.title}
                   onUploadSuccess={handleUploadSuccess}
                   onUploadError={handleUploadError}
                   onUploadStart={onUploadStart}
@@ -333,7 +333,7 @@ export function UploadClient({
                 <div className="mt-8">
                   <MultiFileUpload
                     gameId={confirmedGameId}
-                    gameName={confirmedGame.name}
+                    gameName={confirmedGame.title}
                     language="en"
                     autoUpload={autoUpload}
                     onUploadComplete={refetchPdfs}

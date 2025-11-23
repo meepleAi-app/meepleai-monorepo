@@ -25,12 +25,30 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 [Trait("BoundedContext", "Administration")]
 public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 {
-    private IContainer? _postgresContainer;
-    private MeepleAiDbContext? _dbContext;
-    private IServiceProvider? _serviceProvider;
+    private IContainer _postgresContainer = null!;
+    private MeepleAiDbContext _dbContext = null!;
+    private IServiceProvider _serviceProvider = null!;
     private readonly Action<string> _output;
 
     private static CancellationToken TestCancellationToken => CancellationToken.None;
+
+    /// <summary>
+    /// Helper record to hold resolved test services.
+    /// </summary>
+    private record TestServices(
+        MeepleAiDbContext DbContext,
+        IUserRepository UserRepository,
+        IUnitOfWork UnitOfWork,
+        ILogger<UpdateUserTierCommandHandler> Logger);
+
+    /// <summary>
+    /// Resolves all required services from a scope for handler instantiation.
+    /// </summary>
+    private TestServices GetServices(IServiceScope scope) => new(
+        scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(),
+        scope.ServiceProvider.GetRequiredService<IUserRepository>(),
+        scope.ServiceProvider.GetRequiredService<IUnitOfWork>(),
+        scope.ServiceProvider.GetRequiredService<ILogger<UpdateUserTierCommandHandler>>());
 
     public UpdateUserTierCommandHandlerTests()
     {
@@ -73,7 +91,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 
         // Register domain services
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Infrastructure.DomainEventCollector>();
 
         _serviceProvider = services.BuildServiceProvider();
@@ -86,23 +104,66 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        if (_dbContext != null)
+        // Dispose all resources even if individual disposals fail
+        // Capture first exception but ensure all cleanup is attempted
+        Exception? firstException = null;
+
+        try
         {
             await _dbContext.DisposeAsync();
         }
-
-        if (_serviceProvider is IDisposable disposable)
+        catch (Exception ex)
         {
-            disposable.Dispose();
+            firstException ??= ex;
+            _output($"Warning: DbContext disposal failed: {ex.Message}");
         }
 
-        if (_postgresContainer != null)
+        try
+        {
+            if (_serviceProvider is IAsyncDisposable asyncDisposable)
+            {
+                await asyncDisposable.DisposeAsync();
+            }
+            else if (_serviceProvider is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            firstException ??= ex;
+            _output($"Warning: ServiceProvider disposal failed: {ex.Message}");
+        }
+
+        try
         {
             await _postgresContainer.StopAsync(TestCancellationToken);
+        }
+        catch (Exception ex)
+        {
+            firstException ??= ex;
+            _output($"Warning: PostgreSQL container stop failed: {ex.Message}");
+        }
+
+        try
+        {
             await _postgresContainer.DisposeAsync();
+        }
+        catch (Exception ex)
+        {
+            firstException ??= ex;
+            _output($"Warning: PostgreSQL container disposal failed: {ex.Message}");
         }
 
         _output("Test infrastructure disposed");
+
+        // Re-throw first exception if any disposal failed
+        if (firstException != null)
+        {
+            throw new AggregateException(
+                "One or more errors occurred during test cleanup. See inner exception for details.",
+                firstException);
+        }
     }
 
     #region Happy Path Tests
@@ -111,11 +172,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_UpdateUserTier_PersistsChangesToDatabase()
     {
         // Arrange
-        var scope = _serviceProvider!.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<UpdateUserTierCommandHandler>>();
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
 
         // Create admin user
         var adminUser = new UserBuilder()
@@ -129,15 +187,16 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             .WithTier(UserTier.Free)
             .Build();
 
-        await userRepository.AddAsync(adminUser, TestCancellationToken);
-        await userRepository.AddAsync(regularUser, TestCancellationToken);
-        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(regularUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
+        // NOTE: DbContext is passed to handler for direct query operations alongside repository pattern
         var handler = new UpdateUserTierCommandHandler(
-            userRepository,
-            unitOfWork,
-            dbContext,
-            logger);
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
 
         var command = new UpdateUserTierCommand(
             RequesterUserId: adminUser.Id,
@@ -153,82 +212,80 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         Assert.Equal("user@test.com", result.Email);
 
         // CRITICAL: Verify the tier was actually persisted to the database
-        var persistedUser = await dbContext.Users
+        var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == regularUser.Id, TestCancellationToken);
 
         Assert.NotNull(persistedUser);
         Assert.Equal(UserTier.Premium.Value, persistedUser.Tier);
-
-        scope.Dispose();
     }
 
     [Fact]
     public async Task Handle_UpgradeTierFromFreeToNormal_Persists()
     {
         // Arrange
-        var scope = _serviceProvider!.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<UpdateUserTierCommandHandler>>();
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
 
         var adminUser = new UserBuilder().WithEmail("admin2@test.com").AsAdmin().Build();
         var regularUser = new UserBuilder().WithEmail("user2@test.com").WithTier(UserTier.Free).Build();
 
-        await userRepository.AddAsync(adminUser, TestCancellationToken);
-        await userRepository.AddAsync(regularUser, TestCancellationToken);
-        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(regularUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
-        var handler = new UpdateUserTierCommandHandler(userRepository, unitOfWork, dbContext, logger);
+        var handler = new UpdateUserTierCommandHandler(
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
+
         var command = new UpdateUserTierCommand(adminUser.Id, regularUser.Id, UserTier.Normal.Value);
 
         // Act
         await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        var persistedUser = await dbContext.Users
+        var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == regularUser.Id, TestCancellationToken);
 
         Assert.NotNull(persistedUser);
         Assert.Equal(UserTier.Normal.Value, persistedUser.Tier);
-
-        scope.Dispose();
     }
 
     [Fact]
     public async Task Handle_DowngradeTierFromPremiumToFree_Persists()
     {
         // Arrange
-        var scope = _serviceProvider!.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<UpdateUserTierCommandHandler>>();
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
 
         var adminUser = new UserBuilder().WithEmail("admin3@test.com").AsAdmin().Build();
         var premiumUser = new UserBuilder().WithEmail("premium@test.com").WithTier(UserTier.Premium).Build();
 
-        await userRepository.AddAsync(adminUser, TestCancellationToken);
-        await userRepository.AddAsync(premiumUser, TestCancellationToken);
-        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(premiumUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
-        var handler = new UpdateUserTierCommandHandler(userRepository, unitOfWork, dbContext, logger);
+        var handler = new UpdateUserTierCommandHandler(
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
+
         var command = new UpdateUserTierCommand(adminUser.Id, premiumUser.Id, UserTier.Free.Value);
 
         // Act
         await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        var persistedUser = await dbContext.Users
+        var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == premiumUser.Id, TestCancellationToken);
 
         Assert.NotNull(persistedUser);
         Assert.Equal(UserTier.Free.Value, persistedUser.Tier);
-
-        scope.Dispose();
     }
 
     #endregion
@@ -239,11 +296,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_NonAdminRequester_ThrowsDomainException()
     {
         // Arrange
-        var scope = _serviceProvider!.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<UpdateUserTierCommandHandler>>();
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
 
         // Create non-admin user
         var regularRequester = new UserBuilder()
@@ -255,11 +309,16 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             .WithTier(UserTier.Free)
             .Build();
 
-        await userRepository.AddAsync(regularRequester, TestCancellationToken);
-        await userRepository.AddAsync(targetUser, TestCancellationToken);
-        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        await services.UserRepository.AddAsync(regularRequester, TestCancellationToken);
+        await services.UserRepository.AddAsync(targetUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
-        var handler = new UpdateUserTierCommandHandler(userRepository, unitOfWork, dbContext, logger);
+        var handler = new UpdateUserTierCommandHandler(
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
+
         var command = new UpdateUserTierCommand(
             RequesterUserId: regularRequester.Id,
             UserId: targetUser.Id,
@@ -269,17 +328,16 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var exception = await Assert.ThrowsAsync<DomainException>(
             () => handler.Handle(command, TestCancellationToken));
 
+        // NOTE: Testing exact error message intentionally - this is user-facing validation text
         Assert.Contains("Only administrators can change user tiers", exception.Message);
 
         // Verify tier was NOT changed
-        var persistedUser = await dbContext.Users
+        var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == targetUser.Id, TestCancellationToken);
 
         Assert.NotNull(persistedUser);
         Assert.Equal(UserTier.Free.Value, persistedUser.Tier); // Should still be Free
-
-        scope.Dispose();
     }
 
     #endregion
@@ -290,48 +348,51 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_InvalidTierValue_ThrowsDomainException()
     {
         // Arrange
-        var scope = _serviceProvider!.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<UpdateUserTierCommandHandler>>();
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
 
         var adminUser = new UserBuilder().WithEmail("admin4@test.com").AsAdmin().Build();
         var targetUser = new UserBuilder().WithEmail("target2@test.com").WithTier(UserTier.Free).Build();
 
-        await userRepository.AddAsync(adminUser, TestCancellationToken);
-        await userRepository.AddAsync(targetUser, TestCancellationToken);
-        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(targetUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
-        var handler = new UpdateUserTierCommandHandler(userRepository, unitOfWork, dbContext, logger);
+        var handler = new UpdateUserTierCommandHandler(
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
+
         var command = new UpdateUserTierCommand(adminUser.Id, targetUser.Id, "invalid-tier");
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
             () => handler.Handle(command, TestCancellationToken));
 
+        // NOTE: Testing exact error messages intentionally - these are user-facing validation texts
         Assert.Contains("Invalid tier value", exception.Message);
         Assert.Contains("free, normal, premium", exception.Message);
-
-        scope.Dispose();
     }
 
     [Fact]
     public async Task Handle_NonExistentUser_ThrowsDomainException()
     {
         // Arrange
-        var scope = _serviceProvider!.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<UpdateUserTierCommandHandler>>();
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
 
         var adminUser = new UserBuilder().WithEmail("admin5@test.com").AsAdmin().Build();
 
-        await userRepository.AddAsync(adminUser, TestCancellationToken);
-        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
-        var handler = new UpdateUserTierCommandHandler(userRepository, unitOfWork, dbContext, logger);
+        var handler = new UpdateUserTierCommandHandler(
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
+
         var nonExistentUserId = Guid.NewGuid();
         var command = new UpdateUserTierCommand(adminUser.Id, nonExistentUserId, UserTier.Premium.Value);
 
@@ -339,9 +400,175 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var exception = await Assert.ThrowsAsync<DomainException>(
             () => handler.Handle(command, TestCancellationToken));
 
+        // NOTE: Testing exact error message intentionally - this is user-facing validation text
+        Assert.Contains("not found", exception.Message);
+    }
+
+    #endregion
+
+    #region Edge Cases Tests
+
+    [Fact]
+    public async Task Handle_NonExistentRequester_ThrowsDomainException()
+    {
+        // Arrange
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
+
+        var targetUser = new UserBuilder().WithEmail("target3@test.com").WithTier(UserTier.Free).Build();
+
+        await services.UserRepository.AddAsync(targetUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        var handler = new UpdateUserTierCommandHandler(
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
+
+        var nonExistentRequesterId = Guid.NewGuid();
+        var command = new UpdateUserTierCommand(nonExistentRequesterId, targetUser.Id, UserTier.Premium.Value);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<DomainException>(
+            () => handler.Handle(command, TestCancellationToken));
+
+        // NOTE: Testing exact error message intentionally - this is user-facing validation text
         Assert.Contains("not found", exception.Message);
 
-        scope.Dispose();
+        // Verify tier was NOT changed
+        var persistedUser = await services.DbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == targetUser.Id, TestCancellationToken);
+
+        Assert.NotNull(persistedUser);
+        Assert.Equal(UserTier.Free.Value, persistedUser.Tier); // Should still be Free
+    }
+
+    [Fact]
+    public async Task Handle_AdminChangingOwnTier_SucceedsIfAllowed()
+    {
+        // Arrange
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
+
+        // Create admin user with Normal tier (unusual but possible scenario)
+        var adminUser = new UserBuilder()
+            .WithEmail("selfmodify@test.com")
+            .AsAdmin()
+            .WithTier(UserTier.Normal)
+            .Build();
+
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        var handler = new UpdateUserTierCommandHandler(
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
+
+        // Admin trying to change their own tier
+        var command = new UpdateUserTierCommand(adminUser.Id, adminUser.Id, UserTier.Premium.Value);
+
+        // Act - This test verifies the actual behavior (could succeed or fail based on business rules)
+        var result = await handler.Handle(command, TestCancellationToken);
+
+        // Assert - Verify the change was persisted
+        Assert.NotNull(result);
+        var persistedUser = await services.DbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == adminUser.Id, TestCancellationToken);
+
+        Assert.NotNull(persistedUser);
+        Assert.Equal(UserTier.Premium.Value, persistedUser.Tier);
+    }
+
+    [Fact]
+    public async Task Handle_SettingSameTier_IsIdempotent()
+    {
+        // Arrange
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
+
+        var adminUser = new UserBuilder().WithEmail("admin6@test.com").AsAdmin().Build();
+        var premiumUser = new UserBuilder().WithEmail("alreadypremium@test.com").WithTier(UserTier.Premium).Build();
+
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(premiumUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        var handler = new UpdateUserTierCommandHandler(
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
+
+        // User is already Premium, setting to Premium again (idempotent operation)
+        var command = new UpdateUserTierCommand(adminUser.Id, premiumUser.Id, UserTier.Premium.Value);
+
+        // Act - Should succeed as idempotent operation
+        var result = await handler.Handle(command, TestCancellationToken);
+
+        // Assert - Verify operation succeeded
+        Assert.NotNull(result);
+        Assert.Equal(premiumUser.Id.ToString(), result.Id);
+
+        var persistedUser = await services.DbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == premiumUser.Id, TestCancellationToken);
+
+        Assert.NotNull(persistedUser);
+        Assert.Equal(UserTier.Premium.Value, persistedUser.Tier); // Still Premium
+    }
+
+    [Fact]
+    public async Task Handle_EditorRequester_ThrowsDomainException()
+    {
+        // Arrange
+        using var scope = _serviceProvider.CreateScope();
+        var services = GetServices(scope);
+
+        // Create editor user (per CLAUDE.md: admin/editor/user roles exist)
+        var editorUser = new UserBuilder()
+            .WithEmail("editor@test.com")
+            .WithRole(UserRole.Editor)
+            .Build();
+
+        var targetUser = new UserBuilder()
+            .WithEmail("edittarget@test.com")
+            .WithTier(UserTier.Free)
+            .Build();
+
+        await services.UserRepository.AddAsync(editorUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(targetUser, TestCancellationToken);
+        await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        var handler = new UpdateUserTierCommandHandler(
+            services.UserRepository,
+            services.UnitOfWork,
+            services.DbContext,
+            services.Logger);
+
+        var command = new UpdateUserTierCommand(
+            RequesterUserId: editorUser.Id,
+            UserId: targetUser.Id,
+            NewTier: UserTier.Premium.Value);
+
+        // Act & Assert - Editors should NOT be able to change user tiers
+        var exception = await Assert.ThrowsAsync<DomainException>(
+            () => handler.Handle(command, TestCancellationToken));
+
+        // NOTE: Testing exact error message intentionally - this is user-facing validation text
+        Assert.Contains("Only administrators can change user tiers", exception.Message);
+
+        // Verify tier was NOT changed
+        var persistedUser = await services.DbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == targetUser.Id, TestCancellationToken);
+
+        Assert.NotNull(persistedUser);
+        Assert.Equal(UserTier.Free.Value, persistedUser.Tier); // Should still be Free
     }
 
     #endregion

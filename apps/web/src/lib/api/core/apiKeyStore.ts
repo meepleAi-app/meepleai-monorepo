@@ -4,6 +4,10 @@ const STORAGE_KEY = 'meepleai:apiKey';
 
 let memoryApiKey: string | null = null;
 
+// Track hydration status to prevent race conditions
+let hydrationPromise: Promise<boolean> | null = null;
+let isHydrated = false;
+
 const isBrowser = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
 
 /**
@@ -12,6 +16,7 @@ const isBrowser = () => typeof window !== 'undefined' && typeof window.sessionSt
  */
 export async function setStoredApiKey(apiKey: string): Promise<void> {
   memoryApiKey = apiKey;
+  isHydrated = true; // Mark as hydrated since we're setting a key
 
   if (isBrowser()) {
     try {
@@ -52,9 +57,12 @@ export async function getStoredApiKey(): Promise<string | null> {
 
 /**
  * Clear stored API key and encryption keys
+ * Resets hydration state to allow re-hydration
  */
 export function clearStoredApiKey(): void {
   memoryApiKey = null;
+  hydrationPromise = null;
+  isHydrated = false;
 
   if (isBrowser()) {
     window.sessionStorage.removeItem(STORAGE_KEY);
@@ -63,16 +71,93 @@ export function clearStoredApiKey(): void {
 }
 
 /**
- * Check if API key exists (synchronous check using memory cache)
- * Note: This checks the in-memory cache only for performance
+ * Hydrate API key from sessionStorage into memory cache
+ * Should be called on app startup to restore API key after page reload
+ * Returns true if a key was found and hydrated, false otherwise
+ *
+ * This function is idempotent - calling it multiple times will return
+ * the same promise without re-executing the hydration logic.
+ */
+export function hydrateApiKey(): Promise<boolean> {
+  // Return existing hydration promise if already in progress
+  if (hydrationPromise !== null) {
+    return hydrationPromise;
+  }
+
+  // Create and cache the hydration promise
+  hydrationPromise = (async () => {
+    if (!isBrowser()) {
+      isHydrated = true;
+      return false;
+    }
+
+    const encryptedValue = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!encryptedValue) {
+      isHydrated = true;
+      return false;
+    }
+
+    try {
+      const decrypted = await decrypt(encryptedValue);
+      memoryApiKey = decrypted;
+      isHydrated = true;
+      return true;
+    } catch (error) {
+      console.error('Failed to hydrate API key from sessionStorage:', error);
+      // Clear corrupted data
+      window.sessionStorage.removeItem(STORAGE_KEY);
+      memoryApiKey = null;
+      isHydrated = true;
+      return false;
+    }
+  })();
+
+  return hydrationPromise;
+}
+
+/**
+ * Wait for hydration to complete before proceeding
+ * This can be used to ensure the API key is loaded before making requests
+ *
+ * @returns Promise that resolves when hydration is complete
+ */
+export async function waitForHydration(): Promise<void> {
+  if (isHydrated) {
+    return;
+  }
+  await hydrateApiKey();
+}
+
+/**
+ * Check if hydration has completed
+ * @returns true if hydration has finished (successfully or not)
+ */
+export function isHydrationComplete(): boolean {
+  return isHydrated;
+}
+
+/**
+ * Check if API key exists
+ * First checks memory cache, then falls back to checking sessionStorage
+ * Note: This only checks for presence, use hydrateApiKey() to load into memory
  */
 export function hasStoredApiKey(): boolean {
-  return memoryApiKey !== null;
+  if (memoryApiKey !== null) {
+    return true;
+  }
+
+  // Check if key exists in sessionStorage (without decrypting)
+  if (isBrowser()) {
+    return window.sessionStorage.getItem(STORAGE_KEY) !== null;
+  }
+
+  return false;
 }
 
 /**
  * Synchronous version of getStoredApiKey that returns cached value
  * Used by httpClient for header generation (already has key in memory)
+ * Note: Returns null if not hydrated. Call hydrateApiKey() on app startup.
  */
 export function getStoredApiKeySync(): string | null {
   return memoryApiKey;

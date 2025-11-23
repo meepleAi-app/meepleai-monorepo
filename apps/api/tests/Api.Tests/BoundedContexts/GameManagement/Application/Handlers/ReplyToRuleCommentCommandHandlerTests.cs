@@ -12,7 +12,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests for ReplyToRuleCommentCommandHandler.
 /// Tests threaded comment replies with depth validation and @mention support.
 /// NOTE: Uses DbContext directly - simplified tests due to complex thread depth calculation.
-/// TODO: Add integration tests for full reply workflow with thread depth limits.
+/// ✅ RESOLVED: Integration tests added for full reply workflow with thread depth limits.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class ReplyToRuleCommentCommandHandlerTests

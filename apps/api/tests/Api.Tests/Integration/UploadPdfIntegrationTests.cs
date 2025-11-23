@@ -661,7 +661,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var testGame = await _dbContext.Games.FirstAsync();
 
         const int simultaneousUploads = 10;
-        var barrier = new Barrier(simultaneousUploads);
+        using var barrier = new Barrier(simultaneousUploads);
         var tasks = new List<Task<PdfUploadResult>>();
 
         // Create tasks that will all start at exactly the same time

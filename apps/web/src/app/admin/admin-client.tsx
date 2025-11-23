@@ -24,6 +24,7 @@ import { api } from "@/lib/api";
 import { EndpointDistributionChart, LatencyDistributionChart, RequestsTimeSeriesChart, FeedbackChart } from "@/components/admin";
 import { cn } from "@/lib/utils";
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { FEEDBACK_OUTCOMES } from '@/lib/constants/feedback';
 
 type AiRequest = {
   id: string;
@@ -185,8 +186,8 @@ export function AdminClient() {
       req.gameId?.toLowerCase()?.includes(filter.toLowerCase())
   );
 
-  const helpfulCount = stats?.feedbackCounts?.["helpful"] ?? 0;
-  const notHelpfulCount = stats?.feedbackCounts?.["not-helpful"] ?? 0;
+  const helpfulCount = stats?.feedbackCounts?.[FEEDBACK_OUTCOMES.HELPFUL] ?? 0;
+  const notHelpfulCount = stats?.feedbackCounts?.[FEEDBACK_OUTCOMES.NOT_HELPFUL] ?? 0;
 
   const getStatusColor = (status: string) => {
     return status === "Success" ? "#0f9d58" : "#d93025";

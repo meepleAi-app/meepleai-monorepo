@@ -55,12 +55,9 @@ public static class AnalyticsEndpoints
                 stats.TotalTokens,
                 stats.SuccessRate,
                 stats.EndpointCounts,
-                feedbackStats.TotalFeedbacks,
-                feedbackStats.HelpfulCount,
-                feedbackStats.NotHelpfulCount,
-                feedbackStats.HelpfulRate,
-                feedbackStats.FeedbackByEndpoint,
-                feedbackStats.FeedbackByOutcome
+                // Map to frontend schema (Issue #1695 followup)
+                totalFeedback = feedbackStats.TotalFeedbacks,
+                feedbackCounts = feedbackStats.FeedbackByOutcome
             });
         });
 

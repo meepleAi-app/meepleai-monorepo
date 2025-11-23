@@ -140,7 +140,7 @@ public class GetFeedbackStatsQueryHandlerTests
         var messageId2 = Guid.NewGuid();
         var messageId3 = Guid.NewGuid();
 
-        // Add 2 helpful, 1 not_helpful
+        // Add 2 helpful, 1 not-helpful
         context.AgentFeedbacks.AddRange(
             new AgentFeedbackEntity
             {
@@ -168,7 +168,7 @@ public class GetFeedbackStatsQueryHandlerTests
                 MessageId = messageId3,
                 Endpoint = "/api/v1/search",
                 UserId = userId,
-                Outcome = "not_helpful",
+                Outcome = "not-helpful",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             }
@@ -192,7 +192,7 @@ public class GetFeedbackStatsQueryHandlerTests
         Assert.Equal(1, result.FeedbackByEndpoint["/api/v1/search"]);
         Assert.Equal(2, result.FeedbackByOutcome.Count);
         Assert.Equal(2, result.FeedbackByOutcome["helpful"]);
-        Assert.Equal(1, result.FeedbackByOutcome["not_helpful"]);
+        Assert.Equal(1, result.FeedbackByOutcome["not-helpful"]);
     }
 
     [Fact]
@@ -232,7 +232,7 @@ public class GetFeedbackStatsQueryHandlerTests
                 MessageId = Guid.NewGuid(),
                 Endpoint = "/api/v1/chat",
                 UserId = userId,
-                Outcome = "not_helpful",
+                Outcome = "not-helpful",
                 CreatedAt = new DateTime(2024, 12, 15, 12, 0, 0, DateTimeKind.Utc), // Outside range
                 UpdatedAt = DateTime.UtcNow
             }
@@ -278,7 +278,7 @@ public class GetFeedbackStatsQueryHandlerTests
                 MessageId = Guid.NewGuid(),
                 Endpoint = "/api/v1/chat",
                 UserId = userId,
-                Outcome = "not_helpful",
+                Outcome = "not-helpful",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },

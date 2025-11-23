@@ -12,6 +12,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// </summary>
 public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<ProvideAgentFeedbackCommand>
 {
+    private static readonly HashSet<string> ValidOutcomes = new()
+    {
+        "helpful",
+        "not-helpful",
+        "incorrect"
+    };
+
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<ProvideAgentFeedbackCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
@@ -41,6 +48,14 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
         if (string.IsNullOrWhiteSpace(request.UserId))
         {
             throw new ArgumentException("userId is required", nameof(request));
+        }
+
+        // Validate outcome value if provided
+        if (!string.IsNullOrWhiteSpace(request.Outcome) && !ValidOutcomes.Contains(request.Outcome))
+        {
+            throw new ArgumentException(
+                $"Invalid outcome '{request.Outcome}'. Must be one of: {string.Join(", ", ValidOutcomes)}",
+                nameof(request));
         }
 
         try

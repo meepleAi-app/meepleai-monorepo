@@ -57,7 +57,7 @@ public class GetFeedbackStatsQueryHandler : IQueryHandler<GetFeedbackStatsQuery,
             {
                 TotalFeedbacks = g.Count(),
                 HelpfulCount = g.Count(f => f.Outcome == "helpful"),
-                NotHelpfulCount = g.Count(f => f.Outcome == "not_helpful")
+                NotHelpfulCount = g.Count(f => f.Outcome == "not-helpful")
             })
             .FirstOrDefaultAsync(cancellationToken);
 

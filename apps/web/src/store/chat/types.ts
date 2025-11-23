@@ -11,6 +11,7 @@
 
 import { ChatThread, Message, Game, Agent } from '@/types';
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import type { FeedbackOutcome } from '@/lib/constants/feedback';
 
 // ============================================================================
 // Loading State
@@ -96,7 +97,7 @@ export interface MessagesActions {
   sendMessage: (content: string) => Promise<void>;
   editMessage: (messageId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
-  setMessageFeedback: (messageId: string, feedback: 'helpful' | 'not-helpful') => Promise<void>;
+  setMessageFeedback: (messageId: string, feedback: FeedbackOutcome) => Promise<void>;
   addOptimisticMessage: (message: Message, threadId: string) => void;
   removeOptimisticMessage: (messageId: string, threadId: string) => void;
   updateMessageInThread: (threadId: string, messageId: string, updates: Partial<Message>) => void;

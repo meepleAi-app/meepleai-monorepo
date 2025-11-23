@@ -17,7 +17,7 @@ public record FeedbackStatsDto
     public required int HelpfulCount { get; init; }
 
     /// <summary>
-    /// Number of "not_helpful" feedback responses.
+    /// Number of "not-helpful" feedback responses.
     /// </summary>
     public required int NotHelpfulCount { get; init; }
 
@@ -35,7 +35,7 @@ public record FeedbackStatsDto
 
     /// <summary>
     /// Feedback counts grouped by outcome type.
-    /// Key: outcome ("helpful", "not_helpful"), Value: count.
+    /// Key: outcome ("helpful", "not-helpful"), Value: count.
     /// </summary>
     public required Dictionary<string, int> FeedbackByOutcome { get; init; }
 }

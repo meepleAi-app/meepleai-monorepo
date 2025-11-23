@@ -72,7 +72,7 @@ export interface ChatContextValue {
   sendMessage: (content: string) => Promise<void>;
   editMessage: (messageId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
-  setMessageFeedback: (messageId: string, feedback: 'helpful' | 'not-helpful') => Promise<void>;
+  setMessageFeedback: (messageId: string, feedback: import('@/lib/constants/feedback').FeedbackOutcome) => Promise<void>;
 
   // State
   loading: LoadingState;
@@ -585,7 +585,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
   );
 
   const setMessageFeedback = useCallback(
-    async (messageId: string, feedback: 'helpful' | 'not-helpful') => {
+    async (messageId: string, feedback: import('@/lib/constants/feedback').FeedbackOutcome) => {
       if (!activeChatId) return;
 
       const targetMessage = messages.find((msg) => msg.id === messageId);

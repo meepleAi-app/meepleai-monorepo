@@ -1,3 +1,0 @@
-# MeepleAI — Onboarding Guide
-> Path: `docs/org/onboarding_guide.md`
-... (contenuto completo già fornito sopra) ...

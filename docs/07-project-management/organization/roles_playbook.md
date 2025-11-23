@@ -1,3 +1,0 @@
-# MeepleAI — Roles Playbook
-> Path: `docs/org/roles_playbook.md`
-... (contenuto completo già fornito sopra) ...

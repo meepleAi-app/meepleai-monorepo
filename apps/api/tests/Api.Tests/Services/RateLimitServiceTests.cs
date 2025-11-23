@@ -1,5 +1,6 @@
 using Api.Models;
 using Api.Services;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -32,10 +33,10 @@ public class RateLimitServiceTests
 
         _config = new RateLimitConfiguration
         {
-            Admin = new RateLimitConfig(1000, 10.0),
-            Editor = new RateLimitConfig(500, 5.0),
-            User = new RateLimitConfig(100, 1.0),
-            Anonymous = new RateLimitConfig(60, 1.0)
+            Admin = new RoleLimitConfiguration { MaxTokens = 1000, RefillRate = 10.0 },
+            Editor = new RoleLimitConfiguration { MaxTokens = 500, RefillRate = 5.0 },
+            User = new RoleLimitConfiguration { MaxTokens = 100, RefillRate = 1.0 },
+            Anonymous = new RoleLimitConfiguration { MaxTokens = 60, RefillRate = 1.0 }
         };
     }
 
@@ -53,7 +54,7 @@ public class RateLimitServiceTests
             .Returns(mockConfigSection.Object);
 
         // ConfigurationService returns null (so it falls back to appsettings)
-        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()))
+        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null);
 
         var service = new RateLimitService(
@@ -87,7 +88,7 @@ public class RateLimitServiceTests
         _mockFallbackConfig.Setup(c => c.GetSection("RateLimiting:MaxTokens:anonymous"))
             .Returns(mockConfigSection.Object);
 
-        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()))
+        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null);
 
         var service = new RateLimitService(
@@ -121,7 +122,7 @@ public class RateLimitServiceTests
         _mockFallbackConfig.Setup(c => c.GetSection("RateLimiting:MaxTokens:user"))
             .Returns(mockConfigSection.Object);
 
-        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()))
+        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null);
 
         var service = new RateLimitService(
@@ -149,9 +150,9 @@ public class RateLimitServiceTests
         mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
 
         // Mock database config returning base values
-        _mockConfigService.Setup(c => c.GetValueAsync<int?>("RateLimit.MaxTokens.admin"))
+        _mockConfigService.Setup(c => c.GetValueAsync<int?>("RateLimit.MaxTokens.admin", It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync(1000);
-        _mockConfigService.Setup(c => c.GetValueAsync<double?>("RateLimit.RefillRate.admin"))
+        _mockConfigService.Setup(c => c.GetValueAsync<double?>("RateLimit.RefillRate.admin", It.IsAny<double?>(), It.IsAny<string?>()))
             .ReturnsAsync(10.0);
 
         var service = new RateLimitService(
@@ -190,9 +191,9 @@ public class RateLimitServiceTests
         _mockFallbackConfig.Setup(c => c.GetSection("RateLimiting:RefillRate:user"))
             .Returns(mockRefillRateSection.Object);
 
-        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()))
+        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null);
-        _mockConfigService.Setup(c => c.GetValueAsync<double?>(It.IsAny<string>()))
+        _mockConfigService.Setup(c => c.GetValueAsync<double?>(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<string?>()))
             .ReturnsAsync((double?)null);
 
         var service = new RateLimitService(
@@ -220,9 +221,9 @@ public class RateLimitServiceTests
         var mockEnvironment = new Mock<IWebHostEnvironment>();
         mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
 
-        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()))
+        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null);
-        _mockConfigService.Setup(c => c.GetValueAsync<double?>(It.IsAny<string>()))
+        _mockConfigService.Setup(c => c.GetValueAsync<double?>(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<string?>()))
             .ReturnsAsync((double?)null);
 
         var service = new RateLimitService(
@@ -290,7 +291,7 @@ public class RateLimitServiceTests
         _mockFallbackConfig.Setup(c => c.GetSection("RateLimiting:MaxTokens:anonymous"))
             .Returns(mockConfigSection.Object);
 
-        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()))
+        _mockConfigService.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null);
 
         var service = new RateLimitService(

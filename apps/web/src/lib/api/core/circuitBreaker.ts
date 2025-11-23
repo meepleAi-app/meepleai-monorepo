@@ -14,6 +14,8 @@
  * HALF_OPEN → OPEN: After failed request
  */
 
+import { escapePrometheusLabelValue } from './prometheusUtils';
+
 export enum CircuitState {
   CLOSED = 'CLOSED',       // Normal operation
   OPEN = 'OPEN',           // Failing, retries disabled
@@ -97,7 +99,11 @@ class CircuitBreaker {
         totalFailures: 0,
       });
     }
-    return this.circuits.get(endpoint)!;
+    const circuit = this.circuits.get(endpoint);
+    if (!circuit) {
+      throw new Error(`Circuit for endpoint "${endpoint}" not found`);
+    }
+    return circuit;
   }
 
   /**
@@ -197,6 +203,8 @@ class CircuitBreaker {
   getAllMetrics(): Record<string, CircuitMetrics> {
     const metrics: Record<string, CircuitMetrics> = {};
     this.circuits.forEach((circuit, endpoint) => {
+      // Safe: endpoint comes from Map keys, not user input
+      // eslint-disable-next-line security/detect-object-injection
       metrics[endpoint] = { ...circuit };
     });
     return metrics;
@@ -226,7 +234,7 @@ class CircuitBreaker {
     circuit.successes = 0;
     circuit.lastStateChange = Date.now();
 
-    console.info(`[CircuitBreaker] ${endpoint} → CLOSED (recovered)`);
+    console.warn(`[CircuitBreaker] ${endpoint} → CLOSED (recovered)`);
   }
 
   /**
@@ -252,7 +260,7 @@ class CircuitBreaker {
     circuit.failures = 0;
     circuit.lastStateChange = Date.now();
 
-    console.info(`[CircuitBreaker] ${endpoint} → HALF_OPEN (testing recovery)`);
+    console.warn(`[CircuitBreaker] ${endpoint} → HALF_OPEN (testing recovery)`);
   }
 }
 
@@ -329,7 +337,7 @@ export function exportCircuitBreakerMetrics(): string {
   lines.push('# TYPE http_circuit_breaker_state gauge');
   Object.entries(metrics).forEach(([endpoint, metric]) => {
     const stateValue = metric.state === CircuitState.CLOSED ? 0 : metric.state === CircuitState.HALF_OPEN ? 1 : 2;
-    const escapedEndpoint = endpoint.replace(/"/g, '\\"');
+    const escapedEndpoint = escapePrometheusLabelValue(endpoint);
     lines.push(`http_circuit_breaker_state{endpoint="${escapedEndpoint}",state="${metric.state}"} ${stateValue}`);
   });
 
@@ -337,7 +345,7 @@ export function exportCircuitBreakerMetrics(): string {
   lines.push('# HELP http_circuit_breaker_requests_total Total requests through circuit breaker');
   lines.push('# TYPE http_circuit_breaker_requests_total counter');
   Object.entries(metrics).forEach(([endpoint, metric]) => {
-    const escapedEndpoint = endpoint.replace(/"/g, '\\"');
+    const escapedEndpoint = escapePrometheusLabelValue(endpoint);
     lines.push(`http_circuit_breaker_requests_total{endpoint="${escapedEndpoint}"} ${metric.totalRequests}`);
   });
 
@@ -345,7 +353,7 @@ export function exportCircuitBreakerMetrics(): string {
   lines.push('# HELP http_circuit_breaker_failures_total Total failures through circuit breaker');
   lines.push('# TYPE http_circuit_breaker_failures_total counter');
   Object.entries(metrics).forEach(([endpoint, metric]) => {
-    const escapedEndpoint = endpoint.replace(/"/g, '\\"');
+    const escapedEndpoint = escapePrometheusLabelValue(endpoint);
     lines.push(`http_circuit_breaker_failures_total{endpoint="${escapedEndpoint}"} ${metric.totalFailures}`);
   });
 

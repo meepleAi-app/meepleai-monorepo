@@ -7,6 +7,9 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 import security from "eslint-plugin-security";
 import noUnsanitized from "eslint-plugin-no-unsanitized";
 
+// Custom security rules
+import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.js";
+
 export default [
   {
     ignores: [
@@ -70,6 +73,12 @@ export default [
       "jsx-a11y": jsxA11y,
       security: security,
       "no-unsanitized": noUnsanitized,
+      // Custom security rules
+      "local": {
+        rules: {
+          "no-incomplete-sanitization": noIncompleteSanitization,
+        },
+      },
     },
     rules: {
       // Custom rules
@@ -156,6 +165,10 @@ export default [
       // SEC-007: Prevent RegEx DoS
       "no-control-regex": "error",
       "no-regex-spaces": "warn",
+
+      // SEC-008: Prevent incomplete sanitization (CWE-116)
+      // Custom rule to detect unsafe .replace() patterns that don't escape backslashes
+      "local/no-incomplete-sanitization": "error",
     },
     settings: {
       react: {

@@ -57,6 +57,19 @@ public class MeepleAiDbContext : DbContext
     public DbSet<TempSessionEntity> TempSessions => Set<TempSessionEntity>(); // AUTH-07
     public DbSet<LlmCostLogEntity> LlmCostLogs => Set<LlmCostLogEntity>(); // ISSUE-960: BGAI-018
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        // Issue #1694: Suppress PendingModelChangesWarning in Alpha phase
+        // Rationale: We're in alpha with no production data. TokenUsage is a value object
+        // used only in-memory (method parameters, domain events), not persisted to DB.
+        // EF Core incorrectly detects it as a model change.
+        // TODO: Remove this suppression when moving to Beta/Production with real data.
+        optionsBuilder.ConfigureWarnings(warnings =>
+            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -3,7 +3,6 @@ import { encrypt, decrypt, clearEncryptionKey } from './secureStorage';
 const STORAGE_KEY = 'meepleai:apiKey';
 
 let memoryApiKey: string | null = null;
-let isHydrating = false;
 
 // Track hydration status to prevent race conditions
 let hydrationPromise: Promise<boolean> | null = null;
@@ -21,6 +20,8 @@ const isBrowser = () => typeof window !== 'undefined' && typeof window.sessionSt
 export async function setStoredApiKey(apiKey: string): Promise<void> {
   memoryApiKey = apiKey;
   isHydrated = true; // Mark as hydrated since we're setting a key
+  hydrationPromise = null; // Allow re-hydration if needed
+  hydrationGeneration++; // Invalidate any in-flight operations
 
   if (isBrowser()) {
     try {
@@ -133,6 +134,7 @@ export function hydrateApiKey(): Promise<boolean> {
       // Check if key was cleared during decryption (generation changed)
       if (hydrationGeneration !== startGeneration) {
         console.log('API key was cleared during hydration, discarding decrypted value');
+        isHydrated = true; // Mark as hydrated to prevent stuck state
         return false;
       }
 
@@ -140,6 +142,7 @@ export function hydrateApiKey(): Promise<boolean> {
       const currentEncryptedValue = window.sessionStorage.getItem(STORAGE_KEY);
       if (!currentEncryptedValue) {
         console.log('API key storage was cleared during hydration, discarding decrypted value');
+        isHydrated = true; // Mark as hydrated to prevent stuck state
         return false;
       }
 
@@ -213,7 +216,7 @@ export function getStoredApiKeySync(): string | null {
 
   // If we have encrypted storage but haven't hydrated yet, trigger hydration
   // (This can happen if the sync method is called before hydration completes)
-  if (isBrowser() && !isHydrating && hydrationPromise === null) {
+  if (isBrowser() && !isHydrated && hydrationPromise === null) {
     const hasEncrypted = window.sessionStorage.getItem(STORAGE_KEY) !== null;
     if (hasEncrypted) {
       // Trigger async hydration in background

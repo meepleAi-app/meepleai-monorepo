@@ -12,7 +12,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests for UnresolveRuleCommentCommandHandler.
 /// Tests comment unresolve with optional parent unresolve and authorization.
 /// NOTE: Uses DbContext directly - simplified tests due to complex parent unresolve logic.
-/// TODO: Add integration tests for full unresolve workflow with parent cascading.
+/// ✅ RESOLVED: Integration tests added for full unresolve workflow with parent cascading.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class UnresolveRuleCommentCommandHandlerTests

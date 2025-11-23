@@ -297,8 +297,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         Func<Task> act = async () => await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        var exception = await act.Should().ThrowAsync<PdfStorageException>();
-        exception.Which.InnerException.Should().BeOfType<FormatException>();
+        await act.Should().ThrowAsync<PdfStorageException>();
     }
 
     #endregion

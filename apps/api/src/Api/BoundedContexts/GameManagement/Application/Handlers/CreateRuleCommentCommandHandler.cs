@@ -19,7 +19,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<CreateRuleCommentCommandHandler> _logger;
 
-    private const int MaxCommentLength = 10000;
+    private const int MaxCommentLength = 2000;
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(100);
 
     [GeneratedRegex(@"@(\w{1,50})", RegexOptions.Compiled, matchTimeoutMilliseconds: 100)]

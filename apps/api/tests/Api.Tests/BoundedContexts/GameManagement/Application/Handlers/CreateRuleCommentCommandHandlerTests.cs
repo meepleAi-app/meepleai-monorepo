@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests for CreateRuleCommentCommandHandler.
 /// Tests comment creation with @mention support and line number validation.
 /// NOTE: Uses DbContext directly - simplified tests due to complex EF Core relationships.
-/// TODO: Add integration tests for full comment creation workflow with @mention extraction.
+/// ✅ RESOLVED: Integration tests added in CreateRuleCommentIntegrationTests.cs (Issue #1691)
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class CreateRuleCommentCommandHandlerTests

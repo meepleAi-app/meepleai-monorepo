@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Extensions;
 using Api.Models;
+using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 
 namespace Api.Routing;
@@ -120,6 +121,86 @@ public static class AdminUserEndpoints
         .WithName("DeleteUser")
         .WithTags("Admin");
 
+        // ADMIN-TIER-01: Update user subscription tier
+        group.MapPut("/admin/users/{id}/tier", async (
+            string id,
+            UpdateUserTierRequest request,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            // Validate user ID format
+            if (!Guid.TryParse(id, out var userId))
+            {
+                logger.LogWarning("Admin {AdminId} attempted to update tier with invalid user ID: {UserId}",
+                    session.User.Id, id);
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+            }
+
+            // Validate requester ID format
+            if (!Guid.TryParse(session.User.Id, out var requesterId))
+            {
+                logger.LogError("Invalid requester ID format in session: {RequesterId}", session.User.Id);
+                return Results.BadRequest(new { error = "invalid_session", message = "Invalid session user ID format" });
+            }
+
+            // Validate tier value
+            var validTiers = new[] { "free", "normal", "premium" };
+            if (string.IsNullOrWhiteSpace(request.Tier) ||
+                !validTiers.Contains(request.Tier.ToLowerInvariant()))
+            {
+                logger.LogWarning("Admin {AdminId} attempted to set invalid tier: {Tier}",
+                    requesterId, request.Tier);
+                return Results.BadRequest(new
+                {
+                    error = "invalid_tier",
+                    message = $"Invalid tier value. Valid tiers are: {string.Join(", ", validTiers)}"
+                });
+            }
+
+            logger.LogInformation("Admin {AdminId} updating tier for user {UserId} to {NewTier}",
+                requesterId, userId, request.Tier);
+
+            try
+            {
+                var command = new UpdateUserTierCommand(userId, request.Tier, requesterId);
+                var user = await mediator.Send(command, ct);
+                logger.LogInformation("User {UserId} tier updated successfully to {Tier}", userId, request.Tier);
+                return Results.Ok(user);
+            }
+            catch (DomainException ex)
+            {
+                logger.LogWarning(ex, "Domain error updating tier for user {UserId}", userId);
+                return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+            }
+        })
+        .WithName("UpdateUserTier")
+        .WithTags("Admin")
+        .WithSummary("Update user's subscription tier")
+        .WithDescription(@"Updates a user's subscription tier (free/normal/premium).
+
+**Valid Tiers**:
+- **free**: 5 PDF/day, 20 PDF/week
+- **normal**: 20 PDF/day, 100 PDF/week
+- **premium**: 100 PDF/day, 500 PDF/week
+
+**Authorization**: Admin only
+
+**Request Body**: UpdateUserTierRequest with tier field")
+        .Produces<UserDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
+
         return group;
     }
 }
+
+/// <summary>
+/// Request payload for updating user tier.
+/// </summary>
+public record UpdateUserTierRequest(string Tier);

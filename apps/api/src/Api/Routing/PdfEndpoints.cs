@@ -37,11 +37,9 @@ public static class PdfEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            // Note: Upload quota enforcement is handled by PdfUploadQuotaService in UploadPdfCommandHandler
+            // Admin and Editor roles automatically bypass quota checks
+            // Regular users are subject to tier-based daily/weekly limits
 
             var form = await context.Request.ReadFormAsync(ct);
             var file = form.Files.GetFile("file");

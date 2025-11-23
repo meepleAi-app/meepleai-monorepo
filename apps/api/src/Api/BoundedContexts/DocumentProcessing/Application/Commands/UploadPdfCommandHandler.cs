@@ -123,8 +123,11 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         }
 
         // Check upload quota (Admin and Editor bypass quota checks)
+        // PERF: Use AsNoTracking + Select for read-only query optimization
         var user = await _db.Users
+            .AsNoTracking()
             .Where(u => u.Id == userId)
+            .Select(u => new { u.Id, u.Tier, u.Role })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (user == null)

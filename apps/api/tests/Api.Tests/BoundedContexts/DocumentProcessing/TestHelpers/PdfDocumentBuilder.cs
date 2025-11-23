@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 
@@ -96,7 +97,7 @@ public class PdfDocumentBuilder
     /// </summary>
     public PdfDocumentBuilder ThatIsLarge()
     {
-        return WithFileSize(10 * 1024 * 1024);
+        return WithFileSize(PdfUploadTestConstants.FileSizes.TestMaxBytes);
     }
 
     /// <summary>

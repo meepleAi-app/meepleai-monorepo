@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
+using Api.Tests.Constants;
 using Moq;
 using Xunit;
 
@@ -212,7 +213,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         // Assert
         Assert.Equal(2, result.Count);
         Assert.Equal(100 * 1024, result[0].FileSizeBytes); // 100 KB
-        Assert.Equal(10 * 1024 * 1024, result[1].FileSizeBytes); // 10 MB
+        Assert.Equal(PdfUploadTestConstants.FileSizes.TestMaxBytes, result[1].FileSizeBytes); // 10 MB
     }
 
     #endregion

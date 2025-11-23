@@ -14,6 +14,7 @@ using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Tests.Constants;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using FluentAssertions;
@@ -492,9 +493,9 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var testUser = await _dbContext!.Users.FirstAsync();
         var testGame = await _dbContext.Games.FirstAsync();
 
-        // Create PDF just below limit (10MB for test efficiency)
-        var nearLimitSize = (10 * 1024 * 1024) - 1024;
-        var largeValidPdf = CreateValidPdfBytes(nearLimitSize);
+        // Create PDF just below limit (using shared test constant)
+        var nearLimitSize = PdfUploadTestConstants.FileSizes.NearLimit;
+        var largeValidPdf = CreateValidPdfBytes((int)nearLimitSize);
         var formFile = CreateMockFormFile("large_valid.pdf", largeValidPdf);
 
         var command = new UploadPdfCommand(
@@ -526,9 +527,9 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var testUser = await _dbContext!.Users.FirstAsync();
         var testGame = await _dbContext.Games.FirstAsync();
 
-        // Create PDF exceeding limit (10MB + 1KB for test efficiency)
-        var overLimitSize = (10 * 1024 * 1024) + 1024;
-        var oversizedPdf = CreateValidPdfBytes(overLimitSize);
+        // Create PDF exceeding limit (using shared test constant)
+        var overLimitSize = PdfUploadTestConstants.FileSizes.OverLimit;
+        var oversizedPdf = CreateValidPdfBytes((int)overLimitSize);
         var formFile = CreateMockFormFile("oversized.pdf", oversizedPdf);
 
         var command = new UploadPdfCommand(

@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Tests.Constants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -501,7 +502,7 @@ public class EnhancedPdfProcessingOrchestratorTests
             stage1, stage2, stage3, _logger, emptyConfig, options);
 
         // 110 MB stream - should exceed default 100 MB
-        await using var pdfStream = CreateTestPdfStream(115343360); // 110 * 1024 * 1024
+        await using var pdfStream = CreateTestPdfStream(115343360); // 110 MB - exceeds ProductionMaxBytes (100 MB)
 
         // Act
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, ct: TestCancellationToken);

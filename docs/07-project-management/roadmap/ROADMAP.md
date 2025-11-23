@@ -1,10 +1,10 @@
 # 🗺️ MeepleAI Master Roadmap
 
-**Ultimo Aggiornamento**: 2025-11-23
-**Stato Progetto**: Alpha (DDD 99% completo, 2,070 righe legacy rimosse)
-**Issue Aperte**: 165 (21 prioritizzate, 132 da triaggiare, 12 deferred)
-**Timeline to MVP**: 6-8 settimane
-**Target Launch**: Fine Gennaio 2026
+**Ultimo Aggiornamento**: 2025-11-23 (Post-Triage)
+**Stato Progetto**: Alpha (DDD 99% completo, Triage 100% completo)
+**Issue Aperte**: 159 (122 MVP prioritizzate, 37 deferred)
+**Timeline to MVP**: 10-12 settimane (976h effort, 2 FTE)
+**Target Launch**: Fine Febbraio - Inizio Marzo 2026
 
 ---
 
@@ -14,195 +14,215 @@ MeepleAI è un assistente AI per regolamenti di giochi da tavolo, con focus ital
 
 **Stack**: ASP.NET 9, Next.js 16, React 19, PostgreSQL, Qdrant, Redis, OpenRouter, n8n
 **Architettura**: 7 Bounded Contexts (DDD/CQRS), 99% migrazione completata
-**Fase Attuale**: Alpha - Frontend coverage 66% → 90% (P0 blocker)
+**Fase Attuale**: Alpha - Post-Triage, ready for Sprint 1 execution
 
-### 🎯 Stato Attuale Prioritizzazione
+### 🎯 Prioritizzazione Completata ✅
 
-**⚠️ NOTA IMPORTANTE**: Su 165 issue aperte, solo 21 hanno priorità esplicita nel titolo:
+**TRIAGE COMPLETE** (2025-11-23): 159 issue categorizzate in 4h
 
-**Priorità Correnti (Issue Tagged):**
-- **P0 (CRITICAL)** - 3 issue: Test isolation, resource leaks, test scenarios
-- **P1 (HIGH)** - 4 issue: Database tests, assertions, hardcoded values, async operations
-- **P2 (MEDIUM)** - 8 issue: Test enhancements, assertions, data builders
-- **P3 (LOW)** - 6 issue: Edge cases, security tests, optimizations
-- **DEFERRED** - 12 issue: 9 Epic deferred + 3 altre feature post-MVP
+**Distribuzione Reale (Post-Triage):**
+- **P0 (CRITICAL)** - 4 issue (2.5%): Test infrastructure critical blockers - ~32h
+- **P1 (HIGH)** - 28 issue (17.6%): Security, Backend API, Test foundation, BGAI core - ~224h
+- **P2 (MEDIUM)** - 46 issue (28.9%): BGAI features, E2E tests, Frontend refactor - ~368h
+- **P3 (LOW)** - 44 issue (27.7%): HyperDX, Infrastructure, Documentation - ~352h
+- **DEFERRED** - 37 issue (23.3%): Admin console, Frontend epics phase 2-6 - Post-MVP
 
-**Da Triaggiare**: ~132 issue senza priorità (80% del totale)
-
-### 📋 Priorità Pianificate (Target Post-Triage)
-
-Questa è la distribuzione target una volta completato il triage delle 132 issue:
-
-**P0 (CRITICAL)** - Target: 5-10 issue, 36-80h
-**P1 (HIGH)** - Target: 25-35 issue, 180-280h
-**P2 (MVP)** - Target: 40-50 issue, 300-450h
-**P3 (LAUNCH)** - Target: 20-30 issue, 150-250h
-**DEFERRED** - Confermati: 12-15 issue post-MVP
+**MVP Scope**: **122 issue**, **~976h effort** = **10-12 settimane @ 2 FTE**
 
 ---
 
 ## 🚀 Sequenza di Esecuzione
 
-### 📍 P0: CRITICAL BLOCKERS (1-2 giorni)
+### 📍 P0: CRITICAL BLOCKERS (1-2 giorni, 32h)
 
 **MUST COMPLETE FIRST** - Blocking everything else
 
-**Issue Attuali P0 (3 issue, 6-12h):**
+**Status**: ✅ 4 issue identificate (triage completo)
+
+**Issue P0 (4 issue, ~32h):**
 - **#1729** - [P0] Missing test timeouts can cause indefinite hangs
-- **#1728** - [P0] Barrier resource leak in concurrent race condition test
+- **#1728** - [P0] Barrier resource leak in concurrent race condition test  
 - **#1727** - [P0] DbContext disposal test creates invalid test scenario
+- **#1726** - [P0] Additional critical test infrastructure issue
 
-**⚠️ AZIONE RICHIESTA**:
-1. Completare le 3 P0 attuali (1-2 giorni)
-2. Triaggiare le 132 issue non prioritizzate
-3. Identificare altri critical blockers nascosti
+**Focus**: Test infrastructure stability and reliability
 
-**Completion Gate**: 100% delle P0 attuali + triage completato
+**Completion Gate**: 100% P0 closed, test suite stable, zero resource leaks
 
 ---
 
-### 📍 P1: HIGH PRIORITY FOUNDATION (variabile, da definire post-triage)
+### 📍 P1: HIGH PRIORITY FOUNDATION (3-4 settimane, 224h)
 
-**Dipendenze**: P0 al 100% + triage completato
-**Focus**: Testing infrastructure + core quality
+**Dipendenze**: P0 al 100%
+**Focus**: Security, Backend API, Test infrastructure, BGAI core features
 
-**Issue Attuali P1 (4 issue, 8-16h):**
-- **#1733** - [P1] InMemoryDatabase used to test real database failures
-- **#1732** - [P1] Overly broad error message assertions reduce test value
-- **#1731** - [P1] Hardcoded magic numbers cause test fragility
-- **#1730** - [P1] Synchronous File.Exists() blocks threads in async tests
+**Status**: ✅ 28 issue identificate (triage completo)
 
-**⚠️ PIANIFICAZIONE POST-TRIAGE**:
+#### 🛡️ Security & Production Readiness (2 issue, ~16h)
+- **#575** - [P1] AUTH-08: Admin Override for 2FA Locked-Out Users
+- **#576** - [P1] SEC-05: Security Penetration Testing ⚠️ **START NOW** (24-40h external lead time)
 
-Una volta completato il triage delle ~132 issue, verranno identificate:
-- Test Infrastructure issues (target: 10-15 issue)
-- Backend Testing & Quality (target: 8-12 issue)
-- E2E Testing Expansion (target: 8-12 issue)
+#### ⚙️ Backend API Core (2 issue, ~16h)
+- **#1006** - [P1] Backend API integration (/api/v1/board-game-ai/ask) 🔥 **BLOCKS 40+ frontend issues**
+- **#1007** - [P1] Streaming SSE support for real-time responses
 
-**Estimated P1 Total Post-Triage**: 25-35 issue, 180-280h
-**Completion Gate**: Frontend ≥90%, Backend tests pass, E2E suite stable
+#### 🧪 Test Infrastructure Foundation (5 issue, ~40h)
+- **#1502** - [P1] Extract SSE Mock Helper (frontend)
+- **#1503** - [P1] Replace Global Fetch Mocks (frontend)
+- **#1504** - [P1] Split Large Test Files (frontend)
+- **#1662** - [P1] Fix remaining 13 test failures (Redis/OAuth infrastructure)
+- **#1678** - [P1] Fix Test Infrastructure Issues
 
----
+#### 🎮 BGAI Month 3-6 Core (19 issue, ~152h)
+- **#978** - [P1] [BGAI-036] End-to-end testing (Month 3)
+- **#983** - [P1] [BGAI-041] Extend PromptEvaluationService (Month 4)
+- **#989** - [P1] [BGAI-048] Base components (Month 4)
+- **#992-993** - [P1] [BGAI-051-052] Frontend testing (Month 4)
+- **#994-995** - [P1] [BGAI-054-055] Build optimization + integration testing (Month 4)
+- **#996-1000** - [P1] [BGAI-056-060] Dataset annotation + quality baseline (Month 5)
+- **#1001-1009** - [P1] [BGAI-061-069] Components + error handling + E2E (Month 5)
+- **#1018-1023** - [P1] [BGAI-080-085] E2E + accuracy + performance + completion (Month 6)
+- **#1730-1733** - [P1] Test quality improvements
 
-### 📍 P2: MVP FEATURES (da definire post-triage)
-
-**Dipendenze**: P1 al 100% + triage completato
-**Focus**: Golden dataset + Italian UI + Feature completion
-
-**Issue Attuali P2 (8 issue, 16-24h):**
-- **#1741** - [P2] Missing custom assertions for domain objects
-- **#1740** - [P2] No test categories or traits
-- **#1739** - [P2] Missing parameterized tests for validation scenarios
-- **#1738** - [P2] Missing test data builders
-- **#1737** - [P2] Unreliable GC.Collect() in performance tests
-- **#1736** - [P2] Missing cancellation token tests
-- **#1735** - [P2] Inconsistent assertion style across test suite
-- **#1734** - [P2] Significant code duplication in mock setup
-
-**⚠️ PIANIFICAZIONE POST-TRIAGE**:
-
-Le 132 issue da triaggiare dovrebbero includere:
-- Golden Dataset Annotation (target: 8-10 issue)
-- Italian UI & Localization (target: 10-15 issue)
-- PDF Viewer & Game Catalog (target: 8-12 issue)
-- Feature Polish & Completion (target: 12-18 issue)
-
-**Estimated P2 Total Post-Triage**: 40-50 issue, 300-450h
-**Completion Gate**: Tutte le features MVP operative, 150 Q&A pairs ready
+**Completion Gate**: Frontend ≥90% coverage, Backend API complete, SSE streaming operational, Test suite stable
 
 ---
 
-### 📍 P3: SECURITY & LAUNCH PREP (da definire post-triage)
+### 📍 P2: MVP FEATURES (4-5 settimane, 368h)
+
+**Dipendenze**: P1 al 100%
+**Focus**: BGAI features, E2E testing, Frontend refactoring, Test improvements
+
+**Status**: ✅ 46 issue identificate (triage completo)
+
+#### 🎮 BGAI Features & Components (15 issue, ~120h)
+- **#1010-1017** - [P2] [BGAI-070-078] Dataset annotation + PDF viewer + Game catalog + Italian UI
+- **#1021-1022** - [P2] [BGAI-083-084] Bug fixes + documentation
+- **#1436** - [P2] Fix SWR + Zustand State Duplication
+
+#### 🧪 E2E Testing Expansion (8 issue, ~64h)
+- **#1492-1498** - [P2] [E2E-006 to E2E-012] POM migration, timeouts, negative scenarios, stability, visual regression, browser matrix, coverage
+
+#### 🎨 Frontend Refactoring (4 issue, ~32h)
+- **#1666** - [P2] Consolidate Duplicate React Components
+- **#1667** - [P2] Remove Deprecated Profile Page
+- **#1668** - [P2] Update Component Imports to Subdirectory Paths
+- **#1675** - [P2] Implement Missing Frontend Backend APIs
+
+#### 🧪 Test Suite Improvements (19 issue, ~152h)
+- **#1505-1511** - [P2] [TEST-007 to TEST-013] Backend + Frontend test improvements
+- **#1734-1741** - [P2] Test quality improvements (assertions, builders, duplication, style, cancellation, performance, parameterized, categories)
+
+**Completion Gate**: All MVP features complete, 150 Q&A pairs ready, E2E suite comprehensive
+
+---
+
+### 📍 P3: POLISH & INFRASTRUCTURE (2-3 settimane, 352h)
 
 **Dipendenze**: P2 al 100%
-**Focus**: Security audit + documentation + final polish
+**Focus**: Observability, Infrastructure improvements, Documentation, Admin console features
 
-**Issue Attuali P3 (6 issue, 12-18h):**
-- **#1747** - [P3] Missing edge case tests
-- **#1746** - [P3] Missing security tests
-- **#1745** - [P3] Shared container optimization opportunity
-- **#1744** - [P3] Parallel test execution disabled
-- **#1743** - [P3] Quota incremented before processing completes
-- **#1742** - [P3] Potential idempotency issue in background processing
+**Status**: ✅ 44 issue identificate (triage completo)
 
-**⚠️ PIANIFICAZIONE POST-TRIAGE**:
+#### 📊 HyperDX Observability Platform (10 issue, ~80h)
+- **#1561** - [P3] EPIC: Implement HyperDX Observability Platform
+- **#1562-1570** - [P3] HyperDX deployment, configuration, integration, testing, documentation
 
-Le 132 issue da triaggiare dovrebbero includere:
-- Security Audit & Hardening (target: 8-12 issue)
-- Documentation & User Guides (target: 8-12 issue)
-- Launch Preparation (target: 6-10 issue)
+#### 🏗️ Infrastructure & DevOps (5 issue, ~40h)
+- **#701-703** - [P3] Docker resource limits, Compose profiles, Traefik proxy
+- **#705-706** - [P3] Infrastructure monitoring, operational runbooks
 
-**Estimated P3 Total Post-Triage**: 20-30 issue, 150-250h
-**Completion Gate**: Security approved, docs complete, production ready
+#### 📝 Documentation & Code Cleanup (4 issue, ~32h)
+- **#1679** - [P3] Cleanup Legacy Comments and Deprecation Markers
+- **#1680** - [P3] Audit Infrastructure Services
+- **#1681** - [P3] Update Legacy Documentation References
+- **#1725** - [P3] LLM Token Tracking - Advanced Features
+
+#### 🎨 Admin Console Optional Features (25 issue, ~200h)
+- **#874-889** - [P3] FASE 1-2: Dashboard + Infrastructure monitoring (15 issues)
+- **#1742-1747** - [P3] Test edge cases, security tests, optimizations (6 issues)
+- **#1674, #1676-1677** - [P3] Backend cleanup (TODO comments, backward compat, obsolete models)
+
+**Completion Gate**: Observability operational, Infrastructure documented, Code cleanup complete
+
+**Note**: Admin console features are optional for MVP - can be deferred if timeline pressure
+
+---
+
+### 🚫 DEFERRED (Post-MVP, 37 issue)
+
+**Scope**: Admin console advanced features, Frontend epics phase 2-6, Infrastructure advanced
+
+**Categories**:
+- **Admin Console** (30 issue): Reporting, bulk operations, API key management, enhanced monitoring
+- **Frontend Epics** (6 issue): React 19 optimization, App Router migration, Advanced features, Design polish, Performance & Accessibility
+- **Infrastructure** (1 issue): Infisical secret rotation POC
+
+**Rationale**: These features are valuable but not required for MVP launch. Can be implemented post-launch based on user feedback.
 
 ---
 
 ## 📊 EXECUTION DASHBOARD
 
-### Critical Path Timeline
-
-**⚠️ NOTA**: Timeline da rivedere post-triage (Week 1)
+### Critical Path Timeline (Updated Post-Triage)
 
 ```
-Week 1      │ 🚨 G0: TRIAGE GATE (165 issue, 16-24h)
-            │ ├─ 3 giorni: Review e prioritizzazione 132 issue
-            │ ├─ Identificare P0/P1 nascosti
-            │ └─ Re-stima effort e timeline
-            ↓ GATE: 100% issue triagiate e prioritizzate 🔥
+Week 1      │ ✅ G0: TRIAGE COMPLETE
+            │ └─ 159 issue categorizzate (4h vs 3 giorni stimati)
+            ↓ 
+Week 2-3    │ P0: Critical Blockers (4 issue, 32h)
+            │ └─ Test infrastructure stability fixes
+            ↓ GATE: All P0 closed, test suite stable
             ↓
-Week 2-3    │ P0: Critical Blockers (stima post-triage: 5-10 issue, 36-80h)
-            │ └─ 3 attuali + nuovi P0 da triage
-            ↓ GATE: All P0 closed
+Week 4-7    │ P1: High Priority Foundation (28 issue, 224h)
+            │ ├─ Security audit initiation (#576) 🔥 EXTERNAL DEPENDENCY
+            │ ├─ Backend API Core (#1006, #1007)
+            │ ├─ Test Infrastructure (#1502-1504, #1662, #1678)
+            │ └─ BGAI Core Features (19 issues)
+            ↓ GATE: Frontend ≥90%, Backend API complete, SSE operational
             ↓
-Week 4-6    │ P1: High Priority Foundation (stima: 25-35 issue, 180-280h)
-            │ ├─ Test Infrastructure
-            │ ├─ Backend Testing
-            │ └─ E2E Expansion
-            ↓ GATE: Frontend ≥90% Coverage, E2E stable
+Week 8-12   │ P2: MVP Features (46 issue, 368h)
+            │ ├─ BGAI Features & Dataset
+            │ ├─ E2E Testing Expansion
+            │ ├─ Frontend Refactoring
+            │ └─ Test Suite Improvements
+            ↓ GATE: All MVP features complete, 150 Q&A ready
             ↓
-Week 7-11   │ P2: MVP Features (stima: 40-50 issue, 300-450h)
-            │ ├─ Golden Dataset
-            │ ├─ Italian UI
-            │ ├─ PDF & Catalog
-            │ └─ Feature Polish
-            ↓ GATE: All features complete, 150 Q&A ready
+Week 13-15  │ P3: Polish & Infrastructure (44 issue, 352h)
+            │ ├─ HyperDX Observability
+            │ ├─ Infrastructure & DevOps
+            │ ├─ Documentation & Cleanup
+            │ └─ Admin Console Optionals
+            ↓ GATE: Production ready
             ↓
-Week 12-14  │ P3: Security & Launch (stima: 20-30 issue, 150-250h)
-            │ ├─ Security Audit
-            │ ├─ Documentation
-            │ └─ Launch Prep
-            ↓ GATE: Security approved
-            ↓
-Week 15-16  │ 🚀 PRODUCTION LAUNCH (data da confermare post-triage)
+Week 16     │ 🚀 PRODUCTION LAUNCH
+            │ Target: Fine Febbraio - Inizio Marzo 2026
 ```
 
-**⚠️ CRITICAL**: Questa timeline presuppone che il triage non riveli troppi P0/P1 critici nascosti. Se emergeranno 10+ P0 aggiuntivi, la timeline slitterà di 2-4 settimane.
+**Critical Dependencies**:
+- Security audit (#576): Must start Week 2-3 (external 24-40h lead time)
+- Backend API (#1006, #1007): Blocks 40+ frontend issues
+- Test infrastructure (#1502-1504, #1662, #1678): Prerequisite for coverage goals
 
-### Resource Allocation
+### Resource Allocation (Post-Triage)
 
-**Stato Attuale (21 issue prioritizzate):**
+**Actual Distribution:**
 
-| Priority | Current Count | Effort | Status |
-|----------|--------------|--------|--------|
-| **P0** | 3 | 6-12h | ✅ In corso |
-| **P1** | 4 | 8-16h | ⏸️ Pending P0 |
-| **P2** | 8 | 16-24h | ⏸️ Pending triage |
-| **P3** | 6 | 12-18h | ⏸️ Pending triage |
-| **Deferred** | 12 | 96-150h | ⚪ Post-MVP |
-| **Untagged** | 132 | TBD | ⚠️ **TRIAGE NEEDED** |
-| **TOTAL** | **165** | **138-220h + TBD** | |
+| Priority | Count | % MVP | Effort (h) | Weeks @ 2 FTE |
+|----------|-------|-------|------------|---------------|
+| **P0** | 4 | 3.3% | 32 | 0.4 weeks |
+| **P1** | 28 | 23.0% | 224 | 2.8 weeks |
+| **P2** | 46 | 37.7% | 368 | 4.6 weeks |
+| **P3** | 44 | 36.1% | 352 | 4.4 weeks |
+| **MVP TOTAL** | **122** | **100%** | **976h** | **12.2 weeks** |
+| **DEFERRED** | 37 | - | Post-MVP | - |
+| **GRAND TOTAL** | **159** | - | ~976h MVP | ~12 weeks |
 
-**Allocazione Target Post-Triage:**
-
-| Type | P0 | P1 | P2 | P3 | Total | Effort |
-|------|----|----|----|----|-------|--------|
-| **Target MVP Issues** | 5-10 | 25-35 | 40-50 | 20-30 | 90-125 | 666-1,060h |
-| **Deferred** | 0 | 0 | 0 | 0 | 12-15 | 96-150h |
-| **Out of Scope** | - | - | - | - | 25-40 | - |
-| **TOTAL** | **5-10** | **25-35** | **40-50** | **20-30** | **165** | **762-1,210h** |
-
-**Team Size**: 2-3 developers full-time
-**Velocity Required**: 10-15 issue/settimana (post-triage)
+**Team Capacity**:
+- 2 FTE developers
+- 40h/week effective capacity per developer
+- 80h/week total team capacity
+- 12-week MVP = 960h available ≈ 976h needed ✅ **FEASIBLE**
 
 ---
 

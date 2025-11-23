@@ -1695,6 +1695,9 @@ namespace Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("IsDemoAccount")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsTwoFactorEnabled")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

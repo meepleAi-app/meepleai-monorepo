@@ -153,10 +153,10 @@ namespace Api.Migrations
                     executed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     total_queries = table.Column<int>(type: "integer", nullable: false),
                     accuracy = table.Column<double>(type: "double precision", nullable: false),
-                    hallucination_rate = table.Column<double>(type: "double precision", nullable: false),
-                    avg_confidence = table.Column<double>(type: "double precision", nullable: false),
-                    citation_correctness = table.Column<double>(type: "double precision", nullable: false),
-                    avg_latency_ms = table.Column<double>(type: "double precision", nullable: false),
+                    relevance = table.Column<double>(type: "double precision", nullable: false),
+                    completeness = table.Column<double>(type: "double precision", nullable: false),
+                    clarity = table.Column<double>(type: "double precision", nullable: false),
+                    citation_quality = table.Column<double>(type: "double precision", nullable: false),
                     passed = table.Column<bool>(type: "boolean", nullable: false),
                     summary = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     query_results_json = table.Column<string>(type: "jsonb", nullable: true),
@@ -177,7 +177,9 @@ namespace Api.Migrations
                     DisplayName = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     PasswordHash = table.Column<string>(type: "text", nullable: true),
                     Role = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Tier = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsDemoAccount = table.Column<bool>(type: "boolean", nullable: false),
                     TotpSecretEncrypted = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     IsTwoFactorEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     TwoFactorEnabledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -185,6 +187,38 @@ namespace Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_users", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "validation_accuracy_baselines",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    context = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    dataset_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    evaluation_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    measured_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    true_positives = table.Column<int>(type: "integer", nullable: false),
+                    true_negatives = table.Column<int>(type: "integer", nullable: false),
+                    false_positives = table.Column<int>(type: "integer", nullable: false),
+                    false_negatives = table.Column<int>(type: "integer", nullable: false),
+                    total_cases = table.Column<int>(type: "integer", nullable: false),
+                    precision = table.Column<double>(type: "double precision", precision: 5, scale: 4, nullable: false),
+                    recall = table.Column<double>(type: "double precision", precision: 5, scale: 4, nullable: false),
+                    f1_score = table.Column<double>(type: "double precision", precision: 5, scale: 4, nullable: false),
+                    accuracy = table.Column<double>(type: "double precision", precision: 5, scale: 4, nullable: false),
+                    specificity = table.Column<double>(type: "double precision", precision: 5, scale: 4, nullable: false),
+                    matthews_correlation = table.Column<double>(type: "double precision", precision: 6, scale: 4, nullable: false),
+                    meets_baseline = table.Column<bool>(type: "boolean", nullable: false),
+                    quality_level = table.Column<int>(type: "integer", nullable: false),
+                    summary = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    recommendations_json = table.Column<string>(type: "jsonb", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_validation_accuracy_baselines", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -218,8 +252,6 @@ namespace Api.Migrations
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     LastInvokedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     InvocationCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Kind = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     GameEntityId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
@@ -803,9 +835,13 @@ namespace Api.Migrations
                     TemplateId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
                     VersionNumber = table.Column<int>(type: "integer", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
+                    ChangeNotes = table.Column<string>(type: "text", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedByUserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ActivatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ActivatedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ActivationReason = table.Column<string>(type: "text", nullable: true),
                     Metadata = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true)
                 },
                 constraints: table =>
@@ -1450,6 +1486,36 @@ namespace Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "ix_validation_accuracy_baselines_accuracy",
+                table: "validation_accuracy_baselines",
+                column: "accuracy");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_validation_accuracy_baselines_context",
+                table: "validation_accuracy_baselines",
+                column: "context");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_validation_accuracy_baselines_dataset_id",
+                table: "validation_accuracy_baselines",
+                column: "dataset_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_validation_accuracy_baselines_evaluation_id",
+                table: "validation_accuracy_baselines",
+                column: "evaluation_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_validation_accuracy_baselines_measured_at",
+                table: "validation_accuracy_baselines",
+                column: "measured_at");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_validation_accuracy_baselines_meets_baseline",
+                table: "validation_accuracy_baselines",
+                column: "meets_baseline");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_vector_documents_GameId",
                 table: "vector_documents",
                 column: "GameId");
@@ -1544,6 +1610,9 @@ namespace Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "user_sessions");
+
+            migrationBuilder.DropTable(
+                name: "validation_accuracy_baselines");
 
             migrationBuilder.DropTable(
                 name: "vector_documents");

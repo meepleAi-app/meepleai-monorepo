@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries.QualityReports;
 using Api.Models;
 using MediatR;
@@ -300,14 +301,21 @@ public class WeeklyEvaluationService : BackgroundService
                 alerts.Count,
                 string.Join("; ", alerts));
 
-            // TODO BGAI-042: Uncomment when SendAlertCommand is available
-            // var alertCommand = new SendAlertCommand
-            // {
-            //     Severity = AlertSeverity.Warning,
-            //     Message = $"Weekly quality evaluation detected {alerts.Count} issue(s)",
-            //     Details = string.Join("\n", alerts)
-            // };
-            // await mediator.Send(alertCommand, cancellationToken);
+            // Send alert via CQRS command (BGAI-042)
+            var alertCommand = new SendAlertCommand(
+                AlertType: "QualityEvaluation",
+                Severity: "Warning",
+                Message: $"Weekly quality evaluation detected {alerts.Count} issue(s)",
+                Metadata: new Dictionary<string, object>
+                {
+                    { "Issues", alerts },
+                    { "IssueCount", alerts.Count },
+                    { "StartDate", qualityReport.StartDate },
+                    { "EndDate", qualityReport.EndDate },
+                    { "LowQualityPercentage", qualityReport.LowQualityPercentage }
+                }
+            );
+            await mediator.Send(alertCommand, cancellationToken);
         }
         else
         {

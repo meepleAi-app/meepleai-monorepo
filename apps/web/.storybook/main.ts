@@ -22,7 +22,7 @@ const config: StorybookConfig = {
     autodocs: 'tag',
   },
   typescript: {
-    check: true,
+    check: false, // Disable type checking during build (handled by CI separately)
     reactDocgen: 'react-docgen-typescript',
     reactDocgenTypescriptOptions: {
       shouldExtractLiteralValuesFromEnum: true,

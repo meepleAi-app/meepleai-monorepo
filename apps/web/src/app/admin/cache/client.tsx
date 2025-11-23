@@ -9,6 +9,8 @@ import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 
 type Game = {
   id: string;
@@ -36,7 +38,7 @@ export function AdminPageClient() {
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string>("all");
   const [tagInput, setTagInput] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [confirmation, setConfirmation] = useState<ConfirmationDialog>({
@@ -79,7 +81,7 @@ export function AdminPageClient() {
   // Fetch cache stats
   const fetchStats = useCallback(async () => {
     try {
-      setLoading(true);
+      setDataLoading(true);
       setError(null);
 
       const gameId = selectedGameId === "all" ? undefined : selectedGameId;
@@ -90,10 +92,10 @@ export function AdminPageClient() {
       }
 
       setStats(statsData);
-      setLoading(false);
+      setDataLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-      setLoading(false);
+      setDataLoading(false);
       addToast("error", "Failed to load cache statistics");
     }
   }, [selectedGameId, addToast]);
@@ -181,42 +183,49 @@ export function AdminPageClient() {
     return "#d93025"; // Red
   };
 
-  if (loading) {
+  if (dataLoading) {
     return (
-      <main className="p-6 font-sans max-w-7xl mx-auto">
-        <h1>Loading...</h1>
-      </main>
+      <AdminAuthGuard loading={authLoading} user={user}>
+        <main className="p-6 font-sans max-w-7xl mx-auto">
+          <h1>Loading...</h1>
+        </main>
+      </AdminAuthGuard>
     );
   }
 
   if (error) {
     return (
-      <main className="p-6 font-sans max-w-7xl mx-auto">
-        <div className="mb-4">
-          <ErrorDisplay
-            error={categorizeError(new Error(error))}
-            onRetry={fetchStats}
-            onDismiss={() => window.location.href = '/admin'}
-            showTechnicalDetails={process.env.NODE_ENV === 'development'}
-          />
-        </div>
-        <Link href="/admin" className="text-blue-600">
-          Back to Admin Dashboard
-        </Link>
-      </main>
+      <AdminAuthGuard loading={authLoading} user={user}>
+        <main className="p-6 font-sans max-w-7xl mx-auto">
+          <div className="mb-4">
+            <ErrorDisplay
+              error={categorizeError(new Error(error))}
+              onRetry={fetchStats}
+              onDismiss={() => window.location.href = '/admin'}
+              showTechnicalDetails={process.env.NODE_ENV === 'development'}
+            />
+          </div>
+          <Link href="/admin" className="text-blue-600">
+            Back to Admin Dashboard
+          </Link>
+        </main>
+      </AdminAuthGuard>
     );
   }
 
   if (!stats) {
     return (
-      <main className="p-6 font-sans max-w-7xl mx-auto">
-        <h1>Loading...</h1>
-      </main>
+      <AdminAuthGuard loading={authLoading} user={user}>
+        <main className="p-6 font-sans max-w-7xl mx-auto">
+          <h1>Loading...</h1>
+        </main>
+      </AdminAuthGuard>
     );
   }
 
   return (
-    <main className="p-6 font-sans max-w-7xl mx-auto">
+    <AdminAuthGuard loading={authLoading} user={user}>
+      <main className="p-6 font-sans max-w-7xl mx-auto">
       {/* Toast Notifications */}
       <div className="fixed top-6 right-6 z-[1000] flex flex-col gap-3 max-w-md">
         {toasts.map((toast) => (
@@ -486,6 +495,7 @@ export function AdminPageClient() {
           </p>
         </div>
       )}
-    </main>
+      </main>
+    </AdminAuthGuard>
   );
 }

@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 
 type PromptTemplate = {
   id: string;
@@ -56,9 +58,9 @@ export function AdminPageClient() {
 
   if (!user) return null;
 
-  // Data state
+  // Data state - ALL hooks must be called unconditionally
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Filter/pagination state
@@ -98,7 +100,7 @@ export function AdminPageClient() {
   }, []);
 
   const fetchTemplates = useCallback(async () => {
-    setLoading(true);
+    setDataLoading(true);
     setError(null);
 
     try {
@@ -121,7 +123,7 @@ export function AdminPageClient() {
       setError(getErrorMessage(err, "Failed to fetch templates"));
       showToast("Failed to fetch templates", "error");
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   }, [page, search, categoryFilter, sortBy, sortOrder, showToast]);
 
@@ -219,7 +221,12 @@ export function AdminPageClient() {
   };
 
   return (
-    <div className="min-h-dvh" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+    <AdminAuthGuard
+      loading={authLoading}
+      user={user}
+      backgroundClass="min-h-dvh"
+    >
+      <div className="min-h-dvh" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
       <div className="max-w-7xl mx-auto p-8">
         <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
           {/* Header */}
@@ -264,7 +271,7 @@ export function AdminPageClient() {
 
           {/* Content */}
           <div className="p-6">
-            {loading && <div className="text-center p-8 text-gray-500">Loading...</div>}
+            {dataLoading && <div className="text-center p-8 text-gray-500">Loading...</div>}
 
             {error && (
               <div className="mb-4">
@@ -276,14 +283,14 @@ export function AdminPageClient() {
               </div>
             )}
 
-            {!loading && !error && templates.length === 0 && (
+            {!dataLoading && !error && templates.length === 0 && (
               <div className="text-center p-12 text-gray-500">
                 <p className="text-lg mb-2">No templates found</p>
                 <p className="text-sm">Create your first prompt template to get started</p>
               </div>
             )}
 
-            {!loading && !error && templates.length > 0 && (
+            {!dataLoading && !error && templates.length > 0 && (
               <>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -537,6 +544,7 @@ export function AdminPageClient() {
           {toast.message}
         </div>
       )}
-    </div>
+      </div>
+    </AdminAuthGuard>
   );
 }

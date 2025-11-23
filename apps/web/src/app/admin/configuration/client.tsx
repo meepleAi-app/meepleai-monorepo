@@ -22,6 +22,8 @@ import FeatureFlagsTab from "@/components/admin/FeatureFlagsTab";
 import CategoryConfigTab from "@/components/admin/CategoryConfigTab";
 import { ErrorDisplay } from "@/components/errors";
 import { categorizeError } from "@/lib/errorUtils";
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 
 // Tab types
 type TabId = "feature-flags" | "rate-limiting" | "ai-llm" | "rag";
@@ -68,7 +70,7 @@ export function AdminPageClient() {
   const [activeTab, setActiveTab] = useState<TabId>("feature-flags");
   const [configurations, setConfigurations] = useState<SystemConfigurationDto[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [showBanner, setShowBanner] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,7 +81,7 @@ export function AdminPageClient() {
 
   const loadInitialData = async () => {
     try {
-      setLoading(true);
+      setDataLoading(true);
       setError(null);
 
       // Load all configurations
@@ -102,7 +104,7 @@ export function AdminPageClient() {
         toast.error(errorMessage);
       }
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -126,21 +128,29 @@ export function AdminPageClient() {
   };
 
   // Loading state
-  if (loading) {
+  if (dataLoading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <AdminAuthGuard
+        loading={authLoading}
+        user={user}
+        backgroundClass="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900"
+      >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
           <p className="text-slate-600 dark:text-slate-400">Loading configurations...</p>
         </div>
-      </div>
+      </AdminAuthGuard>
     );
   }
 
   // Error state (if not auth error)
   if (error && !error.includes("Unauthorized") && !error.includes("403")) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <AdminAuthGuard
+        loading={authLoading}
+        user={user}
+        backgroundClass="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900"
+      >
         <div className="max-w-2xl w-full px-4">
           <ErrorDisplay
             error={categorizeError(new Error(error))}
@@ -148,12 +158,17 @@ export function AdminPageClient() {
             showTechnicalDetails={process.env.NODE_ENV === 'development'}
           />
         </div>
-      </div>
+      </AdminAuthGuard>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <AdminAuthGuard
+      loading={authLoading}
+      user={user}
+      backgroundClass="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900"
+    >
+      <div className="min-h-dvh bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         {/* Restart Reminder Banner - Sticky Top */}
         {showBanner && (
           <div className="sticky top-0 z-50 bg-yellow-50 border-b border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
@@ -303,5 +318,6 @@ export function AdminPageClient() {
           </div>
         </div>
       </div>
+    </AdminAuthGuard>
   );
 }

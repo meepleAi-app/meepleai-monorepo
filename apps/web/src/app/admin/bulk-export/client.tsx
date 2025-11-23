@@ -3,16 +3,12 @@
 import type { AuthUser } from '@/types/auth';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from '@/lib/utils/errorHandler';
-
-type AuthResponse = {
-  user: AuthUser;
-  expiresAt: string;
-};
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 
 type Game = {
   id: string;
@@ -26,7 +22,7 @@ export function AdminPageClient() {
   const { user: authUser } = useAuthUser();
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameIds, setSelectedGameIds] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [dataLoading, setDataLoading] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string>("");
@@ -43,7 +39,7 @@ export function AdminPageClient() {
   }, []);
 
   const loadGames = async () => {
-    setIsLoading(true);
+    setDataLoading(true);
     setErrorMessage("");
     try {
       const gamesData = await api.get<Game[]>("/api/v1/games");
@@ -53,7 +49,7 @@ export function AdminPageClient() {
     } catch (err) {
       setErrorMessage(getErrorMessage(err, "Failed to load games."));
     } finally {
-      setIsLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -96,30 +92,25 @@ export function AdminPageClient() {
     }
   };
 
-  if (!authUser) {
+  if (user && user.role !== "Editor" && user.role !== "Admin") {
     return (
-      <div className="min-h-dvh bg-slate-950 text-white flex items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  if (authUser.role !== "Editor" && authUser.role !== "Admin") {
-    return (
-      <div className="min-h-dvh bg-slate-950 text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-          <p className="text-slate-400 mb-6">Editor or Admin role required.</p>
-          <Link href="/" className="text-blue-400 hover:underline">
-            Return to Home
-          </Link>
+      <AdminAuthGuard loading={authLoading} user={user}>
+        <div className="min-h-dvh bg-slate-950 text-white flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+            <p className="text-slate-400 mb-6">Editor or Admin role required.</p>
+            <Link href="/" className="text-blue-400 hover:underline">
+              Return to Home
+            </Link>
+          </div>
         </div>
-      </div>
+      </AdminAuthGuard>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-white">
+    <AdminAuthGuard loading={authLoading} user={user}>
+      <div className="min-h-dvh bg-slate-950 text-white">
       {/* Header */}
       <header className="sticky top-0 glass z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
@@ -186,7 +177,7 @@ export function AdminPageClient() {
         </div>
 
         {/* Games List */}
-        {isLoading ? (
+        {dataLoading ? (
           <div className="text-center py-12">
             <p className="text-slate-400">Loading games...</p>
           </div>
@@ -239,6 +230,7 @@ export function AdminPageClient() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </AdminAuthGuard>
   );
 }

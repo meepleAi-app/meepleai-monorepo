@@ -23,6 +23,7 @@ import { IntlProvider } from '@/components/providers/IntlProvider';
 import { api } from '@/lib/api';
 import { KeyboardShortcutsHelp } from '@/components/layout';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { hydrateApiKey } from '@/lib/api/core/apiKeyStore';
 import { useState, useEffect, ReactNode } from 'react';
 
 interface AppProvidersProps {
@@ -49,6 +50,19 @@ function AppContent({ children }: { children: ReactNode }) {
         // Silently fail if axe-core fails to load
       });
     }
+  }, []);
+
+  // Hydrate API key from sessionStorage on app startup
+  // This restores the encrypted API key into memory after page reload
+  useEffect(() => {
+    hydrateApiKey().catch((error) => {
+      // Log error but don't block app startup
+      logger.error(
+        'Failed to hydrate API key on startup',
+        error instanceof Error ? error : new Error(String(error)),
+        createErrorContext('AppProviders', 'hydrateApiKey', { operation: 'hydrate_api_key' })
+      );
+    });
   }, []);
 
   // Global keyboard shortcuts

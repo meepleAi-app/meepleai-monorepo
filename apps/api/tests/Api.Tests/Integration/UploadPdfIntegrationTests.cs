@@ -728,7 +728,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var failingBlobStorage = new Mock<IBlobStorageService>();
         failingBlobStorage.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(false, null, null, 0, "Simulated storage failure"));
-        services.AddSingleton(failingBlobStorage.Object);
+        services.AddSingleton<IBlobStorageService>(failingBlobStorage.Object);
 
         // Register other required services
         RegisterMockServices(services);
@@ -855,7 +855,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var permissionDeniedStorage = new Mock<IBlobStorageService>();
         permissionDeniedStorage.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(false, null, null, 0, "Access denied: Insufficient permissions"));
-        services.AddSingleton(permissionDeniedStorage.Object);
+        services.AddSingleton<IBlobStorageService>(permissionDeniedStorage.Object);
 
         RegisterMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);
@@ -1001,7 +1001,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         {
             options.UseInMemoryDatabase("CacheInvalidationTest");
         });
-        services.AddSingleton(cacheMock.Object);
+        services.AddSingleton<IAiResponseCacheService>(cacheMock.Object);
 
         RegisterMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);
@@ -1054,7 +1054,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         {
             options.UseInMemoryDatabase("BackgroundTaskTest");
         });
-        services.AddSingleton(backgroundTaskMock.Object);
+        services.AddSingleton<IBackgroundTaskService>(backgroundTaskMock.Object);
 
         RegisterMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);

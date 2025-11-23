@@ -9,7 +9,6 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for GetPdfProgressQuery.
 /// Retrieves PDF processing progress including ownership.
 /// NOTE: Uses DbContext directly for ProcessingProgressJson field (not in domain entity).
-/// TODO: Consider adding ProcessingProgress to domain entity as value object.
 /// PDF-08: Get PDF processing progress
 /// </summary>
 public class GetPdfProgressQueryHandler : IQueryHandler<GetPdfProgressQuery, PdfProgressResult?>

@@ -29,6 +29,17 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Enable Docker-optimized output
 
+  // Permanent redirects (Issue #1672: Remove deprecated /profile page)
+  async redirects() {
+    return [
+      {
+        source: '/profile',
+        destination: '/settings',
+        permanent: true, // 308 redirect for SEO
+      },
+    ];
+  },
+
   // Turbopack configuration for Next.js 16
   turbopack: {
     // Empty config to silence Turbopack warning

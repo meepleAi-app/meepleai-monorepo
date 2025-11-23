@@ -605,10 +605,11 @@ export class AuthPage extends BasePage implements IAuthPage {
   // ========================================================================
 
   /**
-   * Navigate to profile page for OAuth account management
+   * Navigate to settings page for OAuth account management
+   * (Issue #1672: /profile deprecated, now redirects to /settings)
    */
   async gotoProfile(): Promise<void> {
-    await this.page.goto('/profile');
+    await this.page.goto('/settings');
     await this.waitForLoad();
   }
 

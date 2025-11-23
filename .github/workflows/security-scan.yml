@@ -60,6 +60,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
 
       # Build .NET projects for CodeQL analysis
       - name: Setup .NET (C# only)

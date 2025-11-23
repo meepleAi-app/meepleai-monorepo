@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Tests.Constants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -42,7 +43,7 @@ public class LargePdfStreamingTests
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
             stage1, stage2, stage3, _logger, _configuration, options);
 
-        await using var pdfStream = CreateTestPdfStream(10 * 1024 * 1024); // 10 MB
+        await using var pdfStream = CreateTestPdfStream(PdfUploadTestConstants.FileSizes.TestMaxBytes); // 10 MB
 
         // Act
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);

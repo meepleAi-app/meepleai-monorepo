@@ -15,8 +15,9 @@ export function loadConfig() {
   const defaultConfig = {
     apiBaseUrl: __ENV.API_BASE_URL || 'http://localhost:8080',
     testUser: {
-      email: __ENV.TEST_USER_EMAIL || 'test@meepleai.dev',
-      password: __ENV.TEST_USER_PASSWORD || 'Test123!',
+      // Issue #1663: Use demo user credentials (matches Postman/Newman tests)
+      email: __ENV.TEST_USER_EMAIL || 'user@meepleai.dev',
+      password: __ENV.TEST_USER_PASSWORD || 'Demo123!',
     },
     testGameId: __ENV.TEST_GAME_ID || '00000000-0000-0000-0000-000000000001',
     reportDir: __ENV.REPORT_DIR || './reports',
@@ -149,6 +150,48 @@ export function getLoadProfile(testType, baseVUs = 50) {
 export function sleepWithJitter(baseMs = 1000, jitterMs = 200) {
   const actualSleep = baseMs + (Math.random() * jitterMs * 2 - jitterMs);
   sleep(actualSleep / 1000); // k6 sleep takes seconds
+}
+
+/**
+ * Retry HTTP request with exponential backoff for rate limit handling (Issue #1663)
+ * @param {function} requestFn - Function that makes the HTTP request
+ * @param {object} options - Retry options
+ * @returns {object} HTTP response
+ */
+export function retryWithBackoff(requestFn, options = {}) {
+  const maxRetries = options.maxRetries || 3;
+  const initialDelayMs = options.initialDelayMs || 1000;
+  const maxDelayMs = options.maxDelayMs || 5000;
+  const retryOn = options.retryOn || [429, 503]; // Rate limit + service unavailable
+
+  let lastResponse = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    lastResponse = requestFn();
+
+    // Success - return immediately
+    if (!retryOn.includes(lastResponse.status)) {
+      return lastResponse;
+    }
+
+    // Max retries reached
+    if (attempt === maxRetries) {
+      console.warn(`Max retries (${maxRetries}) reached for request. Last status: ${lastResponse.status}`);
+      return lastResponse;
+    }
+
+    // Calculate backoff delay with exponential increase
+    const delayMs = Math.min(initialDelayMs * Math.pow(2, attempt), maxDelayMs);
+
+    // Check for Retry-After header
+    const retryAfter = lastResponse.headers['Retry-After'];
+    const actualDelayMs = retryAfter ? parseInt(retryAfter) * 1000 : delayMs;
+
+    console.log(`Request failed with ${lastResponse.status}. Retrying in ${actualDelayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+    sleep(actualDelayMs / 1000);
+  }
+
+  return lastResponse;
 }
 
 /**

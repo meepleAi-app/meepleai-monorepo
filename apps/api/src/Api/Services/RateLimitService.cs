@@ -17,11 +17,13 @@ public class RateLimitService : IRateLimitService
     private readonly RateLimitConfiguration _config;
     private readonly IConfigurationService? _configService;
     private readonly IConfiguration? _fallbackConfig;
+    private readonly IWebHostEnvironment _environment;
 
     public RateLimitService(
         IConnectionMultiplexer redis,
         ILogger<RateLimitService> logger,
         IOptions<RateLimitConfiguration> config,
+        IWebHostEnvironment environment,
         TimeProvider? timeProvider = null,
         IConfigurationService? configService = null,
         IConfiguration? fallbackConfig = null)
@@ -29,6 +31,7 @@ public class RateLimitService : IRateLimitService
         _redis = redis;
         _logger = logger;
         _config = config.Value;
+        _environment = environment;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _configService = configService;
         _fallbackConfig = fallbackConfig;
@@ -272,21 +275,34 @@ public class RateLimitService : IRateLimitService
 
     /// <summary>
     /// Get hardcoded default values for rate limits.
+    /// Issue #1663: Increased limits for Development/Test environments to support K6 performance testing.
     /// </summary>
     private T GetHardcodedDefault<T>(string limitType, string role) where T : struct
     {
-        return (limitType, role) switch
+        // K6 Performance Testing: Use more generous limits in Dev/Test for performance testing (Issue #1663)
+        var isTestEnvironment = _environment.IsDevelopment() || _environment.EnvironmentName == "Test";
+        var multiplier = isTestEnvironment ? 10 : 1;
+
+        var baseValue = (limitType, role) switch
         {
-            ("MaxTokens", "admin") => (T)(object)1000,
-            ("MaxTokens", "editor") => (T)(object)500,
-            ("MaxTokens", "user") => (T)(object)100,
-            ("MaxTokens", "anonymous") => (T)(object)60,
-            ("RefillRate", "admin") => (T)(object)10.0,
-            ("RefillRate", "editor") => (T)(object)5.0,
-            ("RefillRate", "user") => (T)(object)1.0,
-            ("RefillRate", "anonymous") => (T)(object)1.0,
+            ("MaxTokens", "admin") => (T)(object)(1000 * multiplier),
+            ("MaxTokens", "editor") => (T)(object)(500 * multiplier),
+            ("MaxTokens", "user") => (T)(object)(100 * multiplier),
+            ("MaxTokens", "anonymous") => (T)(object)(60 * multiplier),
+            ("RefillRate", "admin") => (T)(object)(10.0 * multiplier),
+            ("RefillRate", "editor") => (T)(object)(5.0 * multiplier),
+            ("RefillRate", "user") => (T)(object)(1.0 * multiplier),
+            ("RefillRate", "anonymous") => (T)(object)(1.0 * multiplier),
             _ => throw new ArgumentException($"Unknown limit type {limitType} or role {role}")
         };
+
+        if (isTestEnvironment && limitType == "MaxTokens")
+        {
+            _logger.LogDebug("Using test environment rate limits: {LimitType}={Value} for {Role} (10x multiplier)",
+                limitType, baseValue, role);
+        }
+
+        return baseValue;
     }
 
     /// <summary>

@@ -13,6 +13,7 @@ public class UserEntity
     public string Role { get; set; } = "user"; // DDD-PHASE2: Changed from enum to string
     public string Tier { get; set; } = "free"; // User subscription tier (free, normal, premium)
     public DateTime CreatedAt { get; set; }
+    public bool IsDemoAccount { get; set; } = false; // Issue #1663: Demo users for testing (user/editor@meepleai.dev)
 
     // Two-Factor Authentication
     public string? TotpSecretEncrypted { get; set; }

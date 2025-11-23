@@ -826,7 +826,7 @@ describe('createChatClient', () => {
           messageId: 'msg-123',
           endpoint: '/api/v1/chat',
           gameId: 'catan',
-          feedback: 'helpful' as const,
+          outcome: 'helpful' as const,
         };
 
         mockHttpClient.post.mockResolvedValueOnce(undefined);
@@ -841,7 +841,7 @@ describe('createChatClient', () => {
           messageId: 'msg-456',
           endpoint: '/api/v1/rag',
           gameId: 'pandemic',
-          feedback: 'not-helpful' as const,
+          outcome: 'not-helpful' as const,
         };
 
         mockHttpClient.post.mockResolvedValueOnce(undefined);
@@ -858,7 +858,7 @@ describe('createChatClient', () => {
           messageId: 'msg',
           endpoint: '/api',
           gameId: 'game',
-          feedback: 'helpful',
+          outcome: 'helpful',
         });
 
         expect(result).toBeUndefined();

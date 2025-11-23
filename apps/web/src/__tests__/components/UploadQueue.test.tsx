@@ -13,7 +13,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { UploadQueue } from '../../components/UploadQueue';
+import { UploadQueue } from '@/components/upload/UploadQueue';
 import type { UploadQueueItem as UploadQueueItemType, UploadQueueStats } from '../../hooks/useUploadQueue';
 
 // Helper to create test items

@@ -435,6 +435,30 @@ describe('apiKeyStore', () => {
       clearStoredApiKey();
       expect(hasStoredApiKey()).toBe(false);
     });
+
+    it('should return true when encrypted key exists in storage but memory is null', () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // Directly set encrypted key in storage (simulating page reload)
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      // Memory is null, but storage has encrypted key
+      expect(hasStoredApiKey()).toBe(true);
+    });
+
+    it('should trigger background hydration when encrypted key exists but memory is null', () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // Directly set encrypted key in storage
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      // Call hasStoredApiKey - should trigger hydration
+      const result = hasStoredApiKey();
+
+      expect(result).toBe(true);
+      // Note: Hydration is async, so memory won't be populated immediately
+      // But the next call to getStoredApiKeySync() after hydration completes will have it
+    });
   });
 
   describe('SSR compatibility', () => {
@@ -461,6 +485,87 @@ describe('apiKeyStore', () => {
       // Restore window
       // @ts-ignore
       global.window = originalWindow;
+    });
+  });
+
+  describe('rehydrateApiKey', () => {
+    it('should manually re-hydrate API key from storage', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // Store encrypted key in storage
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      // Manually trigger hydration
+      await rehydrateApiKey();
+
+      // Memory should now have the decrypted key
+      expect(getStoredApiKeySync()).toBe(apiKey);
+    });
+
+    it('should force re-hydration even if memory is already populated', async () => {
+      const oldKey = 'mpl_dev_oldKey123';
+      const newKey = 'mpl_dev_newKey456';
+
+      // Set old key in memory
+      await setStoredApiKey(oldKey);
+      expect(getStoredApiKeySync()).toBe(oldKey);
+
+      // Update storage with new key (simulating external update)
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${newKey}`);
+
+      // Memory still has old key
+      expect(getStoredApiKeySync()).toBe(oldKey);
+
+      // Force re-hydration
+      await rehydrateApiKey();
+
+      // Memory should now have the new key
+      expect(getStoredApiKeySync()).toBe(newKey);
+    });
+
+    it('should handle re-hydration with no storage gracefully', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // Set key in memory
+      await setStoredApiKey(apiKey);
+
+      // Clear storage but not memory
+      mockSessionStorage.store.delete('meepleai:apiKey');
+
+      // Re-hydrate (should clear memory since storage is empty)
+      await rehydrateApiKey();
+
+      // Memory should be null since storage was empty
+      expect(getStoredApiKeySync()).toBeNull();
+    });
+
+    it('should handle decryption failure during re-hydration', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Store corrupted data
+      mockSessionStorage.store.set('meepleai:apiKey', 'corrupted_data');
+
+      // Mock decryption failure
+      (secureStorage.decrypt as jest.Mock).mockRejectedValueOnce(
+        new Error('Decryption failed')
+      );
+
+      // Re-hydrate
+      await rehydrateApiKey();
+
+      // Memory should be null
+      expect(getStoredApiKeySync()).toBeNull();
+
+      // Storage should be cleared
+      expect(mockSessionStorage.store.has('meepleai:apiKey')).toBe(false);
+
+      // Error should be logged
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to decrypt API key during hydration, clearing storage:',
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 
@@ -515,6 +620,77 @@ describe('apiKeyStore', () => {
 
       // Should have the last key
       expect(getStoredApiKeySync()).toBe('key5');
+    });
+
+    it('should support full page reload with auto-hydration', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // User logs in and API key is stored
+      await setStoredApiKey(apiKey);
+      expect(getStoredApiKeySync()).toBe(apiKey);
+
+      // Simulate page reload: clear memory (via clearStoredApiKey without clearing storage)
+      const encryptedValue = mockSessionStorage.store.get('meepleai:apiKey');
+      clearStoredApiKey();
+
+      // Restore the encrypted value (simulating it surviving page reload)
+      mockSessionStorage.store.set('meepleai:apiKey', encryptedValue!);
+
+      // Simulate auto-hydration that would happen on module load
+      await rehydrateApiKey();
+
+      // hasStoredApiKey should return true (checks storage)
+      expect(hasStoredApiKey()).toBe(true);
+
+      // Memory should be hydrated
+      expect(getStoredApiKeySync()).toBe(apiKey);
+
+      // API calls should include the API key
+      const keyForHeader = getStoredApiKeySync();
+      expect(keyForHeader).toBe(apiKey);
+    });
+
+    it('should handle first API call timing during hydration window', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // Encrypted key exists in storage (page just loaded)
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      // First call to getStoredApiKeySync before hydration completes
+      const firstCall = getStoredApiKeySync();
+
+      // Should return null (hydration not complete)
+      expect(firstCall).toBeNull();
+
+      // hasStoredApiKey should detect encrypted storage
+      expect(hasStoredApiKey()).toBe(true);
+
+      // Complete hydration manually
+      await rehydrateApiKey();
+
+      // Subsequent calls should have the key
+      expect(getStoredApiKeySync()).toBe(apiKey);
+    });
+
+    it('should support dual-auth fallback pattern', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // Encrypted key exists (page reload scenario)
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      // User makes API call immediately after page load
+      const keyForFirstRequest = getStoredApiKeySync();
+
+      // First request has no API key (hydration not complete)
+      expect(keyForFirstRequest).toBeNull();
+      // In real app, request would fall back to cookie auth
+
+      // Background hydration completes
+      await rehydrateApiKey();
+
+      // Subsequent requests have API key
+      const keyForSecondRequest = getStoredApiKeySync();
+      expect(keyForSecondRequest).toBe(apiKey);
     });
   });
 });

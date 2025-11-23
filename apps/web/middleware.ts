@@ -81,6 +81,23 @@ function getApiOrigin(): string {
 }
 
 /**
+ * Get API origin for CSP connect-src directive
+ */
+function getApiOrigin(): string {
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
+  if (apiBase && apiBase !== 'undefined' && apiBase !== 'null') {
+    try {
+      const url = new URL(apiBase);
+      return url.origin;
+    } catch {
+      // If URL parsing fails, fall back to default
+      return 'http://localhost:8080';
+    }
+  }
+  return 'http://localhost:8080';
+}
+
+/**
  * Security headers configuration
  * Applied to all responses for defense-in-depth protection
  *

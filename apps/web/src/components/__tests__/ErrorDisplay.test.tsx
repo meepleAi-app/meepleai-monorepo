@@ -3,7 +3,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ErrorDisplay } from '../ErrorDisplay';
+import { ErrorDisplay } from '../errors/ErrorDisplay';
 import { ErrorCategory, type CategorizedError } from '../../lib/errorUtils';
 
 // Mock clipboard API

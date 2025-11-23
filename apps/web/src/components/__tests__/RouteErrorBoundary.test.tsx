@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RouteErrorBoundary } from '../RouteErrorBoundary';
+import { RouteErrorBoundary } from '../errors/RouteErrorBoundary';
 
 // Mock the logger
 jest.mock('../../lib/logger', () => ({

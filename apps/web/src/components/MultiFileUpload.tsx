@@ -5,8 +5,7 @@
 
 import { type DragEvent, type ChangeEvent, useCallback, useRef, useState } from 'react';
 import { useUploadQueue } from '../hooks/useUploadQueue';
-import { UploadQueue } from './UploadQueue';
-import { UploadSummary } from './UploadSummary';
+import { UploadQueue, UploadSummary } from './upload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { InlineCommentIndicator } from '../InlineCommentIndicator';
+import { InlineCommentIndicator } from '../comments/InlineCommentIndicator';
 
 describe('InlineCommentIndicator', () => {
   const mockOnClick = jest.fn();

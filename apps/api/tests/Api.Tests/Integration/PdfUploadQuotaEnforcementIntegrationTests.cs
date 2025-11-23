@@ -110,7 +110,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var configServiceMock = new Mock<IConfigurationService>();
         configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null); // Use default limits
-        services.AddSingleton(configServiceMock.Object);
+        services.AddSingleton<IConfigurationService>(configServiceMock.Object);
 
         // Register quota service
         services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();

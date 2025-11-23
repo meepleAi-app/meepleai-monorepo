@@ -193,7 +193,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 
                 return chunks;
             });
-        services.AddSingleton(chunkingMock.Object);
+        services.AddSingleton<ITextChunkingService>(chunkingMock.Object);
 
         // Mock Embedding service (returns mock embeddings)
         var embeddingMock = new Mock<IEmbeddingService>();
@@ -215,7 +215,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
                     ErrorMessage = null
                 };
             });
-        services.AddSingleton(embeddingMock.Object);
+        services.AddSingleton<IEmbeddingService>(embeddingMock.Object);
 
         // Mock Qdrant service (success by default)
         var qdrantMock = new Mock<IQdrantService>();
@@ -224,7 +224,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             .ReturnsAsync(new IndexResult { Success = true, ErrorMessage = null, IndexedCount = 0 });
         qdrantMock.Setup(q => q.DeleteDocumentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        services.AddSingleton(qdrantMock.Object);
+        services.AddSingleton<IQdrantService>(qdrantMock.Object);
     }
 
     private async Task SeedTestDataAsync()

@@ -43,7 +43,10 @@ public static class AnalyticsEndpoints
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestStatsQuery(startDate, endDate, userId, gameId);
             var stats = await mediator.Send(query, ct);
-            // TODO: Add feedback stats query when AgentFeedbackService is migrated to CQRS
+
+            // ISSUE-1695: Feedback stats now available via CQRS
+            var feedbackQuery = new GetFeedbackStatsQuery(startDate, endDate);
+            var feedbackStats = await mediator.Send(feedbackQuery, ct);
 
             return Results.Json(new
             {
@@ -51,8 +54,13 @@ public static class AnalyticsEndpoints
                 stats.AvgLatencyMs,
                 stats.TotalTokens,
                 stats.SuccessRate,
-                stats.EndpointCounts
-                // TODO: Add feedback stats when AgentFeedbackService is migrated to CQRS
+                stats.EndpointCounts,
+                feedbackStats.TotalFeedbacks,
+                feedbackStats.HelpfulCount,
+                feedbackStats.NotHelpfulCount,
+                feedbackStats.HelpfulRate,
+                feedbackStats.FeedbackByEndpoint,
+                feedbackStats.FeedbackByOutcome
             });
         });
 

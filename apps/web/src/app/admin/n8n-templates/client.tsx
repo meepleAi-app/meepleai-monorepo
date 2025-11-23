@@ -9,6 +9,8 @@ import { LoadingButton } from '@/components/loading/LoadingButton';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 import { logger } from '@/lib/logger';
 import { createErrorContext } from '@/lib/errors';
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 
 interface TemplateParameter {
   name: string;
@@ -54,13 +56,13 @@ export function AdminPageClient() {
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplateDetail | null>(null);
   const [category, setCategory] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const loadTemplates = useCallback(async () => {
-    setLoading(true);
+    setDataLoading(true);
     setError(null);
     try {
       const url = category
@@ -83,7 +85,7 @@ export function AdminPageClient() {
       );
       setError('Failed to load templates. Please try again.');
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   }, [category]);
 
@@ -141,7 +143,8 @@ export function AdminPageClient() {
   };
 
   return (
-    <div className="min-h-dvh bg-gray-50 py-8">
+    <AdminAuthGuard loading={authLoading} user={user}>
+      <div className="min-h-dvh bg-gray-50 py-8">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
@@ -195,7 +198,7 @@ export function AdminPageClient() {
         </div>
 
         {/* Template Grid */}
-        {loading ? (
+        {dataLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             <p className="mt-4 text-gray-600">Loading templates...</p>
@@ -227,7 +230,8 @@ export function AdminPageClient() {
           />
         )}
       </div>
-    </div>
+      </div>
+    </AdminAuthGuard>
   );
 };
 

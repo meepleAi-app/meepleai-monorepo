@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState, startTransition } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useAuthUser } from '@/components/auth/AuthProvider';
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 
 // Types
 type User = {
@@ -69,7 +71,7 @@ export function AdminPageClient() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [confirmation, setConfirmation] = useState<ConfirmationDialog>({
@@ -100,7 +102,7 @@ export function AdminPageClient() {
   // Fetch users
   const fetchUsers = useCallback(async () => {
     try {
-      setLoading(true);
+      setDataLoading(true);
       setError(null);
 
       const queryParams = new URLSearchParams({
@@ -127,10 +129,10 @@ export function AdminPageClient() {
 
       setUsers(result.items);
       setTotal(result.total);
-      setLoading(false);
+      setDataLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-      setLoading(false);
+      setDataLoading(false);
       addToast("error", "Failed to load users");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- addToast is stable (defined with useCallback and empty deps)
@@ -261,29 +263,34 @@ export function AdminPageClient() {
     return new Date(dateString).toLocaleString();
   };
 
-  if (loading) {
+  if (dataLoading) {
     return (
-      <div className="p-8">
-        <h1>User Management</h1>
-        <p>Loading...</p>
-      </div>
+      <AdminAuthGuard loading={authLoading} user={user}>
+        <div className="p-8">
+          <h1>User Management</h1>
+          <p>Loading...</p>
+        </div>
+      </AdminAuthGuard>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8">
-        <h1>User Management</h1>
-        <div className="p-4 bg-red-50 border border-red-600 rounded">
-          {error}
+      <AdminAuthGuard loading={authLoading} user={user}>
+        <div className="p-8">
+          <h1>User Management</h1>
+          <div className="p-4 bg-red-50 border border-red-600 rounded">
+            {error}
+          </div>
+          <Link href="/admin">← Back to Admin Dashboard</Link>
         </div>
-        <Link href="/admin">← Back to Admin Dashboard</Link>
-      </div>
+      </AdminAuthGuard>
     );
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <AdminAuthGuard loading={authLoading} user={user}>
+      <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <h1>User Management</h1>
         <Link href="/admin">← Back to Admin Dashboard</Link>
@@ -546,7 +553,8 @@ export function AdminPageClient() {
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </AdminAuthGuard>
   );
 }
 

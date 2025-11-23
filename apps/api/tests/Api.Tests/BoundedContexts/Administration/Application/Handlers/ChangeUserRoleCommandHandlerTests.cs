@@ -59,6 +59,9 @@ public class ChangeUserRoleCommandHandlerTests
         Assert.Equal(Role.Admin.Value, result.Role);
         Assert.Equal("user@example.com", result.Email);
 
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Once);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -87,6 +90,10 @@ public class ChangeUserRoleCommandHandlerTests
 
         // Assert
         Assert.Equal(Role.Editor.Value, result.Role);
+
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -113,6 +120,10 @@ public class ChangeUserRoleCommandHandlerTests
 
         // Assert
         Assert.Equal(Role.User.Value, result.Role);
+
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -138,6 +149,10 @@ public class ChangeUserRoleCommandHandlerTests
 
         // Assert
         Assert.Equal(Role.User.Value, result.Role);
+
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     #endregion
@@ -164,7 +179,10 @@ public class ChangeUserRoleCommandHandlerTests
 
         Assert.Contains($"User {userId} not found", exception.Message);
 
-        // Verify save was NOT called
+        // Verify update and save were NOT called
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Never);
@@ -193,6 +211,9 @@ public class ChangeUserRoleCommandHandlerTests
 
         // Assert - Should still save (idempotent operation)
         Assert.Equal(Role.Admin.Value, result.Role);
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Once);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -264,6 +285,9 @@ public class ChangeUserRoleCommandHandlerTests
         // Assert
         _userRepositoryMock.Verify(
             r => r.GetByIdAsync(userId, cancellationToken),
+            Times.Once);
+        _userRepositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<User>(), cancellationToken),
             Times.Once);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(cancellationToken),

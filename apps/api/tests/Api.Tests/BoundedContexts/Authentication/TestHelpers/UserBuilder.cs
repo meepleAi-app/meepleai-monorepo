@@ -14,6 +14,7 @@ public class UserBuilder
     private string _displayName = "Test User";
     private PasswordHash _passwordHash = PasswordHash.Create("DefaultPassword123!");
     private Role _role = Role.User;
+    private UserTier? _tier;
     private bool _enable2FA;
     private string? _totpSecret;
 
@@ -99,6 +100,15 @@ public class UserBuilder
     }
 
     /// <summary>
+    /// Sets the user tier.
+    /// </summary>
+    public UserBuilder WithTier(UserTier tier)
+    {
+        _tier = tier;
+        return this;
+    }
+
+    /// <summary>
     /// Enables two-factor authentication.
     /// </summary>
     public UserBuilder With2FA(string encryptedSecret = "encrypted_test_secret")
@@ -123,7 +133,7 @@ public class UserBuilder
     /// </summary>
     public User Build()
     {
-        var user = new User(_id, _email, _displayName, _passwordHash, _role);
+        var user = new User(_id, _email, _displayName, _passwordHash, _role, _tier);
 
         if (_enable2FA && _totpSecret != null)
         {

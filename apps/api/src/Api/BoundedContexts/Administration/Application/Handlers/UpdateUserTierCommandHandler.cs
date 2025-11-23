@@ -64,6 +64,8 @@ public class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierComman
         var oldTier = user.Tier;
         user.UpdateTier(newTier, requester.Role);
 
+        // Persist updates - required because repository uses AsNoTracking
+        await _userRepository.UpdateAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(

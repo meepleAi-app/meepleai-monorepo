@@ -51,47 +51,96 @@ const SESSION_COOKIE_NAME = 'meepleai_session';
 // Middleware Function
 // ============================================================================
 
+// Cache API origin at module level for performance (only computed once)
+let cachedApiOrigin: string | null = null;
+
+/**
+ * Get API base URL origin for CSP
+ * Extracts the origin (protocol + host) from the API base URL
+ * Results are cached for performance
+ */
+function getApiOrigin(): string {
+  if (cachedApiOrigin !== null) {
+    return cachedApiOrigin;
+  }
+
+  const envBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
+  const apiBase = (envBase && envBase !== 'undefined' && envBase !== 'null')
+    ? envBase
+    : 'http://localhost:8080';
+
+  try {
+    const url = new URL(apiBase);
+    cachedApiOrigin = url.origin;
+    return cachedApiOrigin;
+  } catch {
+    // Fallback if URL parsing fails
+    cachedApiOrigin = 'http://localhost:8080';
+    return cachedApiOrigin;
+  }
+}
+
 /**
  * Security headers configuration
  * Applied to all responses for defense-in-depth protection
  *
  * See: docs/06-security/client-side-encryption.md
+ *
+ * @param requestOrigin - The origin of the incoming request (for CSP deduplication)
  */
-const SECURITY_HEADERS = {
-  // Content Security Policy - XSS protection
-  'Content-Security-Policy': [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for Next.js hydration
-    "style-src 'self' 'unsafe-inline'", // Required for Tailwind CSS
-    "img-src 'self' data: https:", // Allow images from data URIs and HTTPS
-    "font-src 'self' data:",
-    "connect-src 'self'",
-    "frame-ancestors 'none'", // Prevent clickjacking
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join('; '),
+function getSecurityHeaders(requestOrigin?: string) {
+  const apiOrigin = getApiOrigin();
 
-  // Prevent MIME sniffing
-  'X-Content-Type-Options': 'nosniff',
+  // Only add API origin to connect-src if it differs from the request origin
+  // This prevents redundant CSP entries like "connect-src 'self' http://localhost:3000"
+  // when the API is on the same origin as the frontend
+  const connectSrcParts = ["'self'"];
+  if (requestOrigin && apiOrigin !== requestOrigin) {
+    connectSrcParts.push(apiOrigin);
+  } else if (!requestOrigin) {
+    // No request origin available (shouldn't happen), include API origin for safety
+    connectSrcParts.push(apiOrigin);
+  }
 
-  // Clickjacking protection
-  'X-Frame-Options': 'DENY',
+  return {
+    // Content Security Policy - XSS protection
+    'Content-Security-Policy': [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for Next.js hydration
+      "style-src 'self' 'unsafe-inline'", // Required for Tailwind CSS
+      "img-src 'self' data: https:", // Allow images from data URIs and HTTPS
+      "font-src 'self' data:",
+      `connect-src ${connectSrcParts.join(' ')}`, // Allow API backend requests
+      "frame-ancestors 'none'", // Prevent clickjacking
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; '),
 
-  // XSS filter for legacy browsers
-  'X-XSS-Protection': '1; mode=block',
+    // Prevent MIME sniffing
+    'X-Content-Type-Options': 'nosniff',
 
-  // Referrer policy
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
+    // Clickjacking protection
+    'X-Frame-Options': 'DENY',
 
-  // Permissions policy
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
-};
+    // XSS filter for legacy browsers
+    'X-XSS-Protection': '1; mode=block',
+
+    // Referrer policy
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+
+    // Permissions policy
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  };
+}
 
 /**
  * Add security headers to the response
+ * @param response - The response to add headers to
+ * @param requestOrigin - Optional request origin for CSP deduplication
  */
-function addSecurityHeaders(response: NextResponse): NextResponse {
-  Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+function addSecurityHeaders(response: NextResponse, requestOrigin?: string): NextResponse {
+  const headers = getSecurityHeaders(requestOrigin);
+  Object.entries(headers).forEach(([key, value]) => {
     response.headers.set(key, value);
   });
   return response;
@@ -103,6 +152,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const requestOrigin = request.nextUrl.origin;
 
   // Check if user has a session cookie
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
@@ -118,7 +168,7 @@ export async function middleware(request: NextRequest) {
     // Preserve the intended destination for redirect after login
     loginUrl.searchParams.set('from', pathname);
     const response = NextResponse.redirect(loginUrl);
-    return addSecurityHeaders(response);
+    return addSecurityHeaders(response, requestOrigin);
   }
 
   // Redirect authenticated users from login/register pages to chat
@@ -129,12 +179,12 @@ export async function middleware(request: NextRequest) {
       ? new URL(fromParam, request.url)
       : new URL('/chat', request.url);
     const response = NextResponse.redirect(redirectUrl);
-    return addSecurityHeaders(response);
+    return addSecurityHeaders(response, requestOrigin);
   }
 
   // Allow the request to continue with security headers
   const response = NextResponse.next();
-  return addSecurityHeaders(response);
+  return addSecurityHeaders(response, requestOrigin);
 }
 
 // ============================================================================

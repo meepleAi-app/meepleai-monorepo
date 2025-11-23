@@ -8,6 +8,9 @@ import {
   getStoredApiKeySync,
   clearStoredApiKey,
   hasStoredApiKey,
+  hydrateApiKey,
+  waitForHydration,
+  isHydrationComplete,
 } from '../apiKeyStore';
 import * as secureStorage from '../secureStorage';
 
@@ -223,6 +226,183 @@ describe('apiKeyStore', () => {
     });
   });
 
+  describe('hydrateApiKey', () => {
+    it('should hydrate API key from sessionStorage into memory', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // Store encrypted key in sessionStorage
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      // Hydrate should restore it to memory
+      const result = await hydrateApiKey();
+
+      expect(result).toBe(true);
+      expect(getStoredApiKeySync()).toBe(apiKey);
+      expect(secureStorage.decrypt).toHaveBeenCalledWith(`encrypted_${apiKey}`);
+    });
+
+    it('should return false when no key in sessionStorage', async () => {
+      const result = await hydrateApiKey();
+
+      expect(result).toBe(false);
+      expect(getStoredApiKeySync()).toBeNull();
+      expect(secureStorage.decrypt).not.toHaveBeenCalled();
+    });
+
+    it('should handle decryption failure gracefully', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Store corrupted encrypted key
+      mockSessionStorage.store.set('meepleai:apiKey', 'corrupted_data');
+
+      // Mock decryption failure
+      (secureStorage.decrypt as jest.Mock).mockRejectedValueOnce(
+        new Error('Decryption failed')
+      );
+
+      const result = await hydrateApiKey();
+
+      // Should return false
+      expect(result).toBe(false);
+
+      // Should clear memory
+      expect(getStoredApiKeySync()).toBeNull();
+
+      // Should clear corrupted data from sessionStorage
+      expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('meepleai:apiKey');
+
+      // Should log error
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to hydrate API key from sessionStorage:',
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should work in page refresh scenario', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // Initial login - store key
+      await setStoredApiKey(apiKey);
+      expect(getStoredApiKeySync()).toBe(apiKey);
+
+      // Simulate page refresh - clear memory but keep sessionStorage
+      // In real scenario, memory is cleared by browser reload
+      // Here we manually clear it for testing
+      const encryptedKey = mockSessionStorage.store.get('meepleai:apiKey');
+      clearStoredApiKey();
+      expect(getStoredApiKeySync()).toBeNull();
+
+      // Restore sessionStorage entry (simulating what remains after reload)
+      mockSessionStorage.store.set('meepleai:apiKey', encryptedKey!);
+
+      // Hydrate on app startup
+      const hydrated = await hydrateApiKey();
+
+      expect(hydrated).toBe(true);
+      expect(getStoredApiKeySync()).toBe(apiKey);
+    });
+
+    it('should be idempotent - multiple calls return same promise', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      // Call hydrateApiKey multiple times
+      const promise1 = hydrateApiKey();
+      const promise2 = hydrateApiKey();
+      const promise3 = hydrateApiKey();
+
+      // All should be the same promise instance
+      expect(promise1).toBe(promise2);
+      expect(promise2).toBe(promise3);
+
+      const result = await promise1;
+      expect(result).toBe(true);
+
+      // Decrypt should only be called once
+      expect(secureStorage.decrypt).toHaveBeenCalledTimes(1);
+    });
+
+    it('should mark as hydrated after completion', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      expect(isHydrationComplete()).toBe(false);
+
+      await hydrateApiKey();
+
+      expect(isHydrationComplete()).toBe(true);
+    });
+  });
+
+  describe('waitForHydration', () => {
+    it('should wait for hydration to complete', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      expect(isHydrationComplete()).toBe(false);
+
+      // Start hydration (don't await yet)
+      const hydrationPromise = hydrateApiKey();
+
+      // Wait for hydration should wait for the same promise
+      await waitForHydration();
+
+      expect(isHydrationComplete()).toBe(true);
+      expect(getStoredApiKeySync()).toBe(apiKey);
+
+      // Ensure original promise also resolved
+      const result = await hydrationPromise;
+      expect(result).toBe(true);
+    });
+
+    it('should return immediately if already hydrated', async () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+      await setStoredApiKey(apiKey);
+
+      expect(isHydrationComplete()).toBe(true);
+
+      // Should return immediately
+      await waitForHydration();
+
+      expect(isHydrationComplete()).toBe(true);
+    });
+
+    it('should handle case when no key exists', async () => {
+      expect(isHydrationComplete()).toBe(false);
+
+      await waitForHydration();
+
+      expect(isHydrationComplete()).toBe(true);
+      expect(getStoredApiKeySync()).toBeNull();
+    });
+  });
+
+  describe('isHydrationComplete', () => {
+    it('should return false initially', () => {
+      expect(isHydrationComplete()).toBe(false);
+    });
+
+    it('should return true after setStoredApiKey', async () => {
+      await setStoredApiKey('test-key');
+      expect(isHydrationComplete()).toBe(true);
+    });
+
+    it('should return true after hydrateApiKey completes', async () => {
+      await hydrateApiKey();
+      expect(isHydrationComplete()).toBe(true);
+    });
+
+    it('should return false after clearStoredApiKey', async () => {
+      await setStoredApiKey('test-key');
+      expect(isHydrationComplete()).toBe(true);
+
+      clearStoredApiKey();
+      expect(isHydrationComplete()).toBe(false);
+    });
+  });
+
   describe('hasStoredApiKey', () => {
     it('should return true when API key is in memory', async () => {
       const apiKey = 'mpl_dev_testApiKey123';
@@ -232,7 +412,17 @@ describe('apiKeyStore', () => {
       expect(hasStoredApiKey()).toBe(true);
     });
 
-    it('should return false when no API key in memory', () => {
+    it('should return true when API key is in sessionStorage but not in memory', () => {
+      const apiKey = 'mpl_dev_testApiKey123';
+
+      // Store encrypted key in sessionStorage only
+      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+
+      // Should detect key exists even though not hydrated yet
+      expect(hasStoredApiKey()).toBe(true);
+    });
+
+    it('should return false when no API key in memory or sessionStorage', () => {
       expect(hasStoredApiKey()).toBe(false);
     });
 
@@ -292,21 +482,27 @@ describe('apiKeyStore', () => {
       expect(getStoredApiKeySync()).toBeNull();
     });
 
-    it('should support page refresh simulation', async () => {
+    it('should support page refresh simulation with hydration', async () => {
       const apiKey = 'mpl_dev_testApiKey123';
 
       // Initial login
       await setStoredApiKey(apiKey);
+      const encryptedKey = mockSessionStorage.store.get('meepleai:apiKey');
 
-      // Simulate page refresh: clear memory but keep storage
-      mockSessionStorage.store.set('meepleai:apiKey', `encrypted_${apiKey}`);
+      // Simulate page refresh: clear memory (browser reload clears JS state)
+      clearStoredApiKey();
+      expect(getStoredApiKeySync()).toBeNull();
 
-      // Retrieve from storage (simulating app initialization)
-      const retrieved = await getStoredApiKey();
-      expect(retrieved).toBe(apiKey);
+      // But sessionStorage persists
+      mockSessionStorage.store.set('meepleai:apiKey', encryptedKey!);
+
+      // App startup: hydrate from storage
+      const hydrated = await hydrateApiKey();
+      expect(hydrated).toBe(true);
 
       // Memory cache should be restored
       expect(getStoredApiKeySync()).toBe(apiKey);
+      expect(hasStoredApiKey()).toBe(true);
     });
 
     it('should handle rapid successive calls', async () => {

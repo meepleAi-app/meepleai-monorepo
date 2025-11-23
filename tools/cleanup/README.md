@@ -105,6 +105,97 @@ bash tools/cleanup/cleanup-caches.sh --yes
 
 ---
 
+### 🔧 **fix-vscode-cache-windows.ps1**
+**Purpose:** Fix VS Code cache permission errors on Windows
+
+**What it does:**
+1. Validates Windows environment and VS Code installation
+2. Checks for Administrator privileges (warns if insufficient)
+3. Prompts for confirmation if VS Code is running (warns about unsaved work)
+4. Closes all VS Code related processes (main process + helpers)
+5. Cleans VS Code cache directories (Cache, GPUCache, CachedData, Code Cache)
+6. Cleans Chromium/Electron cache directories
+7. Removes lock files that prevent VS Code from starting
+8. Provides detailed summary and recommendations
+
+**Common errors this fixes:**
+- `ERROR:net\disk_cache\cache_util_win.cc:20] Unable to move the cache: Accesso negato. (0x5)`
+- `ERROR:disk_cache.cc:216] Unable to create cache`
+- `ERROR:gpu_disk_cache.cc:723] Gpu Cache Creation failed: -2`
+- `Error mutex already exists`
+
+**Usage:**
+```powershell
+# Dry run - show what would be deleted
+.\tools\cleanup\fix-vscode-cache-windows.ps1 -DryRun
+
+# Fix cache issues (with confirmation prompt)
+.\tools\cleanup\fix-vscode-cache-windows.ps1
+
+# Skip confirmation prompt (automated use)
+.\tools\cleanup\fix-vscode-cache-windows.ps1 -Yes
+
+# Verbose output
+.\tools\cleanup\fix-vscode-cache-windows.ps1 -Verbose
+```
+
+**Output:**
+```
+🔧 Fix VS Code Cache Errors (Windows)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  WARNING: VS Code is currently running
+
+This script will:
+  1. Close all VS Code instances (may lose unsaved work)
+  2. Delete cache directories (safe, but regenerated on restart)
+  3. Remove lock files
+
+💡 Recommendation: Save all your work in VS Code before continuing!
+
+Continue? (y/N): y
+
+Step 1: Closing VS Code instances
+  ✓ Closed Code (PID: 12345)
+  ✓ Closed Code Helper (PID: 12346)
+
+Step 2: Cleaning VS Code cache directories
+  Deleting: VS Code Cache (245 MB)
+  ✓ Deleted successfully
+
+Step 3: Cleaning Chromium/Electron cache
+  Deleting: Chromium GPU Cache (12 MB)
+
+Step 4: Removing lock files
+  ✓ Removed lock file: SingletonLock
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Cache cleanup complete!
+  Space freed: 257 MB
+  VS Code processes closed: 2
+```
+
+**Who uses it:** Windows developers experiencing VS Code cache/permission errors
+**When:**
+- VS Code shows cache permission errors on startup
+- "Access Denied (0x5)" errors in VS Code console
+- "Unable to create cache" or "GPU Cache Creation failed" errors
+- VS Code won't start or hangs during startup
+- After antivirus software blocks VS Code cache access
+
+**Requirements:** PowerShell 5.1+, Windows 10/11
+**Safety:**
+- Prompts for confirmation before closing VS Code
+- Only removes cache files (preserves settings and extensions)
+- Dry-run mode available for preview
+- Graceful process termination (tries CloseMainWindow before Kill)
+**Alternative (Linux/macOS):** Not needed - cache permission issues are Windows-specific
+
+**Prevention tips:**
+- Always close VS Code properly (File > Exit, not Task Manager)
+- Add VS Code directories to antivirus exclusions
+- Avoid running multiple VS Code instances from different terminals
+
+---
+
 ### 🔍 **cleanup-duplicate-issues.sh**
 **Purpose:** Find and close duplicate GitHub issues
 

@@ -1,7 +1,5 @@
 'use client';
 
-import { useAuthUser } from '@/hooks/useAuthUser';
-
 /**
  * CONFIG-06: Admin Configuration Management Page - App Router
  *
@@ -63,7 +61,7 @@ const TABS: Tab[] = [
 ];
 
 export function AdminPageClient() {
-  const { user } = useAuthUser();
+  const { user, loading: authLoading } = useAuthUser();
 
   if (!user) return null;
   // State

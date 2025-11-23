@@ -175,9 +175,7 @@ describe('HttpClient', () => {
         headers: new Headers(),
       });
 
-      await expect(client.get('/api/v1/test', schema)).rejects.toThrow(
-        SchemaValidationError
-      );
+      await expect(client.get('/api/v1/test', schema)).rejects.toThrow(SchemaValidationError);
     });
 
     it('should include Authorization header when an API key is stored', async () => {
@@ -248,9 +246,7 @@ describe('HttpClient', () => {
         headers: new Headers(),
       });
 
-      await expect(client.post('/api/v1/test', {})).rejects.toThrow(
-        UnauthorizedError
-      );
+      await expect(client.post('/api/v1/test', {})).rejects.toThrow(UnauthorizedError);
     });
 
     it('should handle 204 No Content responses', async () => {
@@ -331,9 +327,7 @@ describe('HttpClient', () => {
         headers: new Headers(),
       });
 
-      await expect(client.put('/api/v1/test', {})).rejects.toThrow(
-        UnauthorizedError
-      );
+      await expect(client.put('/api/v1/test', {})).rejects.toThrow(UnauthorizedError);
     });
 
     it('should validate response with Zod schema', async () => {
@@ -379,9 +373,7 @@ describe('HttpClient', () => {
         headers: new Headers(),
       });
 
-      await expect(client.delete('/api/v1/test')).rejects.toThrow(
-        UnauthorizedError
-      );
+      await expect(client.delete('/api/v1/test')).rejects.toThrow(UnauthorizedError);
     });
 
     it('should not attempt to parse response body', async () => {
@@ -456,9 +448,7 @@ describe('HttpClient', () => {
         headers: new Headers(),
       });
 
-      await expect(client.postFile('/api/v1/export', {})).rejects.toThrow(
-        UnauthorizedError
-      );
+      await expect(client.postFile('/api/v1/export', {})).rejects.toThrow(UnauthorizedError);
     });
   });
 
@@ -739,11 +729,7 @@ describe('HttpClient', () => {
       const results = await Promise.all(promises);
 
       // All should return same result
-      expect(results).toEqual([
-        { data: 'result-1' },
-        { data: 'result-1' },
-        { data: 'result-1' },
-      ]);
+      expect(results).toEqual([{ data: 'result-1' }, { data: 'result-1' }, { data: 'result-1' }]);
 
       // Fetch should only be called once
       expect(callCount).toBe(1);
@@ -863,10 +849,7 @@ describe('HttpClient', () => {
         };
       });
 
-      const promises = [
-        client.get('/api/v1/users'),
-        client.get('/api/v1/games'),
-      ];
+      const promises = [client.get('/api/v1/users'), client.get('/api/v1/games')];
 
       await Promise.all(promises);
 
@@ -946,13 +929,12 @@ describe('HttpClient', () => {
     });
 
     it('should exhaust retries and throw last error', async () => {
-      mockFetch
-        .mockResolvedValue({
-          ok: false,
-          status: 500,
-          json: async () => ({ error: 'Server error' }),
-          headers: new Headers(),
-        });
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Server error' }),
+        headers: new Headers(),
+      });
 
       await expect(
         client.get('/api/v1/test', undefined, {
@@ -1079,7 +1061,7 @@ describe('HttpClient', () => {
       // Both requests should execute (not deduplicated) because of custom callback
       expect(callIndex).toBe(2);
       // Results should be different
-      const resultData = results.map(r => r.data).sort();
+      const resultData = (results as Array<{ data: string }>).map(r => r.data).sort();
       expect(resultData).toEqual(['result-A', 'result-B']);
     });
 

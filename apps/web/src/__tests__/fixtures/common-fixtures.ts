@@ -86,7 +86,7 @@ export const mockAdminAuth = (): MockAuthResponse =>
     id: 'admin-1',
     email: 'admin@meepleai.dev',
     displayName: 'Admin User',
-    role: 'Admin'
+    role: 'Admin',
   });
 
 export const mockEditorAuth = (): MockAuthResponse =>
@@ -94,7 +94,7 @@ export const mockEditorAuth = (): MockAuthResponse =>
     id: 'editor-1',
     email: 'editor@meepleai.dev',
     displayName: 'Editor User',
-    role: 'Editor'
+    role: 'Editor',
   });
 
 export const mockUserAuth = (): MockAuthResponse =>
@@ -102,7 +102,7 @@ export const mockUserAuth = (): MockAuthResponse =>
     id: 'user-1',
     email: 'user@meepleai.dev',
     displayName: 'Regular User',
-    role: 'User'
+    role: 'User',
   });
 
 /**
@@ -140,33 +140,34 @@ export const createMockSessionStatus = (
  *   asPath: '/chat?gameId=demo-chess'
  * });
  */
-export const createMockRouter = (overrides?: Partial<NextRouter>): NextRouter => ({
-  route: overrides?.route || '/',
-  pathname: overrides?.pathname || '/',
-  query: overrides?.query || {},
-  asPath: overrides?.asPath || '/',
-  basePath: '',
-  push: jest.fn(),
-  replace: jest.fn(),
-  reload: jest.fn(),
-  back: jest.fn(),
-  prefetch: jest.fn().mockResolvedValue(undefined),
-  beforePopState: jest.fn(),
-  events: {
-    on: jest.fn(),
-    off: jest.fn(),
-    emit: jest.fn(),
-  },
-  isFallback: false,
-  isLocaleDomain: false,
-  isReady: true,
-  isPreview: false,
-  defaultLocale: 'en',
-  domainLocales: [],
-  locale: undefined,
-  locales: undefined,
-  ...overrides,
-} as unknown as NextRouter);
+export const createMockRouter = (overrides?: Partial<NextRouter>): NextRouter =>
+  ({
+    route: overrides?.route || '/',
+    pathname: overrides?.pathname || '/',
+    query: overrides?.query || {},
+    asPath: overrides?.asPath || '/',
+    basePath: '',
+    push: jest.fn(),
+    replace: jest.fn(),
+    reload: jest.fn(),
+    back: jest.fn(),
+    prefetch: jest.fn().mockResolvedValue(undefined),
+    beforePopState: jest.fn(),
+    events: {
+      on: jest.fn(),
+      off: jest.fn(),
+      emit: jest.fn(),
+    },
+    isFallback: false,
+    isLocaleDomain: false,
+    isReady: true,
+    isPreview: false,
+    defaultLocale: 'en',
+    domainLocales: [],
+    locale: undefined,
+    locales: undefined,
+    ...overrides,
+  }) as unknown as NextRouter;
 
 // =============================================================================
 // API CLIENT FIXTURES
@@ -224,8 +225,7 @@ export const createMockGame = (overrides?: Partial<MockGame>): MockGame => ({
 });
 
 // Preset games
-export const mockChessGame = (): MockGame =>
-  createMockGame({ id: 'demo-chess', title: 'Chess' });
+export const mockChessGame = (): MockGame => createMockGame({ id: 'demo-chess', title: 'Chess' });
 
 export const mockTicTacToeGame = (): MockGame =>
   createMockGame({ id: 'demo-tictactoe', title: 'Tic-Tac-Toe' });
@@ -297,13 +297,14 @@ export const createMockRuleSpec = (overrides?: Partial<MockRuleSpec>): MockRuleS
 
 /**
  * Agent type matching backend
+ * Simplified version of AgentDto for basic testing
  */
 export type MockAgent = {
   id: string;
   gameId: string;
   name: string;
-  type: 'qa' | 'explain' | 'setup';
-  isActive: boolean;
+  type: string; // Changed from 'kind' to match Agent and AgentDto
+  createdAt: string;
 };
 
 /**
@@ -337,15 +338,16 @@ export type MockChat = {
  * @example
  * const agent = createMockAgent({
  *   gameId: 'demo-chess',
- *   name: 'Chess Expert'
+ *   name: 'Chess Expert',
+ *   type: 'qa'
  * });
  */
 export const createMockAgent = (overrides?: Partial<MockAgent>): MockAgent => ({
   id: overrides?.id || 'agent-1',
   gameId: overrides?.gameId || 'game-1',
   name: overrides?.name || 'Test Agent',
-  type: overrides?.type || 'qa',
-  isActive: overrides?.isActive !== undefined ? overrides.isActive : true,
+  type: overrides?.type || 'qa', // Changed from 'kind'
+  createdAt: overrides?.createdAt || new Date().toISOString(),
 });
 
 /**
@@ -399,7 +401,7 @@ export const createMockResponse = (
     status,
     statusText: status === 200 ? 'OK' : status === 404 ? 'Not Found' : 'Error',
     json: async () => body,
-    text: async () => typeof body === 'string' ? body : JSON.stringify(body),
+    text: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
     headers: new Headers(headers || {}),
   };
 
@@ -557,9 +559,7 @@ export type MockPdfDocument = {
  *   processingError: 'Invalid PDF format'
  * });
  */
-export const createMockPdfDocument = (
-  overrides?: Partial<MockPdfDocument>
-): MockPdfDocument => {
+export const createMockPdfDocument = (overrides?: Partial<MockPdfDocument>): MockPdfDocument => {
   const base: MockPdfDocument = {
     id: overrides?.id ?? `pdf-${Date.now()}`,
     fileName: overrides?.fileName ?? 'test-document.pdf',
@@ -651,11 +651,12 @@ export const isValidMockRuleSpec = (obj: any): obj is MockRuleSpec => {
     typeof obj.version === 'string' &&
     typeof obj.createdAt === 'string' &&
     Array.isArray(obj.rules) &&
-    obj.rules.every((rule: any) =>
-      typeof rule === 'object' &&
-      rule !== null &&
-      typeof rule.id === 'string' &&
-      typeof rule.text === 'string'
+    obj.rules.every(
+      (rule: any) =>
+        typeof rule === 'object' &&
+        rule !== null &&
+        typeof rule.id === 'string' &&
+        typeof rule.text === 'string'
     )
   );
 };
@@ -674,7 +675,7 @@ export const validateMockData = <T>(
   if (!validator(data)) {
     throw new Error(
       `Invalid mock ${name} structure. Ensure all required fields are present.\n` +
-      `Received: ${JSON.stringify(data, null, 2)}`
+        `Received: ${JSON.stringify(data, null, 2)}`
     );
   }
 };

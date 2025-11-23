@@ -1,6 +1,5 @@
 'use client';
 
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, CacheStats } from "@/lib/api";
@@ -31,7 +30,7 @@ type ConfirmationDialog = {
 };
 
 export function AdminPageClient() {
-  const { user } = useAuthUser();
+  const { user, loading: authLoading } = useAuthUser();
 
   if (!user) return null;
   const [stats, setStats] = useState<CacheStats | null>(null);

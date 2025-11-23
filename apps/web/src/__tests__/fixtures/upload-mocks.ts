@@ -29,7 +29,7 @@ export interface AuthMockOptions {
 
 export interface GameMockOptions {
   id?: string;
-  name?: string;
+  title?: string;
   createdAt?: string;
 }
 
@@ -100,7 +100,7 @@ export function createAuthMock(options: AuthMockOptions = {}) {
 export function createGameMock(options: GameMockOptions = {}) {
   return createMockGame({
     id: options.id ?? 'game-1',
-    name: options.name ?? 'Test Game',
+    title: options.title ?? 'Test Game',
     createdAt: options.createdAt ?? new Date().toISOString()
   });
 }

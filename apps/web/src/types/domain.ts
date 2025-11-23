@@ -19,7 +19,7 @@ export interface Agent {
   id: string;
   gameId: string;
   name: string;
-  kind: string;
+  type: string; // Changed from 'kind' to match backend AgentDto
   createdAt: string;
 }
 

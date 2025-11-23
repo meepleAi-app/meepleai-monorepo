@@ -12,7 +12,7 @@ export {
   CircuitState,
   type CircuitBreakerConfig,
   getCircuitBreakerConfig,
-  canExecuteRequest,
+  canExecute,
   recordSuccess,
   recordFailure,
   resetCircuit,

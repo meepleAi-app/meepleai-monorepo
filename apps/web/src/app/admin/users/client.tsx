@@ -1,7 +1,6 @@
 'use client';
 
 import type { AuthUser } from '@/types/auth';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useCallback, useEffect, useState, startTransition } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -59,7 +58,7 @@ type ModalState = {
 };
 
 export function AdminPageClient() {
-  const { user } = useAuthUser();
+  const { user, loading: authLoading } = useAuthUser();
 
   if (!user) return null;
   // State

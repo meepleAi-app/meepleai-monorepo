@@ -35,7 +35,7 @@ jest.mock('@/lib/api', () => ({
 }));
 
 const mockApi = api as jest.Mocked<typeof api>;
-const mockChat = mockApi.chat;
+const mockChat = mockApi.chat as jest.Mocked<typeof api.chat>;
 
 // Create test store with minimal slices
 const createTestStore = () => {

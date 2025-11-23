@@ -162,7 +162,10 @@ describe('createBggClient', () => {
 
       await bggClient.getGameDetails(999999);
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/bgg/games/999999', expect.anything());
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/bgg/games/999999',
+        expect.anything()
+      );
     });
 
     it('should handle BGG ID = 1', async () => {
@@ -232,23 +235,22 @@ describe('createBggClient', () => {
         .mockResolvedValueOnce(mockDetails);
 
       const searchResult = await bggClient.search('Catan');
-      const details = await bggClient.getGameDetails(searchResult.items[0].id);
+      const details = await bggClient.getGameDetails(searchResult.results[0].bggId);
 
-      expect(searchResult.items).toHaveLength(1);
+      expect(searchResult.results).toHaveLength(1);
       expect(details.description).toBe('Full details');
     });
 
     it('should handle no search results gracefully', async () => {
-      mockHttpClient.get.mockResolvedValueOnce({ total: 0, items: [] });
+      mockHttpClient.get.mockResolvedValueOnce({ results: [] });
 
       const result = await bggClient.search('nonexistent-game-xyz');
 
-      expect(result.total).toBe(0);
-      expect(result.items).toHaveLength(0);
+      expect(result.results).toHaveLength(0);
     });
 
     it('should handle multiple sequential searches', async () => {
-      mockHttpClient.get.mockResolvedValue({ total: 0, items: [] });
+      mockHttpClient.get.mockResolvedValue({ results: [] });
 
       await bggClient.search('Catan');
       await bggClient.search('Pandemic');
@@ -260,7 +262,7 @@ describe('createBggClient', () => {
 
   describe('Edge Cases', () => {
     it('should handle concurrent searches', async () => {
-      mockHttpClient.get.mockResolvedValue({ total: 0, items: [] });
+      mockHttpClient.get.mockResolvedValue({ results: [] });
 
       const promises = [
         bggClient.search('Catan'),

@@ -105,10 +105,7 @@ describe('createPdfClient', () => {
 
       await pdfClient.getProcessingProgress('');
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/pdfs//progress',
-        expect.anything()
-      );
+      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/pdfs//progress', expect.anything());
     });
 
     it('should propagate httpClient errors', async () => {
@@ -151,9 +148,7 @@ describe('createPdfClient', () => {
 
       await pdfClient.cancelProcessing('pdf&id=123');
 
-      expect(mockHttpClient.delete).toHaveBeenCalledWith(
-        expect.stringContaining('pdf%26id%3D123')
-      );
+      expect(mockHttpClient.delete).toHaveBeenCalledWith(expect.stringContaining('pdf%26id%3D123'));
     });
 
     it('should handle UUID format pdfIds', async () => {
@@ -292,9 +287,9 @@ describe('createPdfClient', () => {
       const result2 = await pdfClient.getProcessingProgress('pdf-123');
       const result3 = await pdfClient.getProcessingProgress('pdf-123');
 
-      expect(result1?.progress).toBe(0.3);
-      expect(result2?.progress).toBe(0.7);
-      expect(result3?.progress).toBe(1.0);
+      expect(result1?.percentComplete).toBe(30);
+      expect(result2?.percentComplete).toBe(70);
+      expect(result3?.percentComplete).toBe(100);
     });
 
     it('should handle cancel during processing', async () => {

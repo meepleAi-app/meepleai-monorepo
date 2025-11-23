@@ -26,12 +26,12 @@ describe('GameProvider', () => {
   const mockGames = [
     {
       id: 'game-1',
-      name: 'Gloomhaven',
+      title: 'Gloomhaven',
       createdAt: '2024-01-01T00:00:00Z',
     },
     {
       id: 'game-2',
-      name: 'Catan',
+      title: 'Catan',
       createdAt: '2024-01-02T00:00:00Z',
     },
   ];
@@ -363,7 +363,7 @@ describe('GameProvider', () => {
 
       // Verify derived state
       expect(result.current.selectedGame).toEqual(mockGames[0]);
-      expect(result.current.selectedGame?.name).toBe('Gloomhaven');
+      expect(result.current.selectedGame?.title).toBe('Gloomhaven');
     });
 
     it('returns null for selectedGame when no game selected', async () => {

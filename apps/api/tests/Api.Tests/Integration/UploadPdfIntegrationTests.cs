@@ -359,7 +359,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
     #region 1. Invalid PDF Scenarios Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
     public async Task UploadPdf_WithCorruptedPdf_ReturnsError()
     {
         // Arrange
@@ -389,7 +389,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "corrupted PDF should not create database record");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithNonPdfFile_ReturnsError()
     {
         // Arrange
@@ -420,7 +420,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "non-PDF file should not create database record");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithEmptyFile_ReturnsError()
     {
         // Arrange
@@ -450,7 +450,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "empty file should not create database record");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithMalformedPdfStructure_ReturnsError()
     {
         // Arrange
@@ -485,7 +485,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
     #region 2. Large File Handling Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithFileNearSizeLimit_Succeeds()
     {
         // Arrange
@@ -519,7 +519,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc!.FileSizeBytes.Should().Be(nearLimitSize, "file size should be recorded correctly");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithFileExceedingSizeLimit_ReturnsError()
     {
         // Arrange
@@ -552,7 +552,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "oversized file should not create database record");
     }
 
-    [Fact]
+    [Fact(Timeout = 60000)] // 60s for performance/memory tests
     public async Task UploadPdf_WithLargeFile_HandlesMemoryEfficiently()
     {
         // Arrange
@@ -605,7 +605,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
     #region 3. Concurrent Upload Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithConcurrentUploads_HandlesCorrectly()
     {
         // Arrange
@@ -653,7 +653,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docs.Select(d => d.FileName).Should().OnlyHaveUniqueItems("file names should be unique");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WithRaceConditions_MaintainsDataIntegrity()
     {
         // Arrange
@@ -713,7 +713,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
     #region 4. Storage Failure Scenarios Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenBlobStorageFails_ReturnsError()
     {
         // Arrange - Create service provider with failing blob storage
@@ -770,7 +770,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "no database record should be created when storage fails");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenDatabaseFails_RollsBackTransaction()
     {
         // Arrange - Use a disposed context to simulate DB failure
@@ -798,7 +798,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // and proper error handling to prevent partial data
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenPartialFailure_CleansUpResources()
     {
         // Arrange - Create handler with storage that succeeds but extraction fails
@@ -841,7 +841,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenStoragePermissionDenied_ReturnsError()
     {
         // Arrange - Mock storage with permission denied error
@@ -900,7 +900,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
     #region 5. Integration Points Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_SuccessfulUpload_PersistsToDatabase()
     {
         // Arrange
@@ -948,7 +948,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.UploadedBy!.Email.Should().Be(testUser.Email);
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_SuccessfulUpload_StoresFileInBlobStorage()
     {
         // Arrange
@@ -985,7 +985,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         storedContent.Should().BeEquivalentTo(pdfBytes, "stored file content should match uploaded content");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_SuccessfulUpload_InvalidatesCache()
     {
         // Arrange
@@ -1039,7 +1039,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             Times.AtLeastOnce(), "cache invalidation should include game ID");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_SuccessfulUpload_EnqueuesBackgroundProcessing()
     {
         // Arrange
@@ -1092,7 +1092,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             Times.Once(), "background task should be enqueued exactly once");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UploadPdf_SuccessfulUpload_ReturnsCorrectResult()
     {
         // Arrange

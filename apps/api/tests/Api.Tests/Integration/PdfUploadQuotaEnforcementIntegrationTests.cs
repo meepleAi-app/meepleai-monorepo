@@ -212,7 +212,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Free Tier Quota Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
     public async Task FreeTier_FiveUploadsInDay_SixthUploadDenied()
     {
         // Arrange - Create free tier user
@@ -246,7 +246,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.Should().Contain("free tier");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task FreeTier_TwentyUploadsInWeek_TwentyFirstUploadDenied()
     {
         // Arrange - Create free tier user
@@ -279,7 +279,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Normal Tier Quota Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task NormalTier_TwentyUploadsInDay_AllAllowed()
     {
         // Arrange - Create normal tier user
@@ -313,7 +313,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.Should().Contain("normal tier");
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task NormalTier_HundredUploadsInWeek_AllAllowed()
     {
         // Arrange - Create normal tier user
@@ -349,7 +349,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Premium Tier Quota Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task PremiumTier_HundredUploadsInDay_AllAllowed()
     {
         // Arrange - Create premium tier user
@@ -384,7 +384,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Admin/Editor Bypass Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task AdminUser_UnlimitedUploads_NoQuotaCheck()
     {
         // Arrange - Create admin user (tier doesn't matter for admin)
@@ -415,7 +415,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(int.MaxValue); // WeeklyRemaining computed
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task EditorUser_UnlimitedUploads_NoQuotaCheck()
     {
         // Arrange - Create editor user
@@ -448,7 +448,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Tier Upgrade Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UserUpgrade_FreeToPremium_QuotaLimitIncreases()
     {
         // Arrange - Create free tier user and upload 5 PDFs (at limit)
@@ -482,7 +482,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (quotaCheckAfter.DailyLimit - quotaCheckAfter.DailyUploadsUsed).Should().Be(95); // DailyRemaining computed
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UserDowngrade_PremiumToFree_QuotaLimitDecreases()
     {
         // Arrange - Create premium tier user and upload 10 PDFs
@@ -520,7 +520,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Multiple Users Isolation Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task MultipleUsers_QuotaTrackedIndependently()
     {
         // Arrange - Create 3 users with different tiers
@@ -559,7 +559,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Redis Persistence Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task QuotaTracking_PersistsInRedis_AcrossServiceInstances()
     {
         // Arrange - Create user and upload 3 PDFs with first service instance

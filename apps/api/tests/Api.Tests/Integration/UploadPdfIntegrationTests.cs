@@ -196,7 +196,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         if (!services.Any(s => s.ServiceType == typeof(IBackgroundTaskService)))
         {
             var backgroundTaskMock = new Mock<IBackgroundTaskService>();
-            services.AddSingleton(backgroundTaskMock.Object);
+            services.AddSingleton<IBackgroundTaskService>(backgroundTaskMock.Object);
         }
 
         if (!services.Any(s => s.ServiceType == typeof(IAiResponseCacheService)))
@@ -204,7 +204,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             var cacheMock = new Mock<IAiResponseCacheService>();
             cacheMock.Setup(c => c.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
-            services.AddSingleton(cacheMock.Object);
+            services.AddSingleton<IAiResponseCacheService>(cacheMock.Object);
         }
 
         if (!services.Any(s => s.ServiceType == typeof(IBlobStorageService)))
@@ -218,7 +218,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
                     stream.CopyTo(fileStream);
                     return new BlobStorageResult(true, Guid.NewGuid().ToString(), filePath, stream.Length, null);
                 });
-            services.AddSingleton(blobStorageMock.Object);
+            services.AddSingleton<IBlobStorageService>(blobStorageMock.Object);
         }
 
         // Always register PDF extractors (not overrideable in current tests)
@@ -234,13 +234,13 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
                     OcrTriggered: false,
                     Quality: ExtractionQuality.High,
                     ErrorMessage: null));
-            services.AddSingleton(extractorMock.Object);
+            services.AddSingleton<IPdfTextExtractor>(extractorMock.Object);
         }
 
         if (!services.Any(s => s.ServiceType == typeof(IPdfTableExtractor)))
         {
             var tableExtractorMock = new Mock<IPdfTableExtractor>();
-            services.AddSingleton(tableExtractorMock.Object);
+            services.AddSingleton<IPdfTableExtractor>(tableExtractorMock.Object);
         }
 
         if (!services.Any(s => s.ServiceType == typeof(IPdfUploadQuotaService)))
@@ -248,7 +248,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             var quotaMock = new Mock<IPdfUploadQuotaService>();
             quotaMock.Setup(q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<AuthRole>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PdfUploadQuotaResult.Success(0, int.MaxValue, 0, int.MaxValue, DateTime.MaxValue, DateTime.MaxValue));
-            services.AddSingleton(quotaMock.Object);
+            services.AddSingleton<IPdfUploadQuotaService>(quotaMock.Object);
         }
     }
 

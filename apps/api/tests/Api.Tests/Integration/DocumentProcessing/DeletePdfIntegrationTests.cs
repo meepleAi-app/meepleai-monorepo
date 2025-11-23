@@ -130,19 +130,19 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var qdrantMock = new Mock<IQdrantService>();
         qdrantMock.Setup(q => q.DeleteDocumentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        services.AddSingleton(qdrantMock.Object);
+        services.AddSingleton<IQdrantService>(qdrantMock.Object);
 
         // Mock BlobStorage service (default: success)
         var blobStorageMock = new Mock<IBlobStorageService>();
         blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        services.AddSingleton(blobStorageMock.Object);
+        services.AddSingleton<IBlobStorageService>(blobStorageMock.Object);
 
         // Mock Cache service (default: success)
         var cacheMock = new Mock<IAiResponseCacheService>();
         cacheMock.Setup(c => c.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        services.AddSingleton(cacheMock.Object);
+        services.AddSingleton<IAiResponseCacheService>(cacheMock.Object);
     }
 
     private async Task SeedTestDataAsync()

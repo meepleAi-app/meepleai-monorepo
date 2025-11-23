@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Constants;
 using Api.Infrastructure;
@@ -14,6 +15,7 @@ using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
@@ -32,8 +34,8 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
     private readonly IBlobStorageService _blobStorageService;
     private readonly IPdfUploadQuotaService _quotaService;
     private readonly TimeProvider _timeProvider;
+    private readonly long _maxFileSizeBytes;
 
-    private const long MaxFileSizeBytes = FileConstants.MaxPdfFileSizeBytes;
     private static readonly HashSet<string> AllowedContentTypes = new() { "application/pdf" };
 
     #endregion
@@ -50,6 +52,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         IAiResponseCacheService cacheService,
         IBlobStorageService blobStorageService,
         IPdfUploadQuotaService quotaService,
+        IOptions<PdfProcessingOptions> pdfOptions,
         TimeProvider? timeProvider = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -61,6 +64,8 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        _maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -81,10 +86,10 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             return new PdfUploadResult(false, "No file provided. Please select a PDF file to upload.", null);
         }
 
-        if (file.Length > MaxFileSizeBytes)
+        if (file.Length > _maxFileSizeBytes)
         {
             var sizeMB = file.Length / 1024.0 / 1024.0;
-            var maxMB = MaxFileSizeBytes / 1024 / 1024;
+            var maxMB = _maxFileSizeBytes / 1024 / 1024;
             RecordUploadMetricSafely("validation_failed_size", file.Length);
             return new PdfUploadResult(false, $"File is too large ({sizeMB:F1}MB). Maximum size is {maxMB}MB. Try compressing the PDF or splitting into smaller files.", null);
         }
@@ -93,6 +98,19 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         {
             RecordUploadMetricSafely("validation_failed_type", file.Length);
             return new PdfUploadResult(false, $"Invalid file type ({file.ContentType}). Only PDF files are allowed. Please ensure your file has a .pdf extension.", null);
+        }
+
+        // Validate PDF file structure (Issue #1688: Prevent corrupted/malformed PDFs)
+        // IFormFile.OpenReadStream() creates a new stream each time it's called (ASP.NET Core contract)
+        // Using 'using' is safe - blob storage will open a new stream later (line 199)
+        using (var validationStream = file.OpenReadStream())
+        {
+            var (isValid, validationError) = await ValidatePdfStructureAsync(validationStream, file.FileName);
+            if (!isValid)
+            {
+                RecordUploadMetricSafely("validation_failed_structure", file.Length);
+                return new PdfUploadResult(false, validationError!, null);
+            }
         }
 
         // SEC-738: Extract and sanitize filename to prevent path injection (CWE-22, CWE-73)
@@ -271,6 +289,64 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             throw new PdfStorageException($"Failed to upload PDF: {ex.Message}", ex);
         }
 #pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// Validates PDF file structure by checking for required PDF headers and trailers.
+    /// Prevents upload of corrupted or malformed files that would fail during processing.
+    /// </summary>
+    /// <param name="stream">The file stream to validate</param>
+    /// <param name="fileName">The file name for logging</param>
+    /// <returns>Tuple of (isValid, errorMessage)</returns>
+    private static async Task<(bool IsValid, string? ErrorMessage)> ValidatePdfStructureAsync(Stream stream, string fileName)
+    {
+        const int headerCheckBytes = 1024; // Read first 1KB to find PDF header
+        const int trailerCheckBytes = 1024; // Read last 1KB to find PDF trailer
+        
+        try
+        {
+            // Check minimum file size (PDF must have at least header + trailer)
+            if (stream.Length < 50)
+            {
+                return (false, "Invalid PDF file: File is too small to be a valid PDF (minimum 50 bytes required).");
+            }
+
+            // Read beginning of file for PDF header
+            stream.Seek(0, SeekOrigin.Begin);
+            var headerBuffer = new byte[Math.Min(headerCheckBytes, (int)stream.Length)];
+            var headerBytesRead = await stream.ReadAsync(headerBuffer.AsMemory(0, headerBuffer.Length));
+            
+            // Check for PDF header signature (%PDF-1.x)
+            var headerText = System.Text.Encoding.ASCII.GetString(headerBuffer, 0, Math.Min(10, headerBytesRead));
+            if (!headerText.StartsWith("%PDF-", StringComparison.Ordinal))
+            {
+                return (false, $"Invalid PDF file: Missing PDF header signature. File appears to be corrupted or not a valid PDF.");
+            }
+
+            // Read end of file for PDF trailer
+            var trailerStart = Math.Max(0, stream.Length - trailerCheckBytes);
+            stream.Seek(trailerStart, SeekOrigin.Begin);
+            var trailerBuffer = new byte[Math.Min(trailerCheckBytes, (int)(stream.Length - trailerStart))];
+            var trailerBytesRead = await stream.ReadAsync(trailerBuffer.AsMemory(0, trailerBuffer.Length));
+            
+            // Check for PDF EOF marker (%%EOF)
+            var trailerText = System.Text.Encoding.ASCII.GetString(trailerBuffer, 0, trailerBytesRead);
+            if (!trailerText.Contains("%%EOF", StringComparison.Ordinal))
+            {
+                return (false, $"Invalid PDF file: Missing PDF end-of-file marker (%%EOF). File appears to be incomplete or malformed.");
+            }
+
+            // Reset stream position for subsequent operations
+            stream.Seek(0, SeekOrigin.Begin);
+            
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            // Reset stream position even on error
+            try { stream.Seek(0, SeekOrigin.Begin); } catch { /* Ignore seek errors */ }
+            return (false, $"Failed to validate PDF structure: {ex.Message}");
+        }
     }
 
     #endregion

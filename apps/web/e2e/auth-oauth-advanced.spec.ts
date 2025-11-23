@@ -91,7 +91,7 @@ test.describe('OAuth Advanced Scenarios', () => {
         await route.fulfill({
           status: 302,
           headers: {
-            Location: '/profile?oauth_success=google',
+            Location: '/settings?oauth_success=google',
           },
         });
       });
@@ -109,7 +109,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       });
 
       await authPage.clickLinkProvider('google');
-      await page.waitForURL('**/profile?oauth_success=google');
+      await page.waitForURL('**/settings?oauth_success=google');
       await authPage.gotoProfile(); // Reload to see updated state
 
       // Verify Google is linked
@@ -129,7 +129,7 @@ test.describe('OAuth Advanced Scenarios', () => {
         await route.fulfill({
           status: 302,
           headers: {
-            Location: '/profile?oauth_success=discord',
+            Location: '/settings?oauth_success=discord',
           },
         });
       });
@@ -148,7 +148,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       });
 
       await authPage.clickLinkProvider('discord');
-      await page.waitForURL('**/profile?oauth_success=discord');
+      await page.waitForURL('**/settings?oauth_success=discord');
       await authPage.gotoProfile();
 
       // Verify both providers linked
@@ -298,7 +298,7 @@ test.describe('OAuth Advanced Scenarios', () => {
         await route.fulfill({
           status: 302,
           headers: {
-            Location: '/profile?oauth_success=github',
+            Location: '/settings?oauth_success=github',
           },
         });
       });
@@ -316,7 +316,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       });
 
       await authPage.clickLinkProvider('github');
-      await page.waitForURL('**/profile?oauth_success=github');
+      await page.waitForURL('**/settings?oauth_success=github');
       await authPage.gotoProfile();
 
       // Verify GitHub is now linked to existing account
@@ -342,9 +342,9 @@ test.describe('OAuth Advanced Scenarios', () => {
       await page.goto('/auth/callback?code=mock-auth-code&state=mock-state&provider=google');
 
       // Should redirect to profile with success message
-      await page.waitForURL('**/profile');
+      await page.waitForURL('**/settings');
       // Success message might be transient, so we just check we're on profile
-      expect(page.url()).toContain('/profile');
+      expect(page.url()).toContain('/settings');
     });
   });
 
@@ -394,7 +394,7 @@ test.describe('OAuth Advanced Scenarios', () => {
         await route.fulfill({
           status: 302,
           headers: {
-            Location: '/profile?oauth_success=google',
+            Location: '/settings?oauth_success=google',
           },
         });
       });
@@ -412,7 +412,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       });
 
       await authPage.clickLinkProvider('google');
-      await page.waitForURL('**/profile?oauth_success=google');
+      await page.waitForURL('**/settings?oauth_success=google');
       await authPage.gotoProfile();
 
       // Verify Google is linked again
@@ -442,7 +442,7 @@ test.describe('OAuth Advanced Scenarios', () => {
         await route.fulfill({
           status: 302,
           headers: {
-            Location: '/profile?oauth_success=google',
+            Location: '/settings?oauth_success=google',
           },
         });
       });
@@ -460,7 +460,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       });
 
       await authPage.clickLinkProvider('google');
-      await page.waitForURL('**/profile?oauth_success=google');
+      await page.waitForURL('**/settings?oauth_success=google');
       await authPage.gotoProfile();
 
       // Verify account now has OAuth option while keeping email/password

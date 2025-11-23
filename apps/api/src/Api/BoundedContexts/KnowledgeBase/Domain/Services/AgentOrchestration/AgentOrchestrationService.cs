@@ -115,7 +115,9 @@ public class AgentOrchestrationService
         var confidence = qualityTracking.CalculateSearchConfidence(searchResults);
 
         // Record invocation on agent aggregate
-        agent.RecordInvocation(context.Query, 0); // TODO: Track actual token usage from LLM calls
+        // Issue #1694: This service performs orchestration/vector search only (no LLM call).
+        // LLM token tracking happens in RAG query handlers that call ILlmService.
+        agent.RecordInvocation(context.Query, new TokenUsage(0, 0, 0, 0m, "none", "orchestration"));
 
         // Build result
         return new AgentInvocationResult(

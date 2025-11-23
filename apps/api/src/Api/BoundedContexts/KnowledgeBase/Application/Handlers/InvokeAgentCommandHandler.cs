@@ -151,7 +151,9 @@ public sealed class InvokeAgentCommandHandler
             var overallConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
 
             // 8. Record invocation on agent
-            agent.RecordInvocation(request.Query, 0); // TODO: Track actual token usage from LLM calls
+            // Issue #1694: This handler performs vector search only (no LLM call), so token usage is empty.
+            // LLM calls happen in AskQuestionQueryHandler/StreamQaQueryHandler which track tokens there.
+            agent.RecordInvocation(request.Query, TokenUsage.Empty);
             await _agentRepository.UpdateAsync(agent, cancellationToken);
 
             // 9. Build and return result

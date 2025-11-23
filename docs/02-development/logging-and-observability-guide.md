@@ -803,6 +803,68 @@ catch (Exception ex)
 }
 ```
 
+#### LLM Token Usage Metrics (Issue #1694)
+
+```csharp
+// Record LLM token usage with OpenTelemetry GenAI semantic conventions
+var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, ct);
+
+if (llmResult.Usage != null && llmResult.Cost != null)
+{
+    var tokenUsage = TokenUsage.FromLlmResult(llmResult.Usage, llmResult.Cost);
+
+    // Automatically records with OpenTelemetry GenAI conventions:
+    // - gen_ai.client.token.usage (with gen_ai.token.type=input/output)
+    // - gen_ai.client.operation.duration
+    // - meepleai.llm.cost.usd
+    MeepleAiMetrics.RecordLlmTokenUsage(
+        promptTokens: tokenUsage.PromptTokens,
+        completionTokens: tokenUsage.CompletionTokens,
+        totalTokens: tokenUsage.TotalTokens,
+        modelId: tokenUsage.ModelId,
+        provider: tokenUsage.Provider,
+        operationDurationMs: sw.Elapsed.TotalMilliseconds,
+        costUsd: tokenUsage.EstimatedCost);
+}
+```
+
+**Prometheus queries**:
+```promql
+# Total prompt tokens by model
+sum(rate(gen_ai_client_token_usage{gen_ai_token_type="input"}[5m])) by (gen_ai_request_model)
+
+# Total completion tokens by model
+sum(rate(gen_ai_client_token_usage{gen_ai_token_type="output"}[5m])) by (gen_ai_request_model)
+
+# Total LLM cost by model
+sum(rate(meepleai_llm_cost_usd[5m])) by (model_id)
+
+# LLM operation duration P95
+histogram_quantile(0.95, gen_ai_client_operation_duration_bucket)
+```
+
+#### Agent Token Usage and Cost Tracking
+
+```csharp
+// For handlers that invoke agents WITH LLM calls
+var tokenUsage = TokenUsage.FromLlmResult(llmResult.Usage, llmResult.Cost);
+
+MeepleAiMetrics.RecordAgentInvocationWithTokens(
+    agentType: "RagAgent",
+    tokenUsage: tokenUsage,
+    durationMs: sw.Elapsed.TotalMilliseconds,
+    success: true);
+```
+
+**Prometheus queries**:
+```promql
+# Agent token usage by type
+sum(rate(meepleai_agent_tokens_total[5m])) by (agent_type)
+
+# Agent cost by type
+sum(rate(meepleai_agent_cost_usd[5m])) by (agent_type)
+```
+
 ### Creating Custom Metrics
 
 Se hai bisogno di una nuova metrica:

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -252,6 +253,9 @@ export function PdfViewerModal({
       <DialogContent className="max-w-6xl h-[90vh] p-0 flex flex-col">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>{documentName}</DialogTitle>
+          <DialogDescription className="sr-only">
+            PDF document viewer with page navigation and zoom controls
+          </DialogDescription>
         </DialogHeader>
 
         {error ? (

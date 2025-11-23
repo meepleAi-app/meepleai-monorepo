@@ -59,6 +59,10 @@ export interface ChatContextValue {
   activeChatId: string | null;
   messages: Message[];
 
+  // Game context (from GameProvider)
+  selectedGameId: string | null;
+  selectedAgentId: string | null;
+
   // Thread operations (DDD ChatThread API)
   createChat: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
@@ -73,6 +77,7 @@ export interface ChatContextValue {
   // State
   loading: LoadingState;
   error: string | null;
+  selectGame: (gameId: string) => Promise<void>;
 }
 
 // ============================================================================
@@ -134,7 +139,7 @@ const ChatContext = createContext<ChatContextValue | null>(null);
 // ============================================================================
 
 export function ChatProvider({ children }: PropsWithChildren) {
-  const { selectedGameId, selectedAgentId } = useGame();
+  const { selectedGameId, selectedAgentId, selectGame } = useGame();
 
   // Load initial state from localStorage
   const [state, setState] = useState<ChatState>(() => {
@@ -639,6 +644,9 @@ export function ChatProvider({ children }: PropsWithChildren) {
       activeChat,
       activeChatId,
       messages,
+      selectedGameId,
+      selectedAgentId,
+      selectGame,
       createChat,
       deleteChat,
       selectChat,
@@ -654,6 +662,9 @@ export function ChatProvider({ children }: PropsWithChildren) {
       activeChat,
       activeChatId,
       messages,
+      selectedGameId,
+      selectedAgentId,
+      selectGame,
       createChat,
       deleteChat,
       selectChat,

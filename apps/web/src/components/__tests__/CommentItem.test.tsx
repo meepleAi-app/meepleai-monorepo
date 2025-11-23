@@ -11,7 +11,7 @@ interface MockMentionInputProps {
   disabled?: boolean;
 }
 
-jest.mock('@/components/chat/MentionInput', () => ({
+jest.mock('../chat/MentionInput', () => ({
   MentionInput: ({ value, onChange, placeholder, disabled }: MockMentionInputProps) => (
     <textarea
       data-testid="mention-input"

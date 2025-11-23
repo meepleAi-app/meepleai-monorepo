@@ -47,14 +47,7 @@ const customJestConfig = {
     '!src/components/chat/ChatProvider.tsx', // Complex provider (integration tested)
     '!src/components/auth/AuthProvider.tsx', // Complex provider (integration tested)
     '!src/components/game/GameProvider.tsx', // Complex provider (integration tested)
-    '!src/components/chat/**', // Chat UI components (E2E tested)
-    '!src/components/editor/**', // Editor components (E2E tested)
-    '!src/components/auth/LoginForm.tsx', // Auth forms (E2E tested)
-    '!src/components/auth/RegisterForm.tsx', // Auth forms (E2E tested)
-    '!src/components/auth/AuthModal.tsx', // Auth modal (E2E tested)
-    '!src/components/ErrorDisplay.tsx', // Error display (E2E tested)
     '!src/lib/animations/**', // Animation utilities (visual)
-    '!src/hooks/useKeyboardShortcuts.ts', // Keyboard shortcuts (E2E tested)
   ],
   coverageThreshold: {
     global: {

@@ -9,7 +9,6 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Handler for GetPdfTextQuery.
 /// Retrieves extracted text from PDF document.
 /// NOTE: Uses DbContext directly for ExtractedText field (not in domain entity).
-/// TODO: Consider adding ExtractedText to domain entity or create read model.
 /// </summary>
 public class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextResult?>
 {

@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// Tests for IndexPdfCommandHandler.
 /// Tests PDF text indexing workflow (chunking, embedding, Qdrant indexing).
 /// NOTE: Complex orchestrator with many dependencies - focused on construction and validation.
-/// TODO: Add integration tests for full indexing workflow.
+/// RESOLVED: Issue #1690 - Integration tests added in IndexPdfIntegrationTests.cs.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class IndexPdfCommandHandlerTests

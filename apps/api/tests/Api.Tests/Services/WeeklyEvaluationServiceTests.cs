@@ -578,11 +578,11 @@ public class WeeklyEvaluationServiceTests : IDisposable
         var ragServiceMock = new Mock<IRagEvaluationService>();
         ragServiceMock
             .Setup(x => x.LoadDatasetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<RagEvaluationDataset>());
+            .ReturnsAsync(new RagEvaluationDataset { Queries = Array.Empty<RagEvaluationQuery>() });
 
         ragServiceMock
             .Setup(x => x.EvaluateAsync(
-                It.IsAny<List<RagEvaluationDataset>>(),
+                It.IsAny<RagEvaluationDataset>(),
                 It.IsAny<int>(),
                 It.IsAny<RagQualityThresholds>(),
                 It.IsAny<CancellationToken>()))

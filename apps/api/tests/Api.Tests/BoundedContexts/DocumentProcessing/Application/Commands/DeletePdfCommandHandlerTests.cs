@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Tests for DeletePdfCommandHandler.
 /// Tests PDF deletion with cascade cleanup (document, vectors, blob storage, cache).
 /// NOTE: Complex handler with many dependencies - focused on construction and error handling.
-/// TODO: Add integration tests for full deletion workflow.
+/// RESOLVED: Issue #1690 - Integration tests added in DeletePdfIntegrationTests.cs.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class DeletePdfCommandHandlerTests

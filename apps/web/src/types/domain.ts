@@ -3,6 +3,8 @@
  * Centralized type definitions for core business entities
  */
 
+import type { FeedbackOutcome } from '@/lib/constants/feedback';
+
 /**
  * Game entity
  */
@@ -77,7 +79,7 @@ export interface ChatThreadMessage {
   backendMessageId?: string;
   endpoint?: string;
   gameId?: string;
-  feedback?: 'helpful' | 'not-helpful' | null;
+  feedback?: FeedbackOutcome | null;
 }
 
 /**
@@ -153,7 +155,7 @@ export interface Message {
   snippets?: Snippet[];
   citations?: Citation[]; // Issue #859: RAG citations with relevance scoring
   followUpQuestions?: string[];
-  feedback?: 'helpful' | 'not-helpful' | null;
+  feedback?: FeedbackOutcome | null;
   endpoint?: string;
   gameId?: string;
   timestamp: Date;

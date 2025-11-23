@@ -25,6 +25,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { useChatStore } from './store';
 import { ChatThread, Message, Game, Agent } from '@/types';
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import type { FeedbackOutcome } from '@/lib/constants/feedback';
 
 export interface ChatContextValue {
   // Authentication (from AuthProvider - not migrated)
@@ -48,7 +49,7 @@ export interface ChatContextValue {
 
   // Messaging (from Zustand MessagesSlice)
   sendMessage: (content: string) => Promise<void>;
-  setMessageFeedback: (messageId: string, feedback: 'helpful' | 'not-helpful') => Promise<void>;
+  setMessageFeedback: (messageId: string, feedback: FeedbackOutcome) => Promise<void>;
   editMessage: (messageId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
 

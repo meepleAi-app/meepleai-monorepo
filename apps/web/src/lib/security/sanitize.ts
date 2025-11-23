@@ -45,28 +45,58 @@ const DEFAULT_CONFIG: DOMPurify.Config = {
   // Allowed tags
   ALLOWED_TAGS: [
     // Text formatting
-    'b', 'i', 'u', 'em', 'strong', 'span', 'p', 'br', 'hr',
+    'b',
+    'i',
+    'u',
+    'em',
+    'strong',
+    'span',
+    'p',
+    'br',
+    'hr',
     // Lists
-    'ul', 'ol', 'li',
+    'ul',
+    'ol',
+    'li',
     // Tables
-    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    'table',
+    'thead',
+    'tbody',
+    'tr',
+    'th',
+    'td',
     // Headers
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
     // Links and images
-    'a', 'img',
+    'a',
+    'img',
     // Code
-    'code', 'pre',
+    'code',
+    'pre',
     // Blockquotes
     'blockquote',
   ],
 
   // Allowed attributes
   ALLOWED_ATTR: [
-    'href', 'title', 'alt', 'src', 'class', 'id',
+    'href',
+    'title',
+    'alt',
+    'src',
+    'class',
+    'id',
     // For accessibility
-    'aria-label', 'aria-describedby', 'role',
+    'aria-label',
+    'aria-describedby',
+    'role',
     // For tables
-    'colspan', 'rowspan',
+    'colspan',
+    'rowspan',
   ],
 
   // Additional security options
@@ -76,7 +106,8 @@ const DEFAULT_CONFIG: DOMPurify.Config = {
   RETURN_TRUSTED_TYPE: false, // For browser compatibility
 
   // URL sanitization - blocks data:, javascript:, vbscript:, file:
-  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
+  ALLOWED_URI_REGEXP:
+    /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 
   // Additional protections
   ADD_TAGS: [], // Don't add any extra tags
@@ -97,11 +128,7 @@ const DEFAULT_CONFIG: DOMPurify.Config = {
  * Use for untrusted user input (comments, forum posts, etc.)
  */
 const STRICT_CONFIG: DOMPurify.Config = {
-  ALLOWED_TAGS: [
-    'b', 'i', 'u', 'em', 'strong', 'p', 'br',
-    'ul', 'ol', 'li',
-    'code', 'pre',
-  ],
+  ALLOWED_TAGS: ['b', 'i', 'u', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'code', 'pre'],
   ALLOWED_ATTR: ['class'], // Only allow class for styling
   ALLOW_DATA_ATTR: false,
   ALLOW_UNKNOWN_PROTOCOLS: false,
@@ -136,10 +163,7 @@ const PLAIN_TEXT_CONFIG: DOMPurify.Config = {
  * // Result: '<p>Safe content</p>'
  * ```
  */
-export function sanitizeHtml(
-  html: string,
-  config: DOMPurify.Config = DEFAULT_CONFIG
-): string {
+export function sanitizeHtml(html: string, config: DOMPurify.Config = DEFAULT_CONFIG): string {
   if (typeof window === 'undefined') {
     // Server-side: return empty string (DOMPurify requires DOM)
     // In production, consider using a server-side sanitization library
@@ -169,14 +193,37 @@ export function sanitizeHtml(
     if (data.attrName === 'title') {
       const value = data.attrValue || '';
 
-      // Remove HTML tags and dangerous content from title attribute
-      // Title attributes should only contain plain text
-      const cleaned = value
-        .replace(/<[^>]*>/g, '') // Remove all HTML tags
-        .replace(/javascript:/gi, '') // Remove javascript: protocol
-        .replace(/on\w+\s*=/gi, ''); // Remove event handlers
+      // Step 1: Use whitelist approach - only allow safe characters
+      // This prevents multi-character sanitization bypass attacks (CWE-182)
+      // by using a positive security model instead of sequential blacklist replacements
+      let cleaned = value.replace(/[^a-zA-Z0-9\s.,!?;:()\-'"]/g, '');
 
-      data.attrValue = cleaned;
+      // Step 2: Remove dangerous keywords (defense-in-depth)
+      // Even though these can't execute in title attributes, remove them for extra safety
+      const dangerousPatterns = [
+        /javascript:/gi,
+        /vbscript:/gi,
+        /data:/gi,
+        /file:/gi,
+        /on\w+\s*=/gi, // event handlers with equals: onclick=, onload=
+        /on(click|load|error|mouseover|mouseout|focus|blur|change|submit|keypress|keydown|keyup)/gi, // common event handlers
+      ];
+
+      // DoS protection: limit iterations to prevent infinite loops with pathological inputs
+      const MAX_ITERATIONS = 100;
+
+      for (const pattern of dangerousPatterns) {
+        // Use while loop to handle nested patterns
+        let previousValue;
+        let iterations = 0;
+        do {
+          previousValue = cleaned;
+          cleaned = cleaned.replace(pattern, '');
+          iterations++;
+        } while (cleaned !== previousValue && iterations < MAX_ITERATIONS); // Continue until no more changes or limit reached
+      }
+
+      data.attrValue = cleaned.trim();
     }
   });
 

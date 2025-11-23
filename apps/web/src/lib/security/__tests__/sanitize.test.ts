@@ -259,4 +259,61 @@ describe('Security Edge Cases', () => {
     const result = sanitizeHtml(pollution);
     expect(result).not.toContain('__proto__');
   });
+
+  it('should prevent multi-character sanitization bypass attacks (CWE-182)', () => {
+    // Test for incomplete multi-character sanitization vulnerability
+    // Previously, sequential .replace() calls could be bypassed with nested patterns
+    // Now using whitelist approach for title attributes
+
+    // Attack 1: Nested javascript: protocol in title attribute
+    const attack1 = '<p title="javajavascript:script:alert(1)">Test</p>';
+    const result1 = sanitizeHtml(attack1);
+    expect(result1).not.toContain('javascript:');
+    expect(result1).toContain('<p');
+
+    // Attack 2: Nested event handler in title attribute
+    const attack2 = '<span title="onon<script>click=alert(1)">Test</span>';
+    const result2 = sanitizeHtml(attack2);
+    expect(result2).not.toContain('onclick');
+    expect(result2).not.toContain('<script');
+
+    // Attack 3: HTML tags in title attribute
+    const attack3 = '<p title="<img src=x onerror=alert(1)>">Test</p>';
+    const result3 = sanitizeHtml(attack3);
+    // Title should be sanitized to only contain safe characters
+    expect(result3).not.toContain('onerror');
+    expect(result3).not.toContain('src=x');
+
+    // Verify that safe content in title is preserved
+    const safe = '<p title="Safe Title: Game Rules!">Content</p>';
+    const resultSafe = sanitizeHtml(safe);
+    expect(resultSafe).toContain('title');
+    expect(resultSafe).toContain('Safe Title');
+    expect(resultSafe).toContain('Content');
+  });
+
+  it('should handle DoS protection for deeply nested patterns', () => {
+    // Test that DoS protection (MAX_ITERATIONS) prevents infinite loops
+    // while still sanitizing deeply nested patterns
+
+    // Create a deeply nested pattern (would require many iterations to clean)
+    let deeplyNested = 'javascript:';
+    for (let i = 0; i < 50; i++) {
+      deeplyNested = 'java' + deeplyNested + 'script:';
+    }
+
+    const attack = `<p title="${deeplyNested}alert(1)">Test</p>`;
+    const result = sanitizeHtml(attack);
+
+    // Should complete without hanging (DoS protection works)
+    // May still contain some "javascript:" if too deeply nested (100 iteration limit)
+    // but the important thing is it doesn't hang
+    expect(result).toContain('<p');
+    expect(result).toContain('Test');
+
+    // Verify moderate nesting is fully cleaned (within 100 iterations)
+    const moderateNesting = '<p title="javajavascript:javascript:script:alert(1)">Test</p>';
+    const result2 = sanitizeHtml(moderateNesting);
+    expect(result2).not.toContain('javascript:');
+  });
 });

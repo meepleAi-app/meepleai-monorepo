@@ -157,12 +157,10 @@ export function AccessibleModal({
         {/* Title - direct child of DialogContent for Radix requirements */}
         <DialogTitle id={titleId.current}>{title}</DialogTitle>
 
-        {/* Description */}
-        {description && (
-          <DialogDescription id={descriptionId.current}>
-            {description}
-          </DialogDescription>
-        )}
+        {/* Description - always present for Radix accessibility requirements */}
+        <DialogDescription id={descriptionId.current} className={!description ? 'sr-only' : ''}>
+          {description || 'Dialog content'}
+        </DialogDescription>
 
         {/* Modal Content */}
         <div className="mt-4">{children}</div>

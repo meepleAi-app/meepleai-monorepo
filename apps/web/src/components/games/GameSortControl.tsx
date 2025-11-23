@@ -19,7 +19,7 @@ const SORT_FIELDS: Array<{ value: GameSortField; label: string }> = [
 
 export function GameSortControl({ sortOptions, onChange }: GameSortControlProps) {
   const handleFieldChange = (field: string) => {
-    if (!field) {
+    if (!field || field === 'none') {
       onChange(null);
     } else {
       onChange({
@@ -52,14 +52,14 @@ export function GameSortControl({ sortOptions, onChange }: GameSortControlProps)
           Sort by
         </Label>
         <Select
-          value={sortOptions?.field || ''}
+          value={sortOptions?.field || 'none'}
           onValueChange={handleFieldChange}
         >
           <SelectTrigger id="sortField">
             <SelectValue placeholder="None" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
+            <SelectItem value="none">None</SelectItem>
             {SORT_FIELDS.map(({ value, label }) => (
               <SelectItem key={value} value={value}>
                 {label}

@@ -60,9 +60,9 @@ export function GameDetailModal({ game, open, onOpenChange }: GameDetailModalPro
               <Badge variant="secondary">BGG</Badge>
             )}
           </DialogTitle>
-          {game.publisher && (
-            <DialogDescription>{game.publisher}</DialogDescription>
-          )}
+          <DialogDescription>
+            {game.publisher || 'Board game details'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

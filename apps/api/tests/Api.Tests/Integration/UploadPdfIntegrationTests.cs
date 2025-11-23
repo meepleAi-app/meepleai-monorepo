@@ -1152,6 +1152,10 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc!.FilePath.Should().NotBeNullOrWhiteSpace();
 
         // Verify file was actually written
+        // Note: File.Exists() is acceptable here as it's a fast metadata-only operation
+        // that doesn't perform actual disk I/O. Using Task.Run() would add more overhead
+        // than the operation itself. Actual file I/O uses async (File.ReadAllBytesAsync below).
+        // Reference: https://learn.microsoft.com/en-us/dotnet/standard/io/asynchronous-file-i-o
         File.Exists(doc.FilePath).Should().BeTrue("file should exist in blob storage location");
 
         // Verify file content matches

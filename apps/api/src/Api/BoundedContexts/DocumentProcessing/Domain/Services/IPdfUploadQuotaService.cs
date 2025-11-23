@@ -4,18 +4,46 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 
 /// <summary>
 /// Domain service for managing PDF upload quotas based on user tier.
+///
+/// <para><strong>Authorization Behavior:</strong></para>
+/// <list type="bullet">
+/// <item><description>Admin and Editor roles: <strong>Unlimited uploads</strong> (bypass all quota checks)</description></item>
+/// <item><description>User role: Subject to tier-based daily and weekly limits</description></item>
+/// </list>
+///
+/// <para><strong>Tier Limits (default values):</strong></para>
+/// <list type="bullet">
+/// <item><description>Free: 5 PDF/day, 20 PDF/week</description></item>
+/// <item><description>Normal: 20 PDF/day, 100 PDF/week</description></item>
+/// <item><description>Premium: 100 PDF/day, 500 PDF/week</description></item>
+/// </list>
+///
+/// <para>Limits are configurable via SystemConfiguration with keys: UploadLimits:{tier}:{DailyLimit|WeeklyLimit}</para>
 /// </summary>
 public interface IPdfUploadQuotaService
 {
     /// <summary>
     /// Checks if a user can upload a PDF based on their tier limits.
-    /// Admin and Editor roles bypass quota checks.
+    ///
+    /// <para><strong>Role-Based Bypass:</strong></para>
+    /// <para>Admin and Editor roles automatically bypass quota checks and receive unlimited uploads.
+    /// This is enforced at the service level for defense in depth, even if endpoint validation exists.</para>
+    ///
+    /// <para><strong>Quota Enforcement:</strong></para>
+    /// <para>Regular users (User role) are subject to tier-based limits:
+    /// - Checked against daily limit first (reset at midnight UTC)
+    /// - Then checked against weekly limit (reset Monday midnight UTC)
+    /// - Returns detailed quota information including usage, limits, and reset times</para>
+    ///
+    /// <para><strong>Fail-Open Pattern:</strong></para>
+    /// <para>If Redis is unavailable, the check succeeds (allows upload) to prioritize availability over strict enforcement.</para>
     /// </summary>
-    /// <param name="userId">User ID</param>
-    /// <param name="userTier">User's subscription tier</param>
-    /// <param name="userRole">User's role</param>
+    /// <param name="userId">User ID to check quota for</param>
+    /// <param name="userTier">User's subscription tier (free/normal/premium)</param>
+    /// <param name="userRole">User's role (determines if quota bypass applies)</param>
     /// <param name="ct">Cancellation token</param>
-    /// <returns>Result with allowed status and quota information</returns>
+    /// <returns>Result with allowed status, quota usage, limits, and reset times</returns>
+    /// <exception cref="ArgumentNullException">Thrown if userTier or userRole is null</exception>
     Task<PdfUploadQuotaResult> CheckQuotaAsync(
         Guid userId,
         UserTier userTier,

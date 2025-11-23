@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -92,7 +93,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         // Register domain services
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Infrastructure.DomainEventCollector>();
+        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -240,7 +241,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             services.DbContext,
             services.Logger);
 
-        var command = new UpdateUserTierCommand(adminUser.Id, regularUser.Id, UserTier.Normal.Value);
+        var command = new UpdateUserTierCommand(regularUser.Id, UserTier.Normal.Value, adminUser.Id);
 
         // Act
         await handler.Handle(command, TestCancellationToken);
@@ -274,7 +275,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             services.DbContext,
             services.Logger);
 
-        var command = new UpdateUserTierCommand(adminUser.Id, premiumUser.Id, UserTier.Free.Value);
+        var command = new UpdateUserTierCommand(premiumUser.Id, UserTier.Free.Value, adminUser.Id);
 
         // Act
         await handler.Handle(command, TestCancellationToken);
@@ -364,7 +365,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             services.DbContext,
             services.Logger);
 
-        var command = new UpdateUserTierCommand(adminUser.Id, targetUser.Id, "invalid-tier");
+        var command = new UpdateUserTierCommand(targetUser.Id, "invalid-tier", adminUser.Id);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
@@ -394,7 +395,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             services.Logger);
 
         var nonExistentUserId = Guid.NewGuid();
-        var command = new UpdateUserTierCommand(adminUser.Id, nonExistentUserId, UserTier.Premium.Value);
+        var command = new UpdateUserTierCommand(nonExistentUserId, UserTier.Premium.Value, adminUser.Id);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
@@ -427,7 +428,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             services.Logger);
 
         var nonExistentRequesterId = Guid.NewGuid();
-        var command = new UpdateUserTierCommand(nonExistentRequesterId, targetUser.Id, UserTier.Premium.Value);
+        var command = new UpdateUserTierCommand(targetUser.Id, UserTier.Premium.Value, nonExistentRequesterId);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
@@ -469,7 +470,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             services.Logger);
 
         // Admin trying to change their own tier
-        var command = new UpdateUserTierCommand(adminUser.Id, adminUser.Id, UserTier.Premium.Value);
+        var command = new UpdateUserTierCommand(adminUser.Id, UserTier.Premium.Value, adminUser.Id);
 
         // Act - This test verifies the actual behavior (could succeed or fail based on business rules)
         var result = await handler.Handle(command, TestCancellationToken);
@@ -505,7 +506,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             services.Logger);
 
         // User is already Premium, setting to Premium again (idempotent operation)
-        var command = new UpdateUserTierCommand(adminUser.Id, premiumUser.Id, UserTier.Premium.Value);
+        var command = new UpdateUserTierCommand(premiumUser.Id, UserTier.Premium.Value, adminUser.Id);
 
         // Act - Should succeed as idempotent operation
         var result = await handler.Handle(command, TestCancellationToken);
@@ -532,7 +533,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         // Create editor user (per CLAUDE.md: admin/editor/user roles exist)
         var editorUser = new UserBuilder()
             .WithEmail("editor@test.com")
-            .WithRole(UserRole.Editor)
+            .WithRole(AuthRole.Editor)
             .Build();
 
         var targetUser = new UserBuilder()

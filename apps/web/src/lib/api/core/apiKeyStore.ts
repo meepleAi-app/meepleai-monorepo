@@ -4,10 +4,9 @@ const STORAGE_KEY = 'meepleai:apiKey';
 
 let memoryApiKey: string | null = null;
 let isHydrating = false;
-let hydrationPromise: Promise<void> | null = null;
 
 // Track hydration status to prevent race conditions
-let hydrationPromise: Promise<boolean> | null = null;
+let hydrationPromise: Promise<void> | null = null;
 let isHydrated = false;
 
 const isBrowser = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';

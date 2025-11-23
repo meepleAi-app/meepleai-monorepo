@@ -65,14 +65,14 @@ export function GameFilterPanel({
               <div className="space-y-1">
                 <Label htmlFor="minPlayers" className="text-xs text-muted-foreground">Min</Label>
                 <Select
-                  value={filters.minPlayers?.toString() || ''}
-                  onValueChange={(value) => handleFilterChange('minPlayers', value ? parseInt(value) : undefined)}
+                  value={filters.minPlayers?.toString() || 'none'}
+                  onValueChange={(value) => handleFilterChange('minPlayers', value === 'none' ? undefined : parseInt(value))}
                 >
                   <SelectTrigger id="minPlayers">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem value="none">Any</SelectItem>
                     {PLAYER_OPTIONS.map(num => (
                       <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
                     ))}
@@ -83,14 +83,14 @@ export function GameFilterPanel({
               <div className="space-y-1">
                 <Label htmlFor="maxPlayers" className="text-xs text-muted-foreground">Max</Label>
                 <Select
-                  value={filters.maxPlayers?.toString() || ''}
-                  onValueChange={(value) => handleFilterChange('maxPlayers', value ? parseInt(value) : undefined)}
+                  value={filters.maxPlayers?.toString() || 'none'}
+                  onValueChange={(value) => handleFilterChange('maxPlayers', value === 'none' ? undefined : parseInt(value))}
                 >
                   <SelectTrigger id="maxPlayers">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem value="none">Any</SelectItem>
                     {PLAYER_OPTIONS.map(num => (
                       <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
                     ))}
@@ -109,14 +109,14 @@ export function GameFilterPanel({
               <div className="space-y-1">
                 <Label htmlFor="minPlayTime" className="text-xs text-muted-foreground">Min</Label>
                 <Select
-                  value={filters.minPlayTime?.toString() || ''}
-                  onValueChange={(value) => handleFilterChange('minPlayTime', value ? parseInt(value) : undefined)}
+                  value={filters.minPlayTime?.toString() || 'none'}
+                  onValueChange={(value) => handleFilterChange('minPlayTime', value === 'none' ? undefined : parseInt(value))}
                 >
                   <SelectTrigger id="minPlayTime">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem value="none">Any</SelectItem>
                     {PLAYTIME_OPTIONS.map(time => (
                       <SelectItem key={time} value={time.toString()}>{time}</SelectItem>
                     ))}
@@ -127,14 +127,14 @@ export function GameFilterPanel({
               <div className="space-y-1">
                 <Label htmlFor="maxPlayTime" className="text-xs text-muted-foreground">Max</Label>
                 <Select
-                  value={filters.maxPlayTime?.toString() || ''}
-                  onValueChange={(value) => handleFilterChange('maxPlayTime', value ? parseInt(value) : undefined)}
+                  value={filters.maxPlayTime?.toString() || 'none'}
+                  onValueChange={(value) => handleFilterChange('maxPlayTime', value === 'none' ? undefined : parseInt(value))}
                 >
                   <SelectTrigger id="maxPlayTime">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem value="none">Any</SelectItem>
                     {PLAYTIME_OPTIONS.map(time => (
                       <SelectItem key={time} value={time.toString()}>{time}</SelectItem>
                     ))}
@@ -153,14 +153,14 @@ export function GameFilterPanel({
               <div className="space-y-1">
                 <Label htmlFor="yearFrom" className="text-xs text-muted-foreground">From</Label>
                 <Select
-                  value={filters.yearFrom?.toString() || ''}
-                  onValueChange={(value) => handleFilterChange('yearFrom', value ? parseInt(value) : undefined)}
+                  value={filters.yearFrom?.toString() || 'none'}
+                  onValueChange={(value) => handleFilterChange('yearFrom', value === 'none' ? undefined : parseInt(value))}
                 >
                   <SelectTrigger id="yearFrom">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem value="none">Any</SelectItem>
                     {YEAR_OPTIONS.map(year => (
                       <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                     ))}
@@ -171,14 +171,14 @@ export function GameFilterPanel({
               <div className="space-y-1">
                 <Label htmlFor="yearTo" className="text-xs text-muted-foreground">To</Label>
                 <Select
-                  value={filters.yearTo?.toString() || ''}
-                  onValueChange={(value) => handleFilterChange('yearTo', value ? parseInt(value) : undefined)}
+                  value={filters.yearTo?.toString() || 'none'}
+                  onValueChange={(value) => handleFilterChange('yearTo', value === 'none' ? undefined : parseInt(value))}
                 >
                   <SelectTrigger id="yearTo">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem value="none">Any</SelectItem>
                     {YEAR_OPTIONS.map(year => (
                       <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                     ))}

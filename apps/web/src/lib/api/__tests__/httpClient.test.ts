@@ -16,6 +16,7 @@ import {
 } from '../core/errors';
 import { resetRetryMetrics, getRetryMetrics } from '../core/metrics';
 import { globalRequestCache } from '../core/requestCache';
+import { resetAllCircuits } from '../core/circuitBreaker';
 
 describe('getApiBase', () => {
   let originalEnv: NodeJS.ProcessEnv;
@@ -63,6 +64,8 @@ describe('HttpClient', () => {
   beforeEach(() => {
     // Clear request cache before each test
     globalRequestCache.clear();
+    // Reset circuit breaker to prevent test interference
+    resetAllCircuits();
 
     mockFetch = jest.fn();
     client = new HttpClient({ baseUrl: 'http://localhost:8080', fetchImpl: mockFetch });
@@ -471,7 +474,10 @@ describe('HttpClient', () => {
       });
 
       await expect(
-        client.get('/api/v1/test', undefined, { skipErrorLogging: true })
+        client.get('/api/v1/test', undefined, {
+          skipErrorLogging: true,
+          retry: { skipRetry: true }, // Skip retry to test error handling directly
+        })
       ).rejects.toThrow(ServerError);
 
       // Logger should not be called
@@ -489,7 +495,9 @@ describe('HttpClient', () => {
       });
 
       try {
-        await client.get('/api/v1/test');
+        await client.get('/api/v1/test', undefined, {
+          retry: { skipRetry: true }, // Skip retry to test error handling directly
+        });
       } catch (error) {
         expect((error as ServerError).correlationId).toBe('test-correlation-xyz');
       }
@@ -539,21 +547,7 @@ describe('HttpClient', () => {
     });
 
     it('should retry on 500 error and succeed', async () => {
-      mockFetch
-        .mockRejectedValueOnce({
-          ok: false,
-          status: 500,
-          json: async () => ({ error: 'Server error' }),
-          headers: new Headers(),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({ data: 'success' }),
-          headers: new Headers(),
-        });
-
-      // First call fails, second call succeeds
+      // First call fails with 500, second call succeeds
       mockFetch
         .mockResolvedValueOnce({
           ok: false,
@@ -1019,11 +1013,13 @@ describe('HttpClient', () => {
         };
       });
 
-      // First request should fail
-      await expect(client.get('/api/v1/users')).rejects.toThrow();
+      // First request should fail (skip retry to test deduplication directly)
+      await expect(
+        client.get('/api/v1/users', undefined, { retry: { skipRetry: true } })
+      ).rejects.toThrow();
 
-      // Second request should retry (cache cleared on failure)
-      const result = await client.get('/api/v1/users');
+      // Second request should succeed (cache cleared on failure)
+      const result = await client.get('/api/v1/users', undefined, { retry: { skipRetry: true } });
       expect(result).toEqual({ data: 'success' });
       expect(callCount).toBe(2);
     });

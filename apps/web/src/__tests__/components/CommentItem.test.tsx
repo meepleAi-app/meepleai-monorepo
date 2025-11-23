@@ -20,7 +20,7 @@ interface MockMentionInputProps {
   disabled?: boolean;
 }
 
-jest.mock('../../components/MentionInput', () => ({
+jest.mock('@/components/chat/MentionInput', () => ({
   MentionInput: ({ value, onChange, placeholder, disabled }: MockMentionInputProps) => (
     <textarea
       data-testid="mention-input"
@@ -30,6 +30,24 @@ jest.mock('../../components/MentionInput', () => ({
       disabled={disabled}
     />
   ),
+}));
+
+// Mock dialog hooks
+const mockConfirm = jest.fn();
+const mockAlert = jest.fn();
+
+jest.mock('@/hooks/useConfirmDialog', () => ({
+  useConfirmDialog: () => ({
+    confirm: mockConfirm,
+    ConfirmDialogComponent: () => null,
+  }),
+}));
+
+jest.mock('@/hooks/useAlertDialog', () => ({
+  useAlertDialog: () => ({
+    alert: mockAlert,
+    AlertDialogComponent: () => null,
+  }),
 }));
 
 /**
@@ -77,8 +95,8 @@ describe('CommentItem Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    window.confirm = jest.fn(() => true);
-    window.alert = jest.fn();
+    mockConfirm.mockResolvedValue(true);
+    mockAlert.mockResolvedValue(undefined);
   });
 
   /**
@@ -383,7 +401,11 @@ describe('CommentItem Component', () => {
       fireEvent.click(screen.getByText('Salva'));
 
       await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith('Impossibile modificare il commento');
+        expect(mockAlert).toHaveBeenCalledWith({
+          title: "Errore",
+          message: "Impossibile modificare il commento",
+          variant: "error",
+        });
       });
     });
 
@@ -411,12 +433,19 @@ describe('CommentItem Component', () => {
 
       fireEvent.click(screen.getByLabelText('Delete comment'));
 
-      expect(window.confirm).toHaveBeenCalledWith('Sei sicuro di voler eliminare questo commento?');
+      await waitFor(() => {
+        expect(mockConfirm).toHaveBeenCalledWith({
+          title: "Elimina commento",
+          message: "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata.",
+          variant: "destructive",
+          confirmText: "Elimina",
+          cancelText: "Annulla",
+        });
+      });
     });
 
     it('calls onDelete when confirmed', async () => {
       const comment = createMockComment({ userId: 'current-user' });
-      window.confirm = jest.fn(() => true);
       mockOnDelete.mockResolvedValue(undefined);
       render(<CommentItem {...defaultProps} comment={comment} />);
 
@@ -429,7 +458,7 @@ describe('CommentItem Component', () => {
 
     it('does not delete when cancelled', async () => {
       const comment = createMockComment({ userId: 'current-user' });
-      window.confirm = jest.fn(() => false);
+      mockConfirm.mockResolvedValueOnce(false);
       render(<CommentItem {...defaultProps} comment={comment} />);
 
       fireEvent.click(screen.getByLabelText('Delete comment'));
@@ -441,14 +470,17 @@ describe('CommentItem Component', () => {
 
     it('shows alert on delete error', async () => {
       const comment = createMockComment({ userId: 'current-user' });
-      window.confirm = jest.fn(() => true);
       mockOnDelete.mockRejectedValue(new Error('Delete failed'));
       render(<CommentItem {...defaultProps} comment={comment} />);
 
       fireEvent.click(screen.getByLabelText('Delete comment'));
 
       await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith('Impossibile eliminare il commento');
+        expect(mockAlert).toHaveBeenCalledWith({
+          title: "Errore",
+          message: "Impossibile eliminare il commento",
+          variant: "error",
+        });
       });
     });
   });
@@ -560,7 +592,11 @@ describe('CommentItem Component', () => {
       fireEvent.click(screen.getByText('Invia risposta'));
 
       await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith('Impossibile aggiungere la risposta');
+        expect(mockAlert).toHaveBeenCalledWith({
+          title: "Errore",
+          message: "Impossibile aggiungere la risposta",
+          variant: "error",
+        });
       });
     });
 
@@ -605,7 +641,11 @@ describe('CommentItem Component', () => {
       fireEvent.click(screen.getByLabelText('Mark as resolved'));
 
       await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith('Impossibile contrassegnare come risolto');
+        expect(mockAlert).toHaveBeenCalledWith({
+          title: "Errore",
+          message: "Impossibile contrassegnare come risolto",
+          variant: "error",
+        });
       });
     });
 
@@ -617,7 +657,11 @@ describe('CommentItem Component', () => {
       fireEvent.click(screen.getByLabelText('Reopen comment'));
 
       await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith('Impossibile riaprire il commento');
+        expect(mockAlert).toHaveBeenCalledWith({
+          title: "Errore",
+          message: "Impossibile riaprire il commento",
+          variant: "error",
+        });
       });
     });
   });

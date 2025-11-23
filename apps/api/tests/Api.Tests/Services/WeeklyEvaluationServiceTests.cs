@@ -639,6 +639,13 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         Assert.NotNull(capturedAlertCommand);
         Assert.Equal("QualityEvaluation", capturedAlertCommand.AlertType);
-        Assert.Contains("RAG evaluation failed quality gates", capturedAlertCommand.Metadata!["Issues"].ToString()!);
+        Assert.Equal("Warning", capturedAlertCommand.Severity);
+        Assert.NotNull(capturedAlertCommand.Metadata);
+        Assert.True(capturedAlertCommand.Metadata.ContainsKey("Issues"));
+
+        // Metadata["Issues"] is a List<string>, so cast it properly
+        var issuesList = capturedAlertCommand.Metadata["Issues"] as IEnumerable<string>;
+        Assert.NotNull(issuesList);
+        Assert.Contains(issuesList, issue => issue.Contains("RAG evaluation failed quality gates"));
     }
 }

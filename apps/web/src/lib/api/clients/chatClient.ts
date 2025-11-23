@@ -115,7 +115,7 @@ export interface ChatClient {
     messageId: string;
     endpoint: string;
     gameId: string;
-    feedback: FeedbackOutcome;
+    outcome: FeedbackOutcome;
   }): Promise<void>;
 }
 
@@ -294,7 +294,7 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
       messageId: string;
       endpoint: string;
       gameId: string;
-      feedback: FeedbackOutcome;
+      outcome: FeedbackOutcome;
     }): Promise<void> {
       return httpClient.post('/api/v1/agents/feedback', request);
     },

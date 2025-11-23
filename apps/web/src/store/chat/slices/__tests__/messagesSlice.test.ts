@@ -813,7 +813,7 @@ describe('messagesSlice', () => {
         messageId: 'backend-msg-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
-        feedback: 'helpful',
+        outcome: 'helpful',
       });
 
       const state = store.getState();
@@ -873,7 +873,7 @@ describe('messagesSlice', () => {
         messageId: 'backend-msg-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
-        feedback: 'not-helpful',
+        outcome: 'not-helpful',
       });
 
       const state = store.getState();
@@ -903,7 +903,7 @@ describe('messagesSlice', () => {
         messageId: 'msg-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
-        feedback: 'helpful',
+        outcome: 'helpful',
       });
     });
 
@@ -1497,7 +1497,7 @@ describe('messagesSlice', () => {
         messageId: 'msg-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
-        feedback: 'helpful',
+        outcome: 'helpful',
       });
     });
 
@@ -1529,7 +1529,7 @@ describe('messagesSlice', () => {
         messageId: 'backend-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
-        feedback: 'helpful',
+        outcome: 'helpful',
       });
     });
 
@@ -1561,7 +1561,7 @@ describe('messagesSlice', () => {
         messageId: 'backend-1',
         endpoint: 'qa',
         gameId: '770e8400-e29b-41d4-a716-000000000001',
-        feedback: 'helpful',
+        outcome: 'helpful',
       });
     });
 

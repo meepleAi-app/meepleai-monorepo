@@ -167,6 +167,76 @@ taskkill /PID <pid> /F
 
 ---
 
+## Development Environment (Windows)
+
+### VS Code: Unable to Move Cache - Access Denied (0x5)
+
+**Sintomo**: VS Code mostra errori all'avvio su Windows:
+```
+ERROR:net\disk_cache\cache_util_win.cc:20] Unable to move the cache: Accesso negato. (0x5)
+ERROR:disk_cache.cc:216] Unable to create cache
+ERROR:gpu_disk_cache.cc:723] Gpu Cache Creation failed: -2
+Error mutex already exists
+```
+
+**Root Cause**:
+- Permessi insufficienti sulle directory cache di VS Code/Chromium
+- Lock files rimasti da istanze precedenti di VS Code
+- Antivirus o software di sicurezza che bloccano l'accesso
+- Multiple istanze di VS Code che tentano di accedere alla stessa cache
+
+**Soluzione**:
+```powershell
+# Opzione 1: Script automatico (consigliato)
+# Con conferma (sicuro, raccomandato)
+pwsh tools/cleanup/fix-vscode-cache-windows.ps1
+
+# Senza conferma (per automazione)
+pwsh tools/cleanup/fix-vscode-cache-windows.ps1 -Yes
+
+# Preview (dry-run)
+pwsh tools/cleanup/fix-vscode-cache-windows.ps1 -DryRun
+
+# Opzione 2: Manuale
+# 1. Chiudi tutte le istanze di VS Code
+taskkill /F /IM Code.exe
+
+# 2. Elimina cache directories
+Remove-Item -Recurse -Force "$env:APPDATA\Code\Cache"
+Remove-Item -Recurse -Force "$env:APPDATA\Code\GPUCache"
+Remove-Item -Recurse -Force "$env:APPDATA\Code\CachedData"
+
+# 3. Rimuovi lock files
+Remove-Item -Force "$env:APPDATA\Code\SingletonLock"
+Remove-Item -Force "$env:APPDATA\Code\SingletonCookie"
+
+# 4. Riavvia VS Code
+```
+
+**Prevenzione**:
+- Chiudi sempre VS Code correttamente (File > Exit)
+- Aggiungi directory VS Code alle esclusioni antivirus:
+  - `%APPDATA%\Code`
+  - `%LOCALAPPDATA%\Programs\Microsoft VS Code`
+- Evita di eseguire multiple istanze da terminali diversi
+- Non interrompere VS Code con Task Manager (usa File > Exit)
+
+**Validation**:
+- Script verifica automaticamente: Windows, VS Code installato, privilegi Admin
+- Opzione dry-run disponibile: `-DryRun`
+- Prompt di conferma prima di modifiche (skip con `-Yes`)
+- Tool: Esegui `code --version` per verificare installazione
+
+**Note Windows-Specific**:
+- Errore 0x5 = ERROR_ACCESS_DENIED
+- Comune su sistemi con antivirus aggressivi o policy aziendali
+- Se persiste: esegui PowerShell come Administrator
+- Se persiste ancora: reinstalla VS Code
+
+**Riferimenti**: Tools script `tools/cleanup/fix-vscode-cache-windows.ps1`
+
+---
+
 ## Observability
 
 ### Seq Logs: Not Receiving Events

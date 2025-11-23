@@ -735,6 +735,32 @@ public async Task LoginAsync_WithInvalidPassword_ThrowsUnauthorizedException() {
 public async Task ValidateApiKeyAsync_WithExpiredKey_ReturnsNull() { }
 ```
 
+### Test Timeout Guidelines
+
+**CRITICAL**: All integration tests with Testcontainers, network calls, or database operations MUST have explicit timeouts to prevent indefinite hangs.
+
+**Timeout Values**:
+- **Unit tests**: 5000ms (5s) - Fast, in-memory operations
+- **Integration tests**: 30000ms (30s) - Testcontainers, database, network operations
+- **Performance tests**: 60000ms (60s) - Memory profiling, large file processing
+
+**Example**:
+```csharp
+[Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
+public async Task UploadPdf_WithValidFile_Succeeds()
+{
+    // Test with real database, blob storage, and network calls
+}
+
+[Fact(Timeout = 60000)] // 60s for performance/memory tests
+public async Task UploadPdf_WithLargeFile_HandlesMemoryEfficiently()
+{
+    // Test with 5MB+ files and memory profiling
+}
+```
+
+**Rationale**: Tests without timeouts can hang indefinitely if infrastructure fails (database connection timeout, Testcontainers startup issue, network unavailability), blocking CI/CD pipelines and wasting resources.
+
 ---
 
 ## Mocking Strategies

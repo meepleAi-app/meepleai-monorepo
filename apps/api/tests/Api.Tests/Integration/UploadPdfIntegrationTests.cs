@@ -381,7 +381,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeFalse();
-        result.Message.Should().Contain("Invalid", "file type or corrupted content should be rejected");
+        result.Message.ShouldIndicateCorruptedPdf("file type or corrupted content should be rejected");
         result.Document.Should().BeNull("no document should be created for corrupted PDF");
 
         // Verify no database record created
@@ -411,8 +411,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeFalse();
-        result.Message.Should().Contain("file type", "should reject non-PDF content type");
-        result.Message.Should().Contain("text/plain", "error message should mention actual content type");
+        result.Message.ShouldIndicateInvalidContentType("text/plain", "should reject non-PDF content type");
         result.Document.Should().BeNull();
 
         // Verify no database record created
@@ -442,7 +441,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeFalse();
-        result.Message.Should().Contain("No file provided", "empty file should be rejected");
+        result.Message.Should().Contain(PdfUploadErrorMessages.NoFileProvided, "empty file should be rejected");
         result.Document.Should().BeNull();
 
         // Verify no database record created
@@ -473,7 +472,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeFalse();
-        result.Message.Should().NotBeNullOrWhiteSpace("should provide error message for malformed PDF");
+        result.Message.ShouldIndicateMalformedPdf("should provide error message for malformed PDF");
         result.Document.Should().BeNull();
 
         // Verify no database record created
@@ -543,8 +542,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeFalse("file exceeding size limit should be rejected");
-        result.Message.Should().Contain("too large", "error message should mention size limit");
-        result.Message.Should().Contain("10", "error message should mention the limit in MB");
+        result.Message.ShouldIndicateFileTooLarge(expectedMaxSizeMb: 10, "error message should mention size limit");
         result.Document.Should().BeNull();
 
         // Verify no database record created
@@ -714,7 +712,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     #region 4. Storage Failure Scenarios Tests
 
     [Fact(Timeout = 30000)]
-    public async Task UploadPdf_WhenBlobStorageFails_ReturnsError()
+    public async Task UploadPdf_WhenBlobStorageFails_ReturnsErrorAndRollsBackTransaction()
     {
         // Arrange - Create service provider with failing blob storage
         var services = new ServiceCollection();
@@ -762,7 +760,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeFalse("storage failure should result in failed upload");
-        result.Message.Should().Contain("storage", "error message should mention storage issue");
+        result.Message.ShouldIndicateStorageFailure("error message should mention storage issue");
         result.Document.Should().BeNull();
 
         // Verify no database record created (transaction rolled back)
@@ -838,7 +836,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     }
 
     [Fact(Timeout = 30000)]
-    public async Task UploadPdf_WhenStoragePermissionDenied_ReturnsError()
+    public async Task UploadPdf_WhenStoragePermissionDenied_ReturnsErrorAndRollsBack()
     {
         // Arrange - Mock storage with permission denied error
         var services = new ServiceCollection();
@@ -884,7 +882,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeFalse("permission denied should result in failed upload");
-        result.Message.Should().Contain("permission", "error message should mention permission issue");
+        result.Message.ShouldIndicatePermissionDenied("error message should mention permission issue");
         result.Document.Should().BeNull();
 
         // Verify no database record created

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20251122232605_AddUserTierColumn")]
-    partial class AddUserTierColumn
+    [Migration("20251123225342_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1697,6 +1697,9 @@ namespace Api.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("IsDemoAccount")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsTwoFactorEnabled")
                         .ValueGeneratedOnAdd()

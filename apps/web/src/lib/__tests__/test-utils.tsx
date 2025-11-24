@@ -37,7 +37,7 @@ export function renderWithProviders(
  * Creates mock API response for fetch mocking
  *
  * @example
- * global.fetch = jest.fn(() => mockApiResponse(200, { data: 'test' }));
+ * global.fetch = vi.fn(() => mockApiResponse(200, { data: 'test' }));
  *
  * @param status - HTTP status code
  * @param payload - Response payload (JSON or text)

@@ -11,14 +11,14 @@
  * ❌ BAD (Anti-pattern):
  * ```typescript
  * await waitFor(() => {
- *   jest.advanceTimersByTime(5000); // ❌ WRONG - waitFor() polls this callback repeatedly
+ *   vi.advanceTimersByTime(5000); // ❌ WRONG - waitFor() polls this callback repeatedly
  *   expect(element).not.toBeInTheDocument();
  * });
  * ```
  *
  * ✅ GOOD (Correct pattern):
  * ```typescript
- * jest.advanceTimersByTime(5000); // ✅ Advance timers BEFORE waitFor
+ * vi.advanceTimersByTime(5000); // ✅ Advance timers BEFORE waitFor
  * await waitFor(() => {
  *   expect(element).not.toBeInTheDocument();
  * });
@@ -38,7 +38,7 @@ import { waitFor } from '@testing-library/react';
  * 1. Advance timers first
  * 2. Then wait for assertion
  *
- * Use this instead of manually calling jest.advanceTimersByTime() to avoid anti-patterns.
+ * Use this instead of manually calling vi.advanceTimersByTime() to avoid anti-patterns.
  *
  * @param ms - Milliseconds to advance timers
  * @param assertion - Assertion function to wait for (must not throw when condition is met)
@@ -46,7 +46,7 @@ import { waitFor } from '@testing-library/react';
  * @example
  * // Test auto-dismissing toast after 5 seconds
  * it('dismisses toast after timeout', async () => {
- *   jest.useFakeTimers();
+ *   vi.useFakeTimers();
  *   render(<ToastComponent />);
  *
  *   // Toast appears
@@ -57,7 +57,7 @@ import { waitFor } from '@testing-library/react';
  *     expect(screen.queryByText('Success!')).not.toBeInTheDocument();
  *   });
  *
- *   jest.useRealTimers();
+ *   vi.useRealTimers();
  * });
  */
 export async function advanceTimersAndWaitFor(
@@ -65,7 +65,7 @@ export async function advanceTimersAndWaitFor(
   assertion: () => void | Promise<void>
 ): Promise<void> {
   // Advance timers FIRST (critical: do NOT do this inside waitFor callback)
-  jest.advanceTimersByTime(ms);
+  vi.advanceTimersByTime(ms);
 
   // THEN wait for assertion to pass
   return waitFor(assertion);
@@ -88,7 +88,7 @@ export async function advanceTimersAndWaitFor(
  *
  *   it('does something after delay', async () => {
  *     render(<Component />);
- *     jest.advanceTimersByTime(1000);
+ *     vi.advanceTimersByTime(1000);
  *     await waitFor(() => expect(...).toBeInTheDocument());
  *     // No need to manually clean up timers - handled by setupFakeTimers()
  *   });
@@ -96,22 +96,22 @@ export async function advanceTimersAndWaitFor(
  */
 export function setupFakeTimers() {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     // Run any pending timers to completion (prevents leaks into next test)
-    jest.runOnlyPendingTimers();
+    vi.runOnlyPendingTimers();
 
     // Restore real timers (prevents interference with other tests)
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 }
 
 /**
  * Advances timers by the specified milliseconds.
  *
- * This is a simple wrapper around jest.advanceTimersByTime() for consistency.
+ * This is a simple wrapper around vi.advanceTimersByTime() for consistency.
  * Included to provide a single import point for all timer utilities.
  *
  * @param ms - Milliseconds to advance
@@ -121,7 +121,7 @@ export function setupFakeTimers() {
  * await waitFor(() => expect(...).not.toBeInTheDocument());
  */
 export function advanceTimers(ms: number): void {
-  jest.advanceTimersByTime(ms);
+  vi.advanceTimersByTime(ms);
 }
 
 /**
@@ -136,7 +136,7 @@ export function advanceTimers(ms: number): void {
  * expect(screen.getByText('Done')).toBeInTheDocument();
  */
 export function runAllPendingTimers(): void {
-  jest.runAllTimers();
+  vi.runAllTimers();
 }
 
 /**

@@ -23,10 +23,10 @@
  * ```
  */
 export function mockUseConfirmDialog(confirmValue: boolean = true) {
-  const mockConfirm = jest.fn().mockResolvedValue(confirmValue);
+  const mockConfirm = vi.fn().mockResolvedValue(confirmValue);
   const { useConfirmDialog } = require("@/hooks/useConfirmDialog");
 
-  (useConfirmDialog as jest.Mock).mockReturnValue({
+  (useConfirmDialog as Mock).mockReturnValue({
     confirm: mockConfirm,
     ConfirmDialogComponent: () => null,
   });
@@ -41,8 +41,8 @@ export function mockUseConfirmDialog(confirmValue: boolean = true) {
 export function resetUseConfirmDialogMock() {
   const { useConfirmDialog } = require("@/hooks/useConfirmDialog");
 
-  (useConfirmDialog as jest.Mock).mockReturnValue({
-    confirm: jest.fn().mockResolvedValue(true),
+  (useConfirmDialog as Mock).mockReturnValue({
+    confirm: vi.fn().mockResolvedValue(true),
     ConfirmDialogComponent: () => null,
   });
 }

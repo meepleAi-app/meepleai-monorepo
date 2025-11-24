@@ -282,5 +282,5 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
     );
   }
 
-  return jest.fn(router.toMockImplementation()) as jest.MockedFunction<typeof fetch>;
+  return vi.fn(router.toMockImplementation()) as MockedFunction<typeof fetch>;
 }

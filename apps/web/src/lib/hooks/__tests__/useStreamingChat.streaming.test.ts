@@ -316,7 +316,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as MockedFunction<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 

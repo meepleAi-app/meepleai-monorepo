@@ -12,7 +12,7 @@ describe('useReducedMotion', () => {
   let removeEventListenerSpy: Mock;
   let addListenerSpy: Mock;
   let removeListenerSpy: Mock;
-  let matchMediaSpy: jest.SpyInstance;
+  let matchMediaSpy: SpyInstance;
 
   beforeEach(() => {
     // Reset spies

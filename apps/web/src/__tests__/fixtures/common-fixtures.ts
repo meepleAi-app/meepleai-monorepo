@@ -147,16 +147,16 @@ export const createMockRouter = (overrides?: Partial<NextRouter>): NextRouter =>
     query: overrides?.query || {},
     asPath: overrides?.asPath || '/',
     basePath: '',
-    push: jest.fn(),
-    replace: jest.fn(),
-    reload: jest.fn(),
-    back: jest.fn(),
-    prefetch: jest.fn().mockResolvedValue(undefined),
-    beforePopState: jest.fn(),
+    push: vi.fn(),
+    replace: vi.fn(),
+    reload: vi.fn(),
+    back: vi.fn(),
+    prefetch: vi.fn().mockResolvedValue(undefined),
+    beforePopState: vi.fn(),
     events: {
-      on: jest.fn(),
-      off: jest.fn(),
-      emit: jest.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
+      emit: vi.fn(),
     },
     isFallback: false,
     isLocaleDomain: false,
@@ -177,10 +177,10 @@ export const createMockRouter = (overrides?: Partial<NextRouter>): NextRouter =>
  * Mock API client type matching our api.ts structure
  */
 export type MockApiClient = {
-  get: jest.Mock;
-  post: jest.Mock;
-  put: jest.Mock;
-  delete: jest.Mock;
+  get: Mock;
+  post: Mock;
+  put: Mock;
+  delete: Mock;
 };
 
 /**
@@ -191,10 +191,10 @@ export type MockApiClient = {
  * mockApi.get.mockResolvedValue({ data: 'test' });
  */
 export const createMockApiClient = (): MockApiClient => ({
-  get: jest.fn(),
-  post: jest.fn(),
-  put: jest.fn(),
-  delete: jest.fn(),
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
 });
 
 // =============================================================================
@@ -389,7 +389,7 @@ export const createMockChat = (overrides?: Partial<MockChat>): MockChat => ({
  * Creates a mock fetch Response object
  *
  * @example
- * global.fetch = jest.fn(() => createMockResponse(200, { data: 'test' }));
+ * global.fetch = vi.fn(() => createMockResponse(200, { data: 'test' }));
  */
 export const createMockResponse = (
   status: number,

@@ -26,7 +26,7 @@ const { api } = require('@/lib/api');
 const mockedApi = api as Mocked<typeof api>;
 
 describe('useSessionCheck', () => {
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleErrorSpy: SpyInstance;
   let originalLocation: Location;
 
   beforeAll(() => {
@@ -66,7 +66,7 @@ describe('useSessionCheck', () => {
 
       // Wait for initial check to complete
       await act(async () => {
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       expect(result.current.remainingMinutes).toBeNull();
@@ -98,7 +98,7 @@ describe('useSessionCheck', () => {
       const { result } = renderHook(() => useSessionCheck());
 
       await act(async () => {
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       expect(result.current.remainingMinutes).toBe(30);
@@ -112,7 +112,7 @@ describe('useSessionCheck', () => {
       const { result } = renderHook(() => useSessionCheck());
 
       await act(async () => {
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       expect(result.current.remainingMinutes).toBe(3);
@@ -125,7 +125,7 @@ describe('useSessionCheck', () => {
       const { result } = renderHook(() => useSessionCheck());
 
       await act(async () => {
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       expect(result.current.remainingMinutes).toBeNull();
@@ -139,7 +139,7 @@ describe('useSessionCheck', () => {
       const { result } = renderHook(() => useSessionCheck());
 
       await act(async () => {
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       // Verify the redirect condition was met (remainingMinutes reached 0)
@@ -155,7 +155,7 @@ describe('useSessionCheck', () => {
       const { result } = renderHook(() => useSessionCheck());
 
       await act(async () => {
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       // Verify the redirect condition was met (remainingMinutes < 0)
@@ -200,7 +200,7 @@ describe('useSessionCheck', () => {
       const { unmount } = renderHook(() => useSessionCheck());
 
       await act(async () => {
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       const callCountBeforeUnmount = (mockedApi.auth.getSessionStatus as Mock).mock.calls.length;
@@ -210,7 +210,7 @@ describe('useSessionCheck', () => {
       // Advance timers after unmount
       await act(async () => {
         vi.advanceTimersByTime(10 * 60 * 1000);
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       // Call count should not increase after unmount
@@ -228,7 +228,7 @@ describe('useSessionCheck', () => {
       const { result } = renderHook(() => useSessionCheck());
 
       await act(async () => {
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       expect(result.current.error).toEqual(mockError);
@@ -255,7 +255,7 @@ describe('useSessionCheck', () => {
       const { result } = renderHook(() => useSessionCheck());
 
       await act(async () => {
-        await jest.runOnlyPendingTimersAsync();
+        await vi.runOnlyPendingTimersAsync();
       });
 
       expect(result.current.error).toBeInstanceOf(Error);

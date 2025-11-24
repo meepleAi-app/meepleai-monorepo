@@ -13,7 +13,7 @@ import { UIProvider } from '@/components/ui/UIProvider';
 import { api } from '@/lib/api';
 
 // Mock API reference for setup
-const mockApi = api as jest.Mocked<typeof api>;
+const mockApi = api as Mocked<typeof api>;
 
 /**
  * Sets up default API mocks for provider initialization
@@ -72,58 +72,58 @@ export function createWrapper() {
  */
 export const mockProviders = () => {
   // Mock AuthProvider
-  jest.mock('@/components/auth/AuthProvider', () => ({
-    useAuth: jest.fn(() => ({
+  vi.mock('@/components/auth/AuthProvider', () => ({
+    useAuth: vi.fn(() => ({
       user: null,
       loading: false,
       error: null,
-      login: jest.fn(),
-      register: jest.fn(),
-      logout: jest.fn(),
-      refreshUser: jest.fn(),
-      clearError: jest.fn(),
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
+      clearError: vi.fn(),
     })),
     AuthProvider: ({ children }: { children: React.ReactNode }) => children,
   }));
 
   // Mock GameProvider
-  jest.mock('@/components/game/GameProvider', () => ({
-    useGame: jest.fn(() => ({
+  vi.mock('@/components/game/GameProvider', () => ({
+    useGame: vi.fn(() => ({
       selectedGameId: null,
       selectedAgentId: null,
       games: [],
       agents: [],
       isLoading: false,
       error: null,
-      setSelectedGameId: jest.fn(),
-      setSelectedAgentId: jest.fn(),
-      refreshGames: jest.fn(),
-      refreshAgents: jest.fn(),
+      setSelectedGameId: vi.fn(),
+      setSelectedAgentId: vi.fn(),
+      refreshGames: vi.fn(),
+      refreshAgents: vi.fn(),
     })),
     GameProvider: ({ children }: { children: React.ReactNode }) => children,
   }));
 
   // Mock ChatProvider
-  jest.mock('@/components/chat/ChatProvider', () => ({
-    useChat: jest.fn(() => ({
+  vi.mock('@/components/chat/ChatProvider', () => ({
+    useChat: vi.fn(() => ({
       activeChatId: null,
       chats: [],
       isLoading: false,
       error: null,
-      setActiveChatId: jest.fn(),
-      refreshChats: jest.fn(),
-      createChat: jest.fn(),
-      deleteChat: jest.fn(),
+      setActiveChatId: vi.fn(),
+      refreshChats: vi.fn(),
+      createChat: vi.fn(),
+      deleteChat: vi.fn(),
     })),
     ChatProvider: ({ children }: { children: React.ReactNode }) => children,
   }));
 
   // Mock UIProvider
-  jest.mock('@/components/ui/UIProvider', () => ({
-    useUI: jest.fn(() => ({
+  vi.mock('@/components/ui/UIProvider', () => ({
+    useUI: vi.fn(() => ({
       isMobileMenuOpen: false,
-      toggleMobileMenu: jest.fn(),
-      closeMobileMenu: jest.fn(),
+      toggleMobileMenu: vi.fn(),
+      closeMobileMenu: vi.fn(),
     })),
     UIProvider: ({ children }: { children: React.ReactNode }) => children,
   }));

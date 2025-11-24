@@ -9,10 +9,10 @@ import { ApiError, UnauthorizedError } from '../core/errors';
 
 describe('Logger', () => {
   let originalEnv: NodeJS.ProcessEnv;
-  let consoleErrorSpy: jest.SpyInstance;
-  let consoleWarnSpy: jest.SpyInstance;
-  let consoleInfoSpy: jest.SpyInstance;
-  let consoleDebugSpy: jest.SpyInstance;
+  let consoleErrorSpy: SpyInstance;
+  let consoleWarnSpy: SpyInstance;
+  let consoleInfoSpy: SpyInstance;
+  let consoleDebugSpy: SpyInstance;
 
   beforeEach(() => {
     originalEnv = process.env;
@@ -139,7 +139,7 @@ describe('Logger', () => {
 });
 
 describe('logApiError', () => {
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleErrorSpy: SpyInstance;
 
   beforeEach(() => {
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();

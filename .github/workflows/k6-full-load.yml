@@ -233,7 +233,7 @@ jobs:
 
       - name: Upload performance reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: k6-full-load-reports-${{ github.run_number }}
           path: tests/k6/reports/
@@ -241,7 +241,7 @@ jobs:
 
       - name: Archive API logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: api-logs-full-load-${{ github.run_number }}
           path: api.log

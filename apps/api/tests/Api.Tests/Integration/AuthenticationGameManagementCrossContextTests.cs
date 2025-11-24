@@ -11,6 +11,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Api.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
@@ -29,7 +30,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
-    private readonly TimeProvider _timeProvider = TimeProvider.System;
+    private readonly TestTimeProvider _timeProvider = new();
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 

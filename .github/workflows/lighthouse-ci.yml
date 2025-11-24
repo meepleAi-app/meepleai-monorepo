@@ -118,7 +118,7 @@ jobs:
           working-directory: apps/web
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: nextjs-build-${{ github.sha }}
           path: apps/web
@@ -178,7 +178,7 @@ jobs:
           frozen-lockfile: 'false'
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: nextjs-build-${{ github.sha }}
           path: apps/web
@@ -256,7 +256,7 @@ jobs:
           node-version: 20
 
       - name: Download PR Lighthouse Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci-pr

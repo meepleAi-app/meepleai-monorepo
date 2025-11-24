@@ -9,7 +9,7 @@ import { SkeletonLoader } from '../SkeletonLoader';
 // Mock useReducedMotion hook
 const mockUseReducedMotion = vi.fn();
 vi.mock('@/lib/animations', () => ({
-  ...jest.requireActual('@/lib/animations'),
+  ...vi.importActual('@/lib/animations'),
   useReducedMotion: () => mockUseReducedMotion(),
 }));
 

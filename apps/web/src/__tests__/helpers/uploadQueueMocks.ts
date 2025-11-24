@@ -546,7 +546,7 @@ export function setupWorkerMock(config?: Partial<MockUploadWorker['config']>): M
 
   // Mock the Worker constructor globally
   // @ts-expect-error - Mocking global Worker for tests
-  global.Worker = jest.fn(() => mockWorker);
+  global.Worker = vi.fn(() => mockWorker);
 
   return mockWorker;
 }

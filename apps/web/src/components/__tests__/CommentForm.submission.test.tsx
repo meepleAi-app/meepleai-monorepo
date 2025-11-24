@@ -26,8 +26,8 @@ import { CommentForm } from "../CommentForm";
   });
 
   describe("error handling", () => {
-    let consoleErrorSpy: jest.SpyInstance;
-    let alertSpy: jest.SpyInstance;
+    let consoleErrorSpy: SpyInstance;
+    let alertSpy: SpyInstance;
 
     beforeEach(() => {
       consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});

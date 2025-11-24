@@ -12,7 +12,7 @@ import { mockGame, gameConfigurations } from './SessionSetupModal.test-helpers';
 
 // Mock API
 vi.mock('@/lib/api', () => ({
-  ...jest.requireActual('@/lib/api'),
+  ...vi.importActual('@/lib/api'),
   api: {
     sessions: {
       start: vi.fn(),

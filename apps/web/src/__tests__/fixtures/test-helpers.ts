@@ -374,7 +374,7 @@ export const waitForError = async (errorText?: string | RegExp, timeout = 3000):
  */
 export const suppressConsoleErrors = (): (() => void) => {
   const originalError = console.error;
-  console.error = jest.fn();
+  console.error = vi.fn();
   return () => {
     console.error = originalError;
   };

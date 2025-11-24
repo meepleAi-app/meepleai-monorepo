@@ -118,7 +118,7 @@ export function renderWithChatStore(
   testStore = store;
 
   // Mock the useChatStore hook globally
-  jest.mock('@/store/chat/ChatStoreProvider', () => ({
+  vi.mock('@/store/chat/ChatStoreProvider', () => ({
     useChatStore: mockUseChatStore,
     ChatStoreProvider: ({ children }: PropsWithChildren) => (
       <TestChatStoreProvider store={store}>{children}</TestChatStoreProvider>

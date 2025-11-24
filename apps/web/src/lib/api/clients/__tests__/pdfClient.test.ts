@@ -10,7 +10,7 @@ import { HttpClient } from '../../core/httpClient';
 import { getApiBase } from '../../core/httpClient';
 
 vi.mock('../../core/httpClient', () => ({
-  ...jest.requireActual('../../core/httpClient'),
+  ...vi.importActual('../../core/httpClient'),
   getApiBase: vi.fn(),
 }));
 

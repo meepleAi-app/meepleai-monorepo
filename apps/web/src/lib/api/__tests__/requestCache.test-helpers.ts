@@ -40,7 +40,7 @@ export function createCountingMockRequest() {
  */
 export const timeHelpers = {
   setSystemTime: (time: number) => {
-    jest.setSystemTime(time);
+    vi.setSystemTime(time);
   },
 
   advanceTime: (ms: number) => {

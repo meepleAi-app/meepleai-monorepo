@@ -1,17 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
 // Force NODE_ENV to 'test' to ensure React development build is used in CI
 process.env.NODE_ENV = 'test';
 
-import '@testing-library/jest-dom/vitest'
-import { toHaveNoViolations } from 'jest-axe'
-import { expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
+import '@testing-library/jest-dom/vitest';
+import { toHaveNoViolations } from 'jest-axe';
 
 // Extend Vitest matchers with jest-axe for accessibility testing
-expect.extend(toHaveNoViolations)
+expect.extend(toHaveNoViolations);
 
 // Mock Prism.js globally to avoid "Prism is not defined" errors
 // Prism.js requires a global Prism object when loading language modules
 global.Prism = {
-  highlight: vi.fn((code) => code),
+  highlight: vi.fn(code => code),
   languages: {
     json: {},
   },
@@ -49,7 +50,10 @@ vi.mock('framer-motion', () => {
         ...rest
       } = props;
       // Only keep inline styles that are NOT from framer-motion animations
-      const cleanStyle = style && typeof style === 'object' && !('opacity' in style && 'transform' in style) ? style : undefined;
+      const cleanStyle =
+        style && typeof style === 'object' && !('opacity' in style && 'transform' in style)
+          ? style
+          : undefined;
       return React.createElement(type, { ...rest, style: cleanStyle, ref });
     });
   };
@@ -122,7 +126,7 @@ global.IntersectionObserver = class IntersectionObserver {
 // Mock File.slice() for PDF validation tests (Issue #871, #1141)
 // jsdom's File doesn't properly implement slice() which is needed for PDF magic bytes validation
 if (typeof File !== 'undefined' && !File.prototype.slice) {
-  File.prototype.slice = function(start?: number, end?: number) {
+  File.prototype.slice = function (start?: number, end?: number) {
     // Return a Blob-like object that supports arrayBuffer()
     // @ts-ignore
     const content = this.text ? this.text() : Promise.resolve('%PDF-1.4');
@@ -131,22 +135,23 @@ if (typeof File !== 'undefined' && !File.prototype.slice) {
       size: Math.max(0, (end || this.size) - (start || 0)),
       // @ts-ignore
       type: this.type,
-      arrayBuffer: () => content.then((text: string) => {
-        const encoder = new TextEncoder();
-        const fullBuffer = encoder.encode(text).buffer;
-        const sliceStart = start || 0;
-        const sliceEnd = Math.min(end || fullBuffer.byteLength, fullBuffer.byteLength);
-        return fullBuffer.slice(sliceStart, sliceEnd);
-      }),
-      text: () => content
+      arrayBuffer: () =>
+        content.then((text: string) => {
+          const encoder = new TextEncoder();
+          const fullBuffer = encoder.encode(text).buffer;
+          const sliceStart = start || 0;
+          const sliceEnd = Math.min(end || fullBuffer.byteLength, fullBuffer.byteLength);
+          return fullBuffer.slice(sliceStart, sliceEnd);
+        }),
+      text: () => content,
     } as Blob;
   };
 }
 
 // Mock Blob.arrayBuffer() for PDF validation tests
 if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
-  Blob.prototype.arrayBuffer = function() {
-    return new Promise((resolve) => {
+  Blob.prototype.arrayBuffer = function () {
+    return new Promise(resolve => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as ArrayBuffer);
       reader.readAsArrayBuffer(this);
@@ -156,9 +161,7 @@ if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
 
 // Setup browser API polyfills for test environment (issue #463)
 // See test-utils/browser-polyfills.ts for implementation details
-Promise.all([
-  import('./src/test-utils/browser-polyfills')
-]).then(([{ setupBrowserPolyfills }]) => {
+Promise.all([import('./src/test-utils/browser-polyfills')]).then(([{ setupBrowserPolyfills }]) => {
   setupBrowserPolyfills();
 });
 
@@ -316,7 +319,7 @@ if (typeof global.Response === 'undefined') {
         },
         has(key: string) {
           return this._map.has(key.toLowerCase());
-        }
+        },
       };
 
       if (init.headers) {
@@ -437,23 +440,41 @@ const originalError = console.error;
 beforeAll(() => {
   console.error = (...args: any[]) => {
     // Suppress expected framer-motion prop warnings in React 19
-    if (typeof args[0] === 'string' && args[0].includes('React does not recognize the `whileHover` prop')) {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('React does not recognize the `whileHover` prop')
+    ) {
       return;
     }
     // Suppress act() warnings for provider initialization effects
-    if (typeof args[0] === 'string' && args[0].includes('An update to ChatProvider inside a test was not wrapped in act')) {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('An update to ChatProvider inside a test was not wrapped in act')
+    ) {
       return;
     }
-    if (typeof args[0] === 'string' && args[0].includes('An update to AnalyticsDashboard inside a test was not wrapped in act')) {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('An update to AnalyticsDashboard inside a test was not wrapped in act')
+    ) {
       return;
     }
-    if (typeof args[0] === 'string' && args[0].includes('An update to GameProvider inside a test was not wrapped in act')) {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('An update to GameProvider inside a test was not wrapped in act')
+    ) {
       return;
     }
-    if (typeof args[0] === 'string' && args[0].includes('An update to AuthProvider inside a test was not wrapped in act')) {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('An update to AuthProvider inside a test was not wrapped in act')
+    ) {
       return;
     }
-    if (typeof args[0] === 'string' && args[0].includes('An update to CacheDashboard inside a test was not wrapped in act')) {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('An update to CacheDashboard inside a test was not wrapped in act')
+    ) {
       return;
     }
     // Suppress all other component act() warnings (provider mount/unmount effects)
@@ -461,7 +482,10 @@ beforeAll(() => {
       return;
     }
     // Suppress JSDOM navigation warnings (known limitation)
-    if (typeof args[0] === 'string' && args[0].includes('Error: Not implemented: navigation (except hash changes)')) {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Error: Not implemented: navigation (except hash changes)')
+    ) {
       return;
     }
     originalError.call(console, ...args);
@@ -475,10 +499,22 @@ afterAll(() => {
 beforeEach(() => {
   // Mock DOM APIs for TipTap/ProseMirror (TEST-633)
   if (typeof Range.prototype.getClientRects === 'undefined') {
-    Range.prototype.getClientRects = vi.fn().mockReturnValue([{ bottom: 0, height: 0, left: 0, right: 0, top: 0, width: 0 }]);
+    Range.prototype.getClientRects = vi
+      .fn()
+      .mockReturnValue([{ bottom: 0, height: 0, left: 0, right: 0, top: 0, width: 0 }]);
   }
   if (typeof Range.prototype.getBoundingClientRect === 'undefined') {
-    Range.prototype.getBoundingClientRect = vi.fn().mockReturnValue({ bottom: 0, height: 0, left: 0, right: 0, top: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
+    Range.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
+      bottom: 0,
+      height: 0,
+      left: 0,
+      right: 0,
+      top: 0,
+      width: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
   }
 
   // Mock Pointer Capture API for Radix UI components (Select, Dropdown, etc.)

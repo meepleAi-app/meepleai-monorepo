@@ -27,7 +27,7 @@
       ]
     },
     "types": [
-      "jest",
+      "vitest/globals",
       "node"
     ],
     "plugins": [
@@ -38,7 +38,7 @@
   },
   "include": [
     "next-env.d.ts",
-    "jest.d.ts",
+    "vitest.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",

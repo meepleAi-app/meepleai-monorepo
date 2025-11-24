@@ -1,19 +1,17 @@
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./vitest.setup.ts'],
+    setupFiles: ['./vitest.setup.tsx'],
     testTimeout: 30000, // Global timeout 30s for slow worker/async tests
     coverage: {
       provider: 'v8',
-      include: [
-        'src/**/*.{js,jsx,ts,tsx}',
-      ],
+      include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: [
         'src/**/*.d.ts',
         'src/**/__tests__/**',
@@ -44,10 +42,10 @@ export default defineConfig({
         'src/lib/animations/**', // Animation utilities (visual)
       ],
       thresholds: {
-        branches: 90,    // ✅ ACHIEVED (90%+)
-        functions: 64,   // Interim target (64.52% achieved, was 67.64%)
-        lines: 60,       // Interim target (60.26% achieved, was 70.4%)
-        statements: 60,  // Interim target (60.26% achieved, was 66.86%)
+        branches: 90, // ✅ ACHIEVED (90%+)
+        functions: 64, // Interim target (64.52% achieved, was 67.64%)
+        lines: 60, // Interim target (60.26% achieved, was 70.4%)
+        statements: 60, // Interim target (60.26% achieved, was 66.86%)
         // TODO Issue #1256: Increase to 90% after writing tests for 123 untested components
       },
     },
@@ -70,14 +68,11 @@ export default defineConfig({
       '**/chat-test-utils.{ts,tsx}',
     ],
     // Explicitly include test files including those in __tests__/utils/__tests__/
-    include: [
-      '**/__tests__/**/*.{test,spec}.{ts,tsx}',
-      '**/*.{test,spec}.{ts,tsx}',
-    ],
+    include: ['**/__tests__/**/*.{test,spec}.{ts,tsx}', '**/*.{test,spec}.{ts,tsx}'],
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-})
+});

@@ -193,7 +193,7 @@ jobs:
 
       - name: Upload performance reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: k6-performance-reports-${{ github.run_number }}
           path: tests/k6/reports/
@@ -201,7 +201,7 @@ jobs:
 
       - name: Save baseline report
         if: github.ref == 'refs/heads/main' && github.event_name == 'schedule'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: k6-performance-reports-latest
           path: tests/k6/reports/summary.json
@@ -209,7 +209,7 @@ jobs:
 
       - name: Archive API logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: api-logs-${{ github.run_number }}
           path: api.log

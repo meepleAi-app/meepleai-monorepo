@@ -100,11 +100,9 @@ describe('Logger', () => {
     it('should log warnings to console', () => {
       logger.warn('Warning message', { key: 'value' });
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[API Warning]',
-        'Warning message',
-        { key: 'value' }
-      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith('[API Warning]', 'Warning message', {
+        key: 'value',
+      });
     });
   });
 
@@ -112,30 +110,28 @@ describe('Logger', () => {
     it('should log info to console', () => {
       logger.info('Info message', { userId: '123' });
 
-      expect(consoleInfoSpy).toHaveBeenCalledWith(
-        '[API Info]',
-        'Info message',
-        { userId: '123' }
-      );
+      expect(consoleInfoSpy).toHaveBeenCalledWith('[API Info]', 'Info message', { userId: '123' });
     });
   });
 
   describe('debug logging', () => {
-    it.skip('should log debug in development', () => {
+    it('should log debug in development', () => {
+      vi.stubEnv('NODE_ENV', 'development');
+
       logger.debug('Debug message', { debug: true });
 
-      expect(consoleDebugSpy).toHaveBeenCalledWith(
-        '[API Debug]',
-        'Debug message',
-        { debug: true }
-      );
+      expect(consoleDebugSpy).toHaveBeenCalledWith('[API Debug]', 'Debug message', { debug: true });
+      vi.unstubAllEnvs();
     });
 
-    it.skip('should not log debug in production', () => {
+    it('should not log debug in production', () => {
+      vi.stubEnv('NODE_ENV', 'production');
+
       logger.debug('Debug message', { debug: true });
 
       // Should not call console.debug in production
       expect(consoleDebugSpy).not.toHaveBeenCalled();
+      vi.unstubAllEnvs();
     });
   });
 });

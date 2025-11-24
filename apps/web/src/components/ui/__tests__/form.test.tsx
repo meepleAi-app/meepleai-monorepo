@@ -53,7 +53,7 @@ function TestForm({ onSubmit }: { onSubmit: (data: TestFormValues) => void }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} data-testid="test-form">
+      <form noValidate onSubmit={form.handleSubmit(onSubmit)} data-testid="test-form">
         <FormField
           control={form.control}
           name="username"
@@ -172,28 +172,28 @@ describe('Form Component', () => {
     });
 
     // TODO: Fix HTML5 validation interference with Zod validation
-    // it('should show validation error for invalid email format', async () => {
-    //   const user = userEvent.setup();
-    //   const mockSubmit = vi.fn();
-    //   render(<TestForm onSubmit={mockSubmit} />);
+    it('should show validation error for invalid email format', async () => {
+      const user = userEvent.setup();
+      const mockSubmit = vi.fn();
+      render(<TestForm onSubmit={mockSubmit} />);
 
-    //   const usernameInput = screen.getByLabelText(/username/i);
-    //   const emailInput = screen.getByLabelText(/email/i);
+      const usernameInput = screen.getByLabelText(/username/i);
+      const emailInput = screen.getByLabelText(/email/i);
 
-    //   await user.type(usernameInput, 'validuser');
-    //   await user.type(emailInput, 'invalid-email');
+      await user.type(usernameInput, 'validuser');
+      await user.type(emailInput, 'invalid-email');
 
-    //   const submitButton = screen.getByRole('button', { name: /submit/i });
-    //   await user.click(submitButton);
+      const submitButton = screen.getByRole('button', { name: /submit/i });
+      await user.click(submitButton);
 
-    //   await waitFor(
-    //     () => {
-    //       expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument();
-    //     },
-    //     { timeout: 3000 }
-    //   );
-    //   expect(mockSubmit).not.toHaveBeenCalled();
-    // });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+      expect(mockSubmit).not.toHaveBeenCalled();
+    });
 
     it('should show multiple validation errors', async () => {
       const user = userEvent.setup();
@@ -213,30 +213,30 @@ describe('Form Component', () => {
 
   describe('Form Submission', () => {
     // TODO: Fix form submission test - possible timing issue with jsdom
-    // it('should submit form with valid data', async () => {
-    //   const user = userEvent.setup();
-    //   const mockSubmit = vi.fn();
-    //   render(<TestForm onSubmit={mockSubmit} />);
+    it('should submit form with valid data', async () => {
+      const user = userEvent.setup();
+      const mockSubmit = vi.fn();
+      render(<TestForm onSubmit={mockSubmit} />);
 
-    //   const usernameInput = screen.getByLabelText(/username/i);
-    //   const emailInput = screen.getByLabelText(/email/i);
+      const usernameInput = screen.getByLabelText(/username/i);
+      const emailInput = screen.getByLabelText(/email/i);
 
-    //   await user.type(usernameInput, 'testuser');
-    //   await user.type(emailInput, 'test@example.com');
+      await user.type(usernameInput, 'testuser');
+      await user.type(emailInput, 'test@example.com');
 
-    //   const submitButton = screen.getByRole('button', { name: /submit/i });
-    //   await user.click(submitButton);
+      const submitButton = screen.getByRole('button', { name: /submit/i });
+      await user.click(submitButton);
 
-    //   await waitFor(
-    //     () => {
-    //       expect(mockSubmit).toHaveBeenCalledWith({
-    //         username: 'testuser',
-    //         email: 'test@example.com',
-    //       });
-    //     },
-    //     { timeout: 3000 }
-    //   );
-    // });
+      await waitFor(
+        () => {
+          expect(mockSubmit).toHaveBeenCalledWith({
+            username: 'testuser',
+            email: 'test@example.com',
+          });
+        },
+        { timeout: 3000 }
+      );
+    });
 
     it('should not submit form with invalid data', async () => {
       const user = userEvent.setup();
@@ -276,7 +276,9 @@ describe('Form Component', () => {
       await user.type(usernameInput, 'validuser');
 
       await waitFor(() => {
-        expect(screen.queryByText(/username must be at least 3 characters/i)).not.toBeInTheDocument();
+        expect(
+          screen.queryByText(/username must be at least 3 characters/i)
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -301,27 +303,27 @@ describe('Form Component', () => {
     });
 
     // TODO: Fix form submission test - possible timing issue with jsdom
-    // it('should submit form on Enter key in input field', async () => {
-    //   const user = userEvent.setup();
-    //   const mockSubmit = vi.fn();
-    //   render(<TestForm onSubmit={mockSubmit} />);
+    it('should submit form on Enter key in input field', async () => {
+      const user = userEvent.setup();
+      const mockSubmit = vi.fn();
+      render(<TestForm onSubmit={mockSubmit} />);
 
-    //   const usernameInput = screen.getByLabelText(/username/i);
-    //   const emailInput = screen.getByLabelText(/email/i);
+      const usernameInput = screen.getByLabelText(/username/i);
+      const emailInput = screen.getByLabelText(/email/i);
 
-    //   await user.type(usernameInput, 'testuser');
-    //   await user.type(emailInput, 'test@example.com{Enter}');
+      await user.type(usernameInput, 'testuser');
+      await user.type(emailInput, 'test@example.com{Enter}');
 
-    //   await waitFor(
-    //     () => {
-    //       expect(mockSubmit).toHaveBeenCalledWith({
-    //         username: 'testuser',
-    //         email: 'test@example.com',
-    //       });
-    //     },
-    //     { timeout: 3000 }
-    //   );
-    // });
+      await waitFor(
+        () => {
+          expect(mockSubmit).toHaveBeenCalledWith({
+            username: 'testuser',
+            email: 'test@example.com',
+          });
+        },
+        { timeout: 3000 }
+      );
+    });
   });
 
   describe('Accessibility', () => {
@@ -371,7 +373,9 @@ describe('Form Component', () => {
         expect(ariaDescribedBy).toBeTruthy();
 
         if (ariaDescribedBy) {
-          const errorMessageId = ariaDescribedBy.split(' ').find(id => id.includes('-form-item-message'));
+          const errorMessageId = ariaDescribedBy
+            .split(' ')
+            .find(id => id.includes('-form-item-message'));
           expect(errorMessageId).toBeTruthy();
         }
       });

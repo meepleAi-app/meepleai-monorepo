@@ -139,14 +139,14 @@ describe('SessionSetupModal - Validation and API Integration', () => {
   });
 
   describe('API Submission', () => {
-    it.skip('should successfully create session and call onSessionCreated', async () => {
+    it('should successfully create session and call onSessionCreated', async () => {
       const user = userEvent.setup();
 
       const mockSession = createMockSession();
 
       // Make the API call take some time so we can see the loading state
-      (api.sessions.start as Mock).mockImplementation(() =>
-        new Promise(resolve => setTimeout(() => resolve(mockSession), 50))
+      (api.sessions.start as Mock).mockImplementation(
+        () => new Promise(resolve => setTimeout(() => resolve(mockSession), 50))
       );
 
       render(
@@ -170,12 +170,15 @@ describe('SessionSetupModal - Validation and API Integration', () => {
 
       // The button text changes to show loading state
       // Use a small timeout to check the loading state appears
-      await waitFor(() => {
-        // Find button that contains "Starting Session..." text
-        const buttons = screen.getAllByRole('button');
-        const loadingButton = buttons.find(b => b.textContent === 'Starting Session...');
-        expect(loadingButton).toBeDefined();
-      }, { timeout: 100 }); // Short timeout since we're checking for immediate state
+      await waitFor(
+        () => {
+          // Find button that contains "Starting Session..." text
+          const buttons = screen.getAllByRole('button');
+          const loadingButton = buttons.find(b => b.textContent === 'Starting Session...');
+          expect(loadingButton).toBeDefined();
+        },
+        { timeout: 100 }
+      ); // Short timeout since we're checking for immediate state
 
       // Should call API with correct payload
       await waitFor(() => {
@@ -199,9 +202,7 @@ describe('SessionSetupModal - Validation and API Integration', () => {
     it('should display error message when API fails', async () => {
       const user = userEvent.setup();
 
-      (api.sessions.start as Mock).mockRejectedValue(
-        new Error('Network error')
-      );
+      (api.sessions.start as Mock).mockRejectedValue(new Error('Network error'));
 
       render(
         <SessionSetupModal

@@ -4,30 +4,35 @@ import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
 
 // Mock dependencies
 vi.mock('@/lib/retryUtils', () => ({
-  retryWithBackoff: vi.fn((fn) => fn()),
-  isRetryableError: vi.fn(() => true)
+  retryWithBackoff: vi.fn(fn => fn()),
+  isRetryableError: vi.fn(() => true),
 }));
 
 vi.mock('@/lib/errorUtils', () => ({
-  categorizeError: vi.fn((error) => ({
+  categorizeError: vi.fn(error => ({
     category: 'network',
     message: error.message,
-    canRetry: true
+    canRetry: true,
   })),
-  extractCorrelationId: vi.fn(() => 'test-correlation-id')
+  extractCorrelationId: vi.fn(() => 'test-correlation-id'),
 }));
 
 vi.mock('@/lib/api', () => ({
   ApiError: class ApiError extends Error {
-    constructor(message: string, public statusCode: number, public correlationId?: string, public response?: Response) {
+    constructor(
+      message: string,
+      public statusCode: number,
+      public correlationId?: string,
+      public response?: Response
+    ) {
       super(message);
     }
-  }
+  },
 }));
 
 // Mock PdfPreview component
 vi.mock('@/components/PdfPreview', () => ({
-  PdfPreview: ({ file }: { file: File }) => <div data-testid="pdf-preview">{file.name}</div>
+  PdfPreview: ({ file }: { file: File }) => <div data-testid="pdf-preview">{file.name}</div>,
 }));
 
 // Polyfill TextEncoder for Node.js test environment
@@ -60,7 +65,7 @@ function createPdfFile(name: string, content: string = '%PDF-1.4 test content'):
 
   // Mock slice method to return a blob with working arrayBuffer
   const originalSlice = file.slice;
-  file.slice = function(start?: number, end?: number) {
+  file.slice = function (start?: number, end?: number) {
     const sliceStart = start || 0;
     const sliceEnd = end || content.length;
     const slicedContent = content.substring(sliceStart, sliceEnd);
@@ -72,8 +77,10 @@ function createPdfFile(name: string, content: string = '%PDF-1.4 test content'):
       type: 'application/pdf',
       arrayBuffer: async () => slicedBytes.buffer,
       slice: originalSlice,
-      stream: () => { throw new Error('stream not implemented'); },
-      text: async () => slicedContent
+      stream: () => {
+        throw new Error('stream not implemented');
+      },
+      text: async () => slicedContent,
     };
 
     return mockBlob;
@@ -87,7 +94,7 @@ describe('PdfUploadForm', () => {
     gameId: 'game-1',
     gameName: 'Gloomhaven',
     onUploadSuccess: vi.fn(),
-    onUploadError: vi.fn()
+    onUploadError: vi.fn(),
   };
 
   beforeEach(() => {
@@ -146,7 +153,7 @@ describe('PdfUploadForm', () => {
       });
     });
 
-    it.skip('shows validation error for non-PDF file', async () => {
+    it('shows validation error for non-PDF file', async () => {
       const user = userEvent.setup();
       // Create a file that looks like PDF but has wrong MIME type
       // This will trigger the validation error
@@ -157,7 +164,7 @@ describe('PdfUploadForm', () => {
 
       // Mock the slice method to return content for validation
       const originalSlice = file.slice.bind(file);
-      file.slice = function(start?: number, end?: number): Blob {
+      file.slice = function (start?: number, end?: number): Blob {
         const sliceStart = start || 0;
         const sliceEnd = Math.min(end || content.length, content.length);
         const slicedContent = content.substring(sliceStart, sliceEnd);
@@ -186,9 +193,10 @@ describe('PdfUploadForm', () => {
       await waitFor(() => {
         const alerts = screen.getAllByRole('alert');
         expect(alerts.length).toBeGreaterThan(0);
-        const validationAlert = alerts.find(alert =>
-          alert.textContent?.includes('Invalid file type') ||
-          alert.textContent?.includes('does not appear to be a valid PDF')
+        const validationAlert = alerts.find(
+          alert =>
+            alert.textContent?.includes('Invalid file type') ||
+            alert.textContent?.includes('does not appear to be a valid PDF')
         );
         expect(validationAlert).toBeInTheDocument();
       });
@@ -281,7 +289,7 @@ describe('PdfUploadForm', () => {
 
       (global.fetch as Mock).mockResolvedValue({
         ok: true,
-        json: async () => ({ documentId: 'doc-123' })
+        json: async () => ({ documentId: 'doc-123' }),
       });
 
       render(<PdfUploadForm {...mockProps} />);
@@ -306,7 +314,7 @@ describe('PdfUploadForm', () => {
       const file = createPdfFile('test.pdf');
 
       let resolveUpload: (value: any) => void;
-      const uploadPromise = new Promise((resolve) => {
+      const uploadPromise = new Promise(resolve => {
         resolveUpload = resolve;
       });
       (global.fetch as Mock).mockReturnValue(uploadPromise);
@@ -339,7 +347,7 @@ describe('PdfUploadForm', () => {
       // Now resolve the upload
       resolveUpload!({
         ok: true,
-        json: async () => ({ documentId: 'doc-123' })
+        json: async () => ({ documentId: 'doc-123' }),
       });
 
       // Wait for the click to complete
@@ -379,14 +387,19 @@ describe('PdfUploadForm', () => {
       const file = createPdfFile('test.pdf');
 
       const { retryWithBackoff } = require('@/lib/retryUtils');
-      retryWithBackoff.mockImplementation(async (fn: () => Promise<unknown>, options: { onRetry: (error: Error, attempt: number, delay: number) => void }) => {
-        await options.onRetry(new Error('Failed'), 1, 2000);
-        return fn();
-      });
+      retryWithBackoff.mockImplementation(
+        async (
+          fn: () => Promise<unknown>,
+          options: { onRetry: (error: Error, attempt: number, delay: number) => void }
+        ) => {
+          await options.onRetry(new Error('Failed'), 1, 2000);
+          return fn();
+        }
+      );
 
       (global.fetch as Mock).mockResolvedValue({
         ok: true,
-        json: async () => ({ documentId: 'doc-123' })
+        json: async () => ({ documentId: 'doc-123' }),
       });
 
       render(<PdfUploadForm {...mockProps} />);

@@ -157,6 +157,14 @@ Promise.all([
   setupBrowserPolyfills();
 });
 
+// Mock TextEncoder/TextDecoder for SSE streaming tests (Issue #1007)
+// Node.js has these in util module, but they're not global in Jest environment
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util');
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}
+
 // Mock Worker API for Jest (Issue #1301 - UploadQueueStore lazy init tests)
 // jsdom does not provide Worker constructor, so we mock it globally
 if (typeof global.Worker === 'undefined') {

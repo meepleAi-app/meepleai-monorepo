@@ -21,6 +21,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useEf
 import { ChatThread, Message } from '@/types';
 import { api } from '@/lib/api';
 import { useGame } from '@/components/game/GameProvider';
+import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
 
 // ============================================================================
 // Types & Constants
@@ -73,6 +74,13 @@ export interface ChatContextValue {
   editMessage: (messageId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
   setMessageFeedback: (messageId: string, feedback: import('@/lib/constants/feedback').FeedbackOutcome) => Promise<void>;
+
+  // Streaming state (Issue #1007)
+  isStreaming: boolean;
+  streamingAnswer: string;
+  streamingState: string;
+  streamingCitations: import('@/lib/api/schemas/streaming.schemas').Citation[];
+  stopStreaming: () => void;
 
   // State
   loading: LoadingState;
@@ -334,6 +342,42 @@ export function ChatProvider({ children }: PropsWithChildren) {
   };
 
   // ============================================================================
+  // Streaming Integration (Issue #1007)
+  // ============================================================================
+
+  // Streaming state hook
+  const [streamingState, streamingControls] = useStreamingChat({
+    onComplete: useCallback((answer: string, citations: import('@/lib/api/schemas/streaming.schemas').Citation[], confidence: number | null) => {
+      // When streaming completes, add assistant message to thread
+      const currentActiveChatId = selectedGameId ? state.activeChatIds[selectedGameId] : null;
+      if (!currentActiveChatId) return;
+
+      const assistantMessage: Message = {
+        id: `temp-assistant-${Date.now()}`,
+        role: 'assistant',
+        content: answer,
+        timestamp: new Date(),
+        endpoint: 'qa-stream',
+        gameId: selectedGameId || undefined,
+      };
+
+      setState((prev) => ({
+        ...prev,
+        messagesByChat: {
+          ...prev.messagesByChat,
+          [currentActiveChatId]: [...(prev.messagesByChat[currentActiveChatId] ?? []), assistantMessage],
+        },
+      }));
+
+      // Reload thread to get backend-persisted message
+      void loadMessages(currentActiveChatId);
+    }, [selectedGameId, state.activeChatIds, loadMessages]),
+    onError: useCallback((err: Error) => {
+      setError(err.message || 'Errore durante lo streaming');
+    }, []),
+  });
+
+  // ============================================================================
   // Chat Operations
   // ============================================================================
 
@@ -516,8 +560,8 @@ export function ChatProvider({ children }: PropsWithChildren) {
           // For now, backend handles title management
         }
 
-        // Note: AI response streaming will be added in future enhancement
-        // For now, this sends the user message to the backend
+        // Issue #1007: Start SSE streaming for AI response
+        await streamingControls.startStreaming(selectedGameId, content.trim(), threadId);
       } catch (err) {
         console.error('Failed to send message:', err);
         setError("Errore nella comunicazione con l'agente. Riprova.");
@@ -536,7 +580,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         setLoading((prev) => ({ ...prev, sending: false }));
       }
     },
-    [selectedGameId, selectedAgentId, activeChatId]
+    [selectedGameId, selectedAgentId, activeChatId, streamingControls, enforceThreadLimit, generateTitleFromMessage, loadChats, state.chatsByGame]
   );
 
   const editMessage = useCallback(
@@ -654,6 +698,12 @@ export function ChatProvider({ children }: PropsWithChildren) {
       editMessage,
       deleteMessage,
       setMessageFeedback,
+      // Streaming state (Issue #1007)
+      isStreaming: streamingState.isStreaming,
+      streamingAnswer: streamingState.currentAnswer,
+      streamingState: streamingState.stateMessage,
+      streamingCitations: streamingState.citations,
+      stopStreaming: streamingControls.stopStreaming,
       loading,
       error,
     }),
@@ -672,6 +722,11 @@ export function ChatProvider({ children }: PropsWithChildren) {
       editMessage,
       deleteMessage,
       setMessageFeedback,
+      streamingState.isStreaming,
+      streamingState.currentAnswer,
+      streamingState.stateMessage,
+      streamingState.citations,
+      streamingControls.stopStreaming,
       loading,
       error,
     ]

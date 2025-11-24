@@ -290,6 +290,45 @@ describe('useStreamingChat', () => {
 
       expect(result.current[0].citations[0].source).toBe('final.pdf');
     });
+
+    it('should fallback to snippets field when citations is empty', async () => {
+      // Test for bug fix: empty arrays are truthy, so we need to check length
+      const events = [
+        JSON.stringify({
+          type: 'citations',
+          data: {
+            citations: [], // Empty array (truthy but no data)
+            snippets: [
+              { source: 'guide.pdf', page: 3, text: 'Setup instructions', score: 0.92 },
+              { source: 'faq.pdf', page: 7, text: 'Common questions', score: 0.87 },
+            ],
+          },
+          timestamp: '2025-01-15T10:00:00Z',
+        }),
+        JSON.stringify({
+          type: 'complete',
+          data: { totalTokens: 0, confidence: null },
+          timestamp: '2025-01-15T10:00:01Z',
+        }),
+      ];
+
+      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+        createSSEResponse(events)
+      );
+
+      const { result } = renderHook(() => useStreamingChat());
+
+      await act(async () => {
+        await result.current[1].startStreaming('game-123', 'test');
+      });
+
+      await waitFor(() => {
+        expect(result.current[0].citations).toHaveLength(2);
+      });
+
+      expect(result.current[0].citations[0].source).toBe('guide.pdf');
+      expect(result.current[0].citations[1].source).toBe('faq.pdf');
+    });
   });
 
   describe('Error Handling', () => {

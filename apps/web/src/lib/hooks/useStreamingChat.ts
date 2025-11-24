@@ -166,7 +166,10 @@ export function useStreamingChat(
 
           case StreamingEventType.Citations: {
             const typedEvent = parseEventData(event) as TypedStreamingEvent<StreamingEventType.Citations>;
-            const citationsData = typedEvent.data.citations || typedEvent.data.snippets || [];
+            // Check array length, not truthiness, since empty arrays are truthy
+            const citationsData = typedEvent.data.citations.length > 0
+              ? typedEvent.data.citations
+              : typedEvent.data.snippets;
             setState((prev) => ({ ...prev, citations: citationsData }));
             break;
           }

@@ -18,7 +18,7 @@ import userEvent from '@testing-library/user-event';
 import { SessionWarningModal } from '../SessionWarningModal';
 
 // Mock AccessibleModal and AccessibleButton
-jest.mock('../accessible/AccessibleModal', () => ({
+vi.mock('../accessible/AccessibleModal', () => ({
   AccessibleModal: ({ children, title, description, isOpen }: any) => {
     if (!isOpen) return null;
     return (
@@ -31,7 +31,7 @@ jest.mock('../accessible/AccessibleModal', () => ({
   },
 }));
 
-jest.mock('../accessible/AccessibleButton', () => ({
+vi.mock('../accessible/AccessibleButton', () => ({
   AccessibleButton: ({ children, onClick, 'aria-label': ariaLabel }: any) => (
     <button onClick={onClick} aria-label={ariaLabel}>
       {children}
@@ -40,17 +40,17 @@ jest.mock('../accessible/AccessibleButton', () => ({
 }));
 
 describe('SessionWarningModal', () => {
-  const mockOnStayLoggedIn = jest.fn();
-  const mockOnLogOut = jest.fn();
+  const mockOnStayLoggedIn = vi.fn();
+  const mockOnLogOut = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   describe('Rendering', () => {
@@ -172,14 +172,14 @@ describe('SessionWarningModal', () => {
 
       // Fast-forward 1 minute
       act(() => {
-        jest.advanceTimersByTime(60 * 1000);
+        vi.advanceTimersByTime(60 * 1000);
       });
 
       expect(screen.getByText('4')).toBeInTheDocument();
 
       // Fast-forward another minute
       act(() => {
-        jest.advanceTimersByTime(60 * 1000);
+        vi.advanceTimersByTime(60 * 1000);
       });
 
       expect(screen.getByText('3')).toBeInTheDocument();
@@ -198,14 +198,14 @@ describe('SessionWarningModal', () => {
 
       // Fast-forward 1 minute
       act(() => {
-        jest.advanceTimersByTime(60 * 1000);
+        vi.advanceTimersByTime(60 * 1000);
       });
 
       expect(screen.getByText('0')).toBeInTheDocument();
 
       // Fast-forward another minute - should still be 0
       act(() => {
-        jest.advanceTimersByTime(60 * 1000);
+        vi.advanceTimersByTime(60 * 1000);
       });
 
       expect(screen.getByText('0')).toBeInTheDocument();
@@ -244,7 +244,7 @@ describe('SessionWarningModal', () => {
 
       // Fast-forward 30 seconds (halfway through first minute)
       act(() => {
-        jest.advanceTimersByTime(30 * 1000);
+        vi.advanceTimersByTime(30 * 1000);
       });
 
       // Update remainingMinutes prop
@@ -260,14 +260,14 @@ describe('SessionWarningModal', () => {
 
       // Fast-forward another 30 seconds (should not decrement yet because interval was reset)
       act(() => {
-        jest.advanceTimersByTime(30 * 1000);
+        vi.advanceTimersByTime(30 * 1000);
       });
 
       expect(screen.getByText('10')).toBeInTheDocument();
 
       // Fast-forward 30 more seconds (now a full minute since prop change)
       act(() => {
-        jest.advanceTimersByTime(30 * 1000);
+        vi.advanceTimersByTime(30 * 1000);
       });
 
       expect(screen.getByText('9')).toBeInTheDocument();
@@ -288,7 +288,7 @@ describe('SessionWarningModal', () => {
 
       // Fast-forward time - should not throw errors
       act(() => {
-        jest.advanceTimersByTime(60 * 1000);
+        vi.advanceTimersByTime(60 * 1000);
       });
 
       // No assertions needed - we're just checking no errors occur
@@ -369,14 +369,14 @@ describe('SessionWarningModal', () => {
 
       // Fast-forward 1 minute (2 -> 1)
       act(() => {
-        jest.advanceTimersByTime(60 * 1000);
+        vi.advanceTimersByTime(60 * 1000);
       });
 
       expect(mockOnLogOut).not.toHaveBeenCalled();
 
       // Fast-forward another minute (1 -> 0)
       act(() => {
-        jest.advanceTimersByTime(60 * 1000);
+        vi.advanceTimersByTime(60 * 1000);
       });
 
       expect(mockOnLogOut).toHaveBeenCalledTimes(1);
@@ -406,14 +406,14 @@ describe('SessionWarningModal', () => {
 
       // Fast-forward 1 minute (1 -> 0)
       act(() => {
-        jest.advanceTimersByTime(60 * 1000);
+        vi.advanceTimersByTime(60 * 1000);
       });
 
       expect(mockOnLogOut).toHaveBeenCalledTimes(1);
 
       // Fast-forward more time - should not call again
       act(() => {
-        jest.advanceTimersByTime(60 * 1000);
+        vi.advanceTimersByTime(60 * 1000);
       });
 
       expect(mockOnLogOut).toHaveBeenCalledTimes(1);
@@ -534,8 +534,8 @@ describe('SessionWarningModal', () => {
     });
 
     it('should handle callback functions being replaced', () => {
-      const newOnStayLoggedIn = jest.fn();
-      const newOnLogOut = jest.fn();
+      const newOnStayLoggedIn = vi.fn();
+      const newOnLogOut = vi.fn();
 
       const { rerender } = render(
         <SessionWarningModal
@@ -555,7 +555,7 @@ describe('SessionWarningModal', () => {
 
       // Countdown to 0 should call new callback
       act(() => {
-        jest.advanceTimersByTime(5 * 60 * 1000);
+        vi.advanceTimersByTime(5 * 60 * 1000);
       });
 
       expect(newOnLogOut).toHaveBeenCalled();

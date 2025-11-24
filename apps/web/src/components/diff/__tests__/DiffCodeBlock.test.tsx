@@ -3,7 +3,7 @@ import { DiffCodeBlock } from '../DiffCodeBlock';
 import { DiffLine } from '../../../lib/diffProcessor';
 
 // Mock PrismHighlighter
-jest.mock('../PrismHighlighter', () => ({
+vi.mock('../PrismHighlighter', () => ({
   PrismHighlighter: ({ code, lineType }: { code: string; lineType: string }) => (
     <span data-testid="prism-highlighter" data-line-type={lineType}>
       {code}

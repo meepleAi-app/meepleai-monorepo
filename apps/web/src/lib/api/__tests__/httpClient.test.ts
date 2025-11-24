@@ -56,7 +56,7 @@ describe('getApiBase', () => {
 });
 
 describe('HttpClient', () => {
-  let mockFetch: jest.Mock;
+  let mockFetch: Mock;
   let client: HttpClient;
   let mockLocalStorage: { [key: string]: string };
   let mockSessionStorage: { [key: string]: string };
@@ -67,7 +67,7 @@ describe('HttpClient', () => {
     // Reset circuit breaker to prevent test interference
     resetAllCircuits();
 
-    mockFetch = jest.fn();
+    mockFetch = vi.fn();
     client = new HttpClient({ baseUrl: 'http://localhost:8080', fetchImpl: mockFetch });
 
     // Mock browser storage
@@ -76,8 +76,8 @@ describe('HttpClient', () => {
 
     Object.defineProperty(window, 'localStorage', {
       value: {
-        getItem: jest.fn((key: string) => mockLocalStorage[key] || null),
-        setItem: jest.fn((key: string, value: string) => {
+        getItem: vi.fn((key: string) => mockLocalStorage[key] || null),
+        setItem: vi.fn((key: string, value: string) => {
           mockLocalStorage[key] = value;
         }),
       },
@@ -86,14 +86,14 @@ describe('HttpClient', () => {
 
     Object.defineProperty(window, 'sessionStorage', {
       value: {
-        getItem: jest.fn((key: string) => mockSessionStorage[key] || null),
-        setItem: jest.fn((key: string, value: string) => {
+        getItem: vi.fn((key: string) => mockSessionStorage[key] || null),
+        setItem: vi.fn((key: string, value: string) => {
           mockSessionStorage[key] = value;
         }),
-        removeItem: jest.fn((key: string) => {
+        removeItem: vi.fn((key: string) => {
           delete mockSessionStorage[key];
         }),
-        clear: jest.fn(() => {
+        clear: vi.fn(() => {
           mockSessionStorage = {};
         }),
       },
@@ -109,7 +109,7 @@ describe('HttpClient', () => {
     // Mock crypto.randomUUID
     Object.defineProperty(global, 'crypto', {
       value: {
-        randomUUID: jest.fn(() => 'test-uuid-123'),
+        randomUUID: vi.fn(() => 'test-uuid-123'),
       },
       writable: true,
     });
@@ -454,7 +454,7 @@ describe('HttpClient', () => {
 
   describe('error handling', () => {
     it('should skip error logging when requested', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
 
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -683,7 +683,7 @@ describe('HttpClient', () => {
           headers: new Headers(),
         });
 
-      const onRetry = jest.fn();
+      const onRetry = vi.fn();
 
       await client.get('/api/v1/test', undefined, {
         retry: {
@@ -1104,20 +1104,20 @@ describe('downloadFile', () => {
   let mockRemoveChild: jest.SpyInstance;
   let mockCreateObjectURL: jest.SpyInstance;
   let mockRevokeObjectURL: jest.SpyInstance;
-  let mockLink: { href: string; download: string; click: jest.Mock };
+  let mockLink: { href: string; download: string; click: Mock };
 
   beforeEach(() => {
     mockLink = {
       href: '',
       download: '',
-      click: jest.fn(),
+      click: vi.fn(),
     };
 
-    mockCreateElement = jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
-    mockAppendChild = jest.spyOn(document.body, 'appendChild').mockImplementation();
-    mockRemoveChild = jest.spyOn(document.body, 'removeChild').mockImplementation();
-    mockCreateObjectURL = jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-url');
-    mockRevokeObjectURL = jest.spyOn(URL, 'revokeObjectURL').mockImplementation();
+    mockCreateElement = vi.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
+    mockAppendChild = vi.spyOn(document.body, 'appendChild').mockImplementation();
+    mockRemoveChild = vi.spyOn(document.body, 'removeChild').mockImplementation();
+    mockCreateObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-url');
+    mockRevokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation();
   });
 
   afterEach(() => {

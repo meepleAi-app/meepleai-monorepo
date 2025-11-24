@@ -3,19 +3,19 @@ import { useMultiGameChat, Chat, ChatMessage, ChatWithHistory } from '../useMult
 import * as api from '../../api';
 
 // Mock the API module
-jest.mock('../../api', () => ({
+vi.mock('../../api', () => ({
   api: {
-    get: jest.fn(),
-    post: jest.fn(),
-    delete: jest.fn(),
+    get: vi.fn(),
+    post: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
-const mockApi = api.api as jest.Mocked<typeof api.api>;
+const mockApi = api.api as Mocked<typeof api.api>;
 
 describe('useMultiGameChat', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Initial State', () => {
@@ -222,7 +222,7 @@ describe('useMultiGameChat', () => {
     });
 
     it('should handle API errors when loading chats', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockApi.get.mockRejectedValueOnce(new Error('Network error'));
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
@@ -371,7 +371,7 @@ describe('useMultiGameChat', () => {
     });
 
     it('should handle API errors when loading chat history', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       // TEST-685: Mock initial auto-load, then the failing loadChatHistory call
       mockApi.get
         .mockResolvedValueOnce([]) // Initial auto-load from useEffect
@@ -612,7 +612,7 @@ describe('useMultiGameChat', () => {
     });
 
     it('should handle API errors when creating chat', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockApi.post.mockRejectedValueOnce(new Error('Failed to create chat'));
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
@@ -785,7 +785,7 @@ describe('useMultiGameChat', () => {
     });
 
     it('should handle API errors when deleting chat', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockApi.delete.mockRejectedValueOnce(new Error('Delete failed'));
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));

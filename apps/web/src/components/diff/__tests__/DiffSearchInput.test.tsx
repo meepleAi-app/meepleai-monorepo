@@ -8,16 +8,16 @@ import userEvent from '@testing-library/user-event';
 import { DiffSearchInput } from '../DiffSearchInput';
 
 describe('DiffSearchInput', () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   describe('Rendering', () => {
@@ -178,7 +178,7 @@ describe('DiffSearchInput', () => {
       expect(mockOnChange).not.toHaveBeenCalled();
 
       // Fast-forward timers by 300ms
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith('test');
@@ -194,7 +194,7 @@ describe('DiffSearchInput', () => {
       await user.type(input, 'abc');
 
       // Advance timers and wait for the onChange to be called
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await waitFor(() => {
         // The onChange is called for each character due to how the debounce is implemented
@@ -212,11 +212,11 @@ describe('DiffSearchInput', () => {
 
       // Type first character
       await user.type(input, 'a');
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
 
       // Type second character (resets debounce)
       await user.type(input, 'b');
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
 
       // Type third character (resets debounce)
       await user.type(input, 'c');
@@ -225,7 +225,7 @@ describe('DiffSearchInput', () => {
       expect(mockOnChange).not.toHaveBeenCalled();
 
       // Now complete the 300ms
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith('abc');
@@ -316,7 +316,7 @@ describe('DiffSearchInput', () => {
       const input = screen.getByRole('textbox');
       await user.type(input, longQuery);
 
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith(longQuery);
@@ -331,7 +331,7 @@ describe('DiffSearchInput', () => {
       const input = screen.getByRole('textbox');
       await user.type(input, '!@#$%^&*()');
 
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith('!@#$%^&*()');
@@ -356,7 +356,7 @@ describe('DiffSearchInput', () => {
 
       // Type something
       await user.type(input, 'first');
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith('first');
@@ -372,7 +372,7 @@ describe('DiffSearchInput', () => {
 
       // Type again
       await user.type(input, 'second');
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalledWith('second');

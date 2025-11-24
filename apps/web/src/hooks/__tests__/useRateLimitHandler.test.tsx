@@ -11,11 +11,11 @@ import { RateLimitError } from '@/lib/api/core/errors';
 
 describe('useRateLimitHandler', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('initialization', () => {
@@ -35,8 +35,8 @@ describe('useRateLimitHandler', () => {
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit exceeded', endpoint: '/api/test' });
       // Mock getRetryAfterSeconds method
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(60);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Please wait 60 seconds');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(60);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Please wait 60 seconds');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -51,8 +51,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(30);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait 30 seconds');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(30);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait 30 seconds');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -65,16 +65,16 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const error1 = new RateLimitError({ message: 'First', endpoint: '/api/test' });
-      error1.getRetryAfterSeconds = jest.fn().mockReturnValue(10);
-      error1.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait 10s');
+      error1.getRetryAfterSeconds = vi.fn().mockReturnValue(10);
+      error1.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait 10s');
 
       act(() => {
         result.current.handleError(error1);
       });
 
       const error2 = new RateLimitError({ message: 'Second', endpoint: '/api/test' });
-      error2.getRetryAfterSeconds = jest.fn().mockReturnValue(20);
-      error2.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait 20s');
+      error2.getRetryAfterSeconds = vi.fn().mockReturnValue(20);
+      error2.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait 20s');
 
       act(() => {
         result.current.handleError(error2);
@@ -90,8 +90,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(5);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(5);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -100,13 +100,13 @@ describe('useRateLimitHandler', () => {
       expect(result.current.remainingSeconds).toBe(5);
 
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
 
       expect(result.current.remainingSeconds).toBe(4);
 
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
 
       expect(result.current.remainingSeconds).toBe(3);
@@ -116,15 +116,15 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(2);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(2);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait');
 
       act(() => {
         result.current.handleError(rateLimitError);
       });
 
       act(() => {
-        jest.advanceTimersByTime(2000);
+        vi.advanceTimersByTime(2000);
       });
 
       expect(result.current.remainingSeconds).toBe(0);
@@ -136,8 +136,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(3);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(3);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -146,7 +146,7 @@ describe('useRateLimitHandler', () => {
       expect(result.current.error).toBeTruthy();
 
       act(() => {
-        jest.advanceTimersByTime(3000);
+        vi.advanceTimersByTime(3000);
       });
 
       expect(result.current.error).toBeNull();
@@ -156,8 +156,8 @@ describe('useRateLimitHandler', () => {
       const { result, unmount } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(60);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(60);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -167,7 +167,7 @@ describe('useRateLimitHandler', () => {
 
       // Advance time - should not crash
       act(() => {
-        jest.advanceTimersByTime(10000);
+        vi.advanceTimersByTime(10000);
       });
 
       expect(true).toBe(true);
@@ -179,8 +179,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(60);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(60);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -202,8 +202,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(60);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(60);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -215,7 +215,7 @@ describe('useRateLimitHandler', () => {
 
       // Advance time - should not decrement
       act(() => {
-        jest.advanceTimersByTime(10000);
+        vi.advanceTimersByTime(10000);
       });
 
       expect(result.current.remainingSeconds).toBe(0);
@@ -225,8 +225,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const error1 = new RateLimitError({ message: 'First', endpoint: '/api/test' });
-      error1.getRetryAfterSeconds = jest.fn().mockReturnValue(30);
-      error1.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait 30s');
+      error1.getRetryAfterSeconds = vi.fn().mockReturnValue(30);
+      error1.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait 30s');
 
       act(() => {
         result.current.handleError(error1);
@@ -237,8 +237,8 @@ describe('useRateLimitHandler', () => {
       });
 
       const error2 = new RateLimitError({ message: 'Second', endpoint: '/api/test' });
-      error2.getRetryAfterSeconds = jest.fn().mockReturnValue(45);
-      error2.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait 45s');
+      error2.getRetryAfterSeconds = vi.fn().mockReturnValue(45);
+      error2.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait 45s');
 
       act(() => {
         result.current.handleError(error2);
@@ -254,8 +254,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(0);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(0);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -269,8 +269,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(1);
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait 1 second');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(1);
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait 1 second');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -279,7 +279,7 @@ describe('useRateLimitHandler', () => {
       expect(result.current.remainingSeconds).toBe(1);
 
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
 
       expect(result.current.isRateLimited).toBe(false);
@@ -289,8 +289,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(3600); // 1 hour
-      rateLimitError.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait 1 hour');
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(3600); // 1 hour
+      rateLimitError.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait 1 hour');
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -304,8 +304,8 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const rateLimitError = new RateLimitError({ message: 'Rate limit', endpoint: '/api/test' });
-      rateLimitError.getRetryAfterSeconds = jest.fn().mockReturnValue(5);
-      rateLimitError.getUserFriendlyMessage = jest.fn((seconds) => `Wait ${seconds} seconds`);
+      rateLimitError.getRetryAfterSeconds = vi.fn().mockReturnValue(5);
+      rateLimitError.getUserFriendlyMessage = vi.fn((seconds) => `Wait ${seconds} seconds`);
 
       act(() => {
         result.current.handleError(rateLimitError);
@@ -314,13 +314,13 @@ describe('useRateLimitHandler', () => {
       expect(result.current.message).toBe('Wait 5 seconds');
 
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
 
       expect(result.current.message).toBe('Wait 4 seconds');
 
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
 
       expect(result.current.message).toBe('Wait 3 seconds');
@@ -330,12 +330,12 @@ describe('useRateLimitHandler', () => {
       const { result } = renderHook(() => useRateLimitHandler());
 
       const error1 = new RateLimitError({ message: 'First', endpoint: '/api/test' });
-      error1.getRetryAfterSeconds = jest.fn().mockReturnValue(10);
-      error1.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait 10s');
+      error1.getRetryAfterSeconds = vi.fn().mockReturnValue(10);
+      error1.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait 10s');
 
       const error2 = new RateLimitError({ message: 'Second', endpoint: '/api/test' });
-      error2.getRetryAfterSeconds = jest.fn().mockReturnValue(15);
-      error2.getUserFriendlyMessage = jest.fn().mockReturnValue('Wait 15s');
+      error2.getRetryAfterSeconds = vi.fn().mockReturnValue(15);
+      error2.getUserFriendlyMessage = vi.fn().mockReturnValue('Wait 15s');
 
       act(() => {
         result.current.handleError(error1);

@@ -20,16 +20,16 @@ describe('DiffToolbar', () => {
   const defaultProps = {
     statistics: mockStatistics,
     searchQuery: '',
-    onSearchChange: jest.fn(),
+    onSearchChange: vi.fn(),
     currentChangeIndex: 0,
     totalChanges: 5,
-    onNavigatePrev: jest.fn(),
-    onNavigateNext: jest.fn(),
+    onNavigatePrev: vi.fn(),
+    onNavigateNext: vi.fn(),
     showNavigation: true,
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {
@@ -106,7 +106,7 @@ describe('DiffToolbar', () => {
 
     it('should call onSearchChange when search input changes', async () => {
       const user = userEvent.setup({ delay: null });
-      const mockOnSearchChange = jest.fn();
+      const mockOnSearchChange = vi.fn();
 
       render(<DiffToolbar {...defaultProps} onSearchChange={mockOnSearchChange} searchQuery="test" />);
 
@@ -126,7 +126,7 @@ describe('DiffToolbar', () => {
 
     it('should call onNavigatePrev when prev button clicked', async () => {
       const user = userEvent.setup();
-      const mockOnNavigatePrev = jest.fn();
+      const mockOnNavigatePrev = vi.fn();
 
       render(
         <DiffToolbar
@@ -144,7 +144,7 @@ describe('DiffToolbar', () => {
 
     it('should call onNavigateNext when next button clicked', async () => {
       const user = userEvent.setup();
-      const mockOnNavigateNext = jest.fn();
+      const mockOnNavigateNext = vi.fn();
 
       render(
         <DiffToolbar

@@ -22,7 +22,7 @@ const mockAgents: Agent[] = [
 ];
 
 describe('SearchFilters', () => {
-  const mockOnFiltersChange = jest.fn();
+  const mockOnFiltersChange = vi.fn();
 
   beforeEach(() => {
     mockOnFiltersChange.mockClear();

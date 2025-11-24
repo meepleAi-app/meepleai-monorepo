@@ -53,17 +53,17 @@ const ComponentWithButton: React.FC<{ onClick: () => void }> = ({ onClick }) => 
 describe('Async Test Helpers', () => {
   describe('advanceTimersAndFlush', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.runOnlyPendingTimers();
-      jest.useRealTimers();
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
     });
 
     describe('Happy Path', () => {
       it('should advance timers by specified milliseconds', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         setTimeout(callback, 1000);
 
         await advanceTimersAndFlush(1000);
@@ -72,7 +72,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should advance timers multiple times', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         setTimeout(callback, 500);
         setTimeout(callback, 1000);
         setTimeout(callback, 1500);
@@ -83,7 +83,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should flush promise microtask queue', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         Promise.resolve().then(callback);
 
         await advanceTimersAndFlush(0);
@@ -92,7 +92,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should handle component with timer', async () => {
-        const onTick = jest.fn();
+        const onTick = vi.fn();
         render(<ComponentWithTimer onTick={onTick} />);
 
         await advanceTimersAndFlush(2000);
@@ -112,7 +112,7 @@ describe('Async Test Helpers', () => {
 
     describe('Edge Cases', () => {
       it('should handle zero milliseconds', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         setTimeout(callback, 100);
 
         await advanceTimersAndFlush(0);
@@ -126,7 +126,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should handle very large milliseconds', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         setTimeout(callback, 100000);
 
         await advanceTimersAndFlush(200000);
@@ -135,7 +135,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should not trigger timers scheduled for future', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         setTimeout(callback, 2000);
 
         await advanceTimersAndFlush(1000);
@@ -144,9 +144,9 @@ describe('Async Test Helpers', () => {
       });
 
       it('should handle multiple pending promises', async () => {
-        const callback1 = jest.fn();
-        const callback2 = jest.fn();
-        const callback3 = jest.fn();
+        const callback1 = vi.fn();
+        const callback2 = vi.fn();
+        const callback3 = vi.fn();
 
         Promise.resolve().then(callback1);
         Promise.resolve().then(callback2);
@@ -189,7 +189,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should flush microtask queue', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         Promise.resolve().then(callback);
 
         await waitForAsyncEffects();
@@ -198,7 +198,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should handle nested promises', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         Promise.resolve()
           .then(() => Promise.resolve())
@@ -254,7 +254,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should handle click events', async () => {
-        const handleClick = jest.fn();
+        const handleClick = vi.fn();
         render(<ComponentWithButton onClick={handleClick} />);
 
         const user = setupUserEvent();
@@ -280,7 +280,7 @@ describe('Async Test Helpers', () => {
         const user = setupUserEvent();
 
         // User event with null delay should execute immediately
-        const handleClick = jest.fn();
+        const handleClick = vi.fn();
         render(<ComponentWithButton onClick={handleClick} />);
 
         await user.click(screen.getByRole('button'));
@@ -324,16 +324,16 @@ describe('Async Test Helpers', () => {
 
   describe('flushAllPending', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     describe('Happy Path', () => {
       it('should flush all pending timers', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         setTimeout(callback, 1000);
         setTimeout(callback, 2000);
 
@@ -343,7 +343,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should flush promise queue', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         Promise.resolve().then(callback);
 
         await flushAllPending();
@@ -352,7 +352,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should work as cleanup in afterEach', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         setTimeout(callback, 100);
 
         await flushAllPending();
@@ -367,7 +367,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should handle only pending timers (no promises)', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         setTimeout(callback, 500);
 
         await flushAllPending();
@@ -376,7 +376,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should handle only pending promises (no timers)', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         Promise.resolve().then(callback);
 
         await flushAllPending();
@@ -385,7 +385,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should handle pending timers at current time', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
         setTimeout(callback, 100);
 
         // runOnlyPendingTimers runs only currently scheduled timers
@@ -398,7 +398,7 @@ describe('Async Test Helpers', () => {
 
     describe('Integration', () => {
       it('should clean up component timers', async () => {
-        const onTick = jest.fn();
+        const onTick = vi.fn();
         const { unmount } = render(<ComponentWithTimer onTick={onTick} />);
 
         unmount();
@@ -579,17 +579,17 @@ describe('Async Test Helpers', () => {
 
   describe('Helper Integration Tests', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(async () => {
       await flushAllPending();
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     describe('Combined Usage', () => {
       it('should work together: waitForAsyncEffects + setupUserEvent', async () => {
-        const handleClick = jest.fn();
+        const handleClick = vi.fn();
         render(
           <>
             <ComponentWithAsyncEffect />
@@ -617,7 +617,7 @@ describe('Async Test Helpers', () => {
       });
 
       it('should support full test lifecycle', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         // Render component
         render(<ComponentWithTimer onTick={callback} />);

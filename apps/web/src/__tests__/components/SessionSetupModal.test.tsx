@@ -19,12 +19,12 @@ import { SessionSetupModal } from '@/components/SessionSetupModal';
 import { Game, GameSessionDto, api } from '@/lib/api';
 
 // Mock API
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   ...jest.requireActual('@/lib/api'),
   api: {
     sessions: {
-      start: jest.fn(),
-      getById: jest.fn(),
+      start: vi.fn(),
+      getById: vi.fn(),
     },
   },
 }));
@@ -33,7 +33,7 @@ jest.mock('@/lib/api', () => ({
 let uuidCounter = 0;
 Object.defineProperty(globalThis, 'crypto', {
   value: {
-    randomUUID: jest.fn(() => {
+    randomUUID: vi.fn(() => {
       uuidCounter++;
       return `mock-uuid-${uuidCounter}`;
     }),
@@ -54,11 +54,11 @@ describe('SessionSetupModal', () => {
     createdAt: '2024-01-01T00:00:00Z',
   };
 
-  const mockOnClose = jest.fn();
-  const mockOnSessionCreated = jest.fn();
+  const mockOnClose = vi.fn();
+  const mockOnSessionCreated = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Reset UUID counter for each test
     uuidCounter = 0;
   });
@@ -302,7 +302,7 @@ describe('SessionSetupModal', () => {
     it('should show error for empty player names', async () => {
       const user = userEvent.setup();
 
-      (api.sessions.start as jest.Mock).mockResolvedValue({
+      (api.sessions.start as Mock).mockResolvedValue({
         id: 'session-123',
         gameId: mockGame.id,
         status: 'InProgress',
@@ -433,7 +433,7 @@ describe('SessionSetupModal', () => {
       };
 
       // Make the API call take some time so we can see the loading state
-      (api.sessions.start as jest.Mock).mockImplementation(() =>
+      (api.sessions.start as Mock).mockImplementation(() =>
         new Promise(resolve => setTimeout(() => resolve(mockSession), 50))
       );
 
@@ -487,7 +487,7 @@ describe('SessionSetupModal', () => {
     it('should display error message when API fails', async () => {
       const user = userEvent.setup();
 
-      (api.sessions.start as jest.Mock).mockRejectedValue(
+      (api.sessions.start as Mock).mockRejectedValue(
         new Error('Network error')
       );
 
@@ -670,7 +670,7 @@ describe('SessionSetupModal', () => {
         durationMinutes: 0,
       };
 
-      (api.sessions.start as jest.Mock).mockResolvedValue(mockSession);
+      (api.sessions.start as Mock).mockResolvedValue(mockSession);
 
       render(
         <SessionSetupModal

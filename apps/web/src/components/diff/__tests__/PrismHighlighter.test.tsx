@@ -6,21 +6,21 @@
 import { render } from '@testing-library/react';
 
 // Mock Prism BEFORE importing component
-jest.mock('prismjs', () => ({
-  highlight: jest.fn((code) => `<span class="highlighted">${code}</span>`),
+vi.mock('prismjs', () => ({
+  highlight: vi.fn((code) => `<span class="highlighted">${code}</span>`),
   languages: {
     json: {},
   },
 }));
 
 // Mock the JSON language component
-jest.mock('prismjs/components/prism-json', () => ({}));
+vi.mock('prismjs/components/prism-json', () => ({}));
 
 import { PrismHighlighter } from '../PrismHighlighter';
 
 describe('PrismHighlighter', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {
@@ -118,7 +118,7 @@ describe('PrismHighlighter', () => {
 
     it('should fallback to plain text on error', () => {
       const Prism = require('prismjs');
-      const consoleError = jest.spyOn(console, 'error').mockImplementation();
+      const consoleError = vi.spyOn(console, 'error').mockImplementation();
       Prism.highlight.mockImplementation(() => {
         throw new Error('Highlighting error');
       });

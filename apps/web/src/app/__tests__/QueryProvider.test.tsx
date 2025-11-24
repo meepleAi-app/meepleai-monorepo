@@ -12,7 +12,7 @@ import { QueryProvider } from '../QueryProvider';
 import { useQueryClient } from '@tanstack/react-query';
 
 // Mock ReactQueryDevtools to avoid rendering issues in tests
-jest.mock('@tanstack/react-query-devtools', () => ({
+vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools">DevTools</div>,
 }));
 

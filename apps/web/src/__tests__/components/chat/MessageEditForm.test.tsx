@@ -10,20 +10,20 @@ import { ChatContextValue } from '@/hooks/useChatContext';
 import React from 'react';
 
 // Mock ChatProvider context
-jest.mock('@/components/chat/ChatProvider', () => ({
-  useChatContext: jest.fn()
+vi.mock('@/components/chat/ChatProvider', () => ({
+  useChatContext: vi.fn()
 }));
 
 import { useChatContext } from '@/components/chat/ChatProvider';
-const mockUseChatContext = useChatContext as jest.MockedFunction<typeof useChatContext>;
+const mockUseChatContext = useChatContext as Mock<typeof useChatContext>;
 
 describe('MessageEditForm', () => {
   const defaultContextValue: Partial<ChatContextValue> = {
     editingMessageId: 'msg-1',
     editContent: 'Test content',
-    setEditContent: jest.fn(),
-    saveEdit: jest.fn(async () => {}),
-    cancelEdit: jest.fn(),
+    setEditContent: vi.fn(),
+    saveEdit: vi.fn(async () => {}),
+    cancelEdit: vi.fn(),
     loading: {
       games: false,
       agents: false,
@@ -37,7 +37,7 @@ describe('MessageEditForm', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockUseChatContext.mockReturnValue(defaultContextValue as ChatContextValue);
   });
 
@@ -102,7 +102,7 @@ describe('MessageEditForm', () => {
   describe('Text Input', () => {
     it('calls setEditContent when textarea value changes', async () => {
       const user = userEvent.setup();
-      const setEditContent = jest.fn();
+      const setEditContent = vi.fn();
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         setEditContent,
@@ -133,7 +133,7 @@ describe('MessageEditForm', () => {
 
     it('allows multiline text input', async () => {
       const user = userEvent.setup();
-      const setEditContent = jest.fn();
+      const setEditContent = vi.fn();
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         setEditContent,
@@ -166,7 +166,7 @@ describe('MessageEditForm', () => {
   describe('Save Functionality', () => {
     it('calls saveEdit when save button is clicked', async () => {
       const user = userEvent.setup();
-      const saveEdit = jest.fn(async () => {});
+      const saveEdit = vi.fn(async () => {});
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         saveEdit
@@ -235,7 +235,7 @@ describe('MessageEditForm', () => {
   describe('Cancel Functionality', () => {
     it('calls cancelEdit when cancel button is clicked', async () => {
       const user = userEvent.setup();
-      const cancelEdit = jest.fn();
+      const cancelEdit = vi.fn();
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         cancelEdit
@@ -316,7 +316,7 @@ describe('MessageEditForm', () => {
     it('handles very long text content', async () => {
       const user = userEvent.setup();
       const longText = 'a'.repeat(5000);
-      const setEditContent = jest.fn();
+      const setEditContent = vi.fn();
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         editContent: '',
@@ -345,7 +345,7 @@ describe('MessageEditForm', () => {
 
     it('handles rapid save button clicks', async () => {
       const user = userEvent.setup();
-      const saveEdit = jest.fn(async () => {});
+      const saveEdit = vi.fn(async () => {});
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         saveEdit
@@ -364,7 +364,7 @@ describe('MessageEditForm', () => {
 
     it('handles rapid cancel button clicks', async () => {
       const user = userEvent.setup();
-      const cancelEdit = jest.fn();
+      const cancelEdit = vi.fn();
       mockUseChatContext.mockReturnValue({
         ...defaultContextValue,
         cancelEdit

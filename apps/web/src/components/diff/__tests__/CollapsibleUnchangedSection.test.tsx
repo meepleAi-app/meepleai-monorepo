@@ -4,7 +4,7 @@ import { CollapsibleUnchangedSection } from '../CollapsibleUnchangedSection';
 import { CollapsibleSection } from '../../../lib/diffProcessor';
 
 describe('CollapsibleUnchangedSection', () => {
-  const mockOnToggle = jest.fn();
+  const mockOnToggle = vi.fn();
 
   const collapsedSection: CollapsibleSection = {
     startLine: 10,
@@ -21,13 +21,13 @@ describe('CollapsibleUnchangedSection', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   describe('Rendering', () => {
@@ -158,7 +158,7 @@ describe('CollapsibleUnchangedSection', () => {
       expect(button).toHaveClass('animating');
 
       // Fast-forward animation timeout (300ms)
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await waitFor(() => {
         expect(button).not.toHaveClass('animating');

@@ -17,7 +17,7 @@ import {
 } from '@/lib/timeline-types';
 
 describe('Feature: Timeline Event Filtering and Display', () => {
-  const mockOnSelectEvent = jest.fn();
+  const mockOnSelectEvent = vi.fn();
   const defaultProps = {
     selectedEventId: null,
     onSelectEvent: mockOnSelectEvent
@@ -30,7 +30,7 @@ describe('Feature: Timeline Event Filtering and Display', () => {
     new Set<TimelineEventStatus>(statuses);
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   // ============================================================================

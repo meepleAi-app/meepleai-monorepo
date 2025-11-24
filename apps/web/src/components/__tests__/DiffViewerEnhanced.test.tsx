@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { DiffViewerEnhanced } from '../DiffViewerEnhanced';
 
 // Mock child components
-jest.mock('../DiffSummary', () => ({
+vi.mock('../DiffSummary', () => ({
   DiffSummary: ({ summary }: any) => (
     <div data-testid="diff-summary">
       {summary.added} added, {summary.modified} modified, {summary.deleted} deleted
@@ -11,7 +11,7 @@ jest.mock('../DiffSummary', () => ({
   ),
 }));
 
-jest.mock('../ChangeItem', () => ({
+vi.mock('../ChangeItem', () => ({
   ChangeItem: ({ change }: any) => (
     <div data-testid="change-item" data-type={change.type}>
       {change.type}
@@ -19,7 +19,7 @@ jest.mock('../ChangeItem', () => ({
   ),
 }));
 
-jest.mock('../diff/DiffViewModeToggle', () => ({
+vi.mock('../diff/DiffViewModeToggle', () => ({
   DiffViewModeToggle: ({ currentMode, onModeChange }: any) => (
     <div data-testid="view-mode-toggle">
       <button onClick={() => onModeChange('list')} data-testid="list-mode-button">
@@ -33,7 +33,7 @@ jest.mock('../diff/DiffViewModeToggle', () => ({
   ),
 }));
 
-jest.mock('../diff/DiffToolbar', () => ({
+vi.mock('../diff/DiffToolbar', () => ({
   DiffToolbar: ({ searchQuery, onSearchChange, onNavigatePrev, onNavigateNext }: any) => (
     <div data-testid="diff-toolbar">
       <input
@@ -51,15 +51,15 @@ jest.mock('../diff/DiffToolbar', () => ({
   ),
 }));
 
-jest.mock('../diff/SideBySideDiffView', () => ({
+vi.mock('../diff/SideBySideDiffView', () => ({
   SideBySideDiffView: () => (
     <div data-testid="side-by-side-view">Side-by-Side View</div>
   ),
 }));
 
 // Mock diffProcessor
-jest.mock('../../lib/diffProcessor', () => ({
-  processDiff: jest.fn((oldJson: string, newJson: string) => ({
+vi.mock('../../lib/diffProcessor', () => ({
+  processDiff: vi.fn((oldJson: string, newJson: string) => ({
     oldLines: [
       { lineNumber: 1, content: 'old line 1', type: 'deleted' },
       { lineNumber: 2, content: 'old line 2', type: 'unchanged' },
@@ -79,8 +79,8 @@ jest.mock('../../lib/diffProcessor', () => ({
       totalLines: 3,
     },
   })),
-  identifyCollapsibleSections: jest.fn(() => []),
-  filterChangesByQuery: jest.fn((changes) => changes),
+  identifyCollapsibleSections: vi.fn(() => []),
+  filterChangesByQuery: vi.fn((changes) => changes),
 }));
 
 describe('DiffViewerEnhanced', () => {
@@ -176,7 +176,7 @@ describe('DiffViewerEnhanced', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('List View Mode', () => {

@@ -9,7 +9,7 @@ import { KeyboardShortcutsHelp } from '../layout/KeyboardShortcutsHelp';
 import type { KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 
 describe('KeyboardShortcutsHelp', () => {
-  const mockOnClose = jest.fn();
+  const mockOnClose = vi.fn();
 
   const mockShortcuts: KeyboardShortcut[] = [
     {
@@ -17,7 +17,7 @@ describe('KeyboardShortcutsHelp', () => {
       ctrl: true,
       meta: true,
       description: 'New chat',
-      action: jest.fn(),
+      action: vi.fn(),
       category: 'navigation',
     },
     {
@@ -25,7 +25,7 @@ describe('KeyboardShortcutsHelp', () => {
       ctrl: true,
       meta: true,
       description: 'Upload PDF',
-      action: jest.fn(),
+      action: vi.fn(),
       category: 'navigation',
     },
     {
@@ -33,20 +33,20 @@ describe('KeyboardShortcutsHelp', () => {
       ctrl: true,
       meta: true,
       description: 'Send message',
-      action: jest.fn(),
+      action: vi.fn(),
       category: 'editor',
     },
     {
       key: '?',
       shift: true,
       description: 'Show keyboard shortcuts',
-      action: jest.fn(),
+      action: vi.fn(),
       category: 'system',
     },
     {
       key: 'Escape',
       description: 'Close modal',
-      action: jest.fn(),
+      action: vi.fn(),
       category: 'system',
     },
   ];
@@ -213,9 +213,9 @@ describe('KeyboardShortcutsHelp', () => {
 
   it('groups shortcuts correctly by category', () => {
     const customShortcuts: KeyboardShortcut[] = [
-      { key: 'a', description: 'Action A', action: jest.fn(), category: 'actions' },
-      { key: 'b', description: 'Action B', action: jest.fn(), category: 'actions' },
-      { key: 'n', description: 'Nav N', action: jest.fn(), category: 'navigation' },
+      { key: 'a', description: 'Action A', action: vi.fn(), category: 'actions' },
+      { key: 'b', description: 'Action B', action: vi.fn(), category: 'actions' },
+      { key: 'n', description: 'Nav N', action: vi.fn(), category: 'navigation' },
     ];
 
     render(

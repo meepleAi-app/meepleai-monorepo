@@ -135,7 +135,7 @@ describe('RateLimitedButton', () => {
 
   it('should call onClick when clicked and not rate limited', async () => {
     const user = userEvent.setup();
-    const onClick = jest.fn();
+    const onClick = vi.fn();
 
     render(
       <RateLimitedButton onClick={onClick} isRateLimited={false}>
@@ -151,7 +151,7 @@ describe('RateLimitedButton', () => {
 
   it('should not call onClick when rate limited', async () => {
     const user = userEvent.setup();
-    const onClick = jest.fn();
+    const onClick = vi.fn();
 
     render(
       <RateLimitedButton

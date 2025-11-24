@@ -54,7 +54,7 @@ describe('API Types', () => {
   describe('createApiError', () => {
     it('should create ApiError from response with correlation ID', async () => {
       const mockHeaders = {
-        get: jest.fn((header: string) =>
+        get: vi.fn((header: string) =>
           header === 'X-Correlation-Id' ? 'test-correlation-id' : null
         ),
       };

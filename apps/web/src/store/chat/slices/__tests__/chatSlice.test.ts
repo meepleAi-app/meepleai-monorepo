@@ -19,15 +19,15 @@ import { ChatThread, Message } from '@/types';
 import { CHAT_CONFIG } from '@/config';
 
 // Mock dependencies
-jest.mock('@/lib/api');
-const mockApi = api as jest.Mocked<typeof api>;
+vi.mock('@/lib/api');
+const mockApi = api as Mocked<typeof api>;
 
 // Explicitly cast nested mock objects for proper TypeScript support
-const mockChat = mockApi.chat as jest.Mocked<typeof api.chat>;
+const mockChat = mockApi.chat as Mocked<typeof api.chat>;
 
 // Mock console methods to avoid noise in tests
 const originalConsoleError = console.error;
-const mockConsoleError = jest.fn();
+const mockConsoleError = vi.fn();
 console.error = mockConsoleError;
 
 describe('chatSlice', () => {
@@ -76,7 +76,7 @@ describe('chatSlice', () => {
     });
 
     // Clear all mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockConsoleError.mockClear();
   });
 
@@ -108,8 +108,8 @@ describe('chatSlice', () => {
       mockChat.getThreadsByGame.mockResolvedValue(mockChats);
 
       // Mock setLoading and setError
-      const setLoadingSpy = jest.spyOn(useChatStore.getState(), 'setLoading');
-      const setErrorSpy = jest.spyOn(useChatStore.getState(), 'setError');
+      const setLoadingSpy = vi.spyOn(useChatStore.getState(), 'setLoading');
+      const setErrorSpy = vi.spyOn(useChatStore.getState(), 'setError');
 
       await useChatStore.getState().loadChats('770e8400-e29b-41d4-a716-000000000001');
 
@@ -148,7 +148,7 @@ describe('chatSlice', () => {
       const error = new Error('Network error');
       mockChat.getThreadsByGame.mockRejectedValue(error);
 
-      const setErrorSpy = jest.spyOn(useChatStore.getState(), 'setError');
+      const setErrorSpy = vi.spyOn(useChatStore.getState(), 'setError');
 
       await useChatStore.getState().loadChats('770e8400-e29b-41d4-a716-000000000001');
 
@@ -165,7 +165,7 @@ describe('chatSlice', () => {
         () => new Promise((resolve) => setTimeout(() => resolve([]), 10))
       );
 
-      const setLoadingSpy = jest.spyOn(useChatStore.getState(), 'setLoading');
+      const setLoadingSpy = vi.spyOn(useChatStore.getState(), 'setLoading');
 
       const loadPromise = useChatStore.getState().loadChats('770e8400-e29b-41d4-a716-000000000001');
 
@@ -234,7 +234,7 @@ describe('chatSlice', () => {
         selectedAgentId: 'agent-1',
       });
 
-      const setErrorSpy = jest.spyOn(useChatStore.getState(), 'setError');
+      const setErrorSpy = vi.spyOn(useChatStore.getState(), 'setError');
 
       await useChatStore.getState().createChat();
 
@@ -248,7 +248,7 @@ describe('chatSlice', () => {
         selectedAgentId: null,
       });
 
-      const setErrorSpy = jest.spyOn(useChatStore.getState(), 'setError');
+      const setErrorSpy = vi.spyOn(useChatStore.getState(), 'setError');
 
       await useChatStore.getState().createChat();
 
@@ -265,7 +265,7 @@ describe('chatSlice', () => {
         selectedAgentId: 'agent-1',
       });
 
-      const setErrorSpy = jest.spyOn(useChatStore.getState(), 'setError');
+      const setErrorSpy = vi.spyOn(useChatStore.getState(), 'setError');
 
       await useChatStore.getState().createChat();
 
@@ -304,7 +304,7 @@ describe('chatSlice', () => {
       mockChat.closeThread.mockResolvedValue({} as any);
       mockChat.getThreadsByGame.mockResolvedValue([...activeThreads, newThread]);
 
-      const loadChatsSpy = jest.spyOn(useChatStore.getState(), 'loadChats');
+      const loadChatsSpy = vi.spyOn(useChatStore.getState(), 'loadChats');
 
       await useChatStore.getState().createChat();
 
@@ -463,7 +463,7 @@ describe('chatSlice', () => {
 
       mockChat.createThread.mockResolvedValue(createMockChatThread());
 
-      const setLoadingSpy = jest.spyOn(useChatStore.getState(), 'setLoading');
+      const setLoadingSpy = vi.spyOn(useChatStore.getState(), 'setLoading');
 
       await useChatStore.getState().createChat();
 
@@ -553,7 +553,7 @@ describe('chatSlice', () => {
 
       mockApi.delete.mockRejectedValue(error);
 
-      const setErrorSpy = jest.spyOn(useChatStore.getState(), 'setError');
+      const setErrorSpy = vi.spyOn(useChatStore.getState(), 'setError');
 
       await useChatStore.getState().deleteChat('aa0e8400-e29b-41d4-a716-000000000001');
 
@@ -568,7 +568,7 @@ describe('chatSlice', () => {
 
       mockApi.delete.mockResolvedValue({} as any);
 
-      const setLoadingSpy = jest.spyOn(useChatStore.getState(), 'setLoading');
+      const setLoadingSpy = vi.spyOn(useChatStore.getState(), 'setLoading');
 
       await useChatStore.getState().deleteChat('aa0e8400-e29b-41d4-a716-000000000001');
 
@@ -603,7 +603,7 @@ describe('chatSlice', () => {
         selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
       });
 
-      const loadMessagesSpy = jest.fn().mockResolvedValue(undefined);
+      const loadMessagesSpy = vi.fn().mockResolvedValue(undefined);
       useChatStore.setState({ loadMessages: loadMessagesSpy } as any);
 
       await useChatStore.getState().selectChat('aa0e8400-e29b-41d4-a716-000000000001');
@@ -621,7 +621,7 @@ describe('chatSlice', () => {
         selectedGameId: null,
       });
 
-      const loadMessagesSpy = jest.fn();
+      const loadMessagesSpy = vi.fn();
       useChatStore.setState({ loadMessages: loadMessagesSpy } as any);
 
       await useChatStore.getState().selectChat('aa0e8400-e29b-41d4-a716-000000000001');
@@ -634,7 +634,7 @@ describe('chatSlice', () => {
         selectedGameId: '770e8400-e29b-41d4-a716-000000000001',
       });
 
-      const loadMessagesSpy = jest.fn().mockRejectedValue(new Error('Load failed'));
+      const loadMessagesSpy = vi.fn().mockRejectedValue(new Error('Load failed'));
       useChatStore.setState({ loadMessages: loadMessagesSpy } as any);
 
       await expect(useChatStore.getState().selectChat('aa0e8400-e29b-41d4-a716-000000000001')).rejects.toThrow('Load failed');

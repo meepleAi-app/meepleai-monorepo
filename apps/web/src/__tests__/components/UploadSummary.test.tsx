@@ -16,11 +16,11 @@ import { UploadSummary } from '@/components/upload/UploadSummary';
 import type { UploadQueueStats } from '../../hooks/useUploadQueue';
 
 describe('UploadSummary Component', () => {
-  const mockOnClose = jest.fn();
-  const mockOnClearAll = jest.fn();
+  const mockOnClose = vi.fn();
+  const mockOnClearAll = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('All Files Succeeded', () => {

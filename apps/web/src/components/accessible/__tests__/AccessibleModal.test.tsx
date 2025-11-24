@@ -32,7 +32,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal is closed, When modal opens with focusable elements, Then focus moves to first focusable element', async () => {
       // Given: Modal is closed
       const { rerender } = render(
-        <AccessibleModal isOpen={false} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={false} onClose={vi.fn()} title="Test Modal">
           <button>First Button</button>
           <button>Second Button</button>
         </AccessibleModal>
@@ -40,7 +40,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
       // When: Modal opens
       rerender(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal">
           <button>First Button</button>
           <button>Second Button</button>
         </AccessibleModal>
@@ -56,14 +56,14 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal opens with no focusable children, When modal opens, Then focus stays on modal container', async () => {
       // Given: Modal with no focusable elements (close button is default)
       const { rerender } = render(
-        <AccessibleModal isOpen={false} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={false} onClose={vi.fn()} title="Test Modal">
           <p>Just text content</p>
         </AccessibleModal>
       );
 
       // When: Modal opens
       rerender(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal">
           <p>Just text content</p>
         </AccessibleModal>
       );
@@ -78,14 +78,14 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal with close button visible, When modal opens, Then close button is first focusable element', async () => {
       // Given: Modal with showCloseButton=true (default)
       const { rerender } = render(
-        <AccessibleModal isOpen={false} onClose={jest.fn()} title="Test Modal" showCloseButton={true}>
+        <AccessibleModal isOpen={false} onClose={vi.fn()} title="Test Modal" showCloseButton={true}>
           <p>Content</p>
         </AccessibleModal>
       );
 
       // When: Modal opens
       rerender(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" showCloseButton={true}>
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" showCloseButton={true}>
           <p>Content</p>
         </AccessibleModal>
       );
@@ -109,13 +109,13 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
       // When: Modal opens
       const { rerender } = render(
-        <AccessibleModal isOpen={false} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={false} onClose={vi.fn()} title="Test Modal">
           <button>Modal Button</button>
         </AccessibleModal>
       );
 
       rerender(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal">
           <button>Modal Button</button>
         </AccessibleModal>
       );
@@ -135,7 +135,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal is open, When modal closes, Then modal is removed from DOM', async () => {
       // Given: Modal is open
       const { rerender } = render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal">
           <div>Modal Content</div>
         </AccessibleModal>
       );
@@ -144,7 +144,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
       // When: Modal closes
       rerender(
-        <AccessibleModal isOpen={false} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={false} onClose={vi.fn()} title="Test Modal">
           <div>Modal Content</div>
         </AccessibleModal>
       );
@@ -157,7 +157,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
     it('Given modal with close button, When close button is clicked, Then onClose is called', async () => {
       // Given: Open modal
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(
         <AccessibleModal isOpen={true} onClose={onClose} title="Test Modal" showCloseButton={true}>
           <p>Content</p>
@@ -177,7 +177,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal is open, When modal closes and reopens, Then modal lifecycle works correctly', async () => {
       // Given: Open modal
       const { rerender } = render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal">
           <p>Content</p>
         </AccessibleModal>
       );
@@ -186,7 +186,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
       // When: Modal closes
       rerender(
-        <AccessibleModal isOpen={false} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={false} onClose={vi.fn()} title="Test Modal">
           <p>Content</p>
         </AccessibleModal>
       );
@@ -198,7 +198,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
       // When: Modal reopens
       rerender(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal">
           <p>Content</p>
         </AccessibleModal>
       );
@@ -213,7 +213,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
   describe('Scenario: Keyboard Navigation - ESC Key', () => {
     it('Given modal is open, When ESC key is pressed, Then onClose callback is called', async () => {
       // Given: Modal is open
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(
         <AccessibleModal isOpen={true} onClose={onClose} title="Test Modal">
           <div>Modal Content</div>
@@ -229,7 +229,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
     it('Given modal with focusable elements, When ESC key is pressed from any element, Then onClose is called', async () => {
       // Given: Modal with multiple buttons
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(
         <AccessibleModal isOpen={true} onClose={onClose} title="Test Modal">
           <button>Button 1</button>
@@ -252,7 +252,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
     it('Given modal is open, When ESC key is pressed multiple times, Then onClose is called each time', async () => {
       // Given: Modal is open
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(
         <AccessibleModal isOpen={true} onClose={onClose} title="Test Modal">
           <p>Content</p>
@@ -272,7 +272,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal with multiple buttons, When TAB is pressed, Then focus moves to next element', async () => {
       // Given: Modal with multiple focusable elements
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" showCloseButton={true}>
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" showCloseButton={true}>
           <button>Button 1</button>
           <button>Button 2</button>
           <button>Button 3</button>
@@ -296,7 +296,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal with multiple buttons, When SHIFT+TAB is pressed, Then focus moves to previous element', async () => {
       // Given: Modal with buttons, Button 2 focused
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" showCloseButton={true}>
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" showCloseButton={true}>
           <button>Button 1</button>
           <button>Button 2</button>
           <button>Button 3</button>
@@ -321,7 +321,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given focus on last element, When TAB is pressed, Then focus cycles to first element', async () => {
       // Given: Modal with 3 buttons, last button focused
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" showCloseButton={true}>
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" showCloseButton={true}>
           <button>Button 1</button>
           <button>Button 2</button>
           <button>Button 3</button>
@@ -346,7 +346,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given focus on first element, When SHIFT+TAB is pressed, Then focus cycles within modal', async () => {
       // Given: Modal with buttons, Button 1 focused (Radix Dialog focuses first interactive element)
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" showCloseButton={true}>
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" showCloseButton={true}>
           <button>Button 1</button>
           <button>Button 2</button>
           <button>Button 3</button>
@@ -376,14 +376,14 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal is closed, When modal opens, Then body scroll lock is applied', async () => {
       // Given: Modal is closed
       const { rerender } = render(
-        <AccessibleModal isOpen={false} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={false} onClose={vi.fn()} title="Test Modal">
           <div>Content</div>
         </AccessibleModal>
       );
 
       // When: Modal opens
       rerender(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal">
           <div>Content</div>
         </AccessibleModal>
       );
@@ -398,7 +398,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal is open with scroll lock, When modal closes, Then body scroll lock is removed', async () => {
       // Given: Modal is open with scroll lock active
       const { rerender } = render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal">
           <div>Content</div>
         </AccessibleModal>
       );
@@ -409,7 +409,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
       // When: Modal closes
       rerender(
-        <AccessibleModal isOpen={false} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={false} onClose={vi.fn()} title="Test Modal">
           <div>Content</div>
         </AccessibleModal>
       );
@@ -423,7 +423,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given modal is open, When component unmounts, Then scroll lock is cleaned up', () => {
       // Given: Modal is open
       const { unmount } = render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal">
           <div>Content</div>
         </AccessibleModal>
       );
@@ -441,7 +441,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
   describe('Scenario: Backdrop Click to Close', () => {
     it('Given closeOnBackdropClick is true, When ESC is pressed, Then onClose is called', async () => {
       // Given: Modal open with backdrop click enabled (default)
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(
         <AccessibleModal
           isOpen={true}
@@ -464,7 +464,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
     it('Given closeOnBackdropClick is false, When ESC is pressed, Then onClose is still called', async () => {
       // Given: Modal with backdrop click disabled (but ESC still works)
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(
         <AccessibleModal
           isOpen={true}
@@ -487,7 +487,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
     it('Given modal is open, When modal content is clicked, Then onClose is NOT called', async () => {
       // Given: Modal with backdrop click enabled
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(
         <AccessibleModal
           isOpen={true}
@@ -512,7 +512,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given size="sm", When modal renders, Then correct size class is applied', () => {
       // Given & When: Modal with size="sm"
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" size="sm">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" size="sm">
           <p>Content</p>
         </AccessibleModal>
       );
@@ -525,7 +525,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given size="md", When modal renders, Then correct size class is applied', () => {
       // Given & When: Modal with size="md" (default)
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" size="md">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" size="md">
           <p>Content</p>
         </AccessibleModal>
       );
@@ -538,7 +538,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given size="lg", When modal renders, Then correct size class is applied', () => {
       // Given & When: Modal with size="lg"
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" size="lg">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" size="lg">
           <p>Content</p>
         </AccessibleModal>
       );
@@ -551,7 +551,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given size="xl", When modal renders, Then correct size class is applied', () => {
       // Given & When: Modal with size="xl"
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" size="xl">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" size="xl">
           <p>Content</p>
         </AccessibleModal>
       );
@@ -564,7 +564,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given size="full", When modal renders, Then correct size class is applied', () => {
       // Given & When: Modal with size="full"
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" size="full">
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" size="full">
           <p>Content</p>
         </AccessibleModal>
       );
@@ -579,7 +579,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given showCloseButton=true, When modal renders, Then close button is visible', () => {
       // Given & When: Modal with close button enabled (default)
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" showCloseButton={true}>
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" showCloseButton={true}>
           <p>Content</p>
         </AccessibleModal>
       );
@@ -593,7 +593,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
     it('Given showCloseButton=false, When modal renders, Then close button is not visible', () => {
       // Given & When: Modal with close button disabled
       render(
-        <AccessibleModal isOpen={true} onClose={jest.fn()} title="Test Modal" showCloseButton={false}>
+        <AccessibleModal isOpen={true} onClose={vi.fn()} title="Test Modal" showCloseButton={false}>
           <p>Content</p>
         </AccessibleModal>
       );
@@ -610,7 +610,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
       render(
         <AccessibleModal
           isOpen={true}
-          onClose={jest.fn()}
+          onClose={vi.fn()}
           title="Test Modal"
           showCloseButton={false}
         >
@@ -627,7 +627,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
 
     it('Given modal, When rapid open/close cycles occur, Then no errors are thrown', async () => {
       // Given: Modal component
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       const { rerender } = render(
         <AccessibleModal isOpen={false} onClose={onClose} title="Test Modal">
           <p>Content</p>
@@ -668,7 +668,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
       render(
         <AccessibleModal
           isOpen={true}
-          onClose={jest.fn()}
+          onClose={vi.fn()}
           title="Test Modal"
           className="custom-modal-class"
         >

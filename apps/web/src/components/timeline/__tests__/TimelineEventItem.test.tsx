@@ -16,11 +16,11 @@ describe('TimelineEventItem Component', () => {
     }
   };
 
-  const mockOnSelect = jest.fn();
-  const mockOnToggleExpand = jest.fn();
+  const mockOnSelect = vi.fn();
+  const mockOnToggleExpand = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Event Header Rendering', () => {

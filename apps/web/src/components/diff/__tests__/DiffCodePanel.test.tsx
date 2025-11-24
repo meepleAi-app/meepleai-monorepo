@@ -3,7 +3,7 @@ import { DiffCodePanel } from '../DiffCodePanel';
 import { DiffLine, CollapsibleSection } from '../../../lib/diffProcessor';
 
 // Mock child components
-jest.mock('../DiffCodeBlock', () => ({
+vi.mock('../DiffCodeBlock', () => ({
   DiffCodeBlock: ({ line }: { line: DiffLine }) => (
     <div data-testid="diff-code-block" data-line-number={line.lineNumber}>
       {line.content}
@@ -11,7 +11,7 @@ jest.mock('../DiffCodeBlock', () => ({
   ),
 }));
 
-jest.mock('../DiffLineNumberGutter', () => ({
+vi.mock('../DiffLineNumberGutter', () => ({
   DiffLineNumberGutter: ({ side }: { side: string }) => (
     <div data-testid="diff-line-number-gutter" data-side={side}>
       Line Numbers
@@ -19,7 +19,7 @@ jest.mock('../DiffLineNumberGutter', () => ({
   ),
 }));
 
-jest.mock('../CollapsibleUnchangedSection', () => ({
+vi.mock('../CollapsibleUnchangedSection', () => ({
   CollapsibleUnchangedSection: ({
     section,
     onToggle,
@@ -38,8 +38,8 @@ jest.mock('../CollapsibleUnchangedSection', () => ({
 }));
 
 describe('DiffCodePanel', () => {
-  const mockOnToggleSection = jest.fn();
-  const mockOnScroll = jest.fn();
+  const mockOnToggleSection = vi.fn();
+  const mockOnScroll = vi.fn();
 
   const mockLines: DiffLine[] = [
     { lineNumber: 1, content: 'Line 1', type: 'unchanged' },
@@ -61,7 +61,7 @@ describe('DiffCodePanel', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {

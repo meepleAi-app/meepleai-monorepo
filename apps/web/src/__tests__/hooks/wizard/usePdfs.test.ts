@@ -26,12 +26,12 @@ describe('usePdfs', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    global.fetch = jest.fn();
+    vi.clearAllMocks();
+    global.fetch = vi.fn();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('Initial State', () => {
@@ -52,7 +52,7 @@ describe('usePdfs', () => {
 
   describe('Fetching PDFs', () => {
     it('fetches PDFs when gameId is provided', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: mockPdfs })
       });
@@ -73,7 +73,7 @@ describe('usePdfs', () => {
     });
 
     it('handles successful fetch with empty array', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: [] })
       });
@@ -87,7 +87,7 @@ describe('usePdfs', () => {
     });
 
     it('handles response without pdfs property', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({})
       });
@@ -102,7 +102,7 @@ describe('usePdfs', () => {
 
   describe('Error Handling', () => {
     it('sets error when fetch fails', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: false,
         statusText: 'Not Found'
       });
@@ -116,8 +116,8 @@ describe('usePdfs', () => {
     });
 
     it('logs error to console when fetch fails', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      (global.fetch as jest.Mock).mockResolvedValue({
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
+      (global.fetch as Mock).mockResolvedValue({
         ok: false,
         statusText: 'Server Error'
       });
@@ -132,7 +132,7 @@ describe('usePdfs', () => {
     });
 
     it('handles network error', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (global.fetch as Mock).mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => usePdfs('game-1'));
 
@@ -144,7 +144,7 @@ describe('usePdfs', () => {
 
   describe('Game ID Changes', () => {
     it('refetches when gameId changes', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: mockPdfs })
       });
@@ -174,7 +174,7 @@ describe('usePdfs', () => {
     });
 
     it('clears PDFs when gameId becomes null', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: mockPdfs })
       });
@@ -195,7 +195,7 @@ describe('usePdfs', () => {
     });
 
     it('does not refetch if gameId changes to same value', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: mockPdfs })
       });
@@ -220,7 +220,7 @@ describe('usePdfs', () => {
 
   describe('Manual Refetch', () => {
     it('provides refetch function', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: mockPdfs })
       });
@@ -235,7 +235,7 @@ describe('usePdfs', () => {
     });
 
     it('refetches PDFs when refetch is called', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: mockPdfs })
       });
@@ -258,7 +258,7 @@ describe('usePdfs', () => {
       const firstPromise = new Promise((resolve) => {
         resolveFirst = resolve;
       });
-      (global.fetch as jest.Mock).mockReturnValueOnce(firstPromise);
+      (global.fetch as Mock).mockReturnValueOnce(firstPromise);
 
       const { result } = renderHook(() => usePdfs('game-1'));
 
@@ -281,7 +281,7 @@ describe('usePdfs', () => {
     it('uses NEXT_PUBLIC_API_BASE from environment', async () => {
       process.env.NEXT_PUBLIC_API_BASE = 'https://api.example.com';
 
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: mockPdfs })
       });
@@ -301,7 +301,7 @@ describe('usePdfs', () => {
     it('falls back to localhost when env var not set', async () => {
       delete process.env.NEXT_PUBLIC_API_BASE;
 
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: mockPdfs })
       });
@@ -319,7 +319,7 @@ describe('usePdfs', () => {
 
   describe('Credentials', () => {
     it('includes credentials in fetch request', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ pdfs: mockPdfs })
       });

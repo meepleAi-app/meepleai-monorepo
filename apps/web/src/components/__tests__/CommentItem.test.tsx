@@ -11,7 +11,7 @@ interface MockMentionInputProps {
   disabled?: boolean;
 }
 
-jest.mock('../chat/MentionInput', () => ({
+vi.mock('../chat/MentionInput', () => ({
   MentionInput: ({ value, onChange, placeholder, disabled }: MockMentionInputProps) => (
     <textarea
       data-testid="mention-input"
@@ -24,17 +24,17 @@ jest.mock('../chat/MentionInput', () => ({
 }));
 
 // Mock dialog hooks
-const mockConfirm = jest.fn();
-const mockAlert = jest.fn();
+const mockConfirm = vi.fn();
+const mockAlert = vi.fn();
 
-jest.mock('@/hooks/useConfirmDialog', () => ({
+vi.mock('@/hooks/useConfirmDialog', () => ({
   useConfirmDialog: () => ({
     confirm: mockConfirm,
     ConfirmDialogComponent: () => null,
   }),
 }));
 
-jest.mock('@/hooks/useAlertDialog', () => ({
+vi.mock('@/hooks/useAlertDialog', () => ({
   useAlertDialog: () => ({
     alert: mockAlert,
     AlertDialogComponent: () => null,
@@ -63,14 +63,14 @@ describe('CommentItem', () => {
     updatedAt: null,
   };
 
-  const mockOnEdit = jest.fn();
-  const mockOnDelete = jest.fn();
-  const mockOnReply = jest.fn();
-  const mockOnResolve = jest.fn();
-  const mockOnUnresolve = jest.fn();
+  const mockOnEdit = vi.fn();
+  const mockOnDelete = vi.fn();
+  const mockOnReply = vi.fn();
+  const mockOnResolve = vi.fn();
+  const mockOnUnresolve = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockConfirm.mockResolvedValue(true);
     mockAlert.mockResolvedValue(undefined);
   });

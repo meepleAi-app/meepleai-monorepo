@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import PromptEditor from '../prompt/PromptEditor';
 
 // Mock Monaco Editor
-jest.mock('@monaco-editor/react', () => ({
+vi.mock('@monaco-editor/react', () => ({
   __esModule: true,
   default: ({
     value,
@@ -32,10 +32,10 @@ jest.mock('@monaco-editor/react', () => ({
 }));
 
 describe('PromptEditor', () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {
@@ -105,7 +105,7 @@ describe('PromptEditor', () => {
 
     it('should handle onChange with undefined value', async () => {
       const user = userEvent.setup();
-      const customOnChange = jest.fn((value: string | undefined) => {
+      const customOnChange = vi.fn((value: string | undefined) => {
         expect(value).toBeDefined();
       });
 

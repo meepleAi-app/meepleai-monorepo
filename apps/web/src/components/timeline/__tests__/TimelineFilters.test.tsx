@@ -10,11 +10,11 @@ import {
 } from '@/lib/timeline-types';
 
 describe('TimelineFilters Component', () => {
-  const mockOnFiltersChange = jest.fn();
-  const mockOnToggleCollapse = jest.fn();
+  const mockOnFiltersChange = vi.fn();
+  const mockOnToggleCollapse = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Collapse/Expand State', () => {

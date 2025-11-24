@@ -10,16 +10,16 @@ import { useUploadQueue, UploadQueueItem, UploadStatus } from '../useUploadQueue
 import * as retryUtils from '../../lib/retryUtils';
 import * as errorUtils from '../../lib/errorUtils';
 
-jest.mock('../../lib/retryUtils', () => ({
-  retryWithBackoff: jest.fn((fn) => fn()),
-  isRetryableError: jest.fn(() => false),
+vi.mock('../../lib/retryUtils', () => ({
+  retryWithBackoff: vi.fn((fn) => fn()),
+  isRetryableError: vi.fn(() => false),
 }));
 
-jest.mock('../../lib/errorUtils', () => ({
-  extractCorrelationId: jest.fn(() => undefined),
+vi.mock('../../lib/errorUtils', () => ({
+  extractCorrelationId: vi.fn(() => undefined),
 }));
 
-jest.mock('../../lib/api', () => ({
+vi.mock('../../lib/api', () => ({
   ApiError: class ApiError extends Error {
     correlationId?: string;
     constructor({ message, correlationId }: any) {
@@ -30,13 +30,13 @@ jest.mock('../../lib/api', () => ({
 }));
 
 describe('useUploadQueue', () => {
-  let mockFetch: jest.Mock;
+  let mockFetch: Mock;
   let originalFetch: typeof global.fetch;
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     originalFetch = global.fetch;
-    mockFetch = jest.fn();
+    mockFetch = vi.fn();
     global.fetch = mockFetch;
 
     // Mock successful upload by default
@@ -48,9 +48,9 @@ describe('useUploadQueue', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     global.fetch = originalFetch;
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('initialization', () => {
@@ -68,7 +68,7 @@ describe('useUploadQueue', () => {
     });
 
     it('should accept custom options', () => {
-      const onUploadComplete = jest.fn();
+      const onUploadComplete = vi.fn();
       const { result } = renderHook(() =>
         useUploadQueue({
           concurrencyLimit: 5,
@@ -147,7 +147,7 @@ describe('useUploadQueue', () => {
     });
 
     it('should trigger onQueueAdd callback', () => {
-      const onQueueAdd = jest.fn();
+      const onQueueAdd = vi.fn();
       const { result } = renderHook(() => useUploadQueue({ autoUpload: false, onQueueAdd }));
 
       const file = new File(['content'], 'test.pdf');
@@ -163,7 +163,7 @@ describe('useUploadQueue', () => {
     });
 
     it('should reset allCompleteNotified flag when adding files', () => {
-      const onAllComplete = jest.fn();
+      const onAllComplete = vi.fn();
       const { result } = renderHook(() =>
         useUploadQueue({ autoUpload: false, onAllComplete })
       );
@@ -290,7 +290,7 @@ describe('useUploadQueue', () => {
 
       // Wait for upload to start
       await act(async () => {
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
       });
 
       const itemId = result.current.queue[0].id;
@@ -500,7 +500,7 @@ describe('useUploadQueue', () => {
 
       // Let upload start
       await act(async () => {
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
       });
 
       act(() => {
@@ -511,7 +511,7 @@ describe('useUploadQueue', () => {
     });
 
     it('should reset allCompleteNotified flag', () => {
-      const onAllComplete = jest.fn();
+      const onAllComplete = vi.fn();
       const { result } = renderHook(() =>
         useUploadQueue({ autoUpload: false, onAllComplete })
       );
@@ -608,7 +608,7 @@ describe('useUploadQueue', () => {
       });
 
       await act(async () => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
 
       expect(result.current.queue[0].status).toBe('pending');
@@ -644,7 +644,7 @@ describe('useUploadQueue', () => {
 
   describe('callbacks', () => {
     it('should accept onUploadStart callback in options', () => {
-      const onUploadStart = jest.fn();
+      const onUploadStart = vi.fn();
       const { result } = renderHook(() =>
         useUploadQueue({ autoUpload: false, onUploadStart })
       );
@@ -653,7 +653,7 @@ describe('useUploadQueue', () => {
     });
 
     it('should accept onUploadComplete callback in options', () => {
-      const onUploadComplete = jest.fn();
+      const onUploadComplete = vi.fn();
       const { result } = renderHook(() =>
         useUploadQueue({ autoUpload: false, onUploadComplete })
       );
@@ -662,7 +662,7 @@ describe('useUploadQueue', () => {
     });
 
     it('should accept onUploadError callback in options', () => {
-      const onUploadError = jest.fn();
+      const onUploadError = vi.fn();
       const { result } = renderHook(() =>
         useUploadQueue({ autoUpload: false, onUploadError })
       );
@@ -671,7 +671,7 @@ describe('useUploadQueue', () => {
     });
 
     it('should accept onAllComplete callback in options', () => {
-      const onAllComplete = jest.fn();
+      const onAllComplete = vi.fn();
       const { result } = renderHook(() =>
         useUploadQueue({ autoUpload: false, onAllComplete })
       );
@@ -680,7 +680,7 @@ describe('useUploadQueue', () => {
     });
 
     it('should accept onQueueAdd callback in options', () => {
-      const onQueueAdd = jest.fn();
+      const onQueueAdd = vi.fn();
       const { result } = renderHook(() =>
         useUploadQueue({ autoUpload: false, onQueueAdd })
       );
@@ -697,7 +697,7 @@ describe('useUploadQueue', () => {
     });
 
     it('should accept onRetry callback in options', () => {
-      const onRetry = jest.fn();
+      const onRetry = vi.fn();
       const { result } = renderHook(() =>
         useUploadQueue({ autoUpload: false, onRetry })
       );
@@ -770,7 +770,7 @@ describe('useUploadQueue', () => {
       });
 
       await act(async () => {
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
       });
 
       // Unmount while uploading

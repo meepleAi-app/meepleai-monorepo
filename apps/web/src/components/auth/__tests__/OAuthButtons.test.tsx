@@ -81,7 +81,7 @@ describe('OAuthButtons', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env = { ...originalEnv };
   });
 
@@ -168,7 +168,7 @@ describe('OAuthButtons', () => {
 
     it('calls onOAuthLogin with "google" when Google button is clicked', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       const googleButton = screen.getByText('Continue with Google');
@@ -180,7 +180,7 @@ describe('OAuthButtons', () => {
 
     it('calls onOAuthLogin with "discord" when Discord button is clicked', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       const discordButton = screen.getByText('Continue with Discord');
@@ -192,7 +192,7 @@ describe('OAuthButtons', () => {
 
     it('calls onOAuthLogin with "github" when GitHub button is clicked', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       const githubButton = screen.getByText('Continue with GitHub');
@@ -204,7 +204,7 @@ describe('OAuthButtons', () => {
 
     it('does not trigger navigation when onOAuthLogin callback is provided for Google', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       await user.click(screen.getByText('Continue with Google'));
@@ -216,7 +216,7 @@ describe('OAuthButtons', () => {
 
     it('does not trigger navigation when onOAuthLogin callback is provided for Discord', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       await user.click(screen.getByText('Continue with Discord'));
@@ -227,7 +227,7 @@ describe('OAuthButtons', () => {
 
     it('does not trigger navigation when onOAuthLogin callback is provided for GitHub', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       await user.click(screen.getByText('Continue with GitHub'));
@@ -238,7 +238,7 @@ describe('OAuthButtons', () => {
 
     it('calls callback with correct provider type (parametric test)', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
 
@@ -257,7 +257,7 @@ describe('OAuthButtons', () => {
 
     it('callback is only called once per click', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       await user.click(screen.getByText('Continue with Google'));
@@ -267,7 +267,7 @@ describe('OAuthButtons', () => {
 
     it('callback ignores environment variables when provided', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
       process.env.NEXT_PUBLIC_API_BASE = 'https://api.example.com';
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
@@ -368,7 +368,7 @@ describe('OAuthButtons', () => {
   describe('Edge Cases', () => {
     it('handles multiple rapid clicks on same button', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       const googleButton = screen.getByText('Continue with Google');
@@ -383,7 +383,7 @@ describe('OAuthButtons', () => {
 
     it('handles clicks on different providers in sequence', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn();
+      const onOAuthLogin = vi.fn();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
 
@@ -431,7 +431,7 @@ describe('OAuthButtons', () => {
 
     it('callback function receives only valid provider string types', async () => {
       const user = userEvent.setup();
-      const onOAuthLogin = jest.fn((provider: string) => {
+      const onOAuthLogin = vi.fn((provider: string) => {
         // Verify provider is one of the expected literal types
         expect(['google', 'discord', 'github']).toContain(provider);
       });

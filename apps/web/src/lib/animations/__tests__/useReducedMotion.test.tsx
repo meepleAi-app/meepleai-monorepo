@@ -7,22 +7,22 @@ import { renderHook } from '@testing-library/react';
 import { useReducedMotion } from '../useReducedMotion';
 
 describe('useReducedMotion', () => {
-  let matchMediaMock: jest.Mock;
-  let addEventListenerSpy: jest.Mock;
-  let removeEventListenerSpy: jest.Mock;
-  let addListenerSpy: jest.Mock;
-  let removeListenerSpy: jest.Mock;
+  let matchMediaMock: Mock;
+  let addEventListenerSpy: Mock;
+  let removeEventListenerSpy: Mock;
+  let addListenerSpy: Mock;
+  let removeListenerSpy: Mock;
   let matchMediaSpy: jest.SpyInstance;
 
   beforeEach(() => {
     // Reset spies
-    addEventListenerSpy = jest.fn();
-    removeEventListenerSpy = jest.fn();
-    addListenerSpy = jest.fn();
-    removeListenerSpy = jest.fn();
+    addEventListenerSpy = vi.fn();
+    removeEventListenerSpy = vi.fn();
+    addListenerSpy = vi.fn();
+    removeListenerSpy = vi.fn();
 
     // Mock matchMedia
-    matchMediaMock = jest.fn().mockImplementation((query: string) => ({
+    matchMediaMock = vi.fn().mockImplementation((query: string) => ({
       matches: false,
       media: query,
       addEventListener: addEventListenerSpy,
@@ -31,11 +31,11 @@ describe('useReducedMotion', () => {
       removeListener: removeListenerSpy,
     }));
 
-    matchMediaSpy = jest.spyOn(window, 'matchMedia').mockImplementation(matchMediaMock as unknown as typeof window.matchMedia);
+    matchMediaSpy = vi.spyOn(window, 'matchMedia').mockImplementation(matchMediaMock as unknown as typeof window.matchMedia);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     matchMediaSpy.mockRestore();
   });
 

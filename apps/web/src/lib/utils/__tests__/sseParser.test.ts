@@ -5,7 +5,7 @@
  * Tests: complete events, incomplete chunks, multiple events, malformed data, buffer management
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { SSEParser } from '../sseParser';
 import { StreamingEventType } from '@/lib/api/schemas/streaming.schemas';
 

@@ -11,11 +11,11 @@ import { useCurrentUser } from '../useCurrentUser';
 import { ReactNode } from 'react';
 
 // Mock the auth action
-jest.mock('@/actions/auth', () => ({
-  getCurrentUser: jest.fn(),
+vi.mock('@/actions/auth', () => ({
+  getCurrentUser: vi.fn(),
 }));
 
-const mockGetCurrentUser = getCurrentUser as jest.MockedFunction<typeof getCurrentUser>;
+const mockGetCurrentUser = getCurrentUser as Mock<typeof getCurrentUser>;
 
 describe('useCurrentUser', () => {
   let queryClient: QueryClient;
@@ -31,7 +31,7 @@ describe('useCurrentUser', () => {
       },
     });
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {

@@ -70,7 +70,7 @@ describe('GameCard', () => {
   });
 
   it('calls onClick handler when clicked', () => {
-    const handleClick = jest.fn();
+    const handleClick = vi.fn();
     render(<GameCard game={mockGame} onClick={handleClick} />);
 
     const card = screen.getByRole('button');
@@ -80,7 +80,7 @@ describe('GameCard', () => {
   });
 
   it('supports keyboard interaction when onClick is provided', () => {
-    const handleClick = jest.fn();
+    const handleClick = vi.fn();
     render(<GameCard game={mockGame} onClick={handleClick} />);
 
     const card = screen.getByRole('button');
@@ -100,7 +100,7 @@ describe('GameCard', () => {
   });
 
   it('has proper accessibility attributes', () => {
-    render(<GameCard game={mockGame} onClick={jest.fn()} />);
+    render(<GameCard game={mockGame} onClick={vi.fn()} />);
     const card = screen.getByRole('button');
     expect(card).toHaveAttribute('aria-label', 'Game: Catan');
     expect(card).toHaveAttribute('tabIndex', '0');

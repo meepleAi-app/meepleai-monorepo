@@ -9,31 +9,31 @@ import { createPdfClient } from '../pdfClient';
 import { HttpClient } from '../../core/httpClient';
 import { getApiBase } from '../../core/httpClient';
 
-jest.mock('../../core/httpClient', () => ({
+vi.mock('../../core/httpClient', () => ({
   ...jest.requireActual('../../core/httpClient'),
-  getApiBase: jest.fn(),
+  getApiBase: vi.fn(),
 }));
 
 describe('createPdfClient', () => {
-  let mockHttpClient: jest.Mocked<HttpClient>;
+  let mockHttpClient: Mocked<HttpClient>;
   let pdfClient: ReturnType<typeof createPdfClient>;
 
   beforeEach(() => {
     mockHttpClient = {
-      get: jest.fn(),
-      post: jest.fn(),
-      put: jest.fn(),
-      delete: jest.fn(),
-      postFile: jest.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      postFile: vi.fn(),
     } as any;
 
     pdfClient = createPdfClient({ httpClient: mockHttpClient });
 
-    (getApiBase as jest.Mock).mockReturnValue('http://localhost:8080');
+    (getApiBase as Mock).mockReturnValue('http://localhost:8080');
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getProcessingProgress', () => {
@@ -196,7 +196,7 @@ describe('createPdfClient', () => {
     });
 
     it('should use correct API base URL', () => {
-      (getApiBase as jest.Mock).mockReturnValueOnce('https://api.meepleai.dev');
+      (getApiBase as Mock).mockReturnValueOnce('https://api.meepleai.dev');
 
       const url = pdfClient.getPdfDownloadUrl('pdf-123');
 
@@ -204,7 +204,7 @@ describe('createPdfClient', () => {
     });
 
     it('should handle trailing slash in API base URL', () => {
-      (getApiBase as jest.Mock).mockReturnValueOnce('http://localhost:8080/');
+      (getApiBase as Mock).mockReturnValueOnce('http://localhost:8080/');
 
       const url = pdfClient.getPdfDownloadUrl('pdf-123');
 

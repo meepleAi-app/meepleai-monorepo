@@ -1,14 +1,20 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useChatQuery } from '../useChatQuery';
-
-// Mock fetch globally
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+import { server } from '@/__tests__/mocks/server';
+import { http, HttpResponse } from 'msw';
 
 describe('useChatQuery', () => {
+  let fetchSpy: any;
+
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockFetch.mockReset();
+    vi.clearAllMocks();
+    // Spy on fetch to track calls (MSW handles responses)
+    fetchSpy = vi.spyOn(global, 'fetch');
+  });
+
+  afterEach(() => {
+    fetchSpy?.mockRestore();
   });
 
   describe('Initial State', () => {
@@ -39,7 +45,7 @@ describe('useChatQuery', () => {
   describe('Asking Question', () => {
     it('should set isLoading to true when asking question', async () => {
       // Mock a pending response
-      mockFetch.mockImplementation(() => new Promise(() => {}));
+      fetchSpy.mockImplementation(() => new Promise(() => {}));
 
       const { result } = renderHook(() => useChatQuery());
       const [, controls] = result.current;
@@ -55,7 +61,7 @@ describe('useChatQuery', () => {
     });
 
     it('should call fetch with correct parameters', async () => {
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         json: async () => ({
           success: true,
@@ -72,7 +78,7 @@ describe('useChatQuery', () => {
         await controls.askQuestion('game-456', 'How do I play?');
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(fetchSpy).toHaveBeenCalledWith(
         expect.stringContaining('/api/v1/knowledge-base/ask'),
         expect.objectContaining({
           method: 'POST',
@@ -106,7 +112,7 @@ describe('useChatQuery', () => {
         overallConfidence: 0.88,
       };
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         json: async () => mockResponse,
       });
@@ -128,7 +134,7 @@ describe('useChatQuery', () => {
     });
 
     it('should handle HTTP error', async () => {
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: false,
         status: 500,
         json: async () => ({ error: 'Server error' }),
@@ -148,7 +154,7 @@ describe('useChatQuery', () => {
     });
 
     it('should handle network error', async () => {
-      mockFetch.mockRejectedValue(new Error('Network failure'));
+      fetchSpy.mockRejectedValue(new Error('Network failure'));
 
       const { result } = renderHook(() => useChatQuery());
       const [, controls] = result.current;
@@ -163,7 +169,7 @@ describe('useChatQuery', () => {
     });
 
     it('should call onComplete callback when successful', async () => {
-      const onComplete = jest.fn();
+      const onComplete = vi.fn();
       const mockResponse = {
         success: true,
         answer: 'Answer text',
@@ -171,7 +177,7 @@ describe('useChatQuery', () => {
         overallConfidence: 0.85,
       };
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         json: async () => mockResponse,
       });
@@ -193,8 +199,8 @@ describe('useChatQuery', () => {
     });
 
     it('should call onError callback when error occurs', async () => {
-      const onError = jest.fn();
-      mockFetch.mockRejectedValue(new Error('Test error'));
+      const onError = vi.fn();
+      fetchSpy.mockRejectedValue(new Error('Test error'));
 
       const { result } = renderHook(() => useChatQuery({ onError }));
       const [, controls] = result.current;
@@ -209,7 +215,7 @@ describe('useChatQuery', () => {
 
   describe('Reset', () => {
     it('should reset state to initial values', async () => {
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         json: async () => ({
           success: true,
@@ -270,7 +276,7 @@ describe('useChatQuery', () => {
         overallConfidence: 0.9,
       };
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         json: async () => mockResponse,
       });

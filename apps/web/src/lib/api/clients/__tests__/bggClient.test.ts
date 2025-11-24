@@ -9,16 +9,16 @@ import { createBggClient } from '../bggClient';
 import { HttpClient } from '../../core/httpClient';
 
 describe('createBggClient', () => {
-  let mockHttpClient: jest.Mocked<HttpClient>;
+  let mockHttpClient: Mocked<HttpClient>;
   let bggClient: ReturnType<typeof createBggClient>;
 
   beforeEach(() => {
     mockHttpClient = {
-      get: jest.fn(),
-      post: jest.fn(),
-      put: jest.fn(),
-      delete: jest.fn(),
-      postFile: jest.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      postFile: vi.fn(),
     } as any;
 
     bggClient = createBggClient({ httpClient: mockHttpClient });

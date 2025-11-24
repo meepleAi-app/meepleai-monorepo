@@ -8,7 +8,7 @@ import { SideBySideDiffView } from '../SideBySideDiffView';
 import type { ProcessedDiff, CollapsibleSection } from '@/lib/diffProcessor';
 
 // Mock DiffCodePanel
-jest.mock('../DiffCodePanel', () => ({
+vi.mock('../DiffCodePanel', () => ({
   DiffCodePanel: ({ side, onScroll, syncScrollTop }: any) => (
     <div data-testid={`diff-code-panel-${side}`} data-sync={syncScrollTop}>
       <button onClick={() => onScroll?.(100)}>Trigger Scroll</button>
@@ -48,10 +48,10 @@ describe('SideBySideDiffView', () => {
   };
 
   const mockCollapsibleSections = new Map<string, CollapsibleSection>();
-  const mockOnToggleSection = jest.fn();
+  const mockOnToggleSection = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {

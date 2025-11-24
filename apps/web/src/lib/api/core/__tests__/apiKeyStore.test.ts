@@ -21,30 +21,30 @@ import {
 import * as secureStorage from '../secureStorage';
 
 // Mock the secure storage module
-jest.mock('../secureStorage');
+vi.mock('../secureStorage');
 
-const mockEncrypt = secureStorage.encrypt as jest.MockedFunction<typeof secureStorage.encrypt>;
-const mockDecrypt = secureStorage.decrypt as jest.MockedFunction<typeof secureStorage.decrypt>;
-const mockClearEncryptionKey = secureStorage.clearEncryptionKey as jest.MockedFunction<
+const mockEncrypt = secureStorage.encrypt as Mock<typeof secureStorage.encrypt>;
+const mockDecrypt = secureStorage.decrypt as Mock<typeof secureStorage.decrypt>;
+const mockClearEncryptionKey = secureStorage.clearEncryptionKey as Mock<
   typeof secureStorage.clearEncryptionKey
 >;
 
 const mockSessionStorage: {
   store: Map<string, string>;
-  getItem: jest.MockedFunction<(key: string) => string | null>;
-  setItem: jest.MockedFunction<(key: string, value: string) => void>;
-  removeItem: jest.MockedFunction<(key: string) => void>;
-  clear: jest.MockedFunction<() => void>;
+  getItem: Mock<(key: string) => string | null>;
+  setItem: Mock<(key: string, value: string) => void>;
+  removeItem: Mock<(key: string) => void>;
+  clear: Mock<() => void>;
 } = {
   store: new Map<string, string>(),
-  getItem: jest.fn((key: string): string | null => mockSessionStorage.store.get(key) || null),
-  setItem: jest.fn((key: string, value: string): void => {
+  getItem: vi.fn((key: string): string | null => mockSessionStorage.store.get(key) || null),
+  setItem: vi.fn((key: string, value: string): void => {
     mockSessionStorage.store.set(key, value);
   }),
-  removeItem: jest.fn((key: string): void => {
+  removeItem: vi.fn((key: string): void => {
     mockSessionStorage.store.delete(key);
   }),
-  clear: jest.fn((): void => {
+  clear: vi.fn((): void => {
     mockSessionStorage.store.clear();
   }),
 };
@@ -65,7 +65,7 @@ describe('apiKeyStore', () => {
     mockSessionStorage.store.clear();
 
     // Reset all mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Setup default mock implementations
     mockEncrypt.mockImplementation(async (plaintext: string) => {
@@ -98,7 +98,7 @@ describe('apiKeyStore', () => {
     });
 
     it('should handle encryption failures gracefully', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
       mockEncrypt.mockRejectedValueOnce(new Error('Encryption failed'));
 
       const apiKey = 'mpl_dev_testKey123';
@@ -126,7 +126,7 @@ describe('apiKeyStore', () => {
     });
 
     it('should handle decryption failures gracefully', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
       mockSessionStorage.setItem('meepleai:apiKey', 'corrupted-data');
       mockDecrypt.mockRejectedValueOnce(new Error('Decryption failed'));
 
@@ -143,7 +143,7 @@ describe('apiKeyStore', () => {
     });
 
     it('should prevent race condition when cleared during decryption', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
       const apiKey = 'mpl_dev_testKey123';
       mockSessionStorage.setItem('meepleai:apiKey', `encrypted:${apiKey}`);
 
@@ -166,7 +166,7 @@ describe('apiKeyStore', () => {
     });
 
     it('should prevent race condition when storage removed during decryption', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
       const apiKey = 'mpl_dev_testKey123';
       mockSessionStorage.setItem('meepleai:apiKey', `encrypted:${apiKey}`);
 
@@ -250,7 +250,7 @@ describe('apiKeyStore', () => {
     });
 
     it('should prevent race condition when cleared during hydration', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
       const apiKey = 'mpl_dev_testKey123';
       mockSessionStorage.setItem('meepleai:apiKey', `encrypted:${apiKey}`);
 
@@ -277,7 +277,7 @@ describe('apiKeyStore', () => {
     });
 
     it('should handle decryption errors and clean up', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
       mockSessionStorage.setItem('meepleai:apiKey', 'corrupted-data');
       mockDecrypt.mockRejectedValueOnce(new Error('Decryption failed'));
 
@@ -294,7 +294,7 @@ describe('apiKeyStore', () => {
     });
 
     it('should not clean up corrupted data if cleared during decryption', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
       mockSessionStorage.setItem('meepleai:apiKey', 'corrupted-data');
 
       let removeItemCallCount = 0;
@@ -402,7 +402,7 @@ describe('apiKeyStore', () => {
 
   describe('race condition scenarios', () => {
     it('should handle logout during multiple concurrent hydrations', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
       const apiKey = 'mpl_dev_testKey123';
       mockSessionStorage.setItem('meepleai:apiKey', `encrypted:${apiKey}`);
 

@@ -7,7 +7,7 @@
 import { RequestCache } from '../core/requestCache';
 
 // Mock timers for TTL testing
-jest.useFakeTimers();
+vi.useFakeTimers();
 
 describe('RequestCache', () => {
   let cache: RequestCache;
@@ -18,7 +18,7 @@ describe('RequestCache', () => {
       ttl: 100,
       maxSize: 3,
     });
-    jest.clearAllTimers();
+    vi.clearAllTimers();
   });
 
   afterEach(() => {
@@ -71,7 +71,7 @@ describe('RequestCache', () => {
 
   describe('Deduplication', () => {
     it('should deduplicate identical simultaneous requests', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       const cacheKey = 'test-key';
 
       // Execute three simultaneous requests
@@ -91,7 +91,7 @@ describe('RequestCache', () => {
     });
 
     it('should not deduplicate when skipDedup is true', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       const cacheKey = 'test-key';
 
       // Execute three requests with skipDedup
@@ -106,7 +106,7 @@ describe('RequestCache', () => {
     it('should not deduplicate when cache is disabled', async () => {
       cache.updateConfig({ enabled: false });
 
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       const cacheKey = 'test-key';
 
       await cache.dedupe(cacheKey, requestFn);
@@ -117,7 +117,7 @@ describe('RequestCache', () => {
 
     it('should handle request failures', async () => {
       const error = new Error('Request failed');
-      const requestFn = jest.fn().mockRejectedValue(error);
+      const requestFn = vi.fn().mockRejectedValue(error);
       const cacheKey = 'test-key';
 
       // First request should fail
@@ -133,7 +133,7 @@ describe('RequestCache', () => {
 
   describe('TTL Cleanup', () => {
     it('should expire entries after TTL', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       const cacheKey = 'test-key';
 
       const now = Date.now();
@@ -152,7 +152,7 @@ describe('RequestCache', () => {
     });
 
     it('should not expire entries before TTL', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       const cacheKey = 'test-key';
 
       const now = Date.now();
@@ -171,13 +171,13 @@ describe('RequestCache', () => {
     });
 
     it('should auto-cleanup after promise settles', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       const cacheKey = 'test-key';
 
       await cache.dedupe(cacheKey, requestFn);
 
       // Advance timers to trigger cleanup
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
 
       const metrics = cache.getMetrics();
       expect(metrics.size).toBe(0);
@@ -186,10 +186,10 @@ describe('RequestCache', () => {
 
   describe('LRU Eviction', () => {
     it('should evict oldest entry when cache is full', async () => {
-      const requestFn1 = jest.fn().mockResolvedValue('result1');
-      const requestFn2 = jest.fn().mockResolvedValue('result2');
-      const requestFn3 = jest.fn().mockResolvedValue('result3');
-      const requestFn4 = jest.fn().mockResolvedValue('result4');
+      const requestFn1 = vi.fn().mockResolvedValue('result1');
+      const requestFn2 = vi.fn().mockResolvedValue('result2');
+      const requestFn3 = vi.fn().mockResolvedValue('result3');
+      const requestFn4 = vi.fn().mockResolvedValue('result4');
 
       // Fill cache (maxSize = 3)
       await cache.dedupe('key1', requestFn1);
@@ -213,10 +213,10 @@ describe('RequestCache', () => {
     });
 
     it('should update access order on cache hit', async () => {
-      const requestFn1 = jest.fn().mockResolvedValue('result1');
-      const requestFn2 = jest.fn().mockResolvedValue('result2');
-      const requestFn3 = jest.fn().mockResolvedValue('result3');
-      const requestFn4 = jest.fn().mockResolvedValue('result4');
+      const requestFn1 = vi.fn().mockResolvedValue('result1');
+      const requestFn2 = vi.fn().mockResolvedValue('result2');
+      const requestFn3 = vi.fn().mockResolvedValue('result3');
+      const requestFn4 = vi.fn().mockResolvedValue('result4');
 
       // Fill cache
       await cache.dedupe('key1', requestFn1);
@@ -241,7 +241,7 @@ describe('RequestCache', () => {
 
   describe('Metrics', () => {
     it('should track cache hits', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       const cacheKey = 'test-key';
 
       await cache.dedupe(cacheKey, requestFn);
@@ -254,7 +254,7 @@ describe('RequestCache', () => {
     });
 
     it('should track cache misses', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       await cache.dedupe('key1', requestFn);
       await cache.dedupe('key2', requestFn);
@@ -266,7 +266,7 @@ describe('RequestCache', () => {
     });
 
     it('should track evictions', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       // Fill cache and trigger evictions
       await cache.dedupe('key1', requestFn);
@@ -280,7 +280,7 @@ describe('RequestCache', () => {
     });
 
     it('should track expirations', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       const cacheKey = 'test-key';
 
       const now = Date.now();
@@ -299,7 +299,7 @@ describe('RequestCache', () => {
     });
 
     it('should track current cache size', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       await cache.dedupe('key1', requestFn);
       expect(cache.getMetrics().size).toBe(1);
@@ -361,7 +361,7 @@ describe('RequestCache', () => {
 
   describe('Clear Cache', () => {
     it('should clear all cache entries', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       await cache.dedupe('key1', requestFn);
       await cache.dedupe('key2', requestFn);
@@ -375,7 +375,7 @@ describe('RequestCache', () => {
     });
 
     it('should allow new entries after clear', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       await cache.dedupe('key1', requestFn);
       cache.clear();
@@ -387,13 +387,13 @@ describe('RequestCache', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty cache key', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       await cache.dedupe('', requestFn);
       expect(requestFn).toHaveBeenCalledTimes(1);
     });
 
     it('should handle very long cache keys', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
       const longKey = 'a'.repeat(10000);
       await cache.dedupe(longKey, requestFn);
       expect(requestFn).toHaveBeenCalledTimes(1);
@@ -508,7 +508,7 @@ describe('RequestCache', () => {
     });
 
     it('should handle circular references', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       // Create circular reference
       const circular: Record<string, unknown> = { name: 'test' };
@@ -522,14 +522,14 @@ describe('RequestCache', () => {
     });
 
     it('should handle very large request bodies (DoS protection)', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       // Create large object (>10KB)
       const largeBody = {
         data: 'x'.repeat(15000),
       };
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       const key = cache.generateKey('POST', '/api/test', largeBody, undefined);
       await cache.dedupe(key, requestFn);
@@ -561,7 +561,7 @@ describe('RequestCache', () => {
 
   describe('Memory Management', () => {
     it('should cleanup timeouts when cache is cleared', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       // Create several entries
       await cache.dedupe('key1', requestFn);
@@ -572,7 +572,7 @@ describe('RequestCache', () => {
       cache.clear();
 
       // Advance time past TTL
-      jest.advanceTimersByTime(200);
+      vi.advanceTimersByTime(200);
 
       // Cache should be empty
       expect(cache.getMetrics().size).toBe(0);
@@ -585,7 +585,7 @@ describe('RequestCache', () => {
         maxSize: 2,
       });
 
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       // Fill cache
       await customCache.dedupe('key1', requestFn);
@@ -595,7 +595,7 @@ describe('RequestCache', () => {
       await customCache.dedupe('key3', requestFn);
 
       // Advance time past TTL
-      jest.advanceTimersByTime(150);
+      vi.advanceTimersByTime(150);
 
       // key1 should have been evicted and its timeout cleared
       const metrics = customCache.getMetrics();
@@ -605,7 +605,7 @@ describe('RequestCache', () => {
     });
 
     it('should cleanup timeout when entry is deleted', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       await cache.dedupe('key1', requestFn);
 
@@ -623,7 +623,7 @@ describe('RequestCache', () => {
 
   describe('Configuration Validation', () => {
     it('should validate negative TTL', () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       const invalidCache = new RequestCache({
         ttl: -50,
@@ -643,7 +643,7 @@ describe('RequestCache', () => {
     });
 
     it('should validate invalid maxSize', () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       const invalidCache = new RequestCache({
         ttl: 100,
@@ -661,7 +661,7 @@ describe('RequestCache', () => {
     });
 
     it('should validate config in updateConfig', () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       cache.updateConfig({ ttl: -100 });
 
@@ -679,7 +679,7 @@ describe('RequestCache', () => {
   describe('Option-Sensitive Deduplication (Issue #1453)', () => {
     it('should NOT deduplicate requests with different skipCircuitBreaker options', async () => {
       let callCount = 0;
-      const requestFn = jest.fn().mockImplementation(async () => {
+      const requestFn = vi.fn().mockImplementation(async () => {
         callCount++;
         return { data: `result-${callCount}` };
       });
@@ -706,7 +706,7 @@ describe('RequestCache', () => {
 
     it('should NOT deduplicate requests with different retry config', async () => {
       let callCount = 0;
-      const requestFn = jest.fn().mockImplementation(async () => {
+      const requestFn = vi.fn().mockImplementation(async () => {
         callCount++;
         return { data: `result-${callCount}` };
       });
@@ -733,7 +733,7 @@ describe('RequestCache', () => {
 
     it('should deduplicate requests with identical options', async () => {
       let callCount = 0;
-      const requestFn = jest.fn().mockImplementation(async () => {
+      const requestFn = vi.fn().mockImplementation(async () => {
         callCount++;
         return { data: `result-${callCount}` };
       });
@@ -763,7 +763,7 @@ describe('RequestCache', () => {
   describe('Concurrent Requests', () => {
     it('should handle many concurrent requests to same endpoint', async () => {
       let callCount = 0;
-      const requestFn = jest.fn().mockImplementation(async () => {
+      const requestFn = vi.fn().mockImplementation(async () => {
         callCount++;
         return { data: `result-${callCount}` };
       });
@@ -784,7 +784,7 @@ describe('RequestCache', () => {
 
     it('should handle concurrent requests to different endpoints', async () => {
       let callCount = 0;
-      const requestFn = jest.fn().mockImplementation(async () => {
+      const requestFn = vi.fn().mockImplementation(async () => {
         callCount++;
         return { data: `result-${callCount}` };
       });
@@ -803,7 +803,7 @@ describe('RequestCache', () => {
 
   describe('Prometheus Metrics Export', () => {
     it('should export metrics in Prometheus format', async () => {
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       // Generate some metrics
       await cache.dedupe('key1', requestFn);
@@ -836,7 +836,7 @@ describe('RequestCache', () => {
 
     it('should calculate hit rate correctly', async () => {
       cache.clear();
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       // 1 miss, 3 hits (75% hit rate)
       await cache.dedupe('key1', requestFn);
@@ -868,7 +868,7 @@ describe('RequestCache', () => {
         maxSize: 2,
       });
 
-      const requestFn = jest.fn().mockResolvedValue('result');
+      const requestFn = vi.fn().mockResolvedValue('result');
 
       // Fill cache and trigger eviction
       await smallCache.dedupe('key1', requestFn);

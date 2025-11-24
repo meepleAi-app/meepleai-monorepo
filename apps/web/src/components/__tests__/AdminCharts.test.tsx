@@ -7,7 +7,7 @@ import {
 } from '../AdminCharts';
 
 // Mock recharts components to avoid rendering issues in tests
-jest.mock('recharts', () => ({
+vi.mock('recharts', () => ({
   PieChart: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="pie-chart">{children}</div>
   ),

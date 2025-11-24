@@ -3,21 +3,21 @@ import userEvent from '@testing-library/user-event';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
 
 // Mock dependencies
-jest.mock('@/lib/retryUtils', () => ({
-  retryWithBackoff: jest.fn((fn) => fn()),
-  isRetryableError: jest.fn(() => true)
+vi.mock('@/lib/retryUtils', () => ({
+  retryWithBackoff: vi.fn((fn) => fn()),
+  isRetryableError: vi.fn(() => true)
 }));
 
-jest.mock('@/lib/errorUtils', () => ({
-  categorizeError: jest.fn((error) => ({
+vi.mock('@/lib/errorUtils', () => ({
+  categorizeError: vi.fn((error) => ({
     category: 'network',
     message: error.message,
     canRetry: true
   })),
-  extractCorrelationId: jest.fn(() => 'test-correlation-id')
+  extractCorrelationId: vi.fn(() => 'test-correlation-id')
 }));
 
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   ApiError: class ApiError extends Error {
     constructor(message: string, public statusCode: number, public correlationId?: string, public response?: Response) {
       super(message);
@@ -26,7 +26,7 @@ jest.mock('@/lib/api', () => ({
 }));
 
 // Mock PdfPreview component
-jest.mock('@/components/PdfPreview', () => ({
+vi.mock('@/components/PdfPreview', () => ({
   PdfPreview: ({ file }: { file: File }) => <div data-testid="pdf-preview">{file.name}</div>
 }));
 
@@ -86,17 +86,17 @@ describe('PdfUploadForm', () => {
   const mockProps = {
     gameId: 'game-1',
     gameName: 'Gloomhaven',
-    onUploadSuccess: jest.fn(),
-    onUploadError: jest.fn()
+    onUploadSuccess: vi.fn(),
+    onUploadError: vi.fn()
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    global.fetch = jest.fn();
+    vi.clearAllMocks();
+    global.fetch = vi.fn();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('Rendering', () => {
@@ -279,7 +279,7 @@ describe('PdfUploadForm', () => {
       const user = userEvent.setup();
       const file = createPdfFile('test.pdf');
 
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ documentId: 'doc-123' })
       });
@@ -309,7 +309,7 @@ describe('PdfUploadForm', () => {
       const uploadPromise = new Promise((resolve) => {
         resolveUpload = resolve;
       });
-      (global.fetch as jest.Mock).mockReturnValue(uploadPromise);
+      (global.fetch as Mock).mockReturnValue(uploadPromise);
 
       render(<PdfUploadForm {...mockProps} />);
 
@@ -355,7 +355,7 @@ describe('PdfUploadForm', () => {
       const user = userEvent.setup();
       const file = createPdfFile('test.pdf');
 
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (global.fetch as Mock).mockRejectedValue(new Error('Network error'));
 
       render(<PdfUploadForm {...mockProps} />);
 
@@ -384,7 +384,7 @@ describe('PdfUploadForm', () => {
         return fn();
       });
 
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ documentId: 'doc-123' })
       });

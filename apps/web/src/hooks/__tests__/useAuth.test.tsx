@@ -12,17 +12,17 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth } from '../useAuth';
 
 // Mock API module
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
-    get: jest.fn(),
-    post: jest.fn(),
+    get: vi.fn(),
+    post: vi.fn(),
     auth: {},
   },
 }));
 
-jest.mock('next/navigation', () => ({
-  useRouter: jest.fn(() => ({
-    push: jest.fn(),
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({
+    push: vi.fn(),
     pathname: '/',
     query: {},
   })),
@@ -30,11 +30,11 @@ jest.mock('next/navigation', () => ({
 
 // Get mocked functions after module is mocked
 const { api } = require('@/lib/api');
-const mockedApi = api as jest.Mocked<typeof api>;
+const mockedApi = api as Mocked<typeof api>;
 
 describe('useAuth', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockedApi.get.mockResolvedValue(null);
     mockedApi.post.mockResolvedValue({});
   });
@@ -331,7 +331,7 @@ describe('useAuth', () => {
         role: 'User',
       };
 
-      const mockRouterPush = jest.fn();
+      const mockRouterPush = vi.fn();
       const { useRouter } = require('next/navigation');
       useRouter.mockReturnValue({ push: mockRouterPush });
 
@@ -362,11 +362,11 @@ describe('useAuth', () => {
         role: 'User',
       };
 
-      const mockRouterPush = jest.fn();
+      const mockRouterPush = vi.fn();
       const { useRouter } = require('next/navigation');
       useRouter.mockReturnValue({ push: mockRouterPush });
 
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
 
       mockedApi.get.mockResolvedValue({ user: mockUser });
       mockedApi.post.mockRejectedValue(new Error('Logout failed'));

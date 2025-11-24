@@ -46,7 +46,7 @@ describe('SimpleErrorMessage', () => {
     });
 
     it('should have accessible dismiss button label', () => {
-      const onDismiss = jest.fn();
+      const onDismiss = vi.fn();
       render(<SimpleErrorMessage message="Error" onDismiss={onDismiss} />);
 
       const dismissButton = screen.getByRole('button', { name: /dismiss message/i });
@@ -55,7 +55,7 @@ describe('SimpleErrorMessage', () => {
     });
 
     it('should have proper focus management on dismiss button', () => {
-      const onDismiss = jest.fn();
+      const onDismiss = vi.fn();
       render(<SimpleErrorMessage message="Error" onDismiss={onDismiss} />);
 
       const dismissButton = screen.getByRole('button', { name: /dismiss message/i });
@@ -99,7 +99,7 @@ describe('SimpleErrorMessage', () => {
 
   describe('Dismiss Functionality', () => {
     it('should render dismiss button when onDismiss is provided', () => {
-      const onDismiss = jest.fn();
+      const onDismiss = vi.fn();
       render(<SimpleErrorMessage message="Error" onDismiss={onDismiss} />);
 
       const dismissButton = screen.getByRole('button', { name: /dismiss message/i });
@@ -114,7 +114,7 @@ describe('SimpleErrorMessage', () => {
     });
 
     it('should call onDismiss when dismiss button is clicked', () => {
-      const onDismiss = jest.fn();
+      const onDismiss = vi.fn();
       render(<SimpleErrorMessage message="Error" onDismiss={onDismiss} />);
 
       const dismissButton = screen.getByRole('button', { name: /dismiss message/i });
@@ -124,7 +124,7 @@ describe('SimpleErrorMessage', () => {
     });
 
     it('should have proper hover state on dismiss button', () => {
-      const onDismiss = jest.fn();
+      const onDismiss = vi.fn();
       render(<SimpleErrorMessage message="Error" onDismiss={onDismiss} />);
 
       const dismissButton = screen.getByRole('button', { name: /dismiss message/i });
@@ -193,7 +193,7 @@ describe('SimpleErrorMessage', () => {
     });
 
     it('should handle onDismiss being added/removed dynamically', () => {
-      const onDismiss = jest.fn();
+      const onDismiss = vi.fn();
       const { rerender } = render(<SimpleErrorMessage message="Error" />);
 
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
@@ -220,7 +220,7 @@ describe('SimpleErrorMessage', () => {
       const props: SimpleErrorMessageProps = {
         message: 'Test',
         variant: 'error',
-        onDismiss: jest.fn(),
+        onDismiss: vi.fn(),
         className: 'custom'
       };
 

@@ -36,12 +36,12 @@ describe('GameList', () => {
     games: mockGames,
     loading: false,
     viewMode: 'grid' as const,
-    onViewModeChange: jest.fn(),
-    onGameClick: jest.fn(),
+    onViewModeChange: vi.fn(),
+    onGameClick: vi.fn(),
     currentPage: 1,
     totalPages: 3,
     totalGames: 50,
-    onPageChange: jest.fn(),
+    onPageChange: vi.fn(),
   };
 
   it('renders loading skeleton when loading', () => {
@@ -75,7 +75,7 @@ describe('GameList', () => {
   });
 
   it('calls onViewModeChange when grid button clicked', () => {
-    const handleViewModeChange = jest.fn();
+    const handleViewModeChange = vi.fn();
     render(<GameList {...defaultProps} viewMode="list" onViewModeChange={handleViewModeChange} />);
 
     const gridButton = screen.getByLabelText('Grid view');
@@ -85,7 +85,7 @@ describe('GameList', () => {
   });
 
   it('calls onViewModeChange when list button clicked', () => {
-    const handleViewModeChange = jest.fn();
+    const handleViewModeChange = vi.fn();
     render(<GameList {...defaultProps} onViewModeChange={handleViewModeChange} />);
 
     const listButton = screen.getByLabelText('List view');
@@ -122,7 +122,7 @@ describe('GameList', () => {
   });
 
   it('calls onPageChange when page button clicked', () => {
-    const handlePageChange = jest.fn();
+    const handlePageChange = vi.fn();
     render(<GameList {...defaultProps} onPageChange={handlePageChange} />);
 
     const page2Button = screen.getByLabelText('Page 2');
@@ -132,7 +132,7 @@ describe('GameList', () => {
   });
 
   it('calls onPageChange when next button clicked', () => {
-    const handlePageChange = jest.fn();
+    const handlePageChange = vi.fn();
     render(<GameList {...defaultProps} currentPage={1} onPageChange={handlePageChange} />);
 
     const nextButton = screen.getByLabelText('Next page');
@@ -142,7 +142,7 @@ describe('GameList', () => {
   });
 
   it('calls onPageChange when previous button clicked', () => {
-    const handlePageChange = jest.fn();
+    const handlePageChange = vi.fn();
     render(<GameList {...defaultProps} currentPage={2} onPageChange={handlePageChange} />);
 
     const prevButton = screen.getByLabelText('Previous page');
@@ -152,7 +152,7 @@ describe('GameList', () => {
   });
 
   it('calls onGameClick when game card is clicked', () => {
-    const handleGameClick = jest.fn();
+    const handleGameClick = vi.fn();
     render(<GameList {...defaultProps} onGameClick={handleGameClick} />);
 
     const catanCard = screen.getByText('Catan').closest('[role="button"]');

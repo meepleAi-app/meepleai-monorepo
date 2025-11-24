@@ -7,11 +7,11 @@ import CategoryConfigTab from "../CategoryConfigTab";
 import { api } from "../../../lib/api";
 import { toast } from "@/components/Toast";
 
-jest.mock("../../../lib/api");
-jest.mock("@/components/Toast");
+vi.mock("../../../lib/api");
+vi.mock("@/components/Toast");
 
-const mockApi = api as jest.Mocked<typeof api>;
-const mockToast = toast as jest.Mocked<typeof toast>;
+const mockApi = api as Mocked<typeof api>;
+const mockToast = toast as Mocked<typeof toast>;
 
 describe("CategoryConfigTab", () => {
   const mockConfigurations = [
@@ -53,15 +53,15 @@ describe("CategoryConfigTab", () => {
     },
   ];
 
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockApi.config = {
-      updateConfiguration: jest.fn().mockResolvedValue({}),
+      updateConfiguration: vi.fn().mockResolvedValue({}),
     } as any;
-    mockToast.success = jest.fn();
-    mockToast.error = jest.fn();
+    mockToast.success = vi.fn();
+    mockToast.error = vi.fn();
   });
 
   it("filters configurations by category", () => {
@@ -148,7 +148,7 @@ describe("CategoryConfigTab", () => {
       value: "512",
     };
 
-    const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     render(
       <CategoryConfigTab

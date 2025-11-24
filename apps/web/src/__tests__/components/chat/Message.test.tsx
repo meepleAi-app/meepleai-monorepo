@@ -13,13 +13,13 @@ import { Message } from '../../../components/chat/Message';
 import { Message as MessageType } from '../../../types';
 
 // Mock the ChatProvider context
-const mockUseChatContext = jest.fn();
-jest.mock('../../../components/chat/ChatProvider', () => ({
+const mockUseChatContext = vi.fn();
+vi.mock('../../../components/chat/ChatProvider', () => ({
   useChatContext: () => mockUseChatContext(),
 }));
 
 // Mock MessageActions component
-jest.mock('../../../components/chat/MessageActions', () => ({
+vi.mock('../../../components/chat/MessageActions', () => ({
   MessageActions: ({ message, isUser }: any) => (
     <div data-testid="message-actions" data-is-user={isUser} data-message-id={message.id}>
       Message Actions Mock
@@ -28,12 +28,12 @@ jest.mock('../../../components/chat/MessageActions', () => ({
 }));
 
 // Mock MessageEditForm component
-jest.mock('../../../components/chat/MessageEditForm', () => ({
+vi.mock('../../../components/chat/MessageEditForm', () => ({
   MessageEditForm: () => <div data-testid="message-edit-form">Edit Form Mock</div>,
 }));
 
 // Mock FollowUpQuestions component
-jest.mock('../../../components/FollowUpQuestions', () => ({
+vi.mock('../../../components/FollowUpQuestions', () => ({
   FollowUpQuestions: ({ questions, onQuestionClick, disabled }: any) => (
     <div data-disabled={disabled ? 'true' : 'false'}>
       {questions.map((q: string, i: number) => (
@@ -63,18 +63,18 @@ const createMessage = (overrides?: Partial<MessageType>): MessageType => ({
 const setupMockContext = (overrides?: any) => {
   mockUseChatContext.mockReturnValue({
     editingMessageId: null,
-    startEditMessage: jest.fn(),
-    deleteMessage: jest.fn(),
-    setMessageFeedback: jest.fn(),
+    startEditMessage: vi.fn(),
+    deleteMessage: vi.fn(),
+    setMessageFeedback: vi.fn(),
     loading: { sending: false, updating: false, deleting: false },
-    setInputValue: jest.fn(),
+    setInputValue: vi.fn(),
     ...overrides,
   });
 };
 
 describe('Message Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     setupMockContext();
   });
 

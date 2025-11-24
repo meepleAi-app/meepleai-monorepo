@@ -20,7 +20,7 @@ import { MockUploadWorker, MockBroadcastChannel } from '../../__tests__/helpers/
 
 // Mock Worker globally BEFORE importing store
 let mockWorkerInstance: MockUploadWorker;
-global.Worker = jest.fn(() => {
+global.Worker = vi.fn(() => {
   mockWorkerInstance = new MockUploadWorker({ uploadDelay: 10, autoUpload: true });
   return mockWorkerInstance as any;
 }) as any;
@@ -29,7 +29,7 @@ global.Worker = jest.fn(() => {
 global.BroadcastChannel = MockBroadcastChannel as any;
 
 // Mock fetch
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 // NOW import the modules that use Worker
 import { renderHook, waitFor, act } from '@testing-library/react';
@@ -49,18 +49,18 @@ type UseUploadQueueWithWorker = ReturnType<typeof useUploadQueue> & {
 // Mock localStorage
 const localStorageMock: { [key: string]: string } = {};
 global.localStorage = {
-  getItem: jest.fn((key: string) => localStorageMock[key] || null),
-  setItem: jest.fn((key: string, value: string) => {
+  getItem: vi.fn((key: string) => localStorageMock[key] || null),
+  setItem: vi.fn((key: string, value: string) => {
     localStorageMock[key] = value;
   }),
-  removeItem: jest.fn((key: string) => {
+  removeItem: vi.fn((key: string) => {
     delete localStorageMock[key];
   }),
-  clear: jest.fn(() => {
+  clear: vi.fn(() => {
     Object.keys(localStorageMock).forEach(key => delete localStorageMock[key]);
   }),
   length: 0,
-  key: jest.fn(),
+  key: vi.fn(),
 };
 
 // TODO: Fix MockBroadcastChannel.clearAll() performance (takes >30s)
@@ -72,16 +72,16 @@ global.localStorage = {
  */
 describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     Object.keys(localStorageMock).forEach(key => delete localStorageMock[key]);
 
     // Note: MockBroadcastChannel.clearAll() is slow, relies on global testTimeout: 30s
     MockBroadcastChannel.clearAll();
 
     // Reset mock worker instance
-    (global.Worker as jest.Mock).mockClear();
+    (global.Worker as Mock).mockClear();
 
-    (global.fetch as jest.Mock).mockResolvedValue({
+    (global.fetch as Mock).mockResolvedValue({
       ok: true,
       json: async () => ({ documentId: 'pdf-123' }),
       headers: new Headers(),
@@ -356,7 +356,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     });
 
     it('should handle UPLOAD_FAILED response', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (global.fetch as Mock).mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => useUploadQueue());
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
@@ -503,7 +503,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
 
       // Check what was saved
       await waitFor(() => {
-        const lastCall = (localStorage.setItem as jest.Mock).mock.calls.slice(-1)[0];
+        const lastCall = (localStorage.setItem as Mock).mock.calls.slice(-1)[0];
         if (lastCall) {
           const savedData = JSON.parse(lastCall[1]);
           // Successful items should not be persisted
@@ -552,14 +552,14 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const { result } = renderHook(() => useUploadQueue());
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
-      const setItemCallsBefore = (localStorage.setItem as jest.Mock).mock.calls.length;
+      const setItemCallsBefore = (localStorage.setItem as Mock).mock.calls.length;
 
       await act(async () => {
         await result.current.addFiles([file], '770e8400-e29b-41d4-a716-000000000123', 'en');
       });
 
       await waitFor(() => {
-        const setItemCallsAfter = (localStorage.setItem as jest.Mock).mock.calls.length;
+        const setItemCallsAfter = (localStorage.setItem as Mock).mock.calls.length;
         expect(setItemCallsAfter).toBeGreaterThan(setItemCallsBefore);
       });
     });
@@ -576,7 +576,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       });
 
       await waitFor(() => {
-        const lastCall = (localStorage.setItem as jest.Mock).mock.calls.slice(-1)[0];
+        const lastCall = (localStorage.setItem as Mock).mock.calls.slice(-1)[0];
         if (lastCall) {
           const savedData = JSON.parse(lastCall[1]);
           expect(savedData.metrics).toBeDefined();
@@ -602,7 +602,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     });
 
     it('should persist failed items for retry', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (global.fetch as Mock).mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => useUploadQueue());
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
@@ -619,7 +619,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       );
 
       await waitFor(() => {
-        const lastCall = (localStorage.setItem as jest.Mock).mock.calls.slice(-1)[0];
+        const lastCall = (localStorage.setItem as Mock).mock.calls.slice(-1)[0];
         if (lastCall) {
           const savedData = JSON.parse(lastCall[1]);
           // Failed items should be persisted
@@ -638,7 +638,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       });
 
       await waitFor(() => {
-        const lastCall = (localStorage.setItem as jest.Mock).mock.calls.slice(-1)[0];
+        const lastCall = (localStorage.setItem as Mock).mock.calls.slice(-1)[0];
         if (lastCall) {
           const savedData = JSON.parse(lastCall[1]);
           expect(savedData.savedAt).toBeDefined();
@@ -772,7 +772,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     it('should handle BroadcastChannel errors gracefully', async () => {
       // Mock BroadcastChannel to throw
       const OriginalBC = global.BroadcastChannel;
-      global.BroadcastChannel = jest.fn(() => {
+      global.BroadcastChannel = vi.fn(() => {
         throw new Error('BroadcastChannel not supported');
       }) as any;
 
@@ -961,7 +961,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     });
 
     it('should terminate worker on idle timeout', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       const { result } = renderHook(() => useUploadQueue());
 
@@ -980,14 +980,14 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       document.dispatchEvent(visibilityEvent);
 
       // Fast-forward 5 minutes
-      jest.advanceTimersByTime(5 * 60 * 1000);
+      vi.advanceTimersByTime(5 * 60 * 1000);
 
       // Worker should be terminated if queue is empty
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should not cleanup worker if uploads are active', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       mockWorkerInstance.setUploadDelay(10000);
 
@@ -1011,13 +1011,13 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
       const visibilityEvent = new Event('visibilitychange');
       document.dispatchEvent(visibilityEvent);
 
-      jest.advanceTimersByTime(5 * 60 * 1000);
+      vi.advanceTimersByTime(5 * 60 * 1000);
 
       // Worker should NOT be terminated (active uploads)
       // @ts-expect-error - Testing planned worker properties (isWorkerReady, workerError)
       expect(result.current.isWorkerReady).toBe(true);
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should reinitialize worker when tab becomes visible', async () => {
@@ -1277,7 +1277,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     });
 
     it('should handle errors during buffer processing', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (global.fetch as Mock).mockRejectedValue(new Error('Network error'));
 
       uploadQueueStore.destroy();
       mockWorkerInstance.terminate();
@@ -1326,7 +1326,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     });
 
     it('should handle buffer timeout gracefully', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       uploadQueueStore.destroy();
       mockWorkerInstance.terminate();
@@ -1345,7 +1345,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
         expect(result.current.queue.length).toBeGreaterThanOrEqual(0);
       });
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should preserve file metadata in buffer', async () => {
@@ -1483,7 +1483,7 @@ describe.skip('FE-TEST-010: Worker-Specific Tests', () => {
     });
 
     it('should retain ArrayBuffer for failed uploads (for retry)', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (global.fetch as Mock).mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => useUploadQueue());
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });

@@ -124,14 +124,14 @@ describe('LoadingButton', () => {
 
   describe('Event handlers', () => {
     it('should call onClick when not loading', () => {
-      const handleClick = jest.fn();
+      const handleClick = vi.fn();
       render(<LoadingButton onClick={handleClick}>Submit</LoadingButton>);
       fireEvent.click(screen.getByRole('button'));
       expect(handleClick).toHaveBeenCalledTimes(1);
     });
 
     it('should not call onClick when loading (button is disabled)', () => {
-      const handleClick = jest.fn();
+      const handleClick = vi.fn();
       render(
         <LoadingButton onClick={handleClick} isLoading={true}>
           Submit

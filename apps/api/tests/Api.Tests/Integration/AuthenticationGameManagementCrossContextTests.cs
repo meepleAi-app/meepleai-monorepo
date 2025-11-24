@@ -152,7 +152,8 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             Guid.NewGuid(),
             user.Id,
             sessionToken,
-            TimeSpan.FromHours(2)
+            TimeSpan.FromHours(2),
+            timeProvider: _timeProvider
         );
         await sessionRepository.AddAsync(session, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
@@ -283,7 +284,8 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
                 Guid.NewGuid(),
                 user.Id,
                 sessionToken,
-                TimeSpan.FromHours(2)
+                TimeSpan.FromHours(2),
+                timeProvider: _timeProvider
             );
             await sessionRepository.AddAsync(session, TestCancellationToken);
         }
@@ -339,7 +341,8 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             Guid.NewGuid(),
             user.Id,
             sessionToken,
-            TimeSpan.FromHours(1)
+            TimeSpan.FromHours(1),
+            timeProvider: _timeProvider
         );
         await sessionRepository.AddAsync(session, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);

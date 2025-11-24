@@ -115,13 +115,16 @@ describe('Logger', () => {
   });
 
   describe('debug logging', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
     it('should log debug in development', () => {
       vi.stubEnv('NODE_ENV', 'development');
 
       logger.debug('Debug message', { debug: true });
 
       expect(consoleDebugSpy).toHaveBeenCalledWith('[API Debug]', 'Debug message', { debug: true });
-      vi.unstubAllEnvs();
     });
 
     it('should not log debug in production', () => {
@@ -131,7 +134,6 @@ describe('Logger', () => {
 
       // Should not call console.debug in production
       expect(consoleDebugSpy).not.toHaveBeenCalled();
-      vi.unstubAllEnvs();
     });
   });
 });

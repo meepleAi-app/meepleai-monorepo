@@ -1,0 +1,318 @@
+/**
+ * sessionSlice.test.ts
+ * Comprehensive tests for Session Slice (Issue #1083)
+ *
+ * Coverage targets:
+ * - State initialization
+ * - selectGame action and agent reset behavior
+ * - selectAgent action
+ * - toggleSidebar action
+ * - setSidebarCollapsed action
+ * - State transitions and edge cases
+ */
+
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { createSessionSlice } from '../sessionSlice';
+import { ChatStore } from '../../types';
+
+      expect(store.getState().selectedAgentId).toBe(agentId);
+    });
+  });
+
+  // ============================================================================
+  // toggleSidebar Action Tests
+  // ============================================================================
+
+  describe('toggleSidebar', () => {
+    it('should toggle sidebarCollapsed from false to true', () => {
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      store.getState().toggleSidebar();
+
+      expect(store.getState().sidebarCollapsed).toBe(true);
+    });
+
+    it('should toggle sidebarCollapsed from true to false', () => {
+      // First set to true
+      store.getState().setSidebarCollapsed(true);
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      // Then toggle
+      store.getState().toggleSidebar();
+
+      expect(store.getState().sidebarCollapsed).toBe(false);
+    });
+
+    it('should toggle multiple times correctly', () => {
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      store.getState().toggleSidebar();
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      store.getState().toggleSidebar();
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      store.getState().toggleSidebar();
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      store.getState().toggleSidebar();
+      expect(store.getState().sidebarCollapsed).toBe(false);
+    });
+
+    it('should not affect other session state', () => {
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
+      const agentId = 'agent-456';
+
+      store.getState().selectGame(gameId);
+      store.getState().selectAgent(agentId);
+
+      expect(store.getState().selectedGameId).toBe(gameId);
+      expect(store.getState().selectedAgentId).toBe(agentId);
+
+      store.getState().toggleSidebar();
+
+      expect(store.getState().selectedGameId).toBe(gameId);
+      expect(store.getState().selectedAgentId).toBe(agentId);
+      expect(store.getState().sidebarCollapsed).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // setSidebarCollapsed Action Tests
+  // ============================================================================
+
+  describe('setSidebarCollapsed', () => {
+    it('should set sidebarCollapsed to true', () => {
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      store.getState().setSidebarCollapsed(true);
+
+      expect(store.getState().sidebarCollapsed).toBe(true);
+    });
+
+    it('should set sidebarCollapsed to false', () => {
+      // First set to true
+      store.getState().setSidebarCollapsed(true);
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      // Then set to false
+      store.getState().setSidebarCollapsed(false);
+
+      expect(store.getState().sidebarCollapsed).toBe(false);
+    });
+
+    it('should allow setting the same value multiple times', () => {
+      store.getState().setSidebarCollapsed(true);
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      store.getState().setSidebarCollapsed(true);
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      store.getState().setSidebarCollapsed(false);
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      store.getState().setSidebarCollapsed(false);
+      expect(store.getState().sidebarCollapsed).toBe(false);
+    });
+
+    it('should override toggle state', () => {
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      store.getState().toggleSidebar();
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      store.getState().setSidebarCollapsed(false);
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      store.getState().toggleSidebar();
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      store.getState().setSidebarCollapsed(true);
+      expect(store.getState().sidebarCollapsed).toBe(true);
+    });
+
+    it('should not affect other session state', () => {
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
+      const agentId = 'agent-456';
+
+      store.getState().selectGame(gameId);
+      store.getState().selectAgent(agentId);
+
+      expect(store.getState().selectedGameId).toBe(gameId);
+      expect(store.getState().selectedAgentId).toBe(agentId);
+
+      store.getState().setSidebarCollapsed(true);
+
+      expect(store.getState().selectedGameId).toBe(gameId);
+      expect(store.getState().selectedAgentId).toBe(agentId);
+      expect(store.getState().sidebarCollapsed).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // Integration and Edge Case Tests
+  // ============================================================================
+
+  describe('Integration and Edge Cases', () => {
+    it('should handle complete session workflow', () => {
+      // Initial state
+      expect(store.getState().selectedGameId).toBeNull();
+      expect(store.getState().selectedAgentId).toBeNull();
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      // Select game
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000001');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000001');
+      expect(store.getState().selectedAgentId).toBeNull();
+
+      // Select agent
+      store.getState().selectAgent('agent-1');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000001');
+      expect(store.getState().selectedAgentId).toBe('agent-1');
+
+      // Collapse sidebar
+      store.getState().toggleSidebar();
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      // Change game (should reset agent)
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000002');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000002');
+      expect(store.getState().selectedAgentId).toBeNull();
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      // Select new agent
+      store.getState().selectAgent('agent-2');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000002');
+      expect(store.getState().selectedAgentId).toBe('agent-2');
+
+      // Expand sidebar
+      store.getState().setSidebarCollapsed(false);
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      // Clear selection
+      store.getState().selectGame(null);
+      expect(store.getState().selectedGameId).toBeNull();
+      expect(store.getState().selectedAgentId).toBeNull();
+      expect(store.getState().sidebarCollapsed).toBe(false);
+    });
+
+    it('should maintain state independence between actions', () => {
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
+      const agentId = 'agent-456';
+
+      // Set all state
+      store.getState().selectGame(gameId);
+      store.getState().selectAgent(agentId);
+      store.getState().setSidebarCollapsed(true);
+
+      // Verify all state is set
+      expect(store.getState().selectedGameId).toBe(gameId);
+      expect(store.getState().selectedAgentId).toBe(agentId);
+      expect(store.getState().sidebarCollapsed).toBe(true);
+
+      // Modify only sidebar
+      store.getState().toggleSidebar();
+      expect(store.getState().selectedGameId).toBe(gameId);
+      expect(store.getState().selectedAgentId).toBe(agentId);
+      expect(store.getState().sidebarCollapsed).toBe(false);
+
+      // Modify only agent
+      store.getState().selectAgent('agent-789');
+      expect(store.getState().selectedGameId).toBe(gameId);
+      expect(store.getState().selectedAgentId).toBe('agent-789');
+      expect(store.getState().sidebarCollapsed).toBe(false);
+    });
+
+    it('should handle concurrent state updates', () => {
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
+      const agentId = 'agent-456';
+
+      // Multiple rapid updates
+      store.getState().selectGame(gameId);
+      store.getState().selectAgent(agentId);
+      store.getState().toggleSidebar();
+      store.getState().setSidebarCollapsed(false);
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000789');
+
+      // Final state should reflect all updates in order
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000789');
+      expect(store.getState().selectedAgentId).toBeNull(); // Reset by game change
+      expect(store.getState().sidebarCollapsed).toBe(false);
+    });
+
+    it('should handle null-to-null transitions gracefully', () => {
+      expect(store.getState().selectedGameId).toBeNull();
+      expect(store.getState().selectedAgentId).toBeNull();
+
+      store.getState().selectGame(null);
+      store.getState().selectAgent(null);
+
+      expect(store.getState().selectedGameId).toBeNull();
+      expect(store.getState().selectedAgentId).toBeNull();
+    });
+
+    it('should preserve state through multiple game-agent cycles', () => {
+      // First cycle
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000001');
+      store.getState().selectAgent('agent-1');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000001');
+      expect(store.getState().selectedAgentId).toBe('agent-1');
+
+      // Second cycle
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000002');
+      expect(store.getState().selectedAgentId).toBeNull();
+      store.getState().selectAgent('agent-2');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000002');
+      expect(store.getState().selectedAgentId).toBe('agent-2');
+
+      // Third cycle
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000003');
+      expect(store.getState().selectedAgentId).toBeNull();
+      store.getState().selectAgent('agent-3');
+      expect(store.getState().selectedGameId).toBe('770e8400-e29b-41d4-a716-000000000003');
+      expect(store.getState().selectedAgentId).toBe('agent-3');
+    });
+  });
+
+  // ============================================================================
+  // State Consistency Tests
+  // ============================================================================
+
+  describe('State Consistency', () => {
+    it('should maintain referential integrity when no changes occur', () => {
+      const initialState = store.getState();
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
+
+      // Select same game twice
+      store.getState().selectGame(gameId);
+      const firstState = store.getState();
+
+      store.getState().selectGame(gameId);
+      const secondState = store.getState();
+
+      expect(firstState.selectedGameId).toBe(secondState.selectedGameId);
+      expect(firstState.selectedAgentId).toBe(secondState.selectedAgentId);
+    });
+
+    it('should handle sidebar state independently of selection state', () => {
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
+      const agentId = 'agent-456';
+
+      // Set selections
+      store.getState().selectGame(gameId);
+      store.getState().selectAgent(agentId);
+
+      // Toggle sidebar multiple times
+      for (let i = 0; i < 5; i++) {
+        store.getState().toggleSidebar();
+      }
+
+      // Selections should be unchanged
+      expect(store.getState().selectedGameId).toBe(gameId);
+      expect(store.getState().selectedAgentId).toBe(agentId);
+      expect(store.getState().sidebarCollapsed).toBe(true); // Odd number of toggles
+    });
+  });
+});

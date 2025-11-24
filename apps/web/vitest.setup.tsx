@@ -77,7 +77,7 @@ vi.mock('framer-motion', () => {
     AnimatePresence: ({ children, mode }: any) => {
       // In test environment, render all children immediately without animation delays
       // This ensures form elements are accessible to tests via getByLabelText/getByRole
-      return <>{React.Children.map(children, (child: any) => child)}</>;
+      return React.createElement(React.Fragment, null, React.Children.map(children, (child: any) => child));
     },
     // Always return true for inView to trigger animations immediately in tests
     useInView: () => [React.useRef(null), true],

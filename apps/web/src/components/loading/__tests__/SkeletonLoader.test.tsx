@@ -7,8 +7,8 @@ import { render, screen } from '@testing-library/react';
 import { SkeletonLoader } from '../SkeletonLoader';
 
 // Mock useReducedMotion hook
-const mockUseReducedMotion = jest.fn();
-jest.mock('@/lib/animations', () => ({
+const mockUseReducedMotion = vi.fn();
+vi.mock('@/lib/animations', () => ({
   ...jest.requireActual('@/lib/animations'),
   useReducedMotion: () => mockUseReducedMotion(),
 }));
@@ -19,7 +19,7 @@ describe('SkeletonLoader', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Count prop', () => {

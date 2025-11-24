@@ -16,6 +16,10 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   testTimeout: 30000, // Global timeout 30s for slow worker/async tests
   coverageProvider: 'v8', // Fix babel-plugin-istanbul schema error (test-exclude@6.0.0)
+  // Transform ESM modules from MSW and its dependencies (Issue #1503)
+  transformIgnorePatterns: [
+    'node_modules/(?!(msw|@mswjs|@bundled-es-modules|until-async)/)',
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

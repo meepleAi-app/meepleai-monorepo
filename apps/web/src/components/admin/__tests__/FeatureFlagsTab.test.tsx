@@ -8,11 +8,11 @@ import { api } from "../../../lib/api";
 import { toast } from "@/components/Toast";
 
 // Mock dependencies
-jest.mock("../../../lib/api");
-jest.mock("@/components/Toast");
+vi.mock("../../../lib/api");
+vi.mock("@/components/Toast");
 
-const mockApi = api as jest.Mocked<typeof api>;
-const mockToast = toast as jest.Mocked<typeof toast>;
+const mockApi = api as Mocked<typeof api>;
+const mockToast = toast as Mocked<typeof toast>;
 
 describe("FeatureFlagsTab", () => {
   const criticalStreamingFlag = {
@@ -74,15 +74,15 @@ describe("FeatureFlagsTab", () => {
     }
   ];
 
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockApi.config = {
-      updateConfiguration: jest.fn().mockResolvedValue({}),
+      updateConfiguration: vi.fn().mockResolvedValue({}),
     } as any;
-    mockToast.success = jest.fn();
-    mockToast.error = jest.fn();
+    mockToast.success = vi.fn();
+    mockToast.error = vi.fn();
   });
 
   it("renders feature flags correctly", () => {
@@ -111,7 +111,7 @@ describe("FeatureFlagsTab", () => {
   });
 
   it("toggles non-critical feature flags without confirmation", async () => {
-    const confirmSpy = jest.spyOn(window, "confirm").mockImplementation(() => true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockImplementation(() => true);
 
     render(
       <FeatureFlagsTab
@@ -138,7 +138,7 @@ describe("FeatureFlagsTab", () => {
   });
 
   it("shows confirmation prompt for critical features before disabling", () => {
-    const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     render(
       <FeatureFlagsTab
@@ -177,7 +177,7 @@ describe("FeatureFlagsTab", () => {
   });
 
   it("surfaces API errors and keeps toggle state unchanged", async () => {
-    const confirmSpy = jest.spyOn(window, "confirm").mockImplementation(() => true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockImplementation(() => true);
     mockApi.config.updateConfiguration = jest
       .fn()
       .mockRejectedValue(new Error("API Error"));

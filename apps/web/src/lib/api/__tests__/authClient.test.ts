@@ -19,7 +19,7 @@ import type {
 import { globalRequestCache } from '../core/requestCache';
 
 describe('AuthClient', () => {
-  let mockFetch: jest.Mock;
+  let mockFetch: Mock;
   let httpClient: HttpClient;
   let authClient: ReturnType<typeof createAuthClient>;
 
@@ -27,7 +27,7 @@ describe('AuthClient', () => {
     // Clear request cache before each test
     globalRequestCache.clear();
 
-    mockFetch = jest.fn();
+    mockFetch = vi.fn();
     httpClient = new HttpClient({ fetchImpl: mockFetch });
     authClient = createAuthClient({ httpClient });
   });

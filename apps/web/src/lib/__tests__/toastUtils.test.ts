@@ -14,18 +14,18 @@ import {
 import { ErrorCategory, type CategorizedError } from '../errorUtils';
 
 // Mock sonner
-jest.mock('sonner', () => ({
+vi.mock('sonner', () => ({
   toast: {
-    error: jest.fn(),
-    warning: jest.fn(),
-    success: jest.fn(),
-    info: jest.fn()
+    error: vi.fn(),
+    warning: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn()
   }
 }));
 
 describe('toastUtils', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('shouldShowToast', () => {

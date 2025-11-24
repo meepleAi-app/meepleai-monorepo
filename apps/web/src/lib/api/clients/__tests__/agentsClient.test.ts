@@ -9,16 +9,16 @@ import { createAgentsClient } from '../agentsClient';
 import { HttpClient } from '../../core/httpClient';
 
 describe('createAgentsClient', () => {
-  let mockHttpClient: jest.Mocked<HttpClient>;
+  let mockHttpClient: Mocked<HttpClient>;
   let agentsClient: ReturnType<typeof createAgentsClient>;
 
   beforeEach(() => {
     mockHttpClient = {
-      get: jest.fn(),
-      post: jest.fn(),
-      put: jest.fn(),
-      delete: jest.fn(),
-      postFile: jest.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      postFile: vi.fn(),
     } as any;
 
     agentsClient = createAgentsClient({ httpClient: mockHttpClient });

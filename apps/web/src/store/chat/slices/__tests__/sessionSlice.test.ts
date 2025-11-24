@@ -29,26 +29,26 @@ describe('sessionSlice', () => {
           // Mock other slices
           games: [],
           agents: [],
-          setGames: jest.fn(),
-          setAgents: jest.fn(),
-          loadGames: jest.fn(),
-          loadAgents: jest.fn(),
+          setGames: vi.fn(),
+          setAgents: vi.fn(),
+          loadGames: vi.fn(),
+          loadAgents: vi.fn(),
           chatsByGame: {},
           activeChatIds: {},
-          loadChats: jest.fn(),
-          createChat: jest.fn(),
-          deleteChat: jest.fn(),
-          selectChat: jest.fn(),
-          updateChatTitle: jest.fn(),
+          loadChats: vi.fn(),
+          createChat: vi.fn(),
+          deleteChat: vi.fn(),
+          selectChat: vi.fn(),
+          updateChatTitle: vi.fn(),
           messagesByChat: {},
-          loadMessages: jest.fn(),
-          sendMessage: jest.fn(),
-          editMessage: jest.fn(),
-          deleteMessage: jest.fn(),
-          setMessageFeedback: jest.fn(),
-          addOptimisticMessage: jest.fn(),
-          removeOptimisticMessage: jest.fn(),
-          updateMessageInThread: jest.fn(),
+          loadMessages: vi.fn(),
+          sendMessage: vi.fn(),
+          editMessage: vi.fn(),
+          deleteMessage: vi.fn(),
+          setMessageFeedback: vi.fn(),
+          addOptimisticMessage: vi.fn(),
+          removeOptimisticMessage: vi.fn(),
+          updateMessageInThread: vi.fn(),
           loading: {
             chats: false,
             messages: false,
@@ -64,15 +64,15 @@ describe('sessionSlice', () => {
           editingMessageId: null,
           editContent: '',
           searchMode: 'hybrid',
-          setLoading: jest.fn(),
-          setError: jest.fn(),
-          clearError: jest.fn(),
-          setInputValue: jest.fn(),
-          startEdit: jest.fn(),
-          cancelEdit: jest.fn(),
-          saveEdit: jest.fn(),
-          setEditContent: jest.fn(),
-          setSearchMode: jest.fn(),
+          setLoading: vi.fn(),
+          setError: vi.fn(),
+          clearError: vi.fn(),
+          setInputValue: vi.fn(),
+          startEdit: vi.fn(),
+          cancelEdit: vi.fn(),
+          saveEdit: vi.fn(),
+          setEditContent: vi.fn(),
+          setSearchMode: vi.fn(),
         }))
       )
     );
@@ -80,11 +80,11 @@ describe('sessionSlice', () => {
 
   beforeEach(() => {
     store = createTestStore();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // ============================================================================

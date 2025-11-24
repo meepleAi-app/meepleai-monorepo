@@ -7,18 +7,18 @@ import { render, screen } from '@testing-library/react';
 import { MessageAnimator } from '../MessageAnimator';
 
 // Mock useReducedMotion hook
-const mockUseReducedMotion = jest.fn();
-jest.mock('@/lib/animations', () => ({
+const mockUseReducedMotion = vi.fn();
+vi.mock('@/lib/animations', () => ({
   ...jest.requireActual('@/lib/animations'),
   useReducedMotion: () => mockUseReducedMotion(),
 }));
 
 // Mock framer-motion with props tracking
-const mockMotionDiv = jest.fn(({ children, ...props }: any) => (
+const mockMotionDiv = vi.fn(({ children, ...props }: any) => (
   <div {...props}>{children}</div>
 ));
 
-jest.mock('framer-motion', () => ({
+vi.mock('framer-motion', () => ({
   motion: {
     div: (props: any) => mockMotionDiv(props),
   },
@@ -31,7 +31,7 @@ describe('MessageAnimator', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Children wrapping', () => {

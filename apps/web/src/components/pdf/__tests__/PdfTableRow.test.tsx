@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { PdfTableRow } from '../PdfTableRow';
 
 // Mock the table context for TableRow component
-jest.mock('@/components/ui/table', () => ({
+vi.mock('@/components/ui/table', () => ({
   TableCell: ({ children, className, ...props }: any) => (
     <td className={className} {...props}>{children}</td>
   ),
@@ -22,11 +22,11 @@ describe('PdfTableRow', () => {
     logUrl: 'https://example.com/log/pdf-123'
   };
 
-  const mockOnRetryParsing = jest.fn();
-  const mockOnOpenLog = jest.fn();
+  const mockOnRetryParsing = vi.fn();
+  const mockOnOpenLog = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Basic Rendering', () => {

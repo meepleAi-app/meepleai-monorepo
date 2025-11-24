@@ -13,17 +13,17 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useSessionCheck } from '../useSessionCheck';
 
 // Mock API module
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
     auth: {
-      getSessionStatus: jest.fn(),
+      getSessionStatus: vi.fn(),
     },
   },
 }));
 
 // Get mocked functions after module is mocked
 const { api } = require('@/lib/api');
-const mockedApi = api as jest.Mocked<typeof api>;
+const mockedApi = api as Mocked<typeof api>;
 
 describe('useSessionCheck', () => {
   let consoleErrorSpy: jest.SpyInstance;
@@ -35,10 +35,10 @@ describe('useSessionCheck', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockedApi.auth.getSessionStatus.mockClear();
-    jest.useFakeTimers();
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    vi.useFakeTimers();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
 
     // Mock window.location - simplified approach
     delete (window as any).location;
@@ -46,7 +46,7 @@ describe('useSessionCheck', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     consoleErrorSpy.mockRestore();
   });
 
@@ -180,14 +180,14 @@ describe('useSessionCheck', () => {
 
       // After 5 minutes
       await act(async () => {
-        jest.advanceTimersByTime(5 * 60 * 1000);
+        vi.advanceTimersByTime(5 * 60 * 1000);
         await Promise.resolve();
       });
       expect(mockedApi.auth.getSessionStatus).toHaveBeenCalledTimes(2);
 
       // After another 5 minutes
       await act(async () => {
-        jest.advanceTimersByTime(5 * 60 * 1000);
+        vi.advanceTimersByTime(5 * 60 * 1000);
         await Promise.resolve();
       });
       expect(mockedApi.auth.getSessionStatus).toHaveBeenCalledTimes(3);
@@ -203,18 +203,18 @@ describe('useSessionCheck', () => {
         await jest.runOnlyPendingTimersAsync();
       });
 
-      const callCountBeforeUnmount = (mockedApi.auth.getSessionStatus as jest.Mock).mock.calls.length;
+      const callCountBeforeUnmount = (mockedApi.auth.getSessionStatus as Mock).mock.calls.length;
 
       unmount();
 
       // Advance timers after unmount
       await act(async () => {
-        jest.advanceTimersByTime(10 * 60 * 1000);
+        vi.advanceTimersByTime(10 * 60 * 1000);
         await jest.runOnlyPendingTimersAsync();
       });
 
       // Call count should not increase after unmount
-      expect((mockedApi.auth.getSessionStatus as jest.Mock).mock.calls.length).toBe(
+      expect((mockedApi.auth.getSessionStatus as Mock).mock.calls.length).toBe(
         callCountBeforeUnmount
       );
     });
@@ -277,7 +277,7 @@ describe('useSessionCheck', () => {
 
       // Second check succeeds
       await act(async () => {
-        jest.advanceTimersByTime(5 * 60 * 1000);
+        vi.advanceTimersByTime(5 * 60 * 1000);
         await Promise.resolve();
       });
 

@@ -7,13 +7,13 @@ import { encrypt, decrypt, clearEncryptionKey } from '../secureStorage';
 // Mock Web Crypto API
 const mockCrypto = {
   subtle: {
-    generateKey: jest.fn(),
-    exportKey: jest.fn(),
-    importKey: jest.fn(),
-    encrypt: jest.fn(),
-    decrypt: jest.fn(),
+    generateKey: vi.fn(),
+    exportKey: vi.fn(),
+    importKey: vi.fn(),
+    encrypt: vi.fn(),
+    decrypt: vi.fn(),
   },
-  getRandomValues: jest.fn((arr: Uint8Array) => {
+  getRandomValues: vi.fn((arr: Uint8Array) => {
     // Fill with predictable values for testing
     for (let i = 0; i < arr.length; i++) {
       arr[i] = i % 256;
@@ -24,20 +24,20 @@ const mockCrypto = {
 
 const mockSessionStorage: {
   store: Map<string, string>;
-  getItem: jest.MockedFunction<(key: string) => string | null>;
-  setItem: jest.MockedFunction<(key: string, value: string) => void>;
-  removeItem: jest.MockedFunction<(key: string) => void>;
-  clear: jest.MockedFunction<() => void>;
+  getItem: Mock<(key: string) => string | null>;
+  setItem: Mock<(key: string, value: string) => void>;
+  removeItem: Mock<(key: string) => void>;
+  clear: Mock<() => void>;
 } = {
   store: new Map<string, string>(),
-  getItem: jest.fn((key: string): string | null => mockSessionStorage.store.get(key) || null),
-  setItem: jest.fn((key: string, value: string): void => {
+  getItem: vi.fn((key: string): string | null => mockSessionStorage.store.get(key) || null),
+  setItem: vi.fn((key: string, value: string): void => {
     mockSessionStorage.store.set(key, value);
   }),
-  removeItem: jest.fn((key: string): void => {
+  removeItem: vi.fn((key: string): void => {
     mockSessionStorage.store.delete(key);
   }),
-  clear: jest.fn((): void => {
+  clear: vi.fn((): void => {
     mockSessionStorage.store.clear();
   }),
 };
@@ -72,7 +72,7 @@ describe('secureStorage', () => {
     mockSessionStorage.store.clear();
 
     // Reset all mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Setup default mock implementations
     const mockKey: Partial<CryptoKey> = { type: 'secret' };
@@ -255,7 +255,7 @@ describe('secureStorage', () => {
 
   describe('fallback behavior', () => {
     it('should warn and return plaintext when crypto API is not available', async () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       // Temporarily remove crypto API
       const originalCrypto = global.window.crypto;
@@ -283,7 +283,7 @@ describe('secureStorage', () => {
     });
 
     it('should return data as-is when decrypting without crypto API', async () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       // Encrypt first (with crypto)
       const plaintext = 'test-data';

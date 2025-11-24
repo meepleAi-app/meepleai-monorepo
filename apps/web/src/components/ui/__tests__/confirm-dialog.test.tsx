@@ -10,15 +10,15 @@ import { ConfirmDialog } from '../confirm-dialog';
 describe('ConfirmDialog', () => {
   const defaultProps = {
     open: true,
-    onOpenChange: jest.fn(),
+    onOpenChange: vi.fn(),
     title: 'Confirm Action',
     message: 'Are you sure you want to proceed?',
-    onConfirm: jest.fn(),
-    onCancel: jest.fn(),
+    onConfirm: vi.fn(),
+    onCancel: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should render with title and message', () => {

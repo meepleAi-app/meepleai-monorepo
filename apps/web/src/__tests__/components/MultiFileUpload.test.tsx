@@ -16,19 +16,19 @@ import userEvent from '@testing-library/user-event';
 import { MultiFileUpload } from '../../components/MultiFileUpload';
 
 // Mock useUploadQueue hook
-const mockAddFiles = jest.fn();
-const mockRemoveFile = jest.fn();
-const mockCancelUpload = jest.fn();
-const mockRetryUpload = jest.fn();
-const mockClearCompleted = jest.fn();
-const mockClearAll = jest.fn();
-const mockGetStats = jest.fn();
-const mockStartUpload = jest.fn();
+const mockAddFiles = vi.fn();
+const mockRemoveFile = vi.fn();
+const mockCancelUpload = vi.fn();
+const mockRetryUpload = vi.fn();
+const mockClearCompleted = vi.fn();
+const mockClearAll = vi.fn();
+const mockGetStats = vi.fn();
+const mockStartUpload = vi.fn();
 
 let mockQueueState: any[] = [];
 
-jest.mock('../../hooks/useUploadQueue', () => ({
-  useUploadQueue: jest.fn((options) => ({
+vi.mock('../../hooks/useUploadQueue', () => ({
+  useUploadQueue: vi.fn((options) => ({
     queue: mockQueueState,
     addFiles: mockAddFiles,
     removeFile: mockRemoveFile,
@@ -50,9 +50,9 @@ function createMockFile(name: string, size: number, type: string, content = '%PD
 
 // Helper to create FileReader mock - returns a new instance for each FileReader() call
 function mockFileReader(result: string) {
-  (global as any).FileReader = jest.fn(function(this: any) {
+  (global as any).FileReader = vi.fn(function(this: any) {
     // Create a NEW instance for each FileReader() call to avoid shared state
-    this.readAsArrayBuffer = jest.fn(function (this: any) {
+    this.readAsArrayBuffer = vi.fn(function (this: any) {
       const buffer = new ArrayBuffer(result.length);
       const view = new Uint8Array(buffer);
       for (let i = 0; i < result.length; i++) {
@@ -80,7 +80,7 @@ describe('MultiFileUpload Component', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockQueueState = [];
     mockGetStats.mockReturnValue({
       total: 0,
@@ -96,7 +96,7 @@ describe('MultiFileUpload Component', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     mockQueueState = [];
   });
 
@@ -201,7 +201,7 @@ describe('MultiFileUpload Component', () => {
       const browseButton = screen.getByRole('button', { name: /Select Files/i });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
 
-      const clickSpy = jest.spyOn(input, 'click');
+      const clickSpy = vi.spyOn(input, 'click');
       fireEvent.click(browseButton);
 
       expect(clickSpy).toHaveBeenCalled();
@@ -447,13 +447,13 @@ describe('MultiFileUpload Component', () => {
 
     it('handles FileReader errors gracefully', async () => {
       const mockReader = {
-        readAsArrayBuffer: jest.fn(function (this: any) {
+        readAsArrayBuffer: vi.fn(function (this: any) {
           setTimeout(() => this.onerror?.(new Error('Read failed')), 0);
         }),
         onload: null as any,
         onerror: null as any
       };
-      (global as any).FileReader = jest.fn(() => mockReader);
+      (global as any).FileReader = vi.fn(() => mockReader);
 
       render(<MultiFileUpload {...defaultProps} />);
 
@@ -696,7 +696,7 @@ describe('MultiFileUpload Component', () => {
 
   describe('Callback Props', () => {
     it('calls onUploadComplete when provided', () => {
-      const onUploadComplete = jest.fn();
+      const onUploadComplete = vi.fn();
       render(<MultiFileUpload {...defaultProps} onUploadComplete={onUploadComplete} />);
 
       const { useUploadQueue } = require('../../hooks/useUploadQueue');
@@ -711,11 +711,11 @@ describe('MultiFileUpload Component', () => {
 
     it('passes observability hooks to useUploadQueue', () => {
       const hooks = {
-        onUploadStart: jest.fn(),
-        onUploadSuccess: jest.fn(),
-        onUploadError: jest.fn(),
-        onQueueAdd: jest.fn(),
-        onRetry: jest.fn()
+        onUploadStart: vi.fn(),
+        onUploadSuccess: vi.fn(),
+        onUploadError: vi.fn(),
+        onQueueAdd: vi.fn(),
+        onRetry: vi.fn()
       };
 
       render(<MultiFileUpload {...defaultProps} {...hooks} />);
@@ -745,7 +745,7 @@ describe('MultiFileUpload Component', () => {
 
       const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
-      const clickSpy = jest.spyOn(input, 'click');
+      const clickSpy = vi.spyOn(input, 'click');
 
       fireEvent.keyDown(dropZone, { key: 'Enter' });
       expect(clickSpy).toHaveBeenCalled();
@@ -1008,7 +1008,7 @@ describe('MultiFileUpload Component', () => {
       render(<MultiFileUpload {...defaultProps} />);
       const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
-      const clickSpy = jest.spyOn(input, 'click');
+      const clickSpy = vi.spyOn(input, 'click');
 
       fireEvent.click(dropZone);
       expect(clickSpy).toHaveBeenCalled();
@@ -1018,10 +1018,10 @@ describe('MultiFileUpload Component', () => {
       render(<MultiFileUpload {...defaultProps} />);
       const selectButton = screen.getByRole('button', { name: /Select Files/i });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
-      const clickSpy = jest.spyOn(input, 'click');
+      const clickSpy = vi.spyOn(input, 'click');
 
       const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const stopPropSpy = jest.spyOn(event, 'stopPropagation');
+      const stopPropSpy = vi.spyOn(event, 'stopPropagation');
 
       fireEvent(selectButton, event);
 
@@ -1200,10 +1200,10 @@ describe('MultiFileUpload Component', () => {
       render(<MultiFileUpload {...defaultProps} />);
       const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
-      const clickSpy = jest.spyOn(input, 'click');
+      const clickSpy = vi.spyOn(input, 'click');
 
       const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
-      const preventDefaultSpy = jest.spyOn(event, 'preventDefault');
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
 
       fireEvent(dropZone, event);
 
@@ -1215,10 +1215,10 @@ describe('MultiFileUpload Component', () => {
       render(<MultiFileUpload {...defaultProps} />);
       const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
-      const clickSpy = jest.spyOn(input, 'click');
+      const clickSpy = vi.spyOn(input, 'click');
 
       const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
-      const preventDefaultSpy = jest.spyOn(event, 'preventDefault');
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
 
       fireEvent(dropZone, event);
 
@@ -1230,7 +1230,7 @@ describe('MultiFileUpload Component', () => {
       render(<MultiFileUpload {...defaultProps} />);
       const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
       const input = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
-      const clickSpy = jest.spyOn(input, 'click');
+      const clickSpy = vi.spyOn(input, 'click');
 
       fireEvent.keyDown(dropZone, { key: 'a' });
       fireEvent.keyDown(dropZone, { key: 'Escape' });

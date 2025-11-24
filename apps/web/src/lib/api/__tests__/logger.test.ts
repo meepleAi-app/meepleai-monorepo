@@ -16,10 +16,10 @@ describe('Logger', () => {
 
   beforeEach(() => {
     originalEnv = process.env;
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-    consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation();
-    consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
+    consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation();
+    consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation();
   });
 
   afterEach(() => {
@@ -144,7 +144,7 @@ describe('logApiError', () => {
   let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
   });
 
   afterEach(() => {

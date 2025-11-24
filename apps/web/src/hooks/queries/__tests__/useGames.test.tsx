@@ -20,13 +20,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 
 // Mock API module
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
     games: {
-      getAll: jest.fn(),
-      getById: jest.fn(),
-      getSessions: jest.fn(),
-      getDocuments: jest.fn(),
+      getAll: vi.fn(),
+      getById: vi.fn(),
+      getSessions: vi.fn(),
+      getDocuments: vi.fn(),
     },
   },
 }));
@@ -36,7 +36,7 @@ describe('useGames hooks', () => {
 
   beforeEach(() => {
     queryClient = createTestQueryClient();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -96,7 +96,7 @@ describe('useGames hooks', () => {
         page: 1,
         pageSize: 20,
       };
-      (api.games.getAll as jest.Mock).mockResolvedValue(mockResponse);
+      (api.games.getAll as Mock).mockResolvedValue(mockResponse);
 
       const { result } = renderHook(() => useGames(), { wrapper });
 
@@ -114,7 +114,7 @@ describe('useGames hooks', () => {
         page: 1,
         pageSize: 20,
       };
-      (api.games.getAll as jest.Mock).mockResolvedValue(mockResponse);
+      (api.games.getAll as Mock).mockResolvedValue(mockResponse);
 
       const { result } = renderHook(() => useGames(filters), { wrapper });
 
@@ -132,7 +132,7 @@ describe('useGames hooks', () => {
         page: 1,
         pageSize: 20,
       };
-      (api.games.getAll as jest.Mock).mockResolvedValue(mockResponse);
+      (api.games.getAll as Mock).mockResolvedValue(mockResponse);
 
       const { result } = renderHook(() => useGames(undefined, sort), { wrapper });
 
@@ -148,7 +148,7 @@ describe('useGames hooks', () => {
         page: 3,
         pageSize: 10,
       };
-      (api.games.getAll as jest.Mock).mockResolvedValue(mockResponse);
+      (api.games.getAll as Mock).mockResolvedValue(mockResponse);
 
       const { result } = renderHook(() => useGames(undefined, undefined, 3, 10), { wrapper });
 
@@ -159,7 +159,7 @@ describe('useGames hooks', () => {
 
     it('handles fetch errors', async () => {
       const error = new Error('Failed to fetch games');
-      (api.games.getAll as jest.Mock).mockRejectedValue(error);
+      (api.games.getAll as Mock).mockRejectedValue(error);
 
       const { result } = renderHook(() => useGames(), { wrapper });
 
@@ -172,7 +172,7 @@ describe('useGames hooks', () => {
   describe('useGame', () => {
     it('fetches a single game by ID', async () => {
       const mockGame = { id: '770e8400-e29b-41d4-a716-000000000001', title: 'Catan', players: '3-4' };
-      (api.games.getById as jest.Mock).mockResolvedValue(mockGame);
+      (api.games.getById as Mock).mockResolvedValue(mockGame);
 
       const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
@@ -190,7 +190,7 @@ describe('useGames hooks', () => {
     });
 
     it('throws error when game not found', async () => {
-      (api.games.getById as jest.Mock).mockResolvedValue(null);
+      (api.games.getById as Mock).mockResolvedValue(null);
 
       const { result } = renderHook(() => useGame('nonexistent'), { wrapper });
 
@@ -201,7 +201,7 @@ describe('useGames hooks', () => {
 
     it('handles API errors', async () => {
       const error = new Error('Network error');
-      (api.games.getById as jest.Mock).mockRejectedValue(error);
+      (api.games.getById as Mock).mockRejectedValue(error);
 
       const { result } = renderHook(() => useGame('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
@@ -233,7 +233,7 @@ describe('useGames hooks', () => {
         { id: '880e8400-e29b-41d4-a716-000000000001', title: 'Rulebook.pdf', gameId: '770e8400-e29b-41d4-a716-000000000001' },
         { id: '880e8400-e29b-41d4-a716-000000000002', title: 'Reference.pdf', gameId: '770e8400-e29b-41d4-a716-000000000001' },
       ];
-      (api.games.getDocuments as jest.Mock).mockResolvedValue(mockDocuments);
+      (api.games.getDocuments as Mock).mockResolvedValue(mockDocuments);
 
       const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
@@ -252,7 +252,7 @@ describe('useGames hooks', () => {
 
     it('handles fetch errors', async () => {
       const error = new Error('Failed to fetch documents');
-      (api.games.getDocuments as jest.Mock).mockRejectedValue(error);
+      (api.games.getDocuments as Mock).mockRejectedValue(error);
 
       const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
@@ -262,7 +262,7 @@ describe('useGames hooks', () => {
     });
 
     it('returns empty array for game with no documents', async () => {
-      (api.games.getDocuments as jest.Mock).mockResolvedValue([]);
+      (api.games.getDocuments as Mock).mockResolvedValue([]);
 
       const { result } = renderHook(() => useGameDocuments('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 

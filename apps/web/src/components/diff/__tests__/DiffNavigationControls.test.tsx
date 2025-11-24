@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { DiffNavigationControls } from '../DiffNavigationControls';
 
 describe('DiffNavigationControls', () => {
-  const mockOnPrev = jest.fn();
-  const mockOnNext = jest.fn();
+  const mockOnPrev = vi.fn();
+  const mockOnNext = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {

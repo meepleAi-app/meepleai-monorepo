@@ -4,15 +4,15 @@ import { CommentForm } from "../CommentForm";
 
 describe("CommentForm", () => {
   let user: ReturnType<typeof userEvent.setup>;
-  let mockOnSubmit: jest.Mock;
+  let mockOnSubmit: Mock;
 
   beforeEach(() => {
     user = userEvent.setup();
-    mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+    mockOnSubmit = vi.fn().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("rendering", () => {
@@ -289,8 +289,8 @@ describe("CommentForm", () => {
     let alertSpy: jest.SpyInstance;
 
     beforeEach(() => {
-      consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-      alertSpy = jest.spyOn(window, "alert").mockImplementation(() => {});
+      consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     });
 
     afterEach(() => {

@@ -31,12 +31,12 @@ function createTestItem(overrides: Partial<UploadQueueItemType> = {}): UploadQue
 }
 
 describe('UploadQueueItem Component', () => {
-  const mockOnCancel = jest.fn();
-  const mockOnRetry = jest.fn();
-  const mockOnRemove = jest.fn();
+  const mockOnCancel = vi.fn();
+  const mockOnRetry = vi.fn();
+  const mockOnRemove = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering - Status States', () => {

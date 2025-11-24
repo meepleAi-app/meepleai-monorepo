@@ -3,7 +3,7 @@ import { PdfPreview } from '../PdfPreview';
 import '@testing-library/jest-dom';
 
 // Mock react-pdf
-jest.mock('react-pdf', () => {
+vi.mock('react-pdf', () => {
   const React = require('react');
 
   const MockDocument = React.forwardRef(({ file, onLoadSuccess, onLoadError, children }: any, ref: any) => {
@@ -48,17 +48,17 @@ jest.mock('react-pdf', () => {
 });
 
 // Mock react-window
-jest.mock('react-window', () => {
+vi.mock('react-window', () => {
   const React = require('react');
 
   const MockList = React.forwardRef(({ rowComponent, rowCount, rowHeight, defaultHeight, listRef }: any, ref: any) => {
     // Handle listRef callback
     React.useEffect(() => {
       if (listRef && typeof listRef === 'function') {
-        const api = { scrollToItem: jest.fn() };
+        const api = { scrollToItem: vi.fn() };
         listRef(api);
       } else if (listRef && typeof listRef === 'object') {
-        listRef.current = { scrollToItem: jest.fn() };
+        listRef.current = { scrollToItem: vi.fn() };
       }
     }, [listRef]);
 
@@ -85,8 +85,8 @@ jest.mock('react-window', () => {
 });
 
 // Mock URL.createObjectURL and URL.revokeObjectURL
-global.URL.createObjectURL = jest.fn(() => 'mock-url');
-global.URL.revokeObjectURL = jest.fn();
+global.URL.createObjectURL = vi.fn(() => 'mock-url');
+global.URL.revokeObjectURL = vi.fn();
 
 // Mock window.innerWidth for mobile detection
 Object.defineProperty(window, 'innerWidth', {
@@ -99,13 +99,13 @@ describe('PdfPreview Component', () => {
   let mockFile: File;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Create a mock PDF file
     mockFile = new File(['mock pdf content'], 'test.pdf', { type: 'application/pdf' });
   });
 
   afterEach(() => {
-    jest.clearAllTimers();
+    vi.clearAllTimers();
   });
 
   describe('Rendering and Initial State', () => {
@@ -497,7 +497,7 @@ describe('PdfPreview Component', () => {
     });
 
     it('calls onClose with Escape key', async () => {
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(<PdfPreview file={mockFile} onClose={onClose} />);
 
       await waitFor(() => {
@@ -607,7 +607,7 @@ describe('PdfPreview Component', () => {
 
   describe('Close Button', () => {
     it('renders close button when onClose is provided', async () => {
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(<PdfPreview file={mockFile} onClose={onClose} />);
 
       await waitFor(() => {
@@ -626,7 +626,7 @@ describe('PdfPreview Component', () => {
     });
 
     it('calls onClose when close button is clicked', async () => {
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       render(<PdfPreview file={mockFile} onClose={onClose} />);
 
       await waitFor(() => {
@@ -642,12 +642,12 @@ describe('PdfPreview Component', () => {
   describe('Error Handling', () => {
     it('displays error message on load failure', async () => {
       // Override the mock to simulate error
-      jest.spyOn(console, 'error').mockImplementation(() => {});
+      vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const mockErrorFile = new File(['invalid'], 'corrupt.pdf', { type: 'application/pdf' });
 
       // Create a custom mock that triggers error
-      jest.mock('react-pdf', () => ({
+      vi.mock('react-pdf', () => ({
         Document: ({ onLoadError }: any) => {
           setTimeout(() => {
             if (onLoadError) {
@@ -675,8 +675,8 @@ describe('PdfPreview Component', () => {
     });
 
     it('displays close button in error state when onClose provided', async () => {
-      const onClose = jest.fn();
-      jest.spyOn(console, 'error').mockImplementation(() => {});
+      const onClose = vi.fn();
+      vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const mockErrorFile = new File(['invalid'], 'corrupt.pdf', { type: 'application/pdf' });
 

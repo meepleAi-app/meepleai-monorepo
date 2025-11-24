@@ -16,20 +16,20 @@ import { Editor } from '@tiptap/react';
  * Helper to create a complete chain object (for both enabled and disabled states)
  */
 const createChain = (runReturnValue: boolean = true) => ({
-  focus: jest.fn().mockReturnThis(),
-  toggleBold: jest.fn().mockReturnThis(),
-  toggleItalic: jest.fn().mockReturnThis(),
-  toggleStrike: jest.fn().mockReturnThis(),
-  toggleCode: jest.fn().mockReturnThis(),
-  toggleHeading: jest.fn().mockReturnThis(),
-  toggleBulletList: jest.fn().mockReturnThis(),
-  toggleOrderedList: jest.fn().mockReturnThis(),
-  toggleCodeBlock: jest.fn().mockReturnThis(),
-  setHorizontalRule: jest.fn().mockReturnThis(),
-  undo: jest.fn().mockReturnThis(),
-  redo: jest.fn().mockReturnThis(),
-  unsetAllMarks: jest.fn().mockReturnThis(),
-  run: jest.fn().mockReturnValue(runReturnValue),
+  focus: vi.fn().mockReturnThis(),
+  toggleBold: vi.fn().mockReturnThis(),
+  toggleItalic: vi.fn().mockReturnThis(),
+  toggleStrike: vi.fn().mockReturnThis(),
+  toggleCode: vi.fn().mockReturnThis(),
+  toggleHeading: vi.fn().mockReturnThis(),
+  toggleBulletList: vi.fn().mockReturnThis(),
+  toggleOrderedList: vi.fn().mockReturnThis(),
+  toggleCodeBlock: vi.fn().mockReturnThis(),
+  setHorizontalRule: vi.fn().mockReturnThis(),
+  undo: vi.fn().mockReturnThis(),
+  redo: vi.fn().mockReturnThis(),
+  unsetAllMarks: vi.fn().mockReturnThis(),
+  run: vi.fn().mockReturnValue(runReturnValue),
 });
 
 /**
@@ -39,13 +39,13 @@ const createMockEditor = (overrides?: Partial<Editor>): Editor => {
   const mockChain = createChain(true);
 
   const mockCan = {
-    chain: jest.fn(() => mockChain),
+    chain: vi.fn(() => mockChain),
   };
 
   return {
-    chain: jest.fn(() => mockChain),
-    can: jest.fn(() => mockCan),
-    isActive: jest.fn((format: string, options?: any) => false),
+    chain: vi.fn(() => mockChain),
+    can: vi.fn(() => mockCan),
+    isActive: vi.fn((format: string, options?: any) => false),
     ...overrides,
   } as any;
 };
@@ -55,7 +55,7 @@ describe('EditorToolbar Component', () => {
 
   beforeEach(() => {
     mockEditor = createMockEditor();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   /**
@@ -137,7 +137,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when bold is active', () => {
-      mockEditor.isActive = jest.fn((format) => format === 'bold');
+      mockEditor.isActive = vi.fn((format) => format === 'bold');
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
@@ -148,9 +148,9 @@ describe('EditorToolbar Component', () => {
     it('disables bold button when not available', () => {
       const disabledChain = createChain(false);
       const disabledCan = {
-        chain: jest.fn(() => disabledChain),
+        chain: vi.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => disabledCan as any);
+      mockEditor.can = vi.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -173,7 +173,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when italic is active', () => {
-      mockEditor.isActive = jest.fn((format) => format === 'italic');
+      mockEditor.isActive = vi.fn((format) => format === 'italic');
       render(<EditorToolbar editor={mockEditor} />);
 
       const italicButton = screen.getByTitle('Corsivo (Ctrl+I)');
@@ -195,7 +195,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when strike is active', () => {
-      mockEditor.isActive = jest.fn((format) => format === 'strike');
+      mockEditor.isActive = vi.fn((format) => format === 'strike');
       render(<EditorToolbar editor={mockEditor} />);
 
       const strikeButton = screen.getByTitle('Barrato (Ctrl+Shift+X)');
@@ -217,7 +217,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when code is active', () => {
-      mockEditor.isActive = jest.fn((format) => format === 'code');
+      mockEditor.isActive = vi.fn((format) => format === 'code');
       render(<EditorToolbar editor={mockEditor} />);
 
       const codeButton = screen.getByTitle('Codice inline (Ctrl+E)');
@@ -239,7 +239,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state for H1 when active', () => {
-      mockEditor.isActive = jest.fn((format: string, options?: any) =>
+      mockEditor.isActive = vi.fn((format: string, options?: any) =>
         format === 'heading' && options?.level === 1
       ) as any;
       render(<EditorToolbar editor={mockEditor} />);
@@ -258,7 +258,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state for H2 when active', () => {
-      mockEditor.isActive = jest.fn((format: string, options?: any) =>
+      mockEditor.isActive = vi.fn((format: string, options?: any) =>
         format === 'heading' && options?.level === 2
       ) as any;
       render(<EditorToolbar editor={mockEditor} />);
@@ -277,7 +277,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state for H3 when active', () => {
-      mockEditor.isActive = jest.fn((format: string, options?: any) =>
+      mockEditor.isActive = vi.fn((format: string, options?: any) =>
         format === 'heading' && options?.level === 3
       ) as any;
       render(<EditorToolbar editor={mockEditor} />);
@@ -301,7 +301,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when bullet list is active', () => {
-      mockEditor.isActive = jest.fn((format) => format === 'bulletList');
+      mockEditor.isActive = vi.fn((format) => format === 'bulletList');
       render(<EditorToolbar editor={mockEditor} />);
 
       const bulletButton = screen.getByTitle('Elenco puntato (Ctrl+Shift+8)');
@@ -318,7 +318,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when ordered list is active', () => {
-      mockEditor.isActive = jest.fn((format) => format === 'orderedList');
+      mockEditor.isActive = vi.fn((format) => format === 'orderedList');
       render(<EditorToolbar editor={mockEditor} />);
 
       const orderedButton = screen.getByTitle('Elenco numerato (Ctrl+Shift+7)');
@@ -340,7 +340,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when code block is active', () => {
-      mockEditor.isActive = jest.fn((format) => format === 'codeBlock');
+      mockEditor.isActive = vi.fn((format) => format === 'codeBlock');
       render(<EditorToolbar editor={mockEditor} />);
 
       const codeBlockButton = screen.getByTitle('Blocco di codice (Ctrl+Alt+C)');
@@ -373,9 +373,9 @@ describe('EditorToolbar Component', () => {
     it('disables undo button when not available', () => {
       const disabledChain = createChain(false);
       const disabledCan = {
-        chain: jest.fn(() => disabledChain),
+        chain: vi.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => disabledCan as any);
+      mockEditor.can = vi.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -395,9 +395,9 @@ describe('EditorToolbar Component', () => {
     it('disables redo button when not available', () => {
       const disabledChain = createChain(false);
       const disabledCan = {
-        chain: jest.fn(() => disabledChain),
+        chain: vi.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => disabledCan as any);
+      mockEditor.can = vi.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -446,9 +446,9 @@ describe('EditorToolbar Component', () => {
     it('does not change background on hover for disabled button', () => {
       const disabledChain = createChain(false);
       const disabledCan = {
-        chain: jest.fn(() => disabledChain),
+        chain: vi.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => disabledCan as any);
+      mockEditor.can = vi.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -460,7 +460,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('does not change background on hover for active button', () => {
-      mockEditor.isActive = jest.fn((format) => format === 'bold');
+      mockEditor.isActive = vi.fn((format) => format === 'bold');
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
@@ -476,7 +476,7 @@ describe('EditorToolbar Component', () => {
    */
   describe('Multiple Active States', () => {
     it('shows multiple active buttons simultaneously', () => {
-      mockEditor.isActive = jest.fn((format: string) =>
+      mockEditor.isActive = vi.fn((format: string) =>
         ['bold', 'italic', 'strike'].includes(format)
       ) as any;
       render(<EditorToolbar editor={mockEditor} />);
@@ -517,9 +517,9 @@ describe('EditorToolbar Component', () => {
     it('indicates disabled state properly', () => {
       const disabledChain = createChain(false);
       const disabledCan = {
-        chain: jest.fn(() => disabledChain),
+        chain: vi.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => disabledCan as any);
+      mockEditor.can = vi.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -559,9 +559,9 @@ describe('EditorToolbar Component', () => {
     it('applies disabled styling to disabled buttons', () => {
       const disabledChain = createChain(false);
       const disabledCan = {
-        chain: jest.fn(() => disabledChain),
+        chain: vi.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => disabledCan as any);
+      mockEditor.can = vi.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -570,7 +570,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('applies active styling to active buttons', () => {
-      mockEditor.isActive = jest.fn((format) => format === 'bold');
+      mockEditor.isActive = vi.fn((format) => format === 'bold');
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
@@ -584,7 +584,7 @@ describe('EditorToolbar Component', () => {
    */
   describe('Edge Cases', () => {
     it('handles editor with no active formats', () => {
-      mockEditor.isActive = jest.fn(() => false);
+      mockEditor.isActive = vi.fn(() => false);
       render(<EditorToolbar editor={mockEditor} />);
 
       const buttons = screen.getAllByRole('button');
@@ -597,7 +597,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('handles editor with all formats active', () => {
-      mockEditor.isActive = jest.fn(() => true);
+      mockEditor.isActive = vi.fn(() => true);
       render(<EditorToolbar editor={mockEditor} />);
 
       // Most buttons should show active state

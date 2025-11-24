@@ -5,14 +5,14 @@ import { MentionInput } from '../MentionInput';
 import { api, type UserSearchResult } from '@/lib/api';
 
 // Mock the API module
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
-    get: jest.fn(),
+    get: vi.fn(),
   },
 }));
 
 // Mock useDebounce hook
-jest.mock('@/hooks/useDebounce', () => ({
+vi.mock('@/hooks/useDebounce', () => ({
   useDebounce: (value: string, delay: number) => value,
 }));
 
@@ -23,16 +23,16 @@ const mockUsers: UserSearchResult[] = [
 ];
 
 describe('MentionInput', () => {
-  const mockOnChange = jest.fn();
-  const mockApiGet = api.get as jest.MockedFunction<typeof api.get>;
+  const mockOnChange = vi.fn();
+  const mockApiGet = api.get as Mock<typeof api.get>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockApiGet.mockResolvedValue(mockUsers);
   });
 
   afterEach(() => {
-    jest.clearAllTimers();
+    vi.clearAllTimers();
   });
 
   describe('Basic Rendering', () => {
@@ -217,7 +217,7 @@ describe('MentionInput', () => {
 
     it('handles API errors gracefully', async () => {
       mockApiGet.mockRejectedValue(new Error('Network error'));
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       render(<MentionInput value="" onChange={mockOnChange} />);
       const textarea = screen.getByRole('combobox');

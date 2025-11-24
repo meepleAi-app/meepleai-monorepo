@@ -165,6 +165,54 @@ if (typeof global.TextEncoder === 'undefined') {
   global.TextDecoder = TextDecoder;
 }
 
+// Mock TransformStream for MSW (Issue #1503)
+// MSW requires TransformStream for request/response processing
+if (typeof global.TransformStream === 'undefined') {
+  global.TransformStream = class TransformStream {
+    constructor(transformer = {}) {
+      this.readable = new ReadableStream({
+        start(controller) {
+          // Mock implementation
+        },
+      });
+      this.writable = new WritableStream({
+        write(chunk) {
+          // Mock implementation
+        },
+      });
+    }
+  };
+}
+
+// Mock WritableStream for MSW
+if (typeof global.WritableStream === 'undefined') {
+  global.WritableStream = class WritableStream {
+    constructor(underlyingSink = {}) {
+      this.locked = false;
+    }
+
+    abort(reason) {
+      return Promise.resolve();
+    }
+
+    close() {
+      return Promise.resolve();
+    }
+
+    getWriter() {
+      return {
+        write: (chunk) => Promise.resolve(),
+        close: () => Promise.resolve(),
+        abort: (reason) => Promise.resolve(),
+        releaseLock: () => {},
+        closed: Promise.resolve(),
+        ready: Promise.resolve(),
+        desiredSize: 1,
+      };
+    }
+  };
+}
+
 // Mock Worker API for Jest (Issue #1301 - UploadQueueStore lazy init tests)
 // jsdom does not provide Worker constructor, so we mock it globally
 if (typeof global.Worker === 'undefined') {
@@ -499,4 +547,54 @@ afterEach(() => {
   // Note: We don't call jest.clearAllMocks() globally as it can interfere with
   // test-specific mocks that are still needed during teardown.
   // Individual test files should clear their own mocks in their afterEach hooks.
+});
+
+// ============================================================================
+// MSW (Mock Service Worker) Setup
+// ============================================================================
+// MSW intercepts HTTP requests in tests and provides realistic mock responses.
+// This replaces global fetch mocks for better test isolation and maintainability.
+//
+// IMPORTANT: MSW must be imported AFTER all global mocks (Response, fetch, etc.)
+// are defined above, otherwise MSW will fail to initialize.
+//
+// See: apps/web/src/__tests__/mocks/ for handler definitions
+// Docs: docs/02-development/testing/msw-setup-guide.md
+//
+// Migration Status (Issue #1503):
+// - ✅ MSW infrastructure setup complete
+// - 🔄 Incremental migration in progress (Phase 2)
+// - ⏳ Global fetch mock removal pending (Phase 4)
+// ============================================================================
+
+// Import MSW server dynamically to ensure it loads AFTER global mocks
+// Using require() instead of import to avoid hoisting issues
+let server;
+
+// Start MSW server before all tests
+beforeAll(() => {
+  // Dynamically import MSW server after global.Response is defined
+  const { server: mswServer } = require('./src/__tests__/mocks/server');
+  server = mswServer;
+
+  // Enable request interception
+  server.listen({
+    // Warn if a request is not handled by MSW
+    // This helps identify missing mock handlers during migration
+    onUnhandledRequest: 'warn',
+  });
+});
+
+// Reset MSW handlers after each test for test isolation
+afterEach(() => {
+  if (server) {
+    server.resetHandlers();
+  }
+});
+
+// Cleanup MSW after all tests
+afterAll(() => {
+  if (server) {
+    server.close();
+  }
 });

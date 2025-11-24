@@ -20,7 +20,7 @@ import {
 } from '../VERIFICATION';
 
 // Mock framer-motion to avoid animation issues in tests
-jest.mock('framer-motion', () => ({
+vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     li: ({ children, ...props }: any) => <li {...props}>{children}</li>,
@@ -99,7 +99,7 @@ describe('Animation Verification Examples', () => {
   describe('AnimatedModal', () => {
     it('should render modal when isOpen is true', () => {
       render(
-        <AnimatedModal isOpen={true} onClose={jest.fn()}>
+        <AnimatedModal isOpen={true} onClose={vi.fn()}>
           <h3>Modal Content</h3>
         </AnimatedModal>
       );
@@ -109,7 +109,7 @@ describe('Animation Verification Examples', () => {
 
     it('should not render modal when isOpen is false', () => {
       render(
-        <AnimatedModal isOpen={false} onClose={jest.fn()}>
+        <AnimatedModal isOpen={false} onClose={vi.fn()}>
           <h3>Modal Content</h3>
         </AnimatedModal>
       );
@@ -119,7 +119,7 @@ describe('Animation Verification Examples', () => {
 
     it('should call onClose when backdrop is clicked', async () => {
       const user = userEvent.setup();
-      const mockOnClose = jest.fn();
+      const mockOnClose = vi.fn();
 
       const { container } = render(
         <AnimatedModal isOpen={true} onClose={mockOnClose}>
@@ -138,7 +138,7 @@ describe('Animation Verification Examples', () => {
 
     it('should render children content', () => {
       render(
-        <AnimatedModal isOpen={true} onClose={jest.fn()}>
+        <AnimatedModal isOpen={true} onClose={vi.fn()}>
           <h3>Title</h3>
           <p>Description</p>
         </AnimatedModal>
@@ -271,7 +271,7 @@ describe('Animation Verification Examples', () => {
         render(<AccessibleAnimation />);
         render(<AnimatedList items={items} />);
         render(<LoadingSpinner />);
-        render(<AnimatedModal isOpen={false} onClose={jest.fn()}>Content</AnimatedModal>);
+        render(<AnimatedModal isOpen={false} onClose={vi.fn()}>Content</AnimatedModal>);
         render(<FastStaggerList items={items} />);
         render(<DirectionalAnimations />);
         render(<ScaleAnimations />);
@@ -294,7 +294,7 @@ describe('Animation Verification Examples', () => {
   describe('Edge Cases', () => {
     it('should handle modal with complex children', () => {
       render(
-        <AnimatedModal isOpen={true} onClose={jest.fn()}>
+        <AnimatedModal isOpen={true} onClose={vi.fn()}>
           <div>
             <h1>Complex</h1>
             <ul>

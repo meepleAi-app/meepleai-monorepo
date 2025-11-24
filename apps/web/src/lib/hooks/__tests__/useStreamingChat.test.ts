@@ -10,13 +10,13 @@
  * - Callbacks
  */
 
-import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStreamingChat } from '../useStreamingChat';
 import { StreamingEventType } from '@/lib/api/schemas/streaming.schemas';
 
-// Mock fetch globally
-global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+// No global fetch mock needed - MSW handles interception
 
 // Helper to create SSE response
 function createSSEResponse(events: string[]): Response {
@@ -40,12 +40,16 @@ function createSSEResponse(events: string[]): Response {
 }
 
 describe('useStreamingChat', () => {
+  let fetchSpy: Mock;
+
   beforeEach(() => {
-    (global.fetch as jest.MockedFunction<typeof fetch>).mockClear();
+    // Spy on fetch to enable mockImplementation for SSE responses
+    fetchSpy = vi.spyOn(global, 'fetch') as Mock;
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
+    fetchSpy?.mockRestore();
   });
 
   describe('Initial State', () => {
@@ -99,7 +103,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -119,7 +123,7 @@ describe('useStreamingChat', () => {
     });
 
     it('should call onToken callback for each token', async () => {
-      const onToken = jest.fn();
+      const onToken = vi.fn();
       const events = [
         JSON.stringify({
           type: 'token',
@@ -138,7 +142,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -177,7 +181,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -193,7 +197,7 @@ describe('useStreamingChat', () => {
     });
 
     it('should call onStateUpdate callback', async () => {
-      const onStateUpdate = jest.fn();
+      const onStateUpdate = vi.fn();
       const events = [
         JSON.stringify({
           type: 'stateUpdate',
@@ -207,7 +211,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -243,7 +247,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -274,7 +278,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -333,7 +337,7 @@ describe('useStreamingChat', () => {
 
   describe('Error Handling', () => {
     it('should handle SSE error event', async () => {
-      const onError = jest.fn();
+      const onError = vi.fn();
       const events = [
         JSON.stringify({
           type: 'error',
@@ -342,7 +346,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -363,9 +367,9 @@ describe('useStreamingChat', () => {
     });
 
     it('should handle HTTP errors (non-200 status)', async () => {
-      const onError = jest.fn();
+      const onError = vi.fn();
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         new Response(null, { status: 500, statusText: 'Internal Server Error' })
       );
 
@@ -384,9 +388,9 @@ describe('useStreamingChat', () => {
     });
 
     it('should handle network errors', async () => {
-      const onError = jest.fn();
+      const onError = vi.fn();
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockRejectedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockRejectedValueOnce(
         new Error('Network error')
       );
 
@@ -405,9 +409,9 @@ describe('useStreamingChat', () => {
     });
 
     it('should handle 401 unauthorized', async () => {
-      const onError = jest.fn();
+      const onError = vi.fn();
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         new Response(null, { status: 401, statusText: 'Unauthorized' })
       );
 
@@ -429,7 +433,7 @@ describe('useStreamingChat', () => {
     it('should stop streaming when stopStreaming is called', async () => {
       let capturedAbortSignal: AbortSignal | null = null;
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockImplementationOnce((url, options) => {
+      fetchSpy.mockImplementationOnce((url, options) => {
         // Capture the abort signal from the request
         capturedAbortSignal = (options as RequestInit).signal as AbortSignal;
 
@@ -497,7 +501,7 @@ describe('useStreamingChat', () => {
 
   describe('Completion Callback', () => {
     it('should call onComplete when streaming finishes', async () => {
-      const onComplete = jest.fn();
+      const onComplete = vi.fn();
       const events = [
         JSON.stringify({
           type: 'token',
@@ -511,7 +515,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -544,7 +548,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -583,7 +587,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 
@@ -611,7 +615,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
         createSSEResponse(events)
       );
 

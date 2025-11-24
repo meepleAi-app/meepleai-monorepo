@@ -14,13 +14,13 @@ import { ChatProvider } from '../../../components/chat/ChatProvider';
 import { ChatThread } from '../../../types';
 
 // Mock useChatContext hook
-jest.mock('../../../components/chat/ChatProvider', () => ({
-  useChatContext: jest.fn(),
+vi.mock('../../../components/chat/ChatProvider', () => ({
+  useChatContext: vi.fn(),
 }));
 
 import { useChatContext } from '../../../components/chat/ChatProvider';
 
-const mockUseChatContext = useChatContext as jest.Mock;
+const mockUseChatContext = useChatContext as Mock;
 
 /**
  * Helper to create mock chat thread object
@@ -39,16 +39,16 @@ const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
 });
 
 describe('ChatHistory Component', () => {
-  let mockSelectChat: jest.Mock;
-  let mockDeleteChat: jest.Mock;
+  let mockSelectChat: Mock;
+  let mockDeleteChat: Mock;
   let originalConfirm: any;
 
   beforeEach(() => {
-    mockSelectChat = jest.fn();
-    mockDeleteChat = jest.fn();
+    mockSelectChat = vi.fn();
+    mockDeleteChat = vi.fn();
     originalConfirm = window.confirm;
-    window.confirm = jest.fn(() => true); // Default to confirming deletions
-    jest.clearAllMocks();
+    window.confirm = vi.fn(() => true); // Default to confirming deletions
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -310,7 +310,7 @@ describe('ChatHistory Component', () => {
     });
 
     it('calls deleteChat when deletion is confirmed', () => {
-      window.confirm = jest.fn(() => true);
+      window.confirm = vi.fn(() => true);
       const chat = createMockChatThread({ id: 'chat-123' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
@@ -320,7 +320,7 @@ describe('ChatHistory Component', () => {
     });
 
     it('does not call deleteChat when deletion is cancelled', () => {
-      window.confirm = jest.fn(() => false);
+      window.confirm = vi.fn(() => false);
       const chat = createMockChatThread({ id: 'chat-1' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
@@ -330,7 +330,7 @@ describe('ChatHistory Component', () => {
     });
 
     it('displays correct confirmation message', () => {
-      window.confirm = jest.fn(() => false);
+      window.confirm = vi.fn(() => false);
       const chat = createMockChatThread({ id: 'chat-1' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
@@ -340,7 +340,7 @@ describe('ChatHistory Component', () => {
 
     it('handles asynchronous deleteChat calls', async () => {
       mockDeleteChat.mockResolvedValue(undefined);
-      window.confirm = jest.fn(() => true);
+      window.confirm = vi.fn(() => true);
       const chat = createMockChatThread({ id: 'chat-1' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);

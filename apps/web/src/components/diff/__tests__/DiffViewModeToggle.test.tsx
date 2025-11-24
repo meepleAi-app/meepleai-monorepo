@@ -8,10 +8,10 @@ import userEvent from '@testing-library/user-event';
 import { DiffViewModeToggle } from '../DiffViewModeToggle';
 
 describe('DiffViewModeToggle', () => {
-  const mockOnModeChange = jest.fn();
+  const mockOnModeChange = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {

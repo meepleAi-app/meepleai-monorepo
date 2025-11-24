@@ -3,16 +3,16 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { InlineCommentIndicator } from '../comments/InlineCommentIndicator';
 
 describe('InlineCommentIndicator', () => {
-  const mockOnClick = jest.fn();
+  const mockOnClick = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   describe('Basic Rendering', () => {
@@ -314,7 +314,7 @@ describe('InlineCommentIndicator', () => {
 
       // After delay
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
 
       await waitFor(() => {
@@ -338,7 +338,7 @@ describe('InlineCommentIndicator', () => {
       // Show tooltip
       fireEvent.mouseEnter(button);
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
 
       await waitFor(() => {
@@ -368,11 +368,11 @@ describe('InlineCommentIndicator', () => {
 
       fireEvent.mouseEnter(button);
       act(() => {
-        jest.advanceTimersByTime(200); // Before 500ms
+        vi.advanceTimersByTime(200); // Before 500ms
       });
       fireEvent.mouseLeave(button);
       act(() => {
-        jest.advanceTimersByTime(300); // Complete the 500ms
+        vi.advanceTimersByTime(300); // Complete the 500ms
       });
 
       expect(screen.queryByText('This is a comment preview')).not.toBeInTheDocument();
@@ -393,7 +393,7 @@ describe('InlineCommentIndicator', () => {
       const button = screen.getByRole('button');
       fireEvent.mouseEnter(button);
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
 
       await waitFor(() => {
@@ -416,7 +416,7 @@ describe('InlineCommentIndicator', () => {
       const button = screen.getByRole('button');
       fireEvent.mouseEnter(button);
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
 
       await waitFor(() => {
@@ -440,7 +440,7 @@ describe('InlineCommentIndicator', () => {
       const button = screen.getByRole('button');
       fireEvent.mouseEnter(button);
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
 
       await waitFor(() => {
@@ -465,7 +465,7 @@ describe('InlineCommentIndicator', () => {
       const button = screen.getByRole('button');
       fireEvent.mouseEnter(button);
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
 
       await waitFor(() => {
@@ -646,7 +646,7 @@ describe('InlineCommentIndicator', () => {
 
       // Advance timers - should not cause errors
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
     });
 

@@ -18,11 +18,11 @@ import { ErrorModal } from '../ErrorModal';
 import { ApiError, NetworkError, ValidationError } from '../../lib/errors';
 
 describe('ErrorModal', () => {
-  const mockOnClose = jest.fn();
-  const mockOnRetry = jest.fn();
+  const mockOnClose = vi.fn();
+  const mockOnRetry = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering States', () => {

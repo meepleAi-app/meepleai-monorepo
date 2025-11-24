@@ -12,13 +12,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MessageInput } from '../../../components/chat/MessageInput';
 
 // Mock the ChatProvider context
-const mockUseChatContext = jest.fn();
-jest.mock('../../../components/chat/ChatProvider', () => ({
+const mockUseChatContext = vi.fn();
+vi.mock('../../../components/chat/ChatProvider', () => ({
   useChatContext: () => mockUseChatContext(),
 }));
 
 // Mock LoadingButton component
-jest.mock('../../../components/loading/LoadingButton', () => ({
+vi.mock('../../../components/loading/LoadingButton', () => ({
   LoadingButton: ({ children, onClick, disabled, isLoading, loadingText, ...props }: any) => (
     <button
       onClick={onClick}
@@ -33,7 +33,7 @@ jest.mock('../../../components/loading/LoadingButton', () => ({
 }));
 
 // Mock SearchModeToggle component
-jest.mock('../../../components', () => ({
+vi.mock('../../../components', () => ({
   SearchModeToggle: ({ value, onChange, disabled }: any) => (
     <div data-testid="search-mode-toggle" data-value={value} data-disabled={disabled}>
       <button onClick={() => onChange('vector')} disabled={disabled}>
@@ -52,20 +52,20 @@ jest.mock('../../../components', () => ({
 const setupMockContext = (overrides?: any) => {
   mockUseChatContext.mockReturnValue({
     inputValue: '',
-    setInputValue: jest.fn(),
-    sendMessage: jest.fn(),
+    setInputValue: vi.fn(),
+    sendMessage: vi.fn(),
     selectedGameId: 'game-1',
     selectedAgentId: 'agent-1',
     loading: { sending: false },
     searchMode: 'vector',
-    setSearchMode: jest.fn(),
+    setSearchMode: vi.fn(),
     ...overrides,
   });
 };
 
 describe('MessageInput Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   /**
@@ -115,7 +115,7 @@ describe('MessageInput Component', () => {
    */
   describe('Input Handling', () => {
     it('updates input value when typing', () => {
-      const setInputValue = jest.fn();
+      const setInputValue = vi.fn();
       setupMockContext({ setInputValue });
       render(<MessageInput />);
 
@@ -134,7 +134,7 @@ describe('MessageInput Component', () => {
     });
 
     it('handles multiple character inputs', () => {
-      const setInputValue = jest.fn();
+      const setInputValue = vi.fn();
       setupMockContext({ setInputValue });
       render(<MessageInput />);
 
@@ -147,7 +147,7 @@ describe('MessageInput Component', () => {
     });
 
     it('handles clearing input', () => {
-      const setInputValue = jest.fn();
+      const setInputValue = vi.fn();
       setupMockContext({ inputValue: 'Text', setInputValue });
       render(<MessageInput />);
 
@@ -158,7 +158,7 @@ describe('MessageInput Component', () => {
     });
 
     it('accepts long messages', () => {
-      const setInputValue = jest.fn();
+      const setInputValue = vi.fn();
       const longMessage = 'A'.repeat(1000);
       setupMockContext({ setInputValue });
       render(<MessageInput />);
@@ -175,7 +175,7 @@ describe('MessageInput Component', () => {
    */
   describe('Form Submission', () => {
     it('calls sendMessage on form submit', () => {
-      const sendMessage = jest.fn();
+      const sendMessage = vi.fn();
       setupMockContext({
         inputValue: 'Test message',
         sendMessage,
@@ -191,7 +191,7 @@ describe('MessageInput Component', () => {
     });
 
     it('calls sendMessage on button click', () => {
-      const sendMessage = jest.fn();
+      const sendMessage = vi.fn();
       setupMockContext({
         inputValue: 'Test message',
         sendMessage,
@@ -212,7 +212,7 @@ describe('MessageInput Component', () => {
 
       const form = screen.getByLabelText('Message input').closest('form')!;
       const event = new Event('submit', { bubbles: true, cancelable: true });
-      const preventDefaultSpy = jest.spyOn(event, 'preventDefault');
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
 
       form.dispatchEvent(event);
 
@@ -220,7 +220,7 @@ describe('MessageInput Component', () => {
     });
 
     it('does not submit when input is empty', () => {
-      const sendMessage = jest.fn();
+      const sendMessage = vi.fn();
       setupMockContext({
         inputValue: '',
         sendMessage,
@@ -236,7 +236,7 @@ describe('MessageInput Component', () => {
     });
 
     it('does not submit when input is only whitespace', () => {
-      const sendMessage = jest.fn();
+      const sendMessage = vi.fn();
       setupMockContext({
         inputValue: '   ',
         sendMessage,
@@ -252,7 +252,7 @@ describe('MessageInput Component', () => {
     });
 
     it('does not submit when no game is selected', () => {
-      const sendMessage = jest.fn();
+      const sendMessage = vi.fn();
       setupMockContext({
         inputValue: 'Test',
         sendMessage,
@@ -268,7 +268,7 @@ describe('MessageInput Component', () => {
     });
 
     it('does not submit when no agent is selected', () => {
-      const sendMessage = jest.fn();
+      const sendMessage = vi.fn();
       setupMockContext({
         inputValue: 'Test',
         sendMessage,
@@ -284,7 +284,7 @@ describe('MessageInput Component', () => {
     });
 
     it('handles async sendMessage call with void operator', async () => {
-      const sendMessage = jest.fn().mockResolvedValue(undefined);
+      const sendMessage = vi.fn().mockResolvedValue(undefined);
       setupMockContext({
         inputValue: 'Test',
         sendMessage,
@@ -419,7 +419,7 @@ describe('MessageInput Component', () => {
     });
 
     it('calls setSearchMode when mode changes', () => {
-      const setSearchMode = jest.fn();
+      const setSearchMode = vi.fn();
       setupMockContext({ searchMode: 'vector', setSearchMode });
       render(<MessageInput />);
 
@@ -430,7 +430,7 @@ describe('MessageInput Component', () => {
     });
 
     it('switches from vector to hybrid mode', () => {
-      const setSearchMode = jest.fn();
+      const setSearchMode = vi.fn();
       setupMockContext({ searchMode: 'vector', setSearchMode });
       render(<MessageInput />);
 
@@ -440,7 +440,7 @@ describe('MessageInput Component', () => {
     });
 
     it('switches from hybrid to vector mode', () => {
-      const setSearchMode = jest.fn();
+      const setSearchMode = vi.fn();
       setupMockContext({ searchMode: 'hybrid', setSearchMode });
       render(<MessageInput />);
 
@@ -544,7 +544,7 @@ describe('MessageInput Component', () => {
    */
   describe('Edge Cases', () => {
     it('handles special characters in input', () => {
-      const setInputValue = jest.fn();
+      const setInputValue = vi.fn();
       setupMockContext({ setInputValue });
       render(<MessageInput />);
 
@@ -556,7 +556,7 @@ describe('MessageInput Component', () => {
     });
 
     it('handles emoji in input', () => {
-      const setInputValue = jest.fn();
+      const setInputValue = vi.fn();
       setupMockContext({ setInputValue });
       render(<MessageInput />);
 
@@ -567,7 +567,7 @@ describe('MessageInput Component', () => {
     });
 
     it('handles rapid input changes', () => {
-      const setInputValue = jest.fn();
+      const setInputValue = vi.fn();
       setupMockContext({ setInputValue });
       render(<MessageInput />);
 
@@ -596,7 +596,7 @@ describe('MessageInput Component', () => {
     });
 
     it('trims whitespace before checking if input is empty', () => {
-      const sendMessage = jest.fn();
+      const sendMessage = vi.fn();
       setupMockContext({
         inputValue: ' \t\n ',
         sendMessage,

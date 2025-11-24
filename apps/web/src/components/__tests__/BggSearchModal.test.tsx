@@ -4,17 +4,17 @@ import { BggSearchModal } from '../BggSearchModal';
 import * as api from '@/lib/api';
 
 // Mock the API
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
     bgg: {
-      search: jest.fn(),
-      getGameDetails: jest.fn(),
+      search: vi.fn(),
+      getGameDetails: vi.fn(),
     },
   },
 }));
 
 // Mock Next.js Image component
-jest.mock('next/image', () => ({
+vi.mock('next/image', () => ({
   __esModule: true,
   default: ({ src, alt, ...props }: any) => (
     <img src={src} alt={alt} {...props} />
@@ -22,13 +22,13 @@ jest.mock('next/image', () => ({
 }));
 
 // Mock useDebounce hook to avoid timing issues in tests
-jest.mock('@/hooks/useDebounce', () => ({
+vi.mock('@/hooks/useDebounce', () => ({
   useDebounce: (value: any) => value, // Return value immediately
 }));
 
 describe('BggSearchModal', () => {
-  const mockOnClose = jest.fn();
-  const mockOnSelect = jest.fn();
+  const mockOnClose = vi.fn();
+  const mockOnSelect = vi.fn();
 
   const mockSearchResults = [
     {
@@ -61,13 +61,13 @@ describe('BggSearchModal', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   describe('Rendering', () => {
@@ -164,7 +164,7 @@ describe('BggSearchModal', () => {
 
     it('should search BGG when query is 3+ characters', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -178,7 +178,7 @@ describe('BggSearchModal', () => {
 
     it('should display search results', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -196,7 +196,7 @@ describe('BggSearchModal', () => {
 
     it('should display game thumbnail when available', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -211,7 +211,7 @@ describe('BggSearchModal', () => {
 
     it('should show loading state during search', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockImplementation(
+      (api.api.bgg.search as Mock).mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({ results: mockSearchResults }), 1000))
       );
 
@@ -225,7 +225,7 @@ describe('BggSearchModal', () => {
 
     it('should show error when no results found', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: [] });
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: [] });
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -239,7 +239,7 @@ describe('BggSearchModal', () => {
 
     it('should show error when search fails', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (api.api.bgg.search as Mock).mockRejectedValue(new Error('Network error'));
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -255,7 +255,7 @@ describe('BggSearchModal', () => {
 
     it('should clear results when query becomes less than 3 characters', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -276,8 +276,8 @@ describe('BggSearchModal', () => {
   describe('Game Selection', () => {
     it('should fetch game details and call onSelect when game is selected', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
-      (api.api.bgg.getGameDetails as jest.Mock).mockResolvedValue(mockGameDetails);
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.getGameDetails as Mock).mockResolvedValue(mockGameDetails);
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -300,8 +300,8 @@ describe('BggSearchModal', () => {
 
     it('should show loading state while fetching game details', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
-      (api.api.bgg.getGameDetails as jest.Mock).mockImplementation(
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.getGameDetails as Mock).mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve(mockGameDetails), 1000))
       );
 
@@ -326,8 +326,8 @@ describe('BggSearchModal', () => {
 
     it('should show error when fetching game details fails', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
-      (api.api.bgg.getGameDetails as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.getGameDetails as Mock).mockRejectedValue(new Error('Network error'));
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -351,8 +351,8 @@ describe('BggSearchModal', () => {
 
     it('should disable select button while loading details', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
-      (api.api.bgg.getGameDetails as jest.Mock).mockImplementation(
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.getGameDetails as Mock).mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve(mockGameDetails), 1000))
       );
 
@@ -375,7 +375,7 @@ describe('BggSearchModal', () => {
   describe('Modal State Reset', () => {
     it('should reset state when modal is closed', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
 
       const { rerender } = render(
         <BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />
@@ -404,7 +404,7 @@ describe('BggSearchModal', () => {
   describe('Edge Cases', () => {
     it('should handle single search result', async () => {
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({
+      (api.api.bgg.search as Mock).mockResolvedValue({
         results: [mockSearchResults[0]],
       });
 
@@ -421,7 +421,7 @@ describe('BggSearchModal', () => {
     it('should handle game without year published', async () => {
       const user = userEvent.setup({ delay: null });
       const gameWithoutYear = { ...mockSearchResults[0], yearPublished: null };
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: [gameWithoutYear] });
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: [gameWithoutYear] });
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -435,9 +435,9 @@ describe('BggSearchModal', () => {
     });
 
     it('should handle console error when search fails', async () => {
-      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockRejectedValue(new Error('Test error'));
+      (api.api.bgg.search as Mock).mockRejectedValue(new Error('Test error'));
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 
@@ -452,10 +452,10 @@ describe('BggSearchModal', () => {
     });
 
     it('should handle console error when fetching details fails', async () => {
-      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
       const user = userEvent.setup({ delay: null });
-      (api.api.bgg.search as jest.Mock).mockResolvedValue({ results: mockSearchResults });
-      (api.api.bgg.getGameDetails as jest.Mock).mockRejectedValue(new Error('Test error'));
+      (api.api.bgg.search as Mock).mockResolvedValue({ results: mockSearchResults });
+      (api.api.bgg.getGameDetails as Mock).mockRejectedValue(new Error('Test error'));
 
       render(<BggSearchModal isOpen={true} onClose={mockOnClose} onSelect={mockOnSelect} />);
 

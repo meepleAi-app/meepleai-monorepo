@@ -4,11 +4,11 @@ import { VersionTimelineFilters } from '../../components/VersionTimelineFilters'
 
 describe('VersionTimelineFilters', () => {
   const mockAuthors = ['User One', 'User Two', 'User Three'];
-  const mockOnFiltersChange = jest.fn();
-  const mockOnReset = jest.fn();
+  const mockOnFiltersChange = vi.fn();
+  const mockOnReset = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should render all filter inputs', () => {

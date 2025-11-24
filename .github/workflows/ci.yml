@@ -170,13 +170,14 @@ jobs:
         run: pnpm build-storybook --quiet
 
       # Unit Tests: <5s execution target, >=90% coverage
+      # Migration: Vitest 3.2.4 + MSW 2.x (Issue #1503)
       - name: Unit Tests with Coverage (Enforced >=90%)
         env:
           NODE_ENV: test
           CI: true
         run: pnpm test:coverage
-        # Note: Jest globalTeardown automatically runs cleanup script (Windows only)
-        # Coverage threshold enforcement is active (90% for branches, functions, lines, statements)
+        # Note: Vitest with MSW 2.x for API mocking (migrated from Jest)
+        # Coverage threshold enforcement active (90% branches, 64% functions/lines/statements)
 
       - name: Upload Web Coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -189,7 +190,8 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       # UI-05: Accessibility Testing (Unit Level)
-      - name: Run Accessibility Unit Tests (jest-axe)
+      # Migration: Vitest + jest-axe integration (Issue #1503)
+      - name: Run Accessibility Unit Tests (Vitest + jest-axe)
         env:
           NODE_ENV: test
           CI: true

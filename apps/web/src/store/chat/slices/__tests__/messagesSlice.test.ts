@@ -21,21 +21,21 @@ import { Message, ChatThread } from '@/types';
 import { api } from '@/lib/api';
 
 // Mock API
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
     chat: {
-      getThreadById: jest.fn(),
-      createThread: jest.fn(),
-      addMessage: jest.fn(),
-      updateMessage: jest.fn(),
-      deleteMessage: jest.fn(),
-      submitAgentFeedback: jest.fn(),
+      getThreadById: vi.fn(),
+      createThread: vi.fn(),
+      addMessage: vi.fn(),
+      updateMessage: vi.fn(),
+      deleteMessage: vi.fn(),
+      submitAgentFeedback: vi.fn(),
     },
   },
 }));
 
-const mockApi = api as jest.Mocked<typeof api>;
-const mockChat = mockApi.chat as jest.Mocked<typeof api.chat>;
+const mockApi = api as Mocked<typeof api>;
+const mockChat = mockApi.chat as Mocked<typeof api.chat>;
 
 // Create test store with minimal slices
 const createTestStore = () => {
@@ -104,9 +104,9 @@ const createTestStore = () => {
 describe('messagesSlice', () => {
   let store: ReturnType<typeof createTestStore>;
   let setState: jest.SpyInstance;
-  let setLoading: jest.Mock;
-  let setError: jest.Mock;
-  let updateChatTitle: jest.Mock;
+  let setLoading: Mock;
+  let setError: Mock;
+  let updateChatTitle: Mock;
 
   // Helper to create mock ChatThread
   const createMockThread = (overrides?: Partial<ChatThread>): ChatThread => ({
@@ -136,16 +136,16 @@ describe('messagesSlice', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     store = createTestStore();
 
     // Spy on setState
-    setState = jest.spyOn(store, 'setState');
+    setState = vi.spyOn(store, 'setState');
 
     // Create mocks for UI methods
-    setLoading = jest.fn();
-    setError = jest.fn();
-    updateChatTitle = jest.fn();
+    setLoading = vi.fn();
+    setError = vi.fn();
+    updateChatTitle = vi.fn();
 
     // Override store methods with mocks
     store.setState({
@@ -156,7 +156,7 @@ describe('messagesSlice', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // ============================================================================
@@ -622,7 +622,7 @@ describe('messagesSlice', () => {
     });
 
     it('should edit message successfully', async () => {
-      const mockLoadMessages = jest.fn();
+      const mockLoadMessages = vi.fn();
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.updateMessage.mockResolvedValue(createMockMessageResponse());
@@ -640,7 +640,7 @@ describe('messagesSlice', () => {
     });
 
     it('should trim message content', async () => {
-      const mockLoadMessages = jest.fn();
+      const mockLoadMessages = vi.fn();
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.updateMessage.mockResolvedValue(createMockMessageResponse());
@@ -677,7 +677,7 @@ describe('messagesSlice', () => {
     });
 
     it('should handle API errors', async () => {
-      const mockLoadMessages = jest.fn();
+      const mockLoadMessages = vi.fn();
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.updateMessage.mockRejectedValue(new Error('API Error'));
@@ -689,7 +689,7 @@ describe('messagesSlice', () => {
     });
 
     it('should handle non-Error rejections on edit', async () => {
-      const mockLoadMessages = jest.fn();
+      const mockLoadMessages = vi.fn();
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.updateMessage.mockRejectedValue('String error');
@@ -724,7 +724,7 @@ describe('messagesSlice', () => {
     });
 
     it('should delete message successfully', async () => {
-      const mockLoadMessages = jest.fn();
+      const mockLoadMessages = vi.fn();
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.deleteMessage.mockResolvedValue(createMockMessageResponse());
@@ -754,7 +754,7 @@ describe('messagesSlice', () => {
     });
 
     it('should handle API errors', async () => {
-      const mockLoadMessages = jest.fn();
+      const mockLoadMessages = vi.fn();
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.deleteMessage.mockRejectedValue(new Error('API Error'));
@@ -766,7 +766,7 @@ describe('messagesSlice', () => {
     });
 
     it('should handle non-Error rejections on delete', async () => {
-      const mockLoadMessages = jest.fn();
+      const mockLoadMessages = vi.fn();
       store.setState({ loadMessages: mockLoadMessages });
 
       mockChat.deleteMessage.mockRejectedValue('String error');

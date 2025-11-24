@@ -9,24 +9,24 @@ import { createChatClient, ChatClient, ExportFormat } from '../chatClient';
 import { HttpClient } from '../../core/httpClient';
 
 // Mock downloadFile at module level
-jest.mock('../../core/httpClient', () => ({
+vi.mock('../../core/httpClient', () => ({
   ...jest.requireActual('../../core/httpClient'),
-  downloadFile: jest.fn(),
+  downloadFile: vi.fn(),
 }));
 
 import { downloadFile } from '../../core/httpClient';
 
 describe('createChatClient', () => {
-  let mockHttpClient: jest.Mocked<HttpClient>;
+  let mockHttpClient: Mocked<HttpClient>;
   let chatClient: ChatClient;
 
   beforeEach(() => {
     mockHttpClient = {
-      get: jest.fn(),
-      post: jest.fn(),
-      put: jest.fn(),
-      delete: jest.fn(),
-      postFile: jest.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      postFile: vi.fn(),
     } as any;
 
     chatClient = createChatClient({ httpClient: mockHttpClient });
@@ -337,7 +337,7 @@ describe('createChatClient', () => {
 
   describe('Chat Export', () => {
     beforeEach(() => {
-      (downloadFile as jest.Mock).mockClear();
+      (downloadFile as Mock).mockClear();
     });
 
     it('should export chat as PDF', async () => {
@@ -654,7 +654,7 @@ describe('createChatClient', () => {
   describe('Bulk Operations', () => {
     describe('bulkExportRuleSpecs', () => {
       beforeEach(() => {
-        (downloadFile as jest.Mock).mockClear();
+        (downloadFile as Mock).mockClear();
       });
 
       it('should export multiple rule specs', async () => {

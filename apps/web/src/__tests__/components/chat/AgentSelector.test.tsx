@@ -13,13 +13,13 @@ import userEvent from '@testing-library/user-event';
 import { AgentSelector } from '../../../components/chat/AgentSelector';
 
 // Mock the ChatProvider context
-const mockUseChatContext = jest.fn();
-jest.mock('../../../components/chat/ChatProvider', () => ({
+const mockUseChatContext = vi.fn();
+vi.mock('../../../components/chat/ChatProvider', () => ({
   useChatContext: () => mockUseChatContext(),
 }));
 
 // Mock SkeletonLoader component
-jest.mock('../../../components/loading/SkeletonLoader', () => ({
+vi.mock('../../../components/loading/SkeletonLoader', () => ({
   SkeletonLoader: ({ variant }: { variant: string }) => (
     <div data-testid="skeleton-loader" data-variant={variant}>
       Loading...
@@ -34,7 +34,7 @@ const setupMockContext = (overrides?: any) => {
   mockUseChatContext.mockReturnValue({
     agents: [],
     selectedAgentId: null,
-    selectAgent: jest.fn(),
+    selectAgent: vi.fn(),
     selectedGameId: null,
     loading: { agents: false },
     ...overrides,
@@ -43,7 +43,7 @@ const setupMockContext = (overrides?: any) => {
 
 describe('AgentSelector Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   /**
@@ -235,7 +235,7 @@ describe('AgentSelector Component', () => {
 
     it('uses agent.id as option value', async () => {
       const user = userEvent.setup();
-      const selectAgent = jest.fn();
+      const selectAgent = vi.fn();
       const agents = [{ id: 'agent-123', name: 'Test Agent' }];
       setupMockContext({ selectedGameId: 'game-1', agents, selectAgent });
       render(<AgentSelector />);
@@ -257,7 +257,7 @@ describe('AgentSelector Component', () => {
   describe('Agent Selection', () => {
     it('calls selectAgent when an agent is selected', async () => {
       const user = userEvent.setup();
-      const selectAgent = jest.fn();
+      const selectAgent = vi.fn();
       const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
       setupMockContext({ selectedGameId: 'game-1', agents, selectAgent });
       render(<AgentSelector />);
@@ -272,7 +272,7 @@ describe('AgentSelector Component', () => {
     });
 
     it('does not call selectAgent when empty option is selected', () => {
-      const selectAgent = jest.fn();
+      const selectAgent = vi.fn();
       const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
       setupMockContext({
         selectedGameId: 'game-1',
@@ -289,7 +289,7 @@ describe('AgentSelector Component', () => {
 
     it('handles multiple agent selections sequentially', async () => {
       const user = userEvent.setup();
-      const selectAgent = jest.fn();
+      const selectAgent = vi.fn();
       const agents = [
         { id: 'agent-1', name: 'Chess Expert' },
         { id: 'agent-2', name: 'Catan Helper' },
@@ -320,7 +320,7 @@ describe('AgentSelector Component', () => {
 
     it('uses void operator for async selectAgent call', async () => {
       const user = userEvent.setup();
-      const selectAgent = jest.fn().mockResolvedValue(undefined);
+      const selectAgent = vi.fn().mockResolvedValue(undefined);
       const agents = [{ id: 'agent-1', name: 'Chess Expert' }];
       setupMockContext({ selectedGameId: 'game-1', agents, selectAgent });
       render(<AgentSelector />);

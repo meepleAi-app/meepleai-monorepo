@@ -18,7 +18,15 @@ import { SkeletonLoader } from '../loading/SkeletonLoader';
 import { Message as MessageType } from '@/types';
 
 export function MessageList() {
-  const { messages, activeChatId, loading } = useChatContext();
+  const {
+    messages,
+    activeChatId,
+    loading,
+    // Streaming state (Issue #1007)
+    isStreaming,
+    streamingAnswer,
+    streamingState: streamingStateMessage,
+  } = useChatContext();
 
   // Loading state
   if (loading.messages) {
@@ -78,6 +86,29 @@ export function MessageList() {
             isUser={msg.role === 'user'}
           />
         ))}
+
+        {/* Streaming message (Issue #1007) */}
+        {isStreaming && streamingAnswer && (
+          <Message
+            key="streaming-message"
+            message={{
+              id: 'temp-streaming',
+              role: 'assistant',
+              content: streamingAnswer,
+              timestamp: new Date(),
+            }}
+            isUser={false}
+          />
+        )}
+
+        {/* Streaming state indicator (Issue #1007) */}
+        {isStreaming && streamingStateMessage && !streamingAnswer && (
+          <li className="mb-4 flex justify-start">
+            <div className="max-w-[70%] px-4 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm italic">
+              {streamingStateMessage}
+            </div>
+          </li>
+        )}
       </ul>
     </div>
   );

@@ -22,7 +22,10 @@ export function MessageInput() {
     selectedAgentId,
     loading,
     searchMode,
-    setSearchMode
+    setSearchMode,
+    // Streaming state (Issue #1007)
+    isStreaming,
+    stopStreaming,
   } = useChatContext();
 
   const handleSubmit = (e: FormEvent) => {
@@ -33,7 +36,11 @@ export function MessageInput() {
     void sendMessage(inputValue);
   };
 
-  const isDisabled = loading.sending || !selectedGameId || !selectedAgentId;
+  const handleStop = () => {
+    stopStreaming();
+  };
+
+  const isDisabled = loading.sending || isStreaming || !selectedGameId || !selectedAgentId;
   const isSendDisabled = !inputValue.trim() || isDisabled;
 
   return (
@@ -60,15 +67,28 @@ export function MessageInput() {
           aria-label="Message input"
           className="flex-1"
         />
-        <LoadingButton
-          type="submit"
-          isLoading={loading.sending}
-          loadingText="Invio..."
-          disabled={isSendDisabled}
-          aria-label="Send message"
-        >
-          Invia
-        </LoadingButton>
+        {isStreaming ? (
+          <LoadingButton
+            type="button"
+            onClick={handleStop}
+            isLoading={false}
+            disabled={false}
+            aria-label="Stop streaming"
+            className="bg-red-600 hover:bg-red-700"
+          >
+            ⏹ Stop
+          </LoadingButton>
+        ) : (
+          <LoadingButton
+            type="submit"
+            isLoading={loading.sending}
+            loadingText="Invio..."
+            disabled={isSendDisabled}
+            aria-label="Send message"
+          >
+            Invia
+          </LoadingButton>
+        )}
       </form>
     </div>
   );

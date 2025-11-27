@@ -15,29 +15,9 @@ import type { Mock } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStreamingChat } from '../useStreamingChat';
 import { StreamingEventType } from '@/lib/api/schemas/streaming.schemas';
+import { createSSEResponse } from '@/__tests__/fixtures/sse-test-helpers';
 
 // No global fetch mock needed - MSW handles interception
-
-// Helper to create SSE response
-function createSSEResponse(events: string[]): Response {
-  const sseData = events.map((e) => `data: ${e}\n\n`).join('');
-  const encoder = new TextEncoder();
-  const data = encoder.encode(sseData);
-
-  const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue(data);
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/event-stream',
-    },
-  });
-}
 
 describe('useStreamingChat', () => {
   let fetchSpy: Mock;
@@ -103,9 +83,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat());
 
@@ -142,9 +120,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat({ onToken }));
 
@@ -181,9 +157,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat());
 
@@ -211,9 +185,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat({ onStateUpdate }));
 
@@ -247,9 +219,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat());
 
@@ -278,9 +248,7 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat());
 
@@ -316,8 +284,20 @@ describe('useStreamingChat', () => {
         }),
       ];
 
-      (global.fetch as MockedFunction<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat());
+
+      await act(async () => {
+        await result.current[1].startStreaming('game-123', 'test');
+      });
+
+      await waitFor(() => {
+        expect(result.current[0].citations).toHaveLength(2);
+      });
+
+      expect(result.current[0].citations[0].source).toBe('guide.pdf');
+      expect(result.current[0].citations[1].source).toBe('faq.pdf');
+    });
+  });
+});

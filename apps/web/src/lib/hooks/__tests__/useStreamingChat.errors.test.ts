@@ -15,42 +15,21 @@ import type { Mock } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStreamingChat } from '../useStreamingChat';
 import { StreamingEventType } from '@/lib/api/schemas/streaming.schemas';
+import { createSSEResponse } from '@/__tests__/fixtures/sse-test-helpers';
 
 // No global fetch mock needed - MSW handles interception
 
-// Helper to create SSE response
-function createSSEResponse(events: string[]): Response {
-  const sseData = events.map((e) => `data: ${e}\n\n`).join('');
-  const encoder = new TextEncoder();
-  const data = encoder.encode(sseData);
+describe('useStreamingChat', () => {
+  let fetchSpy: Mock;
 
-  const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue(data);
-      controller.close();
-    },
+  beforeEach(() => {
+    // Spy on fetch to enable mockImplementation for SSE responses
+    fetchSpy = vi.spyOn(global, 'fetch') as Mock;
   });
 
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/event-stream',
-    },
-  });
-}
-
-
-      await act(async () => {
-        await result.current[1].startStreaming('game-123', 'test');
-      });
-
-      await waitFor(() => {
-        expect(result.current[0].citations).toHaveLength(2);
-      });
-
-      expect(result.current[0].citations[0].source).toBe('guide.pdf');
-      expect(result.current[0].citations[1].source).toBe('faq.pdf');
-    });
+  afterEach(() => {
+    vi.clearAllMocks();
+    fetchSpy?.mockRestore();
   });
 
   describe('Error Handling', () => {
@@ -64,9 +43,7 @@ function createSSEResponse(events: string[]): Response {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat({ onError }));
 
@@ -108,9 +85,7 @@ function createSSEResponse(events: string[]): Response {
     it('should handle network errors', async () => {
       const onError = vi.fn();
 
-      (global.fetch as Mock<typeof fetch>).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+      (global.fetch as Mock<typeof fetch>).mockRejectedValueOnce(new Error('Network error'));
 
       const { result } = renderHook(() => useStreamingChat({ onError }));
 
@@ -233,9 +208,7 @@ function createSSEResponse(events: string[]): Response {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat({ onComplete }));
 
@@ -266,9 +239,7 @@ function createSSEResponse(events: string[]): Response {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat());
 
@@ -305,9 +276,7 @@ function createSSEResponse(events: string[]): Response {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() => useStreamingChat());
 
@@ -333,9 +302,7 @@ function createSSEResponse(events: string[]): Response {
         }),
       ];
 
-      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(
-        createSSEResponse(events)
-      );
+      (global.fetch as Mock<typeof fetch>).mockResolvedValueOnce(createSSEResponse(events));
 
       const { result } = renderHook(() =>
         useStreamingChat({ apiBaseUrl: 'http://localhost:8080' })

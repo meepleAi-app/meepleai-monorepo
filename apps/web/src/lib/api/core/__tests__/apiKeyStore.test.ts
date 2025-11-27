@@ -8,6 +8,7 @@
  * - Generation counter invalidation
  */
 
+import type { Mock } from 'vitest';
 import {
   setStoredApiKey,
   getStoredApiKey,

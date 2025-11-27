@@ -57,7 +57,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 10);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -90,7 +90,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 10);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, result.Count);
@@ -117,7 +117,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 2);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -139,7 +139,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 10);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -160,7 +160,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 10);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -181,7 +181,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 10);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -206,7 +206,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 10);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -230,7 +230,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 10);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -256,7 +256,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 10);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -324,7 +324,7 @@ public class SearchUsersQueryHandlerTests
             MaxResults: 10);
 
         // Act
-        await _handler.Handle(query, CancellationToken.None);
+        await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Verify information log
         _loggerMock.Verify(
@@ -339,3 +339,4 @@ public class SearchUsersQueryHandlerTests
 
     #endregion
 }
+

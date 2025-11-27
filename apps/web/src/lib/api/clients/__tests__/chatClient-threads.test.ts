@@ -4,13 +4,23 @@
  * Tests for chat thread operations, messages, and export functionality
  */
 
+// Mock downloadFile before importing chatClient
+import { mockDownloadFile } from './chatClient.test-helpers';
+
+vi.mock('../../core/httpClient', async () => {
+  const actual = await vi.importActual('../../core/httpClient');
+  return {
+    ...actual,
+    downloadFile: mockDownloadFile,
+  };
+});
+
 import { createChatClient } from '../chatClient';
 import {
   createMockHttpClient,
   createMockThread,
   createMockMessage,
   commonExpectations,
-  mockDownloadFile,
 } from './chatClient.test-helpers';
 
 describe('ChatClient - Threads & Messages', () => {
@@ -314,10 +324,9 @@ describe('ChatClient - Threads & Messages', () => {
 
       await chatClient.exportChat('chat-1', { format: 'pdf' });
 
-      expect(mockHttpClient.postFile).toHaveBeenCalledWith(
-        '/api/v1/chats/chat-1/export',
-        { format: 'pdf' }
-      );
+      expect(mockHttpClient.postFile).toHaveBeenCalledWith('/api/v1/chats/chat-1/export', {
+        format: 'pdf',
+      });
       expect(mockDownloadFile).toHaveBeenCalledWith(blob, 'chat-export.pdf');
     });
 
@@ -330,10 +339,9 @@ describe('ChatClient - Threads & Messages', () => {
 
       await chatClient.exportChat('chat-1', { format: 'txt' });
 
-      expect(mockHttpClient.postFile).toHaveBeenCalledWith(
-        '/api/v1/chats/chat-1/export',
-        { format: 'txt' }
-      );
+      expect(mockHttpClient.postFile).toHaveBeenCalledWith('/api/v1/chats/chat-1/export', {
+        format: 'txt',
+      });
     });
 
     it('should export chat as Markdown', async () => {
@@ -345,10 +353,9 @@ describe('ChatClient - Threads & Messages', () => {
 
       await chatClient.exportChat('chat-1', { format: 'md' });
 
-      expect(mockHttpClient.postFile).toHaveBeenCalledWith(
-        '/api/v1/chats/chat-1/export',
-        { format: 'md' }
-      );
+      expect(mockHttpClient.postFile).toHaveBeenCalledWith('/api/v1/chats/chat-1/export', {
+        format: 'md',
+      });
     });
 
     it('should include date filters when provided', async () => {
@@ -415,7 +422,7 @@ describe('ChatClient - Threads & Messages', () => {
       await chatClient.getThreadsByGame('游戏-中文');
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining(encodeURIComponent('游戏-中文')),
+        expect.stringContaining(encodeURIComponent('游戏-中文'))
       );
     });
 

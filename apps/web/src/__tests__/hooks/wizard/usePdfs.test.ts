@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { usePdfs } from '@/hooks/wizard/usePdfs';
 

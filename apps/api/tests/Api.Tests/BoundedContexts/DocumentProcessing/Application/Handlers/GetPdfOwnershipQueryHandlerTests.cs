@@ -52,7 +52,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var query = new GetPdfOwnershipQuery(pdfId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -85,7 +85,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var query = new GetPdfOwnershipQuery(pdfId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -114,7 +114,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var query = new GetPdfOwnershipQuery(pdfId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -141,7 +141,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var query = new GetPdfOwnershipQuery(pdfId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -165,7 +165,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var query = new GetPdfOwnershipQuery(pdfId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -194,7 +194,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var query = new GetPdfOwnershipQuery(pdfId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -218,7 +218,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var query = new GetPdfOwnershipQuery(pdfId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -268,3 +268,4 @@ public class GetPdfOwnershipQueryHandlerTests
 
     #endregion
 }
+

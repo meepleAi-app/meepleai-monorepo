@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -300,3 +301,12 @@ describe('MentionInput', () => {
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
       fireEvent.keyDown(textarea, { key: 'ArrowDown' });
+      fireEvent.keyDown(textarea, { key: 'ArrowDown' });
+
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        expect(options[options.length - 1]).toHaveAttribute('aria-selected', 'true');
+      });
+    });
+  });
+});

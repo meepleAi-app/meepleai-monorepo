@@ -457,3 +457,4 @@ public class SecurityHeadersMiddlewareTests
             Options.Create(options));
     }
 }
+

@@ -59,13 +59,13 @@ public class ExtendSessionCommandHandlerTests
         var command = new ExtendSessionCommand(sessionId, userId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(result.NewExpiresAt);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, default), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -82,12 +82,12 @@ public class ExtendSessionCommandHandlerTests
         var command = new ExtendSessionCommand(sessionId, userId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
         Assert.Contains("Rate limit exceeded", result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class ExtendSessionCommandHandlerTests
         var command = new ExtendSessionCommand(sessionId, userId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -135,11 +135,12 @@ public class ExtendSessionCommandHandlerTests
         var command = new ExtendSessionCommand(sessionId, differentUserId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
         Assert.Contains("Unauthorized", result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
+

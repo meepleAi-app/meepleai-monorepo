@@ -88,7 +88,7 @@ public class PdfExportFormatter : IExportFormatter
         return filtered.ToList();
     }
 
-    private void ComposeHeader(IContainer container, string gameName, int messageCount)
+    private static void ComposeHeader(IContainer container, string gameName, int messageCount)
     {
         container.Column(column =>
         {

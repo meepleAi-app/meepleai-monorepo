@@ -46,24 +46,23 @@
  * ```
  */
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
-import { ButtonHTMLAttributes, forwardRef } from "react";
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
+import { ButtonHTMLAttributes, forwardRef } from 'react';
 
-export interface AccessibleButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface AccessibleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /**
    * Button visual variant
    * @default 'primary'
    */
-  variant?: "primary" | "secondary" | "danger" | "ghost";
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
 
   /**
    * Button size
    * @default 'md'
    */
-  size?: "sm" | "md" | "lg";
+  size?: 'sm' | 'md' | 'lg';
 
   /**
    * Whether the button is icon-only (requires aria-label)
@@ -104,68 +103,94 @@ export interface AccessibleButtonProps
  * Map custom variants to shadcn variants
  */
 const variantMap = {
-  primary: "default" as const,
-  secondary: "secondary" as const,
-  danger: "destructive" as const,
-  ghost: "ghost" as const,
+  primary: 'default' as const,
+  secondary: 'secondary' as const,
+  danger: 'destructive' as const,
+  ghost: 'ghost' as const,
 };
 
 /**
  * Map custom sizes to shadcn sizes
  */
 const sizeMap = {
-  sm: "sm" as const,
-  md: "default" as const,
-  lg: "lg" as const,
+  sm: 'sm' as const,
+  md: 'default' as const,
+  lg: 'lg' as const,
 };
 
 /**
  * AccessibleButton component with full WCAG 2.1 AA compliance
  * Now powered by shadcn/ui Button
  */
-export const AccessibleButton = forwardRef<
-  HTMLButtonElement,
-  AccessibleButtonProps
->(
+export const AccessibleButton = forwardRef<HTMLButtonElement, AccessibleButtonProps>(
   (
     {
-      variant = "primary",
-      size = "md",
+      variant = 'primary',
+      size = 'md',
       iconOnly = false,
       isLoading = false,
-      loadingText = "Loading...",
+      loadingText = 'Loading...',
       isPressed,
-      className = "",
+      className = '',
       children,
       disabled,
-      "aria-label": ariaLabel,
+      'aria-label': ariaLabel,
       ...props
     },
     ref
   ) => {
     // Validation: icon-only buttons must have aria-label
-    if (iconOnly && !ariaLabel && process.env.NODE_ENV === "development") {
+    if (iconOnly && !ariaLabel && process.env.NODE_ENV === 'development') {
       console.error(
-        "AccessibleButton: Icon-only buttons must have an aria-label prop for screen reader accessibility"
+        'AccessibleButton: Icon-only buttons must have an aria-label prop for screen reader accessibility'
       );
     }
 
-    // Map to shadcn variant and size
-    const shadcnVariant = variantMap[variant];
-    const shadcnSize = iconOnly ? "icon" : sizeMap[size];
+    // Map to shadcn variant and size (safe mapping to avoid dynamic object injection)
+    let shadcnVariant: 'default' | 'secondary' | 'destructive' | 'ghost';
+    switch (variant) {
+      case 'primary':
+        shadcnVariant = 'default';
+        break;
+      case 'secondary':
+        shadcnVariant = 'secondary';
+        break;
+      case 'danger':
+        shadcnVariant = 'destructive';
+        break;
+      case 'ghost':
+        shadcnVariant = 'ghost';
+        break;
+      default:
+        shadcnVariant = 'default';
+    }
+    let shadcnSize: 'sm' | 'default' | 'lg' | 'icon';
+    if (iconOnly) {
+      shadcnSize = 'icon';
+    } else {
+      switch (size) {
+        case 'sm':
+          shadcnSize = 'sm';
+          break;
+        case 'lg':
+          shadcnSize = 'lg';
+          break;
+        case 'md':
+        default:
+          shadcnSize = 'default';
+      }
+    }
 
     // Pressed state classes (for toggle buttons)
-    const pressedClasses = isPressed
-      ? "ring-2 ring-ring ring-offset-2 ring-offset-background"
-      : "";
+    const pressedClasses = isPressed ? 'ring-2 ring-ring ring-offset-2 ring-offset-background' : '';
 
     // ARIA attributes
     const ariaAttributes: React.AriaAttributes = {
-      "aria-label": ariaLabel,
-      "aria-disabled": disabled || isLoading,
-      "aria-pressed": typeof isPressed === "boolean" ? isPressed : undefined,
-      "aria-live": isLoading ? "polite" : undefined,
-      "aria-busy": isLoading || undefined,
+      'aria-label': ariaLabel,
+      'aria-disabled': disabled || isLoading,
+      'aria-pressed': typeof isPressed === 'boolean' ? isPressed : undefined,
+      'aria-live': isLoading ? 'polite' : undefined,
+      'aria-busy': isLoading || undefined,
     };
 
     return (
@@ -175,9 +200,9 @@ export const AccessibleButton = forwardRef<
           variant={shadcnVariant}
           size={shadcnSize}
           className={cn(
-            "transition-all duration-200",
+            'transition-all duration-200',
             // Enhanced focus ring for WCAG 2.1 AA
-            "focus-visible:ring-2 focus-visible:ring-offset-2",
+            'focus-visible:ring-2 focus-visible:ring-offset-2',
             pressedClasses,
             className
           )}
@@ -199,12 +224,7 @@ export const AccessibleButton = forwardRef<
 
         {/* Screen reader announcement for loading state */}
         {isLoading && (
-          <div
-            className="sr-only"
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-          >
+          <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
             {loadingText}
           </div>
         )}
@@ -213,4 +233,4 @@ export const AccessibleButton = forwardRef<
   }
 );
 
-AccessibleButton.displayName = "AccessibleButton";
+AccessibleButton.displayName = 'AccessibleButton';

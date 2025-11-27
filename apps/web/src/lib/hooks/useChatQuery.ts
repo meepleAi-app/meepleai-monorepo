@@ -1,11 +1,22 @@
-import { useCallback, useState } from 'react';
 import type { Citation } from '@/types';
+import { useCallback, useState } from 'react';
 
 type Snippet = {
   text: string;
   source: string;
   page?: number | null;
   line?: number | null;
+};
+
+type BackendCitation = {
+  documentId?: string;
+  source?: string;
+  pageNumber?: number;
+  page?: number;
+  snippet?: string;
+  text?: string;
+  relevanceScore?: number;
+  score?: number;
 };
 
 export type QueryState = {
@@ -57,7 +68,11 @@ const INITIAL_STATE: QueryState = {
  * @returns [queryState, queryControls] - Current state and control functions
  */
 export function useChatQuery(callbacks?: {
-  onComplete?: (answer: string, citations: Citation[], metadata: { confidence: number | null }) => void;
+  onComplete?: (
+    answer: string,
+    citations: Citation[],
+    metadata: { confidence: number | null }
+  ) => void;
   onError?: (error: string) => void;
 }): [QueryState, QueryControls] {
   const [state, setState] = useState<QueryState>(INITIAL_STATE);
@@ -116,12 +131,14 @@ export function useChatQuery(callbacks?: {
 
         // Map backend response to state
         // Backend returns: { success, answer, sources, citations, overallConfidence, ... }
-        const mappedCitations: Citation[] = (data.citations || []).map((citation: any) => ({
-          documentId: citation.documentId || citation.source || 'Unknown',
-          pageNumber: citation.pageNumber || citation.page || 0,
-          snippet: citation.snippet || citation.text || '',
-          relevanceScore: citation.relevanceScore || citation.score || null,
-        }));
+        const mappedCitations: Citation[] = (data.citations || []).map(
+          (citation: BackendCitation) => ({
+            documentId: citation.documentId || citation.source || 'Unknown',
+            pageNumber: citation.pageNumber || citation.page || 0,
+            snippet: citation.snippet || citation.text || '',
+            relevanceScore: citation.relevanceScore || citation.score || null,
+          })
+        );
 
         const finalState: QueryState = {
           state: null,
@@ -143,7 +160,7 @@ export function useChatQuery(callbacks?: {
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to get answer';
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           error: errorMessage,
           isLoading: false,

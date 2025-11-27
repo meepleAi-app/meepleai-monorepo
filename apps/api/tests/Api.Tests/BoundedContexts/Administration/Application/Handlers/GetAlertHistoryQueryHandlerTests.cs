@@ -61,7 +61,7 @@ public class GetAlertHistoryQueryHandlerTests
             .ReturnsAsync(expectedAlerts);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -86,7 +86,7 @@ public class GetAlertHistoryQueryHandlerTests
             .ReturnsAsync(new List<AlertDto>());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -123,10 +123,11 @@ public class GetAlertHistoryQueryHandlerTests
             .ReturnsAsync(expectedAlerts);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result);
         Assert.Equal("CriticalError", result[0].AlertType);
     }
 }
+

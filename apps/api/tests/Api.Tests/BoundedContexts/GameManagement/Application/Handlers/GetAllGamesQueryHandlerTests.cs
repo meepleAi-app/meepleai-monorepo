@@ -57,7 +57,7 @@ public class GetAllGamesQueryHandlerTests
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -96,7 +96,7 @@ public class GetAllGamesQueryHandlerTests
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -117,7 +117,7 @@ public class GetAllGamesQueryHandlerTests
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -155,7 +155,7 @@ public class GetAllGamesQueryHandlerTests
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, result.Count);
@@ -202,7 +202,7 @@ public class GetAllGamesQueryHandlerTests
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, result.Count);
@@ -276,7 +276,7 @@ public class GetAllGamesQueryHandlerTests
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         var dto = result[0];
@@ -294,3 +294,4 @@ public class GetAllGamesQueryHandlerTests
 
     #endregion
 }
+

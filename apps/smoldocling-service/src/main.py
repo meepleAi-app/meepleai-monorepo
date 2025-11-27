@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
 
             # Dummy inference for GPU warmup
             dummy_image = Image.new("RGB", (512, 512), color="white")
-            from ..domain.models import PageImage
+            from src.domain.models import PageImage
 
             dummy_page = PageImage.from_pil_image(1, dummy_image, 300)
             pdf_service.vlm_adapter.process_page(dummy_page)

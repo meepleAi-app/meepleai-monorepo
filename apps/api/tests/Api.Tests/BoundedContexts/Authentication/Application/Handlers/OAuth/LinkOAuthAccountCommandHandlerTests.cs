@@ -55,7 +55,7 @@ public class LinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((OAuthAccount?)null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -86,7 +86,7 @@ public class LinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((OAuthAccount?)null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -111,7 +111,7 @@ public class LinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((OAuthAccount?)null);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -140,7 +140,7 @@ public class LinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -169,7 +169,7 @@ public class LinkOAuthAccountCommandHandlerTests
             .ReturnsAsync(existingAccount);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -201,7 +201,7 @@ public class LinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((OAuthAccount?)null); // Repository check passes, domain logic fails
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -224,7 +224,7 @@ public class LinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -258,7 +258,7 @@ public class LinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((OAuthAccount?)null);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -314,3 +314,4 @@ public class LinkOAuthAccountCommandHandlerTests
 
     #endregion
 }
+

@@ -379,3 +379,4 @@ public class UploadPdfCommandHandlerTests
     //
     // See integration-tests.yml workflow for comprehensive testing.
 }
+

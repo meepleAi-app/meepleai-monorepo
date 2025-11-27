@@ -8,7 +8,9 @@ public sealed class LatencyStats
 {
     private const int MaxSamples = 100; // Rolling window size
     private readonly Queue<double> _samples = new();
+#pragma warning disable MA0158 // Use System.Threading.Lock
     private readonly object _lock = new();
+#pragma warning restore MA0158
 
     public int TotalRequests { get; private set; }
     public double MinLatencyMs { get; private set; } = double.MaxValue;

@@ -16,9 +16,6 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
     private readonly PdfTextProcessingDomainService _domainService;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    // Timeout slightly longer than Python service timeout (30s + 5s buffer)
-    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(35);
-
     public UnstructuredPdfTextExtractor(
         IHttpClientFactory httpClientFactory,
         ILogger<UnstructuredPdfTextExtractor> logger,
@@ -40,6 +37,8 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
         CancellationToken ct = default)
     {
         string? requestId = Guid.NewGuid().ToString("N");
+        var client = _httpClientFactory.CreateClient("UnstructuredService");
+        var configuredTimeout = client.Timeout;
 
         try
         {
@@ -47,9 +46,7 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
                 "Starting Unstructured extraction (Stage 1). RequestId: {RequestId}",
                 requestId);
 
-            // Step 1: Create HTTP client
-            var client = _httpClientFactory.CreateClient("UnstructuredService");
-            client.Timeout = RequestTimeout;
+            // Step 1: Prepare HTTP client (factory provides configured, pooled instance)
 
             // Step 2: Prepare multipart form data (CODE-01: Dispose all IDisposable content)
             using var content = new MultipartFormDataContent();
@@ -142,10 +139,10 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
         {
             _logger.LogError(ex,
                 "Unstructured service timeout after {Timeout}s. RequestId: {RequestId}",
-                RequestTimeout.TotalSeconds,
+                configuredTimeout.TotalSeconds,
                 requestId);
             return TextExtractionResult.CreateFailure(
-                $"Unstructured service timeout after {RequestTimeout.TotalSeconds}s");
+                $"Unstructured service timeout after {configuredTimeout.TotalSeconds}s");
         }
         catch (JsonException ex)
         {
@@ -213,9 +210,14 @@ public class UnstructuredPdfTextExtractor : IPdfTextExtractor
     /// </summary>
     private List<PageTextChunk> CreatePageChunksFromText(string fullText, int pageCount)
     {
-        if (pageCount <= 0 || string.IsNullOrEmpty(fullText))
+        if (string.IsNullOrEmpty(fullText))
         {
             return new List<PageTextChunk>();
+        }
+
+        if (pageCount <= 0)
+        {
+            pageCount = 1;
         }
 
         var pageChunks = new List<PageTextChunk>();

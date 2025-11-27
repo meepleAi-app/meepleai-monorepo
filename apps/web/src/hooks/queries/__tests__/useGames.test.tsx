@@ -6,6 +6,7 @@
  * Tests TanStack Query hooks for games data management
  */
 
+import type { Mock } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import {
   useGames,

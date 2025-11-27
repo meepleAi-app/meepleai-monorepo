@@ -194,3 +194,4 @@ public class GameSessionBuilder
     /// </summary>
     public static implicit operator GameSession(GameSessionBuilder builder) => builder.Build();
 }
+

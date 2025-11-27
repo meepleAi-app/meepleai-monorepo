@@ -845,3 +845,4 @@ public class UserDomainTests
         return new User(id, email, "Test User", passwordHash, userRole, userTier);
     }
 }
+

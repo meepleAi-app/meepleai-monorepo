@@ -200,3 +200,4 @@ public static class PdfUploadAssertionExtensions
             because.Length > 0 ? because : "should indicate PDF structure is malformed");
     }
 }
+

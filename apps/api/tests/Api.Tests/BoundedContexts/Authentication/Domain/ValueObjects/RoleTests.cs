@@ -195,3 +195,4 @@ public class RoleTests
         Assert.Equal(Role.Admin.Value, roleString);
     }
 }
+

@@ -59,7 +59,7 @@ public class UnlinkOAuthAccountCommandHandlerTests
             .ReturnsAsync(oauthAccount);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -92,7 +92,7 @@ public class UnlinkOAuthAccountCommandHandlerTests
             .ReturnsAsync(oauthAccount);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -121,7 +121,7 @@ public class UnlinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -148,7 +148,7 @@ public class UnlinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((OAuthAccount?)null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -179,7 +179,7 @@ public class UnlinkOAuthAccountCommandHandlerTests
             .ReturnsAsync(oauthAccount);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -201,7 +201,7 @@ public class UnlinkOAuthAccountCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -234,7 +234,7 @@ public class UnlinkOAuthAccountCommandHandlerTests
             .ReturnsAsync(oauthAccount);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _loggerMock.Verify(
@@ -296,3 +296,4 @@ public class UnlinkOAuthAccountCommandHandlerTests
 
     #endregion
 }
+

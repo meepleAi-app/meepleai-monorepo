@@ -56,7 +56,7 @@ public class SendAlertCommandHandlerTests
             .ReturnsAsync(expectedAlert);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -105,7 +105,7 @@ public class SendAlertCommandHandlerTests
             .ReturnsAsync(expectedAlert);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Critical", result.Severity);
@@ -161,7 +161,7 @@ public class SendAlertCommandHandlerTests
             .ReturnsAsync(expectedAlert);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("QualityEvaluation", result.AlertType);
@@ -218,7 +218,7 @@ public class SendAlertCommandHandlerTests
             .ReturnsAsync(expectedAlert);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -248,7 +248,7 @@ public class SendAlertCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, CancellationToken.None));
+            await _handler.Handle(command, TestContext.Current.CancellationToken));
 
         _mockAlertingService.Verify(
             s => s.SendAlertAsync(
@@ -305,7 +305,7 @@ public class SendAlertCommandHandlerTests
             .ReturnsAsync(expectedAlert);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(severity, result.Severity);
@@ -319,3 +319,4 @@ public class SendAlertCommandHandlerTests
             Times.Once);
     }
 }
+

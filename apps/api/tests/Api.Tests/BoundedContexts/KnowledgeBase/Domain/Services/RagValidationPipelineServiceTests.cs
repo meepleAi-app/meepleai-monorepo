@@ -1,3 +1,4 @@
+using System.Threading;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Models;
 using Api.Services;
@@ -14,6 +15,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// </summary>
 public class RagValidationPipelineServiceTests
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     private readonly Mock<IConfidenceValidationService> _mockConfidenceValidation;
     private readonly Mock<IMultiModelValidationService> _mockMultiModelValidation;
     private readonly Mock<ICitationValidationService> _mockCitationValidation;
@@ -52,7 +55,7 @@ public class RagValidationPipelineServiceTests
         SetupMocksForSuccess();
 
         // Act
-        var result = await _service.ValidateResponseAsync(response, gameId, "en");
+        var result = await _service.ValidateResponseAsync(response, gameId, "en", TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -106,7 +109,7 @@ public class RagValidationPipelineServiceTests
             });
 
         // Act
-        var result = await _service.ValidateResponseAsync(response, gameId, "en");
+        var result = await _service.ValidateResponseAsync(response, gameId, "en", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -167,7 +170,7 @@ public class RagValidationPipelineServiceTests
             });
 
         // Act
-        var result = await _service.ValidateResponseAsync(response, gameId, "en");
+        var result = await _service.ValidateResponseAsync(response, gameId, "en", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -218,7 +221,7 @@ public class RagValidationPipelineServiceTests
             });
 
         // Act
-        var result = await _service.ValidateResponseAsync(response, gameId, "en");
+        var result = await _service.ValidateResponseAsync(response, gameId, "en", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -233,8 +236,8 @@ public class RagValidationPipelineServiceTests
     public async Task ValidateResponseAsync_NullResponse_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.ValidateResponseAsync(null!, "gameId", "en"));
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await _service.ValidateResponseAsync(null!, "gameId", "en", TestCancellationToken));
     }
 
     [Fact]
@@ -244,8 +247,8 @@ public class RagValidationPipelineServiceTests
         var response = CreateQaResponse(confidence: 0.85);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.ValidateResponseAsync(response, "", "en"));
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+            await _service.ValidateResponseAsync(response, "", "en", TestCancellationToken));
     }
 
     [Fact]
@@ -258,7 +261,7 @@ public class RagValidationPipelineServiceTests
         SetupMocksForSuccess();
 
         // Act
-        var result = await _service.ValidateResponseAsync(response, gameId, null);
+        var result = await _service.ValidateResponseAsync(response, gameId, null, TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -284,7 +287,7 @@ public class RagValidationPipelineServiceTests
 
         // Act
         var result = await _service.ValidateWithMultiModelAsync(
-            response, gameId, systemPrompt, userPrompt, "en");
+            response, gameId, systemPrompt, userPrompt, "en", TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -359,7 +362,7 @@ public class RagValidationPipelineServiceTests
 
         // Act
         var result = await _service.ValidateWithMultiModelAsync(
-            response, gameId, systemPrompt, userPrompt, "en");
+            response, gameId, systemPrompt, userPrompt, "en", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -384,7 +387,7 @@ public class RagValidationPipelineServiceTests
 
         // Act
         var result = await _service.ValidateWithMultiModelAsync(
-            response, gameId, systemPrompt, userPrompt, "en");
+            response, gameId, systemPrompt, userPrompt, "en", TestCancellationToken);
 
         // Assert
         Assert.True(result.IsValid);
@@ -456,7 +459,7 @@ public class RagValidationPipelineServiceTests
 
         // Act
         var result = await _service.ValidateWithMultiModelAsync(
-            response, gameId, systemPrompt, userPrompt, "en");
+            response, gameId, systemPrompt, userPrompt, "en", TestCancellationToken);
 
         // Assert
         // Verify hallucination detection was called with original answer (not consensus)
@@ -474,7 +477,7 @@ public class RagValidationPipelineServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.ValidateWithMultiModelAsync(response, gameId, "", "user prompt", "en"));
+            _service.ValidateWithMultiModelAsync(response, gameId, "", "user prompt", "en", TestCancellationToken));
     }
 
     [Fact]
@@ -486,7 +489,7 @@ public class RagValidationPipelineServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.ValidateWithMultiModelAsync(response, gameId, "system prompt", "", "en"));
+            _service.ValidateWithMultiModelAsync(response, gameId, "system prompt", "", "en", TestCancellationToken));
     }
 
     [Fact]
@@ -550,7 +553,7 @@ public class RagValidationPipelineServiceTests
 
         // Act
         var result = await _service.ValidateWithMultiModelAsync(
-            response, gameId, systemPrompt, userPrompt, "en");
+            response, gameId, systemPrompt, userPrompt, "en", TestCancellationToken);
 
         // Assert
         Assert.False(result.IsValid);
@@ -667,3 +670,4 @@ public class RagValidationPipelineServiceTests
 
     #endregion
 }
+

@@ -8,6 +8,7 @@
  * - worker-buffering.test.ts
  */
 
+import type { Mock } from 'vitest';
 import { MockUploadWorker, MockBroadcastChannel } from '../../__tests__/helpers/uploadQueueMocks';
 
 /**

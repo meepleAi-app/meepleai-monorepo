@@ -54,7 +54,7 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -63,7 +63,7 @@ public class ValidateApiKeyQueryHandlerTests
         Assert.Equal(user.DisplayName, result.DisplayName);
         Assert.Equal("user", result.Role);
 
-        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, default), Times.Once);
+        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -90,13 +90,13 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        await _handler.Handle(query, CancellationToken.None);
+        await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(apiKey.LastUsedAt);
         Assert.NotEqual(initialLastUsed, apiKey.LastUsedAt);
 
-        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, default), Times.Once);
+        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -110,13 +110,13 @@ public class ValidateApiKeyQueryHandlerTests
         var query = new ValidateApiKeyQuery("short");
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
 
-        _apiKeyRepositoryMock.Verify(x => x.GetByKeyPrefixAsync(It.IsAny<string>(), default), Times.Never);
-        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), default), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.GetByKeyPrefixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -137,12 +137,12 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync((ApiKey?)null);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
 
-        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), default), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -171,12 +171,12 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync(apiKey);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
 
-        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), default), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -199,12 +199,12 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync(apiKey);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
 
-        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), default), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -228,12 +228,12 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync(apiKey);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
 
-        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), default), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     #endregion
@@ -263,12 +263,12 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
 
-        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, default), Times.Once);
+        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -299,11 +299,11 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        await _handler.Handle(query, CancellationToken.None);
+        await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         _apiKeyRepositoryMock.Verify(
-            x => x.GetByKeyPrefixAsync(expectedPrefix, default),
+            x => x.GetByKeyPrefixAsync(expectedPrefix, It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -335,7 +335,7 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -358,7 +358,7 @@ public class ValidateApiKeyQueryHandlerTests
         var query = new ValidateApiKeyQuery("");
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -372,7 +372,7 @@ public class ValidateApiKeyQueryHandlerTests
 
         // Act & Assert - Should handle gracefully
         var exception = await Record.ExceptionAsync(
-            async () => await _handler.Handle(query, CancellationToken.None)
+            async () => await _handler.Handle(query, TestContext.Current.CancellationToken)
         );
 
         // Implementation may throw or return null depending on null checks
@@ -392,13 +392,13 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync((ApiKey?)null);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
 
         _apiKeyRepositoryMock.Verify(
-            x => x.GetByKeyPrefixAsync(shortKey, default),
+            x => x.GetByKeyPrefixAsync(shortKey, It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -460,10 +460,10 @@ public class ValidateApiKeyQueryHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        await _handler.Handle(query, CancellationToken.None);
+        await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Query handlers don't call SaveChanges, but they do call UpdateAsync
-        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, default), Times.Once);
+        _apiKeyRepositoryMock.Verify(x => x.UpdateAsync(apiKey, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -483,3 +483,4 @@ public class ValidateApiKeyQueryHandlerTests
 
     #endregion
 }
+

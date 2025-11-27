@@ -260,3 +260,4 @@ public class TokenUsageTests
         Assert.Equal((decimal)cost, tokenUsage.EstimatedCost);
     }
 }
+

@@ -9,6 +9,7 @@
  * - Manual check trigger
  */
 
+import type { Mock } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useSessionCheck } from '../useSessionCheck';
 

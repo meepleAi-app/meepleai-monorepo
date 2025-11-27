@@ -28,7 +28,9 @@ public sealed class ProviderHealthStatus
 {
     private const int MaxHealthCheckHistory = 10;
     private readonly Queue<(DateTime timestamp, bool success)> _healthCheckHistory = new();
+#pragma warning disable MA0158 // Use System.Threading.Lock
     private readonly object _lock = new();
+#pragma warning restore MA0158
 
     public HealthStatus Status { get; private set; } = HealthStatus.Unknown;
     public DateTime? LastCheckAt { get; private set; }

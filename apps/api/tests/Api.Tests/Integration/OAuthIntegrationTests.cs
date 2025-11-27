@@ -6,12 +6,15 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using System;
+using System.Linq;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -68,7 +71,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
     {
         _output("Initializing OAuth integration test infrastructure...");
 
-        // Start PostgreSQL container
+        // Always start an isolated Postgres container for stability
         _postgresContainer = new ContainerBuilder()
             .WithImage("postgres:16-alpine")
             .WithEnvironment("POSTGRES_USER", "postgres")
@@ -86,6 +89,22 @@ public class OAuthIntegrationTests : IAsyncLifetime
         _output($"PostgreSQL started at localhost:{containerPort}");
 
         // Setup dependency injection
+        // Final guard: enforce SSL disabled
+        var enforcedBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SslMode = SslMode.Disable,
+            KeepAlive = 30,
+            Pooling = false,
+            Timeout = 15,
+            CommandTimeout = 30
+        };
+        // Force IPv4 loopback to avoid IPv6/localhost socket quirks in some environments
+        enforcedBuilder.Host = string.IsNullOrWhiteSpace(enforcedBuilder.Host) || enforcedBuilder.Host == "localhost"
+            ? "127.0.0.1"
+            : enforcedBuilder.Host;
+        connectionString = enforcedBuilder.ConnectionString;
+        _output($"Using connection string for OAuth tests: {connectionString}");
+
         var services = new ServiceCollection();
 
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
@@ -106,6 +125,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
 
         // Register domain event infrastructure
         services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
@@ -122,7 +142,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Apply migrations
         _output("Applying migrations...");
-        await _dbContext.Database.MigrateAsync(TestCancellationToken);
+        await MigrateWithRetry(_dbContext);
         _output("✓ Migrations applied");
 
         // Create test data (users for linking tests)
@@ -640,7 +660,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
     private async Task ResetDatabaseAsync()
     {
         // Clear all data from database tables to ensure test isolation
-        // This prevents test flakiness due to data contamination
         var tableNames = await _dbContext!.Database
             .SqlQueryRaw<string>(
                 @"SELECT tablename
@@ -649,29 +668,66 @@ public class OAuthIntegrationTests : IAsyncLifetime
                   AND tablename != '__EFMigrationsHistory'")
             .ToListAsync(TestCancellationToken);
 
-        if (tableNames.Count > 0)
+        if (tableNames.Count == 0)
         {
-            // Disable foreign key constraints temporarily for cleanup
-            await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'replica';", TestCancellationToken);
+            await CreateTestDataAsync();
+            return;
+        }
 
-            try
+        // Disable foreign key constraints temporarily for cleanup
+        await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'replica';", TestCancellationToken);
+
+        try
+        {
+            foreach (var tableName in tableNames)
             {
-                // Truncate all tables with CASCADE to handle FK dependencies
-                foreach (var tableName in tableNames)
-                {
-                    await _dbContext.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE \"{tableName}\" CASCADE;", TestCancellationToken);
-                }
+#pragma warning disable EF1002 // safeTableName is validated; identifiers cannot be parameterized
+                var safeTableName = SanitizeIdentifier(tableName);
+                await _dbContext.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE \"{safeTableName}\" CASCADE;", TestCancellationToken);
+#pragma warning restore EF1002
             }
-            finally
-            {
-                // Re-enable foreign key constraints
-                await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'origin';", TestCancellationToken);
-            }
+        }
+        finally
+        {
+            // Re-enable foreign key constraints
+            await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'origin';", TestCancellationToken);
         }
 
         // Recreate test data after reset
         await CreateTestDataAsync();
     }
 
-    #endregion
+    private static async Task MigrateWithRetry(MeepleAiDbContext context)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await context.Database.MigrateAsync(TestCancellationToken);
+                return;
+            }
+            catch (NpgsqlException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
+    }
+
+    private static string SanitizeIdentifier(string identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier))
+        {
+            throw new ArgumentException("Identifier cannot be null or whitespace.", nameof(identifier));
+        }
+
+        if (identifier.Any(ch => !(char.IsLetterOrDigit(ch) || ch == '_')))
+        {
+            throw new ArgumentException($"Invalid character in identifier '{identifier}'.", nameof(identifier));
+        }
+
+        return identifier;
+    }
 }
+#endregion
+

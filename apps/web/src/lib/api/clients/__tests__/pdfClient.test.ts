@@ -5,6 +5,7 @@
  * Tests: Processing progress, cancellation, download URLs, edge cases
  */
 
+import type { Mock } from 'vitest';
 import { createPdfClient } from '../pdfClient';
 import { HttpClient } from '../../core/httpClient';
 import { getApiBase } from '../../core/httpClient';

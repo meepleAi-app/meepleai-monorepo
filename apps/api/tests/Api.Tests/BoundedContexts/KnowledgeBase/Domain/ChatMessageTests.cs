@@ -89,3 +89,4 @@ public class ChatMessageTests
         Assert.InRange(message.Timestamp, before, after);
     }
 }
+

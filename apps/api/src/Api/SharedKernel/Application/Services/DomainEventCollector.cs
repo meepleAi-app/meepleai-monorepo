@@ -9,8 +9,10 @@ namespace Api.SharedKernel.Application.Services;
 /// </summary>
 public sealed class DomainEventCollector : IDomainEventCollector
 {
+#pragma warning disable MA0158 // Use System.Threading.Lock
     private readonly List<IDomainEvent> _collectedEvents = new();
     private readonly object _lock = new();
+#pragma warning restore MA0158
 
     /// <summary>
     /// Collects domain events from an aggregate root.

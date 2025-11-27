@@ -423,3 +423,4 @@ public sealed class RegisterCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.DisplayName);
     }
 }
+

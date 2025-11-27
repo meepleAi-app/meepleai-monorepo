@@ -146,3 +146,4 @@ public class PdfDocumentBuilder
     /// </summary>
     public static implicit operator PdfDocument(PdfDocumentBuilder builder) => builder.Build();
 }
+

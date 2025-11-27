@@ -12,6 +12,7 @@ using DotNet.Testcontainers.Containers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Xunit;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
@@ -26,12 +27,12 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 [Trait("BoundedContext", "Administration")]
 public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 {
-    private IContainer _postgresContainer = null!;
+    private IContainer? _postgresContainer;
     private MeepleAiDbContext _dbContext = null!;
     private IServiceProvider _serviceProvider = null!;
     private readonly Action<string> _output;
 
-    private static CancellationToken TestCancellationToken => CancellationToken.None;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     /// <summary>
     /// Helper record to hold resolved test services.
@@ -60,22 +61,41 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     {
         _output("Initializing UpdateUserTier integration test infrastructure...");
 
-        // Start PostgreSQL container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "meepleai_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
+        // Prefer existing infra if provided
+        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
+        string connectionString;
 
-        await _postgresContainer.StartAsync(TestCancellationToken);
-        var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={containerPort};Database=meepleai_test;Username=postgres;Password=postgres;";
+        if (!string.IsNullOrWhiteSpace(externalConn))
+        {
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder(externalConn)
+            {
+                Database = "meepleai_test",
+                SslMode = Npgsql.SslMode.Disable,
+                KeepAlive = 30,
+                Pooling = false
+            };
+            connectionString = builder.ConnectionString;
+            _output("Using external TEST_POSTGRES_CONNSTRING for UpdateUserTier tests");
+        }
+        else
+        {
+            // Start PostgreSQL container
+            _postgresContainer = new ContainerBuilder()
+                .WithImage("postgres:16-alpine")
+                .WithEnvironment("POSTGRES_USER", "postgres")
+                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+                .WithEnvironment("POSTGRES_DB", "meepleai_test")
+                .WithPortBinding(5432, true)
+                .WithWaitStrategy(Wait.ForUnixContainer()
+                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+                .Build();
 
-        _output($"PostgreSQL started at localhost:{containerPort}");
+            await _postgresContainer.StartAsync(TestCancellationToken);
+            var containerPort = _postgresContainer.GetMappedPublicPort(5432);
+            connectionString = $"Host=localhost;Port={containerPort};Database=meepleai_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+
+            _output($"PostgreSQL started at localhost:{containerPort}");
+        }
 
         // Setup dependency injection
         var services = new ServiceCollection();
@@ -94,12 +114,13 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UpdateUserTierCommandHandler).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        // Apply migrations
-        await _dbContext.Database.MigrateAsync(TestCancellationToken);
+        // Apply migrations with simple retry to handle transient container readiness
+        await MigrateWithRetry(_dbContext);
         _output("Database migrations applied");
     }
 
@@ -138,7 +159,10 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 
         try
         {
-            await _postgresContainer.StopAsync(TestCancellationToken);
+            if (_postgresContainer != null)
+            {
+                await _postgresContainer.StopAsync(TestCancellationToken);
+            }
         }
         catch (Exception ex)
         {
@@ -148,7 +172,10 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 
         try
         {
-            await _postgresContainer.DisposeAsync();
+            if (_postgresContainer != null)
+            {
+                await _postgresContainer.DisposeAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -573,4 +600,22 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     }
 
     #endregion
+
+    private static async Task MigrateWithRetry(MeepleAiDbContext context)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await context.Database.MigrateAsync(TestCancellationToken);
+                return;
+            }
+            catch (NpgsqlException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
+    }
 }
+

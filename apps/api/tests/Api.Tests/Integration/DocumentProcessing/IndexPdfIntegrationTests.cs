@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Npgsql;
 using Testcontainers.Qdrant;
 using Xunit;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
@@ -116,7 +117,18 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                break;
+            }
+            catch (NpgsqlException) when (attempt < 2)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
 
         // Seed test data
         await SeedTestDataAsync();
@@ -345,7 +357,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 
         // Verify vector document created
         var vectorDoc = await _dbContext!.Set<VectorDocumentEntity>()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
         vectorDoc.Should().NotBeNull();
         vectorDoc!.IndexingStatus.Should().Be("completed");
         vectorDoc.ChunkCount.Should().BeGreaterThan(0);
@@ -417,7 +429,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 
         // Verify embeddings were generated (chunk count > 0)
         var vectorDoc = await _dbContext!.Set<VectorDocumentEntity>()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
         vectorDoc.Should().NotBeNull();
         vectorDoc!.ChunkCount.Should().BeGreaterThan(0);
         vectorDoc.EmbeddingModel.Should().Be("test-embedding-model");
@@ -448,8 +460,8 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             _serviceProvider!.GetRequiredService<ITextChunkingService>(),
             embeddingMock.Object,
-            _serviceProvider.GetRequiredService<IQdrantService>(),
-            _serviceProvider.GetRequiredService<ILogger<IndexPdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<IQdrantService>(),
+            _serviceProvider!.GetRequiredService<ILogger<IndexPdfCommandHandler>>()
         );
 
         var command = new IndexPdfCommand(pdfId.ToString());
@@ -487,7 +499,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 
         // Verify Qdrant indexing completed
         var vectorDoc = await _dbContext!.Set<VectorDocumentEntity>()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
         vectorDoc.Should().NotBeNull();
         vectorDoc!.IndexingStatus.Should().Be("completed");
     }
@@ -509,9 +521,9 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         var handler = new IndexPdfCommandHandler(
             _dbContext!,
             _serviceProvider!.GetRequiredService<ITextChunkingService>(),
-            _serviceProvider.GetRequiredService<IEmbeddingService>(),
+            _serviceProvider!.GetRequiredService<IEmbeddingService>(),
             qdrantMock.Object,
-            _serviceProvider.GetRequiredService<ILogger<IndexPdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<ILogger<IndexPdfCommandHandler>>()
         );
 
         var command = new IndexPdfCommand(pdfId.ToString());
@@ -554,7 +566,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 
         // Verify chunking worked
         var vectorDoc = await _dbContext!.Set<VectorDocumentEntity>()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
         vectorDoc.Should().NotBeNull();
         vectorDoc!.ChunkCount.Should().Be(result.ChunkCount);
         vectorDoc.TotalCharacters.Should().Be(largeText.Length);
@@ -597,12 +609,12 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 
         // Get original vector doc
         var originalVectorDoc = await _dbContext!.Set<VectorDocumentEntity>()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
         originalVectorDoc.Should().NotBeNull();
         var originalIndexedAt = originalVectorDoc!.IndexedAt;
 
         // Wait a moment to ensure timestamp difference
-        await Task.Delay(100);
+        await Task.Delay(100, TestCancellationToken);
 
         var handler = _serviceProvider!.GetRequiredService<IndexPdfCommandHandler>();
         var command = new IndexPdfCommand(pdfId.ToString());
@@ -616,7 +628,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 
         // Verify vector document updated (not recreated)
         var updatedVectorDoc = await _dbContext.Set<VectorDocumentEntity>()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
         updatedVectorDoc.Should().NotBeNull();
         updatedVectorDoc!.Id.Should().Be(originalVectorDoc.Id, "same entity should be updated");
         updatedVectorDoc.IndexedAt.Should().BeAfter(originalIndexedAt!.Value, "IndexedAt should be updated");
@@ -625,3 +637,4 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
 
     #endregion
 }
+

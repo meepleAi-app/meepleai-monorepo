@@ -1,3 +1,4 @@
+using System;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -15,6 +16,7 @@ using Api.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -32,23 +34,43 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
     private IServiceProvider? _serviceProvider;
     private readonly TestTimeProvider _timeProvider = new();
 
+    private IServiceProvider ServiceProvider => _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized.");
+    private MeepleAiDbContext DbContext => _dbContext ?? throw new InvalidOperationException("DbContext not initialized.");
+
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public async ValueTask InitializeAsync()
     {
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "auth_game_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
+        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
+        string connectionString;
 
-        await _postgresContainer.StartAsync(TestCancellationToken);
-        var containerPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={containerPort};Database=auth_game_test;Username=postgres;Password=postgres;";
+        if (!string.IsNullOrWhiteSpace(externalConn))
+        {
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder(externalConn)
+            {
+                Database = "auth_game_test",
+                SslMode = Npgsql.SslMode.Disable,
+                KeepAlive = 30,
+                Pooling = false
+            };
+            connectionString = builder.ConnectionString;
+        }
+        else
+        {
+            _postgresContainer = new ContainerBuilder()
+                .WithImage("postgres:16-alpine")
+                .WithEnvironment("POSTGRES_USER", "postgres")
+                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+                .WithEnvironment("POSTGRES_DB", "auth_game_test")
+                .WithPortBinding(5432, true)
+                .WithWaitStrategy(Wait.ForUnixContainer()
+                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+                .Build();
+
+            await _postgresContainer.StartAsync(TestCancellationToken);
+            var containerPort = _postgresContainer.GetMappedPublicPort(5432);
+            connectionString = $"Host=localhost;Port={containerPort};Database=auth_game_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+        }
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -65,7 +87,8 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddSingleton(_timeProvider);
+        services.AddSingleton<TestTimeProvider>(_timeProvider);
+        services.AddSingleton<TimeProvider>(_timeProvider);
 
         // Register domain event infrastructure
         services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
@@ -75,11 +98,22 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             config.RegisterServicesFromAssembly(typeof(Api.BoundedContexts.Authentication.Application.Commands.LoginCommandHandler).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
-        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+        _dbContext = ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Use EnsureCreated instead of Migrate to avoid migration ordering issues
         // See: docs/testing/sprint-5-integration-tests-plan.md for details
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                await DbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                break;
+            }
+            catch (Exception ex) when ((ex is NpgsqlException or InvalidOperationException) && attempt < 2)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -98,39 +132,39 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         }
     }
 
-    private async Task ResetDatabaseAsync()
-    {
-        var tableNames = await _dbContext!.Database
-            .SqlQueryRaw<string>(
-                @"SELECT tablename
+        private async Task ResetDatabaseAsync()
+        {
+            var tableNames = await DbContext.Database
+                .SqlQueryRaw<string>(
+                    @"SELECT tablename
                   FROM pg_tables
                   WHERE schemaname = 'public'
                   AND tablename != '__EFMigrationsHistory'")
-            .ToListAsync(TestCancellationToken);
+                .ToListAsync(TestCancellationToken);
 
-        if (tableNames.Count > 0)
-        {
-            await _dbContext.Database.ExecuteSqlRawAsync(
-                "SET session_replication_role = 'replica';",
-                TestCancellationToken);
-
-            try
+            if (tableNames.Count > 0)
             {
-                foreach (var tableName in tableNames)
+                await DbContext.Database.ExecuteSqlRawAsync(
+                    "SET session_replication_role = 'replica';",
+                    TestCancellationToken);
+
+                try
                 {
-                    await _dbContext.Database.ExecuteSqlRawAsync(
-                        $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
+                    foreach (var tableName in tableNames)
+                    {
+                        await DbContext.Database.ExecuteSqlRawAsync(
+                            $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
+                            TestCancellationToken);
+                    }
+                }
+                finally
+                {
+                    await DbContext.Database.ExecuteSqlRawAsync(
+                        "SET session_replication_role = 'origin';",
                         TestCancellationToken);
                 }
             }
-            finally
-            {
-                await _dbContext.Database.ExecuteSqlRawAsync(
-                    "SET session_replication_role = 'origin';",
-                    TestCancellationToken);
-            }
         }
-    }
 
     [Fact]
     public async Task AuthenticatedUser_CanCreateGameSession_WithValidSession()
@@ -138,14 +172,14 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var sessionRepository = _serviceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         var user = CreateTestUser("gamer@meepleai.dev", "Test Gamer");
         await userRepository.AddAsync(user, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var sessionToken = SessionToken.Generate();
         var session = new Session(
@@ -156,7 +190,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             timeProvider: _timeProvider
         );
         await sessionRepository.AddAsync(session, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -165,7 +199,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             playTime: new PlayTime(60, 120)
         );
         await gameRepository.AddAsync(game, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
         var players = new List<SessionPlayer>
@@ -178,7 +212,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         gameSession.Start();
 
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var loadedUser = await userRepository.GetByIdAsync(user.Id, TestCancellationToken);
@@ -201,10 +235,10 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var sessionRepository = _serviceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         // Use FakeTimeProvider to control time for expired session test
         var fakeTimeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
@@ -222,10 +256,10 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             timeProvider: fakeTimeProvider
         );
         await sessionRepository.AddAsync(session, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Clear change tracker to avoid "already tracked" error when reloading
-        _dbContext.ChangeTracker.Clear();
+        DbContext.ChangeTracker.Clear();
 
         var game = new Game(
             Guid.NewGuid(),
@@ -242,7 +276,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         );
         gameSession.Start();
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Advance time by 2 hours to expire the session
         fakeTimeProvider.Advance(TimeSpan.FromHours(2));
@@ -265,10 +299,10 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var sessionRepository = _serviceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         var userIds = new List<Guid>();
         var userNames = new[] { "Alice", "Bob", "Charlie" };
@@ -289,7 +323,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             );
             await sessionRepository.AddAsync(session, TestCancellationToken);
         }
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -298,7 +332,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             playTime: new PlayTime(30, 60)
         );
         await gameRepository.AddAsync(game, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
         var players = userNames.Select((name, index) => new SessionPlayer(name, index + 1)).ToList();
@@ -306,7 +340,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         gameSession.Start();
 
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         foreach (var userId in userIds)
@@ -328,10 +362,10 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var sessionRepository = _serviceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         var user = CreateTestUser("revoked@meepleai.dev", "Revoked User");
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -345,7 +379,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             timeProvider: _timeProvider
         );
         await sessionRepository.AddAsync(session, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -362,7 +396,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         );
         gameSession.Start();
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Revoke all user sessions after game started
         await sessionRepository.RevokeAllUserSessionsAsync(user.Id, TestCancellationToken);
@@ -391,3 +425,4 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         );
     }
 }
+

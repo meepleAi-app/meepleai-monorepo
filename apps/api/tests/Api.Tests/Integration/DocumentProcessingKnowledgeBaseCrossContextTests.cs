@@ -20,6 +20,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -34,11 +35,13 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
+    private IServiceProvider ServiceProvider => _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized");
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public async ValueTask InitializeAsync()
     {
+        // Always start isolated Postgres for this suite
         _postgresContainer = new ContainerBuilder()
             .WithImage("postgres:16-alpine")
             .WithEnvironment("POSTGRES_USER", "postgres")
@@ -52,6 +55,20 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await _postgresContainer.StartAsync(TestCancellationToken);
         var containerPort = _postgresContainer.GetMappedPublicPort(5432);
         var connectionString = $"Host=localhost;Port={containerPort};Database=doc_kb_test;Username=postgres;Password=postgres;";
+
+        // Enforce SSL disabled and stable connection settings
+        var enforcedBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SslMode = SslMode.Disable,
+            KeepAlive = 30,
+            Pooling = false,
+            Timeout = 15,
+            CommandTimeout = 30
+        };
+        enforcedBuilder.Host = string.IsNullOrWhiteSpace(enforcedBuilder.Host) || enforcedBuilder.Host == "localhost"
+            ? "127.0.0.1"
+            : enforcedBuilder.Host;
+        connectionString = enforcedBuilder.ConnectionString;
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -80,7 +97,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await EnsureCreatedWithRetry(_dbContext);
     }
 
     public async ValueTask DisposeAsync()
@@ -96,6 +113,23 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         {
             await _postgresContainer.StopAsync(TestCancellationToken);
             await _postgresContainer.DisposeAsync();
+        }
+    }
+
+    private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await context.Database.EnsureCreatedAsync(TestCancellationToken);
+                return;
+            }
+            catch (NpgsqlException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
         }
     }
 
@@ -119,9 +153,11 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             {
                 foreach (var tableName in tableNames)
                 {
-                    await _dbContext.Database.ExecuteSqlRawAsync(
-                        $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
-                        TestCancellationToken);
+                #pragma warning disable EF1002
+                await _dbContext.Database.ExecuteSqlRawAsync(
+                    $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
+                    TestCancellationToken);
+                #pragma warning restore EF1002
                 }
             }
             finally
@@ -139,9 +175,9 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var pdfRepository = _serviceProvider.GetRequiredService<IPdfDocumentRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var pdfRepository = ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
 
         var user = CreateTestUser("uploader@meepleai.dev", "Document Uploader");
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -183,10 +219,10 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var pdfRepository = _serviceProvider.GetRequiredService<IPdfDocumentRepository>();
-        var vectorRepository = _serviceProvider.GetRequiredService<IVectorDocumentRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var pdfRepository = ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
+        var vectorRepository = ServiceProvider.GetRequiredService<IVectorDocumentRepository>();
 
         var user = CreateTestUser("processor@meepleai.dev", "PDF Processor");
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -254,11 +290,11 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var pdfRepository = _serviceProvider.GetRequiredService<IPdfDocumentRepository>();
-        var vectorRepository = _serviceProvider.GetRequiredService<IVectorDocumentRepository>();
-        var chatThreadRepository = _serviceProvider.GetRequiredService<IChatThreadRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var pdfRepository = ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
+        var vectorRepository = ServiceProvider.GetRequiredService<IVectorDocumentRepository>();
+        var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("raguser@meepleai.dev", "RAG User");
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -335,9 +371,9 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var pdfRepository = _serviceProvider.GetRequiredService<IPdfDocumentRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var pdfRepository = ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
 
         var user1 = CreateTestUser("user1@meepleai.dev", "User One");
         var user2 = CreateTestUser("user2@meepleai.dev", "User Two");
@@ -407,3 +443,4 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         );
     }
 }
+

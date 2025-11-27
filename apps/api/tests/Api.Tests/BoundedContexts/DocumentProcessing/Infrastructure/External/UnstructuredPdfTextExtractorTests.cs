@@ -750,3 +750,4 @@ public class UnstructuredPdfTextExtractorTests
         Assert.Equal(ExtractionQuality.High, result.Quality);
     }
 }
+

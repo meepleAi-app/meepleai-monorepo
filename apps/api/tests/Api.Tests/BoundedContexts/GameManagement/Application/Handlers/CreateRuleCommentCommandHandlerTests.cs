@@ -198,3 +198,4 @@ public class CreateRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full comment workflow testing.
 }
+

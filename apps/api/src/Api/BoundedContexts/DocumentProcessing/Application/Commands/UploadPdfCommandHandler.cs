@@ -16,6 +16,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using System.Diagnostics;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
@@ -130,56 +131,70 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
             return new PdfUploadResult(false, $"Invalid file name: {ex.Message}", null);
         }
 
-        // Verify game exists
-        var game = await _db.Games
-            .Where(g => g.Id.ToString() == gameId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (game == null)
+        UserTier userTier;
+        Role userRole;
+        PdfUploadQuotaResult quotaResult;
+        string? userTierForLog = null;
+        try
         {
-            return new PdfUploadResult(false, "Game not found. Please select a valid game before uploading.", null);
+            // Verify game exists
+            var game = await _db.Games
+                .Where(g => g.Id.ToString() == gameId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (game == null)
+            {
+                return new PdfUploadResult(false, "Game not found. Please select a valid game before uploading.", null);
+            }
+
+            // Check upload quota (Admin and Editor bypass quota checks)
+            // PERF: Use AsNoTracking + Select for read-only query optimization
+            var user = await _db.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => new { u.Id, u.Tier, u.Role })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (user == null)
+            {
+                RecordUploadMetricSafely("user_not_found", file.Length);
+                _logger.LogError("User {UserId} not found during PDF upload", userId);
+                return new PdfUploadResult(false, "User not found. Please ensure you are authenticated.", null);
+            }
+
+            // Parse string properties to ValueObjects for quota service
+            userTier = UserTier.Parse(user.Tier);
+            userRole = Role.Parse(user.Role);
+            userTierForLog = userTier.Value;
+
+            quotaResult = await _quotaService.CheckQuotaAsync(
+                user.Id,
+                userTier,
+                userRole,
+                cancellationToken);
+
+            if (!quotaResult.Allowed)
+            {
+                RecordUploadMetricSafely("quota_exceeded", file.Length);
+                _logger.LogWarning(
+                    "PDF upload denied for user {UserId} ({Tier}): {Reason}",
+                    userId,
+                    userTierForLog,
+                    quotaResult.ErrorMessage);
+                return new PdfUploadResult(false, quotaResult.ErrorMessage!, null);
+            }
         }
-
-        // Check upload quota (Admin and Editor bypass quota checks)
-        // PERF: Use AsNoTracking + Select for read-only query optimization
-        var user = await _db.Users
-            .AsNoTracking()
-            .Where(u => u.Id == userId)
-            .Select(u => new { u.Id, u.Tier, u.Role })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (user == null)
+        catch (Exception ex) when (ex is ObjectDisposedException or Npgsql.NpgsqlException or DbUpdateException or InvalidOperationException)
         {
-            RecordUploadMetricSafely("user_not_found", file.Length);
-            _logger.LogError("User {UserId} not found during PDF upload", userId);
-            return new PdfUploadResult(false, "User not found. Please ensure you are authenticated.", null);
-        }
-
-        // Parse string properties to ValueObjects for quota service
-        var userTier = UserTier.Parse(user.Tier);
-        var userRole = Role.Parse(user.Role);
-
-        var quotaResult = await _quotaService.CheckQuotaAsync(
-            user.Id,
-            userTier,
-            userRole,
-            cancellationToken);
-
-        if (!quotaResult.Allowed)
-        {
-            RecordUploadMetricSafely("quota_exceeded", file.Length);
-            _logger.LogWarning(
-                "PDF upload denied for user {UserId} ({Tier}): {Reason}",
-                userId,
-                user.Tier,
-                quotaResult.ErrorMessage);
-            return new PdfUploadResult(false, quotaResult.ErrorMessage!, null);
+            RecordUploadMetricSafely("db_unavailable", file.Length);
+            _logger.LogError(ex, "Database unavailable during PDF upload for game {GameId}", gameId);
+            return new PdfUploadResult(false, "Database unavailable. Please retry the upload.", null);
         }
 
         _logger.LogDebug(
             "PDF upload quota check passed for user {UserId} ({Tier}): Daily {DailyUsed}/{DailyLimit}, Weekly {WeeklyUsed}/{WeeklyLimit}",
             userId,
-            user.Tier,
+            userTierForLog,
             quotaResult.DailyUploadsUsed,
             quotaResult.DailyLimit,
             quotaResult.WeeklyUploadsUsed,

@@ -117,8 +117,8 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            _logger.LogError(ex, "Concurrency conflict deleting PDF {PdfId}", pdfId);
-            throw new PdfStorageException("Failed to delete PDF: The PDF was modified by another operation.", ex);
+            _logger.LogWarning(ex, "Concurrency conflict deleting PDF {PdfId} - treating as already deleted", pdfId);
+            return new PdfDeleteResult(false, "PDF not found", null);
         }
         catch (DbUpdateException ex)
         {

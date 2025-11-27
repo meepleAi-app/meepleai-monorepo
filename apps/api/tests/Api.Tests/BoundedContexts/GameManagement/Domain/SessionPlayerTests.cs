@@ -107,3 +107,4 @@ public class SessionPlayerTests
         Assert.NotEqual(player1, player3);
     }
 }
+

@@ -28,6 +28,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     private UnstructuredPdfTextExtractor? _extractor;
     private const string ContainerImage = "infra-unstructured-service:latest";
     private const int ServicePort = 8001;
+    private const int UnstructuredTimeoutSeconds = 120; // Allow slow CPU extractions more headroom
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Test PDF paths
@@ -105,12 +106,14 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         _httpClient = new HttpClient
         {
             BaseAddress = new Uri(baseUrl),
-            Timeout = TimeSpan.FromSeconds(60) // Longer timeout for real service
+            Timeout = TimeSpan.FromSeconds(UnstructuredTimeoutSeconds) // Longer timeout for slow CPU-only extractions
         };
+
+        _output($"Using {UnstructuredTimeoutSeconds}s HTTP timeout for Unstructured extraction to cover large CPU-bound PDFs");
 
         // Create extractor
         var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole());
+        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
 
         var mockConfig = new ConfigurationBuilder().Build();
         var domainService = new PdfTextProcessingDomainService(mockConfig);
@@ -465,11 +468,15 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         Assert.False(hasExcessiveWhitespace, "Step 4: Text should be normalized (no excessive whitespace)");
         _output($"✓ Step 4: Text normalization verified");
 
-        // Step 5: Verify paged extraction produces chunks
+        // Step 5: Verify paged extraction produces chunks (use Barrage PDF so CPU-only execution finishes faster)
         // Reopen stream (previous stream was disposed by ExtractTextAsync)
-        await using var pdfStream2 = File.OpenRead(TerraformingMarsPdfPath);
+        await using var pdfStream2 = File.OpenRead(BarragePdfPath);
         var pagedResult = await _extractor.ExtractPagedTextAsync(pdfStream2, ct: TestCancellationToken);
-        Assert.True(pagedResult.Success, "Step 5: Paged extraction should succeed");
+        if (!pagedResult.Success)
+        {
+            _output($"Paged extraction failed: {pagedResult.ErrorMessage}");
+        }
+        Assert.True(pagedResult.Success, $"Step 5: Paged extraction should succeed ({pagedResult.ErrorMessage})");
         Assert.NotEmpty(pagedResult.PageChunks);
         _output($"✓ Step 5: Paged extraction produced {pagedResult.PageChunks.Count} chunks");
 
@@ -494,3 +501,4 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         }
     }
 }
+

@@ -404,3 +404,4 @@ public class ConfidenceValidationServiceTests
         Assert.Equal(ValidationSeverity.Warning, result.Severity);
     }
 }
+

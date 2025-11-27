@@ -129,12 +129,7 @@ describe('Animation Utilities', () => {
     });
 
     it('should have initial, animate, and exit states', () => {
-      const variants = [
-        VARIANTS.fadeIn,
-        VARIANTS.slideUp,
-        VARIANTS.slideDown,
-        VARIANTS.scaleIn,
-      ];
+      const variants = [VARIANTS.fadeIn, VARIANTS.slideUp, VARIANTS.slideDown, VARIANTS.scaleIn];
 
       variants.forEach(variant => {
         expect(variant).toHaveProperty('initial');
@@ -203,9 +198,9 @@ describe('Animation Utilities', () => {
     it('should allow importing all types', () => {
       // This test verifies that TypeScript compilation succeeds
       // The actual type checking happens at compile time
-      type AnimationDuration = typeof DURATIONS[keyof typeof DURATIONS];
-      type EasingFunction = typeof EASINGS[keyof typeof EASINGS];
-      type StaggerDelay = typeof STAGGER[keyof typeof STAGGER];
+      type AnimationDuration = (typeof DURATIONS)[keyof typeof DURATIONS];
+      type EasingFunction = (typeof EASINGS)[keyof typeof EASINGS];
+      type StaggerDelay = (typeof STAGGER)[keyof typeof STAGGER];
 
       const duration: AnimationDuration = DURATIONS.fast;
       const easing: EasingFunction = EASINGS.easeOut;
@@ -218,9 +213,9 @@ describe('Animation Utilities', () => {
   });
 
   describe('Tree-Shaking', () => {
-    it('should use named exports only', () => {
+    it('should use named exports only', async () => {
       // Verify no default exports (better for tree-shaking)
-      const animationsModule = require('../index');
+      const animationsModule = await import('../index');
       expect(animationsModule.default).toBeUndefined();
     });
   });

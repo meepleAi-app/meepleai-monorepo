@@ -1,6 +1,8 @@
+import type { Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
+import { retryWithBackoff } from '@/lib/retryUtils';
 
 // Mock dependencies
 vi.mock('@/lib/retryUtils', () => ({
@@ -386,8 +388,7 @@ describe('PdfUploadForm', () => {
       const user = userEvent.setup();
       const file = createPdfFile('test.pdf');
 
-      const { retryWithBackoff } = require('@/lib/retryUtils');
-      retryWithBackoff.mockImplementation(
+      (retryWithBackoff as Mock).mockImplementation(
         async (
           fn: () => Promise<unknown>,
           options: { onRetry: (error: Error, attempt: number, delay: number) => void }

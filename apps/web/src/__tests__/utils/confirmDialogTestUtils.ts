@@ -22,6 +22,8 @@
  * // ... expect action was not performed
  * ```
  */
+import type { Mock } from 'vitest';
+
 export function mockUseConfirmDialog(confirmValue: boolean = true) {
   const mockConfirm = vi.fn().mockResolvedValue(confirmValue);
   const { useConfirmDialog } = require("@/hooks/useConfirmDialog");

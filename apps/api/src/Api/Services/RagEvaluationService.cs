@@ -145,6 +145,7 @@ public class RagEvaluationService : IRagEvaluationService
     }
 
     /// <inheritdoc/>
+#pragma warning disable MA0051 // Method is too long
     public async Task<RagEvaluationReport> EvaluateAsync(
         RagEvaluationDataset dataset,
         int topK = 10,
@@ -176,7 +177,7 @@ public class RagEvaluationService : IRagEvaluationService
         // Evaluate each query
         foreach (var query in dataset.Queries)
         {
-            var queryResult = await EvaluateQueryAsync(query, topK, ct);
+            var queryResult = await EvaluateQueryAsync(query, topK, ct).ConfigureAwait(false);
             queryResults.Add(queryResult);
 
             if (ct.IsCancellationRequested)
@@ -290,6 +291,7 @@ public class RagEvaluationService : IRagEvaluationService
 
         return report;
     }
+#pragma warning restore MA0051 // Method is too long
 
     /// <summary>
     /// Evaluate a single query
@@ -304,7 +306,7 @@ public class RagEvaluationService : IRagEvaluationService
         try
         {
             // Step 1: Generate embedding for query
-            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query.Query, ct);
+            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query.Query, ct).ConfigureAwait(false);
 
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
             {
@@ -322,11 +324,11 @@ public class RagEvaluationService : IRagEvaluationService
             }
 
             // Step 2: Search Qdrant
-            var searchResult = await _qdrantService.SearchAsync(
-                query.GameId,
-                embeddingResult.Embeddings[0],
-                limit: topK,
-                ct: ct);
+        var searchResult = await _qdrantService.SearchAsync(
+            query.GameId,
+            embeddingResult.Embeddings[0],
+            limit: topK,
+            ct: ct).ConfigureAwait(false);
 
             stopwatch.Stop();
 
@@ -411,7 +413,7 @@ public class RagEvaluationService : IRagEvaluationService
     /// <summary>
     /// Calculate Precision@K: (# relevant docs in top K) / K
     /// </summary>
-    private double CalculatePrecisionAtK(List<string> retrievedDocIds, HashSet<string> relevantDocIds, int k)
+    private static double CalculatePrecisionAtK(List<string> retrievedDocIds, HashSet<string> relevantDocIds, int k)
     {
         if (k <= 0 || retrievedDocIds.Count == 0)
         {
@@ -428,7 +430,7 @@ public class RagEvaluationService : IRagEvaluationService
     /// Calculate Reciprocal Rank: 1 / (position of first relevant result)
     /// Returns 0 if no relevant results found
     /// </summary>
-    private double CalculateReciprocalRank(List<string> retrievedDocIds, HashSet<string> relevantDocIds)
+    private static double CalculateReciprocalRank(List<string> retrievedDocIds, HashSet<string> relevantDocIds)
     {
         for (int i = 0; i < retrievedDocIds.Count; i++)
         {
@@ -444,7 +446,7 @@ public class RagEvaluationService : IRagEvaluationService
     /// <summary>
     /// Calculate percentile value from sorted list
     /// </summary>
-    private double CalculatePercentile(List<double> sortedValues, int percentile)
+    private static double CalculatePercentile(List<double> sortedValues, int percentile)
     {
         if (sortedValues.Count == 0)
         {
@@ -491,40 +493,43 @@ public class RagEvaluationService : IRagEvaluationService
         sb.AppendLine("# RAG Evaluation Report");
         sb.AppendLine();
         sb.AppendLine($"**Dataset:** {report.DatasetName}");
-        sb.AppendLine($"**Evaluated:** {report.EvaluatedAt:yyyy-MM-dd HH:mm:ss} UTC");
-        sb.AppendLine($"**Status:** {(report.PassedQualityGates ? "✅ PASSED" : "❌ FAILED")}");
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "**Evaluated:** {0:yyyy-MM-dd HH:mm:ss} UTC", report.EvaluatedAt));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "**Status:** {0}", report.PassedQualityGates ? "✅ PASSED" : "❌ FAILED"));
         sb.AppendLine();
 
         sb.AppendLine("## Summary");
         sb.AppendLine();
-        sb.AppendLine($"- **Total Queries:** {report.TotalQueries}");
-        sb.AppendLine($"- **Successful:** {report.SuccessfulQueries} ({(double)report.SuccessfulQueries / report.TotalQueries:P2})");
-        sb.AppendLine($"- **Failed:** {report.FailedQueries}");
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Total Queries:** {0}", report.TotalQueries));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "- **Successful:** {0} ({1:P2})", report.SuccessfulQueries, (double)report.SuccessfulQueries / report.TotalQueries));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "- **Failed:** {0}", report.FailedQueries));
         sb.AppendLine();
 
         sb.AppendLine("## Information Retrieval Metrics");
         sb.AppendLine();
         sb.AppendLine("| Metric | Value |");
         sb.AppendLine("|--------|-------|");
-        sb.AppendLine($"| Mean Reciprocal Rank (MRR) | {report.MeanReciprocalRank:F4} |");
-        sb.AppendLine($"| Precision@1 | {report.AvgPrecisionAt1:F4} |");
-        sb.AppendLine($"| Precision@3 | {report.AvgPrecisionAt3:F4} |");
-        sb.AppendLine($"| Precision@5 | {report.AvgPrecisionAt5:F4} |");
-        sb.AppendLine($"| Precision@10 | {report.AvgPrecisionAt10:F4} |");
-        sb.AppendLine($"| Recall@K | {report.AvgRecallAtK:F4} |");
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Mean Reciprocal Rank (MRR) | {0:F4} |", report.MeanReciprocalRank));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Precision@1 | {0:F4} |", report.AvgPrecisionAt1));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Precision@3 | {0:F4} |", report.AvgPrecisionAt3));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Precision@5 | {0:F4} |", report.AvgPrecisionAt5));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Precision@10 | {0:F4} |", report.AvgPrecisionAt10));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Recall@K | {0:F4} |", report.AvgRecallAtK));
         sb.AppendLine();
 
         sb.AppendLine("## Performance Metrics");
         sb.AppendLine();
         sb.AppendLine("| Metric | Value |");
         sb.AppendLine("|--------|-------|");
-        sb.AppendLine($"| Average Latency | {report.AvgLatencyMs:F2} ms |");
-        sb.AppendLine($"| Latency p50 (median) | {report.LatencyP50:F2} ms |");
-        sb.AppendLine($"| Latency p95 | {report.LatencyP95:F2} ms |");
-        sb.AppendLine($"| Latency p99 | {report.LatencyP99:F2} ms |");
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Average Latency | {0:F2} ms |", report.AvgLatencyMs));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Latency p50 (median) | {0:F2} ms |", report.LatencyP50));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Latency p95 | {0:F2} ms |", report.LatencyP95));
+        sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Latency p99 | {0:F2} ms |", report.LatencyP99));
         if (report.AvgConfidence.HasValue)
         {
-            sb.AppendLine($"| Average Confidence | {report.AvgConfidence.Value:F4} |");
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "| Average Confidence | {0:F4} |", report.AvgConfidence.Value));
         }
         sb.AppendLine();
 
@@ -552,7 +557,8 @@ public class RagEvaluationService : IRagEvaluationService
         foreach (var query in slowestQueries)
         {
             var queryText = query.Query.Length > 50 ? query.Query.Substring(0, 47) + "..." : query.Query;
-            sb.AppendLine($"| {query.QueryId} | {queryText} | {query.LatencyMs:F2} |");
+            sb.AppendLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "| {0} | {1} | {2:F2} |", query.QueryId, queryText, query.LatencyMs));
         }
         sb.AppendLine();
 

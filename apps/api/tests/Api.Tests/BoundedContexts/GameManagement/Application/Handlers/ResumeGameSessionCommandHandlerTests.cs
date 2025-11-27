@@ -50,7 +50,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -85,7 +85,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("InProgress", result.Status);
@@ -114,7 +114,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("InProgress", result.Status);
@@ -141,7 +141,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("InProgress", result.Status);
@@ -172,7 +172,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act - Resume from second pause
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("InProgress", result.Status);
@@ -196,7 +196,7 @@ public class ResumeGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains($"Session with ID {sessionId} not found", exception.Message);
 
@@ -223,7 +223,7 @@ public class ResumeGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains("Cannot resume session in Setup status", exception.Message);
 
@@ -251,7 +251,7 @@ public class ResumeGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains("Cannot resume session in InProgress status", exception.Message);
     }
@@ -274,7 +274,7 @@ public class ResumeGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains("Cannot resume session in Completed status", exception.Message);
     }
@@ -307,7 +307,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All metadata except status should be unchanged
         Assert.Equal(sessionId.ToString(), result.Id.ToString());
@@ -360,3 +360,4 @@ public class ResumeGameSessionCommandHandlerTests
 
     #endregion
 }
+

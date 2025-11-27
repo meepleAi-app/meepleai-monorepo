@@ -170,3 +170,4 @@ public sealed class Enable2FACommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.TotpCode);
     }
 }
+

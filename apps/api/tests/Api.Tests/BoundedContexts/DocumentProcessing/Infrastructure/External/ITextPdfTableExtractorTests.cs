@@ -88,7 +88,7 @@ public class ITextPdfTableExtractorTests
     public async Task ExtractTablesAsync_WithNullFilePath_ReturnsFailureResult()
     {
         // Act
-        var result = await _extractor.ExtractTablesAsync(null!, true, CancellationToken.None);
+        var result = await _extractor.ExtractTablesAsync(null!, true, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -99,7 +99,7 @@ public class ITextPdfTableExtractorTests
     public async Task ExtractTablesAsync_WithEmptyFilePath_ReturnsFailureResult()
     {
         // Act
-        var result = await _extractor.ExtractTablesAsync("", true, CancellationToken.None);
+        var result = await _extractor.ExtractTablesAsync("", true, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -110,7 +110,7 @@ public class ITextPdfTableExtractorTests
     public async Task ExtractTablesAsync_WithWhitespaceFilePath_ReturnsFailureResult()
     {
         // Act
-        var result = await _extractor.ExtractTablesAsync("   ", true, CancellationToken.None);
+        var result = await _extractor.ExtractTablesAsync("   ", true, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -124,7 +124,7 @@ public class ITextPdfTableExtractorTests
         var nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent-{Guid.NewGuid()}.pdf");
 
         // Act
-        var result = await _extractor.ExtractTablesAsync(nonExistentPath, true, CancellationToken.None);
+        var result = await _extractor.ExtractTablesAsync(nonExistentPath, true, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -139,7 +139,7 @@ public class ITextPdfTableExtractorTests
     public async Task ExtractStructuredContentAsync_WithNullFilePath_ReturnsFailureResult()
     {
         // Act
-        var result = await _extractor.ExtractStructuredContentAsync(null!, CancellationToken.None);
+        var result = await _extractor.ExtractStructuredContentAsync(null!, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -150,7 +150,7 @@ public class ITextPdfTableExtractorTests
     public async Task ExtractStructuredContentAsync_WithEmptyFilePath_ReturnsFailureResult()
     {
         // Act
-        var result = await _extractor.ExtractStructuredContentAsync("", CancellationToken.None);
+        var result = await _extractor.ExtractStructuredContentAsync("", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -164,7 +164,7 @@ public class ITextPdfTableExtractorTests
         var nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent-{Guid.NewGuid()}.pdf");
 
         // Act
-        var result = await _extractor.ExtractStructuredContentAsync(nonExistentPath, CancellationToken.None);
+        var result = await _extractor.ExtractStructuredContentAsync(nonExistentPath, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -417,3 +417,4 @@ startxref
 
     #endregion
 }
+

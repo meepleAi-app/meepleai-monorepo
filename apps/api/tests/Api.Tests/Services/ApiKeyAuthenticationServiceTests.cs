@@ -3,6 +3,7 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
+using System.Threading;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -13,13 +14,15 @@ namespace Api.Tests.Services;
 
 public class ApiKeyAuthenticationServiceTests
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     [Fact]
     public async Task GenerateApiKeyAsync_InvalidUserId_Throws()
     {
         await using var context = CreateDbContext();
         var service = CreateService(context);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => service.GenerateApiKeyAsync("not-a-guid", "Test", new[] { "read" }));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.GenerateApiKeyAsync("not-a-guid", "Test", new[] { "read" }, null, "live", TestCancellationToken));
     }
 
     [Fact]
@@ -36,13 +39,13 @@ public class ApiKeyAuthenticationServiceTests
             Role = "user",
             CreatedAt = DateTime.UtcNow
         });
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
-        var (plaintext, entity) = await service.GenerateApiKeyAsync(userId.ToString(), "My Key", new[] { "read" });
+        var (plaintext, entity) = await service.GenerateApiKeyAsync(userId.ToString(), "My Key", new[] { "read" }, null, "live", TestCancellationToken);
         context.ApiKeys.Add(entity);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
-        var result = await service.ValidateApiKeyAsync(plaintext);
+        var result = await service.ValidateApiKeyAsync(plaintext, TestCancellationToken);
 
         Assert.True(result.IsValid);
         Assert.Equal(userId.ToString(), result.UserId);
@@ -55,7 +58,7 @@ public class ApiKeyAuthenticationServiceTests
         await using var context = CreateDbContext();
         var service = CreateService(context);
 
-        var success = await service.RevokeApiKeyAsync("not-a-guid", Guid.NewGuid().ToString());
+        var success = await service.RevokeApiKeyAsync("not-a-guid", Guid.NewGuid().ToString(), TestCancellationToken);
 
         Assert.False(success);
     }
@@ -90,3 +93,4 @@ public class ApiKeyAuthenticationServiceTests
         public bool VerifySecret(string secret, string storedHash) => storedHash == HashSecret(secret);
     }
 }
+

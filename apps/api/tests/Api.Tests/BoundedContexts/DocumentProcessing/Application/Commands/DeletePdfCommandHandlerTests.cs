@@ -211,3 +211,4 @@ public class DeletePdfCommandHandlerTests
     // should be in integration test suite due to DbContext and multi-service complexity.
     // See integration-tests.yml workflow.
 }
+

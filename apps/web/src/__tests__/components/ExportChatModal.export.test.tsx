@@ -7,6 +7,7 @@
  * Target Coverage: 90%+ (from 30.6%)
  */
 
+import type { Mock } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportChatModal } from '../../components/ExportChatModal';
@@ -28,6 +29,25 @@ vi.mock('@/lib/api', () => ({
 
 const mockApi = api as Mocked<typeof api>;
 
+describe('ExportChatModal - Export Operations', () => {
+  const mockOnClose = vi.fn();
+  const defaultProps = {
+    isOpen: true,
+    onClose: mockOnClose,
+    chatId: 'chat-123',
+    gameName: 'Chess',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (mockApi.chat.exportChat as Mock).mockResolvedValue(undefined);
+  });
+
+  /**
+   * Test Group: Export Error Handling
+   */
+  describe('Export Error Handling', () => {
+    it('displays error message when export fails', async () => {
       (mockApi.chat.exportChat as Mock).mockRejectedValue(new Error('Export failed'));
       render(<ExportChatModal {...defaultProps} />);
 

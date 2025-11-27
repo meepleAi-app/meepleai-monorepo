@@ -51,7 +51,8 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
         }
 
         // Validate outcome value if provided
-        if (!string.IsNullOrWhiteSpace(request.Outcome) && !ValidOutcomes.Contains(request.Outcome))
+        if (!string.IsNullOrWhiteSpace(request.Outcome) &&
+            !ValidOutcomes.Contains(request.Outcome))
         {
             throw new ArgumentException(
                 $"Invalid outcome '{request.Outcome}'. Must be one of: {string.Join(", ", ValidOutcomes)}",
@@ -63,7 +64,8 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
             var userGuid = Guid.Parse(request.UserId);
             var messageGuid = Guid.Parse(request.MessageId);
             var existing = await _db.AgentFeedbacks
-                .FirstOrDefaultAsync(f => f.MessageId == messageGuid && f.UserId == userGuid, cancellationToken);
+                .FirstOrDefaultAsync(f => f.MessageId == messageGuid && f.UserId == userGuid, cancellationToken)
+                .ConfigureAwait(false);
 
             // If outcome is null/empty, remove existing feedback
             if (string.IsNullOrWhiteSpace(request.Outcome))
@@ -71,7 +73,7 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
                 if (existing != null)
                 {
                     _db.AgentFeedbacks.Remove(existing);
-                    await _db.SaveChangesAsync(cancellationToken);
+                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
                     _logger.LogInformation(
                         "Removed agent feedback for message {MessageId} by user {UserId}",
@@ -120,7 +122,7 @@ public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provide
                     request.Outcome);
             }
 
-            await _db.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         // Justification: CQRS handler boundary - log and rethrow for caller handling

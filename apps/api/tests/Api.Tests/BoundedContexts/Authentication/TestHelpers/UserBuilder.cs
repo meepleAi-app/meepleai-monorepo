@@ -158,3 +158,4 @@ public class UserBuilder
     /// </summary>
     public static User CreateEditor() => new UserBuilder().AsEditor().Build();
 }
+

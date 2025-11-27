@@ -40,7 +40,7 @@ public class LogWorkflowErrorCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -74,7 +74,7 @@ public class LogWorkflowErrorCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -95,7 +95,7 @@ public class LogWorkflowErrorCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.CreatedAt);
@@ -115,7 +115,7 @@ public class LogWorkflowErrorCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, result.RetryCount);
@@ -134,7 +134,7 @@ public class LogWorkflowErrorCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(longMessage, result.ErrorMessage);
@@ -159,7 +159,7 @@ public class LogWorkflowErrorCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -212,10 +212,11 @@ public class LogWorkflowErrorCommandHandlerTests
         );
 
         // Act
-        var result1 = await _handler.Handle(command1, CancellationToken.None);
-        var result2 = await _handler.Handle(command2, CancellationToken.None);
+        var result1 = await _handler.Handle(command1, TestContext.Current.CancellationToken);
+        var result2 = await _handler.Handle(command2, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEqual(result1.Id, result2.Id);
     }
 }
+

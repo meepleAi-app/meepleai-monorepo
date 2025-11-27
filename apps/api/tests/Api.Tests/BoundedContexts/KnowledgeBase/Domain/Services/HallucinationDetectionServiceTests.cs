@@ -469,3 +469,4 @@ public class HallucinationDetectionServiceTests
         Assert.Equal(HallucinationSeverity.High, result.Severity);
     }
 }
+

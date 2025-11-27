@@ -22,57 +22,88 @@ const mockAdmin = {
   id: 'admin-test-1',
   email: 'admin@meepleai.dev',
   displayName: 'Admin User',
-  role: 'Admin'
+  role: 'Admin',
 };
 
 const mockEditor = {
   id: 'editor-test-1',
   email: 'editor@meepleai.dev',
   displayName: 'Editor User',
-  role: 'Editor'
+  role: 'Editor',
 };
 
 const mockUser = {
   id: 'user-test-1',
   email: 'user@meepleai.dev',
   displayName: 'Regular User',
-  role: 'User'
+  role: 'User',
 };
 
 /**
  * Mock authenticated session for a user
+ * Sets both API mock and cookies for middleware compatibility
  */
 async function mockAuthSession(page: Page, user: typeof mockAdmin) {
-  await page.route(`${apiBase}/api/v1/auth/me`, async (route) => {
+  // Mock API response
+  await page.route(`${apiBase}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
         user,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-      })
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
     });
   });
+
+  // Set cookies for middleware (server-side) to work
+  await page.context().addCookies([
+    {
+      name: 'meepleai_session',
+      value: 'mock-session-token',
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      secure: false,
+      sameSite: 'Lax',
+    },
+    {
+      name: 'meepleai_user_role',
+      value: user.role.toLowerCase(),
+      domain: 'localhost',
+      path: '/',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'Lax',
+    },
+  ]);
 }
 
 /**
  * Mock unauthenticated session (401 response)
+ * Clears cookies to ensure clean state
  */
 async function mockUnauthenticated(page: Page) {
-  await page.route(`${apiBase}/api/v1/auth/me`, async (route) => {
+  // Mock API response
+  await page.route(`${apiBase}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 401,
       contentType: 'application/json',
-      body: JSON.stringify({ error: 'Unauthorized' })
+      body: JSON.stringify({ error: 'Unauthorized' }),
     });
   });
+
+  // Clear auth cookies to ensure middleware sees unauthenticated state
+  await page.context().clearCookies();
 }
 
 test.describe('Authentication Flows', () => {
-
   test('should successfully login with valid credentials', async ({ page }) => {
+    // Mock unauthenticated state initially
+    await mockUnauthenticated(page);
+
     // Mock login endpoint
-    await page.route(`${apiBase}/api/v1/auth/login`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/login`, async route => {
       const postData = route.request().postDataJSON();
 
       if (postData.email === 'admin@meepleai.dev' && postData.password === 'Demo123!') {
@@ -81,14 +112,14 @@ test.describe('Authentication Flows', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             user: mockAdmin,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-          })
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          }),
         });
       } else {
         await route.fulfill({
           status: 401,
           contentType: 'application/json',
-          body: JSON.stringify({ error: 'Invalid credentials' })
+          body: JSON.stringify({ error: 'Invalid credentials' }),
         });
       }
     });
@@ -109,18 +140,23 @@ test.describe('Authentication Flows', () => {
 
     // Verify no error messages
     const errorElement = page.locator('text=/invalid|error|failed/i').first();
-    await expect(errorElement).not.toBeVisible({ timeout: 2000 }).catch(() => {
-      // Error element might not exist at all, which is fine
-    });
+    await expect(errorElement)
+      .not.toBeVisible({ timeout: 2000 })
+      .catch(() => {
+        // Error element might not exist at all, which is fine
+      });
   });
 
   test('should show error with invalid credentials', async ({ page }) => {
+    // Mock unauthenticated state initially
+    await mockUnauthenticated(page);
+
     // Mock failed login
-    await page.route(`${apiBase}/api/v1/auth/login`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/login`, async route => {
       await route.fulfill({
         status: 401,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Invalid credentials' })
+        body: JSON.stringify({ error: 'Invalid credentials' }),
       });
     });
 
@@ -145,11 +181,11 @@ test.describe('Authentication Flows', () => {
     await mockAuthSession(page, mockAdmin);
 
     // Mock logout endpoint
-    await page.route(`${apiBase}/api/v1/auth/logout`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/logout`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ ok: true })
+        body: JSON.stringify({ ok: true }),
       });
     });
 
@@ -157,7 +193,9 @@ test.describe('Authentication Flows', () => {
     await page.goto('/upload');
 
     // Find and click logout button (typically in nav or user menu)
-    const logoutButton = page.locator('button:has-text("Logout"), button:has-text("Log out"), a:has-text("Logout")').first();
+    const logoutButton = page
+      .locator('button:has-text("Logout"), button:has-text("Log out"), a:has-text("Logout")')
+      .first();
 
     if (await logoutButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await logoutButton.click();
@@ -171,7 +209,6 @@ test.describe('Authentication Flows', () => {
 });
 
 test.describe('SSR Auth Protection', () => {
-
   test('should redirect unauthenticated users from /upload to /login', async ({ page }) => {
     await mockUnauthenticated(page);
 
@@ -210,7 +247,7 @@ test.describe('SSR Auth Protection', () => {
     await mockAuthSession(page, mockAdmin);
 
     // Mock games endpoint for upload page
-    await page.route(`${apiBase}/api/v1/games*`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games*`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -219,8 +256,8 @@ test.describe('SSR Auth Protection', () => {
           totalCount: 0,
           pageNumber: 1,
           pageSize: 10,
-          totalPages: 0
-        })
+          totalPages: 0,
+        }),
       });
     });
 
@@ -235,7 +272,7 @@ test.describe('SSR Auth Protection', () => {
     await mockAuthSession(page, mockEditor);
 
     // Mock games endpoint
-    await page.route(`${apiBase}/api/v1/games*`, async (route) => {
+    await page.route(`${apiBase}/api/v1/games*`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -244,8 +281,8 @@ test.describe('SSR Auth Protection', () => {
           totalCount: 0,
           pageNumber: 1,
           pageSize: 10,
-          totalPages: 0
-        })
+          totalPages: 0,
+        }),
       });
     });
 
@@ -268,17 +305,14 @@ test.describe('SSR Auth Protection', () => {
 });
 
 test.describe('Role-Based Authorization', () => {
-
   test('should block non-admin users from /admin pages', async ({ page }) => {
     await mockAuthSession(page, mockEditor); // Editor, not admin
 
     await page.goto('/admin');
 
     // Should redirect to home (not login, since user is authenticated)
-    await page.waitForTimeout(500);
-    const url = page.url();
-    expect(url).not.toContain('/admin');
-    expect(url).toMatch(/\/(login|)$/); // Home or login
+    await page.waitForURL('http://localhost:3000/', { timeout: 5000 });
+    expect(page.url()).toBe('http://localhost:3000/');
   });
 
   test('should block regular users from /admin pages', async ({ page }) => {
@@ -287,24 +321,23 @@ test.describe('Role-Based Authorization', () => {
     await page.goto('/admin');
 
     // Should redirect to home
-    await page.waitForTimeout(500);
-    const url = page.url();
-    expect(url).not.toContain('/admin');
+    await page.waitForURL('http://localhost:3000/', { timeout: 5000 });
+    expect(page.url()).toBe('http://localhost:3000/');
   });
 
   test('should allow admin users to access /admin pages', async ({ page }) => {
     await mockAuthSession(page, mockAdmin);
 
     // Mock admin stats endpoint
-    await page.route(`${apiBase}/api/v1/admin/stats`, async (route) => {
+    await page.route(`${apiBase}/api/v1/admin/stats`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           totalUsers: 10,
           totalGames: 5,
-          totalQueries: 100
-        })
+          totalQueries: 100,
+        }),
       });
     });
 
@@ -329,7 +362,7 @@ test.describe('Role-Based Authorization', () => {
     await mockAuthSession(page, mockAdmin);
 
     // Mock users endpoint
-    await page.route(`${apiBase}/api/v1/admin/users*`, async (route) => {
+    await page.route(`${apiBase}/api/v1/admin/users*`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -338,8 +371,8 @@ test.describe('Role-Based Authorization', () => {
           totalCount: 1,
           pageNumber: 1,
           pageSize: 10,
-          totalPages: 1
-        })
+          totalPages: 1,
+        }),
       });
     });
 
@@ -352,12 +385,11 @@ test.describe('Role-Based Authorization', () => {
 });
 
 test.describe('User Profile Management', () => {
-
   test('should update user profile successfully', async ({ page }) => {
     await mockAuthSession(page, mockAdmin);
 
     // Mock profile endpoints
-    await page.route(`${apiBase}/api/v1/users/profile`, async (route) => {
+    await page.route(`${apiBase}/api/v1/users/profile`, async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -366,8 +398,8 @@ test.describe('User Profile Management', () => {
             Email: mockAdmin.email,
             DisplayName: mockAdmin.displayName,
             Role: mockAdmin.role,
-            IsTwoFactorEnabled: false
-          })
+            IsTwoFactorEnabled: false,
+          }),
         });
       } else if (route.request().method() === 'PUT') {
         await route.fulfill({
@@ -375,30 +407,30 @@ test.describe('User Profile Management', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             ok: true,
-            message: 'Profile updated successfully'
-          })
+            message: 'Profile updated successfully',
+          }),
         });
       }
     });
 
     // Mock 2FA status
-    await page.route(`${apiBase}/api/v1/auth/2fa/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/2fa/status`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           isEnabled: false,
-          backupCodesRemaining: 0
-        })
+          backupCodesRemaining: 0,
+        }),
       });
     });
 
     // Mock OAuth accounts
-    await page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async (route) => {
+    await page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([]),
       });
     });
 
@@ -408,7 +440,9 @@ test.describe('User Profile Management', () => {
     await page.waitForTimeout(1000);
 
     // Update display name
-    const displayNameInput = page.locator('input[name="displayName"], input[placeholder*="name" i]').first();
+    const displayNameInput = page
+      .locator('input[name="displayName"], input[placeholder*="name" i]')
+      .first();
     await displayNameInput.fill('Updated Admin Name');
 
     // Click save button
@@ -425,7 +459,7 @@ test.describe('User Profile Management', () => {
     await mockAuthSession(page, mockAdmin);
 
     // Mock profile endpoint
-    await page.route(`${apiBase}/api/v1/users/profile`, async (route) => {
+    await page.route(`${apiBase}/api/v1/users/profile`, async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -434,38 +468,38 @@ test.describe('User Profile Management', () => {
             Email: mockAdmin.email,
             DisplayName: mockAdmin.displayName,
             Role: mockAdmin.role,
-            IsTwoFactorEnabled: false
-          })
+            IsTwoFactorEnabled: false,
+          }),
         });
       }
     });
 
     // Mock password change endpoint
-    await page.route(`${apiBase}/api/v1/users/profile/password`, async (route) => {
+    await page.route(`${apiBase}/api/v1/users/profile/password`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           ok: true,
-          message: 'Password changed successfully'
-        })
+          message: 'Password changed successfully',
+        }),
       });
     });
 
     // Mock 2FA and OAuth endpoints
-    await page.route(`${apiBase}/api/v1/auth/2fa/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/2fa/status`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ isEnabled: false, backupCodesRemaining: 0 })
+        body: JSON.stringify({ isEnabled: false, backupCodesRemaining: 0 }),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async (route) => {
+    await page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([]),
       });
     });
 
@@ -473,12 +507,23 @@ test.describe('User Profile Management', () => {
     await page.waitForTimeout(1000);
 
     // Fill password change form
-    await page.fill('input[type="password"][placeholder*="current" i], input[name="currentPassword"]', 'OldPass123!');
-    await page.fill('input[type="password"][placeholder*="new" i]:not([placeholder*="confirm" i]), input[name="newPassword"]', 'NewPass123!');
-    await page.fill('input[type="password"][placeholder*="confirm" i], input[name="confirmPassword"]', 'NewPass123!');
+    await page.fill(
+      'input[type="password"][placeholder*="current" i], input[name="currentPassword"]',
+      'OldPass123!'
+    );
+    await page.fill(
+      'input[type="password"][placeholder*="new" i]:not([placeholder*="confirm" i]), input[name="newPassword"]',
+      'NewPass123!'
+    );
+    await page.fill(
+      'input[type="password"][placeholder*="confirm" i], input[name="confirmPassword"]',
+      'NewPass123!'
+    );
 
     // Click change password button
-    const changePasswordBtn = page.locator('button:has-text("Change Password"), button:has-text("Update Password")').first();
+    const changePasswordBtn = page
+      .locator('button:has-text("Change Password"), button:has-text("Update Password")')
+      .first();
     await changePasswordBtn.click();
 
     // Should show success message
@@ -491,7 +536,7 @@ test.describe('User Profile Management', () => {
     await mockAuthSession(page, mockAdmin);
 
     // Mock profile endpoint
-    await page.route(`${apiBase}/api/v1/users/profile`, async (route) => {
+    await page.route(`${apiBase}/api/v1/users/profile`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -499,25 +544,25 @@ test.describe('User Profile Management', () => {
           Email: mockAdmin.email,
           DisplayName: mockAdmin.displayName,
           Role: mockAdmin.role,
-          IsTwoFactorEnabled: false
-        })
+          IsTwoFactorEnabled: false,
+        }),
       });
     });
 
     // Mock 2FA and OAuth
-    await page.route(`${apiBase}/api/v1/auth/2fa/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/2fa/status`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ isEnabled: false, backupCodesRemaining: 0 })
+        body: JSON.stringify({ isEnabled: false, backupCodesRemaining: 0 }),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async (route) => {
+    await page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([]),
       });
     });
 
@@ -525,12 +570,23 @@ test.describe('User Profile Management', () => {
     await page.waitForTimeout(1000);
 
     // Fill with mismatched passwords
-    await page.fill('input[type="password"][placeholder*="current" i], input[name="currentPassword"]', 'OldPass123!');
-    await page.fill('input[type="password"][placeholder*="new" i]:not([placeholder*="confirm" i]), input[name="newPassword"]', 'NewPass123!');
-    await page.fill('input[type="password"][placeholder*="confirm" i], input[name="confirmPassword"]', 'DifferentPass123!');
+    await page.fill(
+      'input[type="password"][placeholder*="current" i], input[name="currentPassword"]',
+      'OldPass123!'
+    );
+    await page.fill(
+      'input[type="password"][placeholder*="new" i]:not([placeholder*="confirm" i]), input[name="newPassword"]',
+      'NewPass123!'
+    );
+    await page.fill(
+      'input[type="password"][placeholder*="confirm" i], input[name="confirmPassword"]',
+      'DifferentPass123!'
+    );
 
     // Click change password
-    const changePasswordBtn = page.locator('button:has-text("Change Password"), button:has-text("Update Password")').first();
+    const changePasswordBtn = page
+      .locator('button:has-text("Change Password"), button:has-text("Update Password")')
+      .first();
     await changePasswordBtn.click();
 
     // Should show error

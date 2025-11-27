@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Npgsql;
 using Xunit;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
@@ -102,7 +103,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await EnsureCreatedWithRetry(_dbContext);
 
         // Seed test data
         await SeedTestDataAsync();
@@ -257,7 +258,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         result.GameId.Should().NotBeNullOrEmpty();
 
         // Verify database state
-        var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId);
+        var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
         pdfExists.Should().BeFalse();
     }
 
@@ -321,8 +322,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         result.Success.Should().BeTrue();
 
         // Verify both PDF and Vector documents are deleted
-        var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId);
-        var vectorExists = await _dbContext.VectorDocuments.AnyAsync(v => v.PdfDocumentId == pdfId);
+        var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
+        var vectorExists = await _dbContext!.VectorDocuments.AnyAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
 
         pdfExists.Should().BeFalse();
         vectorExists.Should().BeFalse();
@@ -346,9 +347,9 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var handler = new DeletePdfCommandHandler(
             _dbContext!,
             scopeFactory,
-            _serviceProvider.GetRequiredService<IBlobStorageService>(),
-            _serviceProvider.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<IBlobStorageService>(),
+            _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
         );
 
         // Inject Qdrant mock into scope factory
@@ -363,9 +364,9 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         handler = new DeletePdfCommandHandler(
             _dbContext!,
             mockScopeFactory.Object,
-            _serviceProvider.GetRequiredService<IBlobStorageService>(),
-            _serviceProvider.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<IBlobStorageService>(),
+            _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -410,7 +411,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         notFoundCount.Should().Be(1, "the second deletion should get 'not found'");
 
         // Verify final database state
-        var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId);
+        var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
         pdfExists.Should().BeFalse("PDF should be deleted by the successful operation");
     }
 
@@ -442,15 +443,15 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var command = new DeletePdfCommand(pdfId.ToString());
 
         // Create a handler with a disposed DbContext to force DbUpdateException
-        var disposedContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+        var disposedContext = _serviceProvider!.GetRequiredService<MeepleAiDbContext>();
         await disposedContext.DisposeAsync();
 
         var faultyHandler = new DeletePdfCommandHandler(
             disposedContext,
-            _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-            _serviceProvider.GetRequiredService<IBlobStorageService>(),
-            _serviceProvider.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<IServiceScopeFactory>(),
+            _serviceProvider!.GetRequiredService<IBlobStorageService>(),
+            _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
         );
 
         // Act
@@ -489,8 +490,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             mockScopeFactory.Object,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
-            _serviceProvider.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -503,8 +504,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         result.Success.Should().BeTrue("deletion should succeed despite Qdrant failure");
 
         // Verify database cleanup happened
-        var pdfExists = await _dbContext.PdfDocuments.AnyAsync(p => p.Id == pdfId);
-        var vectorExists = await _dbContext.VectorDocuments.AnyAsync(v => v.PdfDocumentId == pdfId);
+        var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
+        var vectorExists = await _dbContext.VectorDocuments.AnyAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
 
         pdfExists.Should().BeFalse();
         vectorExists.Should().BeFalse();
@@ -526,8 +527,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             _serviceProvider!.GetRequiredService<IServiceScopeFactory>(),
             blobStorageMock.Object,
-            _serviceProvider.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -540,9 +541,27 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         result.Success.Should().BeTrue("deletion should succeed despite blob storage failure");
 
         // Verify database cleanup happened
-        var pdfExists = await _dbContext.PdfDocuments.AnyAsync(p => p.Id == pdfId);
+        var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
         pdfExists.Should().BeFalse();
     }
 
     #endregion
+
+    private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await context.Database.EnsureCreatedAsync(TestCancellationToken);
+                return;
+            }
+            catch (NpgsqlException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
+    }
 }
+

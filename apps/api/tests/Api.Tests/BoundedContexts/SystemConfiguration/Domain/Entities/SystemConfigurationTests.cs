@@ -93,3 +93,4 @@ public class SystemConfigurationTests
         Assert.True(config.LastToggledAt >= beforeActivate);
     }
 }
+

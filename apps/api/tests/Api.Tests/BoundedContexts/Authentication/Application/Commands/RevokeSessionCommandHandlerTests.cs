@@ -47,13 +47,13 @@ public class RevokeSessionCommandHandlerTests
         var command = new RevokeSessionCommand(sessionId, userId, false);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
         Assert.Null(result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, default), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -72,12 +72,12 @@ public class RevokeSessionCommandHandlerTests
         var command = new RevokeSessionCommand(sessionId, adminUserId, true);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
         Assert.Null(result.ErrorMessage);
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, default), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -96,13 +96,13 @@ public class RevokeSessionCommandHandlerTests
         var command = new RevokeSessionCommand(sessionId, differentUserId, false);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
         Assert.Contains("Unauthorized", result.ErrorMessage);
         // Session should NOT be updated when unauthorized (early return)
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -119,10 +119,11 @@ public class RevokeSessionCommandHandlerTests
         var command = new RevokeSessionCommand(sessionId, userId, false);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
         Assert.Equal("Session not found", result.ErrorMessage);
     }
 }
+

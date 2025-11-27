@@ -7,6 +7,7 @@
  * Target Coverage: 90%+ (from 30.6%)
  */
 
+import type { Mock } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportChatModal } from '../../components/ExportChatModal';
@@ -301,3 +302,17 @@ describe('ExportChatModal Component', () => {
     });
 
     it('does not close modal when export fails', async () => {
+      (mockApi.chat.exportChat as Mock).mockRejectedValue(new Error('Export failed'));
+      render(<ExportChatModal {...defaultProps} />);
+
+      const exportButton = screen.getByRole('button', { name: /esporta/i });
+      fireEvent.click(exportButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Export failed/)).toBeInTheDocument();
+      });
+
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+  });
+});

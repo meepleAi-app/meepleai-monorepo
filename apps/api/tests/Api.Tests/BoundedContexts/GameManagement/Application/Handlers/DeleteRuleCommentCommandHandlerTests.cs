@@ -159,3 +159,4 @@ public class DeleteRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full comment deletion workflow testing.
 }
+

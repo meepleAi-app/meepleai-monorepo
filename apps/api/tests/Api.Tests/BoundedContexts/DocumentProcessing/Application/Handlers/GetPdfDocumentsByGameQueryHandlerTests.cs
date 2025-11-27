@@ -57,7 +57,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var query = new GetPdfDocumentsByGameQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -101,7 +101,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var query = new GetPdfDocumentsByGameQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -124,7 +124,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var query = new GetPdfDocumentsByGameQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -169,7 +169,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var query = new GetPdfDocumentsByGameQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(4, result.Count);
@@ -208,7 +208,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var query = new GetPdfDocumentsByGameQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -234,7 +234,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var query = new GetPdfDocumentsByGameQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -255,7 +255,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var query = new GetPdfDocumentsByGameQuery(nonExistentGameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -301,3 +301,4 @@ public class GetPdfDocumentsByGameQueryHandlerTests
 
     #endregion
 }
+

@@ -58,7 +58,7 @@ public sealed class InvokeAgentCommandHandler
         try
         {
             // 1. Retrieve agent from repository
-            var agent = await _agentRepository.GetByIdAsync(request.AgentId, cancellationToken);
+            var agent = await _agentRepository.GetByIdAsync(request.AgentId, cancellationToken).ConfigureAwait(false);
             if (agent == null)
             {
                 throw new InvalidOperationException($"Agent not found: {request.AgentId}");
@@ -79,7 +79,7 @@ public sealed class InvokeAgentCommandHandler
             // 3. Generate query embedding
             var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
                 request.Query,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (embeddingResult == null || embeddingResult.Embeddings.Count == 0)
             {
@@ -114,7 +114,7 @@ public sealed class InvokeAgentCommandHandler
                 topK: topK,
                 minScore: minScore,
                 cancellationToken: cancellationToken
-            );
+            ).ConfigureAwait(false);
 
             if (searchResults.Count == 0)
             {
@@ -154,7 +154,7 @@ public sealed class InvokeAgentCommandHandler
             // Issue #1694: This handler performs vector search only (no LLM call), so token usage is empty.
             // LLM calls happen in AskQuestionQueryHandler/StreamQaQueryHandler which track tokens there.
             agent.RecordInvocation(request.Query, TokenUsage.Empty);
-            await _agentRepository.UpdateAsync(agent, cancellationToken);
+            await _agentRepository.UpdateAsync(agent, cancellationToken).ConfigureAwait(false);
 
             // 9. Build and return result
             var result = new AgentInvocationResult(

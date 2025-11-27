@@ -58,7 +58,7 @@ public class GetActiveAlertsQueryHandlerTests
             .ReturnsAsync(expectedAlerts);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -79,10 +79,11 @@ public class GetActiveAlertsQueryHandlerTests
             .ReturnsAsync(new List<AlertDto>());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
     }
 }
+

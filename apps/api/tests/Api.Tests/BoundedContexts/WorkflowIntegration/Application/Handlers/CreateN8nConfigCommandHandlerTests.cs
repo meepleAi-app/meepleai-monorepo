@@ -41,7 +41,7 @@ public class CreateN8nConfigCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -75,7 +75,7 @@ public class CreateN8nConfigCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -97,7 +97,7 @@ public class CreateN8nConfigCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEqual(Guid.Empty, result.Id);
@@ -116,7 +116,7 @@ public class CreateN8nConfigCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsActive);
@@ -135,7 +135,7 @@ public class CreateN8nConfigCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -184,7 +184,7 @@ public class CreateN8nConfigCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.CreatedAt);
@@ -192,3 +192,4 @@ public class CreateN8nConfigCommandHandlerTests
         Assert.True(result.CreatedAt <= DateTime.UtcNow.AddSeconds(1));
     }
 }
+

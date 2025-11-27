@@ -2,8 +2,8 @@
 import logging
 import torch
 from typing import List, Optional
-from transformers import AutoProcessor, AutoModelForVision2Seq
-from docling_core.types.doc.document import DocTagsDocument
+from transformers import AutoProcessor, AutoModelForImageTextToText
+from docling_core.types.doc.document import DoclingDocument, DocTagsDocument
 
 from ..domain.models import PageImage, PageExtractionResult
 from ..config import settings
@@ -56,7 +56,7 @@ class SmolDoclingAdapter:
 
             # Load model with specified dtype
             torch_dtype = getattr(torch, self.settings.torch_dtype)
-            self.model = AutoModelForVision2Seq.from_pretrained(
+            self.model = AutoModelForImageTextToText.from_pretrained(
                 self.settings.model_name,
                 torch_dtype=torch_dtype,
                 cache_dir=str(self.settings.model_cache_dir),
@@ -103,10 +103,19 @@ class SmolDoclingAdapter:
                 images=page_image.image, return_tensors="pt"
             ).to(self.device)
 
+            # Some processor outputs (rows/cols) are unused by the current model
+            # and would surface as "Unused model_kwargs" warnings/errors.
+            # Filter them out before generation.
+            filtered_inputs = {
+                key: value
+                for key, value in inputs.items()
+                if key not in {"rows", "cols"}
+            }
+
             # Generate DocTags with VLM
             with torch.no_grad():
                 generated_ids = self.model.generate(
-                    **inputs,
+                    **filtered_inputs,
                     max_new_tokens=self.settings.max_new_tokens,
                     do_sample=False,  # Deterministic output
                 )
@@ -170,15 +179,15 @@ class SmolDoclingAdapter:
             Markdown-formatted text
         """
         try:
-            # Use Docling library to convert
-            doc_tags_doc = DocTagsDocument(text=doctags_text)
-            docling_doc = doc_tags_doc.export_to_document()
-            markdown = docling_doc.export_to_markdown()
-            return markdown
+            doctags_doc = DocTagsDocument.from_doctags_and_image_pairs(
+                doctags=[doctags_text],
+                images=None,
+            )
+            docling_doc = DoclingDocument.load_from_doctags(doctags_doc)
+            return docling_doc.export_to_markdown()
 
         except Exception as e:
-            logger.warning(f"Markdown conversion failed, returning raw text: {e}")
-            # Fallback: return raw DocTags if conversion fails
+            logger.warning("Markdown conversion failed, returning raw DocTags text: %s", e)
             return doctags_text
 
     def _estimate_confidence(self, doctags_text: str) -> float:

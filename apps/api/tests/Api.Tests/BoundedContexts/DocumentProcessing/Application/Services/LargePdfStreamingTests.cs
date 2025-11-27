@@ -334,3 +334,4 @@ file class FakePagedExtractor : IPdfTextExtractor
         return Task.FromResult(result);
     }
 }
+

@@ -102,3 +102,4 @@ public class AuditLogTests
         Assert.True(auditLog.CreatedAt <= DateTime.UtcNow.AddSeconds(1));
     }
 }
+

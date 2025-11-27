@@ -7,6 +7,7 @@
  * Target Coverage: 90%+
  */
 
+import type { Mock } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ChatHistory } from '../../../components/chat/ChatHistory';
@@ -38,15 +39,36 @@ const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
   ...overrides,
 });
 
-      // Issue #858: Click the select button in ThreadListItem
-      const selectButton = screen.getByRole('button', { name: /Select thread: Test Agent/ });
-      fireEvent.click(selectButton);
+describe('ChatHistory - Loading States', () => {
+  let mockSelectChat: Mock;
+  let mockDeleteChat: Mock;
+  let originalConfirm: any;
 
-      await waitFor(() => {
-        expect(mockSelectChat).toHaveBeenCalledTimes(1);
-      });
-    });
+  beforeEach(() => {
+    mockSelectChat = vi.fn();
+    mockDeleteChat = vi.fn();
+    originalConfirm = window.confirm;
+    window.confirm = vi.fn(() => true);
+    vi.clearAllMocks();
   });
+
+  afterEach(() => {
+    window.confirm = originalConfirm;
+  });
+
+  /**
+   * Helper to setup chat context with default values
+   */
+  const setupChatContext = (overrides?: any) => {
+    mockUseChatContext.mockReturnValue({
+      chats: [],
+      activeChatId: null,
+      selectChat: mockSelectChat,
+      deleteChat: mockDeleteChat,
+      loading: { chats: false },
+      ...overrides,
+    });
+  };
 
   /**
    * Test Group: Chat Deletion
@@ -135,9 +157,7 @@ const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
     });
 
     it('renders with scrollable container', () => {
-      const chats = Array.from({ length: 10 }, (_, i) =>
-        createMockChatThread({ id: `chat-${i}` })
-      );
+      const chats = Array.from({ length: 10 }, (_, i) => createMockChatThread({ id: `chat-${i}` }));
       setupChatContext({ chats });
       render(<ChatHistory />);
 
@@ -218,13 +238,17 @@ const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
       setupChatContext({ chats: [] });
       const { rerender } = render(<ChatHistory />);
 
-      expect(screen.getByText('Nessun thread. Invia un messaggio per iniziare!')).toBeInTheDocument();
+      expect(
+        screen.getByText('Nessun thread. Invia un messaggio per iniziare!')
+      ).toBeInTheDocument();
 
       // Add threads
       setupChatContext({ chats: [createMockChatThread()] });
       rerender(<ChatHistory />);
 
-      expect(screen.queryByText('Nessun thread. Invia un messaggio per iniziare!')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Nessun thread. Invia un messaggio per iniziare!')
+      ).not.toBeInTheDocument();
       expect(screen.getByRole('list')).toBeInTheDocument();
     });
 
@@ -239,7 +263,9 @@ const createMockChatThread = (overrides?: Partial<ChatThread>): ChatThread => ({
       rerender(<ChatHistory />);
 
       expect(screen.queryByRole('list')).not.toBeInTheDocument();
-      expect(screen.getByText('Nessun thread. Invia un messaggio per iniziare!')).toBeInTheDocument();
+      expect(
+        screen.getByText('Nessun thread. Invia un messaggio per iniziare!')
+      ).toBeInTheDocument();
     });
 
     it('handles chat with missing optional properties', () => {

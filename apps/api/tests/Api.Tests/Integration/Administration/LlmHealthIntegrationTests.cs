@@ -106,7 +106,7 @@ public sealed class LlmHealthIntegrationTests
         var query = new GetLlmHealthQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -155,7 +155,7 @@ public sealed class LlmHealthIntegrationTests
         var query = new GetLlmHealthQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -182,7 +182,7 @@ public sealed class LlmHealthIntegrationTests
         var query = new GetLlmHealthQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -217,7 +217,7 @@ public sealed class LlmHealthIntegrationTests
         var query = new GetLlmHealthQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -262,7 +262,7 @@ public sealed class LlmHealthIntegrationTests
 
         // Act - Execute 5 concurrent health checks
         var tasks = Enumerable.Range(0, 5)
-            .Select(_ => Task.Run(async () => await handler.Handle(query, CancellationToken.None)))
+            .Select(_ => Task.Run(async () => await handler.Handle(query, TestContext.Current.CancellationToken)))
             .ToList();
 
         var results = await Task.WhenAll(tasks);
@@ -282,3 +282,4 @@ public sealed class LlmHealthIntegrationTests
 
     #endregion
 }
+

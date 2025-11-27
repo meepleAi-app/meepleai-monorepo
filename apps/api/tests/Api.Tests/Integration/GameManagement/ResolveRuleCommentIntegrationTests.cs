@@ -9,6 +9,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration.GameManagement;
@@ -46,22 +47,38 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Start PostgreSQL container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "resolve_comment_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
+        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
+        string connectionString;
 
-        await _postgresContainer.StartAsync(TestCancellationToken);
+        if (!string.IsNullOrWhiteSpace(externalConn))
+        {
+            var builder = new NpgsqlConnectionStringBuilder(externalConn)
+            {
+                Database = "resolve_comment_test",
+                SslMode = SslMode.Disable,
+                KeepAlive = 30,
+                Pooling = false
+            };
+            connectionString = builder.ConnectionString;
+        }
+        else
+        {
+            // Start PostgreSQL container
+            _postgresContainer = new ContainerBuilder()
+                .WithImage("postgres:16-alpine")
+                .WithEnvironment("POSTGRES_USER", "postgres")
+                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+                .WithEnvironment("POSTGRES_DB", "resolve_comment_test")
+                .WithPortBinding(5432, true)
+                .WithWaitStrategy(Wait.ForUnixContainer()
+                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+                .Build();
 
-        // Setup services
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={postgresPort};Database=resolve_comment_test;Username=postgres;Password=postgres;";
+            await _postgresContainer.StartAsync(TestCancellationToken);
+
+            var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+            connectionString = $"Host=localhost;Port={postgresPort};Database=resolve_comment_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+        }
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -89,7 +106,7 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await EnsureCreatedWithRetry(_dbContext);
 
         // Seed test data
         await SeedTestDataAsync();
@@ -154,6 +171,23 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 
+    private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await context.Database.EnsureCreatedAsync(TestCancellationToken);
+                return;
+            }
+            catch (Exception ex) when ((ex is Npgsql.NpgsqlException or InvalidOperationException) && attempt < maxAttempts)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
+    }
+
     private async Task<Guid> CreateTestCommentAsync(Guid userId, string text = "Test comment", Guid? parentId = null)
     {
         var comment = new RuleSpecCommentEntity
@@ -206,7 +240,7 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         result.ResolvedAt.Should().NotBeNull();
 
         // Verify database state
-        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, TestCancellationToken);
         comment.Should().NotBeNull();
         comment!.IsResolved.Should().BeTrue();
     }
@@ -235,7 +269,7 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         result.IsResolved.Should().BeTrue();
 
         // Verify reply is NOT resolved
-        var reply = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == replyId);
+        var reply = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == replyId, TestCancellationToken);
         reply.Should().NotBeNull();
         reply!.IsResolved.Should().BeFalse("replies should not be resolved");
     }
@@ -266,7 +300,7 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
             .WithMessage("*not authorized*");
 
         // Verify comment is still unresolved
-        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, TestCancellationToken);
         comment.Should().NotBeNull();
         comment!.IsResolved.Should().BeFalse();
     }
@@ -327,8 +361,8 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         result.IsResolved.Should().BeTrue();
 
         // Verify all replies are resolved
-        var reply1 = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == reply1Id);
-        var reply2 = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == reply2Id);
+        var reply1 = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == reply1Id, TestCancellationToken);
+        var reply2 = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == reply2Id, TestCancellationToken);
 
         reply1.Should().NotBeNull();
         reply1!.IsResolved.Should().BeTrue("reply 1 should be resolved");
@@ -365,9 +399,9 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         result.IsResolved.Should().BeTrue();
 
         // Verify all levels are resolved
-        var l0 = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == level0);
-        var l1 = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == level1);
-        var l2 = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == level2);
+        var l0 = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == level0, TestCancellationToken);
+        var l1 = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == level1, TestCancellationToken);
+        var l2 = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == level2, TestCancellationToken);
 
         l0.Should().NotBeNull();
         l0!.IsResolved.Should().BeTrue();
@@ -442,3 +476,4 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
 
     #endregion
 }
+

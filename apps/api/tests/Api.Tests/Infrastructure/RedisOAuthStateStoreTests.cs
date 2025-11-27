@@ -240,3 +240,4 @@ public class RedisOAuthStateStoreTests
         Assert.False(result);
     }
 }
+

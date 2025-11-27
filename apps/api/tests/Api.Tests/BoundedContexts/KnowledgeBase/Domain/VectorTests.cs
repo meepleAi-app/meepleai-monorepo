@@ -77,3 +77,4 @@ public class VectorTests
         Assert.Throws<ArgumentException>(() => vector1.CosineSimilarity(vector2));
     }
 }
+

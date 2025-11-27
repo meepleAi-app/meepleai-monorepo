@@ -45,7 +45,7 @@ public class CreateApiKeyCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -59,8 +59,8 @@ public class CreateApiKeyCommandHandlerTests
         Assert.True(result.ExpiresAt.HasValue);
         Assert.True(result.ExpiresAt.Value > DateTime.UtcNow);
 
-        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), default), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class CreateApiKeyCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -98,7 +98,7 @@ public class CreateApiKeyCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -114,8 +114,8 @@ public class CreateApiKeyCommandHandlerTests
         var command2 = new CreateApiKeyCommand(userId, "Key 2", "read", null, null);
 
         // Act
-        var result1 = await _handler.Handle(command1, CancellationToken.None);
-        var result2 = await _handler.Handle(command2, CancellationToken.None);
+        var result1 = await _handler.Handle(command1, TestContext.Current.CancellationToken);
+        var result2 = await _handler.Handle(command2, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEqual(result1.PlaintextKey, result2.PlaintextKey);
@@ -131,7 +131,7 @@ public class CreateApiKeyCommandHandlerTests
         var command = new CreateApiKeyCommand(userId, "Test Key", "read", null, null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.StartsWith(result.KeyPrefix, result.PlaintextKey);
@@ -151,7 +151,7 @@ public class CreateApiKeyCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("read,write,delete,admin", result.Scopes);
@@ -177,7 +177,7 @@ public class CreateApiKeyCommandHandlerTests
             .Callback<ApiKey, CancellationToken>((apiKey, _) => capturedApiKey = apiKey);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(capturedApiKey);
@@ -203,11 +203,11 @@ public class CreateApiKeyCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
-        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), default), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -225,7 +225,7 @@ public class CreateApiKeyCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
 
@@ -248,10 +248,10 @@ public class CreateApiKeyCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
-        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), default), Times.Never);
+        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -269,7 +269,7 @@ public class CreateApiKeyCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
 
@@ -292,7 +292,7 @@ public class CreateApiKeyCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -315,7 +315,7 @@ public class CreateApiKeyCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -342,7 +342,7 @@ public class CreateApiKeyCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEqual(Guid.Empty, result.Id);
@@ -363,7 +363,7 @@ public class CreateApiKeyCommandHandlerTests
         var command = new CreateApiKeyCommand(userId, "Test Key", "read", null, null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.PlaintextKey);
@@ -385,10 +385,10 @@ public class CreateApiKeyCommandHandlerTests
         var command = new CreateApiKeyCommand(userId, "Test Key", "read", null, null);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -409,7 +409,7 @@ public class CreateApiKeyCommandHandlerTests
             .Callback(() => callOrder.Add("save"));
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, callOrder.Count);
@@ -448,7 +448,7 @@ public class CreateApiKeyCommandHandlerTests
         var command = new CreateApiKeyCommand(userId, longName, "read", null, null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(longName, result.KeyName);
@@ -467,7 +467,7 @@ public class CreateApiKeyCommandHandlerTests
             .Callback<ApiKey, CancellationToken>((apiKey, _) => capturedApiKey = apiKey);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(capturedApiKey);
@@ -493,3 +493,4 @@ public class CreateApiKeyCommandHandlerTests
 
     #endregion
 }
+

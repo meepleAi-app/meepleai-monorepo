@@ -51,7 +51,7 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: Role.Admin.Value);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -86,7 +86,7 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: Role.Editor.Value);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(Role.Editor.Value, result.Role);
@@ -116,7 +116,7 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: Role.User.Value);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(Role.User.Value, result.Role);
@@ -145,7 +145,7 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: Role.User.Value);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(Role.User.Value, result.Role);
@@ -175,7 +175,7 @@ public class ChangeUserRoleCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains($"User {userId} not found", exception.Message);
 
@@ -207,7 +207,7 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: Role.Admin.Value); // Same role
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Should still save (idempotent operation)
         Assert.Equal(Role.Admin.Value, result.Role);
@@ -245,7 +245,7 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: Role.Editor.Value);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All user details should be preserved
         Assert.Equal(userId.ToString(), result.Id);
@@ -296,3 +296,4 @@ public class ChangeUserRoleCommandHandlerTests
 
     #endregion
 }
+

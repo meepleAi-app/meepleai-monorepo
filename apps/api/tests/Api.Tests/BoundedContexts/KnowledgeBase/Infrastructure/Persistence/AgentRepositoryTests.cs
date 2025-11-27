@@ -65,10 +65,10 @@ public class AgentRepositoryTests : IAsyncLifetime
         var agent = CreateTestAgent("Test Agent");
 
         // Act
-        await _repository!.AddAsync(agent);
+        await _repository!.AddAsync(agent, CancellationToken.None);
 
         // Assert
-        var retrieved = await _repository.GetByIdAsync(agent.Id);
+        var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
         Assert.NotNull(retrieved);
         Assert.Equal(agent.Name, retrieved.Name);
         Assert.Equal(agent.Type.Value, retrieved.Type.Value);
@@ -79,10 +79,10 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Test Agent");
-        await _repository!.AddAsync(agent);
+        await _repository!.AddAsync(agent, CancellationToken.None);
 
         // Act
-        var retrieved = await _repository.GetByIdAsync(agent.Id);
+        var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -94,7 +94,7 @@ public class AgentRepositoryTests : IAsyncLifetime
     public async Task GetByIdAsync_NonExistingAgent_ReturnsNull()
     {
         // Act
-        var retrieved = await _repository!.GetByIdAsync(Guid.NewGuid());
+        var retrieved = await _repository!.GetByIdAsync(Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         Assert.Null(retrieved);
@@ -105,10 +105,10 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Unique Agent");
-        await _repository!.AddAsync(agent);
+        await _repository!.AddAsync(agent, CancellationToken.None);
 
         // Act
-        var retrieved = await _repository.GetByNameAsync("Unique Agent");
+        var retrieved = await _repository.GetByNameAsync("Unique Agent", CancellationToken.None);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -123,12 +123,12 @@ public class AgentRepositoryTests : IAsyncLifetime
         var activeAgent2 = CreateTestAgent("Active 2", isActive: true);
         var inactiveAgent = CreateTestAgent("Inactive", isActive: false);
 
-        await _repository!.AddAsync(activeAgent1);
-        await _repository.AddAsync(activeAgent2);
-        await _repository.AddAsync(inactiveAgent);
+        await _repository!.AddAsync(activeAgent1, CancellationToken.None);
+        await _repository.AddAsync(activeAgent2, CancellationToken.None);
+        await _repository.AddAsync(inactiveAgent, CancellationToken.None);
 
         // Act
-        var activeAgents = await _repository.GetAllActiveAsync();
+        var activeAgents = await _repository.GetAllActiveAsync(CancellationToken.None);
 
         // Assert
         Assert.Equal(2, activeAgents.Count);
@@ -143,12 +143,12 @@ public class AgentRepositoryTests : IAsyncLifetime
         var ragAgent2 = CreateTestAgent("RAG 2", AgentType.RagAgent);
         var citationAgent = CreateTestAgent("Citation", AgentType.CitationAgent);
 
-        await _repository!.AddAsync(ragAgent1);
-        await _repository.AddAsync(ragAgent2);
-        await _repository.AddAsync(citationAgent);
+        await _repository!.AddAsync(ragAgent1, CancellationToken.None);
+        await _repository.AddAsync(ragAgent2, CancellationToken.None);
+        await _repository.AddAsync(citationAgent, CancellationToken.None);
 
         // Act
-        var ragAgents = await _repository.GetByTypeAsync(AgentType.RagAgent);
+        var ragAgents = await _repository.GetByTypeAsync(AgentType.RagAgent, CancellationToken.None);
 
         // Assert
         Assert.Equal(2, ragAgents.Count);
@@ -160,16 +160,16 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Original Name");
-        await _repository!.AddAsync(agent);
+        await _repository!.AddAsync(agent, CancellationToken.None);
 
         agent.Rename("Updated Name");
         agent.Configure(AgentStrategy.VectorOnly());
 
         // Act
-        await _repository.UpdateAsync(agent);
+        await _repository.UpdateAsync(agent, CancellationToken.None);
 
         // Assert
-        var retrieved = await _repository.GetByIdAsync(agent.Id);
+        var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
         Assert.Equal("Updated Name", retrieved!.Name);
         Assert.Equal("VectorOnly", retrieved.Strategy.Name);
     }
@@ -179,13 +179,13 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("To Delete");
-        await _repository!.AddAsync(agent);
+        await _repository!.AddAsync(agent, CancellationToken.None);
 
         // Act
-        await _repository.DeleteAsync(agent.Id);
+        await _repository.DeleteAsync(agent.Id, CancellationToken.None);
 
         // Assert
-        var retrieved = await _repository.GetByIdAsync(agent.Id);
+        var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
         Assert.Null(retrieved);
     }
 
@@ -194,10 +194,10 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Exists");
-        await _repository!.AddAsync(agent);
+        await _repository!.AddAsync(agent, CancellationToken.None);
 
         // Act
-        var exists = await _repository.ExistsAsync("Exists");
+        var exists = await _repository.ExistsAsync("Exists", CancellationToken.None);
 
         // Assert
         Assert.True(exists);
@@ -207,7 +207,7 @@ public class AgentRepositoryTests : IAsyncLifetime
     public async Task ExistsAsync_NonExistingAgent_ReturnsFalse()
     {
         // Act
-        var exists = await _repository!.ExistsAsync("Does Not Exist");
+        var exists = await _repository!.ExistsAsync("Does Not Exist", CancellationToken.None);
 
         // Assert
         Assert.False(exists);
@@ -228,3 +228,4 @@ public class AgentRepositoryTests : IAsyncLifetime
         );
     }
 }
+

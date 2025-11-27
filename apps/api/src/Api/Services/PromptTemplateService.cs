@@ -391,7 +391,7 @@ ANSWER:",
         // FIX: Load user BEFORE transaction to reduce transaction scope and lock duration
         // Note: NOT using AsNoTracking because user entity is reused in audit log (needs tracking)
         var changedByUser = await _dbContext.Set<UserEntity>()
-            .FirstOrDefaultAsync(u => u.Id == activatedByUserId, ct);
+            .FirstOrDefaultAsync(u => u.Id == activatedByUserId, ct).ConfigureAwait(false);
 
         if (changedByUser == null)
         {
@@ -399,14 +399,15 @@ ANSWER:",
             throw new InvalidOperationException($"User {activatedByUserId} not found");
         }
 
-        using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+        using var transaction = await _dbContext.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
 
         try
         {
             // Step 1: Verify version exists and belongs to template
             var versionToActivate = await _dbContext.Set<PromptVersionEntity>()
                 .Include(v => v.Template)
-                .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, ct);
+                .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, ct)
+                .ConfigureAwait(false);
 
             if (versionToActivate == null)
             {
@@ -419,7 +420,8 @@ ANSWER:",
             // Step 2: Deactivate all other versions for this template (ensure single active)
             var otherVersions = await _dbContext.Set<PromptVersionEntity>()
                 .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
-                .ToListAsync(ct);
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
 
             foreach (var version in otherVersions)
             {
@@ -450,10 +452,10 @@ ANSWER:",
             _dbContext.Set<PromptAuditLogEntity>().Add(auditLog);
 
             // Step 5: Save changes (within transaction)
-            await _dbContext.SaveChangesAsync(ct);
+            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
             // Step 6: Commit transaction (atomic) - FIX: Commit BEFORE cache invalidation
-            await transaction.CommitAsync(ct);
+            await transaction.CommitAsync(ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Transaction committed for template {TemplateName} version {VersionNumber}",
@@ -463,7 +465,7 @@ ANSWER:",
             // This ensures cache doesn't contain old data while transaction uncommitted
             var cacheKey = $"{CacheKeyPrefix}{versionToActivate.Template.Name}:active";
             var db = _redis.GetDatabase();
-            var deleted = await db.KeyDeleteAsync(cacheKey);
+            var deleted = await db.KeyDeleteAsync(cacheKey).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Cache invalidation for template {TemplateName} after activation: {Result}",
@@ -506,7 +508,7 @@ ANSWER:",
 
         var cacheKey = $"{CacheKeyPrefix}{templateName}:active";
         var db = _redis.GetDatabase();
-        var deleted = await db.KeyDeleteAsync(cacheKey);
+        var deleted = await db.KeyDeleteAsync(cacheKey).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Cache invalidation for template {TemplateName}: {Result}",

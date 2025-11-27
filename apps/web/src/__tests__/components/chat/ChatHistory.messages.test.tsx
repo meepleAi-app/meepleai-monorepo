@@ -7,6 +7,7 @@
  * Target Coverage: 90%+
  */
 
+import type { Mock } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ChatHistory } from '../../../components/chat/ChatHistory';
@@ -284,4 +285,15 @@ describe('ChatHistory Component', () => {
       const chat = createMockChatThread({ id: 'chat-1', title: 'Test Agent' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
+
+      // Issue #858: Click the select button in ThreadListItem
+      const selectButton = screen.getByRole('button', { name: /Select thread: Test Agent/ });
+      fireEvent.click(selectButton);
+
+      await waitFor(() => {
+        expect(mockSelectChat).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+});
 

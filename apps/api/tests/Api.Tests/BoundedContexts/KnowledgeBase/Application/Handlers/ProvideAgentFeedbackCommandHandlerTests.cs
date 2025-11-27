@@ -1,3 +1,4 @@
+using System.Threading;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.Infrastructure;
@@ -16,6 +17,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// </summary>
 public class ProvideAgentFeedbackCommandHandlerTests
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     private readonly Mock<ILogger<ProvideAgentFeedbackCommandHandler>> _mockLogger;
     private readonly TimeProvider _timeProvider;
 
@@ -51,10 +54,10 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act
-        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync();
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
         Assert.Equal("helpful", feedback.Outcome);
     }
@@ -75,10 +78,10 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act
-        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync();
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
         Assert.Equal("not-helpful", feedback.Outcome);
     }
@@ -99,10 +102,10 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act
-        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync();
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
         Assert.Equal("incorrect", feedback.Outcome);
     }
@@ -130,7 +133,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, CancellationToken.None));
+            () => handler.Handle(command, TestCancellationToken));
 
         Assert.Contains("Invalid outcome", exception.Message);
         Assert.Contains(invalidOutcome, exception.Message);
@@ -156,7 +159,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         });
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
@@ -168,10 +171,10 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act
-        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync();
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.Null(feedback);
     }
 
@@ -194,7 +197,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         });
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
@@ -206,10 +209,10 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act
-        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync();
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.Null(feedback);
     }
 
@@ -233,7 +236,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, CancellationToken.None));
+            () => handler.Handle(command, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -252,7 +255,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, CancellationToken.None));
+            () => handler.Handle(command, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -271,7 +274,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, CancellationToken.None));
+            () => handler.Handle(command, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -290,7 +293,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, CancellationToken.None));
+            () => handler.Handle(command, TestContext.Current.CancellationToken));
     }
 
     #endregion
@@ -316,7 +319,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         });
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
@@ -328,10 +331,10 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act
-        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync();
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
         Assert.NotNull(feedback);
         Assert.Equal("not-helpful", feedback.Outcome);
         Assert.Equal("/api/v1/search", feedback.Endpoint);
@@ -339,3 +342,4 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
     #endregion
 }
+

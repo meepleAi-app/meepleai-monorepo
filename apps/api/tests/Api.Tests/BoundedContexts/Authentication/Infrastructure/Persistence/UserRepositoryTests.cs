@@ -19,6 +19,8 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
     protected override UserRepository CreateRepository(MeepleAiDbContext dbContext)
         => new UserRepository(dbContext, MockEventCollector.Object);
 
+    private CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     #region GetByIdAsync Tests
 
     [Fact]
@@ -27,11 +29,11 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("test@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var result = await Repository.GetByIdAsync(user.Id);
+        var result = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -48,7 +50,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await Repository.GetByIdAsync(nonExistentId);
+        var result = await Repository.GetByIdAsync(nonExistentId, TestCancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -64,13 +66,13 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("user@test.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var email = new Email("user@test.com");
 
         // Act
-        var result = await Repository.GetByEmailAsync(email);
+        var result = await Repository.GetByEmailAsync(email, TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -84,13 +86,13 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("CaseSensitive@Example.COM", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var emailLowercase = new Email("casesensitive@example.com");
 
         // Act
-        var result = await Repository.GetByEmailAsync(emailLowercase);
+        var result = await Repository.GetByEmailAsync(emailLowercase, TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -105,7 +107,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var email = new Email("nonexistent@example.com");
 
         // Act
-        var result = await Repository.GetByEmailAsync(email);
+        var result = await Repository.GetByEmailAsync(email, TestCancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -121,13 +123,13 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("exists@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var email = new Email("exists@example.com");
 
         // Act
-        var exists = await Repository.ExistsByEmailAsync(email);
+        var exists = await Repository.ExistsByEmailAsync(email, TestCancellationToken);
 
         // Assert
         Assert.True(exists);
@@ -141,7 +143,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var email = new Email("notexists@example.com");
 
         // Act
-        var exists = await Repository.ExistsByEmailAsync(email);
+        var exists = await Repository.ExistsByEmailAsync(email, TestCancellationToken);
 
         // Assert
         Assert.False(exists);
@@ -158,7 +160,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await ResetDatabaseAsync();
 
         // Act
-        var hasUsers = await Repository.HasAnyUsersAsync();
+        var hasUsers = await Repository.HasAnyUsersAsync(TestCancellationToken);
 
         // Assert
         Assert.False(hasUsers);
@@ -170,11 +172,11 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("firstuser@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var hasUsers = await Repository.HasAnyUsersAsync();
+        var hasUsers = await Repository.HasAnyUsersAsync(TestCancellationToken);
 
         // Assert
         Assert.True(hasUsers);
@@ -191,12 +193,12 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await ResetDatabaseAsync();
         var user1 = CreateTestUser("user1@example.com", Role.User);
         var user2 = CreateTestUser("user2@example.com", Role.Editor);
-        await Repository.AddAsync(user1);
-        await Repository.AddAsync(user2);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user1, TestCancellationToken);
+        await Repository.AddAsync(user2, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var adminCount = await Repository.CountAdminsAsync();
+        var adminCount = await Repository.CountAdminsAsync(TestCancellationToken);
 
         // Assert
         Assert.Equal(0, adminCount);
@@ -212,14 +214,14 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var user = CreateTestUser("user@example.com", Role.User);
         var editor = CreateTestUser("editor@example.com", Role.Editor);
 
-        await Repository.AddAsync(admin1);
-        await Repository.AddAsync(admin2);
-        await Repository.AddAsync(user);
-        await Repository.AddAsync(editor);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(admin1, TestCancellationToken);
+        await Repository.AddAsync(admin2, TestCancellationToken);
+        await Repository.AddAsync(user, TestCancellationToken);
+        await Repository.AddAsync(editor, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var adminCount = await Repository.CountAdminsAsync();
+        var adminCount = await Repository.CountAdminsAsync(TestCancellationToken);
 
         // Assert
         Assert.Equal(2, adminCount);
@@ -236,7 +238,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await ResetDatabaseAsync();
 
         // Act
-        var users = await Repository.GetAllAsync();
+        var users = await Repository.GetAllAsync(TestCancellationToken);
 
         // Assert
         Assert.Empty(users);
@@ -251,13 +253,13 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var user2 = CreateTestUser("user2@example.com", Role.Admin);
         var user3 = CreateTestUser("user3@example.com", Role.Editor);
 
-        await Repository.AddAsync(user1);
-        await Repository.AddAsync(user2);
-        await Repository.AddAsync(user3);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user1, TestCancellationToken);
+        await Repository.AddAsync(user2, TestCancellationToken);
+        await Repository.AddAsync(user3, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var users = await Repository.GetAllAsync();
+        var users = await Repository.GetAllAsync(TestCancellationToken);
 
         // Assert
         Assert.Equal(3, users.Count);
@@ -278,8 +280,8 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var user = CreateTestUser("newuser@example.com", Role.User);
 
         // Act
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
@@ -297,8 +299,8 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         user.Enable2FA(TotpSecret.FromEncrypted("encrypted_totp_secret_123"));
 
         // Act
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
@@ -318,8 +320,8 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("update@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         DbContext.ChangeTracker.Clear();
 
@@ -329,7 +331,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
 
         // Act
         await Repository.UpdateAsync(user);
-        await DbContext.SaveChangesAsync();
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
@@ -344,15 +346,15 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("enable2fa@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Enable 2FA
         user.Enable2FA(TotpSecret.FromEncrypted("new_encrypted_secret"));
 
         // Act
         await Repository.UpdateAsync(user);
-        await DbContext.SaveChangesAsync();
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
@@ -371,12 +373,12 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("delete@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
         await Repository.DeleteAsync(user);
-        await DbContext.SaveChangesAsync();
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var deleted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
@@ -392,7 +394,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
 
         // Act & Assert - Should not throw
         await Repository.DeleteAsync(user);
-        await DbContext.SaveChangesAsync();
+        await DbContext.SaveChangesAsync(TestCancellationToken);
     }
 
     #endregion
@@ -405,8 +407,8 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("exists@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
         var exists = await Repository.ExistsAsync(user.Id);
@@ -442,8 +444,8 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         user.UpdateDisplayName("Mapping Test");
 
         // Act
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
@@ -463,11 +465,11 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await ResetDatabaseAsync();
         var user = CreateTestUser("roundtrip@example.com", Role.Editor);
         user.UpdateDisplayName("Round Trip Test");
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var retrieved = await Repository.GetByIdAsync(user.Id);
+        var retrieved = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -485,11 +487,11 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         await ResetDatabaseAsync();
         var user = CreateTestUser("2famapping@example.com", Role.User);
         user.Enable2FA(TotpSecret.FromEncrypted("secret_123"));
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var retrieved = await Repository.GetByIdAsync(user.Id);
+        var retrieved = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -508,8 +510,8 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("concurrent@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Multiple concurrent reads using independent repositories
         var tasks = Enumerable.Range(0, 10).Select(async _ =>
@@ -534,8 +536,8 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("concurrentemail@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var email = new Email("concurrentemail@example.com");
 
@@ -569,7 +571,7 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var user = CreateTestUser("transaction@example.com", Role.User);
 
         // Act
-        await Repository.AddAsync(user);
+        await Repository.AddAsync(user, TestCancellationToken);
         // DO NOT call SaveChangesAsync - simulates rollback
 
         // Assert
@@ -586,9 +588,9 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var user2 = CreateTestUser("trans2@example.com", Role.Admin);
 
         // Act
-        await Repository.AddAsync(user1);
-        await Repository.AddAsync(user2);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user1, TestCancellationToken);
+        await Repository.AddAsync(user2, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var count = await DbContext.Users.CountAsync();
@@ -608,11 +610,11 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // DisplayName is nullable in some cases
 
         // Act
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
-        var retrieved = await Repository.GetByIdAsync(user.Id);
+        var retrieved = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
         Assert.NotNull(retrieved);
     }
 
@@ -624,11 +626,11 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         var user = CreateTestUser("user+tag@sub.domain.com", Role.User);
 
         // Act
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var email = new Email("user+tag@sub.domain.com");
-        var retrieved = await Repository.GetByEmailAsync(email);
+        var retrieved = await Repository.GetByEmailAsync(email, TestCancellationToken);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -646,12 +648,12 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
 
         foreach (var user in users)
         {
-            await Repository.AddAsync(user);
+            await Repository.AddAsync(user, TestCancellationToken);
         }
-        await DbContext.SaveChangesAsync();
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var allUsers = await Repository.GetAllAsync();
+        var allUsers = await Repository.GetAllAsync(TestCancellationToken);
 
         // Assert
         Assert.Equal(100, allUsers.Count);
@@ -663,17 +665,17 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
         // Arrange
         await ResetDatabaseAsync();
         var user = CreateTestUser("notracking@example.com", Role.User);
-        await Repository.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        await Repository.AddAsync(user, TestCancellationToken);
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var retrieved = await Repository.GetByIdAsync(user.Id);
+        var retrieved = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
 
         // Modify retrieved object
         retrieved!.UpdateDisplayName("Modified");
 
         // SaveChanges without explicit Update call
-        await DbContext.SaveChangesAsync();
+        await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Changes should NOT be persisted (AsNoTracking)
         var reloaded = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
@@ -701,3 +703,4 @@ public class UserRepositoryTests : IntegrationTestBase<UserRepository>
 
     #endregion
 }
+

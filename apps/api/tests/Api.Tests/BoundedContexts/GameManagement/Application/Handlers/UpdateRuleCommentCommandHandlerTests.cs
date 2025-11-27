@@ -178,3 +178,4 @@ public class UpdateRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full comment update workflow testing.
 }
+

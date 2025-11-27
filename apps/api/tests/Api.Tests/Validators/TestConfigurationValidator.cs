@@ -155,3 +155,4 @@ When production configuration changes:
         updateProcess.Should().NotBeNullOrEmpty("Update process must be documented");
     }
 }
+

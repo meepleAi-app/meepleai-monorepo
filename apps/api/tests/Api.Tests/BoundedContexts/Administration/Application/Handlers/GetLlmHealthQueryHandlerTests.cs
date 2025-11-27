@@ -119,3 +119,4 @@ public class GetLlmHealthQueryHandlerTests
     // See integration-tests.yml workflow and ProviderHealthCheckServiceTests.cs
     // for health check service unit tests.
 }
+

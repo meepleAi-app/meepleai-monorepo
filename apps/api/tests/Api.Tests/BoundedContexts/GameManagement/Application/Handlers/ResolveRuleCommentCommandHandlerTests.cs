@@ -231,3 +231,4 @@ public class ResolveRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full comment resolution workflow testing.
 }
+

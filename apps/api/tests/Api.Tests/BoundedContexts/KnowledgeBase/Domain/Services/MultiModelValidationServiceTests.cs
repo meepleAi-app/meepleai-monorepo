@@ -1,3 +1,4 @@
+using System.Threading;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -14,6 +15,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 /// </summary>
 public class MultiModelValidationServiceTests
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     private readonly Mock<ILlmClient> _mockOpenRouterClient;
     private readonly Mock<ILogger<MultiModelValidationService>> _mockLogger;
     private readonly MultiModelValidationService _service;
@@ -110,7 +113,7 @@ public class MultiModelValidationServiceTests
         SetupMockResponses(gpt4Response, claudeResponse);
 
         // Act
-        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.True(result.HasConsensus);
@@ -136,7 +139,7 @@ public class MultiModelValidationServiceTests
         SetupMockResponses(gpt4Response, claudeResponse);
 
         // Act
-        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
         // With cosine similarity, semantically similar texts may score high
@@ -172,7 +175,7 @@ public class MultiModelValidationServiceTests
         SetupMockResponses(gpt4Response, claudeResponse);
 
         // Act
-        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -209,7 +212,7 @@ public class MultiModelValidationServiceTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("The queen moves any number of squares in any direction."));
 
         // Act
-        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -248,7 +251,7 @@ public class MultiModelValidationServiceTests
             .ReturnsAsync(LlmCompletionResult.CreateFailure("Timeout"));
 
         // Act
-        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -277,7 +280,7 @@ public class MultiModelValidationServiceTests
             .ReturnsAsync(LlmCompletionResult.CreateFailure("Network error"));
 
         // Act
-        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -295,7 +298,7 @@ public class MultiModelValidationServiceTests
         var userPrompt = "";
 
         // Act
-        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -395,7 +398,7 @@ public class MultiModelValidationServiceTests
             });
 
         // Act
-        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert - Both models should be called (parallel execution)
         Assert.True(gpt4Called, "GPT-4 should have been called");
@@ -416,7 +419,7 @@ public class MultiModelValidationServiceTests
         SetupMockResponses(gpt4Response, claudeResponse);
 
         // Act
-        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert - Performance metrics should be recorded
         Assert.True(result.TotalDurationMs >= 0, "Total duration should be non-negative");
@@ -441,25 +444,25 @@ public class MultiModelValidationServiceTests
         var highSimilarText1 = "The knight moves in an L-shape: two squares in one direction and one square perpendicular.";
         var highSimilarText2 = "The knight moves in an L-shape pattern: two squares in one direction and one square in a perpendicular direction.";
         SetupMockResponses(highSimilarText1, highSimilarText2);
-        var resultHigh = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var resultHigh = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Test case 2: Moderate severity (similarity 0.70-0.90)
         var moderateText1 = "The rook moves horizontally or vertically across the board.";
         var moderateText2 = "Rooks can move any number of squares in straight lines along ranks or files.";
         SetupMockResponses(moderateText1, moderateText2);
-        var resultModerate = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var resultModerate = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Test case 3: Low severity (similarity 0.50-0.70)
         var lowText1 = "Chess is a strategic board game.";
         var lowText2 = "The game of chess involves tactical thinking.";
         SetupMockResponses(lowText1, lowText2);
-        var resultLow = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var resultLow = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Test case 4: None severity (similarity < 0.50)
         var noneText1 = "The bishop moves diagonally.";
         var noneText2 = "Settlers of Catan is a resource management game.";
         SetupMockResponses(noneText1, noneText2);
-        var resultNone = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt);
+        var resultNone = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert - Verify severity levels
         if (resultHigh.SimilarityScore >= 0.90)
@@ -498,7 +501,7 @@ public class MultiModelValidationServiceTests
         // Act
         var result = await _service.ValidateWithConsensusAsync(
             "System prompt",
-            "What are the chess piece movements?");
+            "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -516,7 +519,7 @@ public class MultiModelValidationServiceTests
         // Act
         var result = await _service.ValidateWithConsensusAsync(
             "System prompt",
-            "What are the chess piece movements?");
+            "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -534,7 +537,7 @@ public class MultiModelValidationServiceTests
         // Act
         var result = await _service.ValidateWithConsensusAsync(
             "System prompt",
-            "What are the chess piece movements?");
+            "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -552,7 +555,7 @@ public class MultiModelValidationServiceTests
         // Act
         var result = await _service.ValidateWithConsensusAsync(
             "System prompt",
-            "What are the chess piece movements?");
+            "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -570,7 +573,7 @@ public class MultiModelValidationServiceTests
         // Act
         var result = await _service.ValidateWithConsensusAsync(
             "System prompt",
-            "What are the chess piece movements?");
+            "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
         Assert.False(result.HasConsensus);
@@ -638,3 +641,4 @@ public class MultiModelValidationServiceTests
                 new LlmUsage(100, 50, 150)));
     }
 }
+

@@ -436,3 +436,4 @@ public class GameSessionDomainTests
         return new GameSession(Guid.NewGuid(), Guid.NewGuid(), players);
     }
 }
+

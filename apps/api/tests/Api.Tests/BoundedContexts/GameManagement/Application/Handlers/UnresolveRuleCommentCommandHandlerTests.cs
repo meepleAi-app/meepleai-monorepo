@@ -243,3 +243,4 @@ public class UnresolveRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full comment unresolve workflow testing.
 }
+

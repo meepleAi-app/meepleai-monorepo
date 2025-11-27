@@ -69,3 +69,4 @@ public class N8nConfigurationTests
         Assert.False(config.IsActive);
     }
 }
+

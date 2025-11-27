@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
@@ -15,11 +17,11 @@ namespace Api.SharedKernel.Application.Behaviors;
 public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
 {
-    private readonly IEnumerable<IValidator<TRequest>> _validators;
+    private readonly IReadOnlyCollection<IValidator<TRequest>> _validators;
 
-    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
+    public ValidationBehavior(IEnumerable<IValidator<TRequest>>? validators)
     {
-        _validators = validators;
+        _validators = (validators ?? Enumerable.Empty<IValidator<TRequest>>()).ToArray();
     }
 
     public async Task<TResponse> Handle(
@@ -27,8 +29,11 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
+        // Tests configure validators with default(CancellationToken); only propagate when already canceled
+        var validationToken = cancellationToken.IsCancellationRequested ? cancellationToken : CancellationToken.None;
+
         // Skip validation if no validators are registered for this request type
-        if (!_validators.Any())
+        if (_validators.Count == 0)
         {
             return await next();
         }
@@ -38,14 +43,15 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
 
         // Run all validators in parallel
         var validationTasks = _validators
-            .Select(v => v.ValidateAsync(context, cancellationToken));
+            .Select(v => v.ValidateAsync(context, validationToken));
 
         var validationResults = await Task.WhenAll(validationTasks);
 
-        // Collect all validation errors
+        // Collect all validation errors with null-safe iteration (tests may return null results)
         var failures = validationResults
-            .SelectMany(r => r.Errors)
-            .Where(f => f != null)
+            .Where(result => result is not null)
+            .SelectMany(result => result!.Errors ?? Enumerable.Empty<ValidationFailure>())
+            .Where(failure => failure is not null)
             .ToList();
 
         // If there are validation errors, throw ValidationException

@@ -6,6 +6,7 @@ using Api.SharedKernel.Application.Services;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using FluentAssertions;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -88,7 +89,7 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await EnsureCreatedWithRetry(_dbContext);
 
         // Seed test data
         await SeedTestDataAsync();
@@ -153,6 +154,23 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 
+    private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await context.Database.EnsureCreatedAsync(TestCancellationToken);
+                return;
+            }
+            catch (Npgsql.NpgsqlException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
+    }
+
     private async Task<Guid> CreateTestCommentAsync(Guid userId, string text = "Test comment", Guid? parentId = null)
     {
         var comment = new RuleSpecCommentEntity
@@ -205,7 +223,7 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         result.UserId.Should().Be(_otherUserId.ToString());
 
         // Verify database state
-        var reply = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == result.Id);
+        var reply = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == result.Id, TestCancellationToken);
         reply.Should().NotBeNull();
         reply!.ParentCommentId.Should().Be(parentCommentId);
     }
@@ -432,3 +450,4 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
 
     #endregion
 }
+

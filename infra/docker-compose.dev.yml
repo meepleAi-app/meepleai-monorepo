@@ -19,6 +19,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meeplepass}  # Plain password for dev
+      POSTGRES_PASSWORD_FILE: ""
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
     secrets: []  # Disable secrets in dev
     volumes:
@@ -31,6 +32,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       # Use plain connection string for dev (no secrets)
       ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD:-meeplepass}"
+      POSTGRES_PASSWORD_FILE: ""
       QDRANT_URL: http://qdrant:6333
       REDIS_URL: redis:6379
       OLLAMA_URL: http://ollama:11434
@@ -79,6 +81,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}  # Plain password for dev
+      GF_SECURITY_ADMIN_PASSWORD__FILE: ""
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_ROOT_URL: "http://localhost:3001"
     secrets: []  # Disable secrets in dev

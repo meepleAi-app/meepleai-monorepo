@@ -175,3 +175,4 @@ public class GetPdfTextQueryHandlerTests
     // NOTE: Full integration tests for Handle method should be in integration test suite
     // due to DbContext dependency complexity. See integration-tests.yml workflow.
 }
+

@@ -4,6 +4,7 @@
  * Tests WCAG 2.1 AA compliance using jest-axe
  */
 
+import type { Mock } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { axe } from 'jest-axe';
 import { AccessibleSkipLink } from '../AccessibleSkipLink';

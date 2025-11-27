@@ -277,3 +277,4 @@ public class DocnetPdfValidatorTests : IDisposable
         GC.SuppressFinalize(this);
     }
 }
+

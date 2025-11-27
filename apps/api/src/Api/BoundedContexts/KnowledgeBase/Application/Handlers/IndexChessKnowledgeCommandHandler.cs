@@ -51,7 +51,7 @@ public sealed class IndexChessKnowledgeCommandHandler
                 return Api.Services.ChessIndexResult.CreateFailure($"Knowledge file not found: {knowledgePath}");
             }
 
-            var jsonContent = await File.ReadAllTextAsync(knowledgePath, cancellationToken);
+            var jsonContent = await File.ReadAllTextAsync(knowledgePath, cancellationToken).ConfigureAwait(false);
             var knowledge = JsonSerializer.Deserialize<ChessKnowledge>(jsonContent, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -76,7 +76,7 @@ public sealed class IndexChessKnowledgeCommandHandler
 
             _logger.LogInformation("Found {Count} chess knowledge items to index", allItems.Count);
 
-            var categoryCounts = new Dictionary<string, int>();
+            var categoryCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var totalChunks = 0;
 
             // Process each knowledge item
@@ -95,7 +95,8 @@ public sealed class IndexChessKnowledgeCommandHandler
 
                 // Generate embeddings for all chunks
                 var texts = chunkInputs.Select(c => c.Text).ToList();
-                var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken);
+                var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken)
+                    .ConfigureAwait(false);
 
                 if (!embeddingResult.Success)
                 {
@@ -129,7 +130,7 @@ public sealed class IndexChessKnowledgeCommandHandler
                 var indexResult = await _qdrantService.IndexChunksWithMetadataAsync(
                     metadata,
                     chunks,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
 
                 if (!indexResult.Success)
                 {

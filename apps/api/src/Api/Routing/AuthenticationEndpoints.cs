@@ -36,6 +36,8 @@ public static class AuthenticationEndpoints
         var getSessionCookieName = CookieHelpers.GetSessionCookieName;
         var writeApiKeyCookie = CookieHelpers.WriteApiKeyCookie;
         var removeApiKeyCookie = CookieHelpers.RemoveApiKeyCookie;
+        var writeUserRoleCookie = CookieHelpers.WriteUserRoleCookie;
+        var removeUserRoleCookie = CookieHelpers.RemoveUserRoleCookie;
 
         // User registration (DDD/CQRS)
         group.MapPost("/auth/register", async (RegisterPayload payload, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
@@ -55,6 +57,7 @@ public static class AuthenticationEndpoints
             logger.LogInformation("User registration attempt for {Email}", payload.Email);
             var result = await mediator.Send(command, ct);
             writeSessionCookie(context, result.SessionToken, result.ExpiresAt);
+            writeUserRoleCookie(context, result.User.Role, result.ExpiresAt);
             logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
 
             // Map to legacy AuthResponse for backward compatibility
@@ -115,6 +118,7 @@ public static class AuthenticationEndpoints
             var sessionExpirationDays = await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30) ?? 30;
             var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
             writeSessionCookie(context, result.SessionToken, expiresAt);
+            writeUserRoleCookie(context, result.User.Role, expiresAt);
             logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
 
             // Map to legacy AuthResponse for backward compatibility
@@ -141,6 +145,7 @@ public static class AuthenticationEndpoints
             }
 
             removeSessionCookie(context);
+            removeUserRoleCookie(context);
             return Results.Json(new { ok = true });
         });
 
@@ -166,6 +171,7 @@ public static class AuthenticationEndpoints
 
             var protectedApiKey = apiKeyCookieService.Protect(payload.ApiKey);
             writeApiKeyCookie(context, protectedApiKey);
+            writeUserRoleCookie(context, result.User.Role, DateTime.UtcNow.AddDays(90));
             logger.LogInformation("User {UserId} validated API key {ApiKeyId} and cookie issued", result.User.Id, result.ApiKeyId);
 
             // Map to legacy format for backward compatibility
@@ -201,6 +207,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             var result = await mediator.Send(command, ct);
 
             removeApiKeyCookie(context);
+            removeUserRoleCookie(context);
             logger.LogInformation("API key cookie removed");
 
             return Results.Json(new { ok = true, message = result.Message });

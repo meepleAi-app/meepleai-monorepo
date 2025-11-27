@@ -21,6 +21,7 @@
  * Split from: useUploadQueue.worker.test.ts (1833 lines → ~450 lines)
  */
 
+import type { Mock } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useUploadQueue } from '../useUploadQueue';
 import { uploadQueueStore } from '../../stores/UploadQueueStore';

@@ -255,3 +255,4 @@ public class ReplyToRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full reply workflow testing.
 }
+

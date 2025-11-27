@@ -393,3 +393,4 @@ public class QueryValidatorTests
 
     #endregion
 }
+

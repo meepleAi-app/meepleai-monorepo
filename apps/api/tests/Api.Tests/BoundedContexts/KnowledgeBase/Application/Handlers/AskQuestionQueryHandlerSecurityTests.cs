@@ -226,7 +226,7 @@ public class AskQuestionQueryHandlerSecurityTests
             ThreadId: threadId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -278,7 +278,7 @@ public class AskQuestionQueryHandlerSecurityTests
             ThreadId: threadId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -335,7 +335,7 @@ public class AskQuestionQueryHandlerSecurityTests
             ThreadId: threadId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -373,7 +373,7 @@ public class AskQuestionQueryHandlerSecurityTests
             ThreadId: threadId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -408,7 +408,7 @@ public class AskQuestionQueryHandlerSecurityTests
             ThreadId: threadId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -467,3 +467,4 @@ public class AskQuestionQueryHandlerSecurityTests
             .ReturnsAsync("Test system prompt");
     }
 }
+

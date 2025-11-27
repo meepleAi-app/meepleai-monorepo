@@ -9,6 +9,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration.GameManagement;
@@ -44,22 +45,39 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Start PostgreSQL container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "create_comment_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
+        // Prefer external Postgres if provided
+        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
+        string connectionString;
+        if (!string.IsNullOrWhiteSpace(externalConn))
+        {
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder(externalConn)
+            {
+                Database = "create_comment_test",
+                SslMode = Npgsql.SslMode.Disable,
+                KeepAlive = 30,
+                Pooling = false
+            };
+            connectionString = builder.ConnectionString;
+        }
+        else
+        {
+            // Start PostgreSQL container
+            _postgresContainer = new ContainerBuilder()
+                .WithImage("postgres:16-alpine")
+                .WithEnvironment("POSTGRES_USER", "postgres")
+                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+                .WithEnvironment("POSTGRES_DB", "create_comment_test")
+                .WithPortBinding(5432, true)
+                .WithWaitStrategy(Wait.ForUnixContainer()
+                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+                .Build();
 
-        await _postgresContainer.StartAsync(TestCancellationToken);
+            await _postgresContainer.StartAsync(TestCancellationToken);
 
-        // Setup services
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        var connectionString = $"Host=localhost;Port={postgresPort};Database=create_comment_test;Username=postgres;Password=postgres;";
+            // Setup services
+            var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+            connectionString = $"Host=localhost;Port={postgresPort};Database=create_comment_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+        }
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -87,7 +105,19 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        // Retry to mitigate occasional network hiccups when starting fresh container
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                break;
+            }
+            catch (NpgsqlException) when (attempt < 2)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
 
         // Seed test data
         await SeedTestDataAsync();
@@ -190,7 +220,7 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         result.GameId.Should().Be(_testGameId.ToString());
 
         // Verify database state
-        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == result.Id);
+        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == result.Id, TestCancellationToken);
         comment.Should().NotBeNull();
         comment!.CommentText.Should().Be("This is a test comment");
     }
@@ -336,7 +366,7 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         result.MentionedUserIds.Should().NotBeEmpty();
 
         var mentionedUser = await _dbContext!.Users
-            .FirstOrDefaultAsync(u => u.DisplayName == "MentionedUser");
+            .FirstOrDefaultAsync(u => u.DisplayName == "MentionedUser", TestCancellationToken);
         result.MentionedUserIds.Should().Contain(mentionedUser!.Id.ToString());
     }
 
@@ -414,3 +444,4 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
 
     #endregion
 }
+

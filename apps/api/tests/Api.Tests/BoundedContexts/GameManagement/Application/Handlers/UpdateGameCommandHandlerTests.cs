@@ -60,7 +60,7 @@ public class UpdateGameCommandHandlerTests
             MaxPlayTimeMinutes: 90);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -104,7 +104,7 @@ public class UpdateGameCommandHandlerTests
             Title: "Updated Title");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Updated Title", result.Title);
@@ -130,7 +130,7 @@ public class UpdateGameCommandHandlerTests
             Publisher: "New Publisher");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Catan", result.Title); // Unchanged
@@ -158,7 +158,7 @@ public class UpdateGameCommandHandlerTests
             MaxPlayers: 5);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, result.MinPlayers);
@@ -186,7 +186,7 @@ public class UpdateGameCommandHandlerTests
             MaxPlayTimeMinutes: 120);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(60, result.MinPlayTimeMinutes);
@@ -213,7 +213,7 @@ public class UpdateGameCommandHandlerTests
             YearPublished: 2025);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2025, result.YearPublished);
@@ -239,7 +239,7 @@ public class UpdateGameCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains($"Game with ID {gameId} not found", exception.Message);
 
@@ -266,7 +266,7 @@ public class UpdateGameCommandHandlerTests
         var command = new UpdateGameCommand(GameId: gameId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Should still persist (UpdateDetails called with all nulls)
         Assert.NotNull(result);
@@ -298,7 +298,7 @@ public class UpdateGameCommandHandlerTests
             MinPlayers: 1); // MaxPlayers is null
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - PlayerCount should remain unchanged (2-4)
         Assert.Equal(2, result.MinPlayers);
@@ -325,7 +325,7 @@ public class UpdateGameCommandHandlerTests
             MinPlayTimeMinutes: 60); // MaxPlayTimeMinutes is null
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - PlayTime should remain unchanged (30-45)
         Assert.Equal(30, result.MinPlayTimeMinutes);
@@ -396,7 +396,7 @@ public class UpdateGameCommandHandlerTests
             Title: "Updated Title");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - CreatedAt should be preserved
         Assert.NotEqual(default(DateTime), result.CreatedAt);
@@ -423,7 +423,7 @@ public class UpdateGameCommandHandlerTests
             Title: "Settlers of Catan"); // Update title, preserve BGG link
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - BGG ID should be preserved
         Assert.Equal(13, result.BggId);
@@ -432,3 +432,4 @@ public class UpdateGameCommandHandlerTests
 
     #endregion
 }
+

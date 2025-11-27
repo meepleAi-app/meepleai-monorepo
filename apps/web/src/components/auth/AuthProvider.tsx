@@ -9,7 +9,15 @@
  * Designed to wrap the entire app in _app.tsx for global auth availability
  */
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, PropsWithChildren } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  PropsWithChildren,
+} from 'react';
 import { AuthUser } from '@/types';
 import { api } from '@/lib/api';
 
@@ -51,16 +59,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load user on mount
-  useEffect(() => {
-    void loadCurrentUser();
-  }, []);
-
   const loadCurrentUser = useCallback(async () => {
-    setLoading(true);
+    setInitialLoading(true);
     setError(null);
     try {
       const res = await api.get<AuthResponse>('/api/v1/auth/me');
@@ -69,9 +73,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       console.error('Failed to load current user:', err);
       setUser(null);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   }, []);
+
+  // Load user on mount
+  useEffect(() => {
+    void loadCurrentUser();
+  }, [loadCurrentUser]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     setLoading(true);

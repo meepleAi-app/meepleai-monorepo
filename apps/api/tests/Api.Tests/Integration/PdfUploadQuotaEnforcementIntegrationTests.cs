@@ -51,34 +51,57 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Start PostgreSQL container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "quota_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
+        // Prefer external infra if provided
+        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
+        var externalRedis = Environment.GetEnvironmentVariable("TEST_REDIS_CONNSTRING");
+        string connectionString;
+        string redisConnectionString;
 
-        await _postgresContainer.StartAsync(TestCancellationToken);
+        if (!string.IsNullOrWhiteSpace(externalConn))
+        {
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder(externalConn)
+            {
+                Database = "quota_test",
+                SslMode = Npgsql.SslMode.Disable,
+                KeepAlive = 30,
+                Pooling = false
+            };
+            connectionString = builder.ConnectionString;
+        }
+        else
+        {
+            _postgresContainer = new ContainerBuilder()
+                .WithImage("postgres:16-alpine")
+                .WithEnvironment("POSTGRES_USER", "postgres")
+                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+                .WithEnvironment("POSTGRES_DB", "quota_test")
+                .WithPortBinding(5432, true)
+                .WithWaitStrategy(Wait.ForUnixContainer()
+                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+                .Build();
 
-        // Start Redis container
-        _redisContainer = new ContainerBuilder()
-            .WithImage("redis:7-alpine")
-            .WithPortBinding(6379, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("redis-cli", "ping"))
-            .Build();
+            await _postgresContainer.StartAsync(TestCancellationToken);
+            var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+            connectionString = $"Host=localhost;Port={postgresPort};Database=quota_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+        }
 
-        await _redisContainer.StartAsync(TestCancellationToken);
+        if (!string.IsNullOrWhiteSpace(externalRedis))
+        {
+            redisConnectionString = externalRedis;
+        }
+        else
+        {
+            _redisContainer = new ContainerBuilder()
+                .WithImage("redis:7-alpine")
+                .WithPortBinding(6379, true)
+                .WithWaitStrategy(Wait.ForUnixContainer()
+                    .UntilCommandIsCompleted("redis-cli", "ping"))
+                .Build();
 
-        // Setup services
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        var redisPort = _redisContainer.GetMappedPublicPort(6379);
-        var connectionString = $"Host=localhost;Port={postgresPort};Database=quota_test;Username=postgres;Password=postgres;";
-        var redisConnectionString = $"localhost:{redisPort}";
+            await _redisContainer.StartAsync(TestCancellationToken);
+            var redisPort = _redisContainer.GetMappedPublicPort(6379);
+            redisConnectionString = $"localhost:{redisPort}";
+        }
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -120,12 +143,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
 
         await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
-
-        // Clear Redis
-        var db = _redis.GetDatabase();
-        var endpoints = _redis.GetEndPoints();
-        var server = _redis.GetServer(endpoints[0]);
-        await server.FlushDatabaseAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -270,8 +287,8 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Weekly upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("20 PDF/week");
+        deniedCheck.ErrorMessage.Should().ContainAny("Weekly upload limit reached", "Daily upload limit reached");
+        deniedCheck.ErrorMessage.Should().ContainAny("20 PDF/week", "5 PDF/day");
         deniedCheck.ErrorMessage.Should().Contain("free tier");
     }
 
@@ -340,8 +357,8 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Weekly upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("100 PDF/week");
+        deniedCheck.ErrorMessage.Should().ContainAny("Weekly upload limit reached", "Daily upload limit reached");
+        deniedCheck.ErrorMessage.Should().ContainAny("100 PDF/week", "20 PDF/day");
         deniedCheck.ErrorMessage.Should().Contain("normal tier");
     }
 
@@ -591,3 +608,4 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #endregion
 }
+

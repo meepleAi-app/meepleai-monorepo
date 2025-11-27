@@ -169,3 +169,4 @@ public class GameDomainTests
         Assert.InRange(game.CreatedAt, before, after);
     }
 }
+

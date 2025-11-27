@@ -4,8 +4,18 @@
  * Tests for RuleSpec comments, bulk operations, cache management, and agent feedback
  */
 
+// Mock downloadFile before importing chatClient
+import { mockDownloadFile } from './chatClient.test-helpers';
+
+vi.mock('../../core/httpClient', async () => {
+  const actual = await vi.importActual('../../core/httpClient');
+  return {
+    ...actual,
+    downloadFile: mockDownloadFile,
+  };
+});
+
 import { createChatClient } from '../chatClient';
-import { downloadFile } from '../../core/httpClient';
 import {
   createMockHttpClient,
   createMockComment,
@@ -236,7 +246,7 @@ describe('ChatClient - Operations & Management', () => {
   describe('Bulk Operations', () => {
     describe('bulkExportRuleSpecs', () => {
       beforeEach(() => {
-        (downloadFile as Mock).mockClear();
+        mockDownloadFile.mockClear();
       });
 
       it('should export multiple rule specs', async () => {
@@ -256,7 +266,7 @@ describe('ChatClient - Operations & Management', () => {
           '/api/v1/rulespecs/bulk/export',
           request
         );
-        expect(downloadFile).toHaveBeenCalledWith(blob, 'rulespecs-export.zip');
+        expect(mockDownloadFile).toHaveBeenCalledWith(blob, 'rulespecs-export.zip');
       });
 
       it('should handle single rule spec export', async () => {
@@ -274,10 +284,9 @@ describe('ChatClient - Operations & Management', () => {
 
         await chatClient.bulkExportRuleSpecs({ ruleSpecIds: [] });
 
-        expect(mockHttpClient.postFile).toHaveBeenCalledWith(
-          '/api/v1/rulespecs/bulk/export',
-          { ruleSpecIds: [] }
-        );
+        expect(mockHttpClient.postFile).toHaveBeenCalledWith('/api/v1/rulespecs/bulk/export', {
+          ruleSpecIds: [],
+        });
       });
     });
   });
@@ -300,7 +309,7 @@ describe('ChatClient - Operations & Management', () => {
       it('should fetch cache stats for specific game', async () => {
         const mockStats = createMockCacheStats({
           totalEntries: 50,
-          hitRate: 0.90,
+          hitRate: 0.9,
           memoryUsage: 256000,
         });
 
@@ -363,9 +372,7 @@ describe('ChatClient - Operations & Management', () => {
         mockHttpClient.delete.mockResolvedValueOnce(undefined);
         await chatClient.invalidateCacheByTag('game-rules');
 
-        expect(mockHttpClient.delete).toHaveBeenCalledWith(
-          '/api/v1/admin/cache/tags/game-rules'
-        );
+        expect(mockHttpClient.delete).toHaveBeenCalledWith('/api/v1/admin/cache/tags/game-rules');
       });
 
       it('should encode tag in URL', async () => {

@@ -93,10 +93,10 @@ public class RagService : IRagService
 
         // AI-05: Check cache first (unless bypassed)
         // AI-09: Include language in cache key to avoid cross-language cache hits
-        var cacheKey = $"{_cache.GenerateQaCacheKey(gameId, query)}:lang:{language}";
+        var cacheKey = $"{_cache.GenerateQaCacheKey(gameId, query!)}:lang:{language}";
         if (!bypassCache)
         {
-            var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
+            var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
             if (cachedResponse != null)
             {
                 LogInformation("Returning cached QA response for game {GameId}", gameId);
@@ -113,11 +113,11 @@ public class RagService : IRagService
             async () =>
             {
                 // CONFIG-04: Load dynamic RAG configuration
-                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK);
+                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
                 activity?.SetTag("rag.config.topK", topK);
 
                 // Step 1: PERF-08 - Generate query variations for improved recall
-                var queryVariations = await _queryExpansion.GenerateQueryVariationsAsync(query, language, cancellationToken);
+                var queryVariations = await _queryExpansion.GenerateQueryVariationsAsync(query!, language, cancellationToken);
                 activity?.SetTag("query.variations.count", queryVariations.Count);
 
                 _logger.LogDebug("Generated {Count} query variations: {Variations}",
@@ -146,7 +146,7 @@ public class RagService : IRagService
                 var searchTasks = embeddings
                     .Select(embedding => _qdrantService.SearchAsync(gameId, embedding, language, limit: topK, cancellationToken))
                     .ToList();
-                var searchResults = await Task.WhenAll(searchTasks);
+                var searchResults = await Task.WhenAll(searchTasks).ConfigureAwait(false);
 
                 // Step 4: PERF-08 - Fuse and deduplicate results using Reciprocal Rank Fusion (RRF)
                 var fusedResults = await _reranker.FuseSearchResultsAsync(searchResults.Where(r => r.Success).ToList());
@@ -176,12 +176,12 @@ public class RagService : IRagService
                     $"[Page {r.Page}]\n{r.Text}"));
 
                 // AI-07.1: Use PromptTemplateService for advanced prompt engineering
-                var questionType = _promptTemplateService.ClassifyQuestion(query);
+                var questionType = _promptTemplateService.ClassifyQuestion(query!);
                 Guid? gameGuid = Guid.TryParse(gameId, out var guid) ? guid : null;
-                var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType);
+                var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType).ConfigureAwait(false);
 
                 var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
-                var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query);
+                var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query!);
 
                 _logger.LogDebug(
                     "Using prompt template for game {GameId}, question type {QuestionType}",
@@ -211,7 +211,7 @@ public class RagService : IRagService
                     snippets.Count, StringHelper.Truncate(answer, 50));
 
                 var metadata = llmResult.Metadata.Count > 0
-                    ? new Dictionary<string, string>(llmResult.Metadata)
+                    ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
                     : null;
 
                 var response = new QaResponse(
@@ -224,7 +224,7 @@ public class RagService : IRagService
                     metadata);
 
                 // AI-05: Cache the response for future requests
-                await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
+                await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
 
                 // OPS-02: Record metrics
                 stopwatch.Stop();
@@ -274,7 +274,7 @@ public class RagService : IRagService
         // AI-05: Check cache first
         // AI-09: Include language in cache key
         var cacheKey = $"{_cache.GenerateExplainCacheKey(gameId, topic)}:lang:{language}";
-        var cachedResponse = await _cache.GetAsync<ExplainResponse>(cacheKey, cancellationToken);
+        var cachedResponse = await _cache.GetAsync<ExplainResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
         if (cachedResponse != null)
         {
             LogInformation("Returning cached Explain response for game {GameId}, topic: {Topic}, language: {Language}", gameId, topic, language);
@@ -286,7 +286,7 @@ public class RagService : IRagService
             async () =>
             {
                 // CONFIG-04: Load dynamic RAG configuration
-                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK);
+                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
 
                 // Step 1: Generate embedding for the topic
                 // AI-09: Use language-aware embedding service
@@ -302,7 +302,7 @@ public class RagService : IRagService
                 // Step 2: Search Qdrant for relevant chunks (get more for comprehensive explanation)
                 // AI-09: Filter search by language
                 // CONFIG-04: Use dynamic topK from configuration
-                var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: topK, cancellationToken);
+                var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: topK, cancellationToken).ConfigureAwait(false);
 
                 if (!searchResult.Success || searchResult.Results.Count == 0)
                 {
@@ -488,7 +488,7 @@ public class RagService : IRagService
     /// </summary>
     private Dictionary<string, Func<QaResponse>> GetQaErrorResponseFactories()
     {
-        return new Dictionary<string, Func<QaResponse>>
+        return new Dictionary<string, Func<QaResponse>>(StringComparer.OrdinalIgnoreCase)
         {
             ["HttpRequestException"] = () => new QaResponse("Network error while processing your question.", Array.Empty<Snippet>()),
             ["TaskCanceledException"] = () => new QaResponse("Request timed out. Please try again.", Array.Empty<Snippet>()),
@@ -504,7 +504,7 @@ public class RagService : IRagService
     /// </summary>
     private Dictionary<string, Func<ExplainResponse>> GetExplainErrorResponseFactories()
     {
-        return new Dictionary<string, Func<ExplainResponse>>
+        return new Dictionary<string, Func<ExplainResponse>>(StringComparer.OrdinalIgnoreCase)
         {
             ["HttpRequestException"] = () => CreateEmptyExplainResponse("Network error while generating explanation."),
             ["TaskCanceledException"] = () => CreateEmptyExplainResponse("Request timed out. Please try again."),
@@ -553,10 +553,10 @@ public class RagService : IRagService
         // AI-05: Check cache first (unless bypassed)
         // AI-09: Include language in cache key to avoid cross-language cache hits
         // AI-14: Include search mode in cache key to differentiate cached responses
-        var cacheKey = $"{_cache.GenerateQaCacheKey(gameId, query)}:lang:{language}:mode:{searchMode}";
+        var cacheKey = $"{_cache.GenerateQaCacheKey(gameId, query!)}:lang:{language}:mode:{searchMode}";
         if (!bypassCache)
         {
-            var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
+            var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
             if (cachedResponse != null)
             {
                 LogInformation("Returning cached hybrid search QA response for game {GameId}, mode {SearchMode}", gameId, searchMode);
@@ -573,7 +573,7 @@ public class RagService : IRagService
             async () =>
             {
                 // CONFIG-04: Load dynamic RAG configuration for top K
-                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK);
+                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
                 activity?.SetTag("rag.config.topK", topK);
 
                 // Step 1: Parse gameId to Guid for hybrid search
@@ -585,11 +585,11 @@ public class RagService : IRagService
 
                 // Step 2: AI-14 - Use hybrid search service to retrieve results
                 var hybridResults = await _hybridSearchService.SearchAsync(
-                    query,
+                    query!,
                     gameGuid,
                     mode: searchMode,
                     limit: topK,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (hybridResults.Count == 0)
                 {
@@ -619,19 +619,19 @@ public class RagService : IRagService
                     $"[Page {r.PageNumber ?? 0}]\n{r.Content}"));
 
                 // AI-07.1: Use PromptTemplateService for advanced prompt engineering
-                var questionType = _promptTemplateService.ClassifyQuestion(query);
+                var questionType = _promptTemplateService.ClassifyQuestion(query!);
                 Guid? gameGuidNullable = gameGuid;
-                var template = await _promptTemplateService.GetTemplateAsync(gameGuidNullable, questionType);
+                var template = await _promptTemplateService.GetTemplateAsync(gameGuidNullable, questionType).ConfigureAwait(false);
 
                 var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
-                var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query);
+                var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query!);
 
                 _logger.LogDebug(
                     "Using prompt template for game {GameId}, question type {QuestionType}, search mode {SearchMode}",
                     gameId, questionType, searchMode);
 
                 // Step 5: Generate LLM response
-                var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken);
+                var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
 
                 if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
                 {
@@ -655,7 +655,7 @@ public class RagService : IRagService
                     searchMode, snippets.Count, StringHelper.Truncate(answer, 50));
 
                 var metadata = llmResult.Metadata.Count > 0
-                    ? new Dictionary<string, string>(llmResult.Metadata)
+                    ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
                     : null;
 
                 var response = new QaResponse(
@@ -668,7 +668,7 @@ public class RagService : IRagService
                     metadata);
 
                 // AI-05: Cache the response for future requests
-                await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
+                await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
 
                 // OPS-02: Record metrics
                 stopwatch.Stop();
@@ -732,7 +732,7 @@ public class RagService : IRagService
             async () =>
             {
                 // CONFIG-04: Load dynamic RAG configuration for top K
-                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK);
+                var topK = await _configProvider.GetRagConfigAsync("TopK", DefaultTopK).ConfigureAwait(false);
                 activity?.SetTag("rag.config.topK", topK);
 
                 // Step 1: Parse gameId to Guid for hybrid search
@@ -744,11 +744,11 @@ public class RagService : IRagService
 
                 // Step 2: Use hybrid search service to retrieve results
                 var hybridResults = await _hybridSearchService.SearchAsync(
-                    query,
+                    query!,
                     gameGuid,
                     mode: searchMode,
                     limit: topK,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (hybridResults.Count == 0)
                 {

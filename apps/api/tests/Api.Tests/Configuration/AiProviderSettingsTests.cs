@@ -371,3 +371,4 @@ public class AiProviderSettingsTests
         Assert.Contains(result.Failures!, f => f.Contains("FailureThreshold must be positive"));
     }
 }
+

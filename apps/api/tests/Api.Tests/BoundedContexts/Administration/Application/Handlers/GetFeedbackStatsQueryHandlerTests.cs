@@ -1,3 +1,4 @@
+using System.Threading;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -21,6 +22,8 @@ public class GetFeedbackStatsQueryHandlerTests
     {
         _mockLogger = new Mock<ILogger<GetFeedbackStatsQueryHandler>>();
     }
+
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     /// <summary>
     /// Creates a fresh DbContext for each test to ensure complete isolation
@@ -118,7 +121,7 @@ public class GetFeedbackStatsQueryHandlerTests
         var query = new GetFeedbackStatsQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -173,13 +176,13 @@ public class GetFeedbackStatsQueryHandlerTests
                 UpdatedAt = DateTime.UtcNow
             }
         );
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
         var handler = new GetFeedbackStatsQueryHandler(context, _mockLogger.Object);
         var query = new GetFeedbackStatsQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -237,13 +240,13 @@ public class GetFeedbackStatsQueryHandlerTests
                 UpdatedAt = DateTime.UtcNow
             }
         );
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
         var handler = new GetFeedbackStatsQueryHandler(context, _mockLogger.Object);
         var query = new GetFeedbackStatsQuery(startDate, endDate);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Should only include 2 feedbacks within date range
         Assert.NotNull(result);
@@ -293,13 +296,13 @@ public class GetFeedbackStatsQueryHandlerTests
                 UpdatedAt = DateTime.UtcNow
             }
         );
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
         var handler = new GetFeedbackStatsQueryHandler(context, _mockLogger.Object);
         var query = new GetFeedbackStatsQuery(Endpoint: "/api/v1/chat");
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Should only include /api/v1/chat feedback
         Assert.NotNull(result);
@@ -356,13 +359,13 @@ public class GetFeedbackStatsQueryHandlerTests
                 UpdatedAt = DateTime.UtcNow
             }
         );
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
         var handler = new GetFeedbackStatsQueryHandler(context, _mockLogger.Object);
         var query = new GetFeedbackStatsQuery(startDate, endDate, "/api/v1/chat");
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Should only include 1 feedback matching all filters
         Assert.NotNull(result);
@@ -388,3 +391,4 @@ public class GetFeedbackStatsQueryHandlerTests
 
     #endregion
 }
+

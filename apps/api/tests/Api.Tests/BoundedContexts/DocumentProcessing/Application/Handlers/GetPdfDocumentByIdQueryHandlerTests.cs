@@ -47,7 +47,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -82,7 +82,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -110,7 +110,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -137,7 +137,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -164,7 +164,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -189,7 +189,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -212,7 +212,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
         var query = new GetPdfDocumentByIdQuery(documentId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -252,3 +252,4 @@ public class GetPdfDocumentByIdQueryHandlerTests
 
     #endregion
 }
+

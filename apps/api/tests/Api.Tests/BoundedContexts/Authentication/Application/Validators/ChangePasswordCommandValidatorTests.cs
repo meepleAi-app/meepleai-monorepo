@@ -306,3 +306,4 @@ public sealed class ChangePasswordCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.NewPassword);
     }
 }
+

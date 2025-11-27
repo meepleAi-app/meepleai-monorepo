@@ -112,3 +112,4 @@ public class YearPublishedTests
         Assert.NotEqual(year1, year3);
     }
 }
+

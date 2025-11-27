@@ -58,7 +58,7 @@ public sealed class InvokeChessAgentCommandHandler
             var cacheKey = _cache.GenerateQaCacheKey(
                 ChessGameId,
                 $"{request.Question}|{request.FenPosition ?? ""}");
-            var cachedResponse = await _cache.GetAsync<ChessAgentResponse>(cacheKey, cancellationToken);
+            var cachedResponse = await _cache.GetAsync<ChessAgentResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
             if (cachedResponse != null)
             {
                 _logger.LogInformation("Returning cached chess agent response");
@@ -88,7 +88,7 @@ public sealed class InvokeChessAgentCommandHandler
                     Query = searchQuery,
                     Limit = 5
                 },
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {
@@ -109,10 +109,10 @@ public sealed class InvokeChessAgentCommandHandler
                 $"[Source {i + 1}]\n{r.Text}"));
 
             // Step 4: Generate response using LLM with chess-specialized prompt
-            var systemPrompt = await BuildChessSystemPromptAsync(hasFenPosition, fenValidationError, cancellationToken);
+            var systemPrompt = await BuildChessSystemPromptAsync(hasFenPosition, fenValidationError, cancellationToken).ConfigureAwait(false);
             var userPrompt = BuildChessUserPrompt(request.Question, request.FenPosition, context, fenValidationError);
 
-            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken);
+            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
 
             if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
             {
@@ -148,7 +148,7 @@ public sealed class InvokeChessAgentCommandHandler
                 metadata);
 
             // Cache the response
-            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
+            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
 
             return response;
         }
@@ -183,7 +183,7 @@ public sealed class InvokeChessAgentCommandHandler
             {
                 var promptTemplate = await _promptTemplateService.GetActivePromptAsync(
                     "chess-system-prompt",
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
 
                 if (!string.IsNullOrWhiteSpace(promptTemplate))
                 {
@@ -384,7 +384,10 @@ ANSWER:";
 
         foreach (var pattern in movePatterns)
         {
-            var matches = Regex.Matches(answer, pattern, RegexOptions.IgnoreCase);
+            var matches = Regex.Matches(
+                answer,
+                pattern,
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking | RegexOptions.Compiled);
             foreach (Match match in matches)
             {
                 if (match.Groups.Count > 1)
@@ -429,7 +432,13 @@ ANSWER:";
             }
         }
 
-        return new ParsedChessResponse(answer, analysis, suggestedMoves.Distinct().Take(6).ToList());
+        return new ParsedChessResponse(
+            answer,
+            analysis,
+            suggestedMoves
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(6)
+                .ToList());
     }
 
     private static ChessAgentResponse CreateEmptyResponse(string message, IReadOnlyList<Snippet>? sources = null)

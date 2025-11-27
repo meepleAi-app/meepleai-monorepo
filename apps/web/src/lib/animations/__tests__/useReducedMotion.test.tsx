@@ -3,6 +3,7 @@
  * Verifies media query detection and SSR safety
  */
 
+import type { Mock, SpyInstance } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useReducedMotion } from '../useReducedMotion';
 
@@ -31,7 +32,9 @@ describe('useReducedMotion', () => {
       removeListener: removeListenerSpy,
     }));
 
-    matchMediaSpy = vi.spyOn(window, 'matchMedia').mockImplementation(matchMediaMock as unknown as typeof window.matchMedia);
+    matchMediaSpy = vi
+      .spyOn(window, 'matchMedia')
+      .mockImplementation(matchMediaMock as unknown as typeof window.matchMedia);
   });
 
   afterEach(() => {

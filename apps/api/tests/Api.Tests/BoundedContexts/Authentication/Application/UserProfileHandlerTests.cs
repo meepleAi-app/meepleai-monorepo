@@ -41,7 +41,7 @@ public class UserProfileHandlerTests
         var query = new GetUserProfileQuery { UserId = userId };
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -64,7 +64,7 @@ public class UserProfileHandlerTests
         var query = new GetUserProfileQuery { UserId = userId };
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -93,11 +93,11 @@ public class UserProfileHandlerTests
         };
 
         // Act
-        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("New Display Name", user.DisplayName);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -122,11 +122,11 @@ public class UserProfileHandlerTests
         };
 
         // Act
-        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("newemail@test.com", user.Email.Value);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class UserProfileHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            handler.Handle(command, CancellationToken.None));
+            handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("Email is already in use", exception.Message);
     }
 
@@ -177,7 +177,7 @@ public class UserProfileHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            handler.Handle(command, CancellationToken.None));
+            handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("User not found", exception.Message);
     }
 
@@ -206,12 +206,12 @@ public class UserProfileHandlerTests
         };
 
         // Act
-        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(user.VerifyPassword("NewPassword456!"));
         Assert.False(user.VerifyPassword(currentPassword));
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public class UserProfileHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            handler.Handle(command, CancellationToken.None));
+            handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("Current password is incorrect", exception.Message);
     }
 
@@ -260,7 +260,7 @@ public class UserProfileHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() =>
-            handler.Handle(command, CancellationToken.None));
+            handler.Handle(command, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public class UserProfileHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            handler.Handle(command, CancellationToken.None));
+            handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("User not found", exception.Message);
     }
 
@@ -299,3 +299,4 @@ public class UserProfileHandlerTests
         );
     }
 }
+

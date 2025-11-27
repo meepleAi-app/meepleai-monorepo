@@ -85,7 +85,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -149,7 +149,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -183,7 +183,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -228,7 +228,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -259,7 +259,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -280,7 +280,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -298,7 +298,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -328,7 +328,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -363,7 +363,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -392,7 +392,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -422,7 +422,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -543,7 +543,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -577,7 +577,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -614,7 +614,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -635,7 +635,7 @@ public class StreamExplainQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -696,3 +696,4 @@ public class StreamExplainQueryHandlerTests
 
     #endregion
 }
+

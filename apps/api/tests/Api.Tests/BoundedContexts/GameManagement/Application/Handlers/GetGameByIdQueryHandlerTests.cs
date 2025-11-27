@@ -46,7 +46,7 @@ public class GetGameByIdQueryHandlerTests
         var query = new GetGameByIdQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -81,7 +81,7 @@ public class GetGameByIdQueryHandlerTests
         var query = new GetGameByIdQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -114,7 +114,7 @@ public class GetGameByIdQueryHandlerTests
         var query = new GetGameByIdQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -140,7 +140,7 @@ public class GetGameByIdQueryHandlerTests
         var query = new GetGameByIdQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -170,7 +170,7 @@ public class GetGameByIdQueryHandlerTests
         var query = new GetGameByIdQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -193,7 +193,7 @@ public class GetGameByIdQueryHandlerTests
         var query = new GetGameByIdQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -254,7 +254,7 @@ public class GetGameByIdQueryHandlerTests
         var query = new GetGameByIdQuery(gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -264,3 +264,4 @@ public class GetGameByIdQueryHandlerTests
 
     #endregion
 }
+

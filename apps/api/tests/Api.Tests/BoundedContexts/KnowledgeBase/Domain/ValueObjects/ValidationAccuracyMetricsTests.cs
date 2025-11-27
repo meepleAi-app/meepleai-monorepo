@@ -343,3 +343,4 @@ public class ValidationAccuracyMetricsTests
         Assert.Equal(ValidationAccuracyLevel.Good, metrics.QualityLevel);
     }
 }
+

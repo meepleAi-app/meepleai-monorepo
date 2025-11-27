@@ -673,3 +673,4 @@ public class RagExceptionHandlerTests
         public static TestResult CreateFailure(string error) => new() { Success = false, ErrorMessage = error };
     }
 }
+

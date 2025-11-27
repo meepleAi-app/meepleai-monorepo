@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # Load Docker Secrets into environment variables
 # SEC-708: Docker Secrets support for services that don't natively support _FILE pattern
 #
@@ -14,13 +14,13 @@ SECRETS_DIR="/run/secrets"
 
 # Function to load a secret file into an environment variable
 load_secret() {
-    local secret_name=$1
-    local env_var_name=$2
-    local secret_file="$SECRETS_DIR/$secret_name"
+    secret_name=$1
+    env_var_name=$2
+    secret_file="$SECRETS_DIR/$secret_name"
 
     if [ -f "$secret_file" ]; then
         # Read secret value (trim whitespace)
-        local secret_value=$(cat "$secret_file" | tr -d '\n\r' | xargs)
+        secret_value=$(cat "$secret_file" | tr -d '\n\r' | xargs)
 
         if [ -n "$secret_value" ]; then
             # Export as environment variable

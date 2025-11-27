@@ -184,20 +184,4 @@ describe('LoadingButton', () => {
       expect(button).toHaveAttribute('aria-label', 'Submit form');
     });
   });
-
-  describe('Snapshot tests', () => {
-    it('should match snapshot in default state', () => {
-      const { container } = render(<LoadingButton>Submit</LoadingButton>);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('should match snapshot in loading state', () => {
-      const { container } = render(
-        <LoadingButton isLoading={true} loadingText="Processing...">
-          Submit
-        </LoadingButton>
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

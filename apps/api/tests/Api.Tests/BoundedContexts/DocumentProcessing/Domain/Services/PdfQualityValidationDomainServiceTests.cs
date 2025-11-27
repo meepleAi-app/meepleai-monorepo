@@ -223,3 +223,4 @@ public class PdfQualityValidationDomainServiceTests
         Assert.True(validation.Report.Metrics.TextCoverageScore < 0.5);
     }
 }
+

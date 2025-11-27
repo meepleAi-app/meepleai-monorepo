@@ -3,9 +3,9 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
-using Api.SharedKernel.Application.Services;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.EventHandlers;
+using Api.SharedKernel.Application.Services;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -83,7 +83,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         };
 
         _dbContext.Users.Add(userEntity);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(CancellationToken.None);
 
         // Act - Change password (raises domain event)
         var newPasswordHash = PasswordHash.Create("NewPassword123!");
@@ -94,11 +94,11 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         var passwordChangedEvent = (PasswordChangedEvent)user.DomainEvents.First();
 
         // Manually dispatch event (simulating what SaveChangesAsync does)
-        await _mediator.Publish(passwordChangedEvent);
+        await _mediator.Publish(passwordChangedEvent, CancellationToken.None);
         user.ClearDomainEvents();
 
         // Assert - Audit log should be created
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync();
+        var auditLogs = await _dbContext.AuditLogs.ToListAsync(CancellationToken.None);
         auditLogs.Should().HaveCount(1);
 
         var auditLog = auditLogs.First();
@@ -135,11 +135,11 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         apiKeyRevokedEvent.Reason.Should().Be("Security audit");
 
         // Dispatch event manually
-        await _mediator.Publish(apiKeyRevokedEvent);
+        await _mediator.Publish(apiKeyRevokedEvent, CancellationToken.None);
         apiKey.ClearDomainEvents();
 
         // Verify audit log
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync();
+        var auditLogs = await _dbContext.AuditLogs.ToListAsync(CancellationToken.None);
         auditLogs.Should().HaveCount(1);
         auditLogs.First().Action.Should().Contain("ApiKeyRevokedEvent");
     }
@@ -192,3 +192,4 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         );
     }
 }
+

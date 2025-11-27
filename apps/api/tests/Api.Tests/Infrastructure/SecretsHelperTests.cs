@@ -232,3 +232,4 @@ public class SecretsHelperTests
             SecretsHelper.BuildPostgresConnectionString(config, NullLogger.Instance));
     }
 }
+

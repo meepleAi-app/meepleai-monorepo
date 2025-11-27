@@ -62,7 +62,7 @@ public class GetRuleSpecsQueryHandlerTests
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -113,7 +113,7 @@ public class GetRuleSpecsQueryHandlerTests
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -143,7 +143,7 @@ public class GetRuleSpecsQueryHandlerTests
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -168,7 +168,7 @@ public class GetRuleSpecsQueryHandlerTests
         var query = new GetRuleSpecsQuery(gameId1);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -195,7 +195,7 @@ public class GetRuleSpecsQueryHandlerTests
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -260,7 +260,7 @@ public class GetRuleSpecsQueryHandlerTests
         var query = new GetRuleSpecsQuery(gameId);
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -292,3 +292,4 @@ public class GetRuleSpecsQueryHandlerTests
 
     #endregion
 }
+

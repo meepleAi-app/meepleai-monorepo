@@ -33,8 +33,15 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+*.env.dev
+*.env.production
+*.env.staging
 **/.env
 **/.env.*
+# Secrets and passwords
+infra/secrets/*.txt
+infra/env/*.env
+tools/secrets/*.txt
 
 # Logs
 logs/
@@ -77,6 +84,8 @@ playwright-report/
 test-results/
 
 # Misc
+.zencoder/
+.vscode/
 *.swp
 *.swo
 *~

@@ -89,15 +89,16 @@ export function RequireRole({
 
         // Not authenticated
         if (!result.success || !result.user) {
-          router.replace(unauthenticatedRedirect);
+          // Preserve the current path in 'from' parameter
+          const currentPath = window.location.pathname;
+          const redirectUrl = `${unauthenticatedRedirect}?from=${encodeURIComponent(currentPath)}`;
+          router.replace(redirectUrl);
           return;
         }
 
         // Check authorization (role-based)
         const userRole = result.user.role.toLowerCase();
-        const hasRequiredRole = allowedRoles.some(
-          (role) => role.toLowerCase() === userRole
-        );
+        const hasRequiredRole = allowedRoles.some(role => role.toLowerCase() === userRole);
 
         if (!hasRequiredRole) {
           // Authenticated but not authorized
@@ -110,7 +111,10 @@ export function RequireRole({
         setLoading(false);
       } catch (error) {
         console.error('[RequireRole] Auth check failed:', error);
-        router.replace(unauthenticatedRedirect);
+        // Preserve the current path in 'from' parameter
+        const currentPath = window.location.pathname;
+        const redirectUrl = `${unauthenticatedRedirect}?from=${encodeURIComponent(currentPath)}`;
+        router.replace(redirectUrl);
       }
     }
 

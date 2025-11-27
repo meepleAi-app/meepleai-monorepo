@@ -6,6 +6,7 @@ using Api.SharedKernel.Application.Services;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using FluentAssertions;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -88,7 +89,7 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await EnsureCreatedWithRetry(_dbContext);
 
         // Seed test data
         await SeedTestDataAsync();
@@ -208,7 +209,7 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         result.ResolvedAt.Should().BeNull();
 
         // Verify database state
-        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, TestCancellationToken);
         comment.Should().NotBeNull();
         comment!.IsResolved.Should().BeFalse();
         comment.ResolvedByUserId.Should().BeNull();
@@ -263,7 +264,7 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
             .WithMessage("*not authorized*");
 
         // Verify comment is still resolved
-        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, TestCancellationToken);
         comment.Should().NotBeNull();
         comment!.IsResolved.Should().BeTrue();
     }
@@ -322,7 +323,7 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         result.IsResolved.Should().BeFalse();
 
         // Verify parent is also unresolved
-        var parent = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == parentId);
+        var parent = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == parentId, TestCancellationToken);
         parent.Should().NotBeNull();
         parent!.IsResolved.Should().BeFalse("parent should be unresolved");
         parent.ResolvedByUserId.Should().BeNull();
@@ -367,7 +368,7 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
         result.IsResolved.Should().BeFalse();
 
         // Verify parent remains unresolved (no change)
-        var parent = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == parentComment.Id);
+        var parent = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == parentComment.Id, TestCancellationToken);
         parent.Should().NotBeNull();
         parent!.IsResolved.Should().BeFalse();
     }
@@ -414,6 +415,23 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
 
     #endregion
 
+    private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                await context.Database.EnsureCreatedAsync(TestCancellationToken);
+                return;
+            }
+            catch (NpgsqlException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
+    }
+
     #region 6. Not Found Tests
 
     [Fact]
@@ -440,3 +458,4 @@ public sealed class UnresolveRuleCommentIntegrationTests : IAsyncLifetime
 
     #endregion
 }
+

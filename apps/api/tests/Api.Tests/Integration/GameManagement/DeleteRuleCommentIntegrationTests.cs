@@ -9,6 +9,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration.GameManagement;
@@ -85,7 +86,18 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                break;
+            }
+            catch (NpgsqlException) when (attempt < 2)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
 
         // Seed test data
         await SeedTestDataAsync();
@@ -197,7 +209,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().BeTrue();
 
         // Verify comment is deleted
-        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, CancellationToken.None);
         comment.Should().BeNull();
     }
 
@@ -226,7 +238,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
             .WithMessage("*not authorized*");
 
         // Verify comment still exists
-        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, TestCancellationToken);
         comment.Should().NotBeNull();
     }
 
@@ -254,7 +266,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().BeTrue();
 
         // Verify comment is deleted
-        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, CancellationToken.None);
         comment.Should().BeNull();
     }
 
@@ -322,11 +334,11 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         result.Should().BeTrue();
 
         // Verify parent is deleted
-        var parentComment = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == parentCommentId);
+        var parentComment = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == parentCommentId, TestCancellationToken);
         parentComment.Should().BeNull();
 
         // Verify reply is also deleted (cascade)
-        var replyComment = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == reply.Id);
+        var replyComment = await _dbContext.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == reply.Id, TestCancellationToken);
         replyComment.Should().BeNull("replies should be cascade deleted");
     }
 
@@ -385,7 +397,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         successCount.Should().BeGreaterThanOrEqualTo(1, "at least one deletion should succeed");
 
         // Verify final database state
-        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var comment = await _dbContext!.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId, TestCancellationToken);
         comment.Should().BeNull("comment should be deleted");
     }
 
@@ -400,3 +412,4 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
 
     #endregion
 }
+

@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities;
 using Api.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using System.Threading;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -17,6 +18,8 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 public class GetUserByIdQueryHandlerTests
 {
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
     /// <summary>
     /// Creates a fresh DbContext for each test to ensure complete isolation
     /// </summary>
@@ -48,12 +51,12 @@ public class GetUserByIdQueryHandlerTests
             CreatedAt = DateTime.UtcNow
         };
         context.Users.Add(user);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -74,7 +77,7 @@ public class GetUserByIdQueryHandlerTests
         var query = new GetUserByIdQuery(nonExistentId.ToString());
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -113,12 +116,12 @@ public class GetUserByIdQueryHandlerTests
 
         context.Users.Add(user);
         context.UserSessions.Add(session);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestCancellationToken);
 
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -176,7 +179,7 @@ public class GetUserByIdQueryHandlerTests
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -222,7 +225,7 @@ public class GetUserByIdQueryHandlerTests
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -252,10 +255,11 @@ public class GetUserByIdQueryHandlerTests
         var query = new GetUserByIdQuery(userId.ToString());
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(string.Empty, result.DisplayName);
     }
 }
+

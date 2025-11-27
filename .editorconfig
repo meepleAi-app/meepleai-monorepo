@@ -107,7 +107,6 @@ dotnet_diagnostic.CS8625.severity = error
 [tests/**/*.cs]
 dotnet_diagnostic.CS8600.severity = warning
 dotnet_diagnostic.CS8602.severity = warning
-dotnet_diagnostic.CS8604.severity = warning
 
 # C# Coding Conventions
 [*.cs]

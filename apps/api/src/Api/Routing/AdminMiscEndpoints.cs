@@ -20,8 +20,10 @@ public static class AdminMiscEndpoints
         // EDIT-07: Bulk RuleSpec operations
         group.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
+            var sessionResult = context.RequireAdminSession();
+            if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
+            var session = sessionResult.Session;
+            ArgumentNullException.ThrowIfNull(session);
 
             if (string.IsNullOrWhiteSpace(request.gameId))
             {
@@ -33,7 +35,7 @@ public static class AdminMiscEndpoints
                 return Results.BadRequest(new { error = "Invalid game ID format" });
             }
 
-            logger.LogInformation("Admin {UserId} creating demo RuleSpec for game {GameId}", session!.User.Id, gameGuid);
+            logger.LogInformation("Admin {UserId} creating demo RuleSpec for game {GameId}", session.User.Id, gameGuid);
             var command = new CreateDemoRuleSpecCommand(gameGuid);
             var specDto = await mediator.Send(command, ct);
 
@@ -47,8 +49,10 @@ public static class AdminMiscEndpoints
         // CHESS-03: Chess knowledge indexing endpoints
         group.MapPost("/chess/index", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var (authorized, session, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
+            var sessionResult = context.RequireAdminSession();
+            if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
+            var session = sessionResult.Session;
+            ArgumentNullException.ThrowIfNull(session);
 
             logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 
@@ -83,10 +87,11 @@ public static class AdminMiscEndpoints
             {
                 return Results.BadRequest(new { error = queryError });
             }
+            var validatedQuery = q!;
 
-            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, q);
+            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, validatedQuery);
 
-            var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = q, Limit = limit ?? 5 }, ct);
+            var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = validatedQuery, Limit = limit ?? 5 }, ct);
 
             if (!searchResult.Success)
             {

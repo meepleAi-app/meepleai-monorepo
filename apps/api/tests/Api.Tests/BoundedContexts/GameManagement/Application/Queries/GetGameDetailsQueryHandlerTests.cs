@@ -47,7 +47,7 @@ public class GetGameDetailsQueryHandlerTests
             .ReturnsAsync(sessions);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -63,8 +63,8 @@ public class GetGameDetailsQueryHandlerTests
         Assert.Null(result.TotalSessionsPlayed);
         Assert.Null(result.LastPlayedAt);
 
-        _gameRepositoryMock.Verify(x => x.GetByIdAsync(game.Id, default), Times.Once);
-        _sessionRepositoryMock.Verify(x => x.FindByGameIdAsync(game.Id, default), Times.Once);
+        _gameRepositoryMock.Verify(x => x.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.FindByGameIdAsync(game.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class GetGameDetailsQueryHandlerTests
             .ReturnsAsync(sessions);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -122,7 +122,7 @@ public class GetGameDetailsQueryHandlerTests
             .ReturnsAsync(sessions);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -148,7 +148,7 @@ public class GetGameDetailsQueryHandlerTests
             .ReturnsAsync(sessions);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -172,13 +172,13 @@ public class GetGameDetailsQueryHandlerTests
             .ReturnsAsync((Game?)null);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
 
-        _gameRepositoryMock.Verify(x => x.GetByIdAsync(gameId, default), Times.Once);
-        _sessionRepositoryMock.Verify(x => x.FindByGameIdAsync(It.IsAny<Guid>(), default), Times.Never);
+        _gameRepositoryMock.Verify(x => x.GetByIdAsync(gameId, It.IsAny<CancellationToken>()), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.FindByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     #endregion
@@ -230,7 +230,7 @@ public class GetGameDetailsQueryHandlerTests
             .ReturnsAsync(sessions);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -293,3 +293,4 @@ public class GetGameDetailsQueryHandlerTests
 
     #endregion
 }
+

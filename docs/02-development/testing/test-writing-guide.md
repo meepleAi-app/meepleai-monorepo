@@ -547,6 +547,83 @@ public class GameControllerTests : IAsyncLifetime
 - Use `WebApplicationFactory<Program>` for integration tests
 - Clean up containers in `DisposeAsync()`
 
+### RAG Validation Pipeline Integration Testing
+
+Integration tests for RAG validation pipeline with Testcontainers and mocked LLM.
+
+**File**: `apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Integration/RagValidationPipelineIntegrationTests.cs`
+**Issue**: #978 (BGAI-036)
+
+```csharp
+// Test RAG validation pipeline with Testcontainers PostgreSQL
+[Collection("RagValidationPipelineIntegration")]
+[Trait("Category", "Integration")]
+[Trait("Dependency", "Testcontainers")]
+public class RagValidationPipelineIntegrationTests : IAsyncLifetime
+{
+    private IContainer? _postgresContainer;
+    private IRagValidationPipelineService? _validationPipeline;
+
+    public async ValueTask InitializeAsync()
+    {
+        // Start PostgreSQL Testcontainer
+        _postgresContainer = new ContainerBuilder()
+            .WithImage("postgres:16-alpine")
+            .WithEnvironment("POSTGRES_USER", "postgres")
+            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+            .WithEnvironment("POSTGRES_DB", "rag_validation_test")
+            .WithPortBinding(5432, true)
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+            .Build();
+
+        await _postgresContainer.StartAsync(CancellationToken.None);
+
+        // IMPORTANT: Wait 2s for container stability
+        await Task.Delay(2000);
+
+        // Setup DI with validation services
+        var services = new ServiceCollection();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        services.AddDbContext<MeepleAiDbContext>(/* ... */);
+        services.AddScoped<IRagValidationPipelineService, RagValidationPipelineService>();
+        // Mock MultiModelValidationService to avoid OpenRouter dependency
+    }
+
+    [Fact]
+    public async Task FullPipeline_AllFourLayers_WithMockedMultiModel()
+    {
+        // Arrange
+        var qaResponse = new QaResponse(
+            answer: "Players start with 10 credits.",
+            snippets: new List<Snippet> { /* ... */ },
+            confidence: 0.88
+        );
+
+        // Act - Test all 4 validation layers
+        var result = await _validationPipeline!.ValidateWithMultiModelAsync(
+            qaResponse,
+            gameId.ToString(),
+            systemPrompt,
+            userPrompt,
+            "en",
+            CancellationToken.None
+        );
+
+        // Assert
+        Assert.True(result.TotalLayers >= 4); // 4 or 5 layers
+        Assert.True(result.LayersPassed >= 3);
+    }
+}
+```
+
+**Key patterns**:
+- Use Testcontainers for PostgreSQL (citation validation needs DB)
+- Add 2s delay after container start for stability
+- Mock `IMultiModelValidationService` to avoid real LLM calls
+- Test validation pipeline logic, not LLM integration
+- Run with: `dotnet test --filter "FullyQualifiedName~RagValidationPipelineIntegrationTests"`
+
 ---
 
 ## E2E Testing (Playwright)

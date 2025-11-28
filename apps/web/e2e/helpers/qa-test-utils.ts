@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 
 const apiBase = 'http://localhost:8080';
 
@@ -220,6 +220,8 @@ export async function mockQAStreamingAPI(
 
 /**
  * Setup complete Q&A test environment with auth, games, agents, chats
+ *
+ * CRITICAL FIX (Issue #1009): Uses localStorage pre-seed to enable input on page load
  */
 export async function setupQATestEnvironment(
   page: Page,
@@ -267,4 +269,69 @@ export async function setupQATestEnvironment(
     mockQAStreaming: (events: Parameters<typeof mockQAStreamingAPI>[1]) =>
       mockQAStreamingAPI(page, events),
   };
+}
+
+/**
+ * Wait for page load and ensure game/agent are selected
+ *
+ * BEST PRACTICE: Uses data-testid + programmatic approach (UI Element Identification Guide)
+ * Follows strategy from ui-element-identification-guide.md
+ *
+ * CRITICAL FIX (Issue #1800): Programmatic selection via data-testid to avoid:
+ * - Magic strings/localizable text
+ * - Viewport/responsive issues (sidebar hidden on mobile)
+ * - Unreliable auto-selection in test environment
+ */
+export async function waitForAutoSelection(
+  page: Page,
+  expectedGameId: string,
+  expectedAgentId: string
+) {
+  // Wait for page to load completely
+  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('networkidle'); // Double wait pattern from existing tests
+
+  // Wait for game selector with data-testid (Strategy 3 from UI Guide)
+  const gameSelector = page.getByTestId('game-selector');
+  await gameSelector.waitFor({ state: 'attached', timeout: 10000 });
+
+  // Check if auto-selection happened (input enabled = game + agent selected)
+  const messageInput = page.locator('#message-input');
+  const isEnabled = await messageInput.isEnabled().catch(() => false);
+
+  if (isEnabled) {
+    // Auto-selection worked! We're done
+    return;
+  }
+
+  // Auto-selection didn't happen - select manually
+  // Use force: true to click even if sidebar is hidden on mobile viewports
+  await gameSelector.click({ force: true });
+  await page.waitForTimeout(500); // Allow dropdown animation
+
+  // Click game option using data-testid (stable, no text)
+  const gameOption = page.getByTestId(`game-option-${expectedGameId}`);
+  await gameOption.click({ force: true, timeout: 3000 }).catch(async () => {
+    // Fallback: click first option
+    await page.getByRole('option').first().click({ force: true });
+  });
+
+  // Wait for agents to load after game selection
+  await page.waitForTimeout(1000);
+
+  // Select agent (may be in hidden sidebar on mobile, use force)
+  const agentSelector = page.getByTestId('agent-selector');
+  await agentSelector.waitFor({ state: 'attached', timeout: 5000 });
+  await agentSelector.click({ force: true });
+  await page.waitForTimeout(500); // Allow dropdown animation
+
+  // Click agent option using data-testid
+  const agentOption = page.getByTestId(`agent-option-${expectedAgentId}`);
+  await agentOption.click({ force: true, timeout: 3000 }).catch(async () => {
+    // Fallback: click first option
+    await page.getByRole('option').first().click({ force: true });
+  });
+
+  // Wait for input to be enabled (indicates selection complete)
+  await expect(messageInput).toBeEnabled({ timeout: 10000 });
 }

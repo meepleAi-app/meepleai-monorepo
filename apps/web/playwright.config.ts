@@ -11,8 +11,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
-    actionTimeout: 10000,     // 10s for clicks/fills
-    navigationTimeout: 30000, // 30s for page.goto
+    actionTimeout: 10000, // 10s for clicks/fills
+    navigationTimeout: 60000, // 60s for page.goto (increased for dev server)
     launchOptions: {
       args: [
         '--no-sandbox',
@@ -27,15 +27,32 @@ export default defineConfig({
 
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'mobile',
+      use: {
+        ...devices['iPhone 13'],
+        viewport: { width: 390, height: 844 },
+      },
+    },
+    {
+      name: 'tablet',
+      use: {
+        ...devices['iPad Pro'],
+        viewport: { width: 1024, height: 1366 },
+      },
+    },
+    {
+      name: 'desktop',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+      },
     },
   ],
 
   webServer: {
-    command: 'pnpm dev',
+    command: 'node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3000',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    timeout: 180 * 1000, // 3min for dev server startup
   },
 });

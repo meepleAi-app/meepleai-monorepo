@@ -57,7 +57,7 @@ export const useChatStore = create<ChatStore>()(
         {
           // Zundo configuration for undo/redo
           // Only track message operations (send, edit, delete)
-          partialize: (state) => ({
+          partialize: state => ({
             messagesByChat: state.messagesByChat,
             chatsByGame: state.chatsByGame,
           }),
@@ -80,7 +80,7 @@ export const useChatStore = create<ChatStore>()(
               }
         ),
         // Only persist essential state
-        partialize: (state) => ({
+        partialize: state => ({
           selectedGameId: state.selectedGameId,
           selectedAgentId: state.selectedAgentId,
           sidebarCollapsed: state.sidebarCollapsed,
@@ -99,6 +99,15 @@ export const useChatStore = create<ChatStore>()(
     }
   )
 );
+
+// Expose store globally for E2E tests
+if (
+  typeof window !== 'undefined' &&
+  (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test')
+) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).useChatStore = useChatStore;
+}
 
 // ============================================================================
 // Temporal (Undo/Redo) Store Access

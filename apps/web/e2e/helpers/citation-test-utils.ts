@@ -5,6 +5,7 @@ import {
   mockAgentsAPI,
   mockChatsAPI,
   mockChatCreation,
+  waitForAutoSelection,
   defaultTestUser,
   QATestUser,
   QATestGame,
@@ -85,9 +86,9 @@ export async function setupCitationTestEnv(
   }
 ) {
   const user = options?.user || defaultTestUser;
-  const games = options?.games || [
-    { id: 'harmonies-1', name: 'HARMONIES', createdAt: '2025-01-01T00:00:00Z' },
-    { id: 'chess-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+  const games: QATestGame[] = options?.games || [
+    { id: 'harmonies-1', title: 'HARMONIES', createdAt: '2025-01-01T00:00:00Z' },
+    { id: 'chess-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
   ];
   const gameId = options?.gameId || 'harmonies-1';
   const agents = options?.agents || [
@@ -113,18 +114,36 @@ export async function setupCitationTestEnv(
 
   // Mock APIs
   await mockGamesAPI(page, games);
+
+  // Mock agents API - Both endpoints for compatibility
+  // 1. Legacy endpoint (per-game): /api/v1/games/{gameId}/agents
   await mockAgentsAPI(
     page,
     gameId,
     agents.filter(a => a.gameId === gameId)
   );
+
+  // 2. Global endpoint (Zustand store): /api/v1/agents?activeOnly=true
+  // Issue #868: Agents are global, not per-game
+  await page.route(`${apiBase}/api/v1/agents*`, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        agents: agents,
+        count: agents.length,
+      }),
+    });
+  });
+
   await mockChatsAPI(page, gameId);
 
   // Default chat creation
   const defaultChat: QATestChat = {
     id: `chat-citation-${Date.now()}`,
     gameId,
-    gameName: games.find(g => g.id === gameId)?.name || 'Test Game',
+    gameName: games.find(g => g.id === gameId)?.title || 'Test Game',
     agentId: agents.find(a => a.gameId === gameId)?.id || 'agent-qa-1',
     agentName: agents.find(a => a.gameId === gameId)?.name || 'Q&A Agent',
     startedAt: new Date().toISOString(),
@@ -253,16 +272,44 @@ export async function verifyNoCitations(page: Page) {
 /**
  * Send question and wait for response
  *
- * Follows pattern from qa-test-utils
+ * DEBUG: Add detailed logging to understand selection state
  */
 export async function sendQuestionAndWaitForResponse(
   page: Page,
   question: string,
-  expectedAnswerSnippet: string
+  expectedAnswerSnippet: string,
+  gameId: string = 'harmonies-1',
+  agentId: string = 'agent-qa-harmonies'
 ) {
-  // Wait for input to be enabled (after auto-selection or manual selection)
+  // DEBUG: Take screenshot before attempting selection
+  await page.screenshot({ path: `test-results/debug-before-selection-${Date.now()}.png` });
+
+  // DEBUG: Check what the page actually has
+  const hasGameSelector = await page.getByTestId('game-selector').count();
+  const hasAgentSelector = await page.getByTestId('agent-selector').count();
+  const inputDisabled = await page.locator('#message-input').getAttribute('disabled');
+
+  console.log('DEBUG State:', {
+    hasGameSelector,
+    hasAgentSelector,
+    inputDisabled,
+    expectedGameId: gameId,
+    expectedAgentId: agentId,
+  });
+
+  // Try waitForAutoSelection if selectors exist
+  if (hasGameSelector > 0 && hasAgentSelector > 0) {
+    try {
+      await waitForAutoSelection(page, gameId, agentId);
+    } catch (error) {
+      console.log('waitForAutoSelection failed:', error);
+      // Continue anyway, maybe input is enabled through other means
+    }
+  }
+
+  // Input should now be enabled
   const input = page.getByPlaceholder(/fai una domanda|ask a question/i);
-  await expect(input).toBeEnabled({ timeout: 15000 });
+  await expect(input).toBeEnabled({ timeout: 10000 });
 
   // Type question
   await input.fill(question);

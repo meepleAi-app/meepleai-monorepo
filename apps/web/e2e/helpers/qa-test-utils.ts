@@ -11,7 +11,7 @@ export interface QATestUser {
 
 export interface QATestGame {
   id: string;
-  name: string;
+  title: string;
   createdAt: string;
 }
 
@@ -60,8 +60,8 @@ export const defaultTestUser: QATestUser = {
 };
 
 export const defaultGames: QATestGame[] = [
-  { id: 'chess-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
-  { id: 'tictactoe-1', name: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' },
+  { id: 'chess-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+  { id: 'tictactoe-1', title: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' },
 ];
 
 export const defaultAgents: QATestAgent[] = [
@@ -250,7 +250,7 @@ export async function setupQATestEnvironment(
   const defaultChat: QATestChat = {
     id: `chat-${Date.now()}`,
     gameId,
-    gameName: games.find(g => g.id === gameId)?.name || 'Test Game',
+    gameName: games.find(g => g.id === gameId)?.title || 'Test Game',
     agentId: agents[0]?.id || 'agent-qa-1',
     agentName: agents[0]?.name || 'Q&A Agent',
     startedAt: new Date().toISOString(),

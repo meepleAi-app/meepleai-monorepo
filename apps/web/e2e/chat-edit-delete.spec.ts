@@ -30,13 +30,19 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for nextjs-portal to disappear (it appears during initial render)
-    await page.waitForFunction(() => {
-      const portals = document.querySelectorAll('nextjs-portal');
-      return portals.length === 0 || Array.from(portals).every(p => {
-        const rect = p.getBoundingClientRect();
-        return rect.width === 0 && rect.height === 0;
-      });
-    }, { timeout: 5000 });
+    await page.waitForFunction(
+      () => {
+        const portals = document.querySelectorAll('nextjs-portal');
+        return (
+          portals.length === 0 ||
+          Array.from(portals).every(p => {
+            const rect = p.getBoundingClientRect();
+            return rect.width === 0 && rect.height === 0;
+          })
+        );
+      },
+      { timeout: 5000 }
+    );
 
     // Click first "Get Started Free" button to open auth modal
     await page.getByRole('button', { name: 'Get Started Free' }).first().click({ force: true });
@@ -71,13 +77,17 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await chatInput.press('Enter');
 
     // Wait for message to appear in chat
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${originalMessage}")`)).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${originalMessage}")`)
+    ).toBeVisible({ timeout: 10000 });
 
     // Wait for AI response to complete (look for assistant message or wait a bit)
     await page.waitForTimeout(2000);
 
     // Locate the user message that contains our text
-    const userMessageBubble = page.locator(`li[aria-label="Your message"]:has-text("${originalMessage}")`);
+    const userMessageBubble = page.locator(
+      `li[aria-label="Your message"]:has-text("${originalMessage}")`
+    );
 
     // Hover over message to reveal edit/delete buttons
     await userMessageBubble.hover();
@@ -97,7 +107,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await editTextarea.fill(editedMessage);
 
     // Mock the API update response for predictable testing
-    await page.route('**/api/v1/chats/*/messages/*', async (route) => {
+    await page.route('**/api/v1/chats/*/messages/*', async route => {
       const method = route.request().method();
       if (method === 'PUT') {
         await route.fulfill({
@@ -107,8 +117,8 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
             messageId: 'test-message-id',
             content: editedMessage,
             isEdited: true,
-            editedAt: new Date().toISOString()
-          })
+            editedAt: new Date().toISOString(),
+          }),
         });
       } else {
         await route.continue();
@@ -131,7 +141,9 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
 
     // Verify original message no longer visible (unless it's in edit history)
     // We just verify the new message is there
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${editedMessage}")`)).toBeVisible();
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${editedMessage}")`)
+    ).toBeVisible();
   });
 
   /**
@@ -147,11 +159,15 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await page.locator('#message-input').press('Enter');
 
     // Wait for message to appear
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
+    ).toBeVisible({ timeout: 10000 });
     await page.waitForTimeout(1000);
 
     // Enter edit mode
-    const userMessageBubble = page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`);
+    const userMessageBubble = page.locator(
+      `li[aria-label="Your message"]:has-text("${testMessage}")`
+    );
     await userMessageBubble.hover();
     await userMessageBubble.locator('button[aria-label="Edit message"]').click({ force: true });
 
@@ -187,11 +203,15 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await page.locator('#message-input').press('Enter');
 
     // Wait for message to appear
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
+    ).toBeVisible({ timeout: 10000 });
     await page.waitForTimeout(1000);
 
     // Hover and click delete button
-    const userMessageBubble = page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`);
+    const userMessageBubble = page.locator(
+      `li[aria-label="Your message"]:has-text("${testMessage}")`
+    );
     await userMessageBubble.hover();
     const deleteButton = userMessageBubble.locator('button[aria-label="Delete message"]');
     await expect(deleteButton).toBeVisible({ timeout: 2000 });
@@ -204,7 +224,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await expect(page.getByText(/eliminerà permanentemente/i)).toBeVisible();
 
     // Mock the API delete response
-    await page.route('**/api/v1/chats/*/messages/*', async (route) => {
+    await page.route('**/api/v1/chats/*/messages/*', async route => {
       const method = route.request().method();
       if (method === 'DELETE') {
         await route.fulfill({
@@ -212,8 +232,8 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             success: true,
-            messageId: 'test-message-id'
-          })
+            messageId: 'test-message-id',
+          }),
         });
       } else {
         await route.continue();
@@ -233,7 +253,9 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await expect(page.getByText('[Messaggio eliminato]')).toBeVisible({ timeout: 5000 });
 
     // Verify original message text no longer visible in that message bubble
-    const deletedMessageLi = page.locator('li[aria-label="Your message"]').filter({ hasText: '[Messaggio eliminato]' });
+    const deletedMessageLi = page
+      .locator('li[aria-label="Your message"]')
+      .filter({ hasText: '[Messaggio eliminato]' });
     await expect(deletedMessageLi).toBeVisible();
   });
 
@@ -250,11 +272,15 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await page.locator('#message-input').press('Enter');
 
     // Wait for message to appear
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
+    ).toBeVisible({ timeout: 10000 });
     await page.waitForTimeout(1000);
 
     // Hover and click delete button
-    const userMessageBubble = page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`);
+    const userMessageBubble = page.locator(
+      `li[aria-label="Your message"]:has-text("${testMessage}")`
+    );
     await userMessageBubble.hover();
     await userMessageBubble.locator('button[aria-label="Delete message"]').click({ force: true });
 
@@ -268,7 +294,9 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await expect(page.getByRole('heading', { name: 'Eliminare il messaggio?' })).not.toBeVisible();
 
     // Verify original message still visible
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)).toBeVisible();
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
+    ).toBeVisible();
 
     // Verify no deleted placeholder
     await expect(page.getByText('[Messaggio eliminato]')).not.toBeVisible();
@@ -289,13 +317,17 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await page.locator('#message-input').press('Enter');
 
     // Wait for message to appear
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
+    ).toBeVisible({ timeout: 10000 });
 
     // Wait for AI response
     await page.waitForTimeout(3000);
 
     // Locate user message
-    const userMessageBubble = page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`);
+    const userMessageBubble = page.locator(
+      `li[aria-label="Your message"]:has-text("${testMessage}")`
+    );
 
     // Buttons should not be visible initially (opacity 0 or hidden by CSS)
     // We'll just verify they appear on hover
@@ -304,8 +336,12 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await userMessageBubble.hover();
 
     // Verify buttons become visible after hover
-    await expect(userMessageBubble.locator('button[aria-label="Edit message"]')).toBeVisible({ timeout: 2000 });
-    await expect(userMessageBubble.locator('button[aria-label="Delete message"]')).toBeVisible({ timeout: 2000 });
+    await expect(userMessageBubble.locator('button[aria-label="Edit message"]')).toBeVisible({
+      timeout: 2000,
+    });
+    await expect(userMessageBubble.locator('button[aria-label="Delete message"]')).toBeVisible({
+      timeout: 2000,
+    });
 
     // Verify AI response messages do NOT have edit/delete buttons
     const aiMessages = page.locator('li[aria-label="AI response"]');
@@ -345,11 +381,13 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await page.locator('#message-input').press('Enter');
 
     // Wait for message to appear
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
+    ).toBeVisible({ timeout: 10000 });
     await page.waitForTimeout(2000);
 
     // Intercept chat history endpoint to return message with isInvalidated=true
-    await page.route('**/api/v1/chats/*/messages*', async (route) => {
+    await page.route('**/api/v1/chats/*/messages*', async route => {
       const method = route.request().method();
       if (method === 'GET') {
         await route.fulfill({
@@ -362,7 +400,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
                 role: 'user',
                 content: testMessage,
                 timestamp: new Date().toISOString(),
-                isEdited: false
+                isEdited: false,
               },
               {
                 messageId: 'assistant-message-id',
@@ -371,11 +409,11 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
                 timestamp: new Date().toISOString(),
                 isEdited: false,
                 isInvalidated: true,
-                invalidationReason: 'Il messaggio originale è stato modificato'
-              }
+                invalidationReason: 'Il messaggio originale è stato modificato',
+              },
             ],
-            hasMore: false
-          })
+            hasMore: false,
+          }),
         });
       } else {
         await route.continue();
@@ -398,7 +436,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     if (alertCount > 0) {
       // If there's an invalidation warning, verify it has the right text
       const invalidationWarning = warningAlerts.filter({ hasText: 'obsoleta' });
-      if (await invalidationWarning.count() > 0) {
+      if ((await invalidationWarning.count()) > 0) {
         await expect(invalidationWarning.first()).toContainText('obsoleta');
       }
     }
@@ -419,11 +457,15 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await page.locator('#message-input').press('Enter');
 
     // Wait for message to appear
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
+    ).toBeVisible({ timeout: 10000 });
     await page.waitForTimeout(1000);
 
     // Enter edit mode
-    const userMessageBubble = page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`);
+    const userMessageBubble = page.locator(
+      `li[aria-label="Your message"]:has-text("${testMessage}")`
+    );
     await userMessageBubble.hover();
     await userMessageBubble.locator('button[aria-label="Edit message"]').click({ force: true });
 
@@ -434,7 +476,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await editTextarea.fill(editedMessage);
 
     // Mock API to return 403 Forbidden
-    await page.route('**/api/v1/chats/*/messages/*', async (route) => {
+    await page.route('**/api/v1/chats/*/messages/*', async route => {
       const method = route.request().method();
       if (method === 'PUT') {
         await route.fulfill({
@@ -442,8 +484,8 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             error: 'forbidden',
-            message: 'Non hai i permessi per modificare questo messaggio'
-          })
+            message: 'Non hai i permessi per modificare questo messaggio',
+          }),
         });
       } else {
         await route.continue();
@@ -465,11 +507,13 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     const anyError = page.getByText(/errore|permess|autorizzat/i);
 
     // At least one error indicator should be visible
-    const errorVisible = await errorAlert.count() > 0 || await anyError.count() > 0;
+    const errorVisible = (await errorAlert.count()) > 0 || (await anyError.count()) > 0;
     expect(errorVisible).toBeTruthy();
 
     // Verify message was NOT updated (original still visible in textarea or message)
-    await expect(page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)).toBeVisible();
+    await expect(
+      page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`)
+    ).toBeVisible();
 
     // Verify we're still in edit mode or the message wasn't changed
     // (either textarea still visible OR message still shows original text)

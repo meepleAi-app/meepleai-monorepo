@@ -35,34 +35,38 @@ const test = base.extend<{ chatPage: Page }>({
         let contentType: string;
 
         if (format === 'json') {
-          content = JSON.stringify({
-            chatId,
-            gameName: 'Chess',
-            agentName: 'Q&A Agent',
-            exportedAt: new Date().toISOString(),
-            messages: [
-              {
-                id: 'msg-1',
-                level: 'user',
-                message: 'How do I castle in chess?',
-                timestamp: '2025-11-10T10:00:00Z'
-              },
-              {
-                id: 'msg-2',
-                level: 'assistant',
-                message: 'Castling is a special move involving the king and rook...',
-                metadata: {
-                  citations: [
-                    { title: 'Chess Rulebook', page: 12 },
-                    { title: 'Advanced Chess Tactics', page: 5 }
-                  ],
-                  confidence: 0.92
+          content = JSON.stringify(
+            {
+              chatId,
+              gameName: 'Chess',
+              agentName: 'Q&A Agent',
+              exportedAt: new Date().toISOString(),
+              messages: [
+                {
+                  id: 'msg-1',
+                  level: 'user',
+                  message: 'How do I castle in chess?',
+                  timestamp: '2025-11-10T10:00:00Z',
                 },
-                timestamp: '2025-11-10T10:00:05Z'
-              }
-            ],
-            messageCount: 2
-          }, null, 2);
+                {
+                  id: 'msg-2',
+                  level: 'assistant',
+                  message: 'Castling is a special move involving the king and rook...',
+                  metadata: {
+                    citations: [
+                      { title: 'Chess Rulebook', page: 12 },
+                      { title: 'Advanced Chess Tactics', page: 5 },
+                    ],
+                    confidence: 0.92,
+                  },
+                  timestamp: '2025-11-10T10:00:05Z',
+                },
+              ],
+              messageCount: 2,
+            },
+            null,
+            2
+          );
           contentType = 'application/json';
         } else {
           content = `Chess - Q&A Agent
@@ -92,9 +96,9 @@ Confidence: 92%
           status: 200,
           contentType,
           headers: {
-            'Content-Disposition': `attachment; filename="${filename}"`
+            'Content-Disposition': `attachment; filename="${filename}"`,
           },
-          body: content
+          body: content,
         });
       }
       // List chats endpoint
@@ -110,9 +114,9 @@ Confidence: 92%
               agentId: 'qa-agent',
               agentName: 'Q&A Agent',
               startedAt: new Date().toISOString(),
-              lastMessageAt: new Date().toISOString()
-            }
-          ])
+              lastMessageAt: new Date().toISOString(),
+            },
+          ]),
         });
       }
       // Get specific chat
@@ -134,19 +138,19 @@ Confidence: 92%
                 level: 'user',
                 message: 'How do I castle in chess?',
                 metadataJson: null,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
               },
               {
                 id: 'msg-2',
                 level: 'assistant',
                 message: 'Castling is a special move...',
                 metadataJson: JSON.stringify({
-                  citations: [{ title: 'Chess Rulebook', page: 12 }]
+                  citations: [{ title: 'Chess Rulebook', page: 12 }],
                 }),
-                createdAt: new Date().toISOString()
-              }
-            ]
-          })
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }),
         });
       }
       // Create chat
@@ -161,8 +165,8 @@ Confidence: 92%
             agentId: 'qa-agent',
             agentName: 'Q&A Agent',
             startedAt: new Date().toISOString(),
-            lastMessageAt: new Date().toISOString()
-          })
+            lastMessageAt: new Date().toISOString(),
+          }),
         });
       } else {
         await route.continue();
@@ -174,9 +178,7 @@ Confidence: 92%
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([
-          { id: 'chess', name: 'Chess', description: 'Chess game rules' }
-        ])
+        body: JSON.stringify([{ id: 'chess', title: 'Chess', description: 'Chess game rules' }]),
       });
     });
 
@@ -186,8 +188,8 @@ Confidence: 92%
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'qa-agent', name: 'Q&A Agent', description: 'Answer questions about game rules' }
-        ])
+          { id: 'qa-agent', name: 'Q&A Agent', description: 'Answer questions about game rules' },
+        ]),
       });
     });
 
@@ -196,16 +198,15 @@ Confidence: 92%
       await route.fulfill({
         status: 200,
         contentType: 'text/plain',
-        body: 'Castling is a special move in chess involving the king and rook.'
+        body: 'Castling is a special move in chess involving the king and rook.',
       });
     });
 
     await use(page);
-  }
+  },
 });
 
 test.describe('Chat Export E2E Tests', () => {
-
   test('should show export button after chat interaction', async ({ chatPage: page }) => {
     const chat = new ChatPage(page);
     await chat.goto();
@@ -373,11 +374,14 @@ test.describe('Chat Export E2E Tests', () => {
           agentName: 'Q&A Agent',
           exportedAt: new Date().toISOString(),
           messages: [],
-          messageCount: 0
+          messageCount: 0,
         });
         contentType = 'application/json';
       } else {
-        content = 'Chess - Q&A Agent\nExported: ' + new Date().toISOString() + '\n\n---\n\nNo messages in this chat.\n';
+        content =
+          'Chess - Q&A Agent\nExported: ' +
+          new Date().toISOString() +
+          '\n\n---\n\nNo messages in this chat.\n';
         contentType = 'text/plain';
       }
 
@@ -385,9 +389,9 @@ test.describe('Chat Export E2E Tests', () => {
         status: 200,
         contentType,
         headers: {
-          'Content-Disposition': `attachment; filename="chat-chess-empty.${format}"`
+          'Content-Disposition': `attachment; filename="chat-chess-empty.${format}"`,
         },
-        body: content
+        body: content,
       });
     });
 
@@ -423,7 +427,7 @@ test.describe('Chat Export E2E Tests', () => {
           id: `msg-${i}`,
           level: i % 2 === 0 ? 'user' : 'assistant',
           message: `Message ${i}`,
-          timestamp: new Date(Date.now() + i * 1000).toISOString()
+          timestamp: new Date(Date.now() + i * 1000).toISOString(),
         });
       }
 
@@ -435,7 +439,7 @@ test.describe('Chat Export E2E Tests', () => {
           agentName: 'Q&A Agent',
           exportedAt: new Date().toISOString(),
           messages,
-          messageCount: messages.length
+          messageCount: messages.length,
         });
       } else {
         content = messages.map(m => `[${m.level}] ${m.message}`).join('\n\n');
@@ -445,9 +449,9 @@ test.describe('Chat Export E2E Tests', () => {
         status: 200,
         contentType: format === 'json' ? 'application/json' : 'text/plain',
         headers: {
-          'Content-Disposition': `attachment; filename="chat-chess-long.${format}"`
+          'Content-Disposition': `attachment; filename="chat-chess-long.${format}"`,
         },
-        body: content
+        body: content,
       });
     });
 

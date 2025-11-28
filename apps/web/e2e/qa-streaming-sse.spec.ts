@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { setupQATestEnvironment, QASnippet } from './helpers/qa-test-utils';
+import { setupQATestEnvironment, waitForAutoSelection, QASnippet } from './helpers/qa-test-utils';
 
 test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
   test('should establish SSE connection and receive streaming events', async ({ page }) => {
-    const { mockQAStreaming } = await setupQATestEnvironment(page);
+    const { mockQAStreaming, gameId, agents } = await setupQATestEnvironment(page);
 
     // Mock streaming response with multiple SSE events
     await mockQAStreaming([
@@ -29,9 +29,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
     ]);
 
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#message-input')).toBeEnabled({ timeout: 10000 });
+    await waitForAutoSelection(page, gameId, agents[0].id);
 
     // Send question
     const input = page.getByPlaceholder('Fai una domanda sul gioco...');
@@ -53,7 +51,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
   });
 
   test('should handle streaming interruption gracefully', async ({ page }) => {
-    const { mockQAStreaming } = await setupQATestEnvironment(page);
+    const { mockQAStreaming, gameId, agents } = await setupQATestEnvironment(page);
 
     // Mock interrupted stream (no complete event)
     await mockQAStreaming([
@@ -64,9 +62,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
     ]);
 
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#message-input')).toBeEnabled({ timeout: 10000 });
+    await waitForAutoSelection(page, gameId, agents[0].id);
 
     const input = page.getByPlaceholder('Fai una domanda sul gioco...');
     await input.fill('How many players?');
@@ -82,7 +78,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
   });
 
   test('should display stop button during active streaming', async ({ page }) => {
-    await setupQATestEnvironment(page);
+    const { gameId, agents } = await setupQATestEnvironment(page);
 
     // Intercept to create slow stream
     await page.route('**/api/v1/agents/qa/stream', async route => {
@@ -91,9 +87,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
     });
 
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#message-input')).toBeEnabled({ timeout: 10000 });
+    await waitForAutoSelection(page, gameId, agents[0].id);
 
     await page.fill('#message-input', 'Tell me about castling');
     await page.locator('button[type="submit"]').click();
@@ -108,7 +102,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
   });
 
   test('should stop streaming when stop button clicked', async ({ page }) => {
-    await setupQATestEnvironment(page);
+    const { gameId, agents } = await setupQATestEnvironment(page);
 
     let streamingStopped = false;
 
@@ -132,9 +126,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
     });
 
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#message-input')).toBeEnabled({ timeout: 10000 });
+    await waitForAutoSelection(page, gameId, agents[0].id);
 
     await page.fill('#message-input', 'Long question');
     await page.locator('button[type="submit"]').click();
@@ -153,7 +145,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
   });
 
   test('should accumulate tokens incrementally in UI', async ({ page }) => {
-    const { mockQAStreaming } = await setupQATestEnvironment(page);
+    const { mockQAStreaming, gameId, agents } = await setupQATestEnvironment(page);
 
     await mockQAStreaming([
       { type: 'stateUpdate', data: { state: 'Generating embeddings...' } },
@@ -168,9 +160,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
     ]);
 
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#message-input')).toBeEnabled({ timeout: 10000 });
+    await waitForAutoSelection(page, gameId, agents[0].id);
 
     await page.fill('#message-input', 'Where is the game played?');
     await page.locator('button[type="submit"]').click();
@@ -182,7 +172,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
   });
 
   test('should display citations when received via SSE', async ({ page }) => {
-    const { mockQAStreaming } = await setupQATestEnvironment(page);
+    const { mockQAStreaming, gameId, agents } = await setupQATestEnvironment(page);
 
     const testSnippets: QASnippet[] = [
       {
@@ -210,9 +200,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
     ]);
 
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#message-input')).toBeEnabled({ timeout: 10000 });
+    await waitForAutoSelection(page, gameId, agents[0].id);
 
     await page.fill('#message-input', 'How do turns work?');
     await page.locator('button[type="submit"]').click();
@@ -230,7 +218,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
   });
 
   test('should handle SSE error events', async ({ page }) => {
-    const { mockQAStreaming } = await setupQATestEnvironment(page);
+    const { mockQAStreaming, gameId, agents } = await setupQATestEnvironment(page);
 
     await mockQAStreaming([
       { type: 'stateUpdate', data: { state: 'Processing...' } },
@@ -241,9 +229,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
     ]);
 
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#message-input')).toBeEnabled({ timeout: 10000 });
+    await waitForAutoSelection(page, gameId, agents[0].id);
 
     await page.fill('#message-input', 'Test error');
     await page.locator('button[type="submit"]').click();
@@ -258,12 +244,10 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
   });
 
   test('should maintain connection stability across multiple requests', async ({ page }) => {
-    const { mockQAStreaming } = await setupQATestEnvironment(page);
+    const { mockQAStreaming, gameId, agents } = await setupQATestEnvironment(page);
 
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#message-input')).toBeEnabled({ timeout: 10000 });
+    await waitForAutoSelection(page, gameId, agents[0].id);
 
     // First request
     await mockQAStreaming([

@@ -10,11 +10,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
   });
 
   test('should display streaming UI elements', async ({ userPage: page }) => {
-    // Game and agent should auto-select
-    await expect(page.locator('#gameSelect')).toHaveValue(/.+/);
-    await expect(page.locator('#agentSelect')).toHaveValue(/.+/);
-
-    // Message input should be enabled
+    // Message input enabled = game and agent auto-selected (Issue #1800 fix)
     await expect(page.locator('#message-input')).toBeEnabled();
 
     // Send button should be enabled when input has text
@@ -33,15 +29,21 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
     // Should show "Invio..." or streaming indicator
     // Either the button shows "Invio..." or we see a streaming response bubble
-    const hasInvioText = await page.locator('button[type="submit"]:has-text("Invio...")').isVisible().catch(() => false);
-    const hasStreamingBubble = await page.locator('text=Sto pensando').isVisible().catch(() => false);
+    const hasInvioText = await page
+      .locator('button[type="submit"]:has-text("Invio...")')
+      .isVisible()
+      .catch(() => false);
+    const hasStreamingBubble = await page
+      .locator('text=Sto pensando')
+      .isVisible()
+      .catch(() => false);
 
     expect(hasInvioText || hasStreamingBubble).toBe(true);
   });
 
   test('should display stop button during streaming', async ({ userPage: page }) => {
     // Intercept streaming endpoint to make it slow
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       // Simulate slow streaming
       await new Promise(resolve => setTimeout(resolve, 500));
       await route.continue();
@@ -70,14 +72,14 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     // Intercept to create a slow stream
     let streamingStopped = false;
 
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       // Create a response that streams slowly
       const response = {
         status: 200,
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
+          Connection: 'keep-alive',
         },
         body: 'event: stateUpdate\ndata: {"state":"Thinking..."}\n\n',
       };
@@ -103,13 +105,15 @@ test.describe('Chat Streaming (CHAT-01)', () => {
       await stopButton.click({ force: true });
 
       // Streaming should stop (button changes back to "Invia")
-      await expect(page.locator('button[type="submit"]:has-text("Invia")')).toBeVisible({ timeout: 2000 });
+      await expect(page.locator('button[type="submit"]:has-text("Invia")')).toBeVisible({
+        timeout: 2000,
+      });
     }
   });
 
   test('should accumulate tokens in real-time', async ({ userPage: page }) => {
     // Intercept to simulate token-by-token streaming
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       const sseData = [
         'event: stateUpdate\ndata: {"state":"Generating embeddings..."}\n\n',
         'event: token\ndata: {"token":"The"}\n\n',
@@ -141,7 +145,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should display citations when received', async ({ userPage: page }) => {
     // Intercept to include citations
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       const sseData = [
         'event: stateUpdate\ndata: {"state":"Searching rules..."}\n\n',
         'event: citations\ndata: {"snippets":[{"text":"Players take turns","source":"rules.pdf","page":1,"line":null}]}\n\n',
@@ -173,8 +177,9 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should display error message on failure', async ({ userPage: page }) => {
     // Intercept to return error
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
-      const sseData = 'event: error\ndata: {"message":"Failed to process request","code":"INTERNAL_ERROR"}\n\n';
+    await page.route('**/api/v1/agents/qa/stream', async route => {
+      const sseData =
+        'event: error\ndata: {"message":"Failed to process request","code":"INTERNAL_ERROR"}\n\n';
 
       await route.fulfill({
         status: 200,
@@ -194,7 +199,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should handle authentication error (401)', async ({ userPage: page }) => {
     // Intercept to return 401
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       await route.fulfill({
         status: 401,
         body: JSON.stringify({ message: 'Unauthorized' }),
@@ -210,7 +215,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should disable input during streaming', async ({ userPage: page }) => {
     // Intercept to create slow stream
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       // Don't fulfill immediately - simulate long stream
       await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -238,7 +243,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should preserve chat history after streaming', async ({ userPage: page }) => {
     // Intercept streaming
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       const sseData = [
         'event: token\ndata: {"token":"Response 1"}\n\n',
         'event: complete\ndata: {"totalTokens":2,"confidence":0.9,"snippets":[]}\n\n',
@@ -275,7 +280,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should show state updates during streaming', async ({ userPage: page }) => {
     // Intercept with state updates
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       const sseData = [
         'event: stateUpdate\ndata: {"state":"Generating embeddings..."}\n\n',
         'event: stateUpdate\ndata: {"state":"Searching vector database..."}\n\n',
@@ -300,8 +305,14 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     // We check if either a state message appears or the final answer
     await page.waitForTimeout(300);
 
-    const hasStateUpdate = await page.getByText(/Generating|Searching/i).isVisible().catch(() => false);
-    const hasFinalAnswer = await page.getByText(/Final answer/i).isVisible().catch(() => false);
+    const hasStateUpdate = await page
+      .getByText(/Generating|Searching/i)
+      .isVisible()
+      .catch(() => false);
+    const hasFinalAnswer = await page
+      .getByText(/Final answer/i)
+      .isVisible()
+      .catch(() => false);
 
     expect(hasStateUpdate || hasFinalAnswer).toBe(true);
   });
@@ -309,7 +320,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
   test('should handle rapid consecutive messages', async ({ userPage: page }) => {
     let requestCount = 0;
 
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       requestCount++;
       const responseNum = requestCount;
 

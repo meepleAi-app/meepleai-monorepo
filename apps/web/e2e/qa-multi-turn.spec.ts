@@ -40,7 +40,7 @@ test.describe('Q&A Interface - Multi-Turn Conversations (Issue #1009)', () => {
   test('should handle context switching between different games', async ({ page }) => {
     const env = await setupQATestEnvironment(page, {
       games: [
-        { id: 'chess-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+        { id: 'chess-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
         { id: 'monopoly-1', name: 'Monopoly', createdAt: '2025-01-01T00:00:00Z' },
       ],
     });

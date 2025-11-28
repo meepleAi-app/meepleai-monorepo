@@ -33,29 +33,29 @@ const test = base.extend<{ adminPage: Page }>({
         body: JSON.stringify([
           {
             id: 'chess',
-            name: 'Chess',
+            title: 'Chess',
             description: 'Classic chess game',
-            createdAt: '2025-11-01T10:00:00Z'
+            createdAt: '2025-11-01T10:00:00Z',
           },
           {
             id: 'monopoly',
             name: 'Monopoly',
             description: 'Property trading board game',
-            createdAt: '2025-11-02T11:00:00Z'
+            createdAt: '2025-11-02T11:00:00Z',
           },
           {
             id: 'scrabble',
             name: 'Scrabble',
             description: 'Word-building game',
-            createdAt: '2025-11-03T12:00:00Z'
+            createdAt: '2025-11-03T12:00:00Z',
           },
           {
             id: 'risk',
             name: 'Risk',
             description: 'Strategy war game',
-            createdAt: '2025-11-04T13:00:00Z'
-          }
-        ])
+            createdAt: '2025-11-04T13:00:00Z',
+          },
+        ]),
       });
     });
 
@@ -73,18 +73,17 @@ const test = base.extend<{ adminPage: Page }>({
         status: 200,
         contentType: 'application/zip',
         headers: {
-          'Content-Disposition': `attachment; filename="${filename}"`
+          'Content-Disposition': `attachment; filename="${filename}"`,
         },
-        body: zipContent
+        body: zipContent,
       });
     });
 
     await use(page);
-  }
+  },
 });
 
 test.describe('Bulk Export RuleSpecs E2E Tests', () => {
-
   test('should navigate to bulk export page', async ({ adminPage: page }) => {
     const bulkExportPage = new BulkExportPage(page);
     await bulkExportPage.goto();
@@ -256,13 +255,13 @@ test.describe('Bulk Export RuleSpecs E2E Tests', () => {
         id: `game-${i}`,
         name: `Game ${i}`,
         description: `Test game ${i}`,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       }));
 
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(games)
+        body: JSON.stringify(games),
       });
     });
 
@@ -276,8 +275,8 @@ test.describe('Bulk Export RuleSpecs E2E Tests', () => {
           status: 400,
           contentType: 'application/json',
           body: JSON.stringify({
-            error: 'Maximum 100 rule specs allowed per export'
-          })
+            error: 'Maximum 100 rule specs allowed per export',
+          }),
         });
       } else {
         await route.continue();
@@ -307,8 +306,8 @@ test.describe('Bulk Export RuleSpecs E2E Tests', () => {
         status: 500,
         contentType: 'application/json',
         body: JSON.stringify({
-          error: 'Internal server error during export'
-        })
+          error: 'Internal server error during export',
+        }),
       });
     });
 

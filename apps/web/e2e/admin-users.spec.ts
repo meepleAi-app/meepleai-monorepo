@@ -4,7 +4,7 @@ import { getTextMatcher, t } from './fixtures/i18n';
 const apiBase = 'http://localhost:8080';
 
 async function mockAuthenticatedAdmin(page: Page) {
-  await page.route(`${apiBase}/api/v1/auth/me`, async (route) => {
+  await page.route(`${apiBase}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -13,10 +13,10 @@ async function mockAuthenticatedAdmin(page: Page) {
           id: 'admin-e2e',
           email: 'admin@e2e.com',
           displayName: 'E2E Admin',
-          role: 'Admin'
+          role: 'Admin',
         },
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-      })
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
     });
   });
 }
@@ -33,7 +33,7 @@ test.describe('Admin User Management E2E Flow', () => {
         displayName: 'Existing User',
         role: 'User',
         createdAt: new Date('2024-01-01T10:00:00Z').toISOString(),
-        lastSeenAt: new Date('2024-01-15T14:30:00Z').toISOString()
+        lastSeenAt: new Date('2024-01-15T14:30:00Z').toISOString(),
       },
       {
         id: 'user-2',
@@ -41,15 +41,15 @@ test.describe('Admin User Management E2E Flow', () => {
         displayName: 'Editor User',
         role: 'Editor',
         createdAt: new Date('2024-01-02T10:00:00Z').toISOString(),
-        lastSeenAt: null
-      }
+        lastSeenAt: null,
+      },
     ];
 
     let nextUserId = 3;
     const users = [...sampleUsers];
 
     // Mock GET /api/v1/admin/users
-    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async route => {
       if (route.request().method() === 'GET') {
         const url = new URL(route.request().url());
         const search = url.searchParams.get('search');
@@ -62,14 +62,12 @@ test.describe('Admin User Management E2E Flow', () => {
         if (search) {
           const term = search.toLowerCase();
           filteredUsers = filteredUsers.filter(
-            (u) =>
-              u.email.toLowerCase().includes(term) ||
-              u.displayName.toLowerCase().includes(term)
+            u => u.email.toLowerCase().includes(term) || u.displayName.toLowerCase().includes(term)
           );
         }
 
         if (role && role !== 'all') {
-          filteredUsers = filteredUsers.filter((u) => u.role === role);
+          filteredUsers = filteredUsers.filter(u => u.role === role);
         }
 
         const start = (page - 1) * limit;
@@ -83,14 +81,14 @@ test.describe('Admin User Management E2E Flow', () => {
             items: pagedUsers,
             total: filteredUsers.length,
             page,
-            pageSize: limit
-          })
+            pageSize: limit,
+          }),
         });
       }
     });
 
     // Mock POST /api/v1/admin/users (Create)
-    await page.route(`${apiBase}/api/v1/admin/users`, async (route) => {
+    await page.route(`${apiBase}/api/v1/admin/users`, async route => {
       if (route.request().method() === 'POST') {
         const requestData = JSON.parse(route.request().postData() || '{}');
         const newUser = {
@@ -99,46 +97,46 @@ test.describe('Admin User Management E2E Flow', () => {
           displayName: requestData.displayName,
           role: requestData.role || 'User',
           createdAt: new Date().toISOString(),
-          lastSeenAt: null
+          lastSeenAt: null,
         };
         users.push(newUser);
 
         await route.fulfill({
           status: 201,
           contentType: 'application/json',
-          body: JSON.stringify(newUser)
+          body: JSON.stringify(newUser),
         });
       }
     });
 
     // Mock PUT /api/v1/admin/users/{id} (Update)
-    await page.route(new RegExp(`${apiBase}/api/v1/admin/users/user-\\d+`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/users/user-\\d+`), async route => {
       if (route.request().method() === 'PUT') {
         const userId = route.request().url().split('/').pop();
         const requestData = JSON.parse(route.request().postData() || '{}');
-        const userIndex = users.findIndex((u) => u.id === userId);
+        const userIndex = users.findIndex(u => u.id === userId);
 
         if (userIndex !== -1) {
           users[userIndex] = {
             ...users[userIndex],
-            ...requestData
+            ...requestData,
           };
 
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify(users[userIndex])
+            body: JSON.stringify(users[userIndex]),
           });
         } else {
           await route.fulfill({
             status: 404,
             contentType: 'application/json',
-            body: JSON.stringify({ error: 'User not found' })
+            body: JSON.stringify({ error: 'User not found' }),
           });
         }
       } else if (route.request().method() === 'DELETE') {
         const userId = route.request().url().split('/').pop();
-        const userIndex = users.findIndex((u) => u.id === userId);
+        const userIndex = users.findIndex(u => u.id === userId);
 
         if (userIndex !== -1) {
           users.splice(userIndex, 1);
@@ -147,7 +145,7 @@ test.describe('Admin User Management E2E Flow', () => {
           await route.fulfill({
             status: 404,
             contentType: 'application/json',
-            body: JSON.stringify({ error: 'User not found' })
+            body: JSON.stringify({ error: 'User not found' }),
           });
         }
       }
@@ -166,7 +164,9 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.getByTestId('open-create-user-modal').click();
 
     // Fill out create form
-    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.createUser') })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: getTextMatcher('admin.users.createUser') })
+    ).toBeVisible();
     await page.getByLabel(getTextMatcher('admin.users.email')).fill('newuser@example.com');
     await page.getByLabel(getTextMatcher('admin.users.password')).fill('SecurePass123!');
     await page.getByLabel(getTextMatcher('admin.users.displayName')).fill('New Test User');
@@ -182,7 +182,9 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.waitForTimeout(1000); // Give toast time to auto-dismiss
 
     // Verify new user appears in table (use role to be specific with exact match)
-    await expect(page.getByRole('cell', { name: 'newuser@example.com', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('cell', { name: 'newuser@example.com', exact: true })
+    ).toBeVisible();
     await expect(page.getByRole('cell', { name: 'New Test User', exact: true })).toBeVisible();
 
     // ===== EDIT USER =====
@@ -191,8 +193,12 @@ test.describe('Admin User Management E2E Flow', () => {
     await newUserRow.getByRole('button', { name: getTextMatcher('common.edit') }).click();
 
     // Verify edit modal opens with pre-filled data
-    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.editUser') })).toBeVisible();
-    await expect(page.getByLabel(getTextMatcher('admin.users.email'))).toHaveValue('newuser@example.com');
+    await expect(
+      page.getByRole('heading', { name: getTextMatcher('admin.users.editUser') })
+    ).toBeVisible();
+    await expect(page.getByLabel(getTextMatcher('admin.users.email'))).toHaveValue(
+      'newuser@example.com'
+    );
 
     // Update display name and role
     await page.getByLabel(getTextMatcher('admin.users.displayName')).fill('Updated User Name');
@@ -215,7 +221,9 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.getByPlaceholder(t('admin.users.searchPlaceholder')).fill('Updated');
 
     // Verify filtered results (use role to avoid toast interference)
-    await expect(page.getByRole('cell', { name: 'newuser@example.com', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('cell', { name: 'newuser@example.com', exact: true })
+    ).toBeVisible();
     await expect(page.getByText('existing@example.com')).not.toBeVisible();
 
     // Clear search
@@ -226,9 +234,15 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.locator('select').first().selectOption('User');
 
     // Verify only User role users shown (use role='cell' to avoid toast interference)
-    await expect(page.getByRole('cell', { name: 'newuser@example.com', exact: true })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'existing@example.com', exact: true })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'editor@example.com', exact: true })).not.toBeVisible();
+    await expect(
+      page.getByRole('cell', { name: 'newuser@example.com', exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('cell', { name: 'existing@example.com', exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('cell', { name: 'editor@example.com', exact: true })
+    ).not.toBeVisible();
 
     // Reset filter
     await page.locator('select').first().selectOption('all');
@@ -249,7 +263,9 @@ test.describe('Admin User Management E2E Flow', () => {
     await expect(page.getByText(new RegExp(t('admin.users.deleteConfirm')))).toBeVisible();
 
     // Confirm deletion (use force for portal overlay)
-    await page.getByRole('button', { name: getTextMatcher('common.confirm') }).click({ force: true });
+    await page
+      .getByRole('button', { name: getTextMatcher('common.confirm') })
+      .click({ force: true });
 
     // Verify success toast
     await expect(page.getByText(/deleted successfully/)).toBeVisible();
@@ -271,7 +287,7 @@ test.describe('Admin User Management E2E Flow', () => {
         displayName: 'Bulk User 1',
         role: 'User',
         createdAt: new Date().toISOString(),
-        lastSeenAt: null
+        lastSeenAt: null,
       },
       {
         id: 'bulk-2',
@@ -279,7 +295,7 @@ test.describe('Admin User Management E2E Flow', () => {
         displayName: 'Bulk User 2',
         role: 'User',
         createdAt: new Date().toISOString(),
-        lastSeenAt: null
+        lastSeenAt: null,
       },
       {
         id: 'bulk-3',
@@ -287,14 +303,14 @@ test.describe('Admin User Management E2E Flow', () => {
         displayName: 'Bulk User 3',
         role: 'User',
         createdAt: new Date().toISOString(),
-        lastSeenAt: null
-      }
+        lastSeenAt: null,
+      },
     ];
 
     let userList = [...users];
 
     // Mock GET
-    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -303,17 +319,17 @@ test.describe('Admin User Management E2E Flow', () => {
             items: userList,
             total: userList.length,
             page: 1,
-            pageSize: 20
-          })
+            pageSize: 20,
+          }),
         });
       }
     });
 
     // Mock DELETE
-    await page.route(new RegExp(`${apiBase}/api/v1/admin/users/bulk-\\d+`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/users/bulk-\\d+`), async route => {
       if (route.request().method() === 'DELETE') {
         const userId = route.request().url().split('/').pop();
-        userList = userList.filter((u) => u.id !== userId);
+        userList = userList.filter(u => u.id !== userId);
         await route.fulfill({ status: 204 });
       }
     });
@@ -330,7 +346,9 @@ test.describe('Admin User Management E2E Flow', () => {
     await checkboxes.nth(2).check(); // Second user
 
     // Verify bulk delete button appears with count
-    await expect(page.getByText(new RegExp(`${t('admin.users.deleteSelected')} \\(2\\)`))).toBeVisible();
+    await expect(
+      page.getByText(new RegExp(`${t('admin.users.deleteSelected')} \\(2\\)`))
+    ).toBeVisible();
 
     // Click bulk delete
     await page.getByText(new RegExp(`${t('admin.users.deleteSelected')} \\(2\\)`)).click();
@@ -358,7 +376,7 @@ test.describe('Admin User Management E2E Flow', () => {
         displayName: 'Alpha',
         role: 'Admin',
         createdAt: new Date('2024-01-03T00:00:00Z').toISOString(),
-        lastSeenAt: null
+        lastSeenAt: null,
       },
       {
         id: 'sort-2',
@@ -366,7 +384,7 @@ test.describe('Admin User Management E2E Flow', () => {
         displayName: 'Beta',
         role: 'User',
         createdAt: new Date('2024-01-01T00:00:00Z').toISOString(),
-        lastSeenAt: null
+        lastSeenAt: null,
       },
       {
         id: 'sort-3',
@@ -374,11 +392,11 @@ test.describe('Admin User Management E2E Flow', () => {
         displayName: 'Gamma',
         role: 'Editor',
         createdAt: new Date('2024-01-02T00:00:00Z').toISOString(),
-        lastSeenAt: null
-      }
+        lastSeenAt: null,
+      },
     ];
 
-    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async route => {
       if (route.request().method() === 'GET') {
         const url = new URL(route.request().url());
         const sortBy = url.searchParams.get('sortBy') || 'createdAt';
@@ -408,8 +426,8 @@ test.describe('Admin User Management E2E Flow', () => {
             items: sortedUsers,
             total: sortedUsers.length,
             page: 1,
-            pageSize: 20
-          })
+            pageSize: 20,
+          }),
         });
       }
     });
@@ -423,11 +441,15 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.getByText(new RegExp(t('admin.users.email').replace(' *', ''))).click();
 
     // Should show sort indicator
-    await expect(page.getByText(new RegExp(`${t('admin.users.email').replace(' *', '')} ↑`))).toBeVisible();
+    await expect(
+      page.getByText(new RegExp(`${t('admin.users.email').replace(' *', '')} ↑`))
+    ).toBeVisible();
 
     // Click again to reverse sort
     await page.getByText(new RegExp(t('admin.users.email').replace(' *', ''))).click();
-    await expect(page.getByText(new RegExp(`${t('admin.users.email').replace(' *', '')} ↓`))).toBeVisible();
+    await expect(
+      page.getByText(new RegExp(`${t('admin.users.email').replace(' *', '')} ↓`))
+    ).toBeVisible();
   });
 
   test('pagination navigation', async ({ page }) => {
@@ -440,10 +462,10 @@ test.describe('Admin User Management E2E Flow', () => {
       displayName: `User ${i + 1}`,
       role: 'User',
       createdAt: new Date().toISOString(),
-      lastSeenAt: null
+      lastSeenAt: null,
     }));
 
-    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async route => {
       if (route.request().method() === 'GET') {
         const url = new URL(route.request().url());
         const page = parseInt(url.searchParams.get('page') || '1');
@@ -460,8 +482,8 @@ test.describe('Admin User Management E2E Flow', () => {
             items: pagedUsers,
             total: users.length,
             page,
-            pageSize: limit
-          })
+            pageSize: limit,
+          }),
         });
       }
     });
@@ -469,8 +491,16 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.goto('http://localhost:3000/admin/users');
 
     // Verify page 1
-    await expect(page.getByText(new RegExp(`${t('admin.users.page')} 1 ${t('admin.users.of')} 2`))).toBeVisible();
-    await expect(page.getByText(new RegExp(`${t('admin.users.showing')} 1 ${t('admin.users.to')} 20 ${t('admin.users.of')} 25 ${t('admin.users.users')}`))).toBeVisible();
+    await expect(
+      page.getByText(new RegExp(`${t('admin.users.page')} 1 ${t('admin.users.of')} 2`))
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        new RegExp(
+          `${t('admin.users.showing')} 1 ${t('admin.users.to')} 20 ${t('admin.users.of')} 25 ${t('admin.users.users')}`
+        )
+      )
+    ).toBeVisible();
     await expect(page.getByText('user1@example.com')).toBeVisible();
 
     // Previous should be disabled
@@ -480,21 +510,31 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.getByTestId('pagination-next').click();
 
     // Verify page 2
-    await expect(page.getByText(new RegExp(`${t('admin.users.page')} 2 ${t('admin.users.of')} 2`))).toBeVisible();
-    await expect(page.getByText(new RegExp(`${t('admin.users.showing')} 21 ${t('admin.users.to')} 25 ${t('admin.users.of')} 25 ${t('admin.users.users')}`))).toBeVisible();
+    await expect(
+      page.getByText(new RegExp(`${t('admin.users.page')} 2 ${t('admin.users.of')} 2`))
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        new RegExp(
+          `${t('admin.users.showing')} 21 ${t('admin.users.to')} 25 ${t('admin.users.of')} 25 ${t('admin.users.users')}`
+        )
+      )
+    ).toBeVisible();
 
     // Next should be disabled on last page
     await expect(page.getByTestId('pagination-next')).toBeDisabled();
 
     // Go back to page 1
     await page.getByTestId('pagination-previous').click();
-    await expect(page.getByText(new RegExp(`${t('admin.users.page')} 1 ${t('admin.users.of')} 2`))).toBeVisible();
+    await expect(
+      page.getByText(new RegExp(`${t('admin.users.page')} 1 ${t('admin.users.of')} 2`))
+    ).toBeVisible();
   });
 
   test('form validation in create modal', async ({ page }) => {
     await mockAuthenticatedAdmin(page);
 
-    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -502,8 +542,8 @@ test.describe('Admin User Management E2E Flow', () => {
           items: [],
           total: 0,
           page: 1,
-          pageSize: 20
-        })
+          pageSize: 20,
+        }),
       });
     });
 
@@ -553,11 +593,11 @@ test.describe('Admin User Management E2E Flow', () => {
         displayName: 'Cancel User',
         role: 'User',
         createdAt: new Date().toISOString(),
-        lastSeenAt: null
-      }
+        lastSeenAt: null,
+      },
     ];
 
-    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/users\\??.*`), async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -565,8 +605,8 @@ test.describe('Admin User Management E2E Flow', () => {
           items: users,
           total: users.length,
           page: 1,
-          pageSize: 20
-        })
+          pageSize: 20,
+        }),
       });
     });
 
@@ -574,15 +614,23 @@ test.describe('Admin User Management E2E Flow', () => {
 
     // Test create modal cancel
     await page.getByTestId('open-create-user-modal').click();
-    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.createUser') })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: getTextMatcher('admin.users.createUser') })
+    ).toBeVisible();
     await page.getByRole('button', { name: getTextMatcher('common.cancel') }).click();
-    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.createUser') })).not.toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: getTextMatcher('admin.users.createUser') })
+    ).not.toBeVisible();
 
     // Test edit modal cancel
     await page.getByRole('button', { name: getTextMatcher('common.edit') }).click();
-    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.editUser') })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: getTextMatcher('admin.users.editUser') })
+    ).toBeVisible();
     await page.getByRole('button', { name: getTextMatcher('common.cancel') }).click();
-    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.editUser') })).not.toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: getTextMatcher('admin.users.editUser') })
+    ).not.toBeVisible();
 
     // Test delete confirmation cancel
     await page.getByRole('button', { name: getTextMatcher('common.delete') }).click();

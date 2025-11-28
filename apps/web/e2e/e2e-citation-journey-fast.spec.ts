@@ -36,50 +36,210 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { setupAuthRoutes, waitForAutoSelection } from './helpers/qa-test-utils';
 import {
-  setupCitationTestEnv,
-  mockCitationAPI,
   verifyCitationDisplay,
   verifyNoCitations,
-  sendQuestionAndWaitForResponse,
   defaultHarmoniesCitation,
   defaultChessCitations,
-  CitationResponse,
 } from './helpers/citation-test-utils';
 
+// NOTE: Desktop/Tablet only - Sidebar hidden on mobile
+// ChatSidebar uses "hidden md:flex" which makes GameSelector/AgentSelector
+// inaccessible on mobile viewports (display: none prevents interaction).
 test.describe('E2E Citation Journey - Fast (Mocked)', () => {
-  test.skip('E2E-1: User uploads PDF, asks question, and sees citation from uploaded PDF', async ({
+  test.beforeEach(async ({ page }, testInfo) => {
+    // Skip mobile tests - sidebar is display: none on mobile viewports
+    if (testInfo.project.name === 'mobile') {
+      test.skip();
+    }
+  });
+
+  test('E2E-1: User uploads PDF, asks question, and sees citation from uploaded PDF', async ({
     page,
   }) => {
-    // Setup environment with HARMONIES game
-    await setupCitationTestEnv(page, {
-      gameId: 'harmonies-1',
+    // Listen for console errors
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        console.log('❌ BROWSER ERROR:', msg.text());
+      }
     });
 
-    // Mock citation response for HARMONIES setup question
-    const citationResponse: CitationResponse = {
-      answer:
-        'To start playing HARMONIES, place the habitat tiles face up in the center of the table. Each player takes a set of tokens and places them on the starting positions.',
-      snippets: [defaultHarmoniesCitation],
-      messageId: 'msg-harmonies-setup-123',
-      tokenUsage: {
-        promptTokens: 150,
-        completionTokens: 85,
-        totalTokens: 235,
-      },
-    };
-    await mockCitationAPI(page, citationResponse);
+    page.on('pageerror', err => {
+      console.log('❌ PAGE ERROR:', err.message);
+    });
+
+    // Setup ALL mocks BEFORE navigation
+    await page.route('**/api/v1/games', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'harmonies-1', title: 'HARMONIES', createdAt: '2025-01-01T00:00:00Z' },
+        ]),
+      });
+    });
+
+    // Mock agents API - Global endpoint (schema-compliant)
+    await page.route('**/api/v1/agents?activeOnly=true', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          agents: [
+            {
+              id: '550e8400-e29b-41d4-a716-446655440000', // Valid UUID required
+              name: 'HARMONIES Q&A Agent',
+              type: 'qa', // Required (not 'kind')
+              strategyName: 'default',
+              strategyParameters: {},
+              isActive: true,
+              createdAt: '2025-01-01T00:00:00Z',
+              lastInvokedAt: null,
+              invocationCount: 0,
+              isRecentlyUsed: false,
+              isIdle: true,
+            },
+          ],
+          count: 1,
+        }),
+      });
+    });
+
+    // Mock agents API - Per-game endpoint (legacy, might still be called)
+    await page.route('**/api/v1/games/*/agents', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'agent-qa-1',
+            gameId: 'harmonies-1',
+            name: 'HARMONIES Q&A Agent',
+            kind: 'qa',
+            createdAt: '2025-01-01T00:00:00Z',
+          },
+        ]),
+      });
+    });
+
+    await page.route('**/api/v1/knowledge-base/chat-threads**', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    await page.route('**/api/v1/chats**', async route => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'chat-123',
+            gameId: 'harmonies-1',
+            gameName: 'HARMONIES',
+            agentId: 'agent-qa-1',
+            agentName: 'HARMONIES Q&A Agent',
+            startedAt: new Date().toISOString(),
+            lastMessageAt: null,
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+      }
+    });
+
+    // Mock SSE streaming endpoint (matches qa-streaming-sse.spec.ts pattern)
+    await page.route('**/api/v1/agents/qa/stream', async route => {
+      const sseData = [
+        'event: stateUpdate\ndata: {"state":"Searching..."}\n\n',
+        'event: token\ndata: {"token":"To "}\n\n',
+        'event: token\ndata: {"token":"start "}\n\n',
+        'event: token\ndata: {"token":"playing "}\n\n',
+        'event: token\ndata: {"token":"HARMONIES"}\n\n',
+        'event: token\ndata: {"token":", place the habitat tiles"}\n\n',
+        `event: citation\ndata: ${JSON.stringify(defaultHarmoniesCitation)}\n\n`,
+        'event: complete\ndata: {"confidence":0.85}\n\n',
+      ].join('');
+
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        },
+        body: sseData,
+      });
+    });
+
+    // Setup auth
+    const auth = await setupAuthRoutes(page);
+    auth.authenticate();
 
     // Navigate to chat page
     await page.goto('/chat');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
 
-    // Send question about game setup
-    await sendQuestionAndWaitForResponse(
-      page,
-      'Come devo sistemare il gioco per iniziare a giocare?',
-      'To start playing HARMONIES'
-    );
+    // Select game
+    await page.locator('#gameSelect').click();
+    await page.waitForTimeout(500);
+    await page.getByText('HARMONIES').click();
+    await page.waitForTimeout(1000);
+
+    // DEBUG: Check store state
+    const storeState = await page.evaluate(() => {
+      const win = window as any;
+      const store = win.useChatStore?.getState?.();
+      return {
+        hasStore: !!store,
+        agents: store?.agents || [],
+        selectedGameId: store?.selectedGameId,
+        selectedAgentId: store?.selectedAgentId,
+        loading: store?.loading,
+      };
+    });
+    console.log('🔍 STORE STATE:', JSON.stringify(storeState, null, 2));
+
+    // Select agent - wait for agents to be populated
+    await page.waitForTimeout(1000);
+    const agentCombobox = page.locator('[role="combobox"]').nth(1);
+    await agentCombobox.click();
+    await page.waitForTimeout(500);
+
+    // Try first available option (fallback pattern)
+    const allOptions = page.locator('[role="option"]');
+    const optionsCount = await allOptions.count();
+    console.log('Agent dropdown options:', optionsCount);
+
+    if (optionsCount > 0) {
+      await allOptions.first().click();
+    }
+    await page.waitForTimeout(500);
+
+    // Send question
+    const input = page.getByPlaceholder('Fai una domanda sul gioco...');
+    await expect(input).toBeEnabled({ timeout: 3000 });
+    await input.fill('Come devo sistemare il gioco per iniziare a giocare?');
+
+    // Press Enter to send (more reliable than looking for button text)
+    await input.press('Enter');
+
+    // Wait a bit for response
+    await page.waitForTimeout(2000);
+    await page.screenshot({ path: `test-results/debug-after-send-${Date.now()}.png` });
+
+    // Wait for response
+    await expect(page.getByText('To start playing HARMONIES', { exact: false })).toBeVisible({
+      timeout: 10000,
+    });
 
     // Verify citation is displayed with correct information
     await verifyCitationDisplay(page, [
@@ -91,7 +251,7 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
     ]);
   });
 
-  test.skip('E2E-2: Citation displays correct PDF name and page number', async ({ page }) => {
+  test('E2E-2: Citation displays correct PDF name and page number', async ({ page }) => {
     await setupCitationTestEnv(page, {
       gameId: 'harmonies-1',
     });
@@ -132,7 +292,7 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
     ).toBeVisible();
   });
 
-  test.skip('E2E-3: Multiple citations from same PDF are displayed correctly', async ({ page }) => {
+  test('E2E-3: Multiple citations from same PDF are displayed correctly', async ({ page }) => {
     await setupCitationTestEnv(page, {
       gameId: 'harmonies-1',
     });
@@ -195,7 +355,7 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
     ]);
   });
 
-  test.skip('E2E-4: Multiple citations from different PDFs are displayed correctly', async ({
+  test('E2E-4: Multiple citations from different PDFs are displayed correctly', async ({
     page,
   }) => {
     await setupCitationTestEnv(page, {
@@ -241,7 +401,7 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
     await expect(page.getByText('chess-advanced-tactics.pdf (Pagina 45)')).toBeVisible();
   });
 
-  test.skip('E2E-5: No citations shown when answer is "Not specified"', async ({ page }) => {
+  test('E2E-5: No citations shown when answer is "Not specified"', async ({ page }) => {
     await setupCitationTestEnv(page, {
       gameId: 'harmonies-1',
     });
@@ -268,7 +428,7 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
     await verifyNoCitations(page);
   });
 
-  test.skip('E2E-6: Citation without page number displays correctly', async ({ page }) => {
+  test('E2E-6: Citation without page number displays correctly', async ({ page }) => {
     await setupCitationTestEnv(page, {
       gameId: 'harmonies-1',
     });
@@ -306,7 +466,7 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
     await expect(page.getByText('Some text from a source without page numbers.')).toBeVisible();
   });
 
-  test.skip('E2E-7: Citation section is collapsible', async ({ page }) => {
+  test('E2E-7: Citation section is collapsible', async ({ page }) => {
     await setupCitationTestEnv(page, {
       gameId: 'harmonies-1',
     });

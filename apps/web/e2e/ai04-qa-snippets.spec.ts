@@ -59,8 +59,8 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'chess-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
-          { id: 'tictactoe-1', name: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' },
+          { id: 'chess-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+          { id: 'tictactoe-1', title: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' },
         ]),
       });
     });
@@ -195,7 +195,9 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([{ id: 'chess-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' }]),
+        body: JSON.stringify([
+          { id: 'chess-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+        ]),
       });
     });
 
@@ -293,7 +295,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'tictactoe-1', name: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' },
+          { id: 'tictactoe-1', title: 'Tic-Tac-Toe', createdAt: '2025-01-01T00:00:00Z' },
         ]),
       });
     });
@@ -409,7 +411,9 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([{ id: 'chess-1', name: 'Chess', createdAt: '2025-01-01T00:00:00Z' }]),
+        body: JSON.stringify([
+          { id: 'chess-1', title: 'Chess', createdAt: '2025-01-01T00:00:00Z' },
+        ]),
       });
     });
 

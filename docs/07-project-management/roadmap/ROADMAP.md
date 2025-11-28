@@ -1,108 +1,171 @@
 # 🗺️ MeepleAI Master Roadmap
 
-**Ultimo Aggiornamento**: 2025-11-27
-**Stato Progetto**: Alpha (DDD 99% completo, P0 completati)
-**Issue Aperte**: 153 (108 MVP prioritizzate, 45 non categorizzate)
-**Timeline to MVP**: In ricalcolo
-**Target Launch**: Fine Febbraio - Inizio Marzo 2026
+**Ultimo Aggiornamento**: 2025-11-28
+**Stato Progetto**: Alpha (DDD 99% completo, P0 completati, **Triage completo**)
+**Issue Aperte**: 129 (109 MVP prioritizzate, 20 deferred)
+**Timeline to MVP**: **~62 giorni @ 2 FTE** (~38 settimane calendario)
+**Target Launch**: **Fine Agosto - Inizio Settembre 2026**
+
+📋 **Scaletta Dettagliata**: Vedi [ISSUE-EXECUTION-PLAN.md](ISSUE-EXECUTION-PLAN.md) per sequenza completa di esecuzione
 
 ---
 
-## 📊 STATO ATTUALE ISSUE (2025-11-27)
+## 📊 STATO ATTUALE ISSUE (2025-11-28) ✅ TRIAGE COMPLETO
 
 ### Distribuzione Issue Aperte
 
-**Totale**: 153 issue aperte su GitHub
+**Totale**: 129 issue aperte su GitHub (aggiornato da query live)
 
-| Priorità | Count | % | Focus Area |
-|----------|-------|---|------------|
-| **P0 (CRITICAL)** | 0 | 0% | ✅ **COMPLETATE** (3/3) |
-| **P1 (HIGH)** | 16 | 10.5% | Testing, Security, BGAI Core |
-| **P2 (MEDIUM)** | 48 | 31.4% | Test Quality, Frontend Refactor, BGAI Features |
-| **P3 (LOW)** | 44 | 28.8% | Documentation, Infrastructure, Code Cleanup |
-| **Non Categorizzate** | 45 | 29.4% | Da triagiate |
-| **MVP Scope** | **64** | **41.8%** | P1 + P2 (critical path) |
+| Priorità | Count | % | Focus Area | Effort |
+|----------|-------|---|------------|--------|
+| **P0 (CRITICAL)** | 0 | 0% | ✅ **COMPLETATE** (3/3) | ~32h (spent) |
+| **P1 (HIGH)** | 19 | 14.7% | Security, BGAI Testing, Performance | **~272-288h** (~17-18 giorni) |
+| **P2 (MEDIUM)** | 44 | 34.1% | Test Quality, Frontend, E2E, BGAI Features | **~712h** (~44.5 giorni) |
+| **P3 (LOW)** | 46 | 35.7% | HyperDX, Infrastructure, Documentation | **~524h** (~33 giorni) |
+| **Deferred** | 20 | 15.5% | Admin Console Fase 2-4, Long-term epics | ~160h (Post-MVP) |
+| **MVP Scope (P1+P2)** | **63** | **48.8%** | Critical path to production | **~984-1000h** (**~61.5-62.5 giorni @ 2 FTE**) |
+| **Full Production (P1+P2+P3)** | **109** | **84.5%** | Production-ready + polish | **~1508-1524h** (**~94-95 giorni @ 2 FTE**) |
 
 ### 🎯 Prossima Scaletta di Esecuzione
 
-#### 🔴 P1 - HIGH PRIORITY (16 issue) - NEXT
+📋 **Documento Completo**: [ISSUE-EXECUTION-PLAN.md](ISSUE-EXECUTION-PLAN.md) - Scaletta dettagliata con effort, dependencies, timeline
 
-**1. Security & Production Readiness** (2 issue)
-- #575 - AUTH-08: Admin Override for 2FA Locked-Out Users
-- #576 - SEC-05: Security Penetration Testing 🔥 **CRITICAL**
+#### 🔴 P1 - HIGH PRIORITY (19 issue, ~272-288h, ~17-18 giorni @ 2 FTE) - **START NOW**
 
-**2. Test Infrastructure** (1 issue)
-- #1502 - [TEST-004] Extract SSE Mock Helper (frontend)
+**1. Security & Production Readiness** (5 issue, ~60-76h)
+- **#576** - SEC-05: Security Penetration Testing 🔥 **CRITICAL** (24-40h, external auditor)
+- **#1787** - SEC-07: TOTP Replay Attack Prevention (8h)
+- **#1788** - SEC-08: Enhanced Security Monitoring Dashboard (16h)
+- **#1789** - SEC-07 (duplicate) - **CLOSE as duplicate of #1787** (0h)
+- **#1792** - K6 Performance Tests Failed Investigation (12h)
 
-**3. BGAI Testing - Month 3-6** (13 issue)
-- #978 - [BGAI-036] End-to-end testing (Month 3)
-- #983 - [BGAI-041] Extend PromptEvaluationService (Month 4)
-- #992 - [BGAI-051] Frontend component testing (Month 4)
-- #993 - [BGAI-052] Responsive design testing (Month 4)
-- #995 - [BGAI-055] Month 4 integration testing
-- #999 - [BGAI-059] Quality test implementation (Month 5)
-- #1000 - [BGAI-060] Run first accuracy test (Month 5)
-- #1005 - [BGAI-065] Jest tests for Q&A components (Month 5)
-- #1009 - [BGAI-069] Month 5 E2E testing
-- #1018 - [BGAI-080] End-to-end testing (Month 6)
-- #1019 - [BGAI-081] Accuracy validation (Month 6)
-- #1020 - [BGAI-082] Performance testing (Month 6)
-- #1023 - [BGAI-085] Phase 1A completion checklist (Month 6)
+**2. BGAI Testing - Month 3-6** (14 issue, ~212h)
 
-#### 🟡 P2 - MEDIUM PRIORITY (48 issue) - Dopo P1
+*Month 3* (1 issue, 16h):
+- **#978** - [BGAI-036] End-to-end testing
 
-**Top Priority P2** (primi 15):
-1. #1780 - Fix 171 TypeScript compilation errors in test files
-2. #1757 - Systematic audit of test assertions
-3. #1741 - Missing custom assertions for domain objects
-4. #1740 - No test categories or traits
-5. #1739 - Missing parameterized tests for validation scenarios
-6. #1738 - Missing test data builders
-7. #1737 - Unreliable GC.Collect() in performance tests
-8. #1736 - Missing cancellation token tests
-9. #1735 - Inconsistent assertion style across test suite
-10. #1734 - Significant code duplication in mock setup
-11. #1675 - Implement Missing Frontend Backend APIs
-12. #1668 - Update Component Imports to Subdirectory Paths
-13. #1667 - Remove Deprecated Profile Page
-14. #1666 - Consolidate Duplicate React Components
-15. #1511 - [TEST-013] Expand Visual Regression Tests
+*Month 4* (4 issue, 68h):
+- **#983** - [BGAI-041] Extend PromptEvaluationService (24h)
+- **#992** - [BGAI-051] Frontend component testing (16h)
+- **#993** - [BGAI-052] Responsive design testing (12h)
+- **#995** - [BGAI-055] Month 4 integration testing (16h)
 
-**Altre P2**: 33 issue (E2E expansion, BGAI features, test improvements)
+*Month 5* (4 issue, 60h):
+- **#999** - [BGAI-059] Quality test implementation (20h)
+- **#1000** - [BGAI-060] Run first accuracy test (8h)
+- **#1005** - [BGAI-065] Jest tests for Q&A components (16h)
+- **#1009** - [BGAI-069] Month 5 E2E testing (16h)
 
-#### 🟢 P3 - LOW PRIORITY (44 issue) - Post P1/P2
+*Month 6* (4 issue, 68h):
+- **#1018** - [BGAI-080] End-to-end testing (20h)
+- **#1019** - [BGAI-081] Accuracy validation (24h)
+- **#1020** - [BGAI-082] Performance testing (16h)
+- **#1023** - [BGAI-085] Phase 1A completion checklist (8h)
 
-**Categorie**:
-- **HyperDX** (10 issue): #1561-1570 - Observability platform
-- **Infrastructure** (5 issue): Docker, monitoring, runbooks
-- **Documentation** (4 issue): #1681, #1680, #1679, #1570, #1569 - Legacy cleanup
-- **Code Quality** (25 issue): #1674, #1676-1677, test improvements
+**Completion Gate P1**: Security audit passed, BGAI testing foundation ready, performance validated
 
-#### ⚪ Non Categorizzate (45 issue) - Da Triagiate
+#### 🟡 P2 - MEDIUM PRIORITY (44 issue, ~712h, ~44.5 giorni @ 2 FTE) - Post P1
 
-Richiedono prioritizzazione e assegnazione a milestone.
+**Categorie P2**:
 
-### 📈 Analisi Distribuzione
+1. **Test Quality Improvements** (17 issue, ~292h)
+   - **Critical**: #1780 (TypeScript errors, 40h), #1757 (Test audit, 32h)
+   - **Domain/Validation**: #1741-1738 (64h)
+   - **Reliability/Style**: #1737-1734 (64h)
+   - **Backend/Frontend**: #1505-1511 (100h)
+
+2. **Frontend Refactoring** (4 issue, ~76h)
+   - #1666 - Consolidate Duplicate React Components (24h)
+   - #1667 - Remove Deprecated Profile Page (4h)
+   - #1668 - Update Component Imports to Subdirectory Paths (16h)
+   - #1675 - Implement Missing Frontend Backend APIs (32h)
+
+3. **E2E Testing Expansion** (7 issue, ~124h)
+   - #1492-1498 - POM migration, timeouts, negative scenarios, stability, visual regression, browser matrix, coverage
+
+4. **BGAI Features & Components** (16 issue, ~220h)
+   - **Dataset Annotations**: #1010-1012, #996-998 (84h)
+   - **Frontend Components**: #1013-1017, #989 (88h)
+   - **Documentation/Fixes**: #1021-1022 (28h)
+   - **State Management**: #1436 (20h)
+
+**Completion Gate P2**: Test quality ≥95%, Frontend refactor complete, E2E suite comprehensive, BGAI features ready
+
+#### 🟢 P3 - LOW PRIORITY (46 issue, ~524h, ~33 giorni @ 2 FTE) - Post P1/P2
+
+**Categorie P3**:
+
+1. **HyperDX Observability Platform** (10 issue, ~96h)
+   - #1561 - EPIC: Implement HyperDX Observability Platform
+   - #1562-1570 - Deploy, configure, integrate, test, document
+
+2. **Documentation & Code Cleanup** (8 issue, ~112h)
+   - #1679-1681 - Legacy cleanup, audit, documentation updates
+   - #1725 - LLM Token Tracking advanced features
+   - #706 - Operational runbooks
+   - #1674, #1676-1677 - Backend cleanup
+
+3. **PDF Test Improvements** (6 issue, ~60h)
+   - #1747-1742 - Edge cases, security, optimization, parallel execution
+
+4. **Infrastructure & DevOps** (22 issue, ~256h)
+   - **Docker**: #701-702, #707, #704 (32h)
+   - **Monitoring**: #705, #703, #818 (36h)
+   - **Security**: #936 (16h)
+   - **Admin Console Fase 1**: #874-889 (152h - dashboard overview)
+   - **Testing**: #844 (epic planning)
+
+**Completion Gate P3**: Observability operational, Infrastructure documented, Code cleanup complete, Admin Console Fase 1 deployed
+
+#### 🔵 DEFERRED (20 issue, ~160h) - Post-MVP
+
+**Admin Console Fase 2-4** (18 issue):
+- FASE 2: Infrastructure Monitoring (#890-902) - Multi-service health checks
+- FASE 3: Enhanced Management (#903-914) - API keys, user management, bulk ops
+- FASE 4: Advanced Features (#915-922) - Reporting system, advanced alerting
+
+**Long-term Epics** (2 issue):
+- #935 - Frontend Epic: Performance & Accessibility (Phase 6)
+- #934 - Frontend Epic: Design Polish (Phase 5)
+- #933 - Frontend Epic: App Router Migration (Phase 3)
+- #932 - Frontend Epic: Advanced Features (Phase 4)
+- #931 - Frontend Epic: React 19 Optimization (Phase 2)
+- #926 - Frontend Epic: Foundation & Quick Wins (Phase 1)
+
+### 📈 Analisi Distribuzione ✅ TRIAGE COMPLETO
 
 **Stato Generale**:
-- ✅ P0 blockers risolti (100% completamento)
-- 🔴 P1 represent
+- ✅ **P0 blockers risolti** (100% completamento - 3 issue, ~32h spent)
+- ✅ **Triage completo** (129 issue categorizzate, 0 pending)
+- 🎯 **P1 ready to execute** (19 issue, 14.7% total, ~272-288h)
+- 🟡 **P2+P3 scope definito** (90 issue, 69.8% total, ~1236h)
+- 🔵 **Deferred scope isolato** (20 issue, 15.5% total, ~160h Post-MVP)
 
-a 10.5% delle issue aperte (16/153)
-- 🟡 P2+P3 rappresentano 60.2% delle issue (92/153)
-- ⚪ 29.4% issue non categorizzate richiedono triage (45/153)
+**Critical Path (P1 → P2 → MVP)**:
+1. **Week 1-2 (START NOW)**: Security audit (#576) + TOTP (#1787-1788) + K6 investigation (#1792)
+2. **Week 3-8**: BGAI testing pipeline Month 3-6 (14 issue)
+3. **Week 9-14**: Test quality improvements (17 issue)
+4. **Week 15-24**: Frontend refactor + E2E expansion + BGAI features (27 issue)
+5. **Week 25-35**: P3 polish - HyperDX + Infrastructure + Documentation (46 issue)
+6. **Week 36-38**: Final prep + Launch
 
-**Critical Path**:
-1. **Immediate**: Security audit (#576) + 2FA admin override (#575)
-2. **Short-term**: BGAI testing foundation (Month 3-4)
-3. **Mid-term**: BGAI quality validation (Month 5-6)
-4. **Ongoing**: Test quality improvements (P2), infrastructure polish (P3)
+**Timeline Aggiornata**:
+- **MVP (P1+P2)**: ~61.5-62.5 giorni @ 2 FTE (~38 settimane calendario con buffer)
+- **Full Production (P1+P2+P3)**: ~94-95 giorni @ 2 FTE (~24 settimane calendario)
+- **Target Launch**: **Fine Agosto - Inizio Settembre 2026** (aggiornato da Feb-Mar)
 
-**Raccomandazioni**:
-- ✅ Triagiate le 45 issue non categorizzate
-- 🔥 Avviare SUBITO security audit (#576) - external lead time 24-40h
-- 🎯 Completare P1 prima di espandere scope P2/P3
-- 📊 Ricalcolare effort estimates dopo triage completo
+**Actions Completed** ✅:
+- ✅ Triagiate tutte le 129 issue aperte
+- ✅ Assegnate priorità P1/P2/P3/Deferred
+- ✅ Effort estimates completati per tutte le issue
+- ✅ Dependencies mappate (critical path identificato)
+- ✅ Timeline ricalcolata con effort reali
+
+**Next Actions** 🔥:
+1. **IMMEDIATE**: Schedulare security audit (#576) - external lead time 24-40h
+2. **Week 1**: Chiudere #1789 as duplicate, update GitHub labels P1/P2/P3
+3. **Week 1**: Avviare K6 investigation (#1792) e TOTP implementation (#1787)
+4. **Week 1**: Allocare 2 FTE su P1 security + BGAI prep
 
 ---
 
@@ -448,53 +511,57 @@ Week 20      │ 🎉 PRODUCTION LAUNCH
 
 ## 🎉 NEXT ACTIONS (Immediate - Week 1)
 
-### ⚠️ CRITICAL: Completare Triage (G0)
+### ✅ TRIAGE COMPLETO + AVVIO P1
 
-**G0 - Triage Status**: ⚠️ 108/153 issue categorizzate (70.6%) - **45 issue pending**
+**G0 - Triage Status**: ✅ **COMPLETE** - 129/129 issue categorizzate (100%)
 **G1 - P0 Complete**: ✅ 3/3 issue risolte (#1729, #1728, #1727)
 **Coverage Gates**: ✅ Frontend 90.03%, Backend 90%+
 
-**URGENT ACTION REQUIRED**:
-1. ⚠️ **Triagiate 45 issue non categorizzate** (29.4% scope unknown)
-2. 📊 **Assign priorities** (P1/P2/P3) alle 45 issue
-3. 📈 **Estimate effort** per tutte le issue categorizzate
-4. 🎯 **Update timeline** con effort reali post-triage
+**TRIAGE COMPLETION ACHIEVEMENTS** ✅:
+1. ✅ **129 issue categorizzate** (0 pending, 100% complete)
+2. ✅ **Priorità assegnate**: 19 P1, 44 P2, 46 P3, 20 Deferred
+3. ✅ **Effort estimates completati**: ~1508-1524h totali mappati
+4. ✅ **Timeline aggiornata**: ~62 giorni MVP, ~95 giorni Full Production
+5. ✅ **Scaletta dettagliata**: [ISSUE-EXECUTION-PLAN.md](ISSUE-EXECUTION-PLAN.md) creato
 
-### 🚀 AVVIO P1: High Priority Foundation (Post-Triage)
+**ISSUE TRIAGIATE (23 nuove categorizzazioni)**:
+- **3 → P1**: #1792 (K6 performance), #1787 (TOTP), #1788 (Security dashboard)
+- **1 → Duplicate**: #1789 (chiudere come duplicate di #1787)
+- **8 → P2**: #992-995 (BGAI Month 4-5), #996-998 (Annotations), #989, #1436
+- **11 → P3**: #936, #844, #818, #701-707, #1001-1004, #1008
+
+### 🚀 AVVIO P1: High Priority Foundation
 
 **Obiettivi Immediati** (Prossimi 3-5 giorni):
 
-#### 1. ⚠️ TRIAGE COMPLETION (BLOCCA TUTTO)
-- **Action**: Categorizzare 45 issue rimanenti
-- **Priority**: CRITICAL - blocca effort estimates e timeline
-- **Timeline**: Completare entro fine Week 1 per mantenere target launch
-
-#### 2. 🛡️ Security (START NOW - Critical Path)
+#### 1. 🛡️ Security (START NOW - Critical Path)
 - **#576** - Avviare Security Penetration Testing
   - **URGENTE**: External auditor richiede 24-40h lead time
   - **Action**: Contattare auditor, schedulare testing SUBITO
-  - **Blocca**: Launch (Gate G5)
+  - **Effort**: 24-40h
+  - **Blocca**: Launch readiness
 
-- **#575** - Implementare Admin Override for 2FA Locked-Out Users
-  - **Priority**: HIGH (production readiness)
-  - **Blocca**: Security audit completion
+#### 2. 🔥 Critical Security & Performance
+- **#1787** - TOTP Replay Attack Prevention (8h)
+- **#1788** - Enhanced Security Monitoring Dashboard (16h, depends on #576)
+- **#1789** - **CLOSE as duplicate of #1787** (action item)
+- **#1792** - K6 Performance Tests Failed Investigation (12h, parallel)
 
-#### 3. 🧪 Test Infrastructure
-- **#1502** - Extract SSE Mock Helper (frontend)
-  - **Priority**: HIGH (test foundation)
-  - **Enables**: Frontend test improvements
+#### 3. 🎮 BGAI Testing Prep - Month 3
+- **#978** - [BGAI-036] End-to-end testing (16h)
+  - **Dependency**: Security audit completion
+  - **Enables**: Month 4-6 testing pipeline
 
-#### 4. 🎮 BGAI Testing - Month 3-4 (Parallel Track)
-- **#978** - [BGAI-036] End-to-end testing (Month 3)
-- **#983** - [BGAI-041] Extend PromptEvaluationService (Month 4)
-- **#992** - [BGAI-051] Frontend component testing (Month 4)
-- **#993** - [BGAI-052] Responsive design testing (Month 4)
-- **#995** - [BGAI-055] Month 4 integration testing
+#### 4. 📋 GitHub Housekeeping (Week 1)
+- Update labels P1/P2/P3 per 23 issue triagiate
+- Close #1789 as duplicate
+- Update milestones per nuovo timeline
 
-**Goal Week 1**:
-- ✅ Triage complete (153/153 issue categorizzate)
-- 🔥 Security audit scheduled
-- 🎯 P1 execution plan finalized with real effort estimates
+**Goal Week 1-2**:
+- ✅ Triage complete (129/129 issue) - **ACHIEVED**
+- 🔥 Security audit scheduled and started
+- 🎯 P1 execution started (security track + BGAI prep)
+- 📊 K6 performance investigation complete
 
 ---
 
@@ -524,6 +591,49 @@ Week 20      │ 🎉 PRODUCTION LAUNCH
 
 ## 📝 CHANGELOG
 
+### v18.0 (2025-11-28) - TRIAGE COMPLETION & EXECUTION PLAN
+
+**✅ TRIAGE COMPLETO**: Categorizzate tutte le 129 issue aperte, effort estimates finali, timeline aggiornata
+
+**Major Changes**:
+- ✅ **Triage Status**: Da PARTIAL (70.6%) → **COMPLETE (100%)** - 129/129 issue categorizzate
+- ✅ **Issue Count**: Aggiornato da 153 → 129 issue aperte (query GitHub live)
+- ✅ **P1 Update**: 16 → 19 issue P1 (aggiunti #1787, #1788, #1792 security/performance)
+- ✅ **P2 Update**: 48 → 44 issue P2 (consolidate BGAI features)
+- ✅ **P3 Update**: 44 → 46 issue P3 (aggiunte infrastructure tasks)
+- ✅ **Deferred**: 20 issue identificate (Admin Console Fase 2-4, long-term epics)
+- ✅ **Effort Estimates**: Completati per tutte le 129 issue (~1508-1524h totali)
+- ✅ **Timeline Finalized**: MVP ~62 giorni @ 2 FTE, Full Production ~95 giorni
+
+**Triage Completion Details (23 issue triagiate)**:
+- **3 → P1**: #1792 (K6 performance investigation), #1787 (TOTP prevention), #1788 (Security dashboard)
+- **1 → Duplicate**: #1789 (close as duplicate di #1787)
+- **8 → P2**: #992-995 (BGAI Month 4-5), #996-998 (Dataset annotations), #989 (Base components), #1436 (SWR+Zustand fix)
+- **11 → P3**: #936 (Infisical POC), #844 (UI/UX testing epic), #818 (Security review process), #701-707 (Infrastructure), #1001-1004, #1008 (BGAI UI components)
+
+**New Deliverables**:
+- 📋 **ISSUE-EXECUTION-PLAN.md**: Scaletta completa con effort, dependencies, timeline dettagliata
+- 🎯 **Critical Path Mapped**: P1 (Week 1-8) → P2 (Week 9-24) → P3 (Week 25-35) → Launch (Week 36-38)
+- 📊 **Resource Allocation**: 2 FTE parallel execution strategy per MVP in ~62 giorni
+- 🔥 **Immediate Actions**: Security audit scheduling, K6 investigation, TOTP implementation
+
+**Timeline Impact**:
+- **MVP (P1+P2)**: ~61.5-62.5 giorni @ 2 FTE (~38 settimane calendario con buffer)
+- **Full Production (P1+P2+P3)**: ~94-95 giorni @ 2 FTE (~24 settimane calendario)
+- **Target Launch**: **Aggiornato da Feb-Mar → Fine Agosto - Inizio Settembre 2026**
+
+**Quality Gates Update**:
+- ✅ **G0**: Da PARTIAL → **PASSED** (triage 100% complete)
+- ✅ **G1**: PASSED (P0 complete, coverage ≥90%)
+- 🎯 **G2**: Security + BGAI testing (target Week 8)
+- 🎯 **G3**: Test quality + MVP features (target Week 24)
+- 🎯 **G4**: Production ready (target Week 35)
+- 🎯 **G5**: Launch ready (target Week 38)
+
+**Next Focus**: Security audit execution → BGAI testing pipeline → Test quality improvements
+
+---
+
 ### v17.0 (2025-11-27) - GITHUB SYNC & TRIAGE GAP IDENTIFICATION
 
 **🔄 SINCRONIZZAZIONE**: Aggiornamento con stato reale da GitHub (153 issue aperte)
@@ -536,26 +646,6 @@ Week 20      │ 🎉 PRODUCTION LAUNCH
 - 🔄 **P3 Update**: 45 → 44 issue P3 (HyperDX, infrastructure, cleanup)
 - ⚠️ **G0 Status**: Da "PASSED" a "PARTIAL" (70.6%) - 45 issue pending
 - ❌ **Effort Estimates**: Rimossi (~944h non più applicabile, richiedono re-stima post-triage)
-
-**Critical Findings**:
-- ⚠️ **Triage Gap**: 29.4% scope unknown → blocca effort estimation
-- 🔥 **Backend API**: #1006, #1007 rimossi da P1 (non più priorità critica)
-- 🎯 **BGAI Focus**: 13/16 P1 sono testing BGAI Month 3-6 (production readiness)
-- 📊 **Timeline Impact**: Esteso a ~20 settimane (da 9-11) per approccio conservativo
-
-**New Roadmap Structure**:
-- 📊 **Nuova Sezione**: "STATO ATTUALE ISSUE" in testa con distribuzione e scaletta
-- 🎯 **Scaletta Esecuzione**: Dettaglio completo P1/P2/P3 con issue reali
-- ⚠️ **Risks Updated**: Nuovo rischio critico "Triage incomplete" + rimosso "Backend API delay"
-- 📈 **Quality Gates**: G0 da PASSED a PARTIAL, gates riallineati a nuovo timeline
-
-**Action Items**:
-1. ⚠️ **URGENT**: Completare triage 45 issue non categorizzate (Week 1 priority)
-2. 🔥 **START NOW**: Avviare security audit (#576) - external lead time 24-40h
-3. 📊 **Re-estimate**: Effort per tutte le issue post-triage completo
-4. 🎯 **Update Timeline**: Rivalidare target launch post effort re-estimation
-
-**Next Focus**: Triage completion → Security audit → BGAI testing foundation
 
 ---
 
@@ -628,14 +718,16 @@ Week 20      │ 🎉 PRODUCTION LAUNCH
 
 ---
 
-**Versione**: 17.0 (GitHub Sync & Triage Gap Identification)
+**Versione**: 18.0 (Triage Completion & Execution Plan)
 **Owner**: Engineering Team
-**Issue Totali**: 153 (3 completate + 108 categorizzate + 45 da triagiate)
-**MVP Scope**: 64 issue (P1+P2), effort TBD post-triage
-**Effort to MVP**: Da stimare (post-triage 45 issue rimanenti)
-**Target Launch**: Fine Febbraio - Inizio Marzo 2026 (⚠️ dipende da triage completion)
-**Last Updated**: 2025-11-27
+**Issue Totali**: 129 (3 P0 completate + 109 P1/P2/P3 + 20 deferred)
+**MVP Scope**: 63 issue (P1+P2), **~984-1000h** (~62 giorni @ 2 FTE)
+**Full Production**: 109 issue (P1+P2+P3), **~1508-1524h** (~95 giorni @ 2 FTE)
+**Target Launch**: **Fine Agosto - Inizio Settembre 2026**
+**Last Updated**: 2025-11-28
+
+📋 **Scaletta Completa**: [ISSUE-EXECUTION-PLAN.md](ISSUE-EXECUTION-PLAN.md)
 
 ---
 
-⚠️ **"Triage gap identified, urgent categorization required"** ⚠️
+✅ **"Triage complete, execution ready, timeline finalized"** ✅

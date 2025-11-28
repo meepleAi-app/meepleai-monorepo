@@ -86,8 +86,9 @@
   - [Infrastructure Comprehensive Review 2025-11-22](./02-development/code-review/INFRASTRUCTURE-COMPREHENSIVE-REVIEW-2025-11-22.md)
   - [PDF Processing Checklist](./02-development/code-review/pdf-processing-checklist.md)
 
-- **[testing/](./02-development/testing/)** - Testing documentation (22 files)
+- **[testing/](./02-development/testing/)** - Testing documentation (23 files)
   - [Test Writing Guide](./02-development/testing/test-writing-guide.md) ⭐
+  - [Golden Dataset Testing Guide](./02-development/testing/golden-dataset-testing-guide.md) ⭐ **NEW** - RAG accuracy validation (Issue #999)
   - [UI Element Identification Guide](./02-development/testing/ui-element-identification-guide.md) ⭐ **NEW** - Test selector best practices
   - [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md) (30 pages)
   - [Test Patterns](./02-development/testing/test-patterns.md)

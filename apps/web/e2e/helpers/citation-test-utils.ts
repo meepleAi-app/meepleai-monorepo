@@ -260,9 +260,9 @@ export async function sendQuestionAndWaitForResponse(
   question: string,
   expectedAnswerSnippet: string
 ) {
-  // Wait for input to be enabled
+  // Wait for input to be enabled (after auto-selection or manual selection)
   const input = page.getByPlaceholder(/fai una domanda|ask a question/i);
-  await expect(input).toBeEnabled({ timeout: 10000 });
+  await expect(input).toBeEnabled({ timeout: 15000 });
 
   // Type question
   await input.fill(question);

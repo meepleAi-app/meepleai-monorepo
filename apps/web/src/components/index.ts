@@ -4,3 +4,10 @@
 
 // AI-14: Search mode toggle for hybrid search feature
 export { default as SearchModeToggle, SearchMode } from './SearchModeToggle';
+
+// Issue #1002: BGAI-062 - Response components
+export { ResponseCard } from './response';
+
+// Issue #859: BGAI-074 - Citation components
+export { CitationCard } from './citations/CitationCard';
+export { CitationList } from './citations/CitationList';

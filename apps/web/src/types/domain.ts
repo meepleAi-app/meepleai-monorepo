@@ -167,13 +167,24 @@ export interface Message {
 }
 
 /**
- * Q&A response from agent
+ * Q&A response from agent (Issue #1002: BGAI-062)
+ * Aligned with backend QaResponseDto
  */
 export interface QaResponse {
   answer: string;
   snippets?: Snippet[];
   followUpQuestions?: string[];
   messageId?: string;
+  /** Search/retrieval confidence score (0-1) */
+  searchConfidence?: number;
+  /** LLM generation confidence score (0-1) */
+  llmConfidence?: number;
+  /** Overall confidence score (0-1) - Primary metric for UI display */
+  overallConfidence?: number;
+  /** Flag indicating if response quality is below threshold */
+  isLowQuality?: boolean;
+  /** RAG citations with page numbers and snippets */
+  citations?: Citation[];
 }
 
 /**

@@ -751,8 +751,4 @@ export function useChat(): ChatContextValue {
   return context;
 }
 
-/**
- * Backward compatibility export
- * @deprecated Use useChatContext from '@/hooks/useChatContext' instead
- */
-export { useChatContext } from '@/hooks/useChatContext';
+// Deprecated export removed - use '@/hooks/useChatContext' directly

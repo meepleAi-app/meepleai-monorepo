@@ -258,9 +258,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Daily upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("5 PDF/day");
-        deniedCheck.ErrorMessage.Should().Contain("free tier");
+        deniedCheck.ErrorMessage.ShouldIndicateDailyLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicateFreeTierDailyLimit();
+        deniedCheck.ErrorMessage.ShouldIndicateFreeTier();
     }
 
     [Fact(Timeout = 30000)]
@@ -287,9 +287,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().ContainAny("Weekly upload limit reached", "Daily upload limit reached");
-        deniedCheck.ErrorMessage.Should().ContainAny("20 PDF/week", "5 PDF/day");
-        deniedCheck.ErrorMessage.Should().Contain("free tier");
+        deniedCheck.ErrorMessage.ShouldIndicateQuotaLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicateFreeTierLimit();
+        deniedCheck.ErrorMessage.ShouldIndicateFreeTier();
     }
 
     #endregion
@@ -325,9 +325,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Daily upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("20 PDF/day");
-        deniedCheck.ErrorMessage.Should().Contain("normal tier");
+        deniedCheck.ErrorMessage.ShouldIndicateDailyLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicateNormalTierDailyLimit();
+        deniedCheck.ErrorMessage.ShouldIndicateNormalTier();
     }
 
     [Fact(Timeout = 30000)]
@@ -357,9 +357,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().ContainAny("Weekly upload limit reached", "Daily upload limit reached");
-        deniedCheck.ErrorMessage.Should().ContainAny("100 PDF/week", "20 PDF/day");
-        deniedCheck.ErrorMessage.Should().Contain("normal tier");
+        deniedCheck.ErrorMessage.ShouldIndicateQuotaLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicateNormalTierLimit();
+        deniedCheck.ErrorMessage.ShouldIndicateNormalTier();
     }
 
     #endregion
@@ -393,8 +393,8 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Daily upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("100 PDF/day");
+        deniedCheck.ErrorMessage.ShouldIndicateDailyLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicatePremiumTierDailyLimit();
     }
 
     #endregion
@@ -530,7 +530,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         quotaCheckAfter.Allowed.Should().BeFalse();
         quotaCheckAfter.DailyUploadsUsed.Should().Be(10);
         quotaCheckAfter.DailyLimit.Should().Be(5);
-        quotaCheckAfter.ErrorMessage.Should().Contain("Daily upload limit reached");
+        quotaCheckAfter.ErrorMessage.ShouldIndicateDailyLimitReached();
     }
 
     #endregion

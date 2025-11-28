@@ -111,7 +111,7 @@ public sealed class LlmHealthIntegrationTests
         // Assert
         result.Should().NotBeNull();
         result.Providers.Should().HaveCount(2);
-        result.Summary.Should().Contain("providers healthy");
+        result.Summary.ShouldIndicateProvidersHealthy();
 
         result.Providers.Should().ContainKey("openai");
         result.Providers.Should().ContainKey("anthropic");
@@ -159,9 +159,9 @@ public sealed class LlmHealthIntegrationTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Providers["openai"].Status.Should().Contain("Healthy");
-        result.Providers["anthropic"].CircuitState.Should().Be("open");
-        result.Providers["anthropic"].LatencyStats.Should().Contain("timeout");
+        result.Providers["openai"].Status.ShouldIndicateHealthy();
+        result.Providers["anthropic"].CircuitState.ShouldIndicateCircuitOpen();
+        result.Providers["anthropic"].LatencyStats.ShouldIndicateTimeout();
     }
 
     #endregion
@@ -187,7 +187,7 @@ public sealed class LlmHealthIntegrationTests
         // Assert
         result.Should().NotBeNull();
         result.Providers.Should().BeEmpty();
-        result.Summary.Should().Contain("0/0");
+        result.Summary.ShouldIndicateZeroProviders();
     }
 
     #endregion
@@ -222,8 +222,8 @@ public sealed class LlmHealthIntegrationTests
         // Assert
         result.Should().NotBeNull();
         result.Providers.Should().ContainKey("new-provider");
-        result.Providers["new-provider"].CircuitState.Should().Be("unknown");
-        result.Providers["new-provider"].LatencyStats.Should().Be("No data");
+        result.Providers["new-provider"].CircuitState.ShouldIndicateCircuitUnknown();
+        result.Providers["new-provider"].LatencyStats.ShouldIndicateNoData();
     }
 
     #endregion

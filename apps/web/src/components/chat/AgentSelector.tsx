@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 import {
   Select,

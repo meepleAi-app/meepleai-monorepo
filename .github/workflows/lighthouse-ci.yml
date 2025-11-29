@@ -94,9 +94,10 @@ jobs:
           retention-days: 1
 
   lighthouse-performance:
-    needs: build-nextjs
+    needs: [changes, build-nextjs]
     name: Lighthouse - Performance Testing
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true'
     defaults:
       run:
         working-directory: apps/web
@@ -157,9 +158,10 @@ jobs:
           retention-days: 7
 
   lighthouse-cli:
-    needs: build-nextjs
+    needs: [changes, build-nextjs]
     name: Lighthouse CI - Core Web Vitals
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true'
     defaults:
       run:
         working-directory: apps/web
@@ -239,10 +241,10 @@ jobs:
             }
 
   performance-regression-check:
-    needs: [build-nextjs, lighthouse-cli]
+    needs: [changes, build-nextjs, lighthouse-cli]
     name: Check Performance Regression
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: needs.changes.outputs.web == 'true' && github.event_name == 'pull_request'
     defaults:
       run:
         working-directory: apps/web

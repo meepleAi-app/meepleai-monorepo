@@ -216,8 +216,9 @@ public class TotpService : ITotpService
             return false;
         }
 
-        // SEC-07: Replay attack prevention (Issue #1787) - LAYER 3
-        var codeHash = _passwordHashingService.HashSecret(code);
+        // SEC-07: Replay attack prevention (Issue #1789) - LAYER 3
+        // FIX: Use deterministic hash (SHA256) instead of salted PBKDF2
+        var codeHash = HashTotpCodeDeterministic(code);
         var alreadyUsed = await _dbContext.UsedTotpCodes
             .Where(u => u.UserId == userId &&
                         u.CodeHash == codeHash &&
@@ -698,5 +699,19 @@ public class TotpService : ITotpService
                 },
                 cancellationToken: cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// SEC-07 (Issue #1789): Hash TOTP code deterministically for replay attack prevention.
+    /// Uses SHA256 without salt since TOTP codes are short-lived (60s) and single-use.
+    /// This ensures the same code produces the same hash for replay detection.
+    /// </summary>
+    /// <param name="code">6-digit TOTP code</param>
+    /// <returns>Deterministic SHA256 hash (hex string)</returns>
+    private static string HashTotpCodeDeterministic(string code)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(code);
+        var hashBytes = SHA256.HashData(bytes);
+        return Convert.ToHexString(hashBytes);
     }
 }

@@ -1,6 +1,8 @@
+using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Authentication;
+using Api.Models;
 using Api.Services;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
@@ -104,6 +106,42 @@ public class TotpReplayAttackPreventionTests : IAsyncLifetime
         mockEncryptionService.Setup(x => x.DecryptAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((string ciphertext, string purpose) => ciphertext.Replace("encrypted_", ""));
         services.AddScoped(_ => mockEncryptionService.Object);
+
+        // Mock RateLimitService (allow all requests for replay testing focus)
+        var mockRateLimitService = new Mock<IRateLimitService>();
+        mockRateLimitService.Setup(x => x.CheckRateLimitAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RateLimitResult(Allowed: true, TokensRemaining: 5, RetryAfterSeconds: 0)); // Always allow
+        services.AddScoped(_ => mockRateLimitService.Object);
+
+        // Mock AlertingService (no-op for replay testing)
+        var mockAlertingService = new Mock<IAlertingService>();
+        mockAlertingService.Setup(x => x.SendAlertAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AlertDto(
+                Id: Guid.NewGuid(),
+                AlertType: "TEST",
+                Severity: "INFO",
+                Message: "Test",
+                Metadata: null,
+                TriggeredAt: DateTime.UtcNow,
+                ResolvedAt: null,
+                IsActive: true,
+                ChannelSent: null));
+        services.AddScoped(_ => mockAlertingService.Object);
+
+        // Mock Redis ConnectionMultiplexer (minimal mock for lockout tracking)
+        var mockRedis = new Mock<StackExchange.Redis.IConnectionMultiplexer>();
+        var mockDatabase = new Mock<StackExchange.Redis.IDatabase>();
+        mockDatabase.Setup(x => x.StringIncrementAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<long>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
+            .ReturnsAsync(1); // Return count 1 (below lockout threshold)
+        mockDatabase.Setup(x => x.KeyExpireAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<TimeSpan?>(), It.IsAny<StackExchange.Redis.ExpireWhen>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
+            .ReturnsAsync(true);
+        mockDatabase.Setup(x => x.StringGetAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
+            .ReturnsAsync(StackExchange.Redis.RedisValue.Null); // No lockout active
+        mockDatabase.Setup(x => x.KeyDeleteAsync(It.IsAny<StackExchange.Redis.RedisKey>(), It.IsAny<StackExchange.Redis.CommandFlags>()))
+            .ReturnsAsync(true);
+        mockRedis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
+            .Returns(mockDatabase.Object);
+        services.AddSingleton(_ => mockRedis.Object);
 
         // Register real AuditService - will use same DbContext as TotpService
         services.AddScoped<AuditService>();

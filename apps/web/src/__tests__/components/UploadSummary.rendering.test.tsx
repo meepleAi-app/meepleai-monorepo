@@ -12,6 +12,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import { UploadSummary } from '@/components/upload/UploadSummary';
 import type { UploadQueueStats } from '../../hooks/useUploadQueue';
 
@@ -32,16 +33,16 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText(/Upload Complete/i)).toBeInTheDocument();
       expect(screen.getByText(/All 5 files uploaded successfully!/i)).toBeInTheDocument();
-      expect(screen.getByText(/All files have been uploaded and are being processed/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/All files have been uploaded and are being processed/i)
+      ).toBeInTheDocument();
     });
 
     it('displays success icon for all succeeded', () => {
@@ -52,12 +53,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 3,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText('✅')).toBeInTheDocument();
     });
@@ -70,7 +69,7 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 2,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
       const { container } = render(
@@ -91,12 +90,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 7,
         failed: 3,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText(/7 succeeded, 3 failed/i)).toBeInTheDocument();
     });
@@ -109,12 +106,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 3,
         failed: 2,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText('⚠️')).toBeInTheDocument();
     });
@@ -127,7 +122,7 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 3,
         failed: 2,
-        cancelled: 0
+        cancelled: 0,
       };
 
       const { container } = render(
@@ -146,15 +141,15 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 3,
         failed: 2,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByRole('alert')).toHaveTextContent(/Some uploads failed/i);
-      expect(screen.getByRole('alert')).toHaveTextContent(/Review the failed items in the queue and use the Retry button/i);
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /Review the failed items in the queue and use the Retry button/i
+      );
     });
   });
 
@@ -167,12 +162,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 6,
         failed: 2,
-        cancelled: 2
+        cancelled: 2,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText(/6 succeeded, 2 failed, 2 cancelled/i)).toBeInTheDocument();
     });
@@ -185,12 +178,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 2,
         failed: 1,
-        cancelled: 2
+        cancelled: 2,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       // Find the element with "Cancelled" text, then check its sibling for the count
       const cancelledLabel = screen.getByText('Cancelled');
@@ -207,12 +198,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 3,
         failed: 2,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       const cancelledText = screen.queryByText((content, element) => {
         return element?.textContent === 'Cancelled';
@@ -230,12 +219,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 6,
         failed: 3,
-        cancelled: 1
+        cancelled: 1,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText('10').parentElement).toHaveTextContent('Total');
       expect(screen.getByText('6').parentElement).toHaveTextContent('Succeeded');
@@ -251,12 +238,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       // Check Total stat
       const totalLabel = screen.getByText('Total');
@@ -284,12 +269,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.queryByText('Failed')).not.toBeInTheDocument();
     });
@@ -304,12 +287,10 @@ describe('UploadSummary Component', () => {
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByRole('button', { name: /Close upload summary/i })).toBeInTheDocument();
     });
@@ -321,3 +302,16 @@ describe('UploadSummary Component', () => {
         uploading: 0,
         processing: 0,
         succeeded: 5,
+        failed: 0,
+        cancelled: 0,
+      };
+
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
+
+      const closeButton = screen.getByRole('button', { name: /Close upload summary/i });
+      fireEvent.click(closeButton);
+
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+  });
+});

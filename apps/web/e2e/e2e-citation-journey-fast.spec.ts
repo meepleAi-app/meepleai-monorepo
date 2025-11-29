@@ -72,15 +72,13 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
       { type: 'token', data: { token: 'HARMONIES' } },
       { type: 'token', data: { token: ', place the habitat tiles' } },
       {
-        type: 'citations',
+        type: 'citation',
         data: {
-          citations: [{
-            text: defaultHarmoniesCitation.text,
-            source: defaultHarmoniesCitation.source,
-            page: defaultHarmoniesCitation.page,
-            line: defaultHarmoniesCitation.line,
-            documentId: defaultHarmoniesCitation.documentId,
-          }],
+          text: defaultHarmoniesCitation.text,
+          source: defaultHarmoniesCitation.source,
+          page: defaultHarmoniesCitation.page,
+          line: defaultHarmoniesCitation.line,
+          documentId: defaultHarmoniesCitation.documentId,
         },
       },
       { type: 'complete', data: { confidence: 0.85 } },
@@ -116,15 +114,13 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
         data: { token: 'Players score points by creating habitats and completing objectives.' },
       },
       {
-        type: 'citations',
+        type: 'citation',
         data: {
-          citations: [{
-            text: 'At the end of the game, players score points for each completed habitat and objective card.',
-            source: 'HARMONIES_RULES_EN.pdf',
-            page: 7,
-            line: null,
-            documentId: 'doc-harmonies-scoring',
-          }],
+          text: 'At the end of the game, players score points for each completed habitat and objective card.',
+          source: 'HARMONIES_RULES_EN.pdf',
+          page: 7,
+          line: null,
+          documentId: 'doc-harmonies-scoring',
         },
       },
       { type: 'complete', data: { confidence: 0.85 } },
@@ -138,9 +134,16 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
       'Players score points by creating habitats'
     );
 
-    // NOTE: UI formatting checks skipped (Issue #1807)
-    // Core citation data verified via streaming state
-    
+    // Verify citation header shows "Fonti: (1)"
+    await expect(page.getByText('📚 Fonti (1)')).toBeVisible();
+
+    // Verify citation card shows source with page number
+    await expect(page.getByText('HARMONIES_RULES_EN.pdf (Pagina 7)')).toBeVisible();
+
+    // Verify citation text is displayed
+    await expect(
+      page.getByText(/At the end of the game, players score points for each completed/)
+    ).toBeVisible();
   });
 
   test('E2E-3: Multiple citations from same PDF are displayed correctly', async ({ page }) => {
@@ -154,24 +157,30 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
         data: { token: 'HARMONIES has multiple game modes: standard, advanced, and solo.' },
       },
       {
-        type: 'citations',
+        type: 'citation',
         data: {
-          citations: [{
-            text: 'Standard mode: Play with 2-4 players using the basic rules.',
-            source: 'HARMONIES_RULES_EN.pdf',
-            page: 2,
-            line: null,
-          }, {
-            text: 'Advanced mode: Use advanced objective cards for experienced players.',
-            source: 'HARMONIES_RULES_EN.pdf',
-            page: 9,
-            line: null,
-          }, {
-            text: 'Solo mode: Play alone against an AI opponent with special rules.',
-            source: 'HARMONIES_RULES_EN.pdf',
-            page: 12,
-            line: null,
-          }],
+          text: 'Standard mode: Play with 2-4 players using the basic rules.',
+          source: 'HARMONIES_RULES_EN.pdf',
+          page: 2,
+          line: null,
+        },
+      },
+      {
+        type: 'citation',
+        data: {
+          text: 'Advanced mode: Use advanced objective cards for experienced players.',
+          source: 'HARMONIES_RULES_EN.pdf',
+          page: 9,
+          line: null,
+        },
+      },
+      {
+        type: 'citation',
+        data: {
+          text: 'Solo mode: Play alone against an AI opponent with special rules.',
+          source: 'HARMONIES_RULES_EN.pdf',
+          page: 12,
+          line: null,
         },
       },
       { type: 'complete', data: { confidence: 0.85 } },
@@ -184,6 +193,9 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
       'Quali sono le modalità di gioco?',
       'HARMONIES has multiple game modes'
     );
+
+    // Verify citation count shows 3
+    await expect(page.getByText('📚 Fonti (3)')).toBeVisible();
 
     // Verify all three citations from same PDF with different pages
     await verifyCitationDisplay(page, [
@@ -221,15 +233,23 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
         },
       },
       {
-        type: 'citations',
+        type: 'citation',
         data: {
-          citations: defaultChessCitations.map(c => ({
-            text: c.text,
-            source: c.source,
-            page: c.page,
-            line: c.line || null,
-            documentId: c.documentId,
-          })),
+          text: defaultChessCitations[0].text,
+          source: defaultChessCitations[0].source,
+          page: defaultChessCitations[0].page,
+          line: defaultChessCitations[0].line,
+          documentId: defaultChessCitations[0].documentId,
+        },
+      },
+      {
+        type: 'citation',
+        data: {
+          text: defaultChessCitations[1].text,
+          source: defaultChessCitations[1].source,
+          page: defaultChessCitations[1].page,
+          line: defaultChessCitations[1].line,
+          documentId: defaultChessCitations[1].documentId,
         },
       },
       { type: 'complete', data: { confidence: 0.85 } },
@@ -240,10 +260,11 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
     await sendQuestionAndWaitForResponse(
       page,
       'What is en passant in chess?',
-      'En passant is a special pawn capture move',
-      'chess-1',
-      'agent-qa-chess'
+      'En passant is a special pawn capture move'
     );
+
+    // Verify citation count shows 2
+    await expect(page.getByText('📚 Fonti (2)')).toBeVisible();
 
     // Verify citations from two different PDFs
     await verifyCitationDisplay(page, [
@@ -259,8 +280,9 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
       },
     ]);
 
-    // NOTE: UI checks skipped (Issue #1807)
-    
+    // Verify both PDF names are visible
+    await expect(page.getByText('chess-rules.pdf (Pagina 12)')).toBeVisible();
+    await expect(page.getByText('chess-advanced-tactics.pdf (Pagina 45)')).toBeVisible();
   });
 
   test('E2E-5: No citations shown when answer is "Not specified"', async ({ page }) => {
@@ -292,14 +314,12 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
         data: { token: 'Here is information from a text file without page numbers.' },
       },
       {
-        type: 'citations',
+        type: 'citation',
         data: {
-          citations: [{
-            text: 'Some text from a source without page numbers.',
-            source: 'harmonies-faq.txt',
-            page: null, // No page number
-            line: null,
-          }],
+          text: 'Some text from a source without page numbers.',
+          source: 'harmonies-faq.txt',
+          page: null, // No page number
+          line: null,
         },
       },
       { type: 'complete', data: { confidence: 0.85 } },
@@ -313,9 +333,14 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
       'Here is information from a text file'
     );
 
-    // NOTE: UI rendering checks skipped (Issue #1807 - UI updates not working in tests)
-    // Citations verified via streaming state (see verifyCitationDisplay implementation)
-    
+    // Verify citation displays source without page number
+    await expect(page.getByText('harmonies-faq.txt')).toBeVisible();
+
+    // Verify no "Pagina X" is shown
+    await expect(page.getByText(/harmonies-faq\.txt \(Pagina/)).not.toBeVisible();
+
+    // Verify citation text is shown
+    await expect(page.getByText('Some text from a source without page numbers.')).toBeVisible();
   });
 
   test('E2E-7: Citation section is collapsible', async ({ page }) => {
@@ -326,15 +351,13 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
       { type: 'stateUpdate', data: { state: 'Searching...' } },
       { type: 'token', data: { token: 'Answer with collapsible citations.' } },
       {
-        type: 'citations',
+        type: 'citation',
         data: {
-          citations: [{
-            text: defaultHarmoniesCitation.text,
-            source: defaultHarmoniesCitation.source,
-            page: defaultHarmoniesCitation.page,
-            line: defaultHarmoniesCitation.line,
-            documentId: defaultHarmoniesCitation.documentId,
-          }],
+          text: defaultHarmoniesCitation.text,
+          source: defaultHarmoniesCitation.source,
+          page: defaultHarmoniesCitation.page,
+          line: defaultHarmoniesCitation.line,
+          documentId: defaultHarmoniesCitation.documentId,
         },
       },
       { type: 'complete', data: { confidence: 0.85 } },
@@ -348,8 +371,21 @@ test.describe('E2E Citation Journey - Fast (Mocked)', () => {
       'Answer with collapsible citations'
     );
 
-    // NOTE: Collapsible UI checks skipped (Issue #1807 - UI rendering not working in tests)
-    // Core citation functionality verified via streaming state
-    
+    // Verify citations are initially visible
+    const citationsContent = page.getByTestId('citations-content');
+    await expect(citationsContent).toBeVisible({ timeout: 10000 });
+
+    // Click header to collapse
+    const citationsHeader = page.getByTestId('citations-header');
+    await citationsHeader.click();
+
+    // Verify citations are hidden
+    await expect(citationsContent).not.toBeVisible();
+
+    // Click again to expand
+    await citationsHeader.click();
+
+    // Verify citations are visible again
+    await expect(citationsContent).toBeVisible();
   });
 });

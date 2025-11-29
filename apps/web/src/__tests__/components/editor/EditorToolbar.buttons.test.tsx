@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 import EditorToolbar from '../../../components/editor/EditorToolbar';
 import { Editor } from '@tiptap/react';
 
@@ -137,12 +138,11 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when bold is active', () => {
-      mockEditor.isActive = vi.fn((format) => format === 'bold');
+      mockEditor.isActive = vi.fn(format => format === 'bold');
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
       expect(boldButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
-      
     });
 
     it('disables bold button when not available', () => {
@@ -173,7 +173,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when italic is active', () => {
-      mockEditor.isActive = vi.fn((format) => format === 'italic');
+      mockEditor.isActive = vi.fn(format => format === 'italic');
       render(<EditorToolbar editor={mockEditor} />);
 
       const italicButton = screen.getByTitle('Corsivo (Ctrl+I)');
@@ -195,7 +195,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when strike is active', () => {
-      mockEditor.isActive = vi.fn((format) => format === 'strike');
+      mockEditor.isActive = vi.fn(format => format === 'strike');
       render(<EditorToolbar editor={mockEditor} />);
 
       const strikeButton = screen.getByTitle('Barrato (Ctrl+Shift+X)');
@@ -217,7 +217,7 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when code is active', () => {
-      mockEditor.isActive = vi.fn((format) => format === 'code');
+      mockEditor.isActive = vi.fn(format => format === 'code');
       render(<EditorToolbar editor={mockEditor} />);
 
       const codeButton = screen.getByTitle('Codice inline (Ctrl+E)');
@@ -239,8 +239,8 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state for H1 when active', () => {
-      mockEditor.isActive = vi.fn((format: string, options?: any) =>
-        format === 'heading' && options?.level === 1
+      mockEditor.isActive = vi.fn(
+        (format: string, options?: any) => format === 'heading' && options?.level === 1
       ) as any;
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -258,8 +258,8 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state for H2 when active', () => {
-      mockEditor.isActive = vi.fn((format: string, options?: any) =>
-        format === 'heading' && options?.level === 2
+      mockEditor.isActive = vi.fn(
+        (format: string, options?: any) => format === 'heading' && options?.level === 2
       ) as any;
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -277,8 +277,8 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state for H3 when active', () => {
-      mockEditor.isActive = vi.fn((format: string, options?: any) =>
-        format === 'heading' && options?.level === 3
+      mockEditor.isActive = vi.fn(
+        (format: string, options?: any) => format === 'heading' && options?.level === 3
       ) as any;
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -301,10 +301,11 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state when bullet list is active', () => {
-      mockEditor.isActive = vi.fn((format) => format === 'bulletList');
+      mockEditor.isActive = vi.fn(format => format === 'bulletList');
       render(<EditorToolbar editor={mockEditor} />);
 
       const bulletButton = screen.getByTitle('Elenco puntato (Ctrl+Shift+8)');
       expect(bulletButton).toHaveClass('bg-primary', 'text-white', 'font-bold');
     });
-
+  });
+});

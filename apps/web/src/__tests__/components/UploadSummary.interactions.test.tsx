@@ -14,14 +14,29 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { UploadSummary } from '@/components/upload/UploadSummary';
 import type { UploadQueueStats } from '../../hooks/useUploadQueue';
+import { vi } from 'vitest';
 
+describe('UploadSummary Interactions', () => {
+  const mockOnClose = vi.fn();
+  const mockOnClearAll = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Button Actions', () => {
+    it('calls onClose when close button clicked', () => {
+      const stats: UploadQueueStats = {
+        total: 5,
+        pending: 0,
+        uploading: 0,
+        processing: 0,
+        succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       const closeButton = screen.getByRole('button', { name: /Close upload summary/i });
       fireEvent.click(closeButton);
@@ -37,14 +52,14 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
-      expect(screen.getByRole('button', { name: /Clear all items from queue/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Clear all items from queue/i })
+      ).toBeInTheDocument();
     });
 
     it('calls onClearAll when clear queue button clicked', () => {
@@ -55,12 +70,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       const clearButton = screen.getByRole('button', { name: /Clear all items from queue/i });
       fireEvent.click(clearButton);
@@ -76,12 +89,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       const closeButton = screen.getByRole('button', { name: /Close upload summary/i });
 
@@ -102,12 +113,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       const clearButton = screen.getByRole('button', { name: /Clear all items from queue/i });
 
@@ -130,12 +139,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       const summary = screen.getByRole('status', { name: /Upload summary/i });
       expect(summary).toHaveAttribute('aria-live', 'polite');
@@ -149,12 +156,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 3,
         failed: 2,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByRole('alert')).toBeInTheDocument();
     });
@@ -167,15 +172,17 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
-      expect(screen.getByRole('button', { name: /Close upload summary/i })).toHaveAttribute('aria-label');
-      expect(screen.getByRole('button', { name: /Clear all items from queue/i })).toHaveAttribute('aria-label');
+      expect(screen.getByRole('button', { name: /Close upload summary/i })).toHaveAttribute(
+        'aria-label'
+      );
+      expect(screen.getByRole('button', { name: /Clear all items from queue/i })).toHaveAttribute(
+        'aria-label'
+      );
     });
 
     it('hides decorative icon from screen readers', () => {
@@ -186,7 +193,7 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
       const { container } = render(
@@ -208,12 +215,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 1,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText(/All 1 files uploaded successfully!/i)).toBeInTheDocument();
     });
@@ -226,12 +231,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 0,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       // Find the element with "Total" text, then check its sibling for the count
       const totalLabel = screen.getByText('Total');
@@ -248,12 +251,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 0,
         failed: 5,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText(/0 succeeded, 5 failed/i)).toBeInTheDocument();
       expect(screen.getByRole('alert')).toHaveTextContent(/Some uploads failed/i);
@@ -267,12 +268,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 0,
         failed: 0,
-        cancelled: 3
+        cancelled: 3,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText(/0 succeeded, 0 failed, 3 cancelled/i)).toBeInTheDocument();
     });
@@ -285,12 +284,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 12,
         failed: 5,
-        cancelled: 3
+        cancelled: 3,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.getByText(/12 succeeded, 5 failed, 3 cancelled/i)).toBeInTheDocument();
       expect(screen.getByText('20').parentElement).toHaveTextContent('Total');
@@ -309,12 +306,10 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 5,
         failed: 0,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
       expect(screen.queryByText(/Some uploads failed/i)).not.toBeInTheDocument();
     });
@@ -327,14 +322,14 @@ import type { UploadQueueStats } from '../../hooks/useUploadQueue';
         processing: 0,
         succeeded: 3,
         failed: 2,
-        cancelled: 0
+        cancelled: 0,
       };
 
-      render(
-        <UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />
-      );
+      render(<UploadSummary stats={stats} onClose={mockOnClose} onClearAll={mockOnClearAll} />);
 
-      expect(screen.queryByText(/All files have been uploaded and are being processed/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/All files have been uploaded and are being processed/i)
+      ).not.toBeInTheDocument();
     });
   });
 });

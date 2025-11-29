@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 import EditorToolbar from '../../../components/editor/EditorToolbar';
 import { Editor } from '@tiptap/react';
 
@@ -50,6 +51,18 @@ const createMockEditor = (overrides?: Partial<Editor>): Editor => {
   } as any;
 };
 
+describe('EditorToolbar State Tests', () => {
+  let mockEditor: Editor;
+
+  beforeEach(() => {
+    mockEditor = createMockEditor();
+    vi.clearAllMocks();
+  });
+
+  /**
+   * Test Group: List Buttons (state tests)
+   */
+  describe('List Buttons State', () => {
     it('executes ordered list command when clicked', () => {
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -60,7 +73,7 @@ const createMockEditor = (overrides?: Partial<Editor>): Editor => {
     });
 
     it('shows active state when ordered list is active', () => {
-      mockEditor.isActive = vi.fn((format) => format === 'orderedList');
+      mockEditor.isActive = vi.fn(format => format === 'orderedList');
       render(<EditorToolbar editor={mockEditor} />);
 
       const orderedButton = screen.getByTitle('Elenco numerato (Ctrl+Shift+7)');
@@ -82,7 +95,7 @@ const createMockEditor = (overrides?: Partial<Editor>): Editor => {
     });
 
     it('shows active state when code block is active', () => {
-      mockEditor.isActive = vi.fn((format) => format === 'codeBlock');
+      mockEditor.isActive = vi.fn(format => format === 'codeBlock');
       render(<EditorToolbar editor={mockEditor} />);
 
       const codeBlockButton = screen.getByTitle('Blocco di codice (Ctrl+Alt+C)');
@@ -202,7 +215,7 @@ const createMockEditor = (overrides?: Partial<Editor>): Editor => {
     });
 
     it('does not change background on hover for active button', () => {
-      mockEditor.isActive = vi.fn((format) => format === 'bold');
+      mockEditor.isActive = vi.fn(format => format === 'bold');
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
@@ -312,12 +325,11 @@ const createMockEditor = (overrides?: Partial<Editor>): Editor => {
     });
 
     it('applies active styling to active buttons', () => {
-      mockEditor.isActive = vi.fn((format) => format === 'bold');
+      mockEditor.isActive = vi.fn(format => format === 'bold');
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
       expect(boldButton).toHaveClass('bg-primary', 'font-bold', 'text-white');
-      
     });
   });
 

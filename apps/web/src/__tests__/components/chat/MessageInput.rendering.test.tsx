@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import { MessageInput } from '../../../components/chat/MessageInput';
 
 // Mock the ChatProvider context
@@ -207,7 +208,11 @@ describe('MessageInput Component', () => {
     });
 
     it('prevents default form submission behavior', () => {
-      setupMockContext({ inputValue: 'Test', selectedGameId: 'game-1', selectedAgentId: 'agent-1' });
+      setupMockContext({
+        inputValue: 'Test',
+        selectedGameId: 'game-1',
+        selectedAgentId: 'agent-1',
+      });
       render(<MessageInput />);
 
       const form = screen.getByLabelText('Message input').closest('form')!;
@@ -320,3 +325,23 @@ describe('MessageInput Component', () => {
 
       const button = screen.getByTestId('loading-button');
       expect(button).toBeDisabled();
+    });
+
+    it('disables search mode toggle when sending', () => {
+      setupMockContext({ loading: { sending: true } });
+      render(<MessageInput />);
+
+      const toggle = screen.getByTestId('search-mode-toggle');
+      expect(toggle).toHaveAttribute('data-disabled', 'true');
+    });
+
+    it('shows loading state on button', () => {
+      setupMockContext({ loading: { sending: true }, inputValue: 'Test' });
+      render(<MessageInput />);
+
+      const button = screen.getByTestId('loading-button');
+      expect(button).toHaveAttribute('data-loading', 'true');
+      expect(button).toHaveTextContent('Invio...');
+    });
+  });
+});

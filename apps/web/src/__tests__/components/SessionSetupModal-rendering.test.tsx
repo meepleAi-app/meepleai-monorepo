@@ -6,7 +6,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SessionSetupModal } from '@/components/SessionSetupModal';
+import { SessionSetupModal } from '@/components/modals/SessionSetupModal';
 import { api } from '@/lib/api';
 import { mockGame, gameConfigurations } from './SessionSetupModal.test-helpers';
 
@@ -226,7 +226,7 @@ describe('SessionSetupModal - Rendering and Player Management', () => {
       });
 
       // All remove buttons should be disabled at min players
-      removeButtons.forEach((button) => {
+      removeButtons.forEach(button => {
         expect(button).toBeDisabled();
       });
     });
@@ -325,9 +325,7 @@ describe('SessionSetupModal - Rendering and Player Management', () => {
       );
 
       expect(screen.getByRole('button', { name: /add player/i })).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /remove player 1/i })
-      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /remove player 1/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /start session/i })).toBeInTheDocument();
     });

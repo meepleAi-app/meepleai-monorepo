@@ -22,12 +22,6 @@ describe('CollapsibleUnchangedSection', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.runOnlyPendingTimers();
-    vi.useRealTimers();
   });
 
   describe('Rendering', () => {
@@ -157,8 +151,8 @@ describe('CollapsibleUnchangedSection', () => {
 
       expect(button).toHaveClass('animating');
 
-      // Fast-forward animation timeout (300ms)
-      vi.advanceTimersByTime(300);
+      // Wait for animation timeout (300ms) + small buffer
+      await new Promise(resolve => setTimeout(resolve, 350));
 
       await waitFor(() => {
         expect(button).not.toHaveClass('animating');

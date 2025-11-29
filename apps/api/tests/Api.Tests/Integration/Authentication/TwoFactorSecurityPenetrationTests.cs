@@ -476,17 +476,21 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Arrange
         _output("🔴 SECURITY TEST: TOTP code expiration enforcement");
         var user = await SeedUserWith2FAAsync();
-        var validCode = await GenerateValidTotpCodeAsync(user.Id);
 
-        // Act - Wait for code to expire (TOTP window: ±60 seconds)
-        _output("⏳ Waiting 65 seconds for TOTP code expiration...");
-        await Task.Delay(TimeSpan.FromSeconds(65), TestCancellationToken);
+        // Generate TOTP code from 120 seconds ago (expired, beyond ±90s window)
+        var userEntity = await _dbContext!.Users.FindAsync(user.Id);
+        var encryptionService = _serviceProvider!.GetRequiredService<IEncryptionService>();
+        var secret = await encryptionService.DecryptAsync(userEntity!.TotpSecretEncrypted!, purpose: "TotpSecrets");
 
-        var isValidAfterExpiry = await _totpService!.VerifyCodeAsync(user.Id, validCode, TestCancellationToken);
+        var expiredCode = GenerateTotpCodeAtTime(secret, DateTimeOffset.UtcNow.AddSeconds(-120));
+        _output($"Generated TOTP code from 120 seconds ago (beyond ±90s window): {expiredCode}");
+
+        // Act - Verify expired code
+        var isValidAfterExpiry = await _totpService!.VerifyCodeAsync(user.Id, expiredCode, TestCancellationToken);
 
         // Assert
         Assert.False(isValidAfterExpiry,
-            "Expired TOTP code should be rejected after 65 seconds");
+            "Expired TOTP code should be rejected after 120 seconds");
 
         _output("✅ PASS: TOTP code correctly expired outside time window");
     }
@@ -815,6 +819,13 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         var secretBytes = Base32Encoding.ToBytes(secret);
         var totp = new Totp(secretBytes, step: 30);
         return totp.ComputeTotp();
+    }
+
+    private string GenerateTotpCodeAtTime(string secret, DateTimeOffset timestamp)
+    {
+        var secretBytes = Base32Encoding.ToBytes(secret);
+        var totp = new Totp(secretBytes, step: 30);
+        return totp.ComputeTotp(timestamp.UtcDateTime);
     }
 
     private string GenerateRandom6DigitCode()

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* eslint-env node */
+/* eslint-disable no-console */
 /**
  * Fix Test Structure v2 - Issue #1780
  *
@@ -137,7 +139,6 @@ async function fixTestFile(filePath) {
 
     // Find where to insert setup (after imports/mocks/helpers)
     let insertLine = 0;
-    let foundHelper = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -154,7 +155,6 @@ async function fixTestFile(filePath) {
 
       // Found helper function (like createMockChatThread)
       if (line.includes('const create') || line.includes('function create')) {
-        foundHelper = true;
         // Find end of helper
         let braceCount = 0;
         let inHelper = false;

@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import { MessageInput } from '../../../components/chat/MessageInput';
 
 // Mock the ChatProvider context
@@ -63,8 +64,17 @@ const setupMockContext = (overrides?: any) => {
   });
 };
 
-    });
+describe('MessageInput Submission Tests', () => {
+  let mockEditor: any;
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /**
+   * Test Group: Disabled States
+   */
+  describe('Disabled States', () => {
     it('disables input when no game selected', () => {
       setupMockContext({ selectedGameId: null, selectedAgentId: 'agent-1' });
       render(<MessageInput />);

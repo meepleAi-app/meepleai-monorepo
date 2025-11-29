@@ -258,34 +258,6 @@ export async function verifyCitationDisplay(
       );
     }
   }
-
-  return;
-
-  // Legacy UI verification (unreachable due to return above)
-  // Wait for citations section to appear
-  await expect(page.getByText('Fonti:')).toBeVisible({ timeout: 10000 });
-
-  // Verify citation count in header
-  const citationCount = expectedCitations.length;
-  if (citationCount > 0) {
-    await expect(page.getByText(`📚 Fonti (${citationCount})`)).toBeVisible();
-  }
-
-  // Verify each citation
-  for (const citation of expectedCitations) {
-    // Verify source and page number
-    if (citation.page !== null) {
-      await expect(page.getByText(`${citation.source} (Pagina ${citation.page})`)).toBeVisible();
-    } else {
-      await expect(page.getByText(citation.source)).toBeVisible();
-    }
-
-    // Verify citation text snippet (partial match)
-    const snippetPreview = citation.text.substring(0, 50); // First 50 chars
-    await expect(
-      page.getByText(new RegExp(snippetPreview.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
-    ).toBeVisible();
-  }
 }
 
 /**

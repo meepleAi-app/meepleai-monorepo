@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* eslint-env node */
+/* eslint-disable no-console */
 /**
  * Fix TypeScript compilation errors in split test files (Issue #1780)
  *
@@ -79,7 +81,6 @@ function generateDescribeTitle(fileInfo) {
  */
 function findTestCodeStart(lines) {
   let lastImportOrMockLine = -1;
-  let foundHelperFunctions = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -103,12 +104,6 @@ function findTestCodeStart(lines) {
       if (pattern.test(lines[i])) {
         return i;
       }
-    }
-
-    // If we hit non-import/mock code that's not a test, it might be a helper
-    // Continue searching for actual test code
-    if (lastImportOrMockLine > -1 && i > lastImportOrMockLine + 5) {
-      foundHelperFunctions = true;
     }
   }
 

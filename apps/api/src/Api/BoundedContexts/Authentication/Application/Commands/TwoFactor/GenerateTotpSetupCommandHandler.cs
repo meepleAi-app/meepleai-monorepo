@@ -36,7 +36,7 @@ public sealed class GenerateTotpSetupCommandHandler : ICommandHandler<GenerateTo
         }
 
         // Delegate TOTP setup to infrastructure service
-        var setup = await _totpService.GenerateSetupAsync(command.UserId, command.UserEmail);
+        var setup = await _totpService.GenerateSetupAsync(command.UserId, command.UserEmail, cancellationToken);
 
         _logger.LogInformation("TOTP setup generated for user {UserId}", command.UserId);
 

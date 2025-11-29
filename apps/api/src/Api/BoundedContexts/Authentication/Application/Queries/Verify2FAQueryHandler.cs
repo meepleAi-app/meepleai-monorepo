@@ -42,11 +42,11 @@ public class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResu
             bool isValid;
             if (query.IsBackupCode)
             {
-                isValid = await _totpService.VerifyBackupCodeAsync(user.Id, query.Code);
+                isValid = await _totpService.VerifyBackupCodeAsync(user.Id, query.Code, cancellationToken);
             }
             else
             {
-                isValid = await _totpService.VerifyCodeAsync(user.Id, query.Code);
+                isValid = await _totpService.VerifyCodeAsync(user.Id, query.Code, cancellationToken);
             }
 
             return new Verify2FAResult(IsValid: isValid);

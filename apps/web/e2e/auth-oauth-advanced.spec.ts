@@ -1,3 +1,9 @@
+/**
+ * Auth OAuth Advanced E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/helpers/AuthHelper.ts
+ */
+
 import { test, expect } from '@playwright/test';
 import { AuthPage } from './pages/auth/AuthPage';
 
@@ -40,7 +46,7 @@ test.describe('OAuth Advanced Scenarios', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
 
     // Mock authentication endpoint
-    await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+    await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -62,7 +68,7 @@ test.describe('OAuth Advanced Scenarios', () => {
   test.describe('Linking Multiple Providers', () => {
     test('link multiple OAuth providers (Google + Discord)', async ({ page }) => {
       // Mock OAuth accounts endpoint - initially no linked accounts
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -77,7 +83,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       expect(initialCount).toBe(0);
 
       // Mock Google OAuth link flow
-      await page.route(`${API_BASE}/api/v1/auth/oauth/google/login`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/google/login`, async route => {
         await route.fulfill({
           status: 302,
           headers: {
@@ -87,7 +93,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       });
 
       // Mock Google callback success
-      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async route => {
         await route.fulfill({
           status: 302,
           headers: {
@@ -98,13 +104,11 @@ test.describe('OAuth Advanced Scenarios', () => {
 
       // Update mock to show Google linked
       await page.unroute(`${API_BASE}/api/v1/users/me/oauth-accounts`);
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([
-            { provider: 'google', createdAt: new Date().toISOString() },
-          ]),
+          body: JSON.stringify([{ provider: 'google', createdAt: new Date().toISOString() }]),
         });
       });
 
@@ -116,7 +120,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       await authPage.assertProviderLinked('google');
 
       // Now link Discord
-      await page.route(`${API_BASE}/api/v1/auth/oauth/discord/login`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/discord/login`, async route => {
         await route.fulfill({
           status: 302,
           headers: {
@@ -125,7 +129,7 @@ test.describe('OAuth Advanced Scenarios', () => {
         });
       });
 
-      await page.route(`${API_BASE}/api/v1/auth/oauth/discord/callback*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/discord/callback*`, async route => {
         await route.fulfill({
           status: 302,
           headers: {
@@ -136,7 +140,7 @@ test.describe('OAuth Advanced Scenarios', () => {
 
       // Update mock to show both providers
       await page.unroute(`${API_BASE}/api/v1/users/me/oauth-accounts`);
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -165,7 +169,7 @@ test.describe('OAuth Advanced Scenarios', () => {
   test.describe('Unlinking Providers', () => {
     test('unlink OAuth provider from profile', async ({ page }) => {
       // Mock OAuth accounts endpoint - Google linked
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -182,7 +186,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       await authPage.assertProviderLinked('google');
 
       // Mock unlink endpoint
-      await page.route(`${API_BASE}/api/v1/auth/oauth/google/unlink`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/google/unlink`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -192,13 +196,11 @@ test.describe('OAuth Advanced Scenarios', () => {
 
       // Update mock to show Google unlinked
       await page.unroute(`${API_BASE}/api/v1/users/me/oauth-accounts`);
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([
-            { provider: 'discord', createdAt: new Date().toISOString() },
-          ]),
+          body: JSON.stringify([{ provider: 'discord', createdAt: new Date().toISOString() }]),
         });
       });
 
@@ -214,20 +216,18 @@ test.describe('OAuth Advanced Scenarios', () => {
 
     test('cannot unlink last authentication method', async ({ page }) => {
       // Mock OAuth accounts endpoint - only Google linked
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([
-            { provider: 'google', createdAt: new Date().toISOString() },
-          ]),
+          body: JSON.stringify([{ provider: 'google', createdAt: new Date().toISOString() }]),
         });
       });
 
       await authPage.gotoProfile();
 
       // Mock unlink endpoint to return error
-      await page.route(`${API_BASE}/api/v1/auth/oauth/google/unlink`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/google/unlink`, async route => {
         await route.fulfill({
           status: 400,
           contentType: 'application/json',
@@ -245,7 +245,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       // Check if button is disabled or shows warning
       const isDisabled = await unlinkButton.isDisabled();
       if (!isDisabled) {
-        page.once('dialog', (dialog) => dialog.accept());
+        page.once('dialog', dialog => dialog.accept());
         await unlinkButton.click();
         // Should show error message
         await expect(page.getByText(/cannot unlink|last authentication/i)).toBeVisible();
@@ -264,7 +264,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       await authPage.goto();
 
       // Mock OAuth callback with conflict error
-      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async route => {
         await route.fulfill({
           status: 400,
           contentType: 'application/json',
@@ -283,7 +283,7 @@ test.describe('OAuth Advanced Scenarios', () => {
 
     test('link OAuth to existing account', async ({ page }) => {
       // Mock OAuth accounts endpoint - initially no linked accounts
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -294,7 +294,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       await authPage.gotoProfile();
 
       // Mock OAuth link callback
-      await page.route(`${API_BASE}/api/v1/auth/oauth/github/callback*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/github/callback*`, async route => {
         await route.fulfill({
           status: 302,
           headers: {
@@ -305,13 +305,11 @@ test.describe('OAuth Advanced Scenarios', () => {
 
       // Update mock to show GitHub linked
       await page.unroute(`${API_BASE}/api/v1/users/me/oauth-accounts`);
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([
-            { provider: 'github', createdAt: new Date().toISOString() },
-          ]),
+          body: JSON.stringify([{ provider: 'github', createdAt: new Date().toISOString() }]),
         });
       });
 
@@ -354,13 +352,11 @@ test.describe('OAuth Advanced Scenarios', () => {
   test.describe('Provider Button States', () => {
     test('provider button states (linked/unlinked)', async ({ page }) => {
       // Mock OAuth accounts endpoint - Google linked, others not
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([
-            { provider: 'google', createdAt: new Date().toISOString() },
-          ]),
+          body: JSON.stringify([{ provider: 'google', createdAt: new Date().toISOString() }]),
         });
       });
 
@@ -376,7 +372,7 @@ test.describe('OAuth Advanced Scenarios', () => {
 
     test('re-link previously unlinked provider', async ({ page }) => {
       // Mock OAuth accounts endpoint - no linked accounts (previously unlinked)
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -390,7 +386,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       await authPage.assertProviderNotLinked('google');
 
       // Mock re-link flow
-      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async route => {
         await route.fulfill({
           status: 302,
           headers: {
@@ -401,13 +397,11 @@ test.describe('OAuth Advanced Scenarios', () => {
 
       // Update mock to show Google linked again
       await page.unroute(`${API_BASE}/api/v1/users/me/oauth-accounts`);
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([
-            { provider: 'google', createdAt: new Date().toISOString() },
-          ]),
+          body: JSON.stringify([{ provider: 'google', createdAt: new Date().toISOString() }]),
         });
       });
 
@@ -429,7 +423,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       await authPage.gotoProfile();
 
       // Mock OAuth accounts - no providers linked yet
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -438,7 +432,7 @@ test.describe('OAuth Advanced Scenarios', () => {
       });
 
       // Add OAuth provider to upgrade account security
-      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async route => {
         await route.fulfill({
           status: 302,
           headers: {
@@ -449,13 +443,11 @@ test.describe('OAuth Advanced Scenarios', () => {
 
       // Update mock to show Google linked
       await page.unroute(`${API_BASE}/api/v1/users/me/oauth-accounts`);
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([
-            { provider: 'google', createdAt: new Date().toISOString() },
-          ]),
+          body: JSON.stringify([{ provider: 'google', createdAt: new Date().toISOString() }]),
         });
       });
 
@@ -476,7 +468,7 @@ test.describe('OAuth Advanced Scenarios', () => {
   test.describe('Profile Page Display', () => {
     test('profile page shows all linked accounts', async ({ page }) => {
       // Mock OAuth accounts endpoint - multiple providers
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -506,7 +498,7 @@ test.describe('OAuth Advanced Scenarios', () => {
   test.describe('OAuth Token Handling', () => {
     test('OAuth token refresh handling (mock)', async ({ page }) => {
       // Mock OAuth accounts endpoint
-      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/oauth-accounts`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -538,7 +530,7 @@ test.describe('OAuth Advanced Scenarios', () => {
   test.describe('Session Persistence', () => {
     test('session persistence after OAuth login', async ({ page }) => {
       // Mock OAuth login flow
-      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/oauth/google/callback*`, async route => {
         await route.fulfill({
           status: 302,
           headers: {

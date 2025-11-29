@@ -1,5 +1,19 @@
-import { test, expect } from './fixtures/auth';
-import { getTextMatcher, t } from './fixtures/i18n';
+/**
+ * Chat Streaming E2E Tests (CHAT-01) - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
+
+import { test as base, expect, Page } from '@playwright/test';
+import { AuthHelper, USER_FIXTURES } from './pages';
+
+const test = base.extend<{ userPage: Page }>({
+  userPage: async ({ page }, use) => {
+    const authHelper = new AuthHelper(page);
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.user);
+    await use(page);
+  },
+});
 
 test.describe('Chat Streaming (CHAT-01)', () => {
   test.beforeEach(async ({ userPage: page }) => {

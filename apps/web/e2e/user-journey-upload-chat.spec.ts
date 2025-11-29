@@ -1,3 +1,9 @@
+/**
+ * User Journey Upload-Chat E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
+ */
+
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import { authenticateViaAPI } from './fixtures/auth';
@@ -26,7 +32,9 @@ import { authenticateViaAPI } from './fixtures/auth';
 test.describe('Complete User Journey: Real Backend Integration', () => {
   test.setTimeout(180000); // 3 minutes for real processing
 
-  test('should upload PDF, create RAG embeddings, and answer question using real LLM', async ({ browser }) => {
+  test('should upload PDF, create RAG embeddings, and answer question using real LLM', async ({
+    browser,
+  }) => {
     // Create new browser context
     const context = await browser.newContext({
       baseURL: 'http://localhost:3000',
@@ -42,7 +50,10 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       const authenticated = await authenticateViaAPI(page, 'editor@meepleai.dev', 'Demo123!');
 
       if (!authenticated) {
-        test.skip(true, 'Authentication failed - backend API might not be running or credentials invalid');
+        test.skip(
+          true,
+          'Authentication failed - backend API might not be running or credentials invalid'
+        );
       }
 
       // Navigate to verify auth
@@ -61,7 +72,10 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       // Check if we're authenticated
       const pageContent = await page.textContent('body');
 
-      if (pageContent?.includes('You need to be logged in') || pageContent?.includes('Login required')) {
+      if (
+        pageContent?.includes('You need to be logged in') ||
+        pageContent?.includes('Login required')
+      ) {
         // Skip test if not authenticated - would need proper session setup
         test.skip(true, 'Authentication required - need to setup session cookies for real backend');
       }
@@ -81,9 +95,9 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
         // Check if HARMONIES exists
         const options = await gameSelect.locator('option').allTextContents();
 
-        if (options.some((opt) => opt.includes('HARMONIES'))) {
+        if (options.some(opt => opt.includes('HARMONIES'))) {
           // Select existing - find the exact label text
-          const harmoniesOption = options.find((opt) => opt.includes('HARMONIES'));
+          const harmoniesOption = options.find(opt => opt.includes('HARMONIES'));
           if (harmoniesOption) {
             await gameSelect.selectOption({ label: harmoniesOption });
           }
@@ -118,7 +132,7 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
 
       // Click upload button if needed
       const uploadButton = page.locator('[data-testid="upload-button"]');
-      if (await uploadButton.isVisible({ timeout: 2000 }) && await uploadButton.isEnabled()) {
+      if ((await uploadButton.isVisible({ timeout: 2000 })) && (await uploadButton.isEnabled())) {
         await uploadButton.click();
       }
     });
@@ -134,10 +148,13 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       // Poll for processing completion indicator (with 60s max timeout)
       try {
         // Wait for success message or processing completion indicator
-        await page.waitForSelector('[data-testid="processing-complete"], text=/processing complete|elaborazione completata/i', {
-          timeout: 60000,
-          state: 'visible',
-        });
+        await page.waitForSelector(
+          '[data-testid="processing-complete"], text=/processing complete|elaborazione completata/i',
+          {
+            timeout: 60000,
+            state: 'visible',
+          }
+        );
         console.log('✓ PDF processing completed successfully');
       } catch (error) {
         // Fallback: check for any success indicators in page content
@@ -157,7 +174,9 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       await page.waitForLoadState('networkidle');
 
       // Verify chat page loaded
-      await expect(page.getByRole('heading', { name: /meepleai chat/i })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('heading', { name: /meepleai chat/i })).toBeVisible({
+        timeout: 10000,
+      });
     });
 
     // ========================================================================
@@ -171,7 +190,7 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
         // Try to select HARMONIES
         try {
           const options = await gameSelect.locator('option').allTextContents();
-          const harmoniesOption = options.find((opt) => opt.includes('HARMONIES'));
+          const harmoniesOption = options.find(opt => opt.includes('HARMONIES'));
           if (harmoniesOption) {
             await gameSelect.selectOption({ label: harmoniesOption });
           }
@@ -201,7 +220,9 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       await sendButton.click();
 
       // Verify question appears
-      await expect(page.getByText('come devo sistemare il gioco per iniziare a giocare?')).toBeVisible();
+      await expect(
+        page.getByText('come devo sistemare il gioco per iniziare a giocare?')
+      ).toBeVisible();
     });
 
     // ========================================================================
@@ -214,14 +235,18 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       const streamingIndicator = page.locator('[data-testid="streaming-indicator"]');
 
       // Wait for streaming to start
-      await expect(streamingIndicator).toBeVisible({ timeout: 5000 }).catch(() => {
-        console.log('Streaming indicator not found, continuing...');
-      });
+      await expect(streamingIndicator)
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {
+          console.log('Streaming indicator not found, continuing...');
+        });
 
       // Wait for streaming to complete
-      await expect(streamingIndicator).not.toBeVisible({ timeout: 60000 }).catch(() => {
-        console.log('Streaming took longer than expected');
-      });
+      await expect(streamingIndicator)
+        .not.toBeVisible({ timeout: 60000 })
+        .catch(() => {
+          console.log('Streaming took longer than expected');
+        });
 
       // Additional wait for response to render
       await page.waitForTimeout(2000);
@@ -237,7 +262,12 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
       // Log response for debugging
       console.log('='.repeat(80));
       console.log('REAL LLM RESPONSE (first 500 chars):');
-      console.log(pageContent?.substring(pageContent.indexOf('come devo sistemare'), pageContent.indexOf('come devo sistemare') + 500));
+      console.log(
+        pageContent?.substring(
+          pageContent.indexOf('come devo sistemare'),
+          pageContent.indexOf('come devo sistemare') + 500
+        )
+      );
       console.log('='.repeat(80));
 
       // Verify response exists and is substantial
@@ -246,19 +276,19 @@ test.describe('Complete User Journey: Real Backend Integration', () => {
 
       // Verify Italian keywords related to game setup
       const setupKeywords = [
-        'giocatori',      // players
-        'tavolo',         // table
-        'carte',          // cards
-        'preparazione',   // preparation
-        'inizia',         // start
-        'setup',          // setup
-        'tessere',        // tiles
-        'posizione',      // position
-        'disporre',       // arrange
-        'mescola',        // shuffle
+        'giocatori', // players
+        'tavolo', // table
+        'carte', // cards
+        'preparazione', // preparation
+        'inizia', // start
+        'setup', // setup
+        'tessere', // tiles
+        'posizione', // position
+        'disporre', // arrange
+        'mescola', // shuffle
       ];
 
-      const foundKeywords = setupKeywords.filter((keyword) =>
+      const foundKeywords = setupKeywords.filter(keyword =>
         pageContent!.toLowerCase().includes(keyword)
       );
 

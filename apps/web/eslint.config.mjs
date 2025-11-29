@@ -26,6 +26,9 @@ export default [
       "jest.config.js",
       "jest.setup.js",
       "jest.teardown.js",
+      "scripts/**", // Node.js utility scripts - exempt from browser linting
+      "**/__tests__/**", // Unit test files - TypeScript handles syntax checking
+      "**/*.test.{ts,tsx,js,jsx}", // Test files - avoid ESLint parser conflicts
     ],
   },
   js.configs.recommended,
@@ -230,6 +233,14 @@ export default [
       "src/__tests__/**/*.{js,jsx,ts,tsx}",
     ],
     languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
       globals: {
         jest: "readonly",
         expect: "readonly",
@@ -245,6 +256,9 @@ export default [
         clearTimeout: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
+        Buffer: "readonly",
+        process: "readonly",
+        console: "readonly",
       },
     },
     plugins: {
@@ -307,9 +321,19 @@ export default [
   },
   // Configuration for scripts - Must come after TypeScript config to override
   {
-    files: ["scripts/**/*.{ts,tsx,js,jsx}"],
+    files: ["scripts/**/*.{ts,tsx,js,jsx,mjs,cjs}"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        Buffer: "readonly",
+      },
+    },
     rules: {
       "no-console": "off", // Allow console in scripts
+      "no-undef": "off", // Node globals are implicit
       "@typescript-eslint/no-explicit-any": "off", // Relaxed type checking for utility scripts
       // Disable some security rules for scripts (false positives in build tools)
       "security/detect-non-literal-fs-filename": "off",

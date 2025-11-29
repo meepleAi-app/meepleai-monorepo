@@ -1,8 +1,8 @@
-import { test, expect, Page } from '@playwright/test';
-import { getTextMatcher, t } from './fixtures/i18n';
-
 /**
- * E2E Test: PDF Upload Journey
+ * E2E Test: PDF Upload Journey - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/helpers/AuthHelper.ts - mockAuthenticatedSession()
+ * @see apps/web/e2e/pages/helpers/GamesHelper.ts - mockPdfUploadJourney()
  *
  * Scenario: User uploads a PDF and verifies it appears in the uploaded PDFs list
  *
@@ -11,173 +11,32 @@ import { getTextMatcher, t } from './fixtures/i18n';
  * Then: The PDF should appear in the "Uploaded PDFs" table with correct details
  */
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { test as base, expect, Page } from '@playwright/test';
+import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
+import { getTextMatcher, t } from './fixtures/i18n';
 
-/**
- * Sets up mock API routes for authentication flow
- * Simulates a user registration and login flow
- */
-async function setupAuthRoutes(page: Page) {
-  let authenticated = false;
-
-  const userResponse = {
-    user: {
-      id: 'test-user-1',
-      email: 'testuser@meepleai.dev',
-      displayName: 'Test User',
-      role: 'Editor'
-    },
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-  };
-
-  // Mock /auth/me endpoint
-  await page.route(`${apiBase}/auth/me`, async (route) => {
-    if (authenticated) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userResponse)
-      });
-    } else {
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' })
-      });
-    }
-  });
-
-  // Mock /auth/register endpoint
-  await page.route(`${apiBase}/auth/register`, async (route) => {
-    const request = route.request();
-    if (request.method() === 'POST') {
-      authenticated = true;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userResponse)
-      });
-    }
-  });
-
-  // Mock /auth/login endpoint
-  await page.route(`${apiBase}/auth/login`, async (route) => {
-    const request = route.request();
-    if (request.method() === 'POST') {
-      authenticated = true;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userResponse)
-      });
-    }
-  });
-
-  // Mock /auth/logout endpoint
-  await page.route(`${apiBase}/auth/logout`, async (route) => {
-    if (route.request().method() === 'POST') {
-      authenticated = false;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: 'Logged out' })
-      });
-    }
-  });
-
-  return { setAuthenticated: (value: boolean) => { authenticated = value; } };
-}
-
-/**
- * Sets up mock API routes for games management with a pre-existing game
- */
-async function setupGamesRoutes(page: Page) {
-  // Start with one existing game
-  const games: any[] = [
-    {
-      id: 'game-1',
-      name: 'Catan',
-      description: 'A strategic board game about resource management',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ];
-
-  // Mock GET /games endpoint
-  await page.route(`${apiBase}/games`, async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(games)
-      });
-    }
-  });
-
-  return { games };
-}
-
-/**
- * Sets up mock API routes for PDF management
- */
-async function setupPdfRoutes(page: Page, gameId: string) {
-  const pdfs: any[] = [];
-  let nextPdfId = 1;
-  let lastDocumentId = '';
-
-  // Mock GET /games/{gameId}/pdfs endpoint
-  await page.route(`${apiBase}/games/${gameId}/pdfs`, async (route) => {
-    if (route.request().method() === 'GET') {
-      // IMPORTANT: The response must have { pdfs: [...] } structure, not just the array
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ pdfs: pdfs })
-      });
-    }
-  });
-
-  // Mock POST /ingest/pdf endpoint (the actual upload endpoint)
-  await page.route(`${apiBase}/ingest/pdf`, async (route) => {
-    if (route.request().method() === 'POST') {
-      // Simulate successful PDF upload
-      const documentId = `doc-${nextPdfId}`;
-      lastDocumentId = documentId;
-
-      const newPdf = {
-        id: `pdf-${nextPdfId++}`,
-        gameId: gameId,
-        fileName: 'test-rulebook.pdf',
-        fileSizeBytes: 1024 * 100, // 100 KB
-        uploadedAt: new Date().toISOString(),
-        status: 'Completed',
-        pageCount: 10
-      };
-      pdfs.push(newPdf);
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ documentId: documentId })
-      });
-    }
-  });
-
-  return { pdfs };
-}
+// Extend test with editor authentication
+const test = base.extend<{ editorPage: Page }>({
+  editorPage: async ({ page }, use) => {
+    const authHelper = new AuthHelper(page);
+    // Use editor fixture for upload permissions
+    await authHelper.mockAuthenticatedSession({
+      ...USER_FIXTURES.user,
+      role: 'Editor' as const,
+    });
+    await use(page);
+  },
+});
 
 test.describe('PDF Upload Journey', () => {
-  test('User uploads PDF and verifies it appears in the list', async ({ page }) => {
-    // Given: Set up mock API routes
-    const authControl = await setupAuthRoutes(page);
-    const { games } = await setupGamesRoutes(page);
+  test('User uploads PDF and verifies it appears in the list', async ({ editorPage: page }) => {
+    const gamesHelper = new GamesHelper(page);
 
-    // Set up PDF routes for the pre-existing game
+    // Setup: Mock complete PDF upload journey with stateful logic
+    const { games, pdfs } = await gamesHelper.mockPdfUploadJourney();
     const gameId = games[0].id;
-    const { pdfs } = await setupPdfRoutes(page, gameId);
 
-    // When: User authenticates and navigates to upload page
-    authControl.setAuthenticated(true);
+    // When: User navigates to upload page
     await page.goto('/upload');
 
     // Then: User should see the upload page
@@ -206,7 +65,7 @@ test.describe('PDF Upload Journey', () => {
     await fileInput.setInputFiles({
       name: 'test-rulebook.pdf',
       mimeType: 'application/pdf',
-      buffer: buffer
+      buffer: buffer,
     });
 
     // When: User clicks upload button
@@ -214,12 +73,12 @@ test.describe('PDF Upload Journey', () => {
     await uploadButton.click();
 
     // Wait for upload to complete - the page will transition to "parse" step
-    // We need to wait for the success message or the step indicator to change
     await page.waitForTimeout(2000);
 
     // Verify that the PDF was added to the pdfs array
     // The upload should have triggered the POST /ingest/pdf endpoint
-    // which adds the PDF to the pdfs array in the mock
+    expect(pdfs.length).toBe(1);
+    expect(pdfs[0].fileName).toBe('test-rulebook.pdf');
 
     // Navigate back to upload step to see the uploaded PDFs table
     await page.goto('/upload');

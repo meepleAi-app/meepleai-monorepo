@@ -1,7 +1,13 @@
+/**
+ * E2E Tests for ThemeSwitcher Component (FRONTEND-4) - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/home/HomePage.ts
+ */
+
 import { test, expect } from '@playwright/test';
 
 /**
- * E2E Tests for ThemeSwitcher Component (FRONTEND-4)
+ * ThemeSwitcher Component Tests
  *
  * Tests cover:
  * - Dark/Light/System mode switching

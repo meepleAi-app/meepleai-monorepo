@@ -1,5 +1,5 @@
 /**
- * E2E Authentication Tests
+ * E2E Authentication Tests - MIGRATED TO PAGE OBJECT MODEL
  *
  * Tests SSR auth protection, login flows, and user profile management
  * across the application.
@@ -11,134 +11,32 @@
  * 4. Profile update functionality
  * 5. Password change functionality
  * 6. Logout flow
+ *
+ * @see apps/web/e2e/page-objects/ - Page Object Model architecture
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { LoginPage, AuthHelper, USER_FIXTURES } from './pages';
 
-const apiBase = 'http://localhost:5080';
-
-// Test user fixtures
-const mockAdmin = {
-  id: 'admin-test-1',
-  email: 'admin@meepleai.dev',
-  displayName: 'Admin User',
-  role: 'Admin',
-};
-
-const mockEditor = {
-  id: 'editor-test-1',
-  email: 'editor@meepleai.dev',
-  displayName: 'Editor User',
-  role: 'Editor',
-};
-
-const mockUser = {
-  id: 'user-test-1',
-  email: 'user@meepleai.dev',
-  displayName: 'Regular User',
-  role: 'User',
-};
-
-/**
- * Mock authenticated session for a user
- * Sets both API mock and cookies for middleware compatibility
- */
-async function mockAuthSession(page: Page, user: typeof mockAdmin) {
-  // Mock API response
-  await page.route(`${apiBase}/api/v1/auth/me`, async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        user,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      }),
-    });
-  });
-
-  // Set cookies for middleware (server-side) to work
-  await page.context().addCookies([
-    {
-      name: 'meepleai_session',
-      value: 'mock-session-token',
-      domain: 'localhost',
-      path: '/',
-      httpOnly: true,
-      secure: false,
-      sameSite: 'Lax',
-    },
-    {
-      name: 'meepleai_user_role',
-      value: user.role.toLowerCase(),
-      domain: 'localhost',
-      path: '/',
-      httpOnly: false,
-      secure: false,
-      sameSite: 'Lax',
-    },
-  ]);
-}
-
-/**
- * Mock unauthenticated session (401 response)
- * Clears cookies to ensure clean state
- */
-async function mockUnauthenticated(page: Page) {
-  // Mock API response
-  await page.route(`${apiBase}/api/v1/auth/me`, async route => {
-    await route.fulfill({
-      status: 401,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'Unauthorized' }),
-    });
-  });
-
-  // Clear auth cookies to ensure middleware sees unauthenticated state
-  await page.context().clearCookies();
-}
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5080';
 
 test.describe('Authentication Flows', () => {
   test('should successfully login with valid credentials', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    const authHelper = new AuthHelper(page);
+
     // Mock unauthenticated state initially
-    await mockUnauthenticated(page);
+    await authHelper.mockUnauthenticatedSession();
 
-    // Mock login endpoint
-    await page.route(`${apiBase}/api/v1/auth/login`, async route => {
-      const postData = route.request().postDataJSON();
+    // Mock successful login
+    await authHelper.mockLoginEndpoint(true, USER_FIXTURES.admin);
 
-      if (postData.email === 'admin@meepleai.dev' && postData.password === 'Demo123!') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: mockAdmin,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          }),
-        });
-      } else {
-        await route.fulfill({
-          status: 401,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Invalid credentials' }),
-        });
-      }
-    });
+    // Navigate and perform login
+    await loginPage.navigate();
+    await loginPage.login('admin@meepleai.dev', 'Demo123!');
 
-    // Navigate to login page
-    await page.goto('/login');
-
-    // Fill in login form
-    await page.fill('input[type="email"]', 'admin@meepleai.dev');
-    await page.fill('input[type="password"]', 'Demo123!');
-
-    // Submit form
-    await page.click('button[type="submit"]');
-
-    // Should redirect or show success (depends on implementation)
-    // Check for either redirect or success indicator
+    // Wait and verify no error messages
     await page.waitForTimeout(1000);
-
-    // Verify no error messages
     const errorElement = page.locator('text=/invalid|error|failed/i').first();
     await expect(errorElement)
       .not.toBeVisible({ timeout: 2000 })
@@ -148,51 +46,32 @@ test.describe('Authentication Flows', () => {
   });
 
   test('should show error with invalid credentials', async ({ page }) => {
-    // Mock unauthenticated state initially
-    await mockUnauthenticated(page);
+    const loginPage = new LoginPage(page);
+    const authHelper = new AuthHelper(page);
 
-    // Mock failed login
-    await page.route(`${apiBase}/api/v1/auth/login`, async route => {
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Invalid credentials' }),
-      });
-    });
+    // Mock unauthenticated state and failed login
+    await authHelper.mockUnauthenticatedSession();
+    await authHelper.mockLoginEndpoint(false);
 
-    await page.goto('/login');
-
-    // Fill in invalid credentials
-    await page.fill('input[type="email"]', 'wrong@example.com');
-    await page.fill('input[type="password"]', 'wrongpassword');
-
-    // Submit form
-    await page.click('button[type="submit"]');
+    await loginPage.navigate();
+    await loginPage.login('wrong@example.com', 'wrongpassword');
 
     // Should show error message
     await page.waitForTimeout(500);
-
-    // Look for error indicators (could be toast, alert, or inline error)
     const pageContent = await page.content();
     expect(pageContent.toLowerCase()).toMatch(/invalid|error|failed|incorrect/);
   });
 
   test('should logout successfully and redirect to home', async ({ page }) => {
-    await mockAuthSession(page, mockAdmin);
+    const authHelper = new AuthHelper(page);
 
-    // Mock logout endpoint
-    await page.route(`${apiBase}/api/v1/auth/logout`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ok: true }),
-      });
-    });
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
+    await authHelper.mockLogoutEndpoint();
 
     // Navigate to a protected page first
     await page.goto('/upload');
 
-    // Find and click logout button (typically in nav or user menu)
+    // Find and click logout button
     const logoutButton = page
       .locator('button:has-text("Logout"), button:has-text("Log out"), a:has-text("Logout")')
       .first();
@@ -210,13 +89,15 @@ test.describe('Authentication Flows', () => {
 
 test.describe('SSR Auth Protection', () => {
   test('should redirect unauthenticated users from /upload to /login', async ({ page }) => {
-    await mockUnauthenticated(page);
+    const authHelper = new AuthHelper(page);
+
+    await authHelper.mockUnauthenticatedSession();
 
     // Attempt to access protected route
     await page.goto('/upload');
 
     // Should redirect to login
-    await page.waitForURL(/\/login/);
+    await authHelper.verifyRedirectToLogin();
     expect(page.url()).toContain('/login');
 
     // Should preserve return URL
@@ -224,27 +105,31 @@ test.describe('SSR Auth Protection', () => {
   });
 
   test('should redirect unauthenticated users from /editor to /login', async ({ page }) => {
-    await mockUnauthenticated(page);
+    const authHelper = new AuthHelper(page);
 
+    await authHelper.mockUnauthenticatedSession();
     await page.goto('/editor');
 
     // Should redirect to login
-    await page.waitForURL(/\/login/);
+    await authHelper.verifyRedirectToLogin();
     expect(page.url()).toContain('/login');
   });
 
   test('should redirect unauthenticated users from /admin to /login', async ({ page }) => {
-    await mockUnauthenticated(page);
+    const authHelper = new AuthHelper(page);
 
+    await authHelper.mockUnauthenticatedSession();
     await page.goto('/admin');
 
     // Should redirect to login
-    await page.waitForURL(/\/login/);
+    await authHelper.verifyRedirectToLogin();
     expect(page.url()).toContain('/login');
   });
 
   test('should allow authenticated admin to access /upload', async ({ page }) => {
-    await mockAuthSession(page, mockAdmin);
+    const authHelper = new AuthHelper(page);
+
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
     // Mock games endpoint for upload page
     await page.route(`${apiBase}/api/v1/games*`, async route => {
@@ -269,7 +154,9 @@ test.describe('SSR Auth Protection', () => {
   });
 
   test('should allow authenticated editor to access /upload', async ({ page }) => {
-    await mockAuthSession(page, mockEditor);
+    const authHelper = new AuthHelper(page);
+
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.editor);
 
     // Mock games endpoint
     await page.route(`${apiBase}/api/v1/games*`, async route => {
@@ -294,8 +181,9 @@ test.describe('SSR Auth Protection', () => {
   });
 
   test('should allow authenticated editor to access /editor', async ({ page }) => {
-    await mockAuthSession(page, mockEditor);
+    const authHelper = new AuthHelper(page);
 
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.editor);
     await page.goto('/editor');
 
     // Should stay on /editor page
@@ -306,8 +194,9 @@ test.describe('SSR Auth Protection', () => {
 
 test.describe('Role-Based Authorization', () => {
   test('should block non-admin users from /admin pages', async ({ page }) => {
-    await mockAuthSession(page, mockEditor); // Editor, not admin
+    const authHelper = new AuthHelper(page);
 
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.editor); // Editor, not admin
     await page.goto('/admin');
 
     // Should redirect to home (not login, since user is authenticated)
@@ -316,8 +205,9 @@ test.describe('Role-Based Authorization', () => {
   });
 
   test('should block regular users from /admin pages', async ({ page }) => {
-    await mockAuthSession(page, mockUser); // Regular user
+    const authHelper = new AuthHelper(page);
 
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.user); // Regular user
     await page.goto('/admin');
 
     // Should redirect to home
@@ -326,7 +216,9 @@ test.describe('Role-Based Authorization', () => {
   });
 
   test('should allow admin users to access /admin pages', async ({ page }) => {
-    await mockAuthSession(page, mockAdmin);
+    const authHelper = new AuthHelper(page);
+
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
     // Mock admin stats endpoint
     await page.route(`${apiBase}/api/v1/admin/stats`, async route => {
@@ -349,8 +241,9 @@ test.describe('Role-Based Authorization', () => {
   });
 
   test('should block non-admin from /admin/users', async ({ page }) => {
-    await mockAuthSession(page, mockEditor);
+    const authHelper = new AuthHelper(page);
 
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.editor);
     await page.goto('/admin/users');
 
     // Should redirect away from admin area
@@ -359,7 +252,9 @@ test.describe('Role-Based Authorization', () => {
   });
 
   test('should allow admin to access /admin/users', async ({ page }) => {
-    await mockAuthSession(page, mockAdmin);
+    const authHelper = new AuthHelper(page);
+
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
     // Mock users endpoint
     await page.route(`${apiBase}/api/v1/admin/users*`, async route => {
@@ -367,7 +262,7 @@ test.describe('Role-Based Authorization', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          users: [mockAdmin],
+          users: [USER_FIXTURES.admin],
           totalCount: 1,
           pageNumber: 1,
           pageSize: 10,
@@ -386,7 +281,9 @@ test.describe('Role-Based Authorization', () => {
 
 test.describe('User Profile Management', () => {
   test('should update user profile successfully', async ({ page }) => {
-    await mockAuthSession(page, mockAdmin);
+    const authHelper = new AuthHelper(page);
+
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
     // Mock profile endpoints
     await page.route(`${apiBase}/api/v1/users/profile`, async route => {
@@ -395,9 +292,9 @@ test.describe('User Profile Management', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            Email: mockAdmin.email,
-            DisplayName: mockAdmin.displayName,
-            Role: mockAdmin.role,
+            Email: USER_FIXTURES.admin.email,
+            DisplayName: USER_FIXTURES.admin.displayName,
+            Role: USER_FIXTURES.admin.role,
             IsTwoFactorEnabled: false,
           }),
         });
@@ -456,7 +353,9 @@ test.describe('User Profile Management', () => {
   });
 
   test('should change password successfully', async ({ page }) => {
-    await mockAuthSession(page, mockAdmin);
+    const authHelper = new AuthHelper(page);
+
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
     // Mock profile endpoint
     await page.route(`${apiBase}/api/v1/users/profile`, async route => {
@@ -465,9 +364,9 @@ test.describe('User Profile Management', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            Email: mockAdmin.email,
-            DisplayName: mockAdmin.displayName,
-            Role: mockAdmin.role,
+            Email: USER_FIXTURES.admin.email,
+            DisplayName: USER_FIXTURES.admin.displayName,
+            Role: USER_FIXTURES.admin.role,
             IsTwoFactorEnabled: false,
           }),
         });
@@ -533,7 +432,9 @@ test.describe('User Profile Management', () => {
   });
 
   test('should show error when passwords do not match', async ({ page }) => {
-    await mockAuthSession(page, mockAdmin);
+    const authHelper = new AuthHelper(page);
+
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
     // Mock profile endpoint
     await page.route(`${apiBase}/api/v1/users/profile`, async route => {
@@ -541,9 +442,9 @@ test.describe('User Profile Management', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          Email: mockAdmin.email,
-          DisplayName: mockAdmin.displayName,
-          Role: mockAdmin.role,
+          Email: USER_FIXTURES.admin.email,
+          DisplayName: USER_FIXTURES.admin.displayName,
+          Role: USER_FIXTURES.admin.role,
           IsTwoFactorEnabled: false,
         }),
       });

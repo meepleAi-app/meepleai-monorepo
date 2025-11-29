@@ -1,4 +1,10 @@
 /**
+ * E2E Citation Journey (Real Backend) - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
+ */
+
+/**
  * E2E Tests - Complete Citation Journey (REAL - Integration)
  *
  * Issue #1018: [BGAI-080] End-to-end testing (question → PDF citation)

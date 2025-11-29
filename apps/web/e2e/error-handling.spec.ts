@@ -1,17 +1,9 @@
 /**
- * E2E tests for error handling flows
- * 
- * ⚠️ STATUS: These tests are STUBBED and incomplete (Phase 5 deliverable)
- * They define the test structure and scenarios but lack complete assertions.
- * Each test needs implementation before being considered complete.
- * 
- * To implement:
- * 1. Add proper error toast/notification selectors
- * 2. Implement assertions for error handling behavior
- * 3. Add edge case scenarios
- * 4. Validate recovery flows
- * 
- * See docs/issue/ui-05-accessibility-phase5.md for Phase 5 requirements
+ * Error Handling E2E Tests - MIGRATED TO POM (STUBBED)
+ *
+ * @see apps/web/e2e/pages/
+ *
+ * ⚠️ STATUS: STUBBED and incomplete (Phase 5 deliverable)
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -21,7 +13,7 @@ test.describe('Error Handling E2E Tests', () => {
   test.describe('Network errors', () => {
     test('should display error toast on network failure', async ({ page, context }) => {
       // Block all API requests to simulate network failure
-      await context.route('**/api/**', (route) => {
+      await context.route('**/api/**', route => {
         route.abort('failed');
       });
 
@@ -38,21 +30,19 @@ test.describe('Error Handling E2E Tests', () => {
     test('should retry failed requests automatically', async ({ page, context }) => {
       let requestCount = 0;
 
-      await context.route('**/api/v1/games', (route) => {
+      await context.route('**/api/v1/games', route => {
         requestCount++;
         if (requestCount < 3) {
           // Fail first 2 requests
           route.fulfill({
             status: 500,
-            body: JSON.stringify({ error: 'Internal Server Error' })
+            body: JSON.stringify({ error: 'Internal Server Error' }),
           });
         } else {
           // Succeed on 3rd attempt
           route.fulfill({
             status: 200,
-            body: JSON.stringify([
-              { id: '1', name: 'Test Game' }
-            ])
+            body: JSON.stringify([{ id: '1', name: 'Test Game' }]),
           });
         }
       });
@@ -67,10 +57,10 @@ test.describe('Error Handling E2E Tests', () => {
 
   test.describe('API errors', () => {
     test('should display error modal for 404 errors', async ({ page, context }) => {
-      await context.route('**/api/v1/games/nonexistent', (route) => {
+      await context.route('**/api/v1/games/nonexistent', route => {
         route.fulfill({
           status: 404,
-          body: JSON.stringify({ error: 'Not Found' })
+          body: JSON.stringify({ error: 'Not Found' }),
         });
       });
 
@@ -82,10 +72,10 @@ test.describe('Error Handling E2E Tests', () => {
     });
 
     test('should display user-friendly message for 401 errors', async ({ page, context }) => {
-      await context.route('**/api/v1/protected', (route) => {
+      await context.route('**/api/v1/protected', route => {
         route.fulfill({
           status: 401,
-          body: JSON.stringify({ error: 'Unauthorized' })
+          body: JSON.stringify({ error: 'Unauthorized' }),
         });
       });
 
@@ -98,13 +88,13 @@ test.describe('Error Handling E2E Tests', () => {
     });
 
     test('should display error message for 500 errors', async ({ page, context }) => {
-      await context.route('**/api/v1/**', (route) => {
+      await context.route('**/api/v1/**', route => {
         route.fulfill({
           status: 500,
           headers: {
-            'X-Correlation-Id': 'test-correlation-123'
+            'X-Correlation-Id': 'test-correlation-123',
           },
-          body: JSON.stringify({ error: 'Internal Server Error' })
+          body: JSON.stringify({ error: 'Internal Server Error' }),
         });
       });
 
@@ -192,11 +182,11 @@ test.describe('Error Handling E2E Tests', () => {
       // Create multiple errors to trigger multiple toasts
       let requestCount = 0;
 
-      await context.route('**/api/v1/**', (route) => {
+      await context.route('**/api/v1/**', route => {
         requestCount++;
         route.fulfill({
           status: 500,
-          body: JSON.stringify({ error: `Error ${requestCount}` })
+          body: JSON.stringify({ error: `Error ${requestCount}` }),
         });
       });
 
@@ -217,13 +207,13 @@ test.describe('Error Handling E2E Tests', () => {
 
   test.describe('Error modal', () => {
     test('should display error modal with details', async ({ page, context }) => {
-      await context.route('**/api/v1/games', (route) => {
+      await context.route('**/api/v1/games', route => {
         route.fulfill({
           status: 500,
           headers: {
-            'X-Correlation-Id': 'test-correlation-456'
+            'X-Correlation-Id': 'test-correlation-456',
           },
-          body: JSON.stringify({ error: 'Server error' })
+          body: JSON.stringify({ error: 'Server error' }),
         });
       });
 
@@ -262,17 +252,17 @@ test.describe('Error Handling E2E Tests', () => {
     test('should retry action from error modal', async ({ page, context }) => {
       let attemptCount = 0;
 
-      await context.route('**/api/v1/games', (route) => {
+      await context.route('**/api/v1/games', route => {
         attemptCount++;
         if (attemptCount === 1) {
           route.fulfill({
             status: 500,
-            body: JSON.stringify({ error: 'Server error' })
+            body: JSON.stringify({ error: 'Server error' }),
           });
         } else {
           route.fulfill({
             status: 200,
-            body: JSON.stringify([{ id: '1', name: 'Test Game' }])
+            body: JSON.stringify([{ id: '1', name: 'Test Game' }]),
           });
         }
       });
@@ -298,18 +288,18 @@ test.describe('Error Handling E2E Tests', () => {
       const logRequests: any[] = [];
 
       // Intercept log requests
-      await context.route('**/api/v1/logs/client', (route) => {
+      await context.route('**/api/v1/logs/client', route => {
         logRequests.push(route.request().postDataJSON());
         route.fulfill({
-          status: 204
+          status: 204,
         });
       });
 
       // Trigger an error
-      await context.route('**/api/v1/games', (route) => {
+      await context.route('**/api/v1/games', route => {
         route.fulfill({
           status: 500,
-          body: JSON.stringify({ error: 'Server error' })
+          body: JSON.stringify({ error: 'Server error' }),
         });
       });
 

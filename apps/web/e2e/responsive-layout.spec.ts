@@ -1,3 +1,10 @@
+/**
+ * Responsive Layout Tests - Assertion-Based Approach - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/helpers/responsive-utils.ts - Viewport utilities
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
+
 import { test, expect } from '@playwright/test';
 import {
   checkMobileLayout,
@@ -10,7 +17,7 @@ import {
 } from './helpers/responsive-utils';
 
 /**
- * Responsive Layout Tests - Assertion-Based Approach
+ * Responsive Layout E2E Tests
  * Issue #993 - [P1] [BGAI-052] Responsive design testing (320px-1920px)
  *
  * Tests responsive behavior across all breakpoints:

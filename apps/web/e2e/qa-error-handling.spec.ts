@@ -1,3 +1,9 @@
+/**
+ * Q&A Interface - Error Handling E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/helpers/qa-test-utils.ts
+ */
+
 import { test, expect } from '@playwright/test';
 import { setupQATestEnvironment } from './helpers/qa-test-utils';
 

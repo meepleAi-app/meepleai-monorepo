@@ -345,6 +345,213 @@ groups:
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
 
+  # ========================================
+  # 2FA Security Alert Rules (SEC-08)
+  # Issue #1788: Enhanced Security Monitoring
+  # ========================================
+
+  - name: meepleai_2fa_security_recording_rules
+    interval: 15s
+    rules:
+      # 2FA failure rate (failures per second)
+      - record: meepleai:2fa:failure_rate:5m
+        expr: |
+          rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+          rate(meepleai_2fa_failed_backup_attempts_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+      # 2FA success rate percentage
+      - record: meepleai:2fa:success_rate:5m
+        expr: |
+          100 * (
+            sum(rate(meepleai_2fa_successful_totp_total[5m]) + rate(meepleai_2fa_successful_backup_total[5m]))
+            /
+            sum(
+              rate(meepleai_2fa_successful_totp_total[5m]) +
+              rate(meepleai_2fa_successful_backup_total[5m]) +
+              rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+              rate(meepleai_2fa_failed_backup_attempts_total[5m])
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: security
+
+      # Replay attack rate
+      - record: meepleai:2fa:replay_attacks:5m
+        expr: |
+          rate(meepleai_2fa_replay_attacks_blocked_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+  - name: meepleai_2fa_security_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: High rate of failed 2FA attempts (> 10/min sustained)
+      - alert: High2FAFailureRate
+        expr: |
+          meepleai:2fa:failure_rate:5m > 0.167
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: brute_force
+        annotations:
+          summary: "High rate of failed 2FA attempts detected"
+          description: |
+            2FA failure rate is {{ $value | humanize }} failures/sec (threshold: 0.167/sec = 10/min).
+            This indicates a potential brute force attack on user accounts.
+            Verify account lockout mechanisms and consider IP blocking.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-brute-force"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Replay attack detected
+      - alert: TotpReplayAttackDetected
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[1m]) > 0
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "TOTP replay attack blocked"
+          description: |
+            {{ $value }} replay attack(s) blocked in the last minute.
+            Attacker attempted to reuse a valid TOTP code within the 60-second window.
+            This is a sophisticated attack indicating compromised credentials or session hijacking.
+            Review audit logs and consider forcing password reset for affected users.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Distributed brute force attack (multiple users targeted)
+      - alert: Distributed2FABruteForce
+        expr: |
+          count(
+            sum by (user_id) (
+              increase(meepleai_2fa_failed_totp_attempts_total[5m]) > 5
+            )
+          ) > 3
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: distributed_brute_force
+        annotations:
+          summary: "Distributed brute force attack on 2FA detected"
+          description: |
+            {{ $value }} user accounts experiencing simultaneous failed 2FA attempts.
+            This indicates a coordinated attack, possibly from a botnet or distributed attacker.
+            Consider implementing IP rate limiting or temporary 2FA endpoint restrictions.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-distributed-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: 2FA success rate critically low
+      - alert: Low2FASuccessRate
+        expr: |
+          meepleai:2fa:success_rate:5m < 50
+        for: 5m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA success rate is critically low"
+          description: |
+            2FA success rate is {{ $value | humanizePercentage }} (threshold: 50%).
+            More than half of 2FA attempts are failing.
+            Check for attacks, TOTP time sync issues, or UX problems.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-low-success"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Elevated failed attempts for single user
+      - alert: ElevatedUserFailedAttempts
+        expr: |
+          sum by (user_id) (
+            increase(
+              meepleai_2fa_failed_totp_attempts_total[10m] +
+              meepleai_2fa_failed_backup_attempts_total[10m]
+            )
+          ) > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: targeted
+        annotations:
+          summary: "User experiencing multiple failed 2FA attempts"
+          description: |
+            User {{ $labels.user_id }} has {{ $value }} failed attempts in 10 minutes.
+            May indicate targeted attack or user lost TOTP device.
+            Monitor for escalation and consider user notification.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-user-lockout"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: Multiple replay attacks in short period
+      - alert: MultipleReplayAttacks
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[5m]) > 2
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "Multiple TOTP replay attacks detected"
+          description: |
+            {{ $value }} replay attacks blocked in 5 minutes.
+            Indicates possible man-in-the-middle attack or session compromise.
+            Review session security and TLS configuration.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: High backup code usage
+      - alert: HighBackupCodeConsumption
+        expr: |
+          rate(meepleai_2fa_successful_backup_total[1h]) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "Elevated backup code usage detected"
+          description: |
+            Backup code usage: {{ $value | humanize }} uses/sec.
+            Users may be losing access to TOTP apps or experiencing device issues.
+            Monitor for users running out of backup codes.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-backup-codes"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_info_alerts
+    interval: 5m
+    rules:
+      # INFO: 2FA adoption declining
+      - alert: Declining2FAAdoption
+        expr: |
+          increase(meepleai_2fa_disable_total[1h]) > increase(meepleai_2fa_enable_total[1h])
+        for: 6h
+        labels:
+          severity: info
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA adoption is declining"
+          description: |
+            More users disabling 2FA than enabling over 6 hours.
+            Investigate user friction points and UX issues.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-adoption"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
       # CRITICAL: Low-quality response rate > 30% for 1 hour
       - alert: HighLowQualityRate
         expr: |
@@ -362,6 +569,213 @@ groups:
             Investigate RAG retrieval, LLM performance, and citation extraction.
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+  # ========================================
+  # 2FA Security Alert Rules (SEC-08)
+  # Issue #1788: Enhanced Security Monitoring
+  # ========================================
+
+  - name: meepleai_2fa_security_recording_rules
+    interval: 15s
+    rules:
+      # 2FA failure rate (failures per second)
+      - record: meepleai:2fa:failure_rate:5m
+        expr: |
+          rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+          rate(meepleai_2fa_failed_backup_attempts_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+      # 2FA success rate percentage
+      - record: meepleai:2fa:success_rate:5m
+        expr: |
+          100 * (
+            sum(rate(meepleai_2fa_successful_totp_total[5m]) + rate(meepleai_2fa_successful_backup_total[5m]))
+            /
+            sum(
+              rate(meepleai_2fa_successful_totp_total[5m]) +
+              rate(meepleai_2fa_successful_backup_total[5m]) +
+              rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+              rate(meepleai_2fa_failed_backup_attempts_total[5m])
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: security
+
+      # Replay attack rate
+      - record: meepleai:2fa:replay_attacks:5m
+        expr: |
+          rate(meepleai_2fa_replay_attacks_blocked_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+  - name: meepleai_2fa_security_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: High rate of failed 2FA attempts (> 10/min sustained)
+      - alert: High2FAFailureRate
+        expr: |
+          meepleai:2fa:failure_rate:5m > 0.167
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: brute_force
+        annotations:
+          summary: "High rate of failed 2FA attempts detected"
+          description: |
+            2FA failure rate is {{ $value | humanize }} failures/sec (threshold: 0.167/sec = 10/min).
+            This indicates a potential brute force attack on user accounts.
+            Verify account lockout mechanisms and consider IP blocking.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-brute-force"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Replay attack detected
+      - alert: TotpReplayAttackDetected
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[1m]) > 0
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "TOTP replay attack blocked"
+          description: |
+            {{ $value }} replay attack(s) blocked in the last minute.
+            Attacker attempted to reuse a valid TOTP code within the 60-second window.
+            This is a sophisticated attack indicating compromised credentials or session hijacking.
+            Review audit logs and consider forcing password reset for affected users.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Distributed brute force attack (multiple users targeted)
+      - alert: Distributed2FABruteForce
+        expr: |
+          count(
+            sum by (user_id) (
+              increase(meepleai_2fa_failed_totp_attempts_total[5m]) > 5
+            )
+          ) > 3
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: distributed_brute_force
+        annotations:
+          summary: "Distributed brute force attack on 2FA detected"
+          description: |
+            {{ $value }} user accounts experiencing simultaneous failed 2FA attempts.
+            This indicates a coordinated attack, possibly from a botnet or distributed attacker.
+            Consider implementing IP rate limiting or temporary 2FA endpoint restrictions.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-distributed-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: 2FA success rate critically low
+      - alert: Low2FASuccessRate
+        expr: |
+          meepleai:2fa:success_rate:5m < 50
+        for: 5m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA success rate is critically low"
+          description: |
+            2FA success rate is {{ $value | humanizePercentage }} (threshold: 50%).
+            More than half of 2FA attempts are failing.
+            Check for attacks, TOTP time sync issues, or UX problems.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-low-success"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Elevated failed attempts for single user
+      - alert: ElevatedUserFailedAttempts
+        expr: |
+          sum by (user_id) (
+            increase(
+              meepleai_2fa_failed_totp_attempts_total[10m] +
+              meepleai_2fa_failed_backup_attempts_total[10m]
+            )
+          ) > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: targeted
+        annotations:
+          summary: "User experiencing multiple failed 2FA attempts"
+          description: |
+            User {{ $labels.user_id }} has {{ $value }} failed attempts in 10 minutes.
+            May indicate targeted attack or user lost TOTP device.
+            Monitor for escalation and consider user notification.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-user-lockout"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: Multiple replay attacks in short period
+      - alert: MultipleReplayAttacks
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[5m]) > 2
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "Multiple TOTP replay attacks detected"
+          description: |
+            {{ $value }} replay attacks blocked in 5 minutes.
+            Indicates possible man-in-the-middle attack or session compromise.
+            Review session security and TLS configuration.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: High backup code usage
+      - alert: HighBackupCodeConsumption
+        expr: |
+          rate(meepleai_2fa_successful_backup_total[1h]) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "Elevated backup code usage detected"
+          description: |
+            Backup code usage: {{ $value | humanize }} uses/sec.
+            Users may be losing access to TOTP apps or experiencing device issues.
+            Monitor for users running out of backup codes.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-backup-codes"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_info_alerts
+    interval: 5m
+    rules:
+      # INFO: 2FA adoption declining
+      - alert: Declining2FAAdoption
+        expr: |
+          increase(meepleai_2fa_disable_total[1h]) > increase(meepleai_2fa_enable_total[1h])
+        for: 6h
+        labels:
+          severity: info
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA adoption is declining"
+          description: |
+            More users disabling 2FA than enabling over 6 hours.
+            Investigate user friction points and UX issues.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-adoption"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
 
       # CRITICAL: RAG confidence < 0.50 for 30 minutes
       - alert: LowRagConfidence
@@ -381,6 +795,213 @@ groups:
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
 
+  # ========================================
+  # 2FA Security Alert Rules (SEC-08)
+  # Issue #1788: Enhanced Security Monitoring
+  # ========================================
+
+  - name: meepleai_2fa_security_recording_rules
+    interval: 15s
+    rules:
+      # 2FA failure rate (failures per second)
+      - record: meepleai:2fa:failure_rate:5m
+        expr: |
+          rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+          rate(meepleai_2fa_failed_backup_attempts_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+      # 2FA success rate percentage
+      - record: meepleai:2fa:success_rate:5m
+        expr: |
+          100 * (
+            sum(rate(meepleai_2fa_successful_totp_total[5m]) + rate(meepleai_2fa_successful_backup_total[5m]))
+            /
+            sum(
+              rate(meepleai_2fa_successful_totp_total[5m]) +
+              rate(meepleai_2fa_successful_backup_total[5m]) +
+              rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+              rate(meepleai_2fa_failed_backup_attempts_total[5m])
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: security
+
+      # Replay attack rate
+      - record: meepleai:2fa:replay_attacks:5m
+        expr: |
+          rate(meepleai_2fa_replay_attacks_blocked_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+  - name: meepleai_2fa_security_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: High rate of failed 2FA attempts (> 10/min sustained)
+      - alert: High2FAFailureRate
+        expr: |
+          meepleai:2fa:failure_rate:5m > 0.167
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: brute_force
+        annotations:
+          summary: "High rate of failed 2FA attempts detected"
+          description: |
+            2FA failure rate is {{ $value | humanize }} failures/sec (threshold: 0.167/sec = 10/min).
+            This indicates a potential brute force attack on user accounts.
+            Verify account lockout mechanisms and consider IP blocking.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-brute-force"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Replay attack detected
+      - alert: TotpReplayAttackDetected
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[1m]) > 0
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "TOTP replay attack blocked"
+          description: |
+            {{ $value }} replay attack(s) blocked in the last minute.
+            Attacker attempted to reuse a valid TOTP code within the 60-second window.
+            This is a sophisticated attack indicating compromised credentials or session hijacking.
+            Review audit logs and consider forcing password reset for affected users.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Distributed brute force attack (multiple users targeted)
+      - alert: Distributed2FABruteForce
+        expr: |
+          count(
+            sum by (user_id) (
+              increase(meepleai_2fa_failed_totp_attempts_total[5m]) > 5
+            )
+          ) > 3
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: distributed_brute_force
+        annotations:
+          summary: "Distributed brute force attack on 2FA detected"
+          description: |
+            {{ $value }} user accounts experiencing simultaneous failed 2FA attempts.
+            This indicates a coordinated attack, possibly from a botnet or distributed attacker.
+            Consider implementing IP rate limiting or temporary 2FA endpoint restrictions.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-distributed-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: 2FA success rate critically low
+      - alert: Low2FASuccessRate
+        expr: |
+          meepleai:2fa:success_rate:5m < 50
+        for: 5m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA success rate is critically low"
+          description: |
+            2FA success rate is {{ $value | humanizePercentage }} (threshold: 50%).
+            More than half of 2FA attempts are failing.
+            Check for attacks, TOTP time sync issues, or UX problems.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-low-success"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Elevated failed attempts for single user
+      - alert: ElevatedUserFailedAttempts
+        expr: |
+          sum by (user_id) (
+            increase(
+              meepleai_2fa_failed_totp_attempts_total[10m] +
+              meepleai_2fa_failed_backup_attempts_total[10m]
+            )
+          ) > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: targeted
+        annotations:
+          summary: "User experiencing multiple failed 2FA attempts"
+          description: |
+            User {{ $labels.user_id }} has {{ $value }} failed attempts in 10 minutes.
+            May indicate targeted attack or user lost TOTP device.
+            Monitor for escalation and consider user notification.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-user-lockout"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: Multiple replay attacks in short period
+      - alert: MultipleReplayAttacks
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[5m]) > 2
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "Multiple TOTP replay attacks detected"
+          description: |
+            {{ $value }} replay attacks blocked in 5 minutes.
+            Indicates possible man-in-the-middle attack or session compromise.
+            Review session security and TLS configuration.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: High backup code usage
+      - alert: HighBackupCodeConsumption
+        expr: |
+          rate(meepleai_2fa_successful_backup_total[1h]) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "Elevated backup code usage detected"
+          description: |
+            Backup code usage: {{ $value | humanize }} uses/sec.
+            Users may be losing access to TOTP apps or experiencing device issues.
+            Monitor for users running out of backup codes.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-backup-codes"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_info_alerts
+    interval: 5m
+    rules:
+      # INFO: 2FA adoption declining
+      - alert: Declining2FAAdoption
+        expr: |
+          increase(meepleai_2fa_disable_total[1h]) > increase(meepleai_2fa_enable_total[1h])
+        for: 6h
+        labels:
+          severity: info
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA adoption is declining"
+          description: |
+            More users disabling 2FA than enabling over 6 hours.
+            Investigate user friction points and UX issues.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-adoption"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
       # CRITICAL: LLM confidence < 0.50 for 30 minutes
       - alert: LowLlmConfidence
         expr: |
@@ -398,6 +1019,213 @@ groups:
             Check OpenRouter API health, prompt quality, and model selection.
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+  # ========================================
+  # 2FA Security Alert Rules (SEC-08)
+  # Issue #1788: Enhanced Security Monitoring
+  # ========================================
+
+  - name: meepleai_2fa_security_recording_rules
+    interval: 15s
+    rules:
+      # 2FA failure rate (failures per second)
+      - record: meepleai:2fa:failure_rate:5m
+        expr: |
+          rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+          rate(meepleai_2fa_failed_backup_attempts_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+      # 2FA success rate percentage
+      - record: meepleai:2fa:success_rate:5m
+        expr: |
+          100 * (
+            sum(rate(meepleai_2fa_successful_totp_total[5m]) + rate(meepleai_2fa_successful_backup_total[5m]))
+            /
+            sum(
+              rate(meepleai_2fa_successful_totp_total[5m]) +
+              rate(meepleai_2fa_successful_backup_total[5m]) +
+              rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+              rate(meepleai_2fa_failed_backup_attempts_total[5m])
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: security
+
+      # Replay attack rate
+      - record: meepleai:2fa:replay_attacks:5m
+        expr: |
+          rate(meepleai_2fa_replay_attacks_blocked_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+  - name: meepleai_2fa_security_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: High rate of failed 2FA attempts (> 10/min sustained)
+      - alert: High2FAFailureRate
+        expr: |
+          meepleai:2fa:failure_rate:5m > 0.167
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: brute_force
+        annotations:
+          summary: "High rate of failed 2FA attempts detected"
+          description: |
+            2FA failure rate is {{ $value | humanize }} failures/sec (threshold: 0.167/sec = 10/min).
+            This indicates a potential brute force attack on user accounts.
+            Verify account lockout mechanisms and consider IP blocking.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-brute-force"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Replay attack detected
+      - alert: TotpReplayAttackDetected
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[1m]) > 0
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "TOTP replay attack blocked"
+          description: |
+            {{ $value }} replay attack(s) blocked in the last minute.
+            Attacker attempted to reuse a valid TOTP code within the 60-second window.
+            This is a sophisticated attack indicating compromised credentials or session hijacking.
+            Review audit logs and consider forcing password reset for affected users.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Distributed brute force attack (multiple users targeted)
+      - alert: Distributed2FABruteForce
+        expr: |
+          count(
+            sum by (user_id) (
+              increase(meepleai_2fa_failed_totp_attempts_total[5m]) > 5
+            )
+          ) > 3
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: distributed_brute_force
+        annotations:
+          summary: "Distributed brute force attack on 2FA detected"
+          description: |
+            {{ $value }} user accounts experiencing simultaneous failed 2FA attempts.
+            This indicates a coordinated attack, possibly from a botnet or distributed attacker.
+            Consider implementing IP rate limiting or temporary 2FA endpoint restrictions.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-distributed-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: 2FA success rate critically low
+      - alert: Low2FASuccessRate
+        expr: |
+          meepleai:2fa:success_rate:5m < 50
+        for: 5m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA success rate is critically low"
+          description: |
+            2FA success rate is {{ $value | humanizePercentage }} (threshold: 50%).
+            More than half of 2FA attempts are failing.
+            Check for attacks, TOTP time sync issues, or UX problems.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-low-success"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Elevated failed attempts for single user
+      - alert: ElevatedUserFailedAttempts
+        expr: |
+          sum by (user_id) (
+            increase(
+              meepleai_2fa_failed_totp_attempts_total[10m] +
+              meepleai_2fa_failed_backup_attempts_total[10m]
+            )
+          ) > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: targeted
+        annotations:
+          summary: "User experiencing multiple failed 2FA attempts"
+          description: |
+            User {{ $labels.user_id }} has {{ $value }} failed attempts in 10 minutes.
+            May indicate targeted attack or user lost TOTP device.
+            Monitor for escalation and consider user notification.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-user-lockout"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: Multiple replay attacks in short period
+      - alert: MultipleReplayAttacks
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[5m]) > 2
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "Multiple TOTP replay attacks detected"
+          description: |
+            {{ $value }} replay attacks blocked in 5 minutes.
+            Indicates possible man-in-the-middle attack or session compromise.
+            Review session security and TLS configuration.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: High backup code usage
+      - alert: HighBackupCodeConsumption
+        expr: |
+          rate(meepleai_2fa_successful_backup_total[1h]) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "Elevated backup code usage detected"
+          description: |
+            Backup code usage: {{ $value | humanize }} uses/sec.
+            Users may be losing access to TOTP apps or experiencing device issues.
+            Monitor for users running out of backup codes.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-backup-codes"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_info_alerts
+    interval: 5m
+    rules:
+      # INFO: 2FA adoption declining
+      - alert: Declining2FAAdoption
+        expr: |
+          increase(meepleai_2fa_disable_total[1h]) > increase(meepleai_2fa_enable_total[1h])
+        for: 6h
+        labels:
+          severity: info
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA adoption is declining"
+          description: |
+            More users disabling 2FA than enabling over 6 hours.
+            Investigate user friction points and UX issues.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-adoption"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
 
       # CRITICAL: Zero quality metrics for 15 minutes (service health check)
       - alert: QualityMetricsUnavailable
@@ -426,6 +1254,213 @@ groups:
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
 
+  # ========================================
+  # 2FA Security Alert Rules (SEC-08)
+  # Issue #1788: Enhanced Security Monitoring
+  # ========================================
+
+  - name: meepleai_2fa_security_recording_rules
+    interval: 15s
+    rules:
+      # 2FA failure rate (failures per second)
+      - record: meepleai:2fa:failure_rate:5m
+        expr: |
+          rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+          rate(meepleai_2fa_failed_backup_attempts_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+      # 2FA success rate percentage
+      - record: meepleai:2fa:success_rate:5m
+        expr: |
+          100 * (
+            sum(rate(meepleai_2fa_successful_totp_total[5m]) + rate(meepleai_2fa_successful_backup_total[5m]))
+            /
+            sum(
+              rate(meepleai_2fa_successful_totp_total[5m]) +
+              rate(meepleai_2fa_successful_backup_total[5m]) +
+              rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+              rate(meepleai_2fa_failed_backup_attempts_total[5m])
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: security
+
+      # Replay attack rate
+      - record: meepleai:2fa:replay_attacks:5m
+        expr: |
+          rate(meepleai_2fa_replay_attacks_blocked_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+  - name: meepleai_2fa_security_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: High rate of failed 2FA attempts (> 10/min sustained)
+      - alert: High2FAFailureRate
+        expr: |
+          meepleai:2fa:failure_rate:5m > 0.167
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: brute_force
+        annotations:
+          summary: "High rate of failed 2FA attempts detected"
+          description: |
+            2FA failure rate is {{ $value | humanize }} failures/sec (threshold: 0.167/sec = 10/min).
+            This indicates a potential brute force attack on user accounts.
+            Verify account lockout mechanisms and consider IP blocking.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-brute-force"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Replay attack detected
+      - alert: TotpReplayAttackDetected
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[1m]) > 0
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "TOTP replay attack blocked"
+          description: |
+            {{ $value }} replay attack(s) blocked in the last minute.
+            Attacker attempted to reuse a valid TOTP code within the 60-second window.
+            This is a sophisticated attack indicating compromised credentials or session hijacking.
+            Review audit logs and consider forcing password reset for affected users.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Distributed brute force attack (multiple users targeted)
+      - alert: Distributed2FABruteForce
+        expr: |
+          count(
+            sum by (user_id) (
+              increase(meepleai_2fa_failed_totp_attempts_total[5m]) > 5
+            )
+          ) > 3
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: distributed_brute_force
+        annotations:
+          summary: "Distributed brute force attack on 2FA detected"
+          description: |
+            {{ $value }} user accounts experiencing simultaneous failed 2FA attempts.
+            This indicates a coordinated attack, possibly from a botnet or distributed attacker.
+            Consider implementing IP rate limiting or temporary 2FA endpoint restrictions.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-distributed-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: 2FA success rate critically low
+      - alert: Low2FASuccessRate
+        expr: |
+          meepleai:2fa:success_rate:5m < 50
+        for: 5m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA success rate is critically low"
+          description: |
+            2FA success rate is {{ $value | humanizePercentage }} (threshold: 50%).
+            More than half of 2FA attempts are failing.
+            Check for attacks, TOTP time sync issues, or UX problems.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-low-success"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Elevated failed attempts for single user
+      - alert: ElevatedUserFailedAttempts
+        expr: |
+          sum by (user_id) (
+            increase(
+              meepleai_2fa_failed_totp_attempts_total[10m] +
+              meepleai_2fa_failed_backup_attempts_total[10m]
+            )
+          ) > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: targeted
+        annotations:
+          summary: "User experiencing multiple failed 2FA attempts"
+          description: |
+            User {{ $labels.user_id }} has {{ $value }} failed attempts in 10 minutes.
+            May indicate targeted attack or user lost TOTP device.
+            Monitor for escalation and consider user notification.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-user-lockout"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: Multiple replay attacks in short period
+      - alert: MultipleReplayAttacks
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[5m]) > 2
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "Multiple TOTP replay attacks detected"
+          description: |
+            {{ $value }} replay attacks blocked in 5 minutes.
+            Indicates possible man-in-the-middle attack or session compromise.
+            Review session security and TLS configuration.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: High backup code usage
+      - alert: HighBackupCodeConsumption
+        expr: |
+          rate(meepleai_2fa_successful_backup_total[1h]) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "Elevated backup code usage detected"
+          description: |
+            Backup code usage: {{ $value | humanize }} uses/sec.
+            Users may be losing access to TOTP apps or experiencing device issues.
+            Monitor for users running out of backup codes.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-backup-codes"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_info_alerts
+    interval: 5m
+    rules:
+      # INFO: 2FA adoption declining
+      - alert: Declining2FAAdoption
+        expr: |
+          increase(meepleai_2fa_disable_total[1h]) > increase(meepleai_2fa_enable_total[1h])
+        for: 6h
+        labels:
+          severity: info
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA adoption is declining"
+          description: |
+            More users disabling 2FA than enabling over 6 hours.
+            Investigate user friction points and UX issues.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-adoption"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
   - name: meepleai_quality_warning_alerts
     interval: 1m
     rules:
@@ -447,6 +1482,213 @@ groups:
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
 
+  # ========================================
+  # 2FA Security Alert Rules (SEC-08)
+  # Issue #1788: Enhanced Security Monitoring
+  # ========================================
+
+  - name: meepleai_2fa_security_recording_rules
+    interval: 15s
+    rules:
+      # 2FA failure rate (failures per second)
+      - record: meepleai:2fa:failure_rate:5m
+        expr: |
+          rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+          rate(meepleai_2fa_failed_backup_attempts_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+      # 2FA success rate percentage
+      - record: meepleai:2fa:success_rate:5m
+        expr: |
+          100 * (
+            sum(rate(meepleai_2fa_successful_totp_total[5m]) + rate(meepleai_2fa_successful_backup_total[5m]))
+            /
+            sum(
+              rate(meepleai_2fa_successful_totp_total[5m]) +
+              rate(meepleai_2fa_successful_backup_total[5m]) +
+              rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+              rate(meepleai_2fa_failed_backup_attempts_total[5m])
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: security
+
+      # Replay attack rate
+      - record: meepleai:2fa:replay_attacks:5m
+        expr: |
+          rate(meepleai_2fa_replay_attacks_blocked_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+  - name: meepleai_2fa_security_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: High rate of failed 2FA attempts (> 10/min sustained)
+      - alert: High2FAFailureRate
+        expr: |
+          meepleai:2fa:failure_rate:5m > 0.167
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: brute_force
+        annotations:
+          summary: "High rate of failed 2FA attempts detected"
+          description: |
+            2FA failure rate is {{ $value | humanize }} failures/sec (threshold: 0.167/sec = 10/min).
+            This indicates a potential brute force attack on user accounts.
+            Verify account lockout mechanisms and consider IP blocking.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-brute-force"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Replay attack detected
+      - alert: TotpReplayAttackDetected
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[1m]) > 0
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "TOTP replay attack blocked"
+          description: |
+            {{ $value }} replay attack(s) blocked in the last minute.
+            Attacker attempted to reuse a valid TOTP code within the 60-second window.
+            This is a sophisticated attack indicating compromised credentials or session hijacking.
+            Review audit logs and consider forcing password reset for affected users.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Distributed brute force attack (multiple users targeted)
+      - alert: Distributed2FABruteForce
+        expr: |
+          count(
+            sum by (user_id) (
+              increase(meepleai_2fa_failed_totp_attempts_total[5m]) > 5
+            )
+          ) > 3
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: distributed_brute_force
+        annotations:
+          summary: "Distributed brute force attack on 2FA detected"
+          description: |
+            {{ $value }} user accounts experiencing simultaneous failed 2FA attempts.
+            This indicates a coordinated attack, possibly from a botnet or distributed attacker.
+            Consider implementing IP rate limiting or temporary 2FA endpoint restrictions.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-distributed-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: 2FA success rate critically low
+      - alert: Low2FASuccessRate
+        expr: |
+          meepleai:2fa:success_rate:5m < 50
+        for: 5m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA success rate is critically low"
+          description: |
+            2FA success rate is {{ $value | humanizePercentage }} (threshold: 50%).
+            More than half of 2FA attempts are failing.
+            Check for attacks, TOTP time sync issues, or UX problems.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-low-success"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Elevated failed attempts for single user
+      - alert: ElevatedUserFailedAttempts
+        expr: |
+          sum by (user_id) (
+            increase(
+              meepleai_2fa_failed_totp_attempts_total[10m] +
+              meepleai_2fa_failed_backup_attempts_total[10m]
+            )
+          ) > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: targeted
+        annotations:
+          summary: "User experiencing multiple failed 2FA attempts"
+          description: |
+            User {{ $labels.user_id }} has {{ $value }} failed attempts in 10 minutes.
+            May indicate targeted attack or user lost TOTP device.
+            Monitor for escalation and consider user notification.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-user-lockout"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: Multiple replay attacks in short period
+      - alert: MultipleReplayAttacks
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[5m]) > 2
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "Multiple TOTP replay attacks detected"
+          description: |
+            {{ $value }} replay attacks blocked in 5 minutes.
+            Indicates possible man-in-the-middle attack or session compromise.
+            Review session security and TLS configuration.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: High backup code usage
+      - alert: HighBackupCodeConsumption
+        expr: |
+          rate(meepleai_2fa_successful_backup_total[1h]) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "Elevated backup code usage detected"
+          description: |
+            Backup code usage: {{ $value | humanize }} uses/sec.
+            Users may be losing access to TOTP apps or experiencing device issues.
+            Monitor for users running out of backup codes.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-backup-codes"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_info_alerts
+    interval: 5m
+    rules:
+      # INFO: 2FA adoption declining
+      - alert: Declining2FAAdoption
+        expr: |
+          increase(meepleai_2fa_disable_total[1h]) > increase(meepleai_2fa_enable_total[1h])
+        for: 6h
+        labels:
+          severity: info
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA adoption is declining"
+          description: |
+            More users disabling 2FA than enabling over 6 hours.
+            Investigate user friction points and UX issues.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-adoption"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
       # WARNING: Low-quality rate elevated (> 15% for 30 minutes)
       - alert: ElevatedLowQualityRate
         expr: |
@@ -464,3 +1706,210 @@ groups:
             Review recent changes and monitor for escalation.
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+  # ========================================
+  # 2FA Security Alert Rules (SEC-08)
+  # Issue #1788: Enhanced Security Monitoring
+  # ========================================
+
+  - name: meepleai_2fa_security_recording_rules
+    interval: 15s
+    rules:
+      # 2FA failure rate (failures per second)
+      - record: meepleai:2fa:failure_rate:5m
+        expr: |
+          rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+          rate(meepleai_2fa_failed_backup_attempts_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+      # 2FA success rate percentage
+      - record: meepleai:2fa:success_rate:5m
+        expr: |
+          100 * (
+            sum(rate(meepleai_2fa_successful_totp_total[5m]) + rate(meepleai_2fa_successful_backup_total[5m]))
+            /
+            sum(
+              rate(meepleai_2fa_successful_totp_total[5m]) +
+              rate(meepleai_2fa_successful_backup_total[5m]) +
+              rate(meepleai_2fa_failed_totp_attempts_total[5m]) +
+              rate(meepleai_2fa_failed_backup_attempts_total[5m])
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: security
+
+      # Replay attack rate
+      - record: meepleai:2fa:replay_attacks:5m
+        expr: |
+          rate(meepleai_2fa_replay_attacks_blocked_total[5m])
+        labels:
+          service: meepleai-api
+          category: security
+
+  - name: meepleai_2fa_security_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: High rate of failed 2FA attempts (> 10/min sustained)
+      - alert: High2FAFailureRate
+        expr: |
+          meepleai:2fa:failure_rate:5m > 0.167
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: brute_force
+        annotations:
+          summary: "High rate of failed 2FA attempts detected"
+          description: |
+            2FA failure rate is {{ $value | humanize }} failures/sec (threshold: 0.167/sec = 10/min).
+            This indicates a potential brute force attack on user accounts.
+            Verify account lockout mechanisms and consider IP blocking.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-brute-force"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Replay attack detected
+      - alert: TotpReplayAttackDetected
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[1m]) > 0
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "TOTP replay attack blocked"
+          description: |
+            {{ $value }} replay attack(s) blocked in the last minute.
+            Attacker attempted to reuse a valid TOTP code within the 60-second window.
+            This is a sophisticated attack indicating compromised credentials or session hijacking.
+            Review audit logs and consider forcing password reset for affected users.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: Distributed brute force attack (multiple users targeted)
+      - alert: Distributed2FABruteForce
+        expr: |
+          count(
+            sum by (user_id) (
+              increase(meepleai_2fa_failed_totp_attempts_total[5m]) > 5
+            )
+          ) > 3
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+          attack_type: distributed_brute_force
+        annotations:
+          summary: "Distributed brute force attack on 2FA detected"
+          description: |
+            {{ $value }} user accounts experiencing simultaneous failed 2FA attempts.
+            This indicates a coordinated attack, possibly from a botnet or distributed attacker.
+            Consider implementing IP rate limiting or temporary 2FA endpoint restrictions.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-distributed-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # CRITICAL: 2FA success rate critically low
+      - alert: Low2FASuccessRate
+        expr: |
+          meepleai:2fa:success_rate:5m < 50
+        for: 5m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA success rate is critically low"
+          description: |
+            2FA success rate is {{ $value | humanizePercentage }} (threshold: 50%).
+            More than half of 2FA attempts are failing.
+            Check for attacks, TOTP time sync issues, or UX problems.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-low-success"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Elevated failed attempts for single user
+      - alert: ElevatedUserFailedAttempts
+        expr: |
+          sum by (user_id) (
+            increase(
+              meepleai_2fa_failed_totp_attempts_total[10m] +
+              meepleai_2fa_failed_backup_attempts_total[10m]
+            )
+          ) > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: targeted
+        annotations:
+          summary: "User experiencing multiple failed 2FA attempts"
+          description: |
+            User {{ $labels.user_id }} has {{ $value }} failed attempts in 10 minutes.
+            May indicate targeted attack or user lost TOTP device.
+            Monitor for escalation and consider user notification.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-user-lockout"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: Multiple replay attacks in short period
+      - alert: MultipleReplayAttacks
+        expr: |
+          increase(meepleai_2fa_replay_attacks_blocked_total[5m]) > 2
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+          attack_type: replay
+        annotations:
+          summary: "Multiple TOTP replay attacks detected"
+          description: |
+            {{ $value }} replay attacks blocked in 5 minutes.
+            Indicates possible man-in-the-middle attack or session compromise.
+            Review session security and TLS configuration.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-replay-attack"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+      # WARNING: High backup code usage
+      - alert: HighBackupCodeConsumption
+        expr: |
+          rate(meepleai_2fa_successful_backup_total[1h]) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "Elevated backup code usage detected"
+          description: |
+            Backup code usage: {{ $value | humanize }} uses/sec.
+            Users may be losing access to TOTP apps or experiencing device issues.
+            Monitor for users running out of backup codes.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-backup-codes"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"
+
+  - name: meepleai_2fa_security_info_alerts
+    interval: 5m
+    rules:
+      # INFO: 2FA adoption declining
+      - alert: Declining2FAAdoption
+        expr: |
+          increase(meepleai_2fa_disable_total[1h]) > increase(meepleai_2fa_enable_total[1h])
+        for: 6h
+        labels:
+          severity: info
+          service: meepleai-api
+          category: security
+        annotations:
+          summary: "2FA adoption is declining"
+          description: |
+            More users disabling 2FA than enabling over 6 hours.
+            Investigate user friction points and UX issues.
+          runbook_url: "https://docs.meepleai.dev/runbooks/2fa-adoption"
+          dashboard_url: "http://localhost:3001/d/2fa-security-monitoring"

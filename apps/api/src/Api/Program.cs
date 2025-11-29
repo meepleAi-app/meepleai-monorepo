@@ -152,6 +152,9 @@ builder.Services.AddInfrastructureServices(builder.Configuration, builder.Enviro
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
+// SEC-07: Issue #1787 - TOTP Replay Attack Prevention Background Cleanup
+builder.Services.AddHostedService<Api.Infrastructure.BackgroundTasks.UsedTotpCodeCleanupTask>();
+
 // Issue #1449: FluentValidation for CQRS pipeline
 builder.Services.AddFluentValidation();
 

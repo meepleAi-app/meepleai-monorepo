@@ -66,6 +66,14 @@ route:
       group_wait: 10s
       repeat_interval: 30m
 
+    # SEC-08: 2FA security alerts (brute force, replay attacks)
+    - match:
+        category: security
+      receiver: '2fa-security-alerts'
+      group_wait: 5s
+      repeat_interval: 15m
+      continue: true  # Also send to default receiver
+
 # Receivers define where to send notifications
 receivers:
   # OPS-07: MeepleAI API webhook receiver (primary)
@@ -144,6 +152,51 @@ receivers:
   # Dependency health alerts
   - name: 'dependency-alerts'
     # Configure notifications here if needed
+
+  # SEC-08: 2FA Security alerts - Email + Slack notifications
+  - name: '2fa-security-alerts'
+    email_configs:
+      - to: 'security@meepleai.dev,badsworm@gmail.com'
+        headers:
+          Subject: '🔐 [{{ .GroupLabels.severity | toUpper }}] 2FA Security Alert - {{ .GroupLabels.alertname }}'
+        html: |
+          <h2 style="color: {{ if eq .GroupLabels.severity "critical" }}#d93025{{ else }}#ea8600{{ end }};">
+            🔐 2FA SECURITY ALERT
+          </h2>
+          <h3>{{ .GroupLabels.alertname }}</h3>
+          {{ range .Alerts }}
+          <div style="border-left: 4px solid {{ if eq .Labels.severity "critical" }}#d93025{{ else }}#ea8600{{ end }}; padding-left: 12px; margin: 16px 0;">
+            <p><strong>Severity:</strong> {{ .Labels.severity | toUpper }}</p>
+            <p><strong>Attack Type:</strong> {{ .Labels.attack_type }}</p>
+            <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+            <p><strong>Description:</strong></p>
+            <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px;">{{ .Annotations.description }}</pre>
+            <p><strong>Started:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+            {{ if .Annotations.dashboard_url }}
+            <p><a href="{{ .Annotations.dashboard_url }}" style="background: #1a73e8; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Dashboard</a></p>
+            {{ end }}
+            {{ if .Annotations.runbook_url }}
+            <p><a href="{{ .Annotations.runbook_url }}">Incident Runbook</a></p>
+            {{ end }}
+          </div>
+          {{ end }}
+        send_resolved: true
+
+    # SLACK: Enable for Slack notifications (requires SLACK_WEBHOOK_URL env var)
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#security-alerts'
+        username: 'MeepleAI Security'
+        icon_emoji: ':shield:'
+        title: '🔐 {{ .GroupLabels.severity | toUpper }}: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Attack Type*: {{ .Labels.attack_type }}
+          *Summary*: {{ .Annotations.summary }}
+          *Description*: {{ .Annotations.description }}
+          *Dashboard*: {{ .Annotations.dashboard_url }}
+          {{ end }}
+        send_resolved: true
 
 # Inhibition rules - suppress certain alerts when others are firing
 inhibit_rules:

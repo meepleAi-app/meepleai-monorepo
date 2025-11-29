@@ -535,6 +535,7 @@ static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContex
                 Action = "DEMO_USER_CREATED",
                 Resource = "User",
                 ResourceId = demoUser.Id.ToString(),
+                Result = "Success",
                 Details = $"Demo user created: {userData.Email} ({userData.Role})",
                 IpAddress = "system",
                 UserAgent = "bootstrap",

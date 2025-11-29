@@ -1,4 +1,5 @@
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.Authentication;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
@@ -55,6 +56,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AlertEntity> Alerts => Set<AlertEntity>(); // OPS-07
     public DbSet<UserBackupCodeEntity> UserBackupCodes => Set<UserBackupCodeEntity>(); // AUTH-07
     public DbSet<TempSessionEntity> TempSessions => Set<TempSessionEntity>(); // AUTH-07
+    public DbSet<UsedTotpCodeEntity> UsedTotpCodes => Set<UsedTotpCodeEntity>(); // SEC-07: Issue #1787 TOTP Replay Prevention
     public DbSet<LlmCostLogEntity> LlmCostLogs => Set<LlmCostLogEntity>(); // ISSUE-960: BGAI-018
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

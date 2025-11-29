@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.Authentication;
 using Microsoft.EntityFrameworkCore;
 using OtpNet;
 
@@ -126,7 +127,7 @@ public class TotpService : ITotpService
 
         // Decrypt secret and verify code
         var secret = await _encryptionService.DecryptAsync(user.TotpSecretEncrypted, purpose: "TotpSecrets");
-        var isValid = VerifyTotpCode(secret, totpCode);
+        var isValid = VerifyTotpCode(secret, totpCode, out _); // Discard timeStep during setup
 
         if (!isValid)
         {
@@ -149,7 +150,8 @@ public class TotpService : ITotpService
     }
 
     /// <summary>
-    /// Verify TOTP code during login
+    /// Verify TOTP code during login with replay attack prevention
+    /// SECURITY: Issue #1787 - Implements nonce validation (OWASP ASVS 2.8.3)
     /// </summary>
     public async Task<bool> VerifyCodeAsync(Guid userId, string code)
     {
@@ -160,9 +162,25 @@ public class TotpService : ITotpService
             return false;
         }
 
+        // SECURITY: Issue #1787 - Check if code was already used (replay attack prevention)
+        var codeHash = _passwordHashingService.HashSecret(code);
+        var alreadyUsed = await _dbContext.UsedTotpCodes
+            .Where(u => u.UserId == userId &&
+                        u.CodeHash == codeHash &&
+                        u.ExpiresAt > _timeProvider.GetUtcNow().UtcDateTime)
+            .AnyAsync();
+
+        if (alreadyUsed)
+        {
+            _logger.LogWarning("🔴 TOTP replay attack detected for user {UserId}", userId);
+            await _auditService.LogAsync(userId.ToString(), "TotpReplayAttempt", "TwoFactor", userId.ToString(), "Blocked",
+                "Replay attack prevented - code already used");
+            return false;
+        }
+
         // Decrypt secret and verify code
         var secret = await _encryptionService.DecryptAsync(user.TotpSecretEncrypted, purpose: "TotpSecrets");
-        var isValid = VerifyTotpCode(secret, code);
+        var isValid = VerifyTotpCode(secret, code, out long timeStep);
 
         if (!isValid)
         {
@@ -172,7 +190,20 @@ public class TotpService : ITotpService
         }
         else
         {
-            _logger.LogInformation("2FA verify success for user {UserId}", userId);
+            // SECURITY: Issue #1787 - Store used code to prevent replay
+            var expiresAt = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(2); // TTL 2 minutes
+            await _dbContext.UsedTotpCodes.AddAsync(new UsedTotpCodeEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                CodeHash = codeHash,
+                TimeStep = timeStep,
+                UsedAt = _timeProvider.GetUtcNow().UtcDateTime,
+                ExpiresAt = expiresAt
+            });
+            await _dbContext.SaveChangesAsync();
+
+            _logger.LogInformation("2FA verify success for user {UserId}, code stored for replay prevention", userId);
         }
 
         return isValid;
@@ -367,9 +398,11 @@ public class TotpService : ITotpService
 
     /// <summary>
     /// Verify TOTP code with time window (±2 steps = 60 seconds total)
+    /// SECURITY: Issue #1787 - Returns timeStep for nonce tracking
     /// </summary>
-    private bool VerifyTotpCode(string secret, string code)
+    private bool VerifyTotpCode(string secret, string code, out long timeStep)
     {
+        timeStep = 0;
         try
         {
             var secretBytes = Base32Encoding.ToBytes(secret);
@@ -382,6 +415,7 @@ public class TotpService : ITotpService
 
             if (isValid)
             {
+                timeStep = timeStepMatched;
                 _logger.LogDebug("TOTP code verified at time step {TimeStep}", timeStepMatched);
             }
 

@@ -7,7 +7,7 @@
 import type { Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SessionSetupModal } from '@/components/SessionSetupModal';
+import { SessionSetupModal } from '@/components/modals/SessionSetupModal';
 import { api } from '@/lib/api';
 import { mockGame, createMockSession, gameConfigurations } from './SessionSetupModal.test-helpers';
 

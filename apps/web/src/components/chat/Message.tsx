@@ -15,7 +15,7 @@ import { Message as MessageType } from '@/types';
 import { useChatContext } from '@/hooks/useChatContext';
 import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
-import { FollowUpQuestions } from '../FollowUpQuestions';
+import { FollowUpQuestions } from './FollowUpQuestions';
 
 interface MessageProps {
   message: MessageType;

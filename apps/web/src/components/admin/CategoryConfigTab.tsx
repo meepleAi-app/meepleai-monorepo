@@ -5,11 +5,11 @@
  * Used for RateLimiting, AI/LLM, RAG categories.
  */
 
-import { useState, useEffect } from "react";
-import { toast } from "@/components/Toast";
-import { api, SystemConfigurationDto, UpdateConfigurationRequest } from "../../lib/api";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
+import { useState, useEffect } from 'react';
+import { toast } from '@/components/layout/Toast';
+import { api, SystemConfigurationDto, UpdateConfigurationRequest } from '../../lib/api';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
 
 interface CategoryConfigTabProps {
   title: string;
@@ -36,7 +36,7 @@ export default function CategoryConfigTab({
   useEffect(() => {
     // Filter configurations by category
     const filtered = configurations.filter(
-      (c) => c.category === category || c.key.startsWith(`${category}:`)
+      c => c.category === category || c.key.startsWith(`${category}:`)
     );
     setCategoryConfigs(filtered);
   }, [configurations, category]);
@@ -54,13 +54,13 @@ export default function CategoryConfigTab({
 
     // Validation
     if (!editing.value.trim()) {
-      toast.error("Value cannot be empty");
+      toast.error('Value cannot be empty');
       return;
     }
 
     // Destructive change warnings
-    const destructiveKeys = ["ChunkSize", "VectorDimensions", "ChunkOverlap"];
-    const isDestructive = destructiveKeys.some((key) => config.key.includes(key));
+    const destructiveKeys = ['ChunkSize', 'VectorDimensions', 'ChunkOverlap'];
+    const isDestructive = destructiveKeys.some(key => config.key.includes(key));
 
     if (isDestructive && editing.value !== config.value) {
       const confirmed = window.confirm(
@@ -84,7 +84,7 @@ export default function CategoryConfigTab({
       setEditing(null);
       onConfigurationChange();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to update configuration";
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update configuration';
       toast.error(errorMessage);
     } finally {
       setSaving(null);
@@ -101,11 +101,11 @@ export default function CategoryConfigTab({
       });
 
       toast.success(
-        `Configuration '${config.key}' ${config.isActive ? "deactivated" : "activated"}`
+        `Configuration '${config.key}' ${config.isActive ? 'deactivated' : 'activated'}`
       );
       onConfigurationChange();
     } catch (err) {
-      toast.error("Failed to toggle configuration");
+      toast.error('Failed to toggle configuration');
     } finally {
       setSaving(null);
     }
@@ -126,13 +126,11 @@ export default function CategoryConfigTab({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-        {title}
-      </h2>
+      <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">{title}</h2>
 
       {/* Configuration List */}
       <div className="space-y-3">
-        {categoryConfigs.map((config) => {
+        {categoryConfigs.map(config => {
           const isEditing = editing?.id === config.id;
           const isSaving = saving === config.id;
 
@@ -150,13 +148,13 @@ export default function CategoryConfigTab({
                     </h3>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        config.valueType === "string"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                          : config.valueType === "integer" || config.valueType === "int"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : config.valueType === "boolean" || config.valueType === "bool"
-                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                          : "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+                        config.valueType === 'string'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                          : config.valueType === 'integer' || config.valueType === 'int'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : config.valueType === 'boolean' || config.valueType === 'bool'
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                              : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
                       }`}
                     >
                       {config.valueType}
@@ -180,25 +178,15 @@ export default function CategoryConfigTab({
                       <Input
                         type="text"
                         value={editing.value}
-                        onChange={(e) =>
-                          setEditing({ ...editing, value: e.target.value })
-                        }
+                        onChange={e => setEditing({ ...editing, value: e.target.value })}
                         className="flex-1"
                         disabled={isSaving}
                         autoFocus
                       />
-                      <Button
-                        onClick={() => handleSave(config)}
-                        disabled={isSaving}
-                        size="default"
-                      >
-                        {isSaving ? "Saving..." : "Save"}
+                      <Button onClick={() => handleSave(config)} disabled={isSaving} size="default">
+                        {isSaving ? 'Saving...' : 'Save'}
                       </Button>
-                      <Button
-                        onClick={handleCancel}
-                        disabled={isSaving}
-                        variant="outline"
-                      >
+                      <Button onClick={handleCancel} disabled={isSaving} variant="outline">
                         Cancel
                       </Button>
                     </div>
@@ -238,15 +226,11 @@ export default function CategoryConfigTab({
                   <Button
                     onClick={() => handleToggleActive(config)}
                     disabled={isSaving}
-                    variant={config.isActive ? "destructive" : "default"}
+                    variant={config.isActive ? 'destructive' : 'default'}
                     size="sm"
-                    className={
-                      !config.isActive
-                        ? "bg-green-600 hover:bg-green-700 text-white"
-                        : ""
-                    }
+                    className={!config.isActive ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
                   >
-                    {config.isActive ? "Deactivate" : "Activate"}
+                    {config.isActive ? 'Deactivate' : 'Activate'}
                   </Button>
                 </div>
               </div>
@@ -268,7 +252,7 @@ export default function CategoryConfigTab({
 
 function CategoryHelpText({ category }: { category: string }) {
   switch (category) {
-    case "RateLimiting":
+    case 'RateLimiting':
       return (
         <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
           <li>• Configure request limits per minute for different roles</li>
@@ -276,7 +260,7 @@ function CategoryHelpText({ category }: { category: string }) {
           <li>• Changes require server restart to take effect</li>
         </ul>
       );
-    case "AiLlm":
+    case 'AiLlm':
       return (
         <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
           <li>• Temperature (0.0-1.0): Lower = more focused, Higher = more creative</li>
@@ -284,7 +268,7 @@ function CategoryHelpText({ category }: { category: string }) {
           <li>• Model selection: Different models for different use cases</li>
         </ul>
       );
-    case "Rag":
+    case 'Rag':
       return (
         <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
           <li>• TopK: Number of vector search results to retrieve</li>

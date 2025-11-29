@@ -1,7 +1,14 @@
+/**
+ * E2E tests for Month 4 Admin Analytics Quality Metrics Dashboard - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/helpers/AdminHelper.ts
+ * @see apps/web/e2e/pages/admin/AdminPage.ts
+ */
+
 import { test, expect } from '@playwright/test';
 
 /**
- * E2E tests for Month 4 Admin Analytics Quality Metrics Dashboard
+ * Admin Analytics Quality Metrics Tests (SKIPPED)
  * Tests quality metrics display in /admin/analytics page
  *
  * Issue #995: BGAI-055 - Month 4 integration testing

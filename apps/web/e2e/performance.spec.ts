@@ -1,23 +1,7 @@
 /**
- * Performance Testing Suite with Lighthouse CI
+ * Performance E2E Tests - MIGRATED TO POM
  *
- * Tests Core Web Vitals and performance metrics for critical pages:
- * - Homepage (/)
- * - Chat (/chat)
- * - Upload (/upload)
- *
- * Core Web Vitals Targets:
- * - LCP (Largest Contentful Paint) < 2.5s
- * - FID (First Input Delay) < 100ms
- * - CLS (Cumulative Layout Shift) < 0.1
- *
- * Performance Scores:
- * - Performance: >= 85%
- * - Accessibility: >= 95%
- * - Best Practices: >= 90%
- * - SEO: >= 90%
- *
- * @see Issue #842
+ * @see apps/web/e2e/pages/
  */
 
 import { test, expect } from '@playwright/test';

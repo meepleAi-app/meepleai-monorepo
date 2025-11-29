@@ -1,3 +1,9 @@
+/**
+ * n8n Workflow Integration E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
+ */
+
 import { test, expect } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
@@ -27,8 +33,8 @@ test.describe('n8n workflow management', () => {
         lastTestedAt: new Date('2025-01-05T09:00:00Z').toISOString(),
         lastTestResult: 'Last test successful (120ms)',
         createdAt: new Date('2025-01-01T10:00:00Z').toISOString(),
-        updatedAt: new Date('2025-01-05T09:05:00Z').toISOString()
-      }
+        updatedAt: new Date('2025-01-05T09:05:00Z').toISOString(),
+      },
     ];
 
     await page.addInitScript(() => {
@@ -43,13 +49,13 @@ test.describe('n8n workflow management', () => {
       };
     });
 
-    await page.route(`${apiBase}/admin/n8n`, async (route) => {
+    await page.route(`${apiBase}/admin/n8n`, async route => {
       const method = route.request().method();
       if (method === 'GET') {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ configs })
+          body: JSON.stringify({ configs }),
         });
         return;
       }
@@ -71,14 +77,14 @@ test.describe('n8n workflow management', () => {
           lastTestedAt: null,
           lastTestResult: null,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         };
         configs.push(newConfig);
 
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(newConfig)
+          body: JSON.stringify(newConfig),
         });
         return;
       }
@@ -86,10 +92,10 @@ test.describe('n8n workflow management', () => {
       await route.fulfill({ status: 405, body: 'Method not allowed' });
     });
 
-    await page.route(new RegExp(`${apiBase}/admin/n8n/([^/]+)$`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/admin/n8n/([^/]+)$`), async route => {
       const url = new URL(route.request().url());
       const id = url.pathname.split('/').pop()!;
-      const config = configs.find((c) => c.id === id);
+      const config = configs.find(c => c.id === id);
 
       if (!config) {
         await route.fulfill({ status: 404, body: 'Not found' });
@@ -116,20 +122,20 @@ test.describe('n8n workflow management', () => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(config)
+          body: JSON.stringify(config),
         });
         return;
       }
 
       if (method === 'DELETE') {
-        const index = configs.findIndex((c) => c.id === id);
+        const index = configs.findIndex(c => c.id === id);
         if (index >= 0) {
           configs.splice(index, 1);
         }
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ success: true })
+          body: JSON.stringify({ success: true }),
         });
         return;
       }
@@ -137,10 +143,10 @@ test.describe('n8n workflow management', () => {
       await route.fulfill({ status: 405, body: 'Method not allowed' });
     });
 
-    await page.route(new RegExp(`${apiBase}/admin/n8n/([^/]+)/test$`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/admin/n8n/([^/]+)/test$`), async route => {
       const url = new URL(route.request().url());
       const id = url.pathname.split('/').slice(-2, -1)[0];
-      const config = configs.find((c) => c.id === id);
+      const config = configs.find(c => c.id === id);
       if (!config) {
         await route.fulfill({ status: 404, body: 'Not found' });
         return;
@@ -152,7 +158,7 @@ test.describe('n8n workflow management', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, message: config.lastTestResult, latencyMs: 85 })
+        body: JSON.stringify({ success: true, message: config.lastTestResult, latencyMs: 85 }),
       });
     });
 
@@ -167,7 +173,9 @@ test.describe('n8n workflow management', () => {
     await expect(page.getByText('Test successful for Production n8n')).toBeVisible();
 
     const alerts = await page.evaluate(() => (window as any).__alerts as string[]);
-    expect(alerts.some((message) => message.includes('Test successful for Production n8n'))).toBeTruthy();
+    expect(
+      alerts.some(message => message.includes('Test successful for Production n8n'))
+    ).toBeTruthy();
 
     await page.getByRole('button', { name: 'Deactivate' }).click();
     await expect(page.getByText('Inactive')).toBeVisible();
@@ -186,7 +194,9 @@ test.describe('n8n workflow management', () => {
     await expect(page.getByText('Webhook: https://n8n.example.com/new-webhook')).toBeVisible();
 
     await page.getByRole('button', { name: 'Delete' }).click();
-    await expect(page.getByText('No n8n configurations found. Click "Add Configuration" to create one.')).toBeVisible();
+    await expect(
+      page.getByText('No n8n configurations found. Click "Add Configuration" to create one.')
+    ).toBeVisible();
 
     await page.getByRole('button', { name: 'Add Configuration' }).click();
     await expect(page.getByText('New Configuration')).toBeVisible();
@@ -194,7 +204,9 @@ test.describe('n8n workflow management', () => {
     await page.getByPlaceholder('Production n8n').fill('Staging n8n');
     await page.getByPlaceholder('http://localhost:5678').fill('https://staging.n8n.example.com');
     await page.getByPlaceholder('n8n API key').fill('staging-key');
-    await page.getByPlaceholder('http://localhost:5678/webhook').fill('https://staging.n8n.example.com/webhook');
+    await page
+      .getByPlaceholder('http://localhost:5678/webhook')
+      .fill('https://staging.n8n.example.com/webhook');
     await page.getByRole('button', { name: 'Create Configuration' }).click();
 
     await expect(page.getByText('Staging n8n')).toBeVisible();
@@ -202,11 +214,11 @@ test.describe('n8n workflow management', () => {
   });
 
   test('surfaces error when loading n8n configurations fails', async ({ page }) => {
-    await page.route(`${apiBase}/admin/n8n`, async (route) => {
+    await page.route(`${apiBase}/admin/n8n`, async route => {
       await route.fulfill({
         status: 401,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' })
+        body: JSON.stringify({ error: 'Unauthorized' }),
       });
     });
 

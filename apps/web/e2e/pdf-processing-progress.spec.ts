@@ -1,5 +1,8 @@
 /**
- * E2E Test: PDF Processing Progress Tracking (PDF-08)
+ * E2E Test: PDF Processing Progress Tracking (PDF-08) - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/helpers/AuthHelper.ts - mockAuthenticatedSession()
+ * @see apps/web/e2e/pages/helpers/GamesHelper.ts - mockPdfProcessingProgress()
  *
  * Scenario: User uploads a PDF and monitors real-time processing progress
  *
@@ -8,214 +11,48 @@
  * Then: Progress bar advances through steps, shows time estimates, and allows cancellation
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test as base, expect, type Page } from '@playwright/test';
+import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 import { getTextMatcher, t } from './fixtures/i18n';
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+// Extend test with editor authentication
+const test = base.extend<{ editorPage: Page; gameId: string }>({
+  editorPage: async ({ page }, use) => {
+    const authHelper = new AuthHelper(page);
+    const gamesHelper = new GamesHelper(page);
 
-/**
- * Sets up mock authentication routes
- */
-async function setupAuthRoutes(page: Page) {
-  let authenticated = false;
+    // Mock editor authentication
+    await authHelper.mockAuthenticatedSession({
+      ...USER_FIXTURES.user,
+      role: 'Editor' as const,
+    });
 
-  const userResponse = {
-    user: {
-      id: 'test-user-1',
-      email: 'testuser@meepleai.dev',
-      displayName: 'Test User',
-      role: 'Editor'
-    },
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-  };
+    // Mock games list for game selection
+    await gamesHelper.mockGamesList([
+      {
+        id: 'game-1',
+        name: 'Catan',
+        createdAt: new Date().toISOString(),
+      },
+    ]);
 
-  await page.route(`${apiBase}/auth/me`, async (route) => {
-    if (authenticated) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userResponse)
-      });
-    } else {
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' })
-      });
-    }
-  });
-
-  await page.route(`${apiBase}/auth/login`, async (route) => {
-    if (route.request().method() === 'POST') {
-      authenticated = true;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userResponse)
-      });
-    }
-  });
-
-  return { setAuthenticated: (value: boolean) => { authenticated = value; } };
-}
-
-/**
- * Sets up mock games routes
- */
-async function setupGamesRoutes(page: Page) {
-  const games: any[] = [
-    {
-      id: 'game-1',
-      name: 'Catan',
-      description: 'A strategic board game',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ];
-
-  await page.route(`${apiBase}/games`, async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(games)
-      });
-    }
-  });
-
-  return { games };
-}
-
-/**
- * Sets up mock PDF upload and progress routes
- */
-async function setupPdfProgressRoutes(page: Page, gameId: string) {
-  let currentStep = 'Uploading';
-  let percentComplete = 10;
-  let documentId = '';
-  let cancelled = false;
-
-  // Mock PDF upload endpoint
-  await page.route(`${apiBase}/ingest/pdf`, async (route) => {
-    if (route.request().method() === 'POST') {
-      documentId = 'test-doc-123';
-      currentStep = 'Extracting';
-      percentComplete = 20;
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ documentId })
-      });
-    }
-  });
-
-  // Mock PDF processing progress endpoint
-  await page.route(`${apiBase}/pdfs/*/progress`, async (route) => {
-    if (route.request().method() === 'GET') {
-      // Simulate progress advancement
-      const progressSteps: Record<string, { next: string; percent: number; time: number }> = {
-        'Uploading': { next: 'Extracting', percent: 20, time: 120 },
-        'Extracting': { next: 'Chunking', percent: 40, time: 90 },
-        'Chunking': { next: 'Embedding', percent: 60, time: 60 },
-        'Embedding': { next: 'Indexing', percent: 80, time: 30 },
-        'Indexing': { next: 'Completed', percent: 100, time: 0 }
-      };
-
-      if (cancelled) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            currentStep: 'Failed',
-            percentComplete: percentComplete,
-            errorMessage: 'Cancelled by user',
-            updatedAt: new Date().toISOString()
-          })
-        });
-        return;
-      }
-
-      const stepInfo = progressSteps[currentStep];
-      if (stepInfo) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            currentStep,
-            percentComplete,
-            estimatedTimeRemaining: stepInfo.time,
-            updatedAt: new Date().toISOString()
-          })
-        });
-
-        // Auto-advance to next step for next poll
-        currentStep = stepInfo.next;
-        percentComplete = stepInfo.percent;
-      } else {
-        // Completed state
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            currentStep: 'Completed',
-            percentComplete: 100,
-            updatedAt: new Date().toISOString()
-          })
-        });
-      }
-    }
-  });
-
-  // Mock PDF processing cancellation endpoint
-  await page.route(`${apiBase}/pdfs/*/processing`, async (route) => {
-    if (route.request().method() === 'DELETE') {
-      cancelled = true;
-      await route.fulfill({
-        status: 204,
-        contentType: 'application/json'
-      });
-    }
-  });
-
-  // Mock PDF list endpoint
-  await page.route(`${apiBase}/games/${gameId}/pdfs`, async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ pdfs: [] })
-      });
-    }
-  });
-
-  // Mock PDF text endpoint (for old progress polling)
-  await page.route(`${apiBase}/pdfs/*/text`, async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: documentId,
-          fileName: 'test.pdf',
-          processingStatus: 'processing'
-        })
-      });
-    }
-  });
-
-  return { documentId };
-}
+    await use(page);
+  },
+  gameId: async ({ page }, use) => {
+    await use('game-1');
+  },
+});
 
 test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
-  test('should display processing progress with all steps', async ({ page }) => {
-    // Given: Authenticated user with a game
-    const authControl = await setupAuthRoutes(page);
-    const { games } = await setupGamesRoutes(page);
-    const gameId = games[0].id;
-    await setupPdfProgressRoutes(page, gameId);
+  test('should display processing progress with all steps', async ({
+    editorPage: page,
+    gameId,
+  }) => {
+    const gamesHelper = new GamesHelper(page);
 
-    authControl.setAuthenticated(true);
+    // Setup: Mock PDF processing progress with auto-advancing steps
+    await gamesHelper.mockPdfProcessingProgress(gameId);
+
     await page.goto('/upload');
 
     // When: User confirms game and uploads PDF
@@ -233,7 +70,7 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await fileInput.setInputFiles({
       name: 'test-rulebook.pdf',
       mimeType: 'application/pdf',
-      buffer: buffer
+      buffer: buffer,
     });
 
     const uploadButton = page.locator('button[type="submit"]', { hasText: /Upload/i });
@@ -255,13 +92,10 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(page.locator('text=/Status:/i')).toBeVisible();
   });
 
-  test('should show time remaining estimate', async ({ page }) => {
-    // Given: Authenticated user
-    const authControl = await setupAuthRoutes(page);
-    const { games } = await setupGamesRoutes(page);
-    await setupPdfProgressRoutes(page, games[0].id);
+  test('should show time remaining estimate', async ({ editorPage: page, gameId }) => {
+    const gamesHelper = new GamesHelper(page);
+    await gamesHelper.mockPdfProcessingProgress(gameId);
 
-    authControl.setAuthenticated(true);
     await page.goto('/upload');
 
     // When: User uploads PDF
@@ -276,7 +110,7 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await fileInput.setInputFiles({
       name: 'test.pdf',
       mimeType: 'application/pdf',
-      buffer: buffer
+      buffer: buffer,
     });
 
     const uploadButton = page.locator('button[type="submit"]', { hasText: /Upload/i });
@@ -284,17 +118,19 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
 
     // Then: Time remaining should be displayed
     await page.waitForTimeout(1000);
-    await expect(page.locator('text=/estimated time remaining/i')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=/estimated time remaining/i')).toBeVisible({
+      timeout: 10000,
+    });
     await expect(page.locator('text=/min|sec/i')).toBeVisible();
   });
 
-  test('should show cancel button and confirmation dialog', async ({ page }) => {
-    // Given: Authenticated user
-    const authControl = await setupAuthRoutes(page);
-    const { games } = await setupGamesRoutes(page);
-    await setupPdfProgressRoutes(page, games[0].id);
+  test('should show cancel button and confirmation dialog', async ({
+    editorPage: page,
+    gameId,
+  }) => {
+    const gamesHelper = new GamesHelper(page);
+    await gamesHelper.mockPdfProcessingProgress(gameId);
 
-    authControl.setAuthenticated(true);
     await page.goto('/upload');
 
     // When: User uploads PDF
@@ -309,7 +145,7 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await fileInput.setInputFiles({
       name: 'test.pdf',
       mimeType: 'application/pdf',
-      buffer: buffer
+      buffer: buffer,
     });
 
     const uploadButton = page.locator('button[type="submit"]', { hasText: /Upload/i });
@@ -331,13 +167,10 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(page.locator('button', { hasText: /no, continue processing/i })).toBeVisible();
   });
 
-  test('should cancel processing when user confirms', async ({ page }) => {
-    // Given: Authenticated user
-    const authControl = await setupAuthRoutes(page);
-    const { games } = await setupGamesRoutes(page);
-    await setupPdfProgressRoutes(page, games[0].id);
+  test('should cancel processing when user confirms', async ({ editorPage: page, gameId }) => {
+    const gamesHelper = new GamesHelper(page);
+    await gamesHelper.mockPdfProcessingProgress(gameId);
 
-    authControl.setAuthenticated(true);
     await page.goto('/upload');
 
     // When: User uploads PDF
@@ -352,7 +185,7 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await fileInput.setInputFiles({
       name: 'test.pdf',
       mimeType: 'application/pdf',
-      buffer: buffer
+      buffer: buffer,
     });
 
     const uploadButton = page.locator('button[type="submit"]', { hasText: /Upload/i });
@@ -371,13 +204,13 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(page.locator('text=/cancelled by user/i')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should close dialog when user chooses to continue', async ({ page }) => {
-    // Given: Authenticated user
-    const authControl = await setupAuthRoutes(page);
-    const { games } = await setupGamesRoutes(page);
-    await setupPdfProgressRoutes(page, games[0].id);
+  test('should close dialog when user chooses to continue', async ({
+    editorPage: page,
+    gameId,
+  }) => {
+    const gamesHelper = new GamesHelper(page);
+    await gamesHelper.mockPdfProcessingProgress(gameId);
 
-    authControl.setAuthenticated(true);
     await page.goto('/upload');
 
     // When: User uploads PDF
@@ -392,7 +225,7 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await fileInput.setInputFiles({
       name: 'test.pdf',
       mimeType: 'application/pdf',
-      buffer: buffer
+      buffer: buffer,
     });
 
     const uploadButton = page.locator('button[type="submit"]', { hasText: /Upload/i });
@@ -415,13 +248,10 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(cancelButton).toBeVisible();
   });
 
-  test('should update progress percentage', async ({ page }) => {
-    // Given: Authenticated user
-    const authControl = await setupAuthRoutes(page);
-    const { games } = await setupGamesRoutes(page);
-    await setupPdfProgressRoutes(page, games[0].id);
+  test('should update progress percentage', async ({ editorPage: page, gameId }) => {
+    const gamesHelper = new GamesHelper(page);
+    await gamesHelper.mockPdfProcessingProgress(gameId);
 
-    authControl.setAuthenticated(true);
     await page.goto('/upload');
 
     // When: User uploads PDF
@@ -436,7 +266,7 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await fileInput.setInputFiles({
       name: 'test.pdf',
       mimeType: 'application/pdf',
-      buffer: buffer
+      buffer: buffer,
     });
 
     const uploadButton = page.locator('button[type="submit"]', { hasText: /Upload/i });
@@ -448,13 +278,10 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await expect(page.locator('text=/%/i')).toBeVisible();
   });
 
-  test('should have proper accessibility attributes', async ({ page }) => {
-    // Given: Authenticated user
-    const authControl = await setupAuthRoutes(page);
-    const { games } = await setupGamesRoutes(page);
-    await setupPdfProgressRoutes(page, games[0].id);
+  test('should have proper accessibility attributes', async ({ editorPage: page, gameId }) => {
+    const gamesHelper = new GamesHelper(page);
+    await gamesHelper.mockPdfProcessingProgress(gameId);
 
-    authControl.setAuthenticated(true);
     await page.goto('/upload');
 
     // When: User uploads PDF
@@ -469,7 +296,7 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
     await fileInput.setInputFiles({
       name: 'test.pdf',
       mimeType: 'application/pdf',
-      buffer: buffer
+      buffer: buffer,
     });
 
     const uploadButton = page.locator('button[type="submit"]', { hasText: /Upload/i });

@@ -1,15 +1,7 @@
 /**
- * Password Reset E2E Tests (Issue #843 Phase 3)
+ * Auth Password Reset E2E Tests - MIGRATED TO POM
  *
- * Comprehensive testing of password reset functionality using Page Object Model.
- * Covers request reset flow, token validation, and password submission.
- *
- * Test Coverage:
- * - Request Reset Flow (5 tests)
- * - Reset Link Simulation (3 tests)
- * - New Password Submission (5+ tests)
- *
- * Total: 13+ tests
+ * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -46,7 +38,7 @@ async function setupMockLogin(page: Page, email: string): Promise<void> {
     expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   };
 
-  await page.route(`${API_BASE}/api/v1/auth/login`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/login`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -54,7 +46,7 @@ async function setupMockLogin(page: Page, email: string): Promise<void> {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -67,7 +59,7 @@ async function setupMockLogin(page: Page, email: string): Promise<void> {
  * Helper: Setup rate limiting error
  */
 async function setupRateLimitError(page: Page): Promise<void> {
-  await page.route(`${API_BASE}/api/v1/auth/password-reset/request`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/password-reset/request`, async route => {
     await route.fulfill({
       status: 429,
       contentType: 'application/json',
@@ -90,9 +82,7 @@ test.describe('Password Reset - Request Flow', () => {
 
     // Verify page elements
     await expect(page.getByRole('heading', { name: /reset password/i })).toBeVisible();
-    await expect(
-      page.getByText(/enter your email address.*send you instructions/i)
-    ).toBeVisible();
+    await expect(page.getByText(/enter your email address.*send you instructions/i)).toBeVisible();
     await expect(page.getByLabel(/email address/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /send reset instructions/i })).toBeVisible();
   });
@@ -226,13 +216,16 @@ test.describe('Password Reset - New Password Submission', () => {
     clearCapturedEmails();
 
     // Mock /auth/me to return unauthenticated (password reset doesn't require auth)
-    await page.route((url) => url.href.includes('/api/v1/auth/me'), async (route) => {
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' }),
-      });
-    });
+    await page.route(
+      url => url.href.includes('/api/v1/auth/me'),
+      async route => {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Unauthorized' }),
+        });
+      }
+    );
 
     // Setup mocks BEFORE navigation (no need to actually request reset for these tests)
     await setupMockTokenVerification(page, true);
@@ -245,7 +238,9 @@ test.describe('Password Reset - New Password Submission', () => {
     // Wait for page to load and token verification to complete
     // Try multiple selectors as the UI might vary
     try {
-      await expect(page.getByRole('heading', { name: /set new password/i })).toBeVisible({ timeout: 15000 });
+      await expect(page.getByRole('heading', { name: /set new password/i })).toBeVisible({
+        timeout: 15000,
+      });
     } catch (e) {
       // If heading not found, try waiting for form elements as fallback
       await expect(page.getByLabel(/^new password$/i)).toBeVisible({ timeout: 10000 });
@@ -403,13 +398,16 @@ test.describe('Password Reset - Security', () => {
     const token = 'used-token-abcdefghijklmnopqrstuvwxyz123456789';
 
     // Mock /auth/me to return unauthenticated
-    await page.route((url) => url.href.includes('/api/v1/auth/me'), async (route) => {
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' }),
-      });
-    });
+    await page.route(
+      url => url.href.includes('/api/v1/auth/me'),
+      async route => {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Unauthorized' }),
+        });
+      }
+    );
 
     // First use: valid token
     await setupMockTokenVerification(page, true);
@@ -418,7 +416,9 @@ test.describe('Password Reset - Security', () => {
 
     await authPage.gotoPasswordResetWithToken(token);
     // Wait for token verification and form load
-    await expect(page.getByRole('heading', { name: /set new password/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /set new password/i })).toBeVisible({
+      timeout: 10000,
+    });
     await expect(page.getByLabel(/^new password$/i)).toBeVisible({ timeout: 10000 });
 
     // Submit reset (this should mark token as used)
@@ -469,7 +469,7 @@ test.describe('Password Reset - Edge Cases', () => {
 
   test('should handle network errors gracefully', async ({ page }) => {
     // Setup network error (500 Internal Server Error)
-    await page.route(`${API_BASE}/api/v1/auth/password-reset/request`, async (route) => {
+    await page.route(`${API_BASE}/api/v1/auth/password-reset/request`, async route => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -482,10 +482,22 @@ test.describe('Password Reset - Edge Cases', () => {
 
     // Should show error message (check for generic error or API error with increased timeout)
     const errorVisible =
-      (await page.getByText(/failed to send reset email/i).isVisible({ timeout: 5000 }).catch(() => false)) ||
-      (await page.getByText(/internal server error/i).isVisible({ timeout: 5000 }).catch(() => false)) ||
-      (await page.getByText(/something went wrong/i).isVisible({ timeout: 5000 }).catch(() => false)) ||
-      (await page.getByText(/error/i).isVisible({ timeout: 5000 }).catch(() => false));
+      (await page
+        .getByText(/failed to send reset email/i)
+        .isVisible({ timeout: 5000 })
+        .catch(() => false)) ||
+      (await page
+        .getByText(/internal server error/i)
+        .isVisible({ timeout: 5000 })
+        .catch(() => false)) ||
+      (await page
+        .getByText(/something went wrong/i)
+        .isVisible({ timeout: 5000 })
+        .catch(() => false)) ||
+      (await page
+        .getByText(/error/i)
+        .isVisible({ timeout: 5000 })
+        .catch(() => false));
 
     expect(errorVisible).toBeTruthy();
   });

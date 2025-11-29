@@ -1,15 +1,7 @@
 /**
- * Comprehensive 2FA (Two-Factor Authentication) E2E Tests
- * Issue #843 Phase 3 - Critical authentication gap (0% → 90%+ coverage)
+ * Auth 2FA Complete E2E Tests - MIGRATED TO POM
  *
- * Test Coverage:
- * - Setup & Enable Flow (8 tests)
- * - Login with 2FA (7 tests)
- * - Disable 2FA (3 tests)
- * - Error Scenarios (3 tests)
- * - Edge Cases (2 tests)
- *
- * Total: 23 comprehensive tests
+ * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
 import { test, expect } from '@playwright/test';
@@ -57,7 +49,9 @@ test.describe('2FA Setup & Enable Flow', () => {
 
   test('should display 2FA setup page', async () => {
     // Verify 2FA section is visible
-    await expect(authPage.page.getByRole('heading', { name: /two.factor authentication/i })).toBeVisible();
+    await expect(
+      authPage.page.getByRole('heading', { name: /two.factor authentication/i })
+    ).toBeVisible();
 
     // Verify enable button is visible when 2FA is disabled
     await expect(
@@ -65,9 +59,7 @@ test.describe('2FA Setup & Enable Flow', () => {
     ).toBeVisible();
 
     // Verify description text
-    await expect(
-      authPage.page.getByText(/adds an extra layer of security/i)
-    ).toBeVisible();
+    await expect(authPage.page.getByText(/adds an extra layer of security/i)).toBeVisible();
   });
 
   test('should display QR code after clicking enable', async () => {
@@ -189,8 +181,16 @@ test.describe('2FA Setup & Enable Flow', () => {
 
     // Check for error message with more specific selectors
     const hasError =
-      await page.getByRole('alert').filter({ hasText: /invalid|error|failed|incorrect/i }).isVisible({ timeout: 3000 }).catch(() => false) ||
-      await page.getByText(/invalid|error|failed|incorrect/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+      (await page
+        .getByRole('alert')
+        .filter({ hasText: /invalid|error|failed|incorrect/i })
+        .isVisible({ timeout: 3000 })
+        .catch(() => false)) ||
+      (await page
+        .getByText(/invalid|error|failed|incorrect/i)
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false));
 
     expect(hasError).toBe(true);
   });
@@ -242,7 +242,9 @@ test.describe('Login with 2FA', () => {
     await page.goto('/settings');
 
     // Verify main 2FA heading exists (first occurrence)
-    const headings = await authPage.page.getByRole('heading', { name: /two.factor authentication/i }).all();
+    const headings = await authPage.page
+      .getByRole('heading', { name: /two.factor authentication/i })
+      .all();
     expect(headings.length).toBeGreaterThan(0);
     await expect(headings[0]).toBeVisible();
   });
@@ -302,13 +304,19 @@ test.describe('Login with 2FA', () => {
     await expect(page.getByText(/step 2: save backup codes/i)).toBeVisible({ timeout: 15000 });
 
     // Verify warning message about backup codes
-    await expect(page.getByText(/won't be able to see them again/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/won't be able to see them again/i)).toBeVisible({
+      timeout: 10000,
+    });
 
     // Verify download button exists
-    await expect(page.getByRole('button', { name: /download codes/i })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /download codes/i })).toBeVisible({
+      timeout: 5000,
+    });
 
     // Verify "I've saved my codes" button exists
-    await expect(page.getByRole('button', { name: /i've saved my codes/i })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /i've saved my codes/i })).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test('should enforce single-use backup codes', async () => {
@@ -360,7 +368,9 @@ test.describe('Disable 2FA', () => {
 
   test('should disable 2FA with valid credentials', async ({ page }) => {
     // Verify disable section heading exists when 2FA is enabled
-    const disableHeading = page.locator('h3').filter({ hasText: /disable two.factor authentication/i });
+    const disableHeading = page
+      .locator('h3')
+      .filter({ hasText: /disable two.factor authentication/i });
     await expect(disableHeading).toBeVisible({ timeout: 10000 });
 
     // Verify disable form inputs exist (using placeholder text)
@@ -399,9 +409,20 @@ test.describe('Disable 2FA', () => {
 
     // Verify error state (error message or still on enabled state)
     const errorVisible =
-      await page.getByRole('alert').filter({ hasText: /failed|error|invalid/i }).isVisible({ timeout: 3000 }).catch(() => false) ||
-      await page.getByText(/failed|error|invalid/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-    const stillEnabled = await page.getByText(/two.factor authentication is enabled/i).isVisible({ timeout: 3000 }).catch(() => false);
+      (await page
+        .getByRole('alert')
+        .filter({ hasText: /failed|error|invalid/i })
+        .isVisible({ timeout: 3000 })
+        .catch(() => false)) ||
+      (await page
+        .getByText(/failed|error|invalid/i)
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false));
+    const stillEnabled = await page
+      .getByText(/two.factor authentication is enabled/i)
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
 
     // Either error shows or we're still enabled
     expect(errorVisible || stillEnabled).toBe(true);
@@ -421,9 +442,7 @@ test.describe('Disable 2FA', () => {
     await authPage.assert2FADisabled();
 
     // Verify description text for disabled state
-    await expect(
-      authPage.page.getByText(/adds an extra layer of security/i)
-    ).toBeVisible();
+    await expect(authPage.page.getByText(/adds an extra layer of security/i)).toBeVisible();
   });
 });
 
@@ -495,14 +514,10 @@ test.describe('Error Scenarios', () => {
     await authPage.gotoSettings();
 
     // Verify warning message
-    await expect(
-      authPage.page.getByText(/you have only 0 backup codes remaining/i)
-    ).toBeVisible();
+    await expect(authPage.page.getByText(/you have only 0 backup codes remaining/i)).toBeVisible();
 
     // Verify recommendation to regenerate
-    await expect(
-      authPage.page.getByText(/consider disabling and re-enabling/i)
-    ).toBeVisible();
+    await expect(authPage.page.getByText(/consider disabling and re-enabling/i)).toBeVisible();
   });
 });
 

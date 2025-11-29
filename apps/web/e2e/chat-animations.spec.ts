@@ -1,17 +1,7 @@
 /**
- * E2E Tests for Chat Loading States and Animations (CHAT-04)
+ * Chat Loading States and Animations E2E Tests (CHAT-04) - MIGRATED TO POM
  *
- * Tests comprehensive animation and loading state behaviors including:
- * - Skeleton loaders for all variants (games, agents, chat history, messages)
- * - Typing indicators during AI response generation
- * - Message direction animations (slide from left/right)
- * - Message list stagger animations
- * - Loading button states (send and new chat buttons)
- * - Smooth scroll to latest message
- * - Reduced motion accessibility compliance
- * - Animation performance validation
- *
- * @module e2e/chat-animations
+ * @see apps/web/e2e/pages/
  */
 
 import { test, expect, Page, BrowserContext, Route } from '@playwright/test';
@@ -23,7 +13,7 @@ import { getTextMatcher, t } from './fixtures/i18n';
  */
 async function navigateToChat(page: Page): Promise<void> {
   await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('networkidle');
   await page.waitForLoadState('networkidle');
 }
 
@@ -48,7 +38,7 @@ async function sendMessage(page: Page, message: string): Promise<void> {
  */
 async function measureFPS(page: Page, durationMs: number = 1000): Promise<number> {
   const result = await page.evaluate((duration: number) => {
-    return new Promise<number>((resolve) => {
+    return new Promise<number>(resolve => {
       const frameTimestamps: number[] = [];
       const startTime = performance.now();
       let animationFrameId: number;
@@ -74,8 +64,7 @@ async function measureFPS(page: Page, durationMs: number = 1000): Promise<number
 }
 
 test.describe('Chat Loading States and Animations (CHAT-04)', () => {
-  test.beforeEach(async ({ page }) => {
-      });
+  test.beforeEach(async ({ page }) => {});
 
   /**
    * Test 1: Skeleton loaders on initial page load
@@ -154,7 +143,10 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
     // Select a game to trigger agent loading
     const gameSelect = page.locator('#gameSelect');
-    const firstGameValue = await gameSelect.locator('option:not([value=""])').first().getAttribute('value');
+    const firstGameValue = await gameSelect
+      .locator('option:not([value=""])')
+      .first()
+      .getAttribute('value');
     if (firstGameValue) {
       await gameSelect.selectOption(firstGameValue);
 
@@ -163,7 +155,9 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await expect(agentsSkeleton).toBeVisible({ timeout: 1000 });
 
       // Wait for agents to load
-      await expect(page.locator('#agentSelect option:not([value=""])')).toHaveCount(1, { timeout: 5000 });
+      await expect(page.locator('#agentSelect option:not([value=""])')).toHaveCount(1, {
+        timeout: 5000,
+      });
       await expect(agentsSkeleton).not.toBeVisible({ timeout: 5000 });
     }
   });
@@ -274,7 +268,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
     });
 
     // Send a message
-    if (await page.locator('button[type="submit"]').isEnabled().catch(() => false)) {
+    if (
+      await page
+        .locator('button[type="submit"]')
+        .isEnabled()
+        .catch(() => false)
+    ) {
       await sendMessage(page, 'Show typing indicator test');
 
       // Wait a bit for streaming to start
@@ -282,7 +281,9 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
       // Verify typing indicator is visible
       // The indicator shows when isStreaming && !currentAnswer
-      const typingIndicator = page.locator('[aria-label*="is typing"], [aria-label*="sta scrivendo"]');
+      const typingIndicator = page.locator(
+        '[aria-label*="is typing"], [aria-label*="sta scrivendo"]'
+      );
       const hasTypingIndicator = await typingIndicator.isVisible().catch(() => false);
 
       // Also check for the "Sto pensando..." fallback state
@@ -325,7 +326,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       });
     });
 
-    if (await page.locator('button[type="submit"]').isEnabled().catch(() => false)) {
+    if (
+      await page
+        .locator('button[type="submit"]')
+        .isEnabled()
+        .catch(() => false)
+    ) {
       await sendMessage(page, 'Test user message animation');
 
       // Wait for user message to appear
@@ -341,11 +347,15 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       expect(hasMessageId).toBeTruthy();
 
       // Verify animation complete attribute eventually appears
-      await expect(messageContainer).toHaveAttribute('data-animation-complete', 'true', { timeout: 2000 });
+      await expect(messageContainer).toHaveAttribute('data-animation-complete', 'true', {
+        timeout: 2000,
+      });
 
       // Verify message is right-aligned (user messages)
       const parentLi = userMessage.locator('xpath=ancestor::li').first();
-      const alignItems = await parentLi.evaluate((el: HTMLElement) => window.getComputedStyle(el).alignItems);
+      const alignItems = await parentLi.evaluate(
+        (el: HTMLElement) => window.getComputedStyle(el).alignItems
+      );
       expect(alignItems).toBe('flex-end');
     }
   });
@@ -375,7 +385,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       });
     });
 
-    if (await page.locator('button[type="submit"]').isEnabled().catch(() => false)) {
+    if (
+      await page
+        .locator('button[type="submit"]')
+        .isEnabled()
+        .catch(() => false)
+    ) {
       await sendMessage(page, 'Trigger AI response');
 
       // Wait for AI response to complete
@@ -392,7 +407,9 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
       // Verify message is left-aligned (AI messages)
       const parentLi = aiMessage.locator('xpath=ancestor::li').first();
-      const alignItems = await parentLi.evaluate((el: HTMLElement) => window.getComputedStyle(el).alignItems);
+      const alignItems = await parentLi.evaluate(
+        (el: HTMLElement) => window.getComputedStyle(el).alignItems
+      );
       expect(alignItems).toBe('flex-start');
     }
   });
@@ -418,7 +435,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       });
     });
 
-    if (await page.locator('button[type="submit"]').isEnabled().catch(() => false)) {
+    if (
+      await page
+        .locator('button[type="submit"]')
+        .isEnabled()
+        .catch(() => false)
+    ) {
       // Send multiple messages to create history
       for (let i = 1; i <= 3; i++) {
         await sendMessage(page, `Message ${i}`);
@@ -443,7 +465,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
             for (let i = 0; i < Math.min(count, 3); i++) {
               const message = animatedMessages.nth(i);
               await expect(message).toHaveAttribute('data-animation-complete', 'true', {
-                timeout: (i * 50) + 500, // Stagger delay: index * 50ms + 300ms animation
+                timeout: i * 50 + 500, // Stagger delay: index * 50ms + 300ms animation
               });
             }
           }
@@ -473,7 +495,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       });
     });
 
-    if (await page.locator('button[type="submit"]').isEnabled().catch(() => false)) {
+    if (
+      await page
+        .locator('button[type="submit"]')
+        .isEnabled()
+        .catch(() => false)
+    ) {
       await page.fill('#message-input', 'Test loading button');
 
       // Click send button
@@ -485,7 +512,10 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await expect(sendButton).toBeDisabled({ timeout: 500 });
 
       // Verify loading text appears
-      const hasLoadingText = await sendButton.locator('text=Invio...').isVisible().catch(() => false);
+      const hasLoadingText = await sendButton
+        .locator('text=Invio...')
+        .isVisible()
+        .catch(() => false);
       expect(hasLoadingText).toBe(true);
 
       // Verify spinner appears
@@ -528,7 +558,10 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await expect(newChatButton).toBeDisabled({ timeout: 500 });
 
       // Verify loading text appears
-      const hasLoadingText = await newChatButton.locator('text=Creazione...').isVisible().catch(() => false);
+      const hasLoadingText = await newChatButton
+        .locator('text=Creazione...')
+        .isVisible()
+        .catch(() => false);
       expect(hasLoadingText).toBe(true);
 
       // Verify spinner appears
@@ -564,7 +597,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       });
     });
 
-    if (await page.locator('button[type="submit"]').isEnabled().catch(() => false)) {
+    if (
+      await page
+        .locator('button[type="submit"]')
+        .isEnabled()
+        .catch(() => false)
+    ) {
       // Send multiple messages to create scrollable content
       for (let i = 1; i <= 5; i++) {
         await sendMessage(page, `Message ${i} with some additional content to make it longer`);
@@ -633,14 +671,21 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       expect(hasPulse).toBe(false);
     }
 
-    if (await page.locator('button[type="submit"]').isEnabled().catch(() => false)) {
+    if (
+      await page
+        .locator('button[type="submit"]')
+        .isEnabled()
+        .catch(() => false)
+    ) {
       await sendMessage(page, 'Test reduced motion');
 
       // Wait for typing indicator
       await page.waitForTimeout(300);
 
       // Verify typing indicator dots don't have animation
-      const typingIndicator = page.locator('[aria-label*="is typing"], [aria-label*="sta scrivendo"]');
+      const typingIndicator = page.locator(
+        '[aria-label*="is typing"], [aria-label*="sta scrivendo"]'
+      );
       if (await typingIndicator.isVisible().catch(() => false)) {
         const dots = typingIndicator.locator('span[class*="rounded-full"]');
         const firstDot = dots.first();
@@ -667,7 +712,9 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
         const messageContainer = message.locator('xpath=ancestor::div[@data-message-id]').first();
 
         // Animation should complete immediately
-        await expect(messageContainer).toHaveAttribute('data-animation-complete', 'true', { timeout: 100 });
+        await expect(messageContainer).toHaveAttribute('data-animation-complete', 'true', {
+          timeout: 100,
+        });
       }
     }
   });
@@ -692,7 +739,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       });
     });
 
-    if (await page.locator('button[type="submit"]').isEnabled().catch(() => false)) {
+    if (
+      await page
+        .locator('button[type="submit"]')
+        .isEnabled()
+        .catch(() => false)
+    ) {
       // Start FPS measurement
       const fpsPromise = measureFPS(page, 2000);
 
@@ -775,7 +827,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       });
     });
 
-    if (await page.locator('button[type="submit"]').isEnabled().catch(() => false)) {
+    if (
+      await page
+        .locator('button[type="submit"]')
+        .isEnabled()
+        .catch(() => false)
+    ) {
       await sendMessage(page, 'Long streaming test');
 
       // Wait for streaming to start

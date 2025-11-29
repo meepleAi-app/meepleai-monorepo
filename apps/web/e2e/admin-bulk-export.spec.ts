@@ -1,5 +1,5 @@
 /**
- * Bulk Export RuleSpecs E2E Tests (Issue #843 Phase 4)
+ * Bulk Export RuleSpecs E2E Tests (Issue #843 Phase 4) - MIGRATED TO POM
  *
  * Tests admin bulk export functionality for RuleSpecs including:
  * - Navigate to bulk export page
@@ -14,16 +14,20 @@
  * - Network error handling
  *
  * Coverage Target: 12+ tests, 75%+ pass rate
+ *
+ * @see apps/web/e2e/pages/helpers/AdminHelper.ts
  */
 
 import { test as base, expect, Page, Route } from '@playwright/test';
-import { loginAsAdmin } from './fixtures/auth';
+import { AdminHelper } from './pages';
 import { BulkExportPage } from './pages/admin/AdminPage';
 
 const test = base.extend<{ adminPage: Page }>({
   adminPage: async ({ page }: { page: Page }, use: (page: Page) => Promise<void>) => {
-    // Set up auth mocks first
-    await loginAsAdmin(page, true);
+    const adminHelper = new AdminHelper(page);
+
+    // Set up admin auth with mocks (skip navigation)
+    await adminHelper.setupAdminAuth(true);
 
     // Mock games endpoint
     await page.route('**/api/v1/games', async (route: Route) => {

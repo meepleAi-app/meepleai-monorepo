@@ -1,5 +1,7 @@
 /**
- * E2E Tests - Complete Citation Journey (FAST - Mocked APIs)
+ * E2E Tests - Complete Citation Journey (FAST - Mocked APIs) - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
  *
  * Issue #1018: [BGAI-080] End-to-end testing (question → PDF citation)
  *

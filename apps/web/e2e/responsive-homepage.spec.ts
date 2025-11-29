@@ -1,3 +1,10 @@
+/**
+ * Simplified Responsive Tests - HomePage Only (No Auth Required) - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/helpers/responsive-utils.ts - Viewport utilities
+ * @see apps/web/e2e/pages/home/HomePage.ts
+ */
+
 import { test, expect } from '@playwright/test';
 import {
   getViewportInfo,
@@ -9,7 +16,7 @@ import {
 } from './helpers/responsive-utils';
 
 /**
- * Simplified Responsive Tests - HomePage Only (No Auth Required)
+ * HomePage Responsive Design Tests
  * Issue #993 - [P1] [BGAI-052] Responsive design testing (320px-1920px)
  *
  * Tests responsive behavior on public HomePage across:

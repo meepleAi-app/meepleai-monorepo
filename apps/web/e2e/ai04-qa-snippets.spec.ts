@@ -1,3 +1,9 @@
+/**
+ * AI04 QA Snippets E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/helpers/qa-test-utils.ts
+ */
+
 import { test, expect, Page } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 import { waitForAutoSelection } from './helpers/qa-test-utils';

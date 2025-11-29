@@ -1,11 +1,7 @@
 /**
- * E2E Tests - PDF Viewer Modal (BGAI-076)
+ * PDF Viewer Modal E2E Tests - MIGRATED TO POM
  *
- * Tests for PDF viewer modal functionality including:
- * - Citation click-to-jump PDF viewer (BGAI-074)
- * - Modal rendering and controls
- * - Page navigation and zoom
- * - Keyboard shortcuts
+ * @see apps/web/e2e/pages/
  */
 
 import { test, expect } from '@playwright/test';

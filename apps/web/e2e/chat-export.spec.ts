@@ -11,14 +11,22 @@
  * Coverage Target: 10+ tests, 70%+ pass rate
  */
 
+/**
+ * Chat Export E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
+
 import { test as base, expect, Page, Route } from '@playwright/test';
-import { loginAsUser } from './fixtures/auth';
+import { AuthHelper, USER_FIXTURES } from './pages';
 import { ChatPage } from './pages/chat/ChatPage';
 
 const test = base.extend<{ chatPage: Page }>({
   chatPage: async ({ page }: { page: Page }, use: (page: Page) => Promise<void>) => {
-    // Set up auth mocks first
-    await loginAsUser(page, true);
+    const authHelper = new AuthHelper(page);
+
+    // Set up auth using AuthHelper
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.user);
 
     // Mock chat API endpoints
     await page.route('**/api/v1/chats*', async (route: Route) => {

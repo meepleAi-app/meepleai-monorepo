@@ -1,3 +1,9 @@
+/**
+ * Home Page E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/home/HomePage.ts
+ */
+
 import { test } from '@playwright/test';
 import { HomePage } from './pages/home/HomePage';
 

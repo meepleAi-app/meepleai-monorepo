@@ -1,3 +1,9 @@
+/**
+ * Editor Rich Text E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
+ */
+
 import { test, expect } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 

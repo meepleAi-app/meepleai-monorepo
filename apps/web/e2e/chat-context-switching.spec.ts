@@ -1,5 +1,19 @@
-import { test, expect } from './fixtures/auth';
-import { getTextMatcher, t } from './fixtures/i18n';
+/**
+ * CHAT-03: Multi-document context switching - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
+
+import { test as base, expect, Page } from '@playwright/test';
+import { AuthHelper, USER_FIXTURES } from './pages';
+
+const test = base.extend<{ userPage: Page }>({
+  userPage: async ({ page }, use) => {
+    const authHelper = new AuthHelper(page);
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.user);
+    await use(page);
+  },
+});
 
 /**
  * CHAT-03: Multi-document context switching in chat interface
@@ -31,11 +45,16 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
    *   Then Chess conversation history is restored
    *   And Checkers history is preserved when switching back
    */
-  test('preserves conversation history when switching between games', async ({ userPage: page }) => {
+  test('preserves conversation history when switching between games', async ({
+    userPage: page,
+  }) => {
     // Step 1: Select Chess game
     const gameSelector = page.locator('#gameSelect');
     // Get the option by text and select by value
-    const chessOption = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessOption = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /chess/i })
+      .first();
     const chessValue = await chessOption.getAttribute('value');
     if (chessValue) {
       await gameSelector.selectOption(chessValue);
@@ -60,12 +79,17 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await sendButton.click({ force: true });
 
     // Wait for user message to appear
-    await expect(page.locator('.message, [role="log"] li').filter({ hasText: 'castling' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.locator('.message, [role="log"] li').filter({ hasText: 'castling' }).first()
+    ).toBeVisible({ timeout: 15000 });
 
     // Note: We're testing the UI, not waiting for AI response (which may be slow/unavailable in tests)
 
     // Step 3: Switch to Checkers game
-    const checkersOption = await page.locator('#gameSelect option').filter({ hasText: /checkers|tic.tac.toe/i }).first();
+    const checkersOption = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /checkers|tic.tac.toe/i })
+      .first();
     const checkersValue = await checkersOption.getAttribute('value');
     if (checkersValue) {
       await gameSelector.selectOption(checkersValue);
@@ -88,10 +112,15 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await sendButton.click({ force: true });
 
     // Wait for backwards message to appear
-    await expect(page.locator('.message, [role="log"] li').filter({ hasText: 'backwards' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.locator('.message, [role="log"] li').filter({ hasText: 'backwards' }).first()
+    ).toBeVisible({ timeout: 15000 });
 
     // Step 5: Switch back to Chess
-    const chessOption2 = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessOption2 = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /chess/i })
+      .first();
     const chessValue2 = await chessOption2.getAttribute('value');
     if (chessValue2) {
       await gameSelector.selectOption(chessValue2);
@@ -104,14 +133,19 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await expect(contextBadge).toContainText(/chess/i);
 
     // Step 6: Verify Chess conversation history is restored
-    await expect(page.locator('.message, [role="log"] li').filter({ hasText: 'castling' }).first()).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator('.message, [role="log"] li').filter({ hasText: 'castling' }).first()
+    ).toBeVisible({ timeout: 10000 });
 
     // Verify Checkers message is NOT visible (we're back on Chess)
     const checkersMessages = messagesArea.locator('text=backwards');
     await expect(checkersMessages).not.toBeVisible();
 
     // Step 7: Switch back to Checkers/Tic-Tac-Toe to verify its history was preserved
-    const checkersOption2 = await page.locator('#gameSelect option').filter({ hasText: /checkers|tic.tac.toe/i }).first();
+    const checkersOption2 = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /checkers|tic.tac.toe/i })
+      .first();
     const checkersValue2 = await checkersOption2.getAttribute('value');
     if (checkersValue2) {
       await gameSelector.selectOption(checkersValue2);
@@ -121,7 +155,9 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await page.waitForTimeout(500);
 
     // Verify Checkers history is still there
-    await expect(page.locator('.message, [role="log"] li').filter({ hasText: 'backwards' }).first()).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator('.message, [role="log"] li').filter({ hasText: 'backwards' }).first()
+    ).toBeVisible({ timeout: 10000 });
 
     // Verify Chess message is NOT visible
     const chessMessagesAgain = messagesArea.locator('text=castling');
@@ -143,7 +179,10 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     // (depending on implementation)
 
     // Select Chess
-    const chessOption = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessOption = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /chess/i })
+      .first();
     const chessValue = await chessOption.getAttribute('value');
     if (chessValue) {
       await gameSelector.selectOption(chessValue);
@@ -155,7 +194,10 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await expect(contextBadge).toContainText(/chess/i);
 
     // Switch to another game
-    const ticTacToeOption = await page.locator('#gameSelect option').filter({ hasText: /tic.tac.toe/i }).first();
+    const ticTacToeOption = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /tic.tac.toe/i })
+      .first();
     const ticTacToeValue = await ticTacToeOption.getAttribute('value');
     if (ticTacToeValue) {
       await gameSelector.selectOption(ticTacToeValue);
@@ -177,7 +219,10 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     const gameSelector = page.locator('#gameSelect');
 
     // Select Chess and create a chat
-    const chessOption = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessOption = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /chess/i })
+      .first();
     const chessValue = await chessOption.getAttribute('value');
     if (chessValue) {
       await gameSelector.selectOption(chessValue);
@@ -188,17 +233,26 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await agentSelector.selectOption({ index: 1 });
 
     // Create new chat button
-    const newChatButton = page.locator('button:has-text("Nuova Chat"), button[aria-label="Create new chat"]');
+    const newChatButton = page.locator(
+      'button:has-text("Nuova Chat"), button[aria-label="Create new chat"]'
+    );
     await newChatButton.click({ force: true });
 
     // Wait for chat to be created and appear in sidebar
-    await page.waitForSelector('[role="list"] [role="button"], nav[aria-label="Chat history"] li', { timeout: 5000 });
+    await page.waitForSelector('[role="list"] [role="button"], nav[aria-label="Chat history"] li', {
+      timeout: 5000,
+    });
 
     // Count chats in sidebar
-    const chessChats = await page.locator('[role="list"] [role="button"], nav[aria-label="Chat history"] li').count();
+    const chessChats = await page
+      .locator('[role="list"] [role="button"], nav[aria-label="Chat history"] li')
+      .count();
 
     // Switch to different game
-    const ticTacToeOption = await page.locator('#gameSelect option').filter({ hasText: /tic.tac.toe/i }).first();
+    const ticTacToeOption = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /tic.tac.toe/i })
+      .first();
     const ticTacToeValue = await ticTacToeOption.getAttribute('value');
     if (ticTacToeValue) {
       await gameSelector.selectOption(ticTacToeValue);
@@ -206,7 +260,9 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await page.waitForTimeout(500);
 
     // Chat list should be different (either empty or different chats)
-    const ticTacToeChats = await page.locator('[role="list"] [role="button"], nav[aria-label="Chat history"] li').count();
+    const ticTacToeChats = await page
+      .locator('[role="list"] [role="button"], nav[aria-label="Chat history"] li')
+      .count();
 
     // They should be different unless user has chats for both games
     // In fresh test environment, Tic-Tac-Toe should have 0 chats
@@ -228,7 +284,10 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
 
     // Setup: Create conversations in two games
     // Game 1: Chess
-    const chessOption = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessOption = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /chess/i })
+      .first();
     const chessValue = await chessOption.getAttribute('value');
     if (chessValue) {
       await gameSelector.selectOption(chessValue);
@@ -242,7 +301,10 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await page.waitForTimeout(1000);
 
     // Game 2: Tic-Tac-Toe
-    const ticTacToeOption = await page.locator('#gameSelect option').filter({ hasText: /tic.tac.toe/i }).first();
+    const ticTacToeOption = await page
+      .locator('#gameSelect option')
+      .filter({ hasText: /tic.tac.toe/i })
+      .first();
     const ticTacToeValue = await ticTacToeOption.getAttribute('value');
     if (ticTacToeValue) {
       await gameSelector.selectOption(ticTacToeValue);
@@ -257,7 +319,10 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     // Rapid switching test
     for (let i = 0; i < 3; i++) {
       // Switch to Chess
-      const chessOption2 = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+      const chessOption2 = await page
+        .locator('#gameSelect option')
+        .filter({ hasText: /chess/i })
+        .first();
       const chessValue2 = await chessOption2.getAttribute('value');
       if (chessValue2) {
         await gameSelector.selectOption(chessValue2);
@@ -271,7 +336,10 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
       await expect(messagesArea.locator('text=Tic-Tac-Toe question 1')).not.toBeVisible();
 
       // Switch to Tic-Tac-Toe
-      const ticTacToeOption2 = await page.locator('#gameSelect option').filter({ hasText: /tic.tac.toe/i }).first();
+      const ticTacToeOption2 = await page
+        .locator('#gameSelect option')
+        .filter({ hasText: /tic.tac.toe/i })
+        .first();
       const ticTacToeValue2 = await ticTacToeOption2.getAttribute('value');
       if (ticTacToeValue2) {
         await gameSelector.selectOption(ticTacToeValue2);

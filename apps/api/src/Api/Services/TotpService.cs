@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Authentication;
+using Api.Observability;
 using Microsoft.EntityFrameworkCore;
 using OtpNet;
 
@@ -99,6 +100,9 @@ public class TotpService : ITotpService
             "User generated 2FA setup");
         _logger.LogInformation("2FA setup generated for user {UserId}", userId);
 
+        // SEC-08: Track 2FA setup operation
+        MeepleAiMetrics.Record2FALifecycle("setup", userId: userId.ToString());
+
         return new TotpSetupResponse
         {
             Secret = secret, // Only shown once during setup
@@ -146,6 +150,9 @@ public class TotpService : ITotpService
             "User enabled 2FA");
         _logger.LogInformation("2FA enabled for user {UserId}", userId);
 
+        // SEC-08: Track 2FA enable operation
+        MeepleAiMetrics.Record2FALifecycle("enable", userId: userId.ToString());
+
         return true;
     }
 
@@ -175,6 +182,10 @@ public class TotpService : ITotpService
             _logger.LogWarning("🔴 TOTP replay attack detected for user {UserId}", userId);
             await _auditService.LogAsync(userId.ToString(), "TotpReplayAttempt", "TwoFactor", userId.ToString(), "Blocked",
                 "Replay attack prevented - code already used");
+
+            // SEC-08: Track replay attack for security monitoring
+            MeepleAiMetrics.Record2FAVerification("totp", success: false, userId: userId.ToString(), isReplayAttack: true);
+
             return false;
         }
 
@@ -187,6 +198,9 @@ public class TotpService : ITotpService
             _logger.LogWarning("2FA verify failed: Invalid TOTP code for user {UserId}", userId);
             await _auditService.LogAsync(userId.ToString(), "TwoFactorVerify", "TwoFactor", userId.ToString(), "Failed",
                 "Failed TOTP code attempt");
+
+            // SEC-08: Track failed TOTP attempt for brute force detection
+            MeepleAiMetrics.Record2FAVerification("totp", success: false, userId: userId.ToString());
         }
         else
         {
@@ -204,6 +218,9 @@ public class TotpService : ITotpService
             await _dbContext.SaveChangesAsync();
 
             _logger.LogInformation("2FA verify success for user {UserId}, code stored for replay prevention", userId);
+
+            // SEC-08: Track successful TOTP verification
+            MeepleAiMetrics.Record2FAVerification("totp", success: true, userId: userId.ToString());
         }
 
         return isValid;
@@ -264,6 +281,9 @@ public class TotpService : ITotpService
                             userId, remainingCodes);
                     }
 
+                    // SEC-08: Track successful backup code use
+                    MeepleAiMetrics.Record2FAVerification("backup_code", success: true, userId: userId.ToString());
+
                     return true;
                 }
             }
@@ -272,6 +292,10 @@ public class TotpService : ITotpService
             _logger.LogWarning("Backup code verify failed: Invalid code for user {UserId}", userId);
             await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
                 "Failed backup code attempt");
+
+            // SEC-08: Track failed backup code attempt
+            MeepleAiMetrics.Record2FAVerification("backup_code", success: false, userId: userId.ToString());
+
             return false;
         }
         catch (DbUpdateException ex)
@@ -347,6 +371,9 @@ public class TotpService : ITotpService
         await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Success",
             "User disabled 2FA");
         _logger.LogInformation("2FA disabled for user {UserId}", userId);
+
+        // SEC-08: Track 2FA disable operation
+        MeepleAiMetrics.Record2FALifecycle("disable", userId: userId.ToString());
     }
 
     /// <summary>

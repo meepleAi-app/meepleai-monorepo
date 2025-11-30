@@ -143,6 +143,12 @@ const meta: Meta<typeof DashboardPage> = {
   component: DashboardPage,
   parameters: {
     layout: 'fullscreen',
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: '/dashboard',
+      },
+    },
     chromatic: {
       viewports: [375, 768, 1440],
       delay: 500, // Allow TanStack Query and animations to settle

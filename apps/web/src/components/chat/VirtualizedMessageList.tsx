@@ -11,7 +11,7 @@
 
 import React, { useRef, useEffect, useMemo } from 'react';
 // @ts-ignore - react-window types not available in v2.x
-import { FixedSizeList } from 'react-window';
+import { List as FixedSizeList } from 'react-window';
 // @ts-ignore - auto-sizer types
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { ChatMessage, type Citation } from '@/components/ui/chat-message';
@@ -103,10 +103,11 @@ export function VirtualizedMessageList({
     }
   }, [messages.length, shouldVirtualize]);
 
-  // Message row renderer
-  const Row = useMemo(
+  // Message row renderer for react-window v2 List
+  // v2 API: rowComponent receives { index, style, ariaAttributes }
+  const RowComponent = React.useMemo(
     () =>
-      ({ index, style }: ListChildComponentProps) => {
+      ({ index, style }: { index: number; style: React.CSSProperties }) => {
         // eslint-disable-next-line security/detect-object-injection
         const message = messages[index];
         if (!message) return null;
@@ -154,15 +155,14 @@ export function VirtualizedMessageList({
       <AutoSizer>
         {({ height, width }: { height: number; width: number }) => (
           <FixedSizeList
-            ref={listRef}
-            height={height}
-            width={width}
-            itemCount={messages.length}
-            itemSize={FIXED_MESSAGE_HEIGHT}
+            listRef={listRef}
+            defaultHeight={height}
+            rowComponent={RowComponent as any}
+            rowCount={messages.length}
+            rowHeight={FIXED_MESSAGE_HEIGHT}
+            rowProps={{}}
             overscanCount={5}
-          >
-            {Row}
-          </FixedSizeList>
+          />
         )}
       </AutoSizer>
 

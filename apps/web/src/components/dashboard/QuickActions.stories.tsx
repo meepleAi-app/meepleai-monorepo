@@ -15,6 +15,13 @@ const meta = {
   component: QuickActions,
   parameters: {
     layout: 'padded',
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: '/dashboard',
+        push: () => {},
+      },
+    },
   },
   tags: ['autodocs'],
   argTypes: {

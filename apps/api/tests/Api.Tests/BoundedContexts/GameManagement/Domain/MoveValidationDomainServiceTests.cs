@@ -448,7 +448,7 @@ public class MoveValidationDomainServiceTests
             .ToList();
 
         context.RuleSpecs.Add(ruleSpecEntity);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private static int? TryParseNullableInt(string? value)

@@ -35,7 +35,7 @@ public class CitationValidationServiceTests
         var mockEventCollector = new Mock<IDomainEventCollector>();
         
         // FIX: Configure GetAndClearEvents() to return empty collection instead of null
-        // This prevents NullReferenceException in MeepleAiDbContext.SaveChangesAsync() line 90
+        // This prevents NullReferenceException in MeepleAiDbContext.SaveChangesAsync(TestContext.Current.CancellationToken) line 90
         mockEventCollector
             .Setup(ec => ec.GetAndClearEvents())
             .Returns(Array.Empty<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
@@ -86,7 +86,7 @@ public class CitationValidationServiceTests
                 UploadedAt = DateTime.UtcNow
             });
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return (gameId, pdf1Id, pdf2Id);
     }
 

@@ -65,7 +65,7 @@ public class AgentRepositoryTests : IAsyncLifetime
         var agent = CreateTestAgent("Test Agent");
 
         // Act
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await _repository!.AddAsync(agent, CancellationToken.None, TestContext.Current.CancellationToken);
 
         // Assert
         var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
@@ -79,7 +79,7 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Test Agent");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await _repository!.AddAsync(agent, CancellationToken.None, TestContext.Current.CancellationToken);
 
         // Act
         var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
@@ -105,7 +105,7 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Unique Agent");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await _repository!.AddAsync(agent, CancellationToken.None, TestContext.Current.CancellationToken);
 
         // Act
         var retrieved = await _repository.GetByNameAsync("Unique Agent", CancellationToken.None);
@@ -123,9 +123,9 @@ public class AgentRepositoryTests : IAsyncLifetime
         var activeAgent2 = CreateTestAgent("Active 2", isActive: true);
         var inactiveAgent = CreateTestAgent("Inactive", isActive: false);
 
-        await _repository!.AddAsync(activeAgent1, CancellationToken.None);
-        await _repository.AddAsync(activeAgent2, CancellationToken.None);
-        await _repository.AddAsync(inactiveAgent, CancellationToken.None);
+        await _repository!.AddAsync(activeAgent1, CancellationToken.None, TestContext.Current.CancellationToken);
+        await _repository.AddAsync(activeAgent2, CancellationToken.None, TestContext.Current.CancellationToken);
+        await _repository.AddAsync(inactiveAgent, CancellationToken.None, TestContext.Current.CancellationToken);
 
         // Act
         var activeAgents = await _repository.GetAllActiveAsync(CancellationToken.None);
@@ -143,9 +143,9 @@ public class AgentRepositoryTests : IAsyncLifetime
         var ragAgent2 = CreateTestAgent("RAG 2", AgentType.RagAgent);
         var citationAgent = CreateTestAgent("Citation", AgentType.CitationAgent);
 
-        await _repository!.AddAsync(ragAgent1, CancellationToken.None);
-        await _repository.AddAsync(ragAgent2, CancellationToken.None);
-        await _repository.AddAsync(citationAgent, CancellationToken.None);
+        await _repository!.AddAsync(ragAgent1, CancellationToken.None, TestContext.Current.CancellationToken);
+        await _repository.AddAsync(ragAgent2, CancellationToken.None, TestContext.Current.CancellationToken);
+        await _repository.AddAsync(citationAgent, CancellationToken.None, TestContext.Current.CancellationToken);
 
         // Act
         var ragAgents = await _repository.GetByTypeAsync(AgentType.RagAgent, CancellationToken.None);
@@ -160,7 +160,7 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Original Name");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await _repository!.AddAsync(agent, CancellationToken.None, TestContext.Current.CancellationToken);
 
         agent.Rename("Updated Name");
         agent.Configure(AgentStrategy.VectorOnly());
@@ -179,7 +179,7 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("To Delete");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await _repository!.AddAsync(agent, CancellationToken.None, TestContext.Current.CancellationToken);
 
         // Act
         await _repository.DeleteAsync(agent.Id, CancellationToken.None);
@@ -194,7 +194,7 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Exists");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await _repository!.AddAsync(agent, CancellationToken.None, TestContext.Current.CancellationToken);
 
         // Act
         var exists = await _repository.ExistsAsync("Exists", CancellationToken.None);

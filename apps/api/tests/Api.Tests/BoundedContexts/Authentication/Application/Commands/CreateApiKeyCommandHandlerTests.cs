@@ -435,7 +435,7 @@ public class CreateApiKeyCommandHandlerTests
         await _handler.Handle(command, token);
 
         // Assert
-        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(), token), Times.Once);
+        _apiKeyRepositoryMock.Verify(x => x.AddAsync(It.IsAny<ApiKey>(, TestContext.Current.CancellationToken), token), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(token), Times.Once);
     }
 

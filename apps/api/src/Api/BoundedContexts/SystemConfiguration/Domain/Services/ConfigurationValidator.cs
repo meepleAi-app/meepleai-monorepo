@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 
 namespace Api.BoundedContexts.SystemConfiguration.Domain.Services;
 
@@ -137,7 +138,7 @@ public class ConfigurationValidator
     {
         if (key.Contains("MaxTokens", StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(value, out var maxTokens) && maxTokens < 0)
+            if (int.TryParse(value, CultureInfo.InvariantCulture, out var maxTokens) && maxTokens < 0)
             {
                 errors.Add("MaxTokens must be non-negative");
             }
@@ -145,7 +146,7 @@ public class ConfigurationValidator
 
         if (key.Contains("RefillRate", StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(value, out var refillRate) && refillRate < 0)
+            if (int.TryParse(value, CultureInfo.InvariantCulture, out var refillRate) && refillRate < 0)
             {
                 errors.Add("RefillRate must be non-negative");
             }
@@ -153,7 +154,7 @@ public class ConfigurationValidator
 
         if (key.Contains("WindowSeconds", StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(value, out var windowSeconds) && windowSeconds < 1)
+            if (int.TryParse(value, CultureInfo.InvariantCulture, out var windowSeconds) && windowSeconds < 1)
             {
                 errors.Add("WindowSeconds must be at least 1");
             }
@@ -164,7 +165,7 @@ public class ConfigurationValidator
     {
         if (key.Contains("Temperature", StringComparison.OrdinalIgnoreCase))
         {
-            if (double.TryParse(value, out var temp) && (temp < 0 || temp > 2))
+            if (double.TryParse(value, CultureInfo.InvariantCulture, out var temp) && (temp < 0 || temp > 2))
             {
                 errors.Add("Temperature must be between 0 and 2");
             }
@@ -172,7 +173,7 @@ public class ConfigurationValidator
 
         if (key.Contains("MaxTokens", StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(value, out var maxTokens) && maxTokens < 1)
+            if (int.TryParse(value, CultureInfo.InvariantCulture, out var maxTokens) && maxTokens < 1)
             {
                 errors.Add("MaxTokens must be positive");
             }
@@ -180,7 +181,7 @@ public class ConfigurationValidator
 
         if (key.Contains("TopP", StringComparison.OrdinalIgnoreCase))
         {
-            if (double.TryParse(value, out var topP) && (topP < 0 || topP > 1))
+            if (double.TryParse(value, CultureInfo.InvariantCulture, out var topP) && (topP < 0 || topP > 1))
             {
                 errors.Add("TopP must be between 0 and 1");
             }
@@ -189,7 +190,7 @@ public class ConfigurationValidator
         if (key.Contains("FrequencyPenalty", StringComparison.OrdinalIgnoreCase) ||
             key.Contains("PresencePenalty", StringComparison.OrdinalIgnoreCase))
         {
-            if (double.TryParse(value, out var penalty) && (penalty < -2 || penalty > 2))
+            if (double.TryParse(value, CultureInfo.InvariantCulture, out var penalty) && (penalty < -2 || penalty > 2))
             {
                 errors.Add("Penalty values must be between -2 and 2");
             }
@@ -200,7 +201,7 @@ public class ConfigurationValidator
     {
         if (key.Contains("TopK", StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(value, out var topK) && topK < 1)
+            if (int.TryParse(value, CultureInfo.InvariantCulture, out var topK) && topK < 1)
             {
                 errors.Add("TopK must be at least 1");
             }
@@ -209,7 +210,7 @@ public class ConfigurationValidator
         if (key.Contains("MinScore", StringComparison.OrdinalIgnoreCase) ||
             key.Contains("Threshold", StringComparison.OrdinalIgnoreCase))
         {
-            if (double.TryParse(value, out var score) && (score < 0 || score > 1))
+            if (double.TryParse(value, CultureInfo.InvariantCulture, out var score) && (score < 0 || score > 1))
             {
                 errors.Add("Score threshold must be between 0 and 1");
             }
@@ -217,7 +218,7 @@ public class ConfigurationValidator
 
         if (key.Contains("MaxChunkSize", StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(value, out var chunkSize) && (chunkSize < 100 || chunkSize > 10000))
+            if (int.TryParse(value, CultureInfo.InvariantCulture, out var chunkSize) && (chunkSize < 100 || chunkSize > 10000))
             {
                 errors.Add("MaxChunkSize must be between 100 and 10000");
             }
@@ -225,7 +226,7 @@ public class ConfigurationValidator
 
         if (key.Contains("ChunkOverlap", StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(value, out var overlap) && overlap < 0)
+            if (int.TryParse(value, CultureInfo.InvariantCulture, out var overlap) && overlap < 0)
             {
                 errors.Add("ChunkOverlap must be non-negative");
             }
@@ -236,7 +237,7 @@ public class ConfigurationValidator
     {
         if (key.Contains("MaxFileSizeMB", StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(value, out var maxSize) && maxSize < 1)
+            if (int.TryParse(value, CultureInfo.InvariantCulture, out var maxSize) && maxSize < 1)
             {
                 errors.Add("MaxFileSizeMB must be at least 1");
             }
@@ -244,7 +245,7 @@ public class ConfigurationValidator
 
         if (key.Contains("TimeoutSeconds", StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(value, out var timeout) && timeout < 1)
+            if (int.TryParse(value, CultureInfo.InvariantCulture, out var timeout) && timeout < 1)
             {
                 errors.Add("TimeoutSeconds must be at least 1");
             }
@@ -253,7 +254,7 @@ public class ConfigurationValidator
         if (key.Contains("Quality", StringComparison.OrdinalIgnoreCase) &&
             key.Contains("Threshold", StringComparison.OrdinalIgnoreCase))
         {
-            if (double.TryParse(value, out var quality) && (quality < 0 || quality > 1))
+            if (double.TryParse(value, CultureInfo.InvariantCulture, out var quality) && (quality < 0 || quality > 1))
             {
                 errors.Add("Quality threshold must be between 0 and 1");
             }

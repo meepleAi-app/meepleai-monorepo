@@ -30,11 +30,11 @@ public sealed class ConfigurationUpdatedEventHandler : DomainEventHandlerBase<Co
         foreach (var env in environments)
         {
             var cacheKey = $"config:{domainEvent.Key.Value}:{env}";
-            await _cache.RemoveAsync(cacheKey, cancellationToken);
+            await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
         }
 
         // Also use tag-based invalidation for broader cleanup
-        await _cache.RemoveByTagAsync("config:category:general", cancellationToken);
+        await _cache.RemoveByTagAsync("config:category:general", cancellationToken).ConfigureAwait(false);
 
         // Future: Send notification for critical configuration changes (e.g., rate limits, feature flags)
         // Future: Check if RequiresRestart and alert administrators
@@ -43,6 +43,7 @@ public sealed class ConfigurationUpdatedEventHandler : DomainEventHandlerBase<Co
     protected override Dictionary<string, object?>? GetAuditMetadata(ConfigurationUpdatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["ConfigurationId"] = domainEvent.ConfigurationId,
             ["Key"] = domainEvent.Key.Value,

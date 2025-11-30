@@ -11,7 +11,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ProviderHealthCheckService> _logger;
-    private readonly Dictionary<string, ProviderHealthStatus> _healthStatuses = new();
+    private readonly Dictionary<string, ProviderHealthStatus> _healthStatuses = new(StringComparer.Ordinal);
 #pragma warning disable MA0158 // Use System.Threading.Lock
     private readonly object _healthLock = new();
 #pragma warning restore MA0158
@@ -33,16 +33,16 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
         _logger.LogInformation("ProviderHealthCheckService starting...");
 
         // Initialize health statuses
-        await InitializeHealthStatuses(stoppingToken);
+        await InitializeHealthStatuses(stoppingToken).ConfigureAwait(false);
 
         // Wait 10 seconds before first health check (let app warm up)
-        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken).ConfigureAwait(false);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await PerformHealthChecksAsync(stoppingToken);
+                await PerformHealthChecksAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -50,7 +50,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
             }
 
             // Wait for next check interval
-            await Task.Delay(TimeSpan.FromSeconds(CheckIntervalSeconds), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(CheckIntervalSeconds), stoppingToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation("ProviderHealthCheckService stopping...");
@@ -91,7 +91,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
         var clients = scope.ServiceProvider.GetRequiredService<IEnumerable<ILlmClient>>();
 
         var tasks = clients.Select(client => CheckProviderHealthAsync(client, ct));
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
 
         // Log summary
         var summary = GetHealthSummary();
@@ -208,7 +208,7 @@ public sealed class ProviderHealthCheckService : BackgroundService, IProviderHea
     {
         lock (_healthLock)
         {
-            return new Dictionary<string, ProviderHealthStatus>(_healthStatuses);
+            return new Dictionary<string, ProviderHealthStatus>(_healthStatuses, StringComparer.Ordinal);
         }
     }
 

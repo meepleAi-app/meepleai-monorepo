@@ -29,7 +29,7 @@ public class EmbeddingRepository : IEmbeddingRepository
         // Note: Qdrant doesn't support direct ID lookup in current implementation
         // Would need to enhance QdrantService with GetPointById method
         // For now, return null as this is rarely used
-        return await Task.FromResult<Embedding?>(null);
+        return await Task.FromResult<Embedding?>(null).ConfigureAwait(false);
     }
 
     public async Task<List<Embedding>> GetByVectorDocumentIdAsync(
@@ -39,7 +39,7 @@ public class EmbeddingRepository : IEmbeddingRepository
         // Note: Current QdrantService doesn't support filtering by vector document ID
         // Would need to add filter capability to SearchAsync
         // For now, return empty list
-        return await Task.FromResult(new List<Embedding>());
+        return await Task.FromResult(new List<Embedding>()).ConfigureAwait(false);
     }
 
     public async Task<List<Embedding>> GetByGameIdAsync(
@@ -49,7 +49,7 @@ public class EmbeddingRepository : IEmbeddingRepository
         // Note: This would require a full scan of Qdrant with gameId filter
         // Not efficient and not supported by current QdrantService
         // Use SearchByVectorAsync with broad query instead
-        return await Task.FromResult(new List<Embedding>());
+        return await Task.FromResult(new List<Embedding>()).ConfigureAwait(false);
     }
 
     public async Task<List<Embedding>> SearchByVectorAsync(
@@ -73,7 +73,7 @@ public class EmbeddingRepository : IEmbeddingRepository
         CancellationToken cancellationToken = default)
     {
         // Delegate to Qdrant adapter for batch insertion
-        await _qdrantAdapter.IndexBatchAsync(embeddings, cancellationToken);
+        await _qdrantAdapter.IndexBatchAsync(embeddings, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteByVectorDocumentIdAsync(
@@ -81,7 +81,7 @@ public class EmbeddingRepository : IEmbeddingRepository
         CancellationToken cancellationToken = default)
     {
         // Delegate to Qdrant adapter for deletion
-        await _qdrantAdapter.DeleteByVectorDocumentIdAsync(vectorDocumentId, cancellationToken);
+        await _qdrantAdapter.DeleteByVectorDocumentIdAsync(vectorDocumentId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<int> GetCountByGameIdAsync(

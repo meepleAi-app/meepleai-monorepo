@@ -17,12 +17,13 @@ public sealed class GameSessionAbandonedEventHandler : DomainEventHandlerBase<Ga
     protected override async Task HandleEventAsync(GameSessionAbandonedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(GameSessionAbandonedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["SessionId"] = domainEvent.SessionId,
             ["AbandonedAt"] = domainEvent.AbandonedAt,

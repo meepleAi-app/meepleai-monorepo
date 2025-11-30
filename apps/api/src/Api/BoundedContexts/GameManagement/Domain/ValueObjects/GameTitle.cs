@@ -36,7 +36,8 @@ public sealed class GameTitle : ValueObject
     private static string Normalize(string title)
     {
         // Remove extra whitespace
-        var normalized = Regex.Replace(title, @"\s+", " ");
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
+        var normalized = Regex.Replace(title, @"\s+", " ", RegexOptions.None, TimeSpan.FromSeconds(1));
         return normalized.Trim().ToLowerInvariant();
     }
 
@@ -48,13 +49,14 @@ public sealed class GameTitle : ValueObject
         var slug = title.ToLowerInvariant();
 
         // Replace spaces with hyphens
-        slug = Regex.Replace(slug, @"\s+", "-");
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
+        slug = Regex.Replace(slug, @"\s+", "-", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         // Remove non-alphanumeric characters (except hyphens)
-        slug = Regex.Replace(slug, @"[^a-z0-9\-]", "");
+        slug = Regex.Replace(slug, @"[^a-z0-9\-]", "", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         // Remove duplicate hyphens
-        slug = Regex.Replace(slug, @"-+", "-");
+        slug = Regex.Replace(slug, @"-+", "-", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         // Trim hyphens from start and end
         slug = slug.Trim('-');

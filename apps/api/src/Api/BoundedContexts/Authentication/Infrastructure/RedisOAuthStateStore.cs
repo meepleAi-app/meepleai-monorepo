@@ -37,7 +37,7 @@ public class RedisOAuthStateStore : IOAuthStateStore
             var key = StateKeyPrefix + state;
 
             // Store state with TTL (automatic expiration)
-            var success = await db.StringSetAsync(key, DateTime.UtcNow.ToString("O"), expiration);
+            var success = await db.StringSetAsync(key, DateTime.UtcNow.ToString("O"), expiration).ConfigureAwait(false);
 
             if (success)
             {
@@ -67,7 +67,7 @@ public class RedisOAuthStateStore : IOAuthStateStore
             var key = StateKeyPrefix + state;
 
             // Atomically check existence and delete (single-use token)
-            var deleted = await db.KeyDeleteAsync(key);
+            var deleted = await db.KeyDeleteAsync(key).ConfigureAwait(false);
 
             if (deleted)
             {
@@ -97,7 +97,7 @@ public class RedisOAuthStateStore : IOAuthStateStore
             var db = _redis.GetDatabase();
             var key = StateKeyPrefix + state;
 
-            return await db.KeyExistsAsync(key);
+            return await db.KeyExistsAsync(key).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -112,7 +112,7 @@ public class RedisOAuthStateStore : IOAuthStateStore
         // This method is a no-op for Redis implementation
         // but kept for interface compatibility with other implementations
         _logger.LogDebug("CleanupExpiredStatesAsync called (no-op for Redis - TTL handles cleanup)");
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
         return 0;
     }
 }

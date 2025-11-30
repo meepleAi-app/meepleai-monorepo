@@ -22,7 +22,7 @@ public class ExportChatCommandHandler : ICommandHandler<ExportChatCommand, Expor
     public async Task<ExportedChatDto> Handle(ExportChatCommand command, CancellationToken cancellationToken)
     {
         // Retrieve thread
-        var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken);
+        var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken).ConfigureAwait(false);
         if (thread == null)
             throw new InvalidOperationException($"Thread with ID {command.ThreadId} not found");
 

@@ -1,6 +1,7 @@
 using Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace Api.Services.Rag;
 
@@ -65,7 +66,7 @@ public class RagConfigurationProvider : IRagConfigurationProvider
     /// </summary>
     private T ValidateRagConfig<T>(T value, string configKey) where T : struct
     {
-        var numericValue = Convert.ToDouble(value);
+        var numericValue = Convert.ToDouble(value, CultureInfo.InvariantCulture);
         bool isValid = configKey switch
         {
             "TopK" => numericValue >= 1 && numericValue <= 50,

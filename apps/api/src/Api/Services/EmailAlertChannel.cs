@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Options;
@@ -52,7 +53,7 @@ public class EmailAlertChannel : IAlertChannel
                     : null
             };
 
-            var subject = severity.ToUpper() switch
+            var subject = severity.ToUpper(CultureInfo.InvariantCulture) switch
             {
                 "CRITICAL" => $"🚨 [CRITICAL] {alertType} - MeepleAI",
                 "WARNING" => $"⚠️ [WARNING] {alertType} - MeepleAI",
@@ -103,14 +104,14 @@ public class EmailAlertChannel : IAlertChannel
         string message,
         Dictionary<string, object>? metadata)
     {
-        var severityColor = severity.ToUpper() switch
+        var severityColor = severity.ToUpper(CultureInfo.InvariantCulture) switch
         {
             "CRITICAL" => "#d93025",
             "WARNING" => "#ea8600",
             _ => "#1967d2"
         };
 
-        var severityEmoji = severity.ToUpper() switch
+        var severityEmoji = severity.ToUpper(CultureInfo.InvariantCulture) switch
         {
             "CRITICAL" => "🚨",
             "WARNING" => "⚠️",
@@ -140,7 +141,7 @@ public class EmailAlertChannel : IAlertChannel
 </head>
 <body>
     <div class='alert'>
-        <h2>{severityEmoji} {severity.ToUpper()} ALERT</h2>
+        <h2>{severityEmoji} {severity.ToUpper(CultureInfo.InvariantCulture)} ALERT</h2>
         <h3>{alertType}</h3>
         <p><strong>Message:</strong> {message}</p>
         <p><strong>Triggered:</strong> {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</p>

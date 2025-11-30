@@ -51,7 +51,7 @@ public class MultiModelValidationService : IMultiModelValidationService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Get OpenRouter client (supports both GPT-4 and Claude)
-        _openRouterClient = llmClients.FirstOrDefault(c => c.ProviderName == "OpenRouter")
+        _openRouterClient = llmClients.FirstOrDefault(c => string.Equals(c.ProviderName, "OpenRouter", StringComparison.Ordinal))
             ?? throw new InvalidOperationException("OpenRouter client not found in DI container");
 
         // Initialize cosine similarity calculator
@@ -88,10 +88,10 @@ public class MultiModelValidationService : IMultiModelValidationService
         var gpt4Task = QueryModelAsync(Gpt4Model, systemPrompt, userPrompt, temperature, maxTokens, cancellationToken);
         var claudeTask = QueryModelAsync(ClaudeModel, systemPrompt, userPrompt, temperature, maxTokens, cancellationToken);
 
-        await Task.WhenAll(gpt4Task, claudeTask);
+        await Task.WhenAll(gpt4Task, claudeTask).ConfigureAwait(false);
 
-        var gpt4Response = await gpt4Task;
-        var claudeResponse = await claudeTask;
+        var gpt4Response = await gpt4Task.ConfigureAwait(false);
+        var claudeResponse = await claudeTask.ConfigureAwait(false);
 
         stopwatch.Stop();
 

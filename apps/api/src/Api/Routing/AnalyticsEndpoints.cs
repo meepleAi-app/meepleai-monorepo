@@ -6,6 +6,7 @@ using Api.Extensions;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 
 namespace Api.Routing;
 
@@ -201,11 +202,11 @@ public static class AnalyticsEndpoints
             // Default to last 30 days if not specified
             var start = string.IsNullOrWhiteSpace(startDate)
                 ? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30))
-                : DateOnly.Parse(startDate);
+                : DateOnly.Parse(startDate, CultureInfo.InvariantCulture);
 
             var end = string.IsNullOrWhiteSpace(endDate)
                 ? DateOnly.FromDateTime(DateTime.UtcNow)
-                : DateOnly.Parse(endDate);
+                : DateOnly.Parse(endDate, CultureInfo.InvariantCulture);
 
             var query = new GetLlmCostReportQuery
             {
@@ -232,7 +233,7 @@ public static class AnalyticsEndpoints
 
             var targetDate = string.IsNullOrWhiteSpace(date)
                 ? DateOnly.FromDateTime(DateTime.UtcNow)
-                : DateOnly.Parse(date);
+                : DateOnly.Parse(date, CultureInfo.InvariantCulture);
 
             var query = new GetLlmCostReportQuery
             {

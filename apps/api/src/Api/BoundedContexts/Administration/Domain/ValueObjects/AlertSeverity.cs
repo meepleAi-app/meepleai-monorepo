@@ -15,8 +15,8 @@ public sealed class AlertSeverity : ValueObject
         Value = value;
     }
 
-    public bool IsCritical => Value == Critical.Value;
-    public bool IsWarning => Value == Warning.Value;
+    public bool IsCritical => string.Equals(Value, Critical.Value, StringComparison.Ordinal);
+    public bool IsWarning => string.Equals(Value, Warning.Value, StringComparison.Ordinal);
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

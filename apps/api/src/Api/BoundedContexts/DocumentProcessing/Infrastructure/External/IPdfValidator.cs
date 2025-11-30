@@ -52,7 +52,7 @@ public record PdfValidationResult(
     /// Creates a successful validation result with metadata.
     /// </summary>
     public static PdfValidationResult CreateSuccess(PdfMetadata metadata) =>
-        new(true, new Dictionary<string, string>(), metadata);
+        new(true, new Dictionary<string, string>(StringComparer.Ordinal), metadata);
 
     /// <summary>
     /// Creates a failed validation result with errors.

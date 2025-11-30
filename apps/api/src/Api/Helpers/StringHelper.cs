@@ -78,7 +78,8 @@ public static class StringHelper
             .Replace("\\", "_");
 
         // Step 2: Remove control characters (ASCII 0-31 and 127)
-        sanitized = Regex.Replace(sanitized, @"[\x00-\x1F\x7F]", "");
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
+        sanitized = Regex.Replace(sanitized, @"[\x00-\x1F\x7F]", "", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         // Step 3: Remove OS-specific invalid characters plus additional problematic chars
         var invalidChars = Path.GetInvalidFileNameChars()
@@ -93,7 +94,8 @@ public static class StringHelper
         }
 
         // Step 4: Collapse multiple underscores and trim
-        sanitized = Regex.Replace(sanitized, @"_+", "_");
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
+        sanitized = Regex.Replace(sanitized, @"_+", "_", RegexOptions.None, TimeSpan.FromSeconds(1));
         sanitized = sanitized.Trim('_', ' ', '\t');
 
         // Step 5: Handle empty result

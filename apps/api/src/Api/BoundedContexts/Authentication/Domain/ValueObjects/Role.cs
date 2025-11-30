@@ -36,9 +36,9 @@ public sealed class Role : ValueObject
         return new Role(normalized);
     }
 
-    public bool IsAdmin() => Value == "admin";
-    public bool IsEditor() => Value == "editor";
-    public bool IsUser() => Value == "user";
+    public bool IsAdmin() => string.Equals(Value, "admin", StringComparison.Ordinal);
+    public bool IsEditor() => string.Equals(Value, "editor", StringComparison.Ordinal);
+    public bool IsUser() => string.Equals(Value, "user", StringComparison.Ordinal);
 
     public bool HasPermission(Role requiredRole)
     {
@@ -49,7 +49,7 @@ public sealed class Role : ValueObject
         if (IsEditor() && (requiredRole.IsEditor() || requiredRole.IsUser())) return true;
 
         // User has user permissions only
-        return Value == requiredRole.Value;
+        return string.Equals(Value, requiredRole.Value, StringComparison.Ordinal);
     }
 
     protected override IEnumerable<object?> GetEqualityComponents()

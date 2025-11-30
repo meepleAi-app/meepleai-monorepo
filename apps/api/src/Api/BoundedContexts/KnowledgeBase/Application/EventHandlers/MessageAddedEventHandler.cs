@@ -17,12 +17,13 @@ public sealed class MessageAddedEventHandler : DomainEventHandlerBase<MessageAdd
     protected override async Task HandleEventAsync(MessageAddedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(MessageAddedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["Action"] = "MessageAdded",
             ["ThreadId"] = domainEvent.ThreadId,

@@ -22,12 +22,13 @@ public sealed class GameUpdatedEventHandler : DomainEventHandlerBase<GameUpdated
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., update search index)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(GameUpdatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["GameId"] = domainEvent.GameId,
             ["Name"] = domainEvent.Name,

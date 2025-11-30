@@ -31,7 +31,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
     public async Task<GameSessionDto> Handle(StartGameSessionCommand command, CancellationToken cancellationToken)
     {
         // Verify game exists
-        var gameExists = await _gameRepository.ExistsAsync(command.GameId, cancellationToken);
+        var gameExists = await _gameRepository.ExistsAsync(command.GameId, cancellationToken).ConfigureAwait(false);
         if (!gameExists)
             throw new InvalidOperationException($"Game with ID {command.GameId} not found");
 
@@ -50,8 +50,8 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
         session.Start();
 
         // Persist
-        await _sessionRepository.AddAsync(session, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO using shared mapper
         return session.ToDto();

@@ -33,7 +33,7 @@ public class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOnly
 
         try
         {
-            var users = await _userRepository.SearchAsync(query.SearchQuery, query.MaxResults, cancellationToken);
+            var users = await _userRepository.SearchAsync(query.SearchQuery, query.MaxResults, cancellationToken).ConfigureAwait(false);
 
             var results = users.Select(u => new UserSearchResultDto(
                 Id: u.Id.ToString(),

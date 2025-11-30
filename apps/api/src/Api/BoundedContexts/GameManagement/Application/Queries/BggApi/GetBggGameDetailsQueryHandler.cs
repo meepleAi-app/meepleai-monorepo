@@ -39,7 +39,7 @@ public sealed class GetBggGameDetailsQueryHandler : IQueryHandler<GetBggGameDeta
         // - HTTP call to BoardGameGeek XML API (thing endpoint)
         // - XML parsing
         // - Caching (HybridCache with 24h expiration)
-        var details = await _bggApiService.GetGameDetailsAsync(query.BggId, cancellationToken);
+        var details = await _bggApiService.GetGameDetailsAsync(query.BggId, cancellationToken).ConfigureAwait(false);
 
         if (details == null)
         {

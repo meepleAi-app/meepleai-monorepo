@@ -67,7 +67,7 @@ public class GetAiRequestStatsQueryHandler : IQueryHandler<GetAiRequestStatsQuer
                 AvgLatencyMs = 0,
                 TotalTokens = 0,
                 SuccessRate = 0,
-                EndpointCounts = new Dictionary<string, int>()
+                EndpointCounts = new Dictionary<string, int>(StringComparer.Ordinal)
             };
         }
 
@@ -77,7 +77,7 @@ public class GetAiRequestStatsQueryHandler : IQueryHandler<GetAiRequestStatsQuer
             AvgLatencyMs = stats.AvgLatencyMs,
             TotalTokens = stats.TotalTokens,
             SuccessRate = stats.TotalRequests > 0 ? (double)stats.SuccessCount / stats.TotalRequests : 0,
-            EndpointCounts = endpointCounts.ToDictionary(x => x.Endpoint, x => x.Count)
+            EndpointCounts = endpointCounts.ToDictionary(x => x.Endpoint, x => x.Count, StringComparer.Ordinal)
         };
     }
 }

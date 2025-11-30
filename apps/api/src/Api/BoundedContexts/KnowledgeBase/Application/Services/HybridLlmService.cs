@@ -9,6 +9,7 @@ using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -54,8 +55,8 @@ public class HybridLlmService : ILlmService
     private readonly IOptions<AiProviderSettings> _aiSettings;
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
-    private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new();
-    private readonly Dictionary<string, LatencyStats> _latencyStats = new();
+    private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, LatencyStats> _latencyStats = new(StringComparer.Ordinal);
     private readonly object _monitoringLock = new();
 
     // Default LLM parameters
@@ -83,7 +84,7 @@ public class HybridLlmService : ILlmService
 
         if (!_clients.Any())
         {
-            throw new ArgumentNullException("At least one ILlmClient must be registered");
+            throw new ArgumentException("At least one ILlmClient must be registered", nameof(clients));
         }
 
         // ISSUE-962: Initialize circuit breakers and latency stats for each provider
@@ -152,7 +153,7 @@ public class HybridLlmService : ILlmService
                 "Created emergency fallback decision: {Provider} ({Model})",
                 decision.ProviderName, decision.ModelId);
         }
-        else if (client.ProviderName != decision.ProviderName)
+        else if (!string.Equals(client.ProviderName, decision.ProviderName, StringComparison.Ordinal))
         {
             _logger.LogWarning(
                 "Primary provider {Primary} unavailable, using fallback {Fallback}",
@@ -190,12 +191,12 @@ public class HybridLlmService : ILlmService
                 {
                     RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
-                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, ct);
+                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, ct).ConfigureAwait(false);
                     return result;
                 }
 
                 RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
-                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, ct);
+                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, ct).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
             catch (Exception ex)
@@ -207,7 +208,7 @@ public class HybridLlmService : ILlmService
                     "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
                     client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
 
-                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, ct);
+                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, ct).ConfigureAwait(false);
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
@@ -314,7 +315,7 @@ public class HybridLlmService : ILlmService
             Just the raw JSON object that matches the required structure.
             """;
 
-        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, ct);
+        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, ct).ConfigureAwait(false);
 
         if (!result.Success || string.IsNullOrWhiteSpace(result.Response))
         {
@@ -403,8 +404,8 @@ public class HybridLlmService : ILlmService
             // BGAI-022: Use FallbackChain if configured, otherwise use all clients
             var settings = _aiSettings.Value;
             var fallbackOrder = settings.FallbackChain?.Any() == true
-                ? settings.FallbackChain.Where(p => p != client.ProviderName)
-                : _clients.Where(c => c.ProviderName != client.ProviderName).Select(c => c.ProviderName);
+                ? settings.FallbackChain.Where(p => !string.Equals(p, client.ProviderName, StringComparison.Ordinal))
+                : _clients.Where(c => !string.Equals(c.ProviderName, client.ProviderName, StringComparison.Ordinal)).Select(c => c.ProviderName);
 
             foreach (var fallbackProviderName in fallbackOrder)
             {
@@ -487,7 +488,7 @@ public class HybridLlmService : ILlmService
             metadata["routing_decision"] = decision.Reason;
             metadata["selected_provider"] = client.ProviderName;
             metadata["selected_model"] = decision.ModelId;
-            metadata["latency_ms"] = latencyMs.ToString();
+            metadata["latency_ms"] = latencyMs.ToString(CultureInfo.InvariantCulture);
             metadata["circuit_state"] = GetCircuitState(client.ProviderName);
         }
     }
@@ -697,7 +698,7 @@ public class HybridLlmService : ILlmService
     {
         lock (_monitoringLock)
         {
-            var status = new Dictionary<string, (string, string)>();
+            var status = new Dictionary<string, (string, string)>(StringComparer.Ordinal);
             foreach (var client in _clients)
             {
                 var circuit = _circuitBreakers.TryGetValue(client.ProviderName, out var breaker)

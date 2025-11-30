@@ -38,7 +38,7 @@ public sealed class GetWorkflowErrorByIdQueryHandler : IQueryHandler<GetWorkflow
         // Delegate to infrastructure service for:
         // - Database query
         // - HybridCache (10-min expiration)
-        var error = await _errorLoggingService.GetErrorByIdAsync(query.ErrorId, cancellationToken);
+        var error = await _errorLoggingService.GetErrorByIdAsync(query.ErrorId, cancellationToken).ConfigureAwait(false);
 
         if (error == null)
         {

@@ -121,7 +121,7 @@ public class ApiKeyAuthenticationService
             throw new ArgumentException("User ID is required", nameof(userId));
         if (string.IsNullOrWhiteSpace(keyName))
             throw new ArgumentException("Key name is required", nameof(keyName));
-        if (!new[] { "live", "test" }.Contains(environment))
+        if (!new[] { "live", "test" }.Contains(environment, StringComparer.Ordinal))
             throw new ArgumentException("Environment must be 'live' or 'test'", nameof(environment));
 
         // Verify user exists
@@ -277,7 +277,7 @@ public class ApiKeyAuthenticationService
 
         // Format is: mpl_{env}_{secret}
         var parts = apiKey.Split('_', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 3 && parts[0] == KeyPrefix)
+        if (parts.Length >= 3 && string.Equals(parts[0], KeyPrefix, StringComparison.Ordinal))
         {
             // Take first 4 chars of the secret part
             var secret = parts[2];

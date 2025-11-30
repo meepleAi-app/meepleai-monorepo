@@ -56,7 +56,7 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
         if (value is string stringValue)
         {
             var sanitized = SanitizeString(stringValue);
-            if (sanitized != stringValue)
+            if (!string.Equals(sanitized, stringValue, StringComparison.Ordinal))
             {
                 result = new ScalarValue(sanitized);
                 return true;

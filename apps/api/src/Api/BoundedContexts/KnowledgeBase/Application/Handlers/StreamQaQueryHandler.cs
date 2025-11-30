@@ -76,7 +76,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
 
         // Check cache first - if cached, return it as streaming events
         var cacheKey = _cache.GenerateQaCacheKey(query.GameId, query.Query);
-        var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
+        var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
 
         if (cachedResponse != null)
         {
@@ -101,7 +101,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
                 // Small delay to simulate streaming (use Task.Delay directly to avoid FakeTimeProvider issues in tests)
                 if (i < words.Length - 1)
                 {
-                    await Task.Delay(10, cancellationToken);
+                    await Task.Delay(10, cancellationToken).ConfigureAwait(false);
                 }
             }
 
@@ -144,7 +144,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
             Language: "en"
         );
 
-        var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken);
+        var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);
 
         if (searchResults.Count == 0)
         {
@@ -184,11 +184,11 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
         string chatHistoryContext = string.Empty;
         if (query.ThreadId.HasValue)
         {
-            var thread = await _chatThreadRepository.GetByIdAsync(query.ThreadId.Value, cancellationToken);
+            var thread = await _chatThreadRepository.GetByIdAsync(query.ThreadId.Value, cancellationToken).ConfigureAwait(false);
             if (thread != null)
             {
                 // Security: Validate thread belongs to requested game
-                if (thread.GameId.HasValue && thread.GameId.Value.ToString() != query.GameId)
+                if (thread.GameId.HasValue && !string.Equals(thread.GameId.Value.ToString(), query.GameId, StringComparison.Ordinal))
                 {
                     _logger.LogWarning(
                         "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
@@ -214,7 +214,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
         // Use PromptTemplateService for advanced prompt engineering
         var questionType = _promptTemplateService.ClassifyQuestion(query.Query);
         Guid? gameGuid = Guid.TryParse(query.GameId, out var guid) ? guid : null;
-        var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType);
+        var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType).ConfigureAwait(false);
 
         var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
         var baseUserPrompt = _promptTemplateService.RenderUserPrompt(template, context, query.Query);
@@ -263,7 +263,7 @@ public class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStr
             null);
 
         // Cache the complete response
-        await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
+        await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
 
         // Emit complete event
         yield return CreateEvent(StreamingEventType.Complete,

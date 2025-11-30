@@ -62,7 +62,7 @@ public class UpdateApiKeyManagementCommandHandler : ICommandHandler<UpdateApiKey
             apiKey.Metadata = System.Text.Json.JsonSerializer.Serialize(quota);
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("API key updated. KeyId: {KeyId}, UserId: {UserId}", command.KeyId, command.UserId);
 

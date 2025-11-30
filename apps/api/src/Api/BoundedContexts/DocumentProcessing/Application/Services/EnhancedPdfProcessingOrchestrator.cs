@@ -93,7 +93,7 @@ public class EnhancedPdfProcessingOrchestrator
                     bufferSize: 81920,
                     useAsync: true);
 
-                await pdfStream.CopyToAsync(fileStream, ct);
+                await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
                 return PdfDataHandle.FromTempFile(tempFile);
             }
             catch
@@ -111,7 +111,7 @@ public class EnhancedPdfProcessingOrchestrator
             requestId, pdfSize / 1_000_000.0, threshold / 1_000_000.0);
 
         using var memoryStream = new MemoryStream();
-        await pdfStream.CopyToAsync(memoryStream, ct);
+        await pdfStream.CopyToAsync(memoryStream, ct).ConfigureAwait(false);
         return PdfDataHandle.FromBytes(memoryStream.ToArray());
     }
 
@@ -154,7 +154,7 @@ public class EnhancedPdfProcessingOrchestrator
             requestId, pdfStream.CanSeek ? pdfStream.Length : -1);
 
         // BGAI-087: Load PDF with size-based strategy (memory vs temp file)
-        using var pdfData = await LoadPdfBytesAsync(pdfStream, requestId, ct);
+        using var pdfData = await LoadPdfBytesAsync(pdfStream, requestId, ct).ConfigureAwait(false);
 
         try
         {
@@ -199,7 +199,7 @@ public class EnhancedPdfProcessingOrchestrator
 
             var stage3Stopwatch = Stopwatch.StartNew();
             await using var fallbackStream = pdfData.GetStream();
-            var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct);
+            var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
             stage3Stopwatch.Stop();
 
             _logger.LogInformation(
@@ -237,7 +237,7 @@ public class EnhancedPdfProcessingOrchestrator
         try
         {
             await using var stream = pdfData.GetStream();
-            var result = await extractor.ExtractTextAsync(stream, enableOcrFallback, ct);
+            var result = await extractor.ExtractTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
             stageStopwatch.Stop();
 
             if (!result.Success)
@@ -385,7 +385,7 @@ public class EnhancedPdfProcessingOrchestrator
         }
 
         // BGAI-087: Load PDF with size-based strategy (memory vs temp file)
-        using var pdfData = await LoadPdfBytesAsync(pdfStream, requestId, ct);
+        using var pdfData = await LoadPdfBytesAsync(pdfStream, requestId, ct).ConfigureAwait(false);
 
         try
         {
@@ -430,7 +430,7 @@ public class EnhancedPdfProcessingOrchestrator
 
             var stage3Stopwatch = Stopwatch.StartNew();
             await using var fallbackStream = pdfData.GetStream();
-            var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct);
+            var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, ct).ConfigureAwait(false);
             stage3Stopwatch.Stop();
 
             _logger.LogInformation(
@@ -468,7 +468,7 @@ public class EnhancedPdfProcessingOrchestrator
         try
         {
             await using var stream = pdfData.GetStream();
-            var result = await extractor.ExtractPagedTextAsync(stream, enableOcrFallback, ct);
+            var result = await extractor.ExtractPagedTextAsync(stream, enableOcrFallback, ct).ConfigureAwait(false);
             stageStopwatch.Stop();
 
             if (!result.Success)

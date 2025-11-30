@@ -30,11 +30,11 @@ public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatT
             ?? throw new InvalidOperationException($"Chat thread with ID {command.ThreadId} not found");
 
         // Add message via domain method (handles sequencing internally)
-        if (command.Role == ChatMessage.UserRole)
+        if (string.Equals(command.Role, ChatMessage.UserRole, StringComparison.Ordinal))
         {
             thread.AddUserMessage(command.Content);
         }
-        else if (command.Role == ChatMessage.AssistantRole)
+        else if (string.Equals(command.Role, ChatMessage.AssistantRole, StringComparison.Ordinal))
         {
             thread.AddAssistantMessage(command.Content);
         }
@@ -44,8 +44,8 @@ public class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, ChatT
         }
 
         // Persist
-        await _threadRepository.UpdateAsync(thread, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _threadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         return MapToDto(thread);

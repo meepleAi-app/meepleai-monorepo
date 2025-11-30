@@ -30,7 +30,7 @@ public class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, Age
         CancellationToken cancellationToken)
     {
         // Validate name uniqueness
-        var exists = await _agentRepository.ExistsAsync(request.Name, cancellationToken);
+        var exists = await _agentRepository.ExistsAsync(request.Name, cancellationToken).ConfigureAwait(false);
         if (exists)
         {
             throw new InvalidOperationException($"Agent with name '{request.Name}' already exists");
@@ -52,7 +52,7 @@ public class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, Age
         );
 
         // Persist
-        await _agentRepository.AddAsync(agent, cancellationToken);
+        await _agentRepository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created agent {AgentId} with name '{Name}' and type '{Type}'",

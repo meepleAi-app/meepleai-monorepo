@@ -20,7 +20,7 @@ public class DeleteConfigurationCommandHandler : ICommandHandler<DeleteConfigura
 
     public async Task<bool> Handle(DeleteConfigurationCommand command, CancellationToken cancellationToken)
     {
-        var config = await _configurationRepository.GetByIdAsync(command.ConfigId, cancellationToken);
+        var config = await _configurationRepository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
 
         if (config == null)
             return false;
@@ -28,8 +28,8 @@ public class DeleteConfigurationCommandHandler : ICommandHandler<DeleteConfigura
         // Mark as deleted to raise domain event
         config.MarkAsDeleted();
 
-        await _configurationRepository.DeleteAsync(config, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _configurationRepository.DeleteAsync(config, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return true;
     }

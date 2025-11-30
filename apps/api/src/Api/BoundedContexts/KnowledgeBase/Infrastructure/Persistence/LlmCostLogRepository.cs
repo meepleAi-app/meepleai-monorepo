@@ -59,7 +59,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
         };
 
         _context.LlmCostLogs.Add(entity);
-        await _context.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct).ConfigureAwait(false);
 
         _logger.LogDebug(
             "Logged LLM cost: {Provider}/{Model} - {Tokens} tokens = ${Cost:F6} (user: {UserId}, role: {Role})",

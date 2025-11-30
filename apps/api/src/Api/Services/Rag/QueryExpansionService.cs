@@ -33,6 +33,7 @@ public class QueryExpansionService : IQueryExpansionService
 
         // Rule-based query expansion patterns for board games domain
         var expansionRules = new Dictionary<string, string[]>
+(StringComparer.Ordinal)
         {
             // Setup-related synonyms
             { "setup", new[] { "initial setup", "game setup", "starting position", "prepare" } },

@@ -23,7 +23,7 @@ public static class AdminMiscEndpoints
             var sessionResult = context.RequireAdminSession();
             if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
             var session = sessionResult.Session;
-            ArgumentNullException.ThrowIfNull(session);
+            if (session == null) throw new InvalidOperationException("Session is required");
 
             logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 

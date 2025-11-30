@@ -55,7 +55,7 @@ public class AiProviderValidator : IValidateOptions<AiProviderSettings>
 
             // Validation 4: FallbackChain must not have duplicates
             var duplicates = options.FallbackChain
-                .GroupBy(p => p)
+                .GroupBy(p => p, StringComparer.Ordinal)
                 .Where(g => g.Count() > 1)
                 .Select(g => g.Key);
 

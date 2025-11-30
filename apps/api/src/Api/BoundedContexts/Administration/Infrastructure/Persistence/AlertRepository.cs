@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 
@@ -60,7 +61,7 @@ public class AlertRepository : RepositoryBase, IAlertRepository
     {
         CollectDomainEvents(alert);
         var entity = MapToPersistence(alert);
-        await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(Alert alert, CancellationToken cancellationToken = default)
@@ -86,7 +87,7 @@ public class AlertRepository : RepositoryBase, IAlertRepository
 
     private static Alert MapToDomain(Api.Infrastructure.Entities.AlertEntity entity)
     {
-        var severity = entity.Severity.ToLower() switch
+        var severity = entity.Severity.ToLower(CultureInfo.InvariantCulture) switch
         {
             "critical" => AlertSeverity.Critical,
             "warning" => AlertSeverity.Warning,

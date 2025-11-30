@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -48,7 +49,7 @@ public class EmbeddingService : IEmbeddingService
                     ?? config["EMBEDDING_PROVIDER"]?.ToLowerInvariant()
                     ?? "ollama";
 
-        if (_provider == "ollama")
+        if (string.Equals(_provider, "ollama", StringComparison.Ordinal))
         {
             // Use Ollama for local embeddings (no API key needed)
             _httpClient = httpClientFactory.CreateClient("Ollama");
@@ -65,7 +66,7 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogInformation("Using Ollama for embeddings at {Url} with model {Model} ({Dimensions} dimensions)",
                 ollamaUrl, _embeddingModel, _embeddingDimensions);
         }
-        else if (_provider == "openai")
+        else if (string.Equals(_provider, "openai", StringComparison.Ordinal))
         {
             // Use OpenRouter API (OpenAI-compatible)
             _httpClient = httpClientFactory.CreateClient("OpenRouter");
@@ -106,14 +107,14 @@ public class EmbeddingService : IEmbeddingService
     private static int DetermineEmbeddingDimensions(string modelName, IConfiguration config)
     {
         // Try nested config first (Embedding:Dimensions) - matches appsettings.json structure
-        if (int.TryParse(config["Embedding:Dimensions"], out var nestedDimensions) && nestedDimensions > 0)
+        if (int.TryParse(config["Embedding:Dimensions"], CultureInfo.InvariantCulture, out var nestedDimensions) && nestedDimensions > 0)
         {
             return nestedDimensions;
         }
 
         // Try flat config for backward compatibility (EMBEDDING_DIMENSIONS environment variable)
         // IMPORTANT: Only accept positive values to prevent 0 or negative dimensions bug
-        if (int.TryParse(config["EMBEDDING_DIMENSIONS"], out var flatDimensions) && flatDimensions > 0)
+        if (int.TryParse(config["EMBEDDING_DIMENSIONS"], CultureInfo.InvariantCulture, out var flatDimensions) && flatDimensions > 0)
         {
             return flatDimensions;
         }
@@ -151,7 +152,7 @@ public class EmbeddingService : IEmbeddingService
 
         try
         {
-            if (_provider == "ollama")
+            if (string.Equals(_provider, "ollama", StringComparison.Ordinal))
             {
                 return await GenerateOllamaEmbeddingsAsync(texts, ct);
             }
@@ -301,7 +302,7 @@ public class EmbeddingService : IEmbeddingService
             }
 
             // 2. Fall back to configured provider (Ollama or OpenRouter)
-            if (_provider == "ollama")
+            if (string.Equals(_provider, "ollama", StringComparison.Ordinal))
             {
                 return await GenerateOllamaEmbeddingsAsync(texts, ct);
             }
@@ -411,7 +412,7 @@ public class EmbeddingService : IEmbeddingService
             return false;
 
         var supportedLanguages = new[] { "en", "it", "de", "fr", "es" };
-        return supportedLanguages.Contains(languageCode.ToLowerInvariant());
+        return supportedLanguages.Contains(languageCode.ToLowerInvariant(), StringComparer.Ordinal);
     }
 }
 

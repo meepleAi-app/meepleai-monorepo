@@ -37,7 +37,7 @@ public class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTe
         }
 
         // Load user for navigation property
-        var user = await _dbContext.Set<UserEntity>().FindAsync([command.CreatedByUserId], cancellationToken);
+        var user = await _dbContext.Set<UserEntity>().FindAsync([command.CreatedByUserId], cancellationToken).ConfigureAwait(false);
         if (user == null)
         {
             throw new InvalidOperationException($"User {command.CreatedByUserId} not found");
@@ -73,7 +73,7 @@ public class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePromptTe
 
         _dbContext.Set<PromptTemplateEntity>().Add(template);
         _dbContext.Set<PromptVersionEntity>().Add(initialVersion);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return new PromptTemplateDto
         {

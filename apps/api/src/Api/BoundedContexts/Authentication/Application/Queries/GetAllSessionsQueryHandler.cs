@@ -18,7 +18,7 @@ public class GetAllSessionsQueryHandler : IQueryHandler<GetAllSessionsQuery, Lis
     {
         if (request.Limit <= 0 || request.Limit > 1000)
         {
-            throw new ArgumentException("Limit must be between 1 and 1000", nameof(request.Limit));
+            throw new ArgumentException("Limit must be between 1 and 1000", nameof(request));
         }
 
         var query = _db.UserSessions

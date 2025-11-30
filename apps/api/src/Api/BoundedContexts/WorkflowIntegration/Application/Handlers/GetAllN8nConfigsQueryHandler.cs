@@ -17,7 +17,7 @@ public class GetAllN8nConfigsQueryHandler : IQueryHandler<GetAllN8nConfigsQuery,
 
     public async Task<List<N8nConfigurationDto>> Handle(GetAllN8nConfigsQuery query, CancellationToken cancellationToken)
     {
-        var configs = await _repository.GetAllAsync(cancellationToken);
+        var configs = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
         return configs.Select(MapToDto).ToList();
     }
 

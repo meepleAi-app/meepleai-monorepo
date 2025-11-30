@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Domain.Services;
@@ -61,11 +62,11 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
 
         if (!versionProvided)
         {
-            version = await _versioningService.GenerateNextVersionAsync(command.GameId, cancellationToken);
+            version = await _versioningService.GenerateNextVersionAsync(command.GameId, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            var duplicate = await _versioningService.VersionExistsAsync(command.GameId, version, cancellationToken);
+            var duplicate = await _versioningService.VersionExistsAsync(command.GameId, version, cancellationToken).ConfigureAwait(false);
             if (duplicate)
             {
                 throw new InvalidOperationException($"Version {version} already exists for game {command.GameId}");
@@ -90,17 +91,17 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
                 Key = atom.Id,
                 Text = atom.Text,
                 Section = atom.Section,
-                PageNumber = int.TryParse(atom.Page, out var page) ? page : null,
-                LineNumber = int.TryParse(atom.Line, out var line) ? line : null,
+                PageNumber = int.TryParse(atom.Page, CultureInfo.InvariantCulture, out var page) ? page : null,
+                LineNumber = int.TryParse(atom.Line, CultureInfo.InvariantCulture, out var line) ? line : null,
                 SortOrder = sortOrder++,
             });
         }
 
         _dbContext.RuleSpecs.Add(specEntity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Invalidate cache
-        await _cache.InvalidateGameAsync(command.GameId.ToString(), cancellationToken);
+        await _cache.InvalidateGameAsync(command.GameId.ToString(), cancellationToken).ConfigureAwait(false);
 
         // Audit trail
         await _auditService.LogAsync(
@@ -127,8 +128,8 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
                     Id: a.Key,
                     Text: a.Text,
                     Section: a.Section,
-                    Page: a.PageNumber?.ToString(),
-                    Line: a.LineNumber?.ToString()
+                    Page: a.PageNumber?.ToString(CultureInfo.InvariantCulture),
+                    Line: a.LineNumber?.ToString(CultureInfo.InvariantCulture)
                 ))
                 .ToList()
         );

@@ -112,7 +112,8 @@ public static class ValidationExtensions
         string parameterName,
         string? message = null)
     {
-        if (!System.Text.RegularExpressions.Regex.IsMatch(value, pattern))
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value, pattern, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
         {
             return Result<string>.Failure(Error.Validation(
                 message ?? $"{parameterName} does not match the required pattern"));

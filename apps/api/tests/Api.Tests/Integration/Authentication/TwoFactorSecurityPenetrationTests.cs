@@ -93,8 +93,8 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         {
             SslMode = SslMode.Disable,
             KeepAlive = 30,
-            Pooling = false,
-            Timeout = 15,
+            Pooling = true, // FIX #1850: Enable pooling to prevent connection exhaustion
+            Timeout = 5,     // FIX #1850: Reduce timeout to detect issues faster
             CommandTimeout = 30
         };
 
@@ -303,8 +303,9 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
     /// <summary>
     /// SECURITY TEST: Rapid-fire TOTP verification attempts should be rate-limited.
     /// OWASP: Implement rate limiting to prevent automated attacks
+    /// FIX #1850: Added timeout to prevent test hanging indefinitely
     /// </summary>
-    [Fact]
+    [Fact(Timeout = 10000)] // 10 second max (was hanging for 12+ minutes)
     public async Task BruteForce_RapidFireAttack_ShouldBeRateLimited()
     {
         // Arrange
@@ -314,8 +315,9 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         var stopwatch = Stopwatch.StartNew();
         var attemptCount = 0;
 
-        // Act - Rapid-fire attack: as many attempts as possible in 1 second
-        while (stopwatch.ElapsedMilliseconds < 1000)
+        // Act - Rapid-fire attack: as many attempts as possible in 1 second (max 100)
+        // FIX #1850: Limit iterations to prevent database connection exhaustion
+        while (stopwatch.ElapsedMilliseconds < 1000 && attemptCount < 100)
         {
             var randomCode = GenerateRandom6DigitCode();
             await _totpService!.VerifyCodeAsync(user.Id, randomCode, TestCancellationToken);
@@ -764,7 +766,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
             .WithEmail("security-test@meepleai.dev")
             .Build();
 
-        await _userRepository!.AddAsync(user, TestCancellationToken);
+        await _userRepository!.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         // Generate TOTP setup (creates encrypted secret)
@@ -785,7 +787,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
             .WithEmail($"backup-test-{Guid.NewGuid()}@meepleai.dev")
             .Build();
 
-        await _userRepository!.AddAsync(user, TestCancellationToken);
+        await _userRepository!.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         // Generate TOTP setup with backup codes

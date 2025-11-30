@@ -53,7 +53,7 @@ public class LogWorkflowErrorCommandHandlerTests
 
         _mockErrorLogRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<WorkflowErrorLogEntity>(),
+                It.IsAny<WorkflowErrorLogEntity>(, TestContext.Current.CancellationToken),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _mockUnitOfWork.Verify(
@@ -185,7 +185,7 @@ public class LogWorkflowErrorCommandHandlerTests
         // Assert
         _mockErrorLogRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<WorkflowErrorLogEntity>(),
+                It.IsAny<WorkflowErrorLogEntity>(, TestContext.Current.CancellationToken),
                 cancellationToken),
             Times.Once);
         _mockUnitOfWork.Verify(

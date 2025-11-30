@@ -89,7 +89,7 @@ public abstract class DomainEventHandlerBase<TEvent> : INotificationHandler<TEve
     /// </summary>
     private async Task CreateAuditLogAsync(TEvent domainEvent, CancellationToken cancellationToken)
     {
-        var metadata = GetAuditMetadata(domainEvent) ?? new Dictionary<string, object?>();
+        var metadata = GetAuditMetadata(domainEvent) ?? new Dictionary<string, object?>(StringComparer.Ordinal);
         metadata["EventId"] = domainEvent.EventId;
         metadata["OccurredAt"] = domainEvent.OccurredAt;
 

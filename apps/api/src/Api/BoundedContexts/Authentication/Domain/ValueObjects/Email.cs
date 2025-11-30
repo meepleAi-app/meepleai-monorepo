@@ -11,9 +11,11 @@ namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
 public sealed class Email : ValueObject
 {
     // Email validation regex (RFC 5322 simplified)
+    // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex EmailRegex = new(
         @"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase
+        RegexOptions.Compiled | RegexOptions.IgnoreCase,
+        TimeSpan.FromSeconds(1)
     );
 
     public string Value { get; }

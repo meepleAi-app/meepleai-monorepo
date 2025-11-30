@@ -22,15 +22,15 @@ public class UpdateConfigValueCommandHandler : ICommandHandler<UpdateConfigValue
 
     public async Task<ConfigurationDto> Handle(UpdateConfigValueCommand command, CancellationToken cancellationToken)
     {
-        var config = await _configurationRepository.GetByIdAsync(command.ConfigId, cancellationToken);
+        var config = await _configurationRepository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
 
         if (config == null)
             throw new DomainException($"Configuration with ID {command.ConfigId} not found");
 
         config.UpdateValue(command.NewValue, command.UpdatedByUserId);
 
-        await _configurationRepository.UpdateAsync(config, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _configurationRepository.UpdateAsync(config, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToDto(config);
     }

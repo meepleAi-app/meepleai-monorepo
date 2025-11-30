@@ -21,12 +21,13 @@ public sealed class N8nConfigurationUpdatedEventHandler : DomainEventHandlerBase
     {
         // Future: Invalidate cached configuration
         // Future: Re-test connection if critical fields changed
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(N8nConfigurationUpdatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["ConfigurationId"] = domainEvent.ConfigurationId,
             ["Name"] = domainEvent.Name,

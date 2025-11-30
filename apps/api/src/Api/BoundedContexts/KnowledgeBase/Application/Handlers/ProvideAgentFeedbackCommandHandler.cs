@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// </summary>
 public sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<ProvideAgentFeedbackCommand>
 {
-    private static readonly HashSet<string> ValidOutcomes = new()
+    private static readonly HashSet<string> ValidOutcomes = new(StringComparer.Ordinal)
     {
         "helpful",
         "not-helpful",

@@ -119,10 +119,11 @@ public static partial class PathSecurity
         // Normalize allowed extensions to lowercase
         var normalizedAllowed = allowedExtensions.Select(e => e.ToLowerInvariant()).ToArray();
 
-        if (!normalizedAllowed.Contains(extension))
+        if (!normalizedAllowed.Contains(extension, StringComparer.Ordinal))
         {
             throw new ArgumentException(
-                $"Invalid file extension: '{extension}'. Allowed: {string.Join(", ", allowedExtensions)}");
+                $"Invalid file extension: '{extension}'. Allowed: {string.Join(", ", allowedExtensions)}",
+                nameof(filename));
         }
     }
 
@@ -197,8 +198,9 @@ public static partial class PathSecurity
 
     /// <summary>
     /// Regex pattern for validating identifiers (alphanumeric, hyphens, underscores only)
+    /// FIX MA0009: Add timeout to prevent ReDoS attacks
     /// </summary>
-    [GeneratedRegex("^[a-zA-Z0-9_-]+$", RegexOptions.Compiled)]
+    [GeneratedRegex("^[a-zA-Z0-9_-]+$", RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex IdentifierPattern();
 
     /// <summary>

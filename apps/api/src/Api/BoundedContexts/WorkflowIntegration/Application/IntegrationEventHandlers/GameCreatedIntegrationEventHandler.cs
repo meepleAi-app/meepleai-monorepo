@@ -30,6 +30,6 @@ public sealed class GameCreatedIntegrationEventHandler : INotificationHandler<Ga
         // - Setup game-specific webhook subscriptions
         // - Initialize game monitoring
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 }

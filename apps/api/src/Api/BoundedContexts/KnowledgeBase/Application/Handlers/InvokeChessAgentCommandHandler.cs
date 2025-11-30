@@ -133,7 +133,7 @@ public sealed class InvokeChessAgentCommandHandler
                 parsedResponse.SuggestedMoves.Count);
 
             var metadata = llmResult.Metadata.Count > 0
-                ? new Dictionary<string, string>(llmResult.Metadata)
+                ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
                 : null;
 
             var response = new ChessAgentResponse(

@@ -22,11 +22,11 @@ public class GetActiveSessionsQueryHandler : IQueryHandler<GetActiveSessionsQuer
     {
         // Validate pagination parameters
         if (query.Limit.HasValue && query.Limit.Value < 0)
-            throw new ArgumentException("Limit must be non-negative", nameof(query.Limit));
+            throw new ArgumentException("Limit must be non-negative", nameof(query));
         if (query.Limit.HasValue && query.Limit.Value > 1000)
-            throw new ArgumentException("Limit cannot exceed 1000", nameof(query.Limit));
+            throw new ArgumentException("Limit cannot exceed 1000", nameof(query));
         if (query.Offset.HasValue && query.Offset.Value < 0)
-            throw new ArgumentException("Offset must be non-negative", nameof(query.Offset));
+            throw new ArgumentException("Offset must be non-negative", nameof(query));
 
         var sessions = await _sessionRepository.FindActiveAsync(
             limit: query.Limit,

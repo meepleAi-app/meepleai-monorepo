@@ -33,7 +33,7 @@ public sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<Valid
             }
 
             // Delegate to infrastructure service for token validation
-            var isValid = await _passwordResetService.ValidateResetTokenAsync(query.Token, cancellationToken);
+            var isValid = await _passwordResetService.ValidateResetTokenAsync(query.Token, cancellationToken).ConfigureAwait(false);
 
             return new ValidatePasswordResetTokenResult { IsValid = isValid };
         }

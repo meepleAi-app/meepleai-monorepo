@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -92,14 +93,14 @@ public class SlackAlertChannel : IAlertChannel
         string message,
         Dictionary<string, object>? metadata)
     {
-        var color = severity.ToUpper() switch
+        var color = severity.ToUpper(CultureInfo.InvariantCulture) switch
         {
             "CRITICAL" => "danger",
             "WARNING" => "warning",
             _ => "#1967d2"
         };
 
-        var emoji = severity.ToUpper() switch
+        var emoji = severity.ToUpper(CultureInfo.InvariantCulture) switch
         {
             "CRITICAL" => ":rotating_light:",
             "WARNING" => ":warning:",
@@ -108,7 +109,7 @@ public class SlackAlertChannel : IAlertChannel
 
         var fields = new List<object>
         {
-            new { title = "Severity", value = severity.ToUpper(), @short = true },
+            new { title = "Severity", value = severity.ToUpper(CultureInfo.InvariantCulture), @short = true },
             new { title = "Alert Type", value = alertType, @short = true },
             new { title = "Triggered", value = $"<!date^{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}^{{date_short_pretty}} {{time}}|{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC>", @short = true }
         };
@@ -131,7 +132,7 @@ public class SlackAlertChannel : IAlertChannel
                 new
                 {
                     color,
-                    title = $"{emoji} {severity.ToUpper()}: {alertType}",
+                    title = $"{emoji} {severity.ToUpper(CultureInfo.InvariantCulture)}: {alertType}",
                     text = message,
                     fields,
                     footer = "MeepleAI Monitoring",

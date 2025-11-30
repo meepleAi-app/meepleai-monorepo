@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -45,8 +46,8 @@ public class GetRuleSpecQueryHandler : IQueryHandler<GetRuleSpecQuery, RuleSpecD
                     Id: a.Key,
                     Text: a.Text,
                     Section: a.Section,
-                    Page: a.PageNumber?.ToString(),
-                    Line: a.LineNumber?.ToString()
+                    Page: a.PageNumber?.ToString(CultureInfo.InvariantCulture),
+                    Line: a.LineNumber?.ToString(CultureInfo.InvariantCulture)
                 ))
                 .ToList()
         );

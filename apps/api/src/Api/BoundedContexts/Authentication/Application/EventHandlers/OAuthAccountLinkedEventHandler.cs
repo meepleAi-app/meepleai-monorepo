@@ -22,7 +22,7 @@ public sealed class OAuthAccountLinkedEventHandler : DomainEventHandlerBase<OAut
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., send OAuth linked notification)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(OAuthAccountLinkedEvent domainEvent) => domainEvent.UserId;
@@ -30,6 +30,7 @@ public sealed class OAuthAccountLinkedEventHandler : DomainEventHandlerBase<OAut
     protected override Dictionary<string, object?>? GetAuditMetadata(OAuthAccountLinkedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["Provider"] = domainEvent.Provider,

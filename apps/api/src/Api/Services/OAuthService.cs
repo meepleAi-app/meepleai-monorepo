@@ -8,6 +8,7 @@ using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -154,7 +155,7 @@ public class OAuthService : IOAuthService
             "google" => "Google",
             "discord" => "Discord",
             "github" => "GitHub",
-            _ => throw new ArgumentException($"Unsupported OAuth provider: {provider}")
+            _ => throw new ArgumentException($"Unsupported OAuth provider: {provider}", nameof(provider))
         };
 
         if (!_config.Providers.TryGetValue(providerKey, out var config))
@@ -227,6 +228,7 @@ public class OAuthService : IOAuthService
         var callbackUrl = GetCallbackUrl(provider);
 
         var requestData = new Dictionary<string, string>
+(StringComparer.Ordinal)
         {
             { "client_id", config.ClientId },
             { "client_secret", config.ClientSecret },
@@ -346,7 +348,7 @@ public class OAuthService : IOAuthService
         JsonElement userData,
         string accessToken)
     {
-        var id = userData.GetProperty("id").GetInt64().ToString();
+        var id = userData.GetProperty("id").GetInt64().ToString(CultureInfo.InvariantCulture);
         var name = userData.TryGetProperty("name", out var n) ? n.GetString() : null;
 
         // GitHub doesn't always return email in user endpoint, need to fetch from /user/emails
@@ -486,6 +488,7 @@ public class OAuthService : IOAuthService
 #pragma warning restore CA2000
 
         var requestData = new Dictionary<string, string>
+(StringComparer.Ordinal)
         {
             { "client_id", config.ClientId },
             { "client_secret", config.ClientSecret },

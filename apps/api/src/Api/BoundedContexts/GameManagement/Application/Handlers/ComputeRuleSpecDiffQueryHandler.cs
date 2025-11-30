@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.Infrastructure;
@@ -42,8 +43,8 @@ public class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpecDi
                 id: r.Id.ToString(),
                 text: r.Text,
                 section: r.Section,
-                page: r.PageNumber?.ToString(),
-                line: r.LineNumber?.ToString()
+                page: r.PageNumber?.ToString(CultureInfo.InvariantCulture),
+                line: r.LineNumber?.ToString(CultureInfo.InvariantCulture)
             )).ToList(),
             createdAt: fromEntity.CreatedAt
         );
@@ -62,8 +63,8 @@ public class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpecDi
                 id: r.Id.ToString(),
                 text: r.Text,
                 section: r.Section,
-                page: r.PageNumber?.ToString(),
-                line: r.LineNumber?.ToString()
+                page: r.PageNumber?.ToString(CultureInfo.InvariantCulture),
+                line: r.LineNumber?.ToString(CultureInfo.InvariantCulture)
             )).ToList(),
             createdAt: toEntity.CreatedAt
         );

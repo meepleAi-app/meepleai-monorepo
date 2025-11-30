@@ -30,7 +30,7 @@ public sealed class Vector : ValueObject
     public double CosineSimilarity(Vector other)
     {
         if (other.Dimensions != Dimensions)
-            throw new ArgumentException($"Vector dimensions must match. Expected {Dimensions}, got {other.Dimensions}");
+            throw new ArgumentException($"Vector dimensions must match. Expected {Dimensions}, got {other.Dimensions}", nameof(other));
 
         double dotProduct = 0;
         double magnitudeA = 0;

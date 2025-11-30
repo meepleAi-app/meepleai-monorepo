@@ -17,12 +17,13 @@ public sealed class PlayerAddedToSessionEventHandler : DomainEventHandlerBase<Pl
     protected override async Task HandleEventAsync(PlayerAddedToSessionEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(PlayerAddedToSessionEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["SessionId"] = domainEvent.SessionId,
             ["PlayerName"] = domainEvent.PlayerName,

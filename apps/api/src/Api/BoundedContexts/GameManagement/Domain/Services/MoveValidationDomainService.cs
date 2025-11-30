@@ -73,7 +73,7 @@ public class MoveValidationDomainService
         }
 
         // Retrieve RuleSpec for the game
-        var ruleSpec = await GetRuleSpecAsync(session.GameId, ruleSpecVersion, cancellationToken);
+        var ruleSpec = await GetRuleSpecAsync(session.GameId, ruleSpecVersion, cancellationToken).ConfigureAwait(false);
 
         if (ruleSpec == null)
         {
@@ -219,7 +219,7 @@ public class MoveValidationDomainService
             }
         }
 
-        return terms.Distinct().ToList();
+        return terms.Distinct(StringComparer.Ordinal).ToList();
     }
 
     /// <summary>
@@ -336,7 +336,7 @@ public class MoveValidationDomainService
 
         // Decrease confidence if move action is very generic
         var genericActions = new[] { "move", "play", "take", "use", "do" };
-        if (genericActions.Contains(move.Action.ToLowerInvariant()))
+        if (genericActions.Contains(move.Action.ToLowerInvariant(), StringComparer.Ordinal))
         {
             confidence -= 0.1;
         }

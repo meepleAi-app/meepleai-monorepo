@@ -105,6 +105,6 @@ public sealed class OAuthAccount : AggregateRoot<Guid>
     {
         // Discord, Google, and GitHub support refresh tokens
         return !string.IsNullOrWhiteSpace(RefreshTokenEncrypted) &&
-               (Provider == "google" || Provider == "discord" || Provider == "github");
+               (string.Equals(Provider, "google", StringComparison.Ordinal) || string.Equals(Provider, "discord", StringComparison.Ordinal) || string.Equals(Provider, "github", StringComparison.Ordinal));
     }
 }

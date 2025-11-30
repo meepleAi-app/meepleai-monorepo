@@ -8,7 +8,7 @@ namespace Api.Services;
 public class BackgroundTaskService : IBackgroundTaskService
 {
     private readonly ILogger<BackgroundTaskService> _logger;
-    private readonly ConcurrentDictionary<string, CancellationTokenSource> _activeTasks = new();
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _activeTasks = new(StringComparer.Ordinal);
 
     public BackgroundTaskService(ILogger<BackgroundTaskService> logger)
     {

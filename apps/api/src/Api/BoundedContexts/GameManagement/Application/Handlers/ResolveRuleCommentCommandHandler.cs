@@ -49,10 +49,10 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
         // Recursively resolve replies if requested
         if (command.ResolveReplies && comment.Replies.Any())
         {
-            await ResolveRepliesRecursiveAsync(comment.Id, command.ResolvedByUserId, cancellationToken);
+            await ResolveRepliesRecursiveAsync(comment.Id, command.ResolvedByUserId, cancellationToken).ConfigureAwait(false);
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Resolved comment {CommentId} by user {ResolvedBy} (includeReplies: {ResolveReplies}, admin: {IsAdmin})",
@@ -69,7 +69,7 @@ public class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleComme
         CancellationToken cancellationToken)
     {
         // Load all descendants in a single query to avoid N+1
-        var allDescendants = await LoadAllDescendantsAsync(parentCommentId, cancellationToken);
+        var allDescendants = await LoadAllDescendantsAsync(parentCommentId, cancellationToken).ConfigureAwait(false);
 
         var resolvedAt = _timeProvider.GetUtcNow().UtcDateTime;
 

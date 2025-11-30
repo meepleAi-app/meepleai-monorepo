@@ -47,7 +47,7 @@ public class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleComment
         comment.CommentText = command.CommentText;
         comment.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Updated comment {CommentId} by user {UserId}",

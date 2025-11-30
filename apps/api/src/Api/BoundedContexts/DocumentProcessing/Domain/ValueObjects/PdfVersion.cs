@@ -62,8 +62,8 @@ public sealed class PdfVersion : ValueObject
         // Try parsing as "major.minor" format
         var parts = trimmed.Split('.');
         if (parts.Length == 2 &&
-            int.TryParse(parts[0], out var majorPart) &&
-            int.TryParse(parts[1], out var minorPart))
+            int.TryParse(parts[0], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var majorPart) &&
+            int.TryParse(parts[1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var minorPart))
         {
             return new PdfVersion(majorPart, minorPart);
         }

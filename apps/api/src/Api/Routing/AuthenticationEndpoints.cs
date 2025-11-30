@@ -225,7 +225,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             // Check for API key authentication first (higher priority)
             // API keys are identified by the "AuthType" claim with value "ApiKey"
             var authType = context.User.FindFirst("AuthType")?.Value;
-            if (authType == "ApiKey" && context.User.Identity?.IsAuthenticated == true)
+            if (string.Equals(authType, "ApiKey", StringComparison.Ordinal) && context.User.Identity?.IsAuthenticated == true)
             {
                 var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 var email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;

@@ -314,8 +314,8 @@ public static class PromptManagementEndpoints
             if (!authorized) return error!;
 
             // ADMIN-01: Use CQRS pattern for report generation
-            var reportFormat = format?.ToLowerInvariant() == "json"
-                ? ReportFormat.Json
+            var reportFormat = string.Equals(format?.ToLowerInvariant(), "json"
+, StringComparison.Ordinal) ? ReportFormat.Json
                 : ReportFormat.Markdown;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.PromptEvaluation.GenerateEvaluationReportQuery

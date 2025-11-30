@@ -20,21 +20,21 @@ public class GetAllConfigsQueryHandler : IQueryHandler<GetAllConfigsQuery, Paged
 
         if (query.ActiveOnly)
         {
-            configs = await _configurationRepository.GetActiveConfigurationsAsync(cancellationToken);
+            configs = await _configurationRepository.GetActiveConfigurationsAsync(cancellationToken).ConfigureAwait(false);
         }
         else if (!string.IsNullOrWhiteSpace(query.Category))
         {
-            configs = await _configurationRepository.GetByCategoryAsync(query.Category, cancellationToken);
+            configs = await _configurationRepository.GetByCategoryAsync(query.Category, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            configs = await _configurationRepository.GetAllAsync(cancellationToken);
+            configs = await _configurationRepository.GetAllAsync(cancellationToken).ConfigureAwait(false);
         }
 
         // Filter by environment if specified
         if (!string.IsNullOrWhiteSpace(query.Environment))
         {
-            configs = configs.Where(c => c.Environment == query.Environment || c.Environment == "All").ToList();
+            configs = configs.Where(c => string.Equals(c.Environment, query.Environment, StringComparison.Ordinal) || string.Equals(c.Environment, "All", StringComparison.Ordinal)).ToList();
         }
 
         var total = configs.Count;

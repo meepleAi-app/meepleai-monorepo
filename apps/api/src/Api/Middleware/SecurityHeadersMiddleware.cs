@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Api.Middleware;
 
@@ -264,14 +265,16 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
             else
             {
                 // Extract max-age value and validate it's a number
+                // FIX MA0009: Add timeout to prevent ReDoS attacks
                 var maxAgeMatch = System.Text.RegularExpressions.Regex.Match(
                     options.HstsPolicy,
                     @"max-age=(\d+)",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase,
+                    TimeSpan.FromSeconds(1));
 
                 if (maxAgeMatch.Success)
                 {
-                    var maxAge = int.Parse(maxAgeMatch.Groups[1].Value);
+                    var maxAge = int.Parse(maxAgeMatch.Groups[1].Value, CultureInfo.InvariantCulture);
                     if (maxAge < 0)
                     {
                         errors.Add("HSTS max-age must be a positive number");
@@ -309,7 +312,7 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
             {
                 var validValues = new[] { "DENY", "SAMEORIGIN" };
                 var upperPolicy = options.XFrameOptionsPolicy.Trim().ToUpperInvariant();
-                if (!validValues.Contains(upperPolicy) && !upperPolicy.StartsWith("ALLOW-FROM"))
+                if (!validValues.Contains(upperPolicy, StringComparer.Ordinal) && !upperPolicy.StartsWith("ALLOW-FROM"))
                 {
                     errors.Add($"X-Frame-Options must be DENY, SAMEORIGIN, or ALLOW-FROM uri (got: {options.XFrameOptionsPolicy})");
                 }
@@ -339,7 +342,7 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
             else
             {
                 var validPatterns = new[] { "0", "1", "1; mode=block" };
-                if (!validPatterns.Contains(options.XssProtectionPolicy.Trim()))
+                if (!validPatterns.Contains(options.XssProtectionPolicy.Trim(), StringComparer.Ordinal))
                 {
                     errors.Add($"X-XSS-Protection must be '0', '1', or '1; mode=block' (got: {options.XssProtectionPolicy})");
                 }

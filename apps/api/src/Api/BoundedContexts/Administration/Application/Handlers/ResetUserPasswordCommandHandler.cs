@@ -23,13 +23,13 @@ public class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPassword
     public async Task Handle(ResetUserPasswordCommand command, CancellationToken cancellationToken)
     {
         var userId = Guid.Parse(command.UserId);
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
             throw new DomainException($"User {command.UserId} not found");
 
         var newPasswordHash = PasswordHash.Create(command.NewPassword);
         user.UpdatePassword(newPasswordHash);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

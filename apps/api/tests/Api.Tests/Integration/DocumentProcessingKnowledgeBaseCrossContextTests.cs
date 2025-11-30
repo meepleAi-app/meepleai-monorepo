@@ -180,7 +180,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         var pdfRepository = ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
 
         var user = CreateTestUser("uploader@meepleai.dev", "Document Uploader");
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -188,7 +188,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             playerCount: new PlayerCount(1, 4),
             playTime: new PlayTime(90, 150)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -201,7 +201,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             user.Id
         );
 
-        await pdfRepository.AddAsync(pdfDocument, TestCancellationToken);
+        await pdfRepository.AddAsync(pdfDocument, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -225,7 +225,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         var vectorRepository = ServiceProvider.GetRequiredService<IVectorDocumentRepository>();
 
         var user = CreateTestUser("processor@meepleai.dev", "PDF Processor");
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -233,7 +233,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             playerCount: new PlayerCount(1, 5),
             playTime: new PlayTime(90, 120)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Act - Complete workflow
@@ -245,7 +245,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             new FileSize(4 * 1024 * 1024),
             user.Id
         );
-        await pdfRepository.AddAsync(pdfDocument, TestCancellationToken);
+        await pdfRepository.AddAsync(pdfDocument, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Reload to avoid tracking conflicts
@@ -267,7 +267,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             totalChunks: 15
         );
         vectorDoc.UpdateMetadata("{\"page\": 12, \"source\": \"scythe-rules.pdf\", \"quality\": 0.95}");
-        await vectorRepository.AddAsync(vectorDoc, TestCancellationToken);
+        await vectorRepository.AddAsync(vectorDoc, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -297,7 +297,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("raguser@meepleai.dev", "RAG User");
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -305,7 +305,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             playerCount: new PlayerCount(2, 4),
             playTime: new PlayTime(45, 60)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
 
         var pdfDocument = new PdfDocument(
             Guid.NewGuid(),
@@ -317,7 +317,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         );
         pdfDocument.MarkAsProcessing();
         pdfDocument.MarkAsCompleted(24);
-        await pdfRepository.AddAsync(pdfDocument, TestCancellationToken);
+        await pdfRepository.AddAsync(pdfDocument, TestCancellationToken, TestContext.Current.CancellationToken);
 
         var vectorDoc = new VectorDocument(
             Guid.NewGuid(),
@@ -326,7 +326,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             language: "en",
             totalChunks: 12
         );
-        await vectorRepository.AddAsync(vectorDoc, TestCancellationToken);
+        await vectorRepository.AddAsync(vectorDoc, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Clear tracker to avoid conflicts
@@ -348,7 +348,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         chatThread.AddUserMessage("What happens during an outbreak?");
         chatThread.AddAssistantMessage("Based on the rules (page 8): Outbreak occurs when city has 3+ disease cubes...");
 
-        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
+        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Clear tracker before final assertion to force fresh query
@@ -377,8 +377,8 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
 
         var user1 = CreateTestUser("user1@meepleai.dev", "User One");
         var user2 = CreateTestUser("user2@meepleai.dev", "User Two");
-        await userRepository.AddAsync(user1, TestCancellationToken);
-        await userRepository.AddAsync(user2, TestCancellationToken);
+        await userRepository.AddAsync(user1, TestCancellationToken, TestContext.Current.CancellationToken);
+        await userRepository.AddAsync(user2, TestCancellationToken, TestContext.Current.CancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -386,7 +386,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             playerCount: new PlayerCount(1, 5),
             playTime: new PlayTime(120, 180)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -413,8 +413,8 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         pdf2.MarkAsProcessing();
         pdf2.MarkAsCompleted(56);
 
-        await pdfRepository.AddAsync(pdf1, TestCancellationToken);
-        await pdfRepository.AddAsync(pdf2, TestCancellationToken);
+        await pdfRepository.AddAsync(pdf1, TestCancellationToken, TestContext.Current.CancellationToken);
+        await pdfRepository.AddAsync(pdf2, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 

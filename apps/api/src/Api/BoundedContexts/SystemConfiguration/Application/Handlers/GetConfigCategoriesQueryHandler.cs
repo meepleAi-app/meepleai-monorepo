@@ -18,12 +18,12 @@ public class GetConfigCategoriesQueryHandler : IQueryHandler<GetConfigCategories
 
     public async Task<IReadOnlyList<string>> Handle(GetConfigCategoriesQuery query, CancellationToken cancellationToken)
     {
-        var allConfigs = await _configurationRepository.GetAllAsync(cancellationToken);
+        var allConfigs = await _configurationRepository.GetAllAsync(cancellationToken).ConfigureAwait(false);
 
         var categories = allConfigs
             .Select(c => c.Category)
-            .Distinct()
-            .OrderBy(c => c)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(c => c, StringComparer.Ordinal)
             .ToList();
 
         return categories;

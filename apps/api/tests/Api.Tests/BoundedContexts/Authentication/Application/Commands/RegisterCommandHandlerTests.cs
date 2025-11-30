@@ -730,8 +730,8 @@ public class RegisterCommandHandlerTests
         // Assert
         _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), token), Times.Once);
         _userRepositoryMock.Verify(x => x.HasAnyUsersAsync(token), Times.Once);
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), token), Times.Once);
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), token), Times.Once);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(, TestContext.Current.CancellationToken), token), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(, TestContext.Current.CancellationToken), token), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(token), Times.Once);
     }
 

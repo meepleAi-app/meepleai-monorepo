@@ -334,7 +334,7 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
             .WithEmail("no-2fa-user@test.meepleai.dev")
             .Build(); // No .With2FA() call
 
-        await userRepository.AddAsync(targetUserWithout2FA, TestCancellationToken);
+        await userRepository.AddAsync(targetUserWithout2FA, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var command = new AdminDisable2FACommand(
@@ -366,7 +366,7 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
             .With2FA()
             .Build();
 
-        await userRepository.AddAsync(adminUser, TestCancellationToken);
+        await userRepository.AddAsync(adminUser, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var command = new AdminDisable2FACommand(
@@ -417,8 +417,8 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
             .With2FA()
             .Build();
 
-        await userRepository.AddAsync(adminUser, TestCancellationToken);
-        await userRepository.AddAsync(targetUser, TestCancellationToken);
+        await userRepository.AddAsync(adminUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await userRepository.AddAsync(targetUser, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         _output($"Seeded admin user {adminUser.Id} and target user {targetUser.Id} with 2FA enabled");
@@ -444,8 +444,8 @@ public class AdminDisable2FAIntegrationTests : IAsyncLifetime
             .With2FA()
             .Build();
 
-        await userRepository.AddAsync(editorUser, TestCancellationToken);
-        await userRepository.AddAsync(targetUser, TestCancellationToken);
+        await userRepository.AddAsync(editorUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await userRepository.AddAsync(targetUser, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         _output($"Seeded editor user {editorUser.Id} and target user {targetUser.Id} with 2FA enabled");

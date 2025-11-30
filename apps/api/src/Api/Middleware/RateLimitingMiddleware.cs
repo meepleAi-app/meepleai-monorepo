@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Globalization;
 using Api.Models;
 using Api.Services;
 
@@ -53,12 +54,12 @@ public class RateLimitingMiddleware
             var rl = await rateLimiter.CheckRateLimitAsync(rateKey, cfg.MaxTokens, cfg.RefillRate, context.RequestAborted);
 
             // Always add headers for observability
-            context.Response.Headers["X-RateLimit-Limit"] = cfg.MaxTokens.ToString();
-            context.Response.Headers["X-RateLimit-Remaining"] = Math.Max(rl.TokensRemaining, 0).ToString();
+            context.Response.Headers["X-RateLimit-Limit"] = cfg.MaxTokens.ToString(CultureInfo.InvariantCulture);
+            context.Response.Headers["X-RateLimit-Remaining"] = Math.Max(rl.TokensRemaining, 0).ToString(CultureInfo.InvariantCulture);
 
             if (!rl.Allowed)
             {
-                context.Response.Headers["Retry-After"] = rl.RetryAfterSeconds.ToString();
+                context.Response.Headers["Retry-After"] = rl.RetryAfterSeconds.ToString(CultureInfo.InvariantCulture);
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
 
                 var payload = new

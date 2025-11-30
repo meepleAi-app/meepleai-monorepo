@@ -18,12 +18,12 @@ public class GetPromptAuditLogQueryHandler : IQueryHandler<GetPromptAuditLogQuer
     {
         if (!Guid.TryParse(request.TemplateId, out var templateGuid))
         {
-            throw new ArgumentException($"Invalid template ID: {request.TemplateId}");
+            throw new ArgumentException($"Invalid template ID: {request.TemplateId}", nameof(request));
         }
 
         if (request.Limit <= 0 || request.Limit > 1000)
         {
-            throw new ArgumentException("Limit must be between 1 and 1000");
+            throw new ArgumentException("Limit must be between 1 and 1000", nameof(request));
         }
 
         var template = await _db.PromptTemplates

@@ -68,12 +68,12 @@ public class RagPromptsConfiguration
     /// <summary>
     /// Question type-specific templates
     /// </summary>
-    public Dictionary<string, PromptTemplateConfig> Templates { get; set; } = new();
+    public Dictionary<string, PromptTemplateConfig> Templates { get; set; } = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Game-specific template overrides (keyed by game ID)
     /// </summary>
-    public Dictionary<string, Dictionary<string, PromptTemplateConfig>> GameTemplates { get; set; } = new();
+    public Dictionary<string, Dictionary<string, PromptTemplateConfig>> GameTemplates { get; set; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>

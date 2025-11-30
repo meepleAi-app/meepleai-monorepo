@@ -1,6 +1,7 @@
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
 using System;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -98,7 +99,7 @@ public sealed class PasswordHash : ValueObject
                 return false;
             }
 
-            if (!int.TryParse(parts[1], out var iterations))
+            if (!int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var iterations))
             {
                 return false;
             }

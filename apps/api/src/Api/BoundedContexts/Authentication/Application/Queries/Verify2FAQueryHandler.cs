@@ -30,7 +30,7 @@ public class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResu
         {
             // Get user by email
             var email = new Domain.ValueObjects.Email(query.Email);
-            var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
+            var user = await _userRepository.GetByEmailAsync(email, cancellationToken).ConfigureAwait(false);
 
             if (user == null)
             {
@@ -42,11 +42,11 @@ public class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FAResu
             bool isValid;
             if (query.IsBackupCode)
             {
-                isValid = await _totpService.VerifyBackupCodeAsync(user.Id, query.Code, cancellationToken);
+                isValid = await _totpService.VerifyBackupCodeAsync(user.Id, query.Code, cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                isValid = await _totpService.VerifyCodeAsync(user.Id, query.Code, cancellationToken);
+                isValid = await _totpService.VerifyCodeAsync(user.Id, query.Code, cancellationToken).ConfigureAwait(false);
             }
 
             return new Verify2FAResult(IsValid: isValid);

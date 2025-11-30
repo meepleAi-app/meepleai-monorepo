@@ -47,12 +47,12 @@ public sealed class ThreadStatus : IEquatable<ThreadStatus>
     /// <summary>
     /// Checks if the thread is active.
     /// </summary>
-    public bool IsActive => Value == "active";
+    public bool IsActive => string.Equals(Value, "active", StringComparison.Ordinal);
 
     /// <summary>
     /// Checks if the thread is closed.
     /// </summary>
-    public bool IsClosed => Value == "closed";
+    public bool IsClosed => string.Equals(Value, "closed", StringComparison.Ordinal);
 
     public bool Equals(ThreadStatus? other)
     {

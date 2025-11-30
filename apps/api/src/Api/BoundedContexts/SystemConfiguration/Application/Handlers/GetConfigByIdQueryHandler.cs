@@ -16,7 +16,7 @@ public class GetConfigByIdQueryHandler : IQueryHandler<GetConfigByIdQuery, Confi
 
     public async Task<ConfigurationDto?> Handle(GetConfigByIdQuery query, CancellationToken cancellationToken)
     {
-        var config = await _configurationRepository.GetByIdAsync(query.ConfigId, cancellationToken);
+        var config = await _configurationRepository.GetByIdAsync(query.ConfigId, cancellationToken).ConfigureAwait(false);
 
         if (config == null)
             return null;

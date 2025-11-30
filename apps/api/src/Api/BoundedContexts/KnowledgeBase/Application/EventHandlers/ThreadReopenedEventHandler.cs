@@ -17,12 +17,13 @@ public sealed class ThreadReopenedEventHandler : DomainEventHandlerBase<ThreadRe
     protected override async Task HandleEventAsync(ThreadReopenedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(ThreadReopenedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["Action"] = "ThreadReopened",
             ["ThreadId"] = domainEvent.ThreadId

@@ -84,8 +84,8 @@ public class GetFeedbackStatsQueryHandler : IQueryHandler<GetFeedbackStatsQuery,
                 HelpfulCount = 0,
                 NotHelpfulCount = 0,
                 HelpfulRate = 0.0,
-                FeedbackByEndpoint = new Dictionary<string, int>(),
-                FeedbackByOutcome = new Dictionary<string, int>()
+                FeedbackByEndpoint = new Dictionary<string, int>(StringComparer.Ordinal),
+                FeedbackByOutcome = new Dictionary<string, int>(StringComparer.Ordinal)
             };
         }
 
@@ -105,8 +105,8 @@ public class GetFeedbackStatsQueryHandler : IQueryHandler<GetFeedbackStatsQuery,
             HelpfulCount = stats.HelpfulCount,
             NotHelpfulCount = stats.NotHelpfulCount,
             HelpfulRate = helpfulRate,
-            FeedbackByEndpoint = feedbackByEndpoint.ToDictionary(x => x.Endpoint, x => x.Count),
-            FeedbackByOutcome = feedbackByOutcome.ToDictionary(x => x.Outcome, x => x.Count)
+            FeedbackByEndpoint = feedbackByEndpoint.ToDictionary(x => x.Endpoint, x => x.Count, StringComparer.Ordinal),
+            FeedbackByOutcome = feedbackByOutcome.ToDictionary(x => x.Outcome, x => x.Count, StringComparer.Ordinal)
         };
     }
 }

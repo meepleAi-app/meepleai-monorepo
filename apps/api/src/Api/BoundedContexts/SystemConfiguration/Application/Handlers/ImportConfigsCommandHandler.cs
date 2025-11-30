@@ -31,7 +31,7 @@ public class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsCommand,
         {
             var key = new ConfigKey(item.Key);
             // Import should check for existing config with same key AND environment (active or inactive)
-            var existing = await _configurationRepository.GetByKeyAsync(key.Value, environment: item.Environment, activeOnly: false, cancellationToken);
+            var existing = await _configurationRepository.GetByKeyAsync(key.Value, environment: item.Environment, activeOnly: false, cancellationToken).ConfigureAwait(false);
 
             if (existing != null)
             {
@@ -39,7 +39,7 @@ public class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsCommand,
                 {
                     // Update existing configuration
                     existing.UpdateValue(item.Value, command.UserId);
-                    await _configurationRepository.UpdateAsync(existing, cancellationToken);
+                    await _configurationRepository.UpdateAsync(existing, cancellationToken).ConfigureAwait(false);
                     importedCount++;
                 }
                 // If not overwriting, skip this configuration
@@ -64,12 +64,12 @@ public class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsCommand,
                     config.Deactivate();
                 }
 
-                await _configurationRepository.AddAsync(config, cancellationToken);
+                await _configurationRepository.AddAsync(config, cancellationToken).ConfigureAwait(false);
                 importedCount++;
             }
         }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return importedCount;
     }
 }

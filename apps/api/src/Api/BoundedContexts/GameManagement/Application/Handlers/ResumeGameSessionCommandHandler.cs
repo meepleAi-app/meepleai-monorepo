@@ -26,7 +26,7 @@ public class ResumeGameSessionCommandHandler : ICommandHandler<ResumeGameSession
     public async Task<GameSessionDto> Handle(ResumeGameSessionCommand command, CancellationToken cancellationToken)
     {
         // Fetch session
-        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken);
+        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
         if (session == null)
             throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
 
@@ -34,8 +34,8 @@ public class ResumeGameSessionCommandHandler : ICommandHandler<ResumeGameSession
         session.Resume();
 
         // Persist
-        await _sessionRepository.UpdateAsync(session, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO using shared mapper
         return session.ToDto();

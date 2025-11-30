@@ -58,7 +58,7 @@ public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand,
         }
 
         // Retrieve session
-        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken);
+        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
 
         if (session == null)
         {
@@ -82,8 +82,8 @@ public class ExtendSessionCommandHandler : ICommandHandler<ExtendSessionCommand,
             session.Extend(extensionDuration, _timeProvider);
 
             // Persist changes
-            await _sessionRepository.UpdateAsync(session, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Session {SessionId} extended by {Duration}. New expiration: {ExpiresAt}",

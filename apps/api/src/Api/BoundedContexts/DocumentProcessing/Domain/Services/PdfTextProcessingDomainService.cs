@@ -54,14 +54,15 @@ public class PdfTextProcessingDomainService
         var text = rawText.Replace("\r\n", "\n").Replace("\r", "\n");
 
         // Step 2: Remove excessive whitespace within lines
-        text = Regex.Replace(text, @"[ \t]+", " ");
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
+        text = Regex.Replace(text, @"[ \t]+", " ", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         // Step 3: Fix broken paragraphs (lines that end mid-word)
         // If a line ends with a letter (mid-word) and next line starts with a letter, merge them
-        text = Regex.Replace(text, @"([a-z])\n([a-z])", "$1$2");
+        text = Regex.Replace(text, @"([a-z])\n([a-z])", "$1$2", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         // Step 4: Normalize multiple newlines to paragraph breaks (max 2 newlines)
-        text = Regex.Replace(text, @"\n{3,}", "\n\n");
+        text = Regex.Replace(text, @"\n{3,}", "\n\n", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         // Step 5: Trim leading/trailing whitespace from each line (preserve empty lines for paragraph breaks)
         var lines = text.Split('\n')

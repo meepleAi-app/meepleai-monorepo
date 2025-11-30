@@ -28,7 +28,7 @@ public class HallucinationDetectionService : IHallucinationDetectionService
     private readonly ILogger<HallucinationDetectionService> _logger;
 
     // Multilingual forbidden keyword dictionaries (Italian-first per ADR-002)
-    private static readonly Dictionary<string, HashSet<string>> ForbiddenKeywordsByLanguage = new()
+    private static readonly Dictionary<string, HashSet<string>> ForbiddenKeywordsByLanguage = new(StringComparer.Ordinal)
     {
         // Italian (Primary language - ADR-002)
         ["it"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -145,7 +145,7 @@ public class HallucinationDetectionService : IHallucinationDetectionService
         // Auto-detect language if not provided and detection service available
         if (string.IsNullOrWhiteSpace(language) && _languageDetection != null)
         {
-            language = await _languageDetection.DetectLanguageAsync(responseText);
+            language = await _languageDetection.DetectLanguageAsync(responseText).ConfigureAwait(false);
             _logger.LogDebug("Auto-detected language: {Language}", language);
         }
 
@@ -170,7 +170,7 @@ public class HallucinationDetectionService : IHallucinationDetectionService
 
         // Normalize text for German ß/SS handling
         string normalizedText = responseText;
-        if (language == "de")
+        if (string.Equals(language, "de", StringComparison.Ordinal))
         {
             // Normalize ß to ss for case-insensitive matching
             normalizedText = responseText.Replace("ß", "ss", StringComparison.Ordinal);
@@ -181,7 +181,7 @@ public class HallucinationDetectionService : IHallucinationDetectionService
         foreach (var keyword in keywords)
         {
             string normalizedKeyword = keyword;
-            if (language == "de")
+            if (string.Equals(language, "de", StringComparison.Ordinal))
             {
                 // Normalize keyword for German ß/SS equivalence
                 normalizedKeyword = keyword.Replace("ß", "ss", StringComparison.Ordinal);
@@ -236,6 +236,7 @@ public class HallucinationDetectionService : IHallucinationDetectionService
     {
         // Map of critical phrases to languages
         var criticalPhrasesMap = new Dictionary<string, string[]>
+(StringComparer.Ordinal)
         {
             ["en"] = new[] { "don't know", "cannot find", "can't find", "not sure" },
             ["it"] = new[] { "non lo so", "non riesco", "non sono sicuro", "non sono sicura" },

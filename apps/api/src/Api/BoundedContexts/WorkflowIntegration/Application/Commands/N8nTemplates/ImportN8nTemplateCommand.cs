@@ -10,6 +10,6 @@ namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8nTempla
 public sealed record ImportN8nTemplateCommand : ICommand<ImportTemplateResponse>
 {
     public string TemplateId { get; init; } = string.Empty;
-    public Dictionary<string, string> Parameters { get; init; } = new();
+    public Dictionary<string, string> Parameters { get; init; } = new(StringComparer.Ordinal);
     public string UserId { get; init; } = string.Empty;
 }

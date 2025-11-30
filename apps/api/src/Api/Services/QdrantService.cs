@@ -344,6 +344,7 @@ public class QdrantService : IQdrantService
                 chunks.Count, pdfId, language);
             // Build base payload with language
             var basePayload = new Dictionary<string, Value>
+(StringComparer.Ordinal)
             {
                 ["game_id"] = gameId,
                 ["pdf_id"] = pdfId,
@@ -509,7 +510,7 @@ public record ChessIndexResult
     public string? ErrorMessage { get; init; }
     public int TotalKnowledgeItems { get; init; }
     public int TotalChunks { get; init; }
-    public Dictionary<string, int> CategoryCounts { get; init; } = new();
+    public Dictionary<string, int> CategoryCounts { get; init; } = new(StringComparer.Ordinal);
 
     public static ChessIndexResult CreateSuccess(int totalItems, int totalChunks, Dictionary<string, int> categoryCounts) =>
         new() { Success = true, TotalKnowledgeItems = totalItems, TotalChunks = totalChunks, CategoryCounts = categoryCounts };

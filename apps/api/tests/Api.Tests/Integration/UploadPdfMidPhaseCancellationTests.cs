@@ -523,7 +523,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         }
 
         // Verify cleanup regardless of when cancellation occurred
-        var docCount = await _dbContext.PdfDocuments.CountAsync();
+        var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().BeLessThanOrEqualTo(1, "at most one document created before cancellation");
 
         // Note: Files may exist if upload completed before cancellation - this is expected behavior
@@ -592,15 +592,15 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             var orphanedCount = await _dbContext.PdfDocuments
                 .Where(d => !_dbContext.Users.Any(u => u.Id == d.UploadedByUserId) ||
                            !_dbContext.Games.Any(g => g.Id == d.GameId))
-                .CountAsync();
+                .CountAsync(TestContext.Current.CancellationToken);
             orphanedCount.Should().Be(0, $"no orphaned documents after cancellation at {delayMs}ms");
 
             // Clean up for next iteration
             var createdDocs = await _dbContext.PdfDocuments
                 .Where(d => d.GameId == testGame.Id)
-                .ToListAsync();
+                .ToListAsync(TestContext.Current.CancellationToken);
             _dbContext.PdfDocuments.RemoveRange(createdDocs);
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         // Final verification

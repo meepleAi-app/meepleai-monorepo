@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Api.Infrastructure.Security;
 using Api.Models;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
@@ -105,7 +106,7 @@ public class RagEvaluationService : IRagEvaluationService
             var maxFileSizeBytes = maxFileSizeMB * 1024L * 1024L;
             if (fileInfo.Length > maxFileSizeBytes)
             {
-                throw new ArgumentException($"Dataset file exceeds maximum size of {maxFileSizeMB} MB (actual: {fileInfo.Length / 1024 / 1024} MB)");
+                throw new ArgumentException($"Dataset file exceeds maximum size of {maxFileSizeMB} MB (actual: {fileInfo.Length / 1024 / 1024} MB)", nameof(filePath));
             }
 
             var jsonContent = await System.IO.File.ReadAllTextAsync(fullPath, ct);
@@ -349,10 +350,10 @@ public class RagEvaluationService : IRagEvaluationService
 
             // Step 3: Calculate metrics
             var retrievedDocIds = searchResult.Results.Select(r => r.PdfId).ToList();
-            var relevantDocIds = query.RelevantDocIds.ToHashSet();
+            var relevantDocIds = query.RelevantDocIds.ToHashSet(StringComparer.Ordinal);
 
             // TEST-656: Count UNIQUE relevant documents to prevent RecallAtK > 1.0
-            var relevantRetrievedCount = retrievedDocIds.Where(docId => relevantDocIds.Contains(docId)).Distinct().Count();
+            var relevantRetrievedCount = retrievedDocIds.Where(docId => relevantDocIds.Contains(docId)).Distinct(StringComparer.Ordinal).Count();
 
             // Precision@K for different K values
             var precisionAt1 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 1);
@@ -575,7 +576,7 @@ public class RagEvaluationService : IRagEvaluationService
         foreach (var query in lowestPrecisionQueries)
         {
             var queryText = query.Query.Length > 50 ? query.Query.Substring(0, 47) + "..." : query.Query;
-            sb.AppendLine($"| {query.QueryId} | {queryText} | {query.PrecisionAt5:F4} | {query.RecallAtK:F4} |");
+            sb.AppendLine($"| {query.QueryId} | {queryText} | {query.PrecisionAt5.ToString("F4", CultureInfo.InvariantCulture)} | {query.RecallAtK.ToString("F4", CultureInfo.InvariantCulture)} |");
         }
         sb.AppendLine();
 

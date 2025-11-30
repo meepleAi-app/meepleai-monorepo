@@ -12,12 +12,12 @@ public class ValidationException : DomainException
 
     public ValidationException() : base("One or more validation errors occurred.")
     {
-        Errors = new Dictionary<string, string[]>();
+        Errors = new Dictionary<string, string[]>(StringComparer.Ordinal);
     }
 
     public ValidationException(string message) : base(message)
     {
-        Errors = new Dictionary<string, string[]>();
+        Errors = new Dictionary<string, string[]>(StringComparer.Ordinal);
     }
 
     public ValidationException(string message, Dictionary<string, string[]> errors)
@@ -30,6 +30,7 @@ public class ValidationException : DomainException
         : base($"Validation failed for {propertyName}: {errorMessage}")
     {
         Errors = new Dictionary<string, string[]>
+(StringComparer.Ordinal)
         {
             [propertyName] = new[] { errorMessage }
         };

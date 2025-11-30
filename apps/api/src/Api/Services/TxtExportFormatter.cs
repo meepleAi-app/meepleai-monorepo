@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Globalization;
 using Api.Infrastructure.Entities;
 
 namespace Api.Services;
@@ -29,11 +30,11 @@ public class TxtExportFormatter : IExportFormatter
 
         // Header
         var gameName = chat.Game?.Name ?? "Unknown Game";
-        sb.AppendLine("========================================");
-        sb.AppendLine($"Chat Export: {gameName}");
-        sb.AppendLine($"Exported: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
-        sb.AppendLine($"Messages: {filteredLogs.Count}");
-        sb.AppendLine("========================================");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"========================================");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Chat Export: {gameName}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Exported: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Messages: {filteredLogs.Count}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"========================================");
         sb.AppendLine();
 
         if (filteredLogs.Count == 0)
@@ -45,7 +46,7 @@ public class TxtExportFormatter : IExportFormatter
             foreach (var log in filteredLogs.OrderBy(l => l.CreatedAt))
             {
                 // Timestamp and level
-                sb.AppendLine($"[{log.CreatedAt:yyyy-MM-dd HH:mm:ss}] {log.Level.ToUpper()}:");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"[{log.CreatedAt:yyyy-MM-dd HH:mm:ss}] {log.Level.ToUpper(CultureInfo.InvariantCulture)}:");
                 sb.AppendLine(log.Message);
 
                 // Parse and display citations if present
@@ -56,7 +57,7 @@ public class TxtExportFormatter : IExportFormatter
                     sb.AppendLine("Citations:");
                     foreach (var citation in citations)
                     {
-                        sb.AppendLine($"  - {citation.Source}, Page {citation.Page}");
+                        sb.AppendLine(CultureInfo.InvariantCulture, $"  - {citation.Source}, Page {citation.Page}");
                     }
                 }
 

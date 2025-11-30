@@ -19,7 +19,7 @@ public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto?>
 
     public async Task<UserDto?> Handle(GetUserByIdQuery query, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
         return user != null ? MapToUserDto(user) : null;
     }

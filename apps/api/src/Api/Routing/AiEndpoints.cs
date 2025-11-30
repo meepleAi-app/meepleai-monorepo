@@ -11,6 +11,7 @@ using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Api.Routing;
 
@@ -130,7 +131,7 @@ public static class AiEndpoints
                 qualityScores.CitationQuality,
                 qualityScores.OverallConfidence,
                 qualityScores.IsLowQuality,
-                string.Join(", ", ragSearchResults.Select(r => r.Score.ToString("F3"))));
+                string.Join(", ", ragSearchResults.Select(r => r.Score.ToString("F3", CultureInfo.InvariantCulture))));
 
             string? model = null;
             string? finishReason = null;

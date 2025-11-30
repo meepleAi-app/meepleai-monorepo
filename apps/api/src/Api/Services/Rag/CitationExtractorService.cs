@@ -1,6 +1,7 @@
 using Api.Models;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Api.Services.Rag;
 
@@ -19,8 +20,9 @@ public class CitationExtractorService : ICitationExtractorService
     public bool ValidateCitations(List<Snippet> snippets, string answer)
     {
         // Extract [1], [2], etc. from answer
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
         var citationPattern = @"\[(\d+)\]";
-        var matches = Regex.Matches(answer, citationPattern);
+        var matches = Regex.Matches(answer, citationPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
         if (matches.Count == 0)
         {
@@ -32,7 +34,7 @@ public class CitationExtractorService : ICitationExtractorService
 
         foreach (Match match in matches)
         {
-            if (int.TryParse(match.Groups[1].Value, out int index))
+            if (int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
             {
                 // Citations are 1-indexed
                 if (index < 1 || index > snippets.Count)

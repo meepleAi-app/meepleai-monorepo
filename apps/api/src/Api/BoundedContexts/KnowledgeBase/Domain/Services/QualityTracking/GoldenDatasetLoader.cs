@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 
@@ -38,6 +39,14 @@ public interface IGoldenDatasetLoader
     /// <param name="stratified">If true, samples proportionally from each difficulty/category</param>
     /// <param name="cancellationToken">Cancellation token</param>
     Task<IReadOnlyList<GoldenDatasetTestCase>> SampleAsync(int count, bool stratified = true, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads test cases by annotator (e.g., filter for expert-annotated cases)
+    /// </summary>
+    /// <param name="annotator">Annotator identifier to filter by</param>
+    /// <param name="exclude">If true, excludes cases from this annotator; if false, includes only this annotator</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task<IReadOnlyList<GoldenDatasetTestCase>> LoadByAnnotatorAsync(string annotator, bool exclude = false, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -113,7 +122,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
 
         try
         {
-            var json = await File.ReadAllTextAsync(_datasetPath, cancellationToken);
+            var json = await File.ReadAllTextAsync(_datasetPath, cancellationToken).ConfigureAwait(false);
             var dataset = JsonSerializer.Deserialize<GoldenDatasetFile>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -147,7 +156,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
                         category: testCase.Category,
                         gameId: game.GameId,
                         annotatedBy: testCase.AnnotatedBy,
-                        annotatedAt: DateTime.TryParse(testCase.AnnotatedAt, out var annotatedDate)
+                        annotatedAt: DateTime.TryParse(testCase.AnnotatedAt, CultureInfo.InvariantCulture, out var annotatedDate)
                             ? annotatedDate
                             : DateTime.UtcNow
                     );
@@ -174,7 +183,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         if (string.IsNullOrWhiteSpace(gameId))
             throw new ArgumentException("Game ID cannot be empty", nameof(gameId));
 
-        var allCases = await LoadAllAsync(cancellationToken);
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
         return allCases.Where(tc => tc.GameId.Equals(gameId, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
@@ -183,7 +192,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         if (string.IsNullOrWhiteSpace(difficulty))
             throw new ArgumentException("Difficulty cannot be empty", nameof(difficulty));
 
-        var allCases = await LoadAllAsync(cancellationToken);
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
         return allCases.Where(tc => tc.Difficulty.Equals(difficulty, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
@@ -192,7 +201,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         if (string.IsNullOrWhiteSpace(category))
             throw new ArgumentException("Category cannot be empty", nameof(category));
 
-        var allCases = await LoadAllAsync(cancellationToken);
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
         return allCases.Where(tc => tc.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
@@ -201,7 +210,7 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         if (count <= 0)
             throw new ArgumentException("Sample count must be positive", nameof(count));
 
-        var allCases = await LoadAllAsync(cancellationToken);
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
 
         if (count >= allCases.Count)
             return allCases;
@@ -215,9 +224,9 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         }
 
         // Stratified sampling: sample proportionally from each difficulty level
-        var easy = allCases.Where(tc => tc.Difficulty == "easy").ToList();
-        var medium = allCases.Where(tc => tc.Difficulty == "medium").ToList();
-        var hard = allCases.Where(tc => tc.Difficulty == "hard").ToList();
+        var easy = allCases.Where(tc => string.Equals(tc.Difficulty, "easy", StringComparison.Ordinal)).ToList();
+        var medium = allCases.Where(tc => string.Equals(tc.Difficulty, "medium", StringComparison.Ordinal)).ToList();
+        var hard = allCases.Where(tc => string.Equals(tc.Difficulty, "hard", StringComparison.Ordinal)).ToList();
 
         var total = allCases.Count;
         var easyCount = (int)Math.Round((double)easy.Count / total * count);
@@ -233,6 +242,28 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
             sampled.Count, easyCount, mediumCount, hardCount);
 
         return sampled;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<GoldenDatasetTestCase>> LoadByAnnotatorAsync(
+        string annotator,
+        bool exclude = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(annotator))
+            throw new ArgumentException("Annotator cannot be empty", nameof(annotator));
+
+        var allCases = await LoadAllAsync(cancellationToken).ConfigureAwait(false);
+
+        var filtered = exclude
+            ? allCases.Where(tc => !tc.AnnotatedBy.Equals(annotator, StringComparison.OrdinalIgnoreCase)).ToList()
+            : allCases.Where(tc => tc.AnnotatedBy.Equals(annotator, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        _logger.LogInformation(
+            "Loaded {Count} test cases by annotator filter (annotator: {Annotator}, exclude: {Exclude})",
+            filtered.Count, annotator, exclude);
+
+        return filtered;
     }
 }
 

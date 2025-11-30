@@ -819,7 +819,7 @@ Instructions:
                     snippets.Count, StringHelper.Truncate(answer, 50));
 
                 var metadata = llmResult.Metadata.Count > 0
-                    ? new Dictionary<string, string>(llmResult.Metadata)
+                    ? new Dictionary<string, string>(llmResult.Metadata, StringComparer.Ordinal)
                     : null;
 
                 var response = new QaResponse(

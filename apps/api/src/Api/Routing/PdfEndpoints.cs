@@ -52,7 +52,7 @@ public static class PdfEndpoints
 
             if (file == null || file.Length == 0)
             {
-                return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string> { ["file"] = "No file provided" } });
+                return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["file"] = "No file provided" } });
             }
 
             if (!Guid.TryParse(session.User.Id, out var userId))
@@ -369,7 +369,7 @@ public static class PdfEndpoints
             }
 
             // Check if processing is active
-            if (pdf.ProcessingStatus == "completed" || pdf.ProcessingStatus == "failed")
+            if (string.Equals(pdf.ProcessingStatus, "completed", StringComparison.Ordinal) || string.Equals(pdf.ProcessingStatus, "failed", StringComparison.Ordinal))
             {
                 return Results.BadRequest(new { error = "Processing already completed or failed" });
             }

@@ -183,7 +183,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
             role: role ?? AuthRole.User,
             tier: tier);
 
-        await userRepo.AddAsync(user, TestCancellationToken);
+        await userRepo.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         return user;

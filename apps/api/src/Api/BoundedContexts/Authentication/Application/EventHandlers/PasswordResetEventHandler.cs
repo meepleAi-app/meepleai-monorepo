@@ -22,7 +22,7 @@ public sealed class PasswordResetEventHandler : DomainEventHandlerBase<PasswordR
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., send password reset notification email)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(PasswordResetEvent domainEvent) => domainEvent.UserId;
@@ -30,6 +30,7 @@ public sealed class PasswordResetEventHandler : DomainEventHandlerBase<PasswordR
     protected override Dictionary<string, object?>? GetAuditMetadata(PasswordResetEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["ResetByUserId"] = domainEvent.ResetByUserId,

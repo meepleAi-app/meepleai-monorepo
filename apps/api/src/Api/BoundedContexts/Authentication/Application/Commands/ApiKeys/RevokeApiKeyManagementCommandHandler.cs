@@ -29,13 +29,13 @@ public class RevokeApiKeyManagementCommandHandler : ICommandHandler<RevokeApiKey
         }
 
         // Check that the user owns the key before revoking
-        var apiKey = await _db.ApiKeys.AsNoTracking().FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, cancellationToken);
+        var apiKey = await _db.ApiKeys.AsNoTracking().FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, cancellationToken).ConfigureAwait(false);
         if (apiKey == null)
         {
             _logger.LogWarning("API key revocation failed: key not found or unauthorized. KeyId: {KeyId}, UserId: {UserId}", command.KeyId, command.UserId);
             return false;
         }
 
-        return await _authService.RevokeApiKeyAsync(command.KeyId, command.UserId, cancellationToken);
+        return await _authService.RevokeApiKeyAsync(command.KeyId, command.UserId, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -64,8 +64,8 @@ public class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageCommand,
         thread.DeleteMessage(request.MessageId, request.UserId, request.IsAdmin);
 
         // Persist
-        await _threadRepository.UpdateAsync(thread, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _threadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Deleted message {MessageId} in thread {ThreadId} by user {UserId} (admin: {IsAdmin})",

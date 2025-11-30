@@ -151,7 +151,7 @@ public static class AdminUserEndpoints
             // Validate tier value
             var validTiers = new[] { "free", "normal", "premium" };
             if (string.IsNullOrWhiteSpace(request.Tier) ||
-                !validTiers.Contains(request.Tier.ToLowerInvariant()))
+                !validTiers.Contains(request.Tier.ToLowerInvariant(), StringComparer.Ordinal))
             {
                 logger.LogWarning("Admin {AdminId} attempted to set invalid tier: {Tier}",
                     requesterId, request.Tier);

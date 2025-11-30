@@ -35,17 +35,17 @@ public class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, List<
         {
             // Filter by type
             var agentType = AgentType.Parse(request.Type);
-            agents = await _agentRepository.GetByTypeAsync(agentType, cancellationToken);
+            agents = await _agentRepository.GetByTypeAsync(agentType, cancellationToken).ConfigureAwait(false);
         }
         else if (request.ActiveOnly == true)
         {
             // Only active agents
-            agents = await _agentRepository.GetAllActiveAsync(cancellationToken);
+            agents = await _agentRepository.GetAllActiveAsync(cancellationToken).ConfigureAwait(false);
         }
         else
         {
             // Get all agents (active and inactive)
-            agents = await _agentRepository.GetAllAsync(cancellationToken);
+            agents = await _agentRepository.GetAllAsync(cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation("Retrieved {Count} agents", agents.Count);

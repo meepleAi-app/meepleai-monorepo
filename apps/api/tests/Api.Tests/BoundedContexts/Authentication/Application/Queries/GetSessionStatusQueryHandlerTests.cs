@@ -64,7 +64,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
 
         _dbContext.Users.Add(user);
         _dbContext.UserSessions.Add(session);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetSessionStatusQuery(sessionId, userId, false);
 
@@ -106,7 +106,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
 
         _dbContext.Users.Add(owner);
         _dbContext.UserSessions.Add(session);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetSessionStatusQuery(sessionId, adminUserId, true);
 
@@ -147,7 +147,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
 
         _dbContext.Users.Add(owner);
         _dbContext.UserSessions.Add(session);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetSessionStatusQuery(sessionId, differentUserId, false);
 

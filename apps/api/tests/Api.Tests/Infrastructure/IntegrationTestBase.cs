@@ -189,7 +189,7 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
                       FROM pg_tables
                       WHERE schemaname = 'public'
                       AND tablename != '__EFMigrationsHistory'")
-                .ToListAsync();
+                .ToListAsync(TestContext.Current.CancellationToken);
 
             if (tableNames.Count > 0)
             {

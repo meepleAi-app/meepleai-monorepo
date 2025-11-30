@@ -197,7 +197,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             PasswordHash.Create("TempPassword123!"), // Temp password for new OAuth users
             Role.User);
 
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
 
         // Create linked OAuth account
         var oauthAccountId = Guid.NewGuid();
@@ -210,7 +210,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             RefreshToken,
             DateTime.UtcNow.AddHours(1));
 
-        await oauthAccountRepository.AddAsync(oauthAccount, TestCancellationToken);
+        await oauthAccountRepository.AddAsync(oauthAccount, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Act - Query to verify creation
@@ -254,7 +254,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             PasswordHash.Create("ExistingPassword123!"),
             Role.User);
 
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var userCountBefore = await _dbContext!.Users.CountAsync(TestCancellationToken);
@@ -270,7 +270,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             RefreshToken,
             DateTime.UtcNow.AddHours(2));
 
-        await oauthAccountRepository.AddAsync(oauthAccount, TestCancellationToken);
+        await oauthAccountRepository.AddAsync(oauthAccount, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -312,7 +312,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             PasswordHash.Create("Password123!"), // Has password as fallback
             Role.User);
 
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
 
         // Add 2 OAuth accounts
         var googleAccountId = Guid.NewGuid();
@@ -335,8 +335,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
             null,
             null);
 
-        await oauthAccountRepository.AddAsync(googleAccount, TestCancellationToken);
-        await oauthAccountRepository.AddAsync(discordAccount, TestCancellationToken);
+        await oauthAccountRepository.AddAsync(googleAccount, TestCancellationToken, TestContext.Current.CancellationToken);
+        await oauthAccountRepository.AddAsync(discordAccount, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Verify setup
@@ -393,7 +393,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             PasswordHash.Create("Password123!"),
             Role.User);
 
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
 
         // Single OAuth account
         var oauthAccountId = Guid.NewGuid();
@@ -406,7 +406,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             RefreshToken,
             DateTime.UtcNow.AddHours(1));
 
-        await oauthAccountRepository.AddAsync(oauthAccount, TestCancellationToken);
+        await oauthAccountRepository.AddAsync(oauthAccount, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Act - Attempt to unlink OAuth account (user has password, so this WILL succeed)
@@ -452,7 +452,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             PasswordHash.Create("Password123!"),
             Role.User);
 
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
 
         // Google (with expiration)
         var googleAccountId = Guid.NewGuid();
@@ -489,9 +489,9 @@ public class OAuthIntegrationTests : IAsyncLifetime
             RefreshToken,
             githubExpiration);
 
-        await oauthAccountRepository.AddAsync(googleAccount, TestCancellationToken);
-        await oauthAccountRepository.AddAsync(discordAccount, TestCancellationToken);
-        await oauthAccountRepository.AddAsync(githubAccount, TestCancellationToken);
+        await oauthAccountRepository.AddAsync(googleAccount, TestCancellationToken, TestContext.Current.CancellationToken);
+        await oauthAccountRepository.AddAsync(discordAccount, TestCancellationToken, TestContext.Current.CancellationToken);
+        await oauthAccountRepository.AddAsync(githubAccount, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Act - Query linked OAuth accounts
@@ -551,7 +551,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             PasswordHash.Create("Password123!"),
             Role.User);
 
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Step 1: Link first account (Google)
@@ -564,7 +564,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             RefreshToken,
             DateTime.UtcNow.AddHours(1));
 
-        await oauthAccountRepository.AddAsync(googleAccount, TestCancellationToken);
+        await oauthAccountRepository.AddAsync(googleAccount, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var query = new GetLinkedOAuthAccountsQuery { UserId = userId };
@@ -582,7 +582,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             null,
             null);
 
-        await oauthAccountRepository.AddAsync(discordAccount, TestCancellationToken);
+        await oauthAccountRepository.AddAsync(discordAccount, TestCancellationToken, TestContext.Current.CancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var result2 = await mediator.Send(query, TestCancellationToken);
@@ -653,7 +653,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             PasswordHash.Create("TestPassword123!"),
             Role.User);
 
-        await scopedUserRepository.AddAsync(testUser, TestCancellationToken);
+        await scopedUserRepository.AddAsync(testUser, TestCancellationToken, TestContext.Current.CancellationToken);
         await scopedUnitOfWork.SaveChangesAsync(TestCancellationToken);
     }
 

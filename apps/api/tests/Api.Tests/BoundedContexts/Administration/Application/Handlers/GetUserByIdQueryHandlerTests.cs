@@ -174,7 +174,7 @@ public class GetUserByIdQueryHandlerTests
 
         context.Users.Add(user);
         context.UserSessions.AddRange(oldSession, recentSession);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetUserByIdQuery(userId.ToString());
 
@@ -220,7 +220,7 @@ public class GetUserByIdQueryHandlerTests
 
         context.Users.Add(user);
         context.UserSessions.Add(revokedSession);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetUserByIdQuery(userId.ToString());
 
@@ -250,7 +250,7 @@ public class GetUserByIdQueryHandlerTests
             CreatedAt = DateTime.UtcNow
         };
         context.Users.Add(user);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetUserByIdQuery(userId.ToString());
 

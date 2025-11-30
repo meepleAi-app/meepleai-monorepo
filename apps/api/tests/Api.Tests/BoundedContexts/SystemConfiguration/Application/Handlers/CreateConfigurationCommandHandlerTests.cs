@@ -58,7 +58,7 @@ public class CreateConfigurationCommandHandlerTests
 
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<SystemConfig>(),
+                It.IsAny<SystemConfig>(, TestContext.Current.CancellationToken),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _mockUnitOfWork.Verify(
@@ -192,7 +192,7 @@ public class CreateConfigurationCommandHandlerTests
         // Assert
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<SystemConfig>(),
+                It.IsAny<SystemConfig>(, TestContext.Current.CancellationToken),
                 cancellationToken),
             Times.Once);
         _mockUnitOfWork.Verify(

@@ -308,7 +308,7 @@ public class CreateGameCommandHandlerTests
 
         // Assert
         _gameRepositoryMock.Verify(
-            r => r.AddAsync(It.IsAny<Game>(), cancellationToken),
+            r => r.AddAsync(It.IsAny<Game>(, TestContext.Current.CancellationToken), cancellationToken),
             Times.Once);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(cancellationToken),

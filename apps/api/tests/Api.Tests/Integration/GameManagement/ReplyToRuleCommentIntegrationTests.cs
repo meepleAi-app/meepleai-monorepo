@@ -372,7 +372,7 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         // Verify database has both replies
         var replies = await _dbContext!.RuleSpecComments
             .Where(c => c.ParentCommentId == parentCommentId)
-            .ToListAsync();
+            .ToListAsync(TestContext.Current.CancellationToken);
         replies.Should().HaveCount(2);
     }
 

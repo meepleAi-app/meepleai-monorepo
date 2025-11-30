@@ -53,7 +53,7 @@ public class CreateN8nConfigCommandHandlerTests
 
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<N8nConfiguration>(),
+                It.IsAny<N8nConfiguration>(, TestContext.Current.CancellationToken),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _mockUnitOfWork.Verify(
@@ -162,7 +162,7 @@ public class CreateN8nConfigCommandHandlerTests
         // Assert
         _mockConfigRepository.Verify(
             r => r.AddAsync(
-                It.IsAny<N8nConfiguration>(),
+                It.IsAny<N8nConfiguration>(, TestContext.Current.CancellationToken),
                 cancellationToken),
             Times.Once);
         _mockUnitOfWork.Verify(

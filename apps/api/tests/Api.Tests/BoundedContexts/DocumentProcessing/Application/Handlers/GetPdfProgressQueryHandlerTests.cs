@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure;
 using Api.Tests.Helpers;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -10,9 +11,11 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
 /// <summary>
 /// Tests for GetPdfProgressQueryHandler.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// Tests PDF processing progress retrieval.
 /// NOTE: Uses DbContext directly - simplified tests due to mocking complexity.
 /// TODO: Convert to integration tests or refactor handler to use repository.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class GetPdfProgressQueryHandlerTests
 {
@@ -37,17 +40,19 @@ public class GetPdfProgressQueryHandlerTests
             _loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new GetPdfProgressQueryHandler(
                 null!,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -57,10 +62,12 @@ public class GetPdfProgressQueryHandlerTests
         var dbContext = DbContextHelper.CreateInMemoryDbContext();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new GetPdfProgressQueryHandler(
                 dbContext,
-                null!));
+                null!);
+        
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -77,7 +84,7 @@ public class GetPdfProgressQueryHandlerTests
         var query = new GetPdfProgressQuery(pdfId);
 
         // Assert
-        Assert.Equal(pdfId, query.PdfId);
+        query.PdfId.Should().Be(pdfId);
     }
 
     #endregion
@@ -96,9 +103,9 @@ public class GetPdfProgressQueryHandlerTests
         var result = new PdfProgressResult(id, userId, progressJson);
 
         // Assert
-        Assert.Equal(id, result.Id);
-        Assert.Equal(userId, result.UploadedByUserId);
-        Assert.Equal(progressJson, result.ProcessingProgressJson);
+        result.Id.Should().Be(id);
+        result.UploadedByUserId.Should().Be(userId);
+        result.ProcessingProgressJson.Should().Be(progressJson);
     }
 
     [Fact]
@@ -112,7 +119,7 @@ public class GetPdfProgressQueryHandlerTests
         var result = new PdfProgressResult(id, userId, null);
 
         // Assert
-        Assert.Null(result.ProcessingProgressJson);
+        result.ProcessingProgressJson.Should().BeNull();
     }
 
     #endregion
@@ -120,4 +127,3 @@ public class GetPdfProgressQueryHandlerTests
     // NOTE: Full integration tests for Handle method should be in integration test suite
     // due to DbContext dependency complexity. See integration-tests.yml workflow.
 }
-

@@ -7,22 +7,21 @@ using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.Tests.Helpers;
+using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Commands;
 
 /// <summary>
 /// Tests for UploadPdfCommandHandler.
 /// Tests PDF upload, validation, storage, and background processing orchestration.
-/// NOTE: Highly complex handler (574 lines) with many dependencies and background processing.
-/// These tests focus on construction, validation, and core scenarios.
-/// TODO: Add comprehensive integration tests for full upload workflow.
-/// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
+/// ISSUE-1818: Migrating to FluentAssertions for improved readability.
 /// </summary>
 public class UploadPdfCommandHandlerTests
 {
@@ -79,7 +78,7 @@ public class UploadPdfCommandHandlerTests
             pdfOptions);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -88,9 +87,8 @@ public class UploadPdfCommandHandlerTests
         // Arrange - fresh resources per test
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 null!,
                 scopeFactoryMock.Object,
                 loggerMock.Object,
@@ -100,7 +98,11 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions));
+                pdfOptions);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("db");
     }
 
     [Fact]
@@ -110,9 +112,8 @@ public class UploadPdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (_, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 context,
                 null!,
                 loggerMock.Object,
@@ -122,7 +123,11 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions));
+                pdfOptions);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("scopeFactory");
     }
 
     [Fact]
@@ -132,9 +137,8 @@ public class UploadPdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, _, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 null!,
@@ -144,7 +148,11 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions));
+                pdfOptions);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("logger");
     }
 
     [Fact]
@@ -154,9 +162,8 @@ public class UploadPdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, _, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 loggerMock.Object,
@@ -166,7 +173,11 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions));
+                pdfOptions);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("pdfTextExtractor");
     }
 
     [Fact]
@@ -176,9 +187,8 @@ public class UploadPdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, _, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 loggerMock.Object,
@@ -188,7 +198,11 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions));
+                pdfOptions);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("tableExtractor");
     }
 
     [Fact]
@@ -198,9 +212,8 @@ public class UploadPdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, _, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 loggerMock.Object,
@@ -210,7 +223,11 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions));
+                pdfOptions);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("backgroundTaskService");
     }
 
     [Fact]
@@ -220,9 +237,8 @@ public class UploadPdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, _, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 loggerMock.Object,
@@ -232,7 +248,11 @@ public class UploadPdfCommandHandlerTests
                 null!,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions));
+                pdfOptions);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("cacheService");
     }
 
     [Fact]
@@ -242,9 +262,8 @@ public class UploadPdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, _, quotaServiceMock, pdfOptions) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 loggerMock.Object,
@@ -254,7 +273,11 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 null!,
                 quotaServiceMock.Object,
-                pdfOptions));
+                pdfOptions);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("blobStorageService");
     }
 
     [Fact]
@@ -264,9 +287,8 @@ public class UploadPdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, _, pdfOptions) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 loggerMock.Object,
@@ -276,7 +298,11 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 null!,
-                pdfOptions));
+                pdfOptions);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("quotaService");
     }
 
     [Fact]
@@ -286,9 +312,8 @@ public class UploadPdfCommandHandlerTests
         using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, _) = CreateMocks();
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UploadPdfCommandHandler(
+        // Act
+        Action act = () => new UploadPdfCommandHandler(
                 context,
                 scopeFactoryMock.Object,
                 loggerMock.Object,
@@ -298,7 +323,11 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                null!));
+                null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("pdfOptions");
     }
 
     #endregion
@@ -320,9 +349,9 @@ public class UploadPdfCommandHandlerTests
             File: formFileMock.Object);
 
         // Assert
-        Assert.Equal(gameId, command.GameId);
-        Assert.Equal(userId, command.UserId);
-        Assert.Equal(formFileMock.Object, command.File);
+        command.GameId.Should().Be(gameId);
+        command.UserId.Should().Be(userId);
+        command.File.Should().Be(formFileMock.Object);
     }
 
     #endregion
@@ -340,8 +369,8 @@ public class UploadPdfCommandHandlerTests
             File: formFileMock.Object);
 
         // Assert
-        Assert.NotNull(command);
-        Assert.Empty(command.GameId);
+        command.Should().NotBeNull();
+        command.GameId.Should().BeEmpty();
     }
 
     [Fact]
@@ -355,8 +384,8 @@ public class UploadPdfCommandHandlerTests
             File: formFileMock.Object);
 
         // Assert
-        Assert.NotNull(command);
-        Assert.Equal(Guid.Empty, command.UserId);
+        command.Should().NotBeNull();
+        command.UserId.Should().Be(Guid.Empty);
     }
 
     #endregion
@@ -379,4 +408,3 @@ public class UploadPdfCommandHandlerTests
     //
     // See integration-tests.yml workflow for comprehensive testing.
 }
-

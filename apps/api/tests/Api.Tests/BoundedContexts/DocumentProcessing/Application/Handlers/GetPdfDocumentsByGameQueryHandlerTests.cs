@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Moq;
 using Xunit;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// <summary>
 /// Comprehensive tests for GetPdfDocumentsByGameQueryHandler.
 /// Tests document retrieval by game ID, list mapping, and filtering.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class GetPdfDocumentsByGameQueryHandlerTests
 {
@@ -60,20 +62,20 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(3);
 
-        Assert.Equal("rulebook-en.pdf", result[0].FileName);
-        Assert.Equal(gameId, result[0].GameId);
-        Assert.Equal("completed", result[0].ProcessingStatus);
-        Assert.Equal(24, result[0].PageCount);
+        result[0].FileName.Should().Be("rulebook-en.pdf");
+        result[0].GameId.Should().Be(gameId);
+        result[0].ProcessingStatus.Should().Be("completed");
+        result[0].PageCount.Should().Be(24);
 
-        Assert.Equal("quick-start.pdf", result[1].FileName);
-        Assert.Equal(4, result[1].PageCount);
+        result[1].FileName.Should().Be("quick-start.pdf");
+        result[1].PageCount.Should().Be(4);
 
-        Assert.Equal("reference-card.pdf", result[2].FileName);
-        Assert.Equal("processing", result[2].ProcessingStatus);
-        Assert.Null(result[2].PageCount);
+        result[2].FileName.Should().Be("reference-card.pdf");
+        result[2].ProcessingStatus.Should().Be("processing");
+        result[2].PageCount.Should().BeNull();
 
         _documentRepositoryMock.Verify(
             r => r.FindByGameIdAsync(gameId, It.IsAny<CancellationToken>()),
@@ -104,10 +106,10 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal("rulebook.pdf", result[0].FileName);
-        Assert.Equal(32, result[0].PageCount);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
+        result[0].FileName.Should().Be("rulebook.pdf");
+        result[0].PageCount.Should().Be(32);
     }
 
     [Fact]
@@ -127,8 +129,8 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -172,11 +174,11 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(4, result.Count);
-        Assert.Equal("pending", result[0].ProcessingStatus);
-        Assert.Equal("processing", result[1].ProcessingStatus);
-        Assert.Equal("completed", result[2].ProcessingStatus);
-        Assert.Equal("failed", result[3].ProcessingStatus);
+        result.Count.Should().Be(4);
+        result[0].ProcessingStatus.Should().Be("pending");
+        result[1].ProcessingStatus.Should().Be("processing");
+        result[2].ProcessingStatus.Should().Be("completed");
+        result[3].ProcessingStatus.Should().Be("failed");
     }
 
     [Fact]
@@ -211,9 +213,9 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal(100 * 1024, result[0].FileSizeBytes); // 100 KB
-        Assert.Equal(PdfUploadTestConstants.FileSizes.TestMaxBytes, result[1].FileSizeBytes); // 10 MB
+        result.Count.Should().Be(2);
+        result[0].FileSizeBytes.Should().Be(100 * 1024); // 100 KB
+        result[1].FileSizeBytes.Should().Be(PdfUploadTestConstants.FileSizes.TestMaxBytes); // 10 MB
     }
 
     #endregion
@@ -237,8 +239,8 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -258,8 +260,8 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     #endregion
@@ -291,8 +293,8 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         var result = await _handler.Handle(query, cancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
 
         _documentRepositoryMock.Verify(
             r => r.FindByGameIdAsync(gameId, cancellationToken),
@@ -301,4 +303,3 @@ public class GetPdfDocumentsByGameQueryHandlerTests
 
     #endregion
 }
-

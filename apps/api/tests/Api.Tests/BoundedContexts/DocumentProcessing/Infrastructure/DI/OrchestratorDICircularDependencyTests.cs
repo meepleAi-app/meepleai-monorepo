@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using FluentAssertions;
 using static Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection.DocumentProcessingServiceExtensions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.DI;
@@ -43,7 +44,7 @@ public class OrchestratorDICircularDependencyTests
 
         // Assert - Verify primary extractor resolves to OrchestratedPdfTextExtractor
         var extractor = serviceProvider.GetRequiredService<IPdfTextExtractor>();
-        Assert.NotNull(extractor);
+        extractor.Should().NotBeNull();
         Assert.IsType<OrchestratedPdfTextExtractor>(extractor);
     }
 
@@ -74,7 +75,7 @@ public class OrchestratorDICircularDependencyTests
 
         // Assert - Verify orchestrator application service can be resolved
         var orchestrator = serviceProvider.GetRequiredService<EnhancedPdfProcessingOrchestrator>();
-        Assert.NotNull(orchestrator);
+        orchestrator.Should().NotBeNull();
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public class OrchestratorDICircularDependencyTests
 
         // Assert
         var extractor = serviceProvider.GetRequiredService<IPdfTextExtractor>();
-        Assert.NotNull(extractor);
+        extractor.Should().NotBeNull();
         Assert.IsType<UnstructuredPdfTextExtractor>(extractor);
     }
 
@@ -133,7 +134,7 @@ public class OrchestratorDICircularDependencyTests
 
         // Assert
         var extractor = serviceProvider.GetRequiredService<IPdfTextExtractor>();
-        Assert.NotNull(extractor);
+        extractor.Should().NotBeNull();
         Assert.IsType<SmolDoclingPdfTextExtractor>(extractor);
     }
 
@@ -162,7 +163,7 @@ public class OrchestratorDICircularDependencyTests
 
         // Assert
         var extractor = serviceProvider.GetRequiredService<IPdfTextExtractor>();
-        Assert.NotNull(extractor);
+        extractor.Should().NotBeNull();
         Assert.IsType<DocnetPdfTextExtractor>(extractor);
     }
 
@@ -193,15 +194,15 @@ public class OrchestratorDICircularDependencyTests
 
         // Assert - Verify keyed extractors can be resolved using constants
         var unstructuredExtractor = serviceProvider.GetRequiredKeyedService<IPdfTextExtractor>(PdfExtractorKeys.Unstructured);
-        Assert.NotNull(unstructuredExtractor);
+        unstructuredExtractor.Should().NotBeNull();
         Assert.IsType<UnstructuredPdfTextExtractor>(unstructuredExtractor);
 
         var smolDoclingExtractor = serviceProvider.GetRequiredKeyedService<IPdfTextExtractor>(PdfExtractorKeys.SmolDocling);
-        Assert.NotNull(smolDoclingExtractor);
+        smolDoclingExtractor.Should().NotBeNull();
         Assert.IsType<SmolDoclingPdfTextExtractor>(smolDoclingExtractor);
 
         var docnetExtractor = serviceProvider.GetRequiredKeyedService<IPdfTextExtractor>(PdfExtractorKeys.Docnet);
-        Assert.NotNull(docnetExtractor);
+        docnetExtractor.Should().NotBeNull();
         Assert.IsType<DocnetPdfTextExtractor>(docnetExtractor);
     }
 }

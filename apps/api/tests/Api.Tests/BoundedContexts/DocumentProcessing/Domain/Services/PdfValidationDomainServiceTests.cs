@@ -2,12 +2,14 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 
 /// <summary>
 /// Tests for PdfValidationDomainService business rule validation.
 /// Covers: file size, page count, PDF version, MIME type validation.
+/// ISSUE-1818: Migrated to FluentAssertions
 /// </summary>
 public class PdfValidationDomainServiceTests
 {
@@ -43,9 +45,9 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateFileSize(fileSize);
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Null(result.FieldName);
-        Assert.Null(result.Error);
+        result.IsSuccess.Should().BeTrue();
+        result.FieldName.Should().BeNull();
+        result.Error.Should().BeNull();
     }
 
     [Fact]
@@ -58,7 +60,7 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateFileSize(fileSize);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -71,11 +73,11 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateFileSize(fileSize);
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("fileSize", result.FieldName);
-        Assert.Contains("exceeds maximum of 50 MB", result.Error);
+        result.IsSuccess.Should().BeFalse();
+        result.FieldName.Should().Be("fileSize");
+        result.Error.Should().Contain("exceeds maximum of 50 MB");
         // Locale-independent check: just verify MB is mentioned
-        Assert.Contains("MB", result.Error);
+        result.Error.Should().Contain("MB");
     }
 
     [Fact]
@@ -88,7 +90,7 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateFileSize(fileSize);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     #endregion
@@ -105,9 +107,9 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidatePageCount(pageCount);
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Null(result.FieldName);
-        Assert.Null(result.Error);
+        result.IsSuccess.Should().BeTrue();
+        result.FieldName.Should().BeNull();
+        result.Error.Should().BeNull();
     }
 
     [Fact]
@@ -120,7 +122,7 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidatePageCount(pageCount);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -133,7 +135,7 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidatePageCount(pageCount);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -146,10 +148,10 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidatePageCount(pageCount);
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("pageCount", result.FieldName);
-        Assert.Contains("501 pages", result.Error);
-        Assert.Contains("maximum allowed is 500", result.Error);
+        result.IsSuccess.Should().BeFalse();
+        result.FieldName.Should().Be("pageCount");
+        result.Error.Should().Contain("501 pages");
+        result.Error.Should().Contain("maximum allowed is 500");
     }
 
     [Fact]
@@ -170,9 +172,9 @@ public class PdfValidationDomainServiceTests
         var result = service.ValidatePageCount(pageCount);
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Contains("150 pages", result.Error);
-        Assert.Contains("maximum allowed is 100", result.Error);
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("150 pages");
+        result.Error.Should().Contain("maximum allowed is 100");
     }
 
     #endregion
@@ -189,9 +191,9 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidatePdfVersion(version);
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Null(result.FieldName);
-        Assert.Null(result.Error);
+        result.IsSuccess.Should().BeTrue();
+        result.FieldName.Should().BeNull();
+        result.Error.Should().BeNull();
     }
 
     [Fact]
@@ -204,7 +206,7 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidatePdfVersion(version);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -217,7 +219,7 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidatePdfVersion(version);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -237,10 +239,10 @@ public class PdfValidationDomainServiceTests
         var result = service.ValidatePdfVersion(oldVersion);
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("pdfVersion", result.FieldName);
-        Assert.Contains("1.3", result.Error);
-        Assert.Contains("Minimum version required is 1.4", result.Error);
+        result.IsSuccess.Should().BeFalse();
+        result.FieldName.Should().Be("pdfVersion");
+        result.Error.Should().Contain("1.3");
+        result.Error.Should().Contain("Minimum version required is 1.4");
     }
 
     #endregion
@@ -257,9 +259,9 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateMimeType(contentType);
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Null(result.FieldName);
-        Assert.Null(result.Error);
+        result.IsSuccess.Should().BeTrue();
+        result.FieldName.Should().BeNull();
+        result.Error.Should().BeNull();
     }
 
     [Fact]
@@ -272,7 +274,7 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateMimeType(contentType);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -285,7 +287,7 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateMimeType(contentType);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -298,10 +300,10 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateMimeType(contentType);
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("fileType", result.FieldName);
-        Assert.Contains("application/msword", result.Error);
-        Assert.Contains("not allowed", result.Error);
+        result.IsSuccess.Should().BeFalse();
+        result.FieldName.Should().Be("fileType");
+        result.Error.Should().Contain("application/msword");
+        result.Error.Should().Contain("not allowed");
     }
 
     [Fact]
@@ -314,9 +316,9 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateMimeType(contentType);
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("fileType", result.FieldName);
-        Assert.Contains("cannot be empty", result.Error);
+        result.IsSuccess.Should().BeFalse();
+        result.FieldName.Should().Be("fileType");
+        result.Error.Should().Contain("cannot be empty");
     }
 
     [Fact]
@@ -329,8 +331,8 @@ public class PdfValidationDomainServiceTests
         var result = _service.ValidateMimeType(contentType!);
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("fileType", result.FieldName);
+        result.IsSuccess.Should().BeFalse();
+        result.FieldName.Should().Be("fileType");
     }
 
     #endregion
@@ -349,8 +351,8 @@ public class PdfValidationDomainServiceTests
         var result = service.ValidateFileSize(fileSize);
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Contains("50 MB", result.Error);
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("50 MB");
     }
 
     [Fact]
@@ -364,7 +366,7 @@ public class PdfValidationDomainServiceTests
         var result = service.ValidateMimeType("application/pdf");
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     #endregion

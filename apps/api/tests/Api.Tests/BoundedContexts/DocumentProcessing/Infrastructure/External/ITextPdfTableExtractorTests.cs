@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Services.Pdf;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -11,6 +12,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// <summary>
 /// Integration tests for ITextPdfTableExtractor adapter
 /// Tests infrastructure logic with mocked dependencies
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class ITextPdfTableExtractorTests
 {
@@ -40,44 +42,52 @@ public class ITextPdfTableExtractorTests
     public void Constructor_WithNullTableDetectionService_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new ITextPdfTableExtractor(
+        Action act = () => new ITextPdfTableExtractor(
             null!,
             _mockTableAnalyzer.Object,
             _ruleConverter,
-            _logger));
+            _logger);
+        
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullTableStructureAnalyzer_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new ITextPdfTableExtractor(
+        Action act = () => new ITextPdfTableExtractor(
             _mockTableDetection.Object,
             null!,
             _ruleConverter,
-            _logger));
+            _logger);
+        
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullRuleConverter_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new ITextPdfTableExtractor(
+        Action act = () => new ITextPdfTableExtractor(
             _mockTableDetection.Object,
             _mockTableAnalyzer.Object,
             null!,
-            _logger));
+            _logger);
+        
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new ITextPdfTableExtractor(
+        Action act = () => new ITextPdfTableExtractor(
             _mockTableDetection.Object,
             _mockTableAnalyzer.Object,
             _ruleConverter,
-            null!));
+            null!);
+        
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -91,8 +101,8 @@ public class ITextPdfTableExtractorTests
         var result = await _extractor.ExtractTablesAsync(null!, true, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("File path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("File path is required");
     }
 
     [Fact]
@@ -102,8 +112,8 @@ public class ITextPdfTableExtractorTests
         var result = await _extractor.ExtractTablesAsync("", true, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("File path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("File path is required");
     }
 
     [Fact]
@@ -113,8 +123,8 @@ public class ITextPdfTableExtractorTests
         var result = await _extractor.ExtractTablesAsync("   ", true, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("File path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("File path is required");
     }
 
     [Fact]
@@ -127,8 +137,8 @@ public class ITextPdfTableExtractorTests
         var result = await _extractor.ExtractTablesAsync(nonExistentPath, true, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("File not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("File not found");
     }
 
     #endregion
@@ -142,8 +152,8 @@ public class ITextPdfTableExtractorTests
         var result = await _extractor.ExtractStructuredContentAsync(null!, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("File path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("File path is required");
     }
 
     [Fact]
@@ -153,8 +163,8 @@ public class ITextPdfTableExtractorTests
         var result = await _extractor.ExtractStructuredContentAsync("", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("File path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("File path is required");
     }
 
     [Fact]
@@ -167,8 +177,8 @@ public class ITextPdfTableExtractorTests
         var result = await _extractor.ExtractStructuredContentAsync(nonExistentPath, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("File not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("File not found");
     }
 
     #endregion
@@ -186,11 +196,10 @@ public class ITextPdfTableExtractorTests
         try
         {
             // Act & Assert
-            // TaskCanceledException is a subclass of OperationCanceledException
             var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 async () => await _extractor.ExtractTablesAsync(tempPdfPath, true, cts.Token));
 
-            Assert.True(exception is OperationCanceledException or TaskCanceledException);
+            (exception is OperationCanceledException or TaskCanceledException).Should().BeTrue();
         }
         finally
         {
@@ -210,11 +219,10 @@ public class ITextPdfTableExtractorTests
         try
         {
             // Act & Assert
-            // TaskCanceledException is a subclass of OperationCanceledException
             var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 async () => await _extractor.ExtractStructuredContentAsync(tempPdfPath, cts.Token));
 
-            Assert.True(exception is OperationCanceledException or TaskCanceledException);
+            (exception is OperationCanceledException or TaskCanceledException).Should().BeTrue();
         }
         finally
         {
@@ -241,12 +249,12 @@ public class ITextPdfTableExtractorTests
         var result = TableExtractionResult.CreateSuccess(tables, rules);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
-        Assert.Equal(1, result.TableCount);
-        Assert.Equal(1, result.AtomicRuleCount);
-        Assert.Equal(tables, result.Tables);
-        Assert.Equal(rules, result.AtomicRules);
+        result.Success.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.TableCount.Should().Be(1);
+        result.AtomicRuleCount.Should().Be(1);
+        result.Tables.Should().Equal(tables);
+        result.AtomicRules.Should().Equal(rules);
     }
 
     [Fact]
@@ -259,10 +267,10 @@ public class ITextPdfTableExtractorTests
         var result = TableExtractionResult.CreateFailure(errorMessage);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(errorMessage, result.ErrorMessage);
-        Assert.Equal(0, result.TableCount);
-        Assert.Equal(0, result.AtomicRuleCount);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be(errorMessage);
+        result.TableCount.Should().Be(0);
+        result.AtomicRuleCount.Should().Be(0);
     }
 
     [Fact]
@@ -283,11 +291,11 @@ public class ITextPdfTableExtractorTests
         var result = StructuredContentResult.CreateSuccess(tables, diagrams, rules);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
-        Assert.Equal(1, result.TableCount);
-        Assert.Equal(1, result.DiagramCount);
-        Assert.Equal(1, result.AtomicRuleCount);
+        result.Success.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.TableCount.Should().Be(1);
+        result.DiagramCount.Should().Be(1);
+        result.AtomicRuleCount.Should().Be(1);
     }
 
     [Fact]
@@ -300,11 +308,11 @@ public class ITextPdfTableExtractorTests
         var result = StructuredContentResult.CreateFailure(errorMessage);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(errorMessage, result.ErrorMessage);
-        Assert.Equal(0, result.TableCount);
-        Assert.Equal(0, result.DiagramCount);
-        Assert.Equal(0, result.AtomicRuleCount);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be(errorMessage);
+        result.TableCount.Should().Be(0);
+        result.DiagramCount.Should().Be(0);
+        result.AtomicRuleCount.Should().Be(0);
     }
 
     #endregion
@@ -318,10 +326,10 @@ public class ITextPdfTableExtractorTests
         var table = new PdfTable();
 
         // Assert
-        Assert.NotNull(table.Headers);
-        Assert.NotNull(table.Rows);
-        Assert.Empty(table.Headers);
-        Assert.Empty(table.Rows);
+        table.Headers.Should().NotBeNull();
+        table.Rows.Should().NotBeNull();
+        table.Headers.Should().BeEmpty();
+        table.Rows.Should().BeEmpty();
     }
 
     [Fact]
@@ -339,12 +347,12 @@ public class ITextPdfTableExtractorTests
         };
 
         // Assert
-        Assert.Equal(5, table.PageNumber);
-        Assert.Equal(10, table.StartLine);
-        Assert.Equal(2, table.Headers.Count);
-        Assert.Equal(2, table.Rows.Count);
-        Assert.Equal(2, table.ColumnCount);
-        Assert.Equal(2, table.RowCount);
+        table.PageNumber.Should().Be(5);
+        table.StartLine.Should().Be(10);
+        table.Headers.Count.Should().Be(2);
+        table.Rows.Count.Should().Be(2);
+        table.ColumnCount.Should().Be(2);
+        table.RowCount.Should().Be(2);
     }
 
     [Fact]
@@ -362,12 +370,12 @@ public class ITextPdfTableExtractorTests
         };
 
         // Assert
-        Assert.Equal(3, diagram.PageNumber);
-        Assert.Equal("sequence", diagram.DiagramType);
-        Assert.Equal(100, diagram.Width);
-        Assert.Equal(200, diagram.Height);
-        Assert.Equal("Test diagram", diagram.Description);
-        Assert.Equal(3, diagram.ImageData!.Length);
+        diagram.PageNumber.Should().Be(3);
+        diagram.DiagramType.Should().Be("sequence");
+        diagram.Width.Should().Be(100);
+        diagram.Height.Should().Be(200);
+        diagram.Description.Should().Be("Test diagram");
+        diagram.ImageData!.Length.Should().Be(3);
     }
 
     #endregion
@@ -417,4 +425,3 @@ startxref
 
     #endregion
 }
-

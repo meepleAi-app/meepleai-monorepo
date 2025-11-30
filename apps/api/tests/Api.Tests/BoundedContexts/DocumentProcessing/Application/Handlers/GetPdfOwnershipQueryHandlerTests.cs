@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// <summary>
 /// Comprehensive tests for GetPdfOwnershipQueryHandler.
 /// Tests PDF ownership verification for authorization (SEC-02: Row-Level Security).
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class GetPdfOwnershipQueryHandlerTests
 {
@@ -55,11 +57,11 @@ public class GetPdfOwnershipQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(pdfId, result.Id);
-        Assert.Equal(userId, result.UploadedByUserId);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal("completed", result.ProcessingStatus);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(pdfId);
+        result.UploadedByUserId.Should().Be(userId);
+        result.GameId.Should().Be(gameId);
+        result.ProcessingStatus.Should().Be("completed");
 
         _documentRepositoryMock.Verify(
             r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>()),
@@ -88,10 +90,10 @@ public class GetPdfOwnershipQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(pdfId, result.Id);
-        Assert.Equal(userId, result.UploadedByUserId);
-        Assert.Equal("pending", result.ProcessingStatus);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(pdfId);
+        result.UploadedByUserId.Should().Be(userId);
+        result.ProcessingStatus.Should().Be("pending");
     }
 
     [Fact]
@@ -117,8 +119,8 @@ public class GetPdfOwnershipQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("processing", result.ProcessingStatus);
+        result.Should().NotBeNull();
+        result.ProcessingStatus.Should().Be("processing");
     }
 
     [Fact]
@@ -144,8 +146,8 @@ public class GetPdfOwnershipQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("failed", result.ProcessingStatus);
+        result.Should().NotBeNull();
+        result.ProcessingStatus.Should().Be("failed");
     }
 
     #endregion
@@ -168,7 +170,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
 
         // Verify warning was logged
         _loggerMock.Verify(
@@ -197,7 +199,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     #endregion
@@ -221,7 +223,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
 
         // Verify error was logged
         _loggerMock.Verify(
@@ -260,7 +262,7 @@ public class GetPdfOwnershipQueryHandlerTests
         var result = await _handler.Handle(query, cancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _documentRepositoryMock.Verify(
             r => r.GetByIdAsync(pdfId, cancellationToken),
             Times.Once);
@@ -268,4 +270,3 @@ public class GetPdfOwnershipQueryHandlerTests
 
     #endregion
 }
-

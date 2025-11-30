@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure;
 using Api.Tests.Helpers;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -10,9 +11,11 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
 /// <summary>
 /// Tests for GetPdfTextQueryHandler.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// Tests PDF extracted text retrieval.
 /// NOTE: Uses DbContext directly - simplified tests due to mocking complexity.
 /// TODO: Convert to integration tests or refactor handler to use repository.
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class GetPdfTextQueryHandlerTests
 {
@@ -37,17 +40,19 @@ public class GetPdfTextQueryHandlerTests
             _loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new GetPdfTextQueryHandler(
                 null!,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -57,10 +62,12 @@ public class GetPdfTextQueryHandlerTests
         var dbContext = DbContextHelper.CreateInMemoryDbContext();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new GetPdfTextQueryHandler(
                 dbContext,
-                null!));
+                null!);
+        
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -77,7 +84,7 @@ public class GetPdfTextQueryHandlerTests
         var query = new GetPdfTextQuery(pdfId);
 
         // Assert
-        Assert.Equal(pdfId, query.PdfId);
+        query.PdfId.Should().Be(pdfId);
     }
 
     #endregion
@@ -108,14 +115,14 @@ public class GetPdfTextQueryHandlerTests
             null);
 
         // Assert
-        Assert.Equal(id, result.Id);
-        Assert.Equal(fileName, result.FileName);
-        Assert.Equal(extractedText, result.ExtractedText);
-        Assert.Equal(processingStatus, result.ProcessingStatus);
-        Assert.Equal(processedAt, result.ProcessedAt);
-        Assert.Equal(pageCount, result.PageCount);
-        Assert.Equal(characterCount, result.CharacterCount);
-        Assert.Null(result.ProcessingError);
+        result.Id.Should().Be(id);
+        result.FileName.Should().Be(fileName);
+        result.ExtractedText.Should().Be(extractedText);
+        result.ProcessingStatus.Should().Be(processingStatus);
+        result.ProcessedAt.Should().Be(processedAt);
+        result.PageCount.Should().Be(pageCount);
+        result.CharacterCount.Should().Be(characterCount);
+        result.ProcessingError.Should().BeNull();
     }
 
     [Fact]
@@ -138,10 +145,10 @@ public class GetPdfTextQueryHandlerTests
             errorMessage);
 
         // Assert
-        Assert.Equal("failed", result.ProcessingStatus);
-        Assert.Equal(errorMessage, result.ProcessingError);
-        Assert.Null(result.ExtractedText);
-        Assert.Null(result.PageCount);
+        result.ProcessingStatus.Should().Be("failed");
+        result.ProcessingError.Should().Be(errorMessage);
+        result.ExtractedText.Should().BeNull();
+        result.PageCount.Should().BeNull();
     }
 
     [Fact]
@@ -163,11 +170,11 @@ public class GetPdfTextQueryHandlerTests
             null);
 
         // Assert
-        Assert.Null(result.ExtractedText);
-        Assert.Null(result.ProcessedAt);
-        Assert.Null(result.PageCount);
-        Assert.Null(result.CharacterCount);
-        Assert.Null(result.ProcessingError);
+        result.ExtractedText.Should().BeNull();
+        result.ProcessedAt.Should().BeNull();
+        result.PageCount.Should().BeNull();
+        result.CharacterCount.Should().BeNull();
+        result.ProcessingError.Should().BeNull();
     }
 
     #endregion
@@ -175,4 +182,3 @@ public class GetPdfTextQueryHandlerTests
     // NOTE: Full integration tests for Handle method should be in integration test suite
     // due to DbContext dependency complexity. See integration-tests.yml workflow.
 }
-

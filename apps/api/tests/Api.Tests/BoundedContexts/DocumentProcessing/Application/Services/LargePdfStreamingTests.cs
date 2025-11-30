@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 /// <summary>
 /// BGAI-087: Tests for large PDF streaming optimization
 /// Verifies temp file strategy for PDFs ≥50MB to reduce memory pressure
+/// ISSUE-1818: Migrated to FluentAssertions for improved readability.
 /// </summary>
 public class LargePdfStreamingTests
 {
@@ -49,9 +51,9 @@ public class LargePdfStreamingTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Test content", result.ExtractedText);
-        Assert.Equal(1, result.StageUsed); // Stage 1 should succeed
+        result.Success.Should().BeTrue();
+        result.ExtractedText.Should().Be("Test content");
+        result.StageUsed.Should().Be(1); // Stage 1 should succeed
     }
 
     [Fact]
@@ -77,9 +79,9 @@ public class LargePdfStreamingTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Large PDF content", result.ExtractedText);
-        Assert.Equal(1, result.StageUsed);
+        result.Success.Should().BeTrue();
+        result.ExtractedText.Should().Be("Large PDF content");
+        result.StageUsed.Should().Be(1);
         // Note: Temp file should be automatically cleaned up via Dispose
     }
 
@@ -106,8 +108,8 @@ public class LargePdfStreamingTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Memory content", result.ExtractedText);
+        result.Success.Should().BeTrue();
+        result.ExtractedText.Should().Be("Memory content");
     }
 
     [Fact]
@@ -141,9 +143,9 @@ public class LargePdfStreamingTests
         var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Single(result.PageChunks);
-        Assert.Equal(1, result.StageUsed);
+        result.Success.Should().BeTrue();
+        result.PageChunks.Should().ContainSingle();
+        result.StageUsed.Should().Be(1);
     }
 
     [Fact]
@@ -169,9 +171,9 @@ public class LargePdfStreamingTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Fallback content", result.ExtractedText);
-        Assert.Equal(3, result.StageUsed); // Should fall through to Stage 3
+        result.Success.Should().BeTrue();
+        result.ExtractedText.Should().Be("Fallback content");
+        result.StageUsed.Should().Be(3); // Should fall through to Stage 3
     }
 
     [Theory]
@@ -200,7 +202,7 @@ public class LargePdfStreamingTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
     }
 
     [Theory]
@@ -229,7 +231,7 @@ public class LargePdfStreamingTests
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         // Temp file should be cleaned up automatically after extraction
     }
 
@@ -334,4 +336,3 @@ file class FakePagedExtractor : IPdfTextExtractor
         return Task.FromResult(result);
     }
 }
-

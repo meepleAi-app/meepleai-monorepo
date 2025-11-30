@@ -53,7 +53,7 @@ public static class AlertEndpoints
                     else if (string.Equals(alert.Status, "resolved", StringComparison.Ordinal))
                     {
                         var alertType = alert.Labels.GetValueOrDefault("alertname", "Unknown");
-                        await alertingService.ResolveAlertAsync(alertType, ct);
+                        await alertingService.ResolveAlertAsync(alertType, ct).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)
@@ -107,7 +107,7 @@ public static class AlertEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var resolved = await alertingService.ResolveAlertAsync(alertType, ct);
+            var resolved = await alertingService.ResolveAlertAsync(alertType, ct).ConfigureAwait(false);
 
             if (!resolved)
             {

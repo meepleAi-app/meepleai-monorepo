@@ -109,7 +109,7 @@ public class N8nConfigService
         };
 
         _db.N8nConfigs.Add(config);
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         return new N8nConfigDto(
             config.Id.ToString(),
@@ -177,7 +177,7 @@ public class N8nConfigService
 
         config.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         return new N8nConfigDto(
             config.Id.ToString(),
@@ -208,7 +208,7 @@ public class N8nConfigService
         }
 
         _db.N8nConfigs.Remove(config);
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         return true;
     }
@@ -239,7 +239,7 @@ public class N8nConfigService
             request.Headers.Add("X-N8N-API-KEY", apiKey);
 
             var startTime = _timeProvider.GetUtcNow().UtcDateTime;
-            using var response = await httpClient.SendAsync(request, ct);
+            using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
             var latency = (int)(_timeProvider.GetUtcNow().UtcDateTime - startTime).TotalMilliseconds;
 
             var success = response.IsSuccessStatusCode;
@@ -249,7 +249,7 @@ public class N8nConfigService
 
             config.LastTestedAt = _timeProvider.GetUtcNow().UtcDateTime;
             config.LastTestResult = message;
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
             return new N8nTestResult(success, message, latency);
         }
@@ -264,7 +264,7 @@ public class N8nConfigService
             var message = $"Connection failed: {ex.Message}";
             config.LastTestedAt = _timeProvider.GetUtcNow().UtcDateTime;
             config.LastTestResult = message;
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
             return new N8nTestResult(false, message, null);
         }

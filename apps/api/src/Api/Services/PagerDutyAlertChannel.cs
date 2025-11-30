@@ -76,7 +76,7 @@ public class PagerDutyAlertChannel : IAlertChannel
                 return true;
             }
 
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogWarning(
                 "PagerDuty API returned {StatusCode}: {Error}",
                 response.StatusCode,

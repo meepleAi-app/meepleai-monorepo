@@ -766,7 +766,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
             .WithEmail("security-test@meepleai.dev")
             .Build();
 
-        await _userRepository!.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+        await _userRepository!.AddAsync(user, TestCancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         // Generate TOTP setup (creates encrypted secret)
@@ -787,7 +787,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
             .WithEmail($"backup-test-{Guid.NewGuid()}@meepleai.dev")
             .Build();
 
-        await _userRepository!.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
+        await _userRepository!.AddAsync(user, TestCancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         // Generate TOTP setup with backup codes

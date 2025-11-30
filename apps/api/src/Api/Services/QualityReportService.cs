@@ -83,13 +83,13 @@ public class QualityReportService : BackgroundService, IQualityReportService
             _reportWindowDays);
 
         // Wait before first run to allow application to fully start
-        await Task.Delay(_initialDelay, _timeProvider, stoppingToken);
+        await Task.Delay(_initialDelay, _timeProvider, stoppingToken).ConfigureAwait(false);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await GenerateScheduledReportAsync(stoppingToken);
+                await GenerateScheduledReportAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -108,7 +108,7 @@ public class QualityReportService : BackgroundService, IQualityReportService
 #pragma warning restore CA1031
 
             // Wait for the configured interval before next run
-            await Task.Delay(_interval, _timeProvider, stoppingToken);
+            await Task.Delay(_interval, _timeProvider, stoppingToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation("Quality report service stopped");
@@ -127,7 +127,7 @@ public class QualityReportService : BackgroundService, IQualityReportService
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        return await GenerateReportInternalAsync(dbContext, startDate, endDate);
+        return await GenerateReportInternalAsync(dbContext, startDate, endDate).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -144,7 +144,7 @@ public class QualityReportService : BackgroundService, IQualityReportService
         var endDate = _timeProvider.GetUtcNow().DateTime;
         var startDate = endDate.AddDays(-_reportWindowDays);
 
-        var report = await GenerateReportInternalAsync(dbContext, startDate, endDate, cancellationToken);
+        var report = await GenerateReportInternalAsync(dbContext, startDate, endDate, cancellationToken).ConfigureAwait(false);
 
         // Log summary
         _logger.LogInformation(

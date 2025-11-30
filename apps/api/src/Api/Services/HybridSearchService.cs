@@ -69,13 +69,13 @@ public class HybridSearchService : IHybridSearchService
             switch (mode)
             {
                 case SearchMode.Semantic:
-                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, cancellationToken);
+                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Keyword:
-                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, cancellationToken);
+                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Hybrid:
-                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, cancellationToken);
+                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, cancellationToken).ConfigureAwait(false);
 
                 default:
                     throw new ArgumentException($"Unsupported search mode: {mode}", nameof(mode));
@@ -102,7 +102,7 @@ public class HybridSearchService : IHybridSearchService
         CancellationToken cancellationToken)
     {
         // Generate embedding for the query
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, "en", cancellationToken);
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, "en", cancellationToken).ConfigureAwait(false);
         if (embeddingResult == null || !embeddingResult.Success || embeddingResult.Embeddings?.Count == 0)
         {
             _logger.LogError("Failed to generate query embedding for semantic search: {Error}", embeddingResult?.ErrorMessage ?? "Embedding result was null");
@@ -193,12 +193,12 @@ public class HybridSearchService : IHybridSearchService
         var fetchLimit = Math.Max(limit * 2, 20);
 
         // Generate query embedding first (needed for vector search)
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, "en", cancellationToken);
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, "en", cancellationToken).ConfigureAwait(false);
         if (embeddingResult == null || !embeddingResult.Success || embeddingResult.Embeddings?.Count == 0)
         {
             _logger.LogError("Failed to generate query embedding for hybrid search: {Error}", embeddingResult?.ErrorMessage ?? "Embedding result was null");
             // Fall back to keyword-only search if embedding fails
-            return await SearchKeywordOnlyAsync(query, gameId, limit, cancellationToken);
+            return await SearchKeywordOnlyAsync(query, gameId, limit, cancellationToken).ConfigureAwait(false);
         }
 
         var queryEmbedding = embeddingResult.Embeddings![0];
@@ -218,15 +218,15 @@ public class HybridSearchService : IHybridSearchService
             boostTerms: _config.BoostTerms,
             cancellationToken: cancellationToken);
 
-        await Task.WhenAll(vectorTask, keywordTask);
+        await Task.WhenAll(vectorTask, keywordTask).ConfigureAwait(false);
 
-        var vectorResults = await vectorTask;
-        var keywordResults = await keywordTask;
+        var vectorResults = await vectorTask.ConfigureAwait(false);
+        var keywordResults = await keywordTask.ConfigureAwait(false);
 
         if (!vectorResults.Success)
         {
             _logger.LogWarning("Vector search failed, using keyword-only results: {Error}", vectorResults.ErrorMessage);
-            return await SearchKeywordOnlyAsync(query, gameId, limit, cancellationToken);
+            return await SearchKeywordOnlyAsync(query, gameId, limit, cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation(

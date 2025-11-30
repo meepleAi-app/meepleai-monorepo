@@ -321,7 +321,7 @@ public class AdminStatsService : IAdminStatsService
             GameId: request.GameId
         );
 
-        var stats = await GetDashboardStatsAsync(queryParams, cancellationToken);
+        var stats = await GetDashboardStatsAsync(queryParams, cancellationToken).ConfigureAwait(false);
 
         return request.Format.ToLowerInvariant() switch
         {

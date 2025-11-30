@@ -21,7 +21,7 @@ public class QdrantHealthCheck : IHealthCheck
         try
         {
             // Try to check if collection exists (lightweight operation)
-            var collectionExists = await _qdrantService.CollectionExistsAsync(cancellationToken);
+            var collectionExists = await _qdrantService.CollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
             if (collectionExists)
             {

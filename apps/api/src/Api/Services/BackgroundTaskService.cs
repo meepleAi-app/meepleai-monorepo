@@ -21,7 +21,7 @@ public class BackgroundTaskService : IBackgroundTaskService
         {
             try
             {
-                await task();
+                await task().ConfigureAwait(false);
             }
             catch (InvalidOperationException ex)
             {
@@ -56,7 +56,7 @@ public class BackgroundTaskService : IBackgroundTaskService
             try
             {
                 _logger.LogInformation("Starting background task {TaskId}", taskId);
-                await taskFactory(cts.Token);
+                await taskFactory(cts.Token).ConfigureAwait(false);
                 _logger.LogInformation("Background task {TaskId} completed successfully", taskId);
             }
             catch (OperationCanceledException)

@@ -78,7 +78,7 @@ public class PromptEvaluationService : IPromptEvaluationService
 
             // SECURITY: Check file size to prevent resource exhaustion
             var fileInfo = new FileInfo(fullPath);
-            var maxFileSizeMB = await _configService.GetValueAsync<int?>("Evaluation:MaxDatasetFileSizeMB", 10) ?? 10;
+            var maxFileSizeMB = (await _configService.GetValueAsync<int?>("Evaluation:MaxDatasetFileSizeMB", 10).ConfigureAwait(false)) ?? 10;
             var maxFileSizeBytes = maxFileSizeMB * 1024L * 1024L;
             if (fileInfo.Length > maxFileSizeBytes)
             {
@@ -86,7 +86,7 @@ public class PromptEvaluationService : IPromptEvaluationService
             }
 
             // Read and deserialize JSON
-            var jsonContent = await File.ReadAllTextAsync(fullPath, ct);
+            var jsonContent = await File.ReadAllTextAsync(fullPath, ct).ConfigureAwait(false);
             var dataset = JsonSerializer.Deserialize<PromptTestDataset>(jsonContent);
 
             if (dataset == null)
@@ -190,7 +190,7 @@ public class PromptEvaluationService : IPromptEvaluationService
         try
         {
             // Step 1: Load dataset
-            var dataset = await LoadDatasetAsync(datasetPath, ct);
+            var dataset = await LoadDatasetAsync(datasetPath, ct).ConfigureAwait(false);
 
             // Step 2: Get prompt content from database
             var version = await _dbContext.PromptVersions
@@ -220,7 +220,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 progressCallback?.Invoke(i + 1, totalQueries);
 
                 // Execute single test case
-                var queryResult = await EvaluateSingleQueryAsync(testCase, customPrompt, ct);
+                var queryResult = await EvaluateSingleQueryAsync(testCase, customPrompt, ct).ConfigureAwait(false);
                 queryResults.Add(queryResult);
 
                 _logger.LogDebug(
@@ -889,7 +889,7 @@ public class PromptEvaluationService : IPromptEvaluationService
             };
 
             _dbContext.PromptEvaluationResults.Add(entity);
-            await _dbContext.SaveChangesAsync(ct);
+            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully stored evaluation result {EvaluationId}", result.EvaluationId);
         }

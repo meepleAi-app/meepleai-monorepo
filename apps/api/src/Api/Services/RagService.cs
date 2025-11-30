@@ -117,7 +117,7 @@ public class RagService : IRagService
                 activity?.SetTag("rag.config.topK", topK);
 
                 // Step 1: PERF-08 - Generate query variations for improved recall
-                var queryVariations = await _queryExpansion.GenerateQueryVariationsAsync(query!, language, cancellationToken);
+                var queryVariations = await _queryExpansion.GenerateQueryVariationsAsync(query!, language, cancellationToken).ConfigureAwait(false);
                 activity?.SetTag("query.variations.count", queryVariations.Count);
 
                 _logger.LogDebug("Generated {Count} query variations: {Variations}",
@@ -128,7 +128,7 @@ public class RagService : IRagService
                 var embeddingTasks = queryVariations
                     .Select(q => _embeddingService.GenerateEmbeddingAsync(q, language, cancellationToken))
                     .ToList();
-                var embeddingResults = await Task.WhenAll(embeddingTasks);
+                var embeddingResults = await Task.WhenAll(embeddingTasks).ConfigureAwait(false);
 
                 var embeddings = embeddingResults
                     .Where(r => r.Success && r.Embeddings.Count > 0)
@@ -149,7 +149,7 @@ public class RagService : IRagService
                 var searchResults = await Task.WhenAll(searchTasks).ConfigureAwait(false);
 
                 // Step 4: PERF-08 - Fuse and deduplicate results using Reciprocal Rank Fusion (RRF)
-                var fusedResults = await _reranker.FuseSearchResultsAsync(searchResults.Where(r => r.Success).ToList());
+                var fusedResults = await _reranker.FuseSearchResultsAsync(searchResults.Where(r => r.Success).ToList()).ConfigureAwait(false);
 
                 if (fusedResults.Count == 0)
                 {
@@ -187,7 +187,7 @@ public class RagService : IRagService
                     "Using prompt template for game {GameId}, question type {QuestionType}",
                     gameId, questionType);
 
-                var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken);
+                var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
 
                 if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
                 {
@@ -290,7 +290,7 @@ public class RagService : IRagService
 
                 // Step 1: Generate embedding for the topic
                 // AI-09: Use language-aware embedding service
-                var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, language, cancellationToken);
+                var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, language, cancellationToken).ConfigureAwait(false);
                 if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
                 {
                     _logger.LogError("Failed to generate topic embedding for language {Language}: {Error}", language, embeddingResult.ErrorMessage);
@@ -355,7 +355,7 @@ public class RagService : IRagService
                     confidence);
 
                 // AI-05: Cache the response for future requests
-                await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
+                await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
 
                 // OPS-02: Record metrics
                 stopwatch.Stop();
@@ -438,7 +438,7 @@ public class RagService : IRagService
     {
         try
         {
-            return await operationFunc();
+            return await operationFunc().ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         // Justification: Service boundary - must return error response instead of throwing

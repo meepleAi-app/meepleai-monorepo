@@ -32,7 +32,7 @@ public static class AnalyticsEndpoints
                 gameId,
                 startDate,
                 endDate);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Json(new { requests = result.Requests, totalCount = result.TotalCount });
         });
@@ -43,11 +43,11 @@ public static class AnalyticsEndpoints
             if (!authorized) return error!;
 
             var query = new Api.BoundedContexts.Administration.Application.Queries.GetAiRequestStatsQuery(startDate, endDate, userId, gameId);
-            var stats = await mediator.Send(query, ct);
+            var stats = await mediator.Send(query, ct).ConfigureAwait(false);
 
             // ISSUE-1695: Feedback stats now available via CQRS
             var feedbackQuery = new GetFeedbackStatsQuery(startDate, endDate);
-            var feedbackStats = await mediator.Send(feedbackQuery, ct);
+            var feedbackStats = await mediator.Send(feedbackQuery, ct).ConfigureAwait(false);
 
             return Results.Json(new
             {
@@ -68,7 +68,7 @@ public static class AnalyticsEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var healthStatus = await mediator.Send(new GetLlmHealthQuery(), ct);
+            var healthStatus = await mediator.Send(new GetLlmHealthQuery(), ct).ConfigureAwait(false);
             return Results.Json(healthStatus);
         })
         .WithName("GetLlmHealth")
@@ -93,7 +93,7 @@ public static class AnalyticsEndpoints
 
             // Use CQRS Query to get low-quality responses
             var query = new GetLowQualityResponsesQuery(limit, offset, startDate, endDate);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -121,7 +121,7 @@ public static class AnalyticsEndpoints
                 EndDate = endDate,
                 Days = days
             };
-            var report = await mediator.Send(query, ct);
+            var report = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(report);
         })
         .RequireAuthorization()
@@ -145,7 +145,7 @@ public static class AnalyticsEndpoints
             if (!authorized) return error!;
 
             var query = new GetAdminStatsQuery(fromDate, toDate, days, gameId, roleFilter);
-            var stats = await mediator.Send(query, ct);
+            var stats = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(stats);
         })
         .WithName("GetAnalytics")
@@ -165,7 +165,7 @@ public static class AnalyticsEndpoints
             if (!authorized) return error!;
 
             var command = new ExportStatsCommand(request.Format, request.FromDate, request.ToDate, request.GameId);
-            var data = await mediator.Send(command, ct);
+            var data = await mediator.Send(command, ct).ConfigureAwait(false);
             var contentType = request.Format.ToLowerInvariant() switch
             {
                 "csv" => "text/csv",
@@ -215,7 +215,7 @@ public static class AnalyticsEndpoints
                 UserId = userId
             };
 
-            var report = await mediator.Send(query, ct);
+            var report = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Json(report);
         })
@@ -241,7 +241,7 @@ public static class AnalyticsEndpoints
                 EndDate = targetDate
             };
 
-            var report = await mediator.Send(query, ct);
+            var report = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return Results.Json(new
             {
@@ -265,7 +265,7 @@ public static class AnalyticsEndpoints
             if (!authorized) return error!;
 
             // Use CQRS Command to check all thresholds
-            var result = await mediator.Send(new CheckLlmCostAlertsCommand(), ct);
+            var result = await mediator.Send(new CheckLlmCostAlertsCommand(), ct).ConfigureAwait(false);
 
             return Results.Json(new { success = result.Success, message = result.Message });
         })

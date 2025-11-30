@@ -51,7 +51,7 @@ public class TempSessionService : ITempSessionService
         };
 
         _dbContext.TempSessions.Add(tempSession);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Temp session created for user {UserId}, expires at {ExpiresAt}",
             userId, tempSession.ExpiresAt);
@@ -68,7 +68,7 @@ public class TempSessionService : ITempSessionService
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Find temp session with Serializable isolation (prevent concurrent use)
-        using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable).ConfigureAwait(false);
         try
         {
             var tempSession = await _dbContext.TempSessions
@@ -83,8 +83,8 @@ public class TempSessionService : ITempSessionService
             // Mark as used (single-use enforcement)
             tempSession.IsUsed = true;
             tempSession.UsedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await _dbContext.SaveChangesAsync();
-            await transaction.CommitAsync();
+            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+            await transaction.CommitAsync().ConfigureAwait(false);
 
             _logger.LogInformation("Temp session validated and consumed for user {UserId}", tempSession.UserId);
             return tempSession.UserId;
@@ -92,13 +92,13 @@ public class TempSessionService : ITempSessionService
         catch (DbUpdateException ex)
         {
             _logger.LogError(ex, "Database error during temp session validation");
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync().ConfigureAwait(false);
             return null;
         }
         catch (CryptographicException ex)
         {
             _logger.LogError(ex, "Cryptographic error during temp session token validation");
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync().ConfigureAwait(false);
             return null;
         }
     }
@@ -118,7 +118,7 @@ public class TempSessionService : ITempSessionService
         if (expiredSessions.Any())
         {
             _dbContext.TempSessions.RemoveRange(expiredSessions);
-            await _dbContext.SaveChangesAsync(ct);
+            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
             _logger.LogInformation("Cleaned up {Count} expired temp sessions", expiredSessions.Count);
         }

@@ -78,7 +78,7 @@ public static class AiEndpoints
             {
                 var gameGuid = Guid.Parse(req.gameId);
                 // Use CQRS Query to get game name
-                var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct);
+                var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct).ConfigureAwait(false);
 
                 if (gameDto != null && !string.IsNullOrEmpty(gameDto.Title))
                 {
@@ -168,7 +168,7 @@ public static class AiEndpoints
                 FinishReason: finishReason,
                 QualityScores: qualityScores
             );
-            await mediator.Send(logCommand, ct);
+            await mediator.Send(logCommand, ct).ConfigureAwait(false);
 
             return Results.Json(finalResponse); // CHAT-02: Return response with follow-up questions
         })
@@ -197,7 +197,7 @@ public static class AiEndpoints
 
             // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
             // AI-09: Language parameter defaults to null (uses "en")
-            var resp = await rag.ExplainAsync(req.gameId, req.topic, language: null, ct);
+            var resp = await rag.ExplainAsync(req.gameId, req.topic, language: null, ct).ConfigureAwait(false);
             var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
             logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
@@ -222,7 +222,7 @@ public static class AiEndpoints
                 Model: null,
                 FinishReason: null
             );
-            await mediator.Send(logCommand, ct);
+            await mediator.Send(logCommand, ct).ConfigureAwait(false);
 
             return Results.Json(resp);
         })
@@ -257,8 +257,8 @@ public static class AiEndpoints
                     var json = System.Text.Json.JsonSerializer.Serialize(evt);
 
                     // Write SSE format: "data: {json}\n\n"
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
                 }
 
                 logger.LogInformation("Streaming explain completed for game {GameId}, topic: {Topic}", req.gameId, req.topic);
@@ -284,8 +284,8 @@ public static class AiEndpoints
                         new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
                         DateTime.UtcNow);
                     var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
                 // Justification: Cleanup operation - must not throw during disposal/cleanup
@@ -371,8 +371,8 @@ public static class AiEndpoints
                     var json = System.Text.Json.JsonSerializer.Serialize(evt);
 
                     // Write SSE format: "data: {json}\n\n"
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
 
                     // Track response data for logging and chat persistence
                     // Issue #1186: Handlers now emit strongly-typed objects, not JsonElements
@@ -396,7 +396,7 @@ public static class AiEndpoints
                             {
                                 // Use CQRS Query to fetch game name
                                 var gameGuid = Guid.Parse(req.gameId);
-                                var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct);
+                                var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct).ConfigureAwait(false);
 
                                 if (gameDto == null || string.IsNullOrEmpty(gameDto.Title))
                                 {
@@ -423,7 +423,7 @@ public static class AiEndpoints
                 // CHAT-02: Wait for follow-up questions and send event
                 if (followUpTask != null)
                 {
-                    followUpQuestions = await followUpTask;
+                    followUpQuestions = await followUpTask.ConfigureAwait(false);
                     if (followUpQuestions != null && followUpQuestions.Count > 0)
                     {
                         var followUpEvent = new RagStreamingEvent(
@@ -431,8 +431,8 @@ public static class AiEndpoints
                             new StreamingFollowUpQuestions(followUpQuestions),
                             DateTime.UtcNow);
                         var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent);
-                        await context.Response.WriteAsync($"data: {followUpJson}\n\n", ct);
-                        await context.Response.Body.FlushAsync(ct);
+                        await context.Response.WriteAsync($"data: {followUpJson}\n\n", ct).ConfigureAwait(false);
+                        await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
 
                         logger.LogInformation("Sent {Count} follow-up questions for game {GameId}",
                             followUpQuestions.Count, req.gameId);
@@ -466,8 +466,8 @@ public static class AiEndpoints
                         new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
                         DateTime.UtcNow);
                     var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
                 // Justification: Cleanup operation - must not throw during disposal/cleanup
@@ -499,7 +499,7 @@ public static class AiEndpoints
                 UserAgent: context.Request.Headers.UserAgent.ToString(),
                 CompletionTokens: totalTokens
             );
-            await mediator.Send(logCommand, CancellationToken.None);
+            await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
 
             return Results.Empty;
         });
@@ -549,8 +549,8 @@ public static class AiEndpoints
                     var json = System.Text.Json.JsonSerializer.Serialize(evt);
 
                     // Write SSE format: "data: {json}\n\n"
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
 
                     // Track data for chat persistence and logging
                     if (evt.Type == StreamingEventType.SetupStep && evt.Data is System.Text.Json.JsonElement stepElement)
@@ -601,8 +601,8 @@ public static class AiEndpoints
                         new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
                         DateTime.UtcNow);
                     var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct);
-                    await context.Response.Body.FlushAsync(ct);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
                 // Justification: Cleanup operation - must not throw during disposal/cleanup
@@ -643,7 +643,7 @@ public static class AiEndpoints
                 PromptTokens: 0, // Not tracked in streaming
                 CompletionTokens: totalTokens
             );
-            await mediator.Send(logCommand, CancellationToken.None);
+            await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
 
             return Results.Empty;
         });
@@ -749,7 +749,7 @@ public static class AiEndpoints
                 Model: model,
                 FinishReason: finishReason
             );
-            await mediator.Send(logCommand, ct);
+            await mediator.Send(logCommand, ct).ConfigureAwait(false);
 
             return Results.Json(resp);
         })
@@ -781,7 +781,7 @@ public static class AiEndpoints
                 Query = validatedQuery,
                 Exact = exact
             };
-            var results = await mediator.Send(query, ct);
+            var results = await mediator.Send(query, ct).ConfigureAwait(false);
             logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, validatedQuery);
             return Results.Json(new { results });
         })
@@ -807,7 +807,7 @@ public static class AiEndpoints
             {
                 BggId = bggId
             };
-            var details = await mediator.Send(query, ct);
+            var details = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (details == null)
             {
@@ -829,7 +829,7 @@ public static class AiEndpoints
 
             logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 
-            var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct);
+            var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -902,7 +902,7 @@ public static class AiEndpoints
 
             logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
 
-            var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct);
+            var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct).ConfigureAwait(false);
 
             if (!success)
             {

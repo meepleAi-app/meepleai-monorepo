@@ -54,6 +54,6 @@ public class RequireAdminSessionFilter : IEndpointFilter
 
         // Session is validated and user has Admin role
         // Endpoint can safely retrieve session from HttpContext.Items
-        return await next(context);
+        return await next(context).ConfigureAwait(false);
     }
 }

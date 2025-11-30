@@ -30,7 +30,7 @@ public static class AdminUserEndpoints
 
             // Use CQRS Query for user search
             var searchQuery = new SearchUsersQuery(query, MaxResults: 10);
-            var users = await mediator.Send(searchQuery, ct);
+            var users = await mediator.Send(searchQuery, ct).ConfigureAwait(false);
 
             return Results.Ok(users);
         })
@@ -57,7 +57,7 @@ public static class AdminUserEndpoints
             if (!authorized) return error!;
 
             var query = new GetAllUsersQuery(search, role, sortBy, sortOrder, page, limit);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(result);
         })
         .WithName("GetUsers")
@@ -75,7 +75,7 @@ public static class AdminUserEndpoints
 
             logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session.User.Id, request.Email);
             var command = new CreateUserCommand(request.Email, request.Password, request.DisplayName, request.Role ?? "user");
-            var user = await mediator.Send(command, ct);
+            var user = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("User {UserId} created successfully", user.Id);
             return Results.Created($"/api/v1/admin/users/{user.Id}", user);
         })
@@ -95,7 +95,7 @@ public static class AdminUserEndpoints
 
             logger.LogInformation("Admin {AdminId} updating user {UserId}", session.User.Id, id);
             var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role);
-            var user = await mediator.Send(command, ct);
+            var user = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("User {UserId} updated successfully", id);
             return Results.Ok(user);
         })
@@ -114,7 +114,7 @@ public static class AdminUserEndpoints
 
             logger.LogInformation("Admin {AdminId} deleting user {UserId}", session.User.Id, id);
             var command = new DeleteUserCommand(id, session.User.Id);
-            await mediator.Send(command, ct);
+            await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("User {UserId} deleted successfully", id);
             return Results.NoContent();
         })
@@ -168,7 +168,7 @@ public static class AdminUserEndpoints
             try
             {
                 var command = new UpdateUserTierCommand(userId, request.Tier, requesterId);
-                var user = await mediator.Send(command, ct);
+                var user = await mediator.Send(command, ct).ConfigureAwait(false);
                 logger.LogInformation("User {UserId} tier updated successfully to {Tier}", userId, request.Tier);
                 return Results.Ok(user);
             }

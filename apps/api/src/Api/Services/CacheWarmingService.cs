@@ -77,7 +77,7 @@ public class CacheWarmingService : BackgroundService
             {
                 try
                 {
-                    await WarmCacheAsync(stoppingToken);
+                    await WarmCacheAsync(stoppingToken).ConfigureAwait(false);
 
                     _logger.LogInformation(
                         "Cache warming cycle completed. Next cycle in {IntervalHours} hours.",
@@ -98,12 +98,12 @@ public class CacheWarmingService : BackgroundService
                 catch (InvalidOperationException ex)
                 {
                     _logger.LogError(ex, "Invalid operation during cache warming cycle. Will retry after interval.");
-                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), _timeProvider, stoppingToken);
+                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), _timeProvider, stoppingToken).ConfigureAwait(false);
                 }
                 catch (HttpRequestException ex)
                 {
                     _logger.LogError(ex, "HTTP error during cache warming cycle. Will retry after interval.");
-                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), _timeProvider, stoppingToken);
+                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), _timeProvider, stoppingToken).ConfigureAwait(false);
                 }
             }
         }
@@ -136,7 +136,7 @@ public class CacheWarmingService : BackgroundService
             var allQueries = new List<FrequentQuery>();
 
             // Get all active game IDs from database
-            var gameIds = await GetAllGameIdsAsync(cancellationToken);
+            var gameIds = await GetAllGameIdsAsync(cancellationToken).ConfigureAwait(false);
 
             foreach (var gameId in gameIds)
             {
@@ -157,7 +157,7 @@ public class CacheWarmingService : BackgroundService
                 if (cancellationToken.IsCancellationRequested)
                     break;
 
-                await WarmSingleQueryAsync(query, cancellationToken);
+                await WarmSingleQueryAsync(query, cancellationToken).ConfigureAwait(false);
             }
 
             _logger.LogInformation("Cache warming cycle completed successfully.");
@@ -197,7 +197,7 @@ public class CacheWarmingService : BackgroundService
                 frequentQuery.Query);
 
             // Check if already cached
-            var cachedValue = await _cacheService.GetAsync<object>(cacheKey, cancellationToken);
+            var cachedValue = await _cacheService.GetAsync<object>(cacheKey, cancellationToken).ConfigureAwait(false);
             if (cachedValue != null)
             {
                 _logger.LogDebug(

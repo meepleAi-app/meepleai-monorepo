@@ -43,13 +43,13 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
 
         _logger.LogInformation("Scheduling task {TaskId} ({TaskName})", taskId, taskName);
 
-        await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled);
+        await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled).ConfigureAwait(false);
 
         // Create a linked cancellation token source for this scheduled task
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _scheduledTasks.TryAdd(taskId, cts);
 
-        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false), cts.Token);
+        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false), cts.Token).ConfigureAwait(false);
     }
 
     public async Task ScheduleDelayedAsync(
@@ -69,7 +69,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         _logger.LogInformation("Scheduling delayed task {TaskId} ({TaskName}) with delay {Delay}",
             taskId, taskName, delay);
 
-        await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled);
+        await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled).ConfigureAwait(false);
 
         // Create a linked cancellation token source for this scheduled task
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -79,10 +79,10 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         {
             try
             {
-                await Task.Delay(delay, cts.Token);
+                await Task.Delay(delay, cts.Token).ConfigureAwait(false);
                 if (!cts.Token.IsCancellationRequested)
                 {
-                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false);
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: false).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -110,7 +110,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         _logger.LogInformation("Scheduling recurring task {TaskId} ({TaskName}) with interval {Interval}",
             taskId, taskName, interval);
 
-        await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled);
+        await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled).ConfigureAwait(false);
 
         // Create a linked cancellation token source for this scheduled task
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -122,11 +122,11 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             {
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: true);
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, cts.Token, isRecurring: true).ConfigureAwait(false);
 
                     if (!cts.Token.IsCancellationRequested)
                     {
-                        await Task.Delay(interval, cts.Token);
+                        await Task.Delay(interval, cts.Token).ConfigureAwait(false);
                     }
                 }
             }
@@ -154,7 +154,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             _logger.LogInformation("Cancelling scheduled task {TaskId}", taskId);
             scheduledCts.Cancel();
             scheduledCts.Dispose();
-            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled);
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled).ConfigureAwait(false);
             return true;
         }
 
@@ -164,7 +164,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             _logger.LogInformation("Cancelling running task {TaskId}", taskId);
             runningCts.Cancel();
             runningCts.Dispose();
-            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled);
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled).ConfigureAwait(false);
             return true;
         }
 
@@ -180,7 +180,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
         try
         {
             var db = _redis.GetDatabase();
-            var statusValue = await db.StringGetAsync(TaskStatusKeyPrefix + taskId);
+            var statusValue = await db.StringGetAsync(TaskStatusKeyPrefix + taskId).ConfigureAwait(false);
 
             if (!statusValue.HasValue)
                 return null;
@@ -236,13 +236,13 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
             try
             {
                 // Execute task while holding the lock
-                await taskFactory(cancellationToken);
+                await taskFactory(cancellationToken).ConfigureAwait(false);
                 return true;
             }
             finally
             {
                 // Release lock only if we still hold it (verify by value)
-                await ReleaseLockAsync(db, fullLockKey, lockValue);
+                await ReleaseLockAsync(db, fullLockKey, lockValue).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
@@ -271,22 +271,22 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
 
         try
         {
-            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Running);
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Running).ConfigureAwait(false);
             _logger.LogInformation("Executing task {TaskId} ({TaskName})", taskId, taskName);
 
-            await taskFactory(cts.Token);
+            await taskFactory(cts.Token).ConfigureAwait(false);
 
-            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Completed);
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Completed).ConfigureAwait(false);
             _logger.LogInformation("Task {TaskId} ({TaskName}) completed successfully", taskId, taskName);
         }
         catch (OperationCanceledException)
         {
-            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled);
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled).ConfigureAwait(false);
             _logger.LogInformation("Task {TaskId} ({TaskName}) was cancelled", taskId, taskName);
         }
         catch (Exception ex)
         {
-            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Failed);
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Failed).ConfigureAwait(false);
             _logger.LogError(ex, "Task {TaskId} ({TaskName}) failed with error", taskId, taskName);
         }
         finally
@@ -324,7 +324,7 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
                     return 0
                 end";
 
-            await db.ScriptEvaluateAsync(script, new RedisKey[] { lockKey }, new RedisValue[] { lockValue });
+            await db.ScriptEvaluateAsync(script, new RedisKey[] { lockKey }, new RedisValue[] { lockValue }).ConfigureAwait(false);
             _logger.LogDebug("Released distributed lock {LockKey}", lockKey);
         }
         catch (Exception ex)

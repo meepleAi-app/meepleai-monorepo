@@ -27,7 +27,7 @@ public static class AdminMiscEndpoints
 
             logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 
-            var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct);
+            var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -62,7 +62,7 @@ public static class AdminMiscEndpoints
 
             logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, validatedQuery);
 
-            var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = validatedQuery, Limit = limit ?? 5 }, ct);
+            var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = validatedQuery, Limit = limit ?? 5 }, ct).ConfigureAwait(false);
 
             if (!searchResult.Success)
             {
@@ -93,7 +93,7 @@ public static class AdminMiscEndpoints
 
             logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
 
-            var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct);
+            var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct).ConfigureAwait(false);
 
             if (!success)
             {

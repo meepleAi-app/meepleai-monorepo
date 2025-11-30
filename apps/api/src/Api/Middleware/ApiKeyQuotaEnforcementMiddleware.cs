@@ -33,7 +33,7 @@ public class ApiKeyQuotaEnforcementMiddleware
         // Only enforce quota on API endpoints (skip health checks, swagger, etc.)
         if (!context.Request.Path.StartsWithSegments("/api"))
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
             return;
         }
 
@@ -41,7 +41,7 @@ public class ApiKeyQuotaEnforcementMiddleware
         var authType = context.User.FindFirst("AuthType")?.Value;
         if (!string.Equals(authType, "ApiKey", StringComparison.OrdinalIgnoreCase))
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
             return;
         }
 
@@ -49,7 +49,7 @@ public class ApiKeyQuotaEnforcementMiddleware
         var apiKeyIdStr = context.User.FindFirst("ApiKeyId")?.Value;
         if (string.IsNullOrWhiteSpace(apiKeyIdStr) || !Guid.TryParse(apiKeyIdStr, out var apiKeyId))
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
             return;
         }
 
@@ -61,7 +61,7 @@ public class ApiKeyQuotaEnforcementMiddleware
 
         if (apiKey == null)
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
             return;
         }
 
@@ -83,7 +83,7 @@ public class ApiKeyQuotaEnforcementMiddleware
         // If no quota is defined, allow the request
         if (quota == null || (quota.DailyLimit == null && quota.HourlyLimit == null))
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
             return;
         }
 
@@ -118,7 +118,7 @@ public class ApiKeyQuotaEnforcementMiddleware
                     retryAfter = (int)(hourStart.AddHours(1) - now).TotalSeconds
                 };
 
-                await context.Response.WriteAsJsonAsync(error);
+                await context.Response.WriteAsJsonAsync(error).ConfigureAwait(false);
                 return;
             }
 
@@ -157,7 +157,7 @@ public class ApiKeyQuotaEnforcementMiddleware
                     retryAfter = (int)(dayStart.AddDays(1) - now).TotalSeconds
                 };
 
-                await context.Response.WriteAsJsonAsync(error);
+                await context.Response.WriteAsJsonAsync(error).ConfigureAwait(false);
                 return;
             }
 
@@ -168,7 +168,7 @@ public class ApiKeyQuotaEnforcementMiddleware
         }
 
         // Quota not exceeded, proceed with request
-        await _next(context);
+        await _next(context).ConfigureAwait(false);
     }
 
     private class ApiKeyMetadata

@@ -215,8 +215,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             .WithTier(UserTier.Free)
             .Build();
 
-        await services.UserRepository.AddAsync(adminUser, TestCancellationToken, TestContext.Current.CancellationToken);
-        await services.UserRepository.AddAsync(regularUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(regularUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // NOTE: DbContext is passed to handler for direct query operations alongside repository pattern
@@ -258,8 +258,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var adminUser = new UserBuilder().WithEmail("admin2@test.com").AsAdmin().Build();
         var regularUser = new UserBuilder().WithEmail("user2@test.com").WithTier(UserTier.Free).Build();
 
-        await services.UserRepository.AddAsync(adminUser, TestCancellationToken, TestContext.Current.CancellationToken);
-        await services.UserRepository.AddAsync(regularUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(regularUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var handler = new UpdateUserTierCommandHandler(
@@ -292,8 +292,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var adminUser = new UserBuilder().WithEmail("admin3@test.com").AsAdmin().Build();
         var premiumUser = new UserBuilder().WithEmail("premium@test.com").WithTier(UserTier.Premium).Build();
 
-        await services.UserRepository.AddAsync(adminUser, TestCancellationToken, TestContext.Current.CancellationToken);
-        await services.UserRepository.AddAsync(premiumUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(premiumUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var handler = new UpdateUserTierCommandHandler(
@@ -337,8 +337,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             .WithTier(UserTier.Free)
             .Build();
 
-        await services.UserRepository.AddAsync(regularRequester, TestCancellationToken, TestContext.Current.CancellationToken);
-        await services.UserRepository.AddAsync(targetUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(regularRequester, TestCancellationToken);
+        await services.UserRepository.AddAsync(targetUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var handler = new UpdateUserTierCommandHandler(
@@ -382,8 +382,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var adminUser = new UserBuilder().WithEmail("admin4@test.com").AsAdmin().Build();
         var targetUser = new UserBuilder().WithEmail("target2@test.com").WithTier(UserTier.Free).Build();
 
-        await services.UserRepository.AddAsync(adminUser, TestCancellationToken, TestContext.Current.CancellationToken);
-        await services.UserRepository.AddAsync(targetUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(targetUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var handler = new UpdateUserTierCommandHandler(
@@ -412,7 +412,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 
         var adminUser = new UserBuilder().WithEmail("admin5@test.com").AsAdmin().Build();
 
-        await services.UserRepository.AddAsync(adminUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var handler = new UpdateUserTierCommandHandler(
@@ -445,7 +445,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
 
         var targetUser = new UserBuilder().WithEmail("target3@test.com").WithTier(UserTier.Free).Build();
 
-        await services.UserRepository.AddAsync(targetUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(targetUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var handler = new UpdateUserTierCommandHandler(
@@ -487,7 +487,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             .WithTier(UserTier.Normal)
             .Build();
 
-        await services.UserRepository.AddAsync(adminUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var handler = new UpdateUserTierCommandHandler(
@@ -522,8 +522,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var adminUser = new UserBuilder().WithEmail("admin6@test.com").AsAdmin().Build();
         var premiumUser = new UserBuilder().WithEmail("alreadypremium@test.com").WithTier(UserTier.Premium).Build();
 
-        await services.UserRepository.AddAsync(adminUser, TestCancellationToken, TestContext.Current.CancellationToken);
-        await services.UserRepository.AddAsync(premiumUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(adminUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(premiumUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var handler = new UpdateUserTierCommandHandler(
@@ -568,8 +568,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             .WithTier(UserTier.Free)
             .Build();
 
-        await services.UserRepository.AddAsync(editorUser, TestCancellationToken, TestContext.Current.CancellationToken);
-        await services.UserRepository.AddAsync(targetUser, TestCancellationToken, TestContext.Current.CancellationToken);
+        await services.UserRepository.AddAsync(editorUser, TestCancellationToken);
+        await services.UserRepository.AddAsync(targetUser, TestCancellationToken);
         await services.UnitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var handler = new UpdateUserTierCommandHandler(

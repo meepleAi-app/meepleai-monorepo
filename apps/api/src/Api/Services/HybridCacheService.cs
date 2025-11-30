@@ -83,7 +83,7 @@ public class HybridCacheService : IHybridCacheService
                     _logger.LogDebug("Cache MISS for key: {CacheKey}. Executing factory.", cacheKey);
                     Interlocked.Increment(ref _totalMisses);
 
-                    var value = await factory(cancellationToken);
+                    var value = await factory(cancellationToken).ConfigureAwait(false);
                     return value;
                 },
                 options: new HybridCacheEntryOptions
@@ -114,22 +114,22 @@ public class HybridCacheService : IHybridCacheService
         {
             _logger.LogError(ex, "Redis connection failed for key {CacheKey}. Falling back to factory.", cacheKey);
             // Redis unavailable, execute factory directly
-            return await factory(ct);
+            return await factory(ct).ConfigureAwait(false);
         }
         catch (RedisTimeoutException ex)
         {
             _logger.LogWarning(ex, "Redis timeout for key {CacheKey}. Falling back to factory.", cacheKey);
-            return await factory(ct);
+            return await factory(ct).ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)
         {
             _logger.LogError(ex, "Invalid cache operation for key {CacheKey}. Falling back to factory.", cacheKey);
-            return await factory(ct);
+            return await factory(ct).ConfigureAwait(false);
         }
         catch (JsonException ex)
         {
             _logger.LogError(ex, "JSON serialization error for key {CacheKey}. Falling back to factory.", cacheKey);
-            return await factory(ct);
+            return await factory(ct).ConfigureAwait(false);
         }
     }
 
@@ -143,7 +143,7 @@ public class HybridCacheService : IHybridCacheService
 
         try
         {
-            await _hybridCache.RemoveAsync(cacheKey, ct);
+            await _hybridCache.RemoveAsync(cacheKey, ct).ConfigureAwait(false);
 
             // Remove tag tracking for this key
             UntrackKey(cacheKey);
@@ -195,7 +195,7 @@ public class HybridCacheService : IHybridCacheService
             // Remove each key
             foreach (var key in keysToRemove)
             {
-                await RemoveAsync(key, ct);
+                await RemoveAsync(key, ct).ConfigureAwait(false);
             }
 
             _logger.LogInformation("Removed {Count} cache entries for tag: {Tag}", keysToRemove.Count, tag);
@@ -246,7 +246,7 @@ public class HybridCacheService : IHybridCacheService
             // Remove each key
             foreach (var key in keysToRemove)
             {
-                await RemoveAsync(key, ct);
+                await RemoveAsync(key, ct).ConfigureAwait(false);
             }
 
             _logger.LogInformation(

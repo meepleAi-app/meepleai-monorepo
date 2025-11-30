@@ -107,8 +107,8 @@ public class OpenRouterLlmClient : ILlmClient
             HttpResponseMessage? response = null;
             try
             {
-                response = await _httpClient.SendAsync(httpRequest, ct);
-                var responseBody = await response.Content.ReadAsStringAsync(ct);
+                response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
+                var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -259,11 +259,11 @@ public class OpenRouterLlmClient : ILlmClient
 
         try
         {
-            response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+            response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorBody = await response.Content.ReadAsStringAsync(ct);
+                var errorBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError("OpenRouter streaming API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(errorBody));
                 response.Dispose();
                 yield break;
@@ -300,12 +300,12 @@ public class OpenRouterLlmClient : ILlmClient
         // Process stream
         using (response)
         {
-            using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
             using var reader = new StreamReader(stream);
 
             while (!ct.IsCancellationRequested)
             {
-                var line = await reader.ReadLineAsync(ct);
+                var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
 
                 if (line is null)
                 {

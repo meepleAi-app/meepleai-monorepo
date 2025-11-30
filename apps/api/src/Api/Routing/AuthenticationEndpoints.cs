@@ -55,7 +55,7 @@ public static class AuthenticationEndpoints
                 UserAgent: context.Request.Headers.UserAgent.ToString());
 
             logger.LogInformation("User registration attempt for {Email}", payload.Email);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
             writeSessionCookie(context, result.SessionToken, result.ExpiresAt);
             writeUserRoleCookie(context, result.User.Role, result.ExpiresAt);
             logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
@@ -92,7 +92,7 @@ public static class AuthenticationEndpoints
                 UserAgent: context.Request.Headers.UserAgent.ToString());
 
             logger.LogInformation("Login attempt for {Email}", payload.Email);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             // AUTH-07: 2FA flow
             if (result.RequiresTwoFactor)
@@ -115,7 +115,7 @@ public static class AuthenticationEndpoints
             }
 
             // Calculate session expiration from configuration (default: 30 days)
-            var sessionExpirationDays = await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30) ?? 30;
+            var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
             var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
             writeSessionCookie(context, result.SessionToken, expiresAt);
             writeUserRoleCookie(context, result.User.Role, expiresAt);
@@ -140,7 +140,7 @@ public static class AuthenticationEndpoints
                 !string.IsNullOrWhiteSpace(token))
             {
                 var command = new DddLogoutCommand(SessionToken: token);
-                await mediator.Send(command, ct);
+                await mediator.Send(command, ct).ConfigureAwait(false);
                 logger.LogInformation("User logged out successfully");
             }
 
@@ -167,7 +167,7 @@ public static class AuthenticationEndpoints
             var command = new LoginWithApiKeyCommand(ApiKey: payload.ApiKey);
 
             logger.LogInformation("API key login attempt");
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             var protectedApiKey = apiKeyCookieService.Protect(payload.ApiKey);
             writeApiKeyCookie(context, protectedApiKey);
@@ -204,7 +204,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             CancellationToken ct) =>
         {
             var command = new LogoutApiKeyCommand();
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             removeApiKeyCookie(context);
             removeUserRoleCookie(context);
@@ -331,7 +331,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
                 Guid.Parse(session.User.Id),
                 ExtensionDuration: null  // Use default from Session.DefaultLifetime
             );
-            var response = await mediator.Send(command, ct);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!response.Success)
             {
@@ -347,7 +347,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             if (!authenticated) return error!;
 
             var query = new GetUserSessionsQuery(Guid.Parse(session.User.Id));
-            var sessions = await mediator.Send(query, ct);
+            var sessions = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(sessions);
         });
 
@@ -376,7 +376,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             // Execute query via CQRS
             var query = new GetSessionStatusQuery(sessionId, userId, isAdmin);
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (result == null)
             {
@@ -408,7 +408,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             // Execute command via CQRS (with rate limiting)
             var command = new ExtendSessionCommand(sessionId, userId);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -458,7 +458,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
 
             // Execute command via CQRS
             var command = new RevokeSessionCommand(sessionId, userId, isAdmin);
-            var result = await mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {

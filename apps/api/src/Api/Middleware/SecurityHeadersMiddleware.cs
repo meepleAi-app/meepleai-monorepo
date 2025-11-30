@@ -40,7 +40,7 @@ public class SecurityHeadersMiddleware
         // This ensures headers are present in all scenarios (including tests)
         AddSecurityHeaders(context);
 
-        await _next(context);
+        await _next(context).ConfigureAwait(false);
     }
 
     private void AddSecurityHeaders(HttpContext context)

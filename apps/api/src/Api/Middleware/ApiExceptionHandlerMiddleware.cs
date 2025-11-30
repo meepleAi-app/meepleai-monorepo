@@ -33,7 +33,7 @@ public class ApiExceptionHandlerMiddleware
 #pragma warning disable CA1031 // Do not catch general exception types
         try
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -48,7 +48,7 @@ public class ApiExceptionHandlerMiddleware
                 throw;
             }
 
-            await HandleExceptionAsync(context, ex);
+            await HandleExceptionAsync(context, ex).ConfigureAwait(false);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
@@ -67,7 +67,7 @@ public class ApiExceptionHandlerMiddleware
         // Special handling for FluentValidation exceptions (Issue #1449)
         if (ex is FluentValidation.ValidationException fluentValidationEx)
         {
-            await HandleFluentValidationExceptionAsync(context, fluentValidationEx);
+            await HandleFluentValidationExceptionAsync(context, fluentValidationEx).ConfigureAwait(false);
             return;
         }
 
@@ -96,7 +96,7 @@ public class ApiExceptionHandlerMiddleware
             stackTrace = _environment.IsDevelopment() ? ex.StackTrace : null
         };
 
-        await context.Response.WriteAsJsonAsync(errorResponse);
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -136,7 +136,7 @@ public class ApiExceptionHandlerMiddleware
             timestamp = DateTime.UtcNow
         };
 
-        await context.Response.WriteAsJsonAsync(errorResponse);
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
     }
 
     /// <summary>

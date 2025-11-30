@@ -19,16 +19,15 @@
  * - page.context().route() intercepts ALL requests at browser context level
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { setupMockAuth } from '../fixtures/auth';
 import { mockApiForbidden } from '../helpers/mocks';
 
-const API_BASE = process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const API_BASE =
+  process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('API Authorization Tests - E2E-004', () => {
-
   test.describe('Admin-Only API Endpoints', () => {
-
     test('Admin can call GET /api/v1/admin/users', async ({ page }) => {
       await setupMockAuth(page, 'Admin');
 
@@ -63,8 +62,8 @@ test.describe('API Authorization Tests - E2E-004', () => {
         data: {
           key: 'test.feature.enabled',
           value: 'true',
-          category: 'Features'
-        }
+          category: 'Features',
+        },
       });
 
       expect([200, 201, 304]).toContain(response.status());
@@ -77,8 +76,8 @@ test.describe('API Authorization Tests - E2E-004', () => {
       const response = await page.request.post(`${API_BASE}/api/v1/admin/configuration`, {
         data: {
           key: 'test.feature.enabled',
-          value: 'true'
-        }
+          value: 'true',
+        },
       });
 
       expect(response.status()).toBe(403);
@@ -91,8 +90,8 @@ test.describe('API Authorization Tests - E2E-004', () => {
       const response = await page.request.post(`${API_BASE}/api/v1/admin/configuration`, {
         data: {
           key: 'test.feature.enabled',
-          value: 'true'
-        }
+          value: 'true',
+        },
       });
 
       expect(response.status()).toBe(403);
@@ -117,15 +116,14 @@ test.describe('API Authorization Tests - E2E-004', () => {
   });
 
   test.describe('Editor+ API Endpoints (Admin or Editor)', () => {
-
     test('Admin can call POST /api/v1/games', async ({ page }) => {
       await setupMockAuth(page, 'Admin');
 
       const response = await page.request.post(`${API_BASE}/api/v1/games`, {
         data: {
           name: 'Test Game',
-          description: 'Test Description'
-        }
+          description: 'Test Description',
+        },
       });
 
       // Mock returns success
@@ -138,8 +136,8 @@ test.describe('API Authorization Tests - E2E-004', () => {
       const response = await page.request.post(`${API_BASE}/api/v1/games`, {
         data: {
           name: 'Test Game',
-          description: 'Test Description'
-        }
+          description: 'Test Description',
+        },
       });
 
       expect([200, 201, 304]).toContain(response.status());
@@ -152,8 +150,8 @@ test.describe('API Authorization Tests - E2E-004', () => {
       const response = await page.request.post(`${API_BASE}/api/v1/games`, {
         data: {
           name: 'Test Game',
-          description: 'Test Description'
-        }
+          description: 'Test Description',
+        },
       });
 
       expect(response.status()).toBe(403);
@@ -166,8 +164,8 @@ test.describe('API Authorization Tests - E2E-004', () => {
       const response = await page.request.put(`${API_BASE}/api/v1/games/${gameId}/rulespec`, {
         data: {
           content: 'Updated rules',
-          version: '1.0.1'
-        }
+          version: '1.0.1',
+        },
       });
 
       expect([200, 201, 304]).toContain(response.status());
@@ -180,8 +178,8 @@ test.describe('API Authorization Tests - E2E-004', () => {
       const response = await page.request.put(`${API_BASE}/api/v1/games/${gameId}/rulespec`, {
         data: {
           content: 'Updated rules',
-          version: '1.0.1'
-        }
+          version: '1.0.1',
+        },
       });
 
       expect([200, 201, 304]).toContain(response.status());
@@ -196,8 +194,8 @@ test.describe('API Authorization Tests - E2E-004', () => {
       const response = await page.request.put(`${API_BASE}/api/v1/games/${gameId}/rulespec`, {
         data: {
           content: 'Updated rules',
-          version: '1.0.1'
-        }
+          version: '1.0.1',
+        },
       });
 
       expect(response.status()).toBe(403);
@@ -205,7 +203,6 @@ test.describe('API Authorization Tests - E2E-004', () => {
   });
 
   test.describe('Public API Endpoints (All Roles)', () => {
-
     test('All roles can call GET /api/v1/games', async ({ page }) => {
       const roles: Array<'Admin' | 'Editor' | 'User'> = ['Admin', 'Editor', 'User'];
 
@@ -237,19 +234,18 @@ test.describe('API Authorization Tests - E2E-004', () => {
   });
 
   test.describe('Unauthenticated API Access', () => {
-
     test('Unauthenticated request to admin endpoint returns 401/403', async ({ page }) => {
       // No setupMockAuth = unauthenticated
 
-      await page.context().route(`${API_BASE}/api/v1/admin/users**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/admin/users**`, async route => {
         await route.fulfill({
           status: 401,
           contentType: 'application/json',
           body: JSON.stringify({
             error: 'Unauthorized',
             message: 'Authentication required',
-            statusCode: 401
-          })
+            statusCode: 401,
+          }),
         });
       });
 
@@ -259,14 +255,14 @@ test.describe('API Authorization Tests - E2E-004', () => {
     });
 
     test('Unauthenticated request to protected chat endpoint returns 401', async ({ page }) => {
-      await page.context().route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
+      await page.context().route(`${API_BASE}/api/v1/chat/threads**`, async route => {
         await route.fulfill({
           status: 401,
           contentType: 'application/json',
           body: JSON.stringify({
             error: 'Unauthorized',
-            statusCode: 401
-          })
+            statusCode: 401,
+          }),
         });
       });
 

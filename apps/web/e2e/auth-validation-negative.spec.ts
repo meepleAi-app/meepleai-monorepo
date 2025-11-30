@@ -15,7 +15,7 @@
  * - Password mismatch
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { LoginPage, AuthHelper, USER_FIXTURES } from './pages';
 
 test.describe('Authentication Validation Negative Scenarios - Issue #1494', () => {

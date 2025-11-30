@@ -14,7 +14,7 @@
  * - Error handling (403 Forbidden)
  */
 
-import { test as base, expect, Page } from '@playwright/test';
+import { test as base, expect, Page } from './fixtures/chromatic';
 import { AuthHelper, ChatHelper, USER_FIXTURES } from './pages';
 import { getTextMatcher, t } from './fixtures/i18n';
 import { WaitHelper } from './helpers/WaitHelper';

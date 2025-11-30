@@ -15,9 +15,10 @@ public static class TestConstants
         public const string DefaultPassword = "TestPassword123!";
         public const string DefaultDisplayName = "Test User";
 
-        public const string AdminEmail = "admin@meepleai.dev";
-        public const string EditorEmail = "editor@meepleai.dev";
-        public const string UserEmail = "user@meepleai.dev";
+        // Test fixture emails (not seeded in database - used for mock testing only)
+        public const string AdminEmail = "admin-test@example.com";
+        public const string EditorEmail = "editor-test@example.com";
+        public const string UserEmail = "user-test@example.com";
     }
 
     /// <summary>

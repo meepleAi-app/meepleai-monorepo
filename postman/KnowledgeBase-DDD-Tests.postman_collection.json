@@ -74,14 +74,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@meepleai.dev\",\n  \"password\": \"Demo123!\"\n}"
+              "raw": "{\n  \"email\": \"test-user@example.com\",\n  \"password\": \"TestPassword123!\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/auth/login",
               "host": ["{{baseUrl}}"],
               "path": ["api", "{{apiVersion}}", "auth", "login"]
             },
-            "description": "Login with demo user credentials to get session cookie.\nDemo users: user@meepleai.dev, editor@meepleai.dev, admin@meepleai.dev\nPassword: Demo123!"
+            "description": "Login with demo user credentials to get session cookie.\nDemo users: test-user@example.com, test-editor@example.com, test-admin@example.com\nPassword: TestPassword123!"
           },
           "response": []
         },

@@ -98,7 +98,7 @@
                   "pm.test('Response contains user data', function() {",
                   "    const jsonData = pm.response.json();",
                   "    pm.expect(jsonData.user).to.exist;",
-                  "    pm.expect(jsonData.user.email).to.eql('user@meepleai.dev');",
+                  "    pm.expect(jsonData.user.email).to.eql('test-user@example.com');",
                   "});",
                   "",
                   "pm.test('Session cookie is set', function() {",
@@ -119,14 +119,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@meepleai.dev\",\n  \"password\": \"Demo123!\"\n}"
+              "raw": "{\n  \"email\": \"test-user@example.com\",\n  \"password\": \"TestPassword123!\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/login",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "login"]
             },
-            "description": "Login with email/password. Supports 2FA (returns `requiresTwoFactor: true` if enabled).\n\n**Command**: LoginCommand\n**Handler**: LoginCommandHandler\n**Context**: Authentication\n\n**Demo users**:\n- user@meepleai.dev (User role)\n- editor@meepleai.dev (Editor role)\n- admin@meepleai.dev (Admin role)\n**Password**: Demo123!"
+            "description": "Login with email/password. Supports 2FA (returns `requiresTwoFactor: true` if enabled).\n\n**Command**: LoginCommand\n**Handler**: LoginCommandHandler\n**Context**: Authentication\n\n**Demo users**:\n- test-user@example.com (User role)\n- test-editor@example.com (Editor role)\n- test-admin@example.com (Admin role)\n**Password**: TestPassword123!"
           },
           "response": []
         },
@@ -487,7 +487,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"password\": \"Demo123!\",\n  \"code\": \"123456\"\n}"
+              "raw": "{\n  \"password\": \"TestPassword123!\",\n  \"code\": \"123456\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/2fa/disable",

@@ -4,7 +4,6 @@
  * Unified authentication modal supporting:
  * - Login and registration tabs
  * - OAuth authentication buttons
- * - Demo credentials display
  * - Session expired warnings
  * - Accessible modal with Shadcn UI components
  *
@@ -18,7 +17,6 @@ import { AccessibleModal } from '@/components/accessible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginForm, LoginFormData } from './LoginForm';
 import { RegisterForm, RegisterFormData } from './RegisterForm';
-import { DemoCredentialsHint } from './DemoCredentialsHint';
 import OAuthButtons from './OAuthButtons';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -31,7 +29,6 @@ export interface AuthModalProps {
   onClose: () => void;
   defaultMode?: 'login' | 'register';
   onSuccess?: (user: any) => void;
-  showDemoCredentials?: boolean;
   sessionExpiredMessage?: boolean;
 }
 
@@ -44,7 +41,6 @@ export function AuthModal({
   onClose,
   defaultMode = 'login',
   onSuccess,
-  showDemoCredentials = true,
   sessionExpiredMessage = false,
 }: AuthModalProps) {
   const router = useRouter();
@@ -83,12 +79,6 @@ export function AuthModal({
       // Error is already set in useAuth hook
       console.error('Registration failed:', err);
     }
-  };
-
-  // Handle demo credential click
-  const handleDemoCredentialClick = (credential: any) => {
-    setActiveTab('login');
-    // Auto-fill handled by component state if needed
   };
 
   // Handle tab change
@@ -159,27 +149,6 @@ export function AuthModal({
 
         {/* OAuth Buttons (includes "Or continue with" separator) */}
         <OAuthButtons />
-
-        {/* Demo Credentials */}
-        {showDemoCredentials && (
-          <>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-200 dark:border-slate-700" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white dark:bg-slate-900 px-2 text-slate-500 dark:text-slate-400">
-                  For Testing
-                </span>
-              </div>
-            </div>
-
-            <DemoCredentialsHint
-              onCredentialClick={handleDemoCredentialClick}
-              variant="default"
-            />
-          </>
-        )}
       </div>
     </AccessibleModal>
   );

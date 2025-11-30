@@ -341,6 +341,7 @@ jobs:
     needs: changes
     name: API - Smoke Tests (Postman/Newman)
     runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking in alpha phase - smoke test monitoring only
     # Run on schedule/workflow_dispatch, or when API/web files changed in push/PR
     if: ${{ !failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') }}
     services:

@@ -12,6 +12,13 @@ import { render, screen } from '@testing-library/react';
 import { Message } from '../../../components/chat/Message';
 import { Message as MessageType } from '../../../types';
 
+// Mock AuthProvider to provide useAuth hook
+const mockUseAuth = vi.fn();
+vi.mock('../../../components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => mockUseAuth(),
+}));
+
 // Mock the ChatProvider context
 const mockUseChatContext = vi.fn();
 vi.mock('../../../components/chat/ChatProvider', () => ({
@@ -61,6 +68,13 @@ const createMessage = (overrides?: Partial<MessageType>): MessageType => ({
  * Helper to setup mock context
  */
 const setupMockContext = (overrides?: any) => {
+  // Mock AuthProvider's useAuth
+  mockUseAuth.mockReturnValue({
+    user: { id: '1', email: 'test@example.com', displayName: 'Test User' },
+    isAuthenticated: true,
+    isLoading: false,
+  });
+
   mockUseChatContext.mockReturnValue({
     editingMessageId: null,
     startEditMessage: vi.fn(),

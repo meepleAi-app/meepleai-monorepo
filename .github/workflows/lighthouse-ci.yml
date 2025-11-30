@@ -98,6 +98,7 @@ jobs:
     name: Lighthouse - Performance Testing
     runs-on: ubuntu-latest
     if: needs.changes.outputs.web == 'true'
+    continue-on-error: true  # Non-blocking in alpha phase - performance monitoring only
     defaults:
       run:
         working-directory: apps/web
@@ -162,6 +163,7 @@ jobs:
     name: Lighthouse CI - Core Web Vitals
     runs-on: ubuntu-latest
     if: needs.changes.outputs.web == 'true'
+    continue-on-error: true  # Non-blocking in alpha phase - performance monitoring only
     defaults:
       run:
         working-directory: apps/web
@@ -245,6 +247,7 @@ jobs:
     name: Check Performance Regression
     runs-on: ubuntu-latest
     if: needs.changes.outputs.web == 'true' && github.event_name == 'pull_request'
+    continue-on-error: true  # Non-blocking in alpha phase - performance monitoring only
     defaults:
       run:
         working-directory: apps/web

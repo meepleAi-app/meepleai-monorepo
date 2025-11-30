@@ -20,12 +20,13 @@ interface GameCommunityTabProps {
 
 export function GameCommunityTab({ game }: GameCommunityTabProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" role="region" aria-label="Community features">
       {/* Overview Alert */}
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Community features are coming soon! This tab will include discussions, reviews, Q&A, and user-contributed content.
+          Community features are coming soon! This tab will include discussions, reviews, Q&A, and
+          user-contributed content.
         </AlertDescription>
       </Alert>
 
@@ -60,9 +61,7 @@ export function GameCommunityTab({ game }: GameCommunityTabProps) {
             <Star className="h-5 w-5" />
             User Reviews & Ratings
           </CardTitle>
-          <CardDescription>
-            Rate this game and read what other players think
-          </CardDescription>
+          <CardDescription>Rate this game and read what other players think</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -108,9 +107,7 @@ export function GameCommunityTab({ game }: GameCommunityTabProps) {
             <Users className="h-5 w-5" />
             Community Contributors
           </CardTitle>
-          <CardDescription>
-            Top contributors and helpful community members
-          </CardDescription>
+          <CardDescription>Top contributors and helpful community members</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">

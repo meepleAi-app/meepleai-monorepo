@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 import {
   Select,
@@ -23,29 +23,22 @@ export function GameSelector() {
   if (loading.games) {
     return (
       <div className="mb-3">
-        <label className="block mb-1.5 font-medium text-[13px]">
-          Cambia Gioco:
-        </label>
+        <label className="block mb-1.5 font-medium text-[13px]">Cambia Gioco:</label>
         <SkeletonLoader variant="gameSelection" />
       </div>
     );
   }
 
-  const placeholder = games.length === 0
-    ? 'Nessun gioco disponibile'
-    : 'Seleziona un gioco';
+  const placeholder = games.length === 0 ? 'Nessun gioco disponibile' : 'Seleziona un gioco';
 
   return (
     <div className="mb-3">
-      <label
-        htmlFor="gameSelect"
-        className="block mb-1.5 font-medium text-[13px]"
-      >
+      <label htmlFor="gameSelect" className="block mb-1.5 font-medium text-[13px]">
         Cambia Gioco:
       </label>
       <Select
         value={selectedGameId ?? ''}
-        onValueChange={(value) => {
+        onValueChange={value => {
           if (value) {
             void selectGame(value);
           }
@@ -54,6 +47,7 @@ export function GameSelector() {
       >
         <SelectTrigger
           id="gameSelect"
+          data-testid="game-selector"
           aria-busy={loading.games}
           className="w-full"
         >
@@ -61,7 +55,7 @@ export function GameSelector() {
         </SelectTrigger>
         <SelectContent>
           {games.map((game: Game) => (
-            <SelectItem key={game.id} value={game.id}>
+            <SelectItem key={game.id} value={game.id} data-testid={`game-option-${game.id}`}>
               {game.title}
             </SelectItem>
           ))}

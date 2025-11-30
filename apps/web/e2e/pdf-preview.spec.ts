@@ -1,5 +1,13 @@
-import { test, expect, Page } from '@playwright/test';
-import { getTextMatcher, t } from './fixtures/i18n';
+/**
+ * E2E Test: PDF Preview Component - MIGRATED TO POM
+ *
+ * Feature: PDF-07 - PDF Preview with PDF.js
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
+
+import { test, expect } from '@playwright/test';
+import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 
 /**
  * E2E Test: PDF Preview Component
@@ -32,89 +40,10 @@ const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 /**
  * Sets up mock API routes for authentication flow
  */
-async function setupAuthRoutes(page: Page) {
-  let authenticated = false;
-
-  const userResponse = {
-    user: {
-      id: 'test-user-1',
-      email: 'editor@meepleai.dev',
-      displayName: 'Editor User',
-      role: 'editor'
-    },
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-  };
-
-  // Mock /auth/me endpoint
-  await page.route(`${apiBase}/api/v1/auth/me`, async (route) => {
-    if (authenticated) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userResponse)
-      });
-    } else {
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' })
-      });
-    }
-  });
-
-  // Mock /auth/login endpoint
-  await page.route(`${apiBase}/api/v1/auth/login`, async (route) => {
-    if (route.request().method() === 'POST') {
-      authenticated = true;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userResponse)
-      });
-    }
-  });
-
-  return { setAuthenticated: (value: boolean) => { authenticated = value; } };
-}
 
 /**
  * Sets up mock API routes for games management
  */
-async function setupGamesRoutes(page: Page) {
-  const games = [
-    {
-      id: 'game-1',
-      name: 'Test Game',
-      description: 'A test game for PDF preview',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ];
-
-  // Mock GET /api/v1/games endpoint
-  await page.route(`${apiBase}/api/v1/games`, async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(games)
-      });
-    }
-  });
-
-  // Mock GET /api/v1/games/{gameId}/pdfs endpoint
-  await page.route(`${apiBase}/api/v1/games/game-1/pdfs`, async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ pdfs: [] })
-      });
-    }
-  });
-
-  return { games };
-}
 
 // Create a minimal valid PDF file buffer
 function createTestPdfBuffer(): Buffer {
@@ -174,7 +103,9 @@ startxref
 }
 
 test.describe('PDF Preview Component - Full User Journey', () => {
-  test('User previews PDF with zoom, navigation, and thumbnails before upload', async ({ page }) => {
+  test('User previews PDF with zoom, navigation, and thumbnails before upload', async ({
+    page,
+  }) => {
     // Given: Set up authentication and games
     const authControl = await setupAuthRoutes(page);
     await setupGamesRoutes(page);
@@ -193,7 +124,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     // When: User confirms game selection
     const confirmButton = page.locator('button', { hasText: 'Confirm selection' });
     await confirmButton.click();
-    await page.waitForTimeout(500);
 
     // When: User selects a PDF file
     const fileInput = page.locator('input[type="file"]');
@@ -203,7 +133,7 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await fileInput.setInputFiles({
       name: 'test-rulebook.pdf',
       mimeType: 'application/pdf',
-      buffer: pdfBuffer
+      buffer: pdfBuffer,
     });
 
     // Then: PDF preview should appear
@@ -211,7 +141,9 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await expect(pdfPreview).toBeVisible({ timeout: 15000 });
 
     // Then: Preview should display first page
-    await expect(page.locator('[data-testid="current-page"]')).toContainText('Page 1 of 3', { timeout: 10000 });
+    await expect(page.locator('[data-testid="current-page"]')).toContainText('Page 1 of 3', {
+      timeout: 10000,
+    });
 
     // Then: All zoom controls should be visible
     await expect(page.locator('[data-testid="zoom-25"]')).toBeVisible();
@@ -310,7 +242,9 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await expect(page.locator('[aria-label="Zoom out"]')).toBeVisible();
   });
 
-  test('PDF preview handles keyboard navigation without interfering with input fields', async ({ page }) => {
+  test('PDF preview handles keyboard navigation without interfering with input fields', async ({
+    page,
+  }) => {
     // Given: Set up authentication and games
     const authControl = await setupAuthRoutes(page);
     await setupGamesRoutes(page);
@@ -323,7 +257,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     // Wait for games and confirm selection
     await expect(page.locator('select#gameSelect')).toBeVisible({ timeout: 10000 });
     await page.locator('button', { hasText: 'Confirm selection' }).click();
-    await page.waitForTimeout(500);
 
     // When: User selects a PDF file
     const fileInput = page.locator('input[type="file"]');
@@ -331,12 +264,14 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await fileInput.setInputFiles({
       name: 'test-rulebook.pdf',
       mimeType: 'application/pdf',
-      buffer: pdfBuffer
+      buffer: pdfBuffer,
     });
 
     // Then: PDF preview should appear
     await expect(page.locator('[data-testid="pdf-preview"]')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('[data-testid="current-page"]')).toContainText('Page 1 of 3', { timeout: 10000 });
+    await expect(page.locator('[data-testid="current-page"]')).toContainText('Page 1 of 3', {
+      timeout: 10000,
+    });
 
     // When: User focuses on jump-to-page input
     const jumpInput = page.locator('[data-testid="jump-to-page-input"]');
@@ -369,7 +304,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     // Wait for games and confirm selection
     await expect(page.locator('select#gameSelect')).toBeVisible({ timeout: 10000 });
     await page.locator('button', { hasText: 'Confirm selection' }).click();
-    await page.waitForTimeout(500);
 
     // When: User selects an invalid file (not a real PDF)
     const fileInput = page.locator('input[type="file"]');
@@ -378,7 +312,7 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await fileInput.setInputFiles({
       name: 'invalid.pdf',
       mimeType: 'application/pdf',
-      buffer: invalidBuffer
+      buffer: invalidBuffer,
     });
 
     // Then: Validation error should appear (client-side validation)
@@ -397,7 +331,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await page.goto('/upload');
     await expect(page.locator('select#gameSelect')).toBeVisible({ timeout: 10000 });
     await page.locator('button', { hasText: 'Confirm selection' }).click();
-    await page.waitForTimeout(500);
 
     // Select PDF file
     const fileInput = page.locator('input[type="file"]');
@@ -405,7 +338,7 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await fileInput.setInputFiles({
       name: 'test-rulebook.pdf',
       mimeType: 'application/pdf',
-      buffer: pdfBuffer
+      buffer: pdfBuffer,
     });
 
     // Wait for preview
@@ -437,7 +370,6 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await page.goto('/upload');
     await expect(page.locator('select#gameSelect')).toBeVisible({ timeout: 10000 });
     await page.locator('button', { hasText: 'Confirm selection' }).click();
-    await page.waitForTimeout(500);
 
     // Select PDF file
     const fileInput = page.locator('input[type="file"]');
@@ -445,12 +377,14 @@ test.describe('PDF Preview Component - Full User Journey', () => {
     await fileInput.setInputFiles({
       name: 'test-rulebook.pdf',
       mimeType: 'application/pdf',
-      buffer: pdfBuffer
+      buffer: pdfBuffer,
     });
 
     // Wait for preview
     await expect(page.locator('[data-testid="pdf-preview"]')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('[data-testid="current-page"]')).toContainText('Page 1 of 3', { timeout: 10000 });
+    await expect(page.locator('[data-testid="current-page"]')).toContainText('Page 1 of 3', {
+      timeout: 10000,
+    });
 
     // Then: Previous button should be disabled on first page
     await expect(page.locator('[data-testid="prev-page"]')).toBeDisabled();

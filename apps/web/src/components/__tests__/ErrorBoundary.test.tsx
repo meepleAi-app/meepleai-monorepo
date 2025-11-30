@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ErrorBoundary, useErrorHandler } from '../ErrorBoundary';
+import { ErrorBoundary, useErrorHandler } from '../errors/ErrorBoundary';
 
 // Component that throws an error during render
 function ThrowError({ error }: { error: Error }): never {
@@ -27,9 +27,9 @@ describe('ErrorBoundary', () => {
   // Suppress console.error for these tests
   const originalError = console.error;
   beforeAll(() => {
-    console.error = jest.fn();
+    console.error = vi.fn();
     // Mock fetch for logger (not available in jsdom)
-    global.fetch = jest.fn(() =>
+    global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({}),
@@ -100,7 +100,7 @@ describe('ErrorBoundary', () => {
 
   it('should call onError callback when error occurs', () => {
     const error = new Error('Test error');
-    const onError = jest.fn();
+    const onError = vi.fn();
 
     render(
       <ErrorBoundary onError={onError}>
@@ -224,7 +224,7 @@ describe('useErrorHandler', () => {
   // Suppress console.error for these tests
   const originalError = console.error;
   beforeAll(() => {
-    console.error = jest.fn();
+    console.error = vi.fn();
   });
 
   afterAll(() => {

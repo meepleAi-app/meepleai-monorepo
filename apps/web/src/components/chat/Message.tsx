@@ -12,10 +12,10 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Message as MessageType } from '@/types';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
-import { FollowUpQuestions } from '../FollowUpQuestions';
+import { FollowUpQuestions } from './FollowUpQuestions';
 
 interface MessageProps {
   message: MessageType;
@@ -29,7 +29,7 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
     deleteMessage,
     setMessageFeedback,
     loading,
-    setInputValue
+    setInputValue,
   } = useChatContext();
 
   const isEditing = editingMessageId === message.id;
@@ -43,7 +43,9 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
   const handleFollowUpClick = (question: string) => {
     setInputValue(question);
     // Focus the input field
-    const inputElement = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Fai una domanda"]');
+    const inputElement = document.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder*="Fai una domanda"]'
+    );
     if (inputElement) {
       inputElement.focus();
     }
@@ -52,17 +54,14 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
   return (
     <li
       aria-label={`${isUser ? 'Your message' : 'AI response'}`}
-      className={cn(
-        "mb-6 flex flex-col",
-        isUser ? "items-end" : "items-start"
-      )}
+      className={cn('mb-6 flex flex-col', isUser ? 'items-end' : 'items-start')}
     >
       {/* Message Bubble */}
       <div
         className={cn(
-          "max-w-[75%] p-3 rounded-lg text-sm leading-relaxed relative",
-          isUser ? "bg-[#e3f2fd]" : "bg-[#f1f3f4]",
-          isUser && showActions && "user-message-hoverable"
+          'max-w-[75%] p-3 rounded-lg text-sm leading-relaxed relative',
+          isUser ? 'bg-[#e3f2fd]' : 'bg-[#f1f3f4]',
+          isUser && showActions && 'user-message-hoverable'
         )}
       >
         <div className="flex justify-between items-center mb-1">
@@ -70,9 +69,7 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
             {isUser ? 'Tu' : 'MeepleAI'}
             {/* Edited badge */}
             {message.updatedAt && !isDeleted && (
-              <span className="ml-1.5 text-[11px] text-[#94a3b8] italic">
-                (modificato)
-              </span>
+              <span className="ml-1.5 text-[11px] text-[#94a3b8] italic">(modificato)</span>
             )}
           </div>
 
@@ -91,37 +88,32 @@ export const Message = React.memo(function Message({ message, isUser }: MessageP
 
         {/* Message Content */}
         {isDeleted ? (
-          <div className="text-[#94a3b8] italic">
-            [Messaggio eliminato]
-          </div>
+          <div className="text-[#94a3b8] italic">[Messaggio eliminato]</div>
         ) : isEditing ? (
           <MessageEditForm />
         ) : (
-          <div className="whitespace-pre-wrap">
-            {message.content}
-          </div>
+          <div className="whitespace-pre-wrap">{message.content}</div>
         )}
       </div>
 
       {/* Assistant message feedback buttons */}
       {!isUser && showActions && (
-        <MessageActions
-          message={message}
-          isUser={isUser}
-          onFeedback={setMessageFeedback}
-        />
+        <MessageActions message={message} isUser={isUser} onFeedback={setMessageFeedback} />
       )}
 
       {/* CHAT-02: Follow-up questions for assistant messages */}
-      {!isUser && !isDeleted && message.followUpQuestions && message.followUpQuestions.length > 0 && (
-        <div className="max-w-[75%]" data-testid="follow-up-questions">
-          <FollowUpQuestions
-            questions={message.followUpQuestions}
-            onQuestionClick={handleFollowUpClick}
-            disabled={loading.sending}
-          />
-        </div>
-      )}
+      {!isUser &&
+        !isDeleted &&
+        message.followUpQuestions &&
+        message.followUpQuestions.length > 0 && (
+          <div className="max-w-[75%]" data-testid="follow-up-questions">
+            <FollowUpQuestions
+              questions={message.followUpQuestions}
+              onQuestionClick={handleFollowUpClick}
+              disabled={loading.sending}
+            />
+          </div>
+        )}
 
       {/* Timestamp */}
       {!isDeleted && (

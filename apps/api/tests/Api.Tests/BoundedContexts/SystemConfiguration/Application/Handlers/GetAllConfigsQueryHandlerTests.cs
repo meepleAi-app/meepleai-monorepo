@@ -42,7 +42,7 @@ public class GetAllConfigsQueryHandlerTests
             .ReturnsAsync(configs);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -70,7 +70,7 @@ public class GetAllConfigsQueryHandlerTests
             .ReturnsAsync(activeConfigs);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -99,7 +99,7 @@ public class GetAllConfigsQueryHandlerTests
             .ReturnsAsync(databaseConfigs);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -129,7 +129,7 @@ public class GetAllConfigsQueryHandlerTests
             .ReturnsAsync(configs);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -161,7 +161,7 @@ public class GetAllConfigsQueryHandlerTests
             .ReturnsAsync(configs);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -182,7 +182,7 @@ public class GetAllConfigsQueryHandlerTests
             .ReturnsAsync(new List<SystemConfig>());
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -214,7 +214,7 @@ public class GetAllConfigsQueryHandlerTests
             .ReturnsAsync(cacheConfigs);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -243,3 +243,4 @@ public class GetAllConfigsQueryHandlerTests
             Times.Once);
     }
 }
+

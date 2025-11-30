@@ -79,3 +79,4 @@ public class ConfidenceTests
         Assert.Equal(0.75, value);
     }
 }
+

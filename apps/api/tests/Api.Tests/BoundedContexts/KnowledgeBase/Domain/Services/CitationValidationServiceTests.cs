@@ -656,3 +656,4 @@ public class CitationValidationServiceTests
         Assert.Contains(CitationErrorType.MalformedSource, errorTypes);
     }
 }
+

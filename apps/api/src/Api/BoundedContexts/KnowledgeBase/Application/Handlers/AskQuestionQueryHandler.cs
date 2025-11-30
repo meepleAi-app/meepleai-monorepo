@@ -128,6 +128,26 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
 
         var llmResponse = llmResult.Response;
 
+        // Issue #1694: Record LLM token usage with OpenTelemetry GenAI semantic conventions
+        if (llmResult.Usage != null && llmResult.Cost != null)
+        {
+            var tokenUsage = TokenUsage.FromLlmResult(llmResult.Usage, llmResult.Cost);
+
+            // Record metrics with OpenTelemetry GenAI conventions
+            Api.Observability.MeepleAiMetrics.RecordLlmTokenUsage(
+                promptTokens: tokenUsage.PromptTokens,
+                completionTokens: tokenUsage.CompletionTokens,
+                totalTokens: tokenUsage.TotalTokens,
+                modelId: tokenUsage.ModelId,
+                provider: tokenUsage.Provider,
+                operationDurationMs: null, // Duration tracked separately in activity
+                costUsd: tokenUsage.EstimatedCost);
+
+            _logger.LogInformation(
+                "LLM token usage recorded: {TokenUsage}",
+                tokenUsage);
+        }
+
         // Calculate LLM confidence
         var llmConfidence = _qualityTrackingService.CalculateLlmConfidence(
             llmResponse,

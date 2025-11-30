@@ -3,17 +3,17 @@
 /**
  * Board Game AI Ask - Client Component
  *
- * Interactive Q&A interface with streaming responses.
- * Uses the existing useChatStreaming hook for SSE communication.
+ * Interactive Q&A interface for board game rules.
+ * Uses the useChatQuery hook to communicate with /api/v1/knowledge-base/ask.
  *
- * Issue #1006: Backend API Integration
+ * Issue #1006: Backend API Integration (Non-streaming)
  */
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { api } from '@/lib/api';
-import { useChatStreaming } from '@/lib/hooks/useChatStreaming';
+import { useChatQuery } from '@/lib/hooks/useChatQuery';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,25 +48,25 @@ export default function BoardGameAskClient() {
     Array<{ role: 'user' | 'assistant'; content: string; citations?: Citation[] }>
   >([]);
 
-  // Streaming hook
-  const [streamingState, streamingControls] = useChatStreaming({
-    onComplete: (answer, snippets, metadata) => {
+  // Query hook (Issue #1006: Non-streaming backend API)
+  const [queryState, queryControls] = useChatQuery({
+    onComplete: (answer, citations, metadata) => {
       // Add assistant response to conversation history
       setConversationHistory((prev) => [
         ...prev,
         {
           role: 'assistant',
           content: answer,
-          citations: metadata.citations || [],
+          citations: citations || [],
         },
       ]);
       setQuestion(''); // Clear input after successful response
     },
     onError: (error) => {
       logger.error(
-        'Streaming error occurred',
+        'Query error occurred',
         new Error(error),
-        createErrorContext('BoardGameAskClient', 'streamingError', { operation: 'chat_streaming' })
+        createErrorContext('BoardGameAskClient', 'queryError', { operation: 'knowledge_base_ask' })
       );
     },
   });
@@ -117,7 +117,7 @@ export default function BoardGameAskClient() {
   }, []);
 
   // Handle ask question
-  const handleAskQuestion = () => {
+  const handleAskQuestion = async () => {
     if (!selectedGameId) {
       return;
     }
@@ -131,8 +131,8 @@ export default function BoardGameAskClient() {
       { role: 'user', content: question },
     ]);
 
-    // Start streaming
-    streamingControls.startStreaming(selectedGameId, question);
+    // Ask question via backend API
+    await queryControls.askQuestion(selectedGameId, question);
   };
 
   // Handle Enter key (Ctrl+Enter to submit)
@@ -194,7 +194,7 @@ export default function BoardGameAskClient() {
               <Select
                 value={selectedGameId}
                 onValueChange={setSelectedGameId}
-                disabled={loadingGames || streamingState.isStreaming}
+                disabled={loadingGames || queryState.isLoading}
               >
                 <SelectTrigger id="game-select" className="w-full">
                   <SelectValue
@@ -223,7 +223,7 @@ export default function BoardGameAskClient() {
                 onKeyDown={handleKeyDown}
                 placeholder="e.g., Can I play a development card on the same turn I bought it in Catan?"
                 rows={4}
-                disabled={streamingState.isStreaming || !selectedGameId}
+                disabled={queryState.isLoading || !selectedGameId}
                 className="resize-none"
               />
               <p className="text-xs text-slate-400">
@@ -233,11 +233,11 @@ export default function BoardGameAskClient() {
 
             <Button
               onClick={handleAskQuestion}
-              disabled={!selectedGameId || !question.trim() || streamingState.isStreaming}
+              disabled={!selectedGameId || !question.trim() || queryState.isLoading}
               className="w-full"
               size="lg"
             >
-              {streamingState.isStreaming ? (
+              {queryState.isLoading ? (
                 <>
                   <span className="inline-block animate-spin mr-2">⏳</span>
                   Thinking...
@@ -249,20 +249,20 @@ export default function BoardGameAskClient() {
           </div>
         </Card>
 
-        {/* Streaming State Indicator */}
-        {streamingState.state && (
+        {/* Loading State Indicator */}
+        {queryState.state && (
           <Card className="p-4 mb-6 bg-blue-500/10 border-blue-500/30">
             <div className="flex items-center gap-2">
               <span className="inline-block animate-pulse">⚙️</span>
-              <span className="text-blue-400 font-medium">{streamingState.state}</span>
+              <span className="text-blue-400 font-medium">{queryState.state}</span>
             </div>
           </Card>
         )}
 
         {/* Error Display */}
-        {streamingState.error && (
+        {queryState.error && (
           <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{streamingState.error}</AlertDescription>
+            <AlertDescription>{queryState.error}</AlertDescription>
           </Alert>
         )}
 
@@ -327,65 +327,11 @@ export default function BoardGameAskClient() {
                 )}
               </motion.div>
             ))}
-
-            {/* Live Streaming Response */}
-            {streamingState.isStreaming && streamingState.currentAnswer && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="flex justify-start"
-              >
-                <Card className="max-w-[90%] p-4">
-                  <div className="space-y-3" role="region" aria-live="polite" aria-label="AI response streaming">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xl">🤖</span>
-                      <span className="font-semibold">Board Game AI</span>
-                      <span className="inline-block animate-pulse ml-2 text-xs text-slate-400">
-                        typing...
-                      </span>
-                    </div>
-                    <p className="whitespace-pre-wrap leading-relaxed">
-                      {streamingState.currentAnswer}
-                    </p>
-
-                    {/* Live Citations During Streaming */}
-                    {streamingState.citations.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-slate-700">
-                        <h4 className="text-sm font-semibold mb-2">📖 Sources:</h4>
-                        <div className="space-y-2">
-                          {streamingState.citations.map((citation, citIndex) => (
-                            <Card key={citIndex} className="p-3 bg-slate-800/50">
-                              <p className="text-sm text-slate-300">
-                                Document: {citation.documentId}
-                                <span className="ml-2 text-slate-400">
-                                  (Page {citation.pageNumber})
-                                </span>
-                              </p>
-                              {citation.snippet && (
-                                <p className="text-xs text-slate-400 mt-1 italic">
-                                  "{citation.snippet}"
-                                </p>
-                              )}
-                              {citation.relevanceScore && (
-                                <p className="text-xs text-slate-500 mt-1">
-                                  Relevance: {(citation.relevanceScore * 100).toFixed(1)}%
-                                </p>
-                              )}
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </motion.div>
-            )}
           </div>
         )}
 
         {/* Empty State */}
-        {conversationHistory.length === 0 && !streamingState.isStreaming && (
+        {conversationHistory.length === 0 && !queryState.isLoading && (
           <Card className="p-12 text-center">
             <div className="space-y-4">
               <div className="text-6xl">🎲</div>

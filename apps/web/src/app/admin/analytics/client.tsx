@@ -1,6 +1,5 @@
 'use client';
 
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -47,7 +46,7 @@ type ToastMessage = {
 };
 
 export function AdminPageClient() {
-  const { user } = useAuthUser();
+  const { user, loading: authLoading } = useAuthUser();
 
   if (!user) return null;
   // State

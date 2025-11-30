@@ -53,7 +53,7 @@ describe('upload-mocks fixture', () => {
         const gameMock = createGameMock();
 
         expect(gameMock.id).toBe('game-1');
-        expect(gameMock.name).toBe('Test Game');
+        expect(gameMock.title).toBe('Test Game');
         expect(gameMock.createdAt).toBeDefined();
       });
     });
@@ -62,12 +62,12 @@ describe('upload-mocks fixture', () => {
       it('Then returns game with custom values', () => {
         const gameMock = createGameMock({
           id: 'game-custom',
-          name: 'Custom Game',
+          title: 'Custom Game',
           createdAt: '2024-01-01T00:00:00Z'
         });
 
         expect(gameMock.id).toBe('game-custom');
-        expect(gameMock.name).toBe('Custom Game');
+        expect(gameMock.title).toBe('Custom Game');
         expect(gameMock.createdAt).toBe('2024-01-01T00:00:00Z');
       });
     });

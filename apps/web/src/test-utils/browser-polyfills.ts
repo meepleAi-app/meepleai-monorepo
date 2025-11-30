@@ -1,18 +1,20 @@
 /**
  * Comprehensive browser API polyfills for jsdom test environment.
  *
- * jsdom (the DOM implementation used by Jest) doesn't include all browser APIs.
+ * jsdom (the DOM implementation used by Vitest) doesn't include all browser APIs.
  * This module provides polyfills for missing APIs to prevent "X is not a function" errors.
  *
  * Usage:
- * Import and call setupBrowserPolyfills() in jest.setup.js before running tests.
+ * Import and call setupBrowserPolyfills() in vitest.setup.ts before running tests.
  *
  * @module test-utils/browser-polyfills
  */
 
+import { vi } from 'vitest';
+
 /**
  * Sets up all browser API polyfills for the test environment.
- * Call this function once in jest.setup.js to ensure all browser APIs are available.
+ * Call this function once in vitest.setup.ts to ensure all browser APIs are available.
  *
  * Currently includes:
  * - window.matchMedia (for responsive behavior and media queries)
@@ -23,13 +25,14 @@
  * - window.IntersectionObserver (if not already mocked)
  *
  * @example
- * // In jest.setup.js
+ * // In vitest.setup.ts
  * import { setupBrowserPolyfills } from './src/test-utils/browser-polyfills';
  * setupBrowserPolyfills();
  */
 export function setupBrowserPolyfills() {
   setupMatchMedia();
   setupScrollIntoView();
+  setupURLMethods();
 }
 
 /**
@@ -47,7 +50,7 @@ export function setupBrowserPolyfills() {
  *
  * // In tests, matches will be false by default
  * // To test different behavior, override in specific tests:
- * window.matchMedia = jest.fn().mockImplementation(query => ({
+ * window.matchMedia = vi.fn().mockImplementation(query => ({
  *   matches: true, // Override for this test
  *   media: query,
  *   // ... other properties
@@ -56,15 +59,15 @@ export function setupBrowserPolyfills() {
 function setupMatchMedia() {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: jest.fn().mockImplementation(query => ({
+    value: vi.fn().mockImplementation(query => ({
       matches: false, // Default: no media query matches
       media: query,
       onchange: null,
-      addListener: jest.fn(), // Deprecated, but included for compatibility
-      removeListener: jest.fn(), // Deprecated, but included for compatibility
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      dispatchEvent: jest.fn(),
+      addListener: vi.fn(), // Deprecated, but included for compatibility
+      removeListener: vi.fn(), // Deprecated, but included for compatibility
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
     })),
   });
 }
@@ -84,20 +87,47 @@ function setupMatchMedia() {
  * messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
  *
  * // In tests, verify it was called
- * const scrollSpy = jest.spyOn(Element.prototype, 'scrollIntoView');
+ * const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView');
  * // ... render component, trigger scroll
  * expect(scrollSpy).toHaveBeenCalled();
  */
 function setupScrollIntoView() {
   if (typeof Element.prototype.scrollIntoView === 'undefined') {
-    Element.prototype.scrollIntoView = jest.fn();
+    Element.prototype.scrollIntoView = vi.fn();
+  }
+}
+
+/**
+ * Polyfills URL.createObjectURL and URL.revokeObjectURL for file download testing.
+ *
+ * Used by downloadFile utility and components that create download links.
+ *
+ * Implementation:
+ * - createObjectURL: Returns a fake blob URL
+ * - revokeObjectURL: Mock function (no-op)
+ *
+ * @example
+ * // Component using createObjectURL
+ * const url = URL.createObjectURL(blob);
+ * link.href = url;
+ *
+ * // In tests, verify it was called
+ * const createSpy = vi.spyOn(URL, 'createObjectURL');
+ * expect(createSpy).toHaveBeenCalledWith(blob);
+ */
+function setupURLMethods() {
+  if (typeof URL.createObjectURL === 'undefined') {
+    URL.createObjectURL = vi.fn(() => 'blob:http://localhost/mock-object-url');
+  }
+  if (typeof URL.revokeObjectURL === 'undefined') {
+    URL.revokeObjectURL = vi.fn();
   }
 }
 
 /**
  * Future: Add ResizeObserver polyfill if needed.
  *
- * Note: Currently handled in jest.setup.js as a global class.
+ * Note: Currently handled in vitest.setup.ts as a global class.
  * Consider moving here for consistency if refactoring.
  */
 // export function setupResizeObserver() { ... }
@@ -105,7 +135,7 @@ function setupScrollIntoView() {
 /**
  * Future: Add IntersectionObserver polyfill if needed.
  *
- * Note: Currently handled in jest.setup.js as a global class.
+ * Note: Currently handled in vitest.setup.ts as a global class.
  * Consider moving here for consistency if refactoring.
  */
 // export function setupIntersectionObserver() { ... }

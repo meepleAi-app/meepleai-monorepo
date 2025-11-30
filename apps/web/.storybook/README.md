@@ -100,8 +100,35 @@ typescript: {
 ### Addon Compatibility
 Check `pnpm storybook doctor` for version mismatches.
 
+## Visual Testing (Chromatic)
+
+**Status**: ✅ Phase 1 Complete (Infrastructure)
+
+### Current State
+- **Coverage**: 0% (no stories yet)
+- **Mode**: Non-blocking (CI runs but doesn't block merge)
+- **Phase 2**: [Issue #1823](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1823) - Create 50+ stories
+- **Phase 3**: Enable blocking mode at 50%+ coverage
+
+### Usage
+```bash
+# Run visual regression tests locally
+pnpm test:visual
+
+# Debug visual tests
+pnpm test:visual:debug
+
+# CI automatically runs on PR
+```
+
+### Documentation
+- **Primary**: [Visual Testing Guide](../../../docs/02-development/testing/visual-testing-guide.md)
+- **Setup**: [CHROMATIC.md](./CHROMATIC.md) (legacy, use Visual Testing Guide)
+
 ## Resources
 
 - [Storybook Next.js Docs](https://storybook.js.org/docs/get-started/frameworks/nextjs)
 - [Addon Catalog](https://storybook.js.org/integrations)
 - [CSF Format](https://storybook.js.org/docs/api/csf)
+- [Visual Testing Guide](../../../docs/02-development/testing/visual-testing-guide.md)
+- [Chromatic Documentation](https://www.chromatic.com/docs/)

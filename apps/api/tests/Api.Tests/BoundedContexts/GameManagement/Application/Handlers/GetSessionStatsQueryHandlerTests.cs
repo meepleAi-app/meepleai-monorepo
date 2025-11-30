@@ -59,7 +59,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -90,7 +90,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -128,7 +128,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery(TopPlayersLimit: 3);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -157,7 +157,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -186,7 +186,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -215,7 +215,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -245,7 +245,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -274,7 +274,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -311,7 +311,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery(GameId: gameId);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -342,7 +342,7 @@ public class GetSessionStatsQueryHandlerTests
             EndDate: endDate);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -376,7 +376,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -402,7 +402,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -432,7 +432,7 @@ public class GetSessionStatsQueryHandlerTests
         var query = new GetSessionStatsQuery();
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -442,3 +442,4 @@ public class GetSessionStatsQueryHandlerTests
 
     #endregion
 }
+

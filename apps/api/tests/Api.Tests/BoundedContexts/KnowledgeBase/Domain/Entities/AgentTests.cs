@@ -154,7 +154,7 @@ public class AgentTests
         var beforeInvocation = DateTime.UtcNow;
 
         // Act
-        agent.RecordInvocation("test query", 100);
+        agent.RecordInvocation("test query", TokenUsage.Empty);
 
         // Assert
         Assert.Equal(1, agent.InvocationCount);
@@ -170,9 +170,9 @@ public class AgentTests
         var agent = CreateTestAgent();
 
         // Act
-        agent.RecordInvocation("test query 1", 100);
-        agent.RecordInvocation("test query 2", 150);
-        agent.RecordInvocation("test query 3", 200);
+        agent.RecordInvocation("test query 1", TokenUsage.Empty);
+        agent.RecordInvocation("test query 2", TokenUsage.Empty);
+        agent.RecordInvocation("test query 3", TokenUsage.Empty);
 
         // Assert
         Assert.Equal(3, agent.InvocationCount);
@@ -185,7 +185,7 @@ public class AgentTests
         var agent = CreateTestAgent(isActive: false);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => agent.RecordInvocation("test query", 100));
+        var exception = Assert.Throws<InvalidOperationException>(() => agent.RecordInvocation("test query", TokenUsage.Empty));
         Assert.Contains("inactive agent", exception.Message.ToLower());
     }
 
@@ -244,7 +244,7 @@ public class AgentTests
     {
         // Arrange
         var agent = CreateTestAgent();
-        agent.RecordInvocation("test query", 100);
+        agent.RecordInvocation("test query", TokenUsage.Empty);
 
         // Act
         var isRecentlyUsed = agent.IsRecentlyUsed;
@@ -284,7 +284,7 @@ public class AgentTests
     {
         // Arrange
         var agent = CreateTestAgent();
-        agent.RecordInvocation("test query", 100);
+        agent.RecordInvocation("test query", TokenUsage.Empty);
 
         // Act
         var isIdle = agent.IsIdle;
@@ -307,3 +307,4 @@ public class AgentTests
         );
     }
 }
+

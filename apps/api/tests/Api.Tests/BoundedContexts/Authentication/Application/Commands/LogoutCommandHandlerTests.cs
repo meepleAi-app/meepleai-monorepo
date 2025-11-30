@@ -55,14 +55,14 @@ public class LogoutCommandHandlerTests
             .ReturnsAsync(session);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(session.RevokedAt);
         Assert.True(session.IsRevoked());
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, default), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class LogoutCommandHandlerTests
             .Callback(() => callOrder.Add("save"));
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, callOrder.Count);
@@ -124,13 +124,13 @@ public class LogoutCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
         Assert.Equal("Invalid session token", exception.Message);
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), default), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -141,10 +141,10 @@ public class LogoutCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAnyAsync<Exception>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -174,13 +174,13 @@ public class LogoutCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
         Assert.Equal("Session is already revoked", exception.Message);
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), default), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     #endregion
@@ -210,7 +210,7 @@ public class LogoutCommandHandlerTests
             .ReturnsAsync(session);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _sessionRepositoryMock.Verify(
@@ -246,10 +246,10 @@ public class LogoutCommandHandlerTests
             .ReturnsAsync(session);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -280,13 +280,13 @@ public class LogoutCommandHandlerTests
             .ReturnsAsync(session);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(session.RevokedAt);
         Assert.True(session.IsRevoked());
 
-        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, default), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -348,7 +348,7 @@ public class LogoutCommandHandlerTests
         var beforeRevoke = DateTime.UtcNow;
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         var afterRevoke = DateTime.UtcNow;
 
@@ -360,3 +360,4 @@ public class LogoutCommandHandlerTests
 
     #endregion
 }
+

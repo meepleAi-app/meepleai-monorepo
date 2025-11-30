@@ -107,3 +107,4 @@ public class AlertTests
         Assert.True(alert.TriggeredAt <= DateTime.UtcNow.AddSeconds(1));
     }
 }
+

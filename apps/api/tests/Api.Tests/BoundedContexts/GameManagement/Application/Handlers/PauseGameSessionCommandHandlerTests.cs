@@ -47,7 +47,7 @@ public class PauseGameSessionCommandHandlerTests
         var command = new PauseGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -80,7 +80,7 @@ public class PauseGameSessionCommandHandlerTests
         var command = new PauseGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Paused", result.Status);
@@ -107,7 +107,7 @@ public class PauseGameSessionCommandHandlerTests
         var command = new PauseGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Paused", result.Status);
@@ -132,7 +132,7 @@ public class PauseGameSessionCommandHandlerTests
         var command = new PauseGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Paused", result.Status);
@@ -157,7 +157,7 @@ public class PauseGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains($"Session with ID {sessionId} not found", exception.Message);
 
@@ -184,7 +184,7 @@ public class PauseGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains("Cannot pause session in Setup status", exception.Message);
 
@@ -212,7 +212,7 @@ public class PauseGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains("Cannot pause session in Completed status", exception.Message);
     }
@@ -238,7 +238,7 @@ public class PauseGameSessionCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains("Cannot pause session in Paused status", exception.Message);
     }
@@ -269,7 +269,7 @@ public class PauseGameSessionCommandHandlerTests
         var command = new PauseGameSessionCommand(SessionId: sessionId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All metadata except status should be unchanged
         Assert.Equal(sessionId.ToString(), result.Id.ToString());
@@ -320,3 +320,4 @@ public class PauseGameSessionCommandHandlerTests
 
     #endregion
 }
+

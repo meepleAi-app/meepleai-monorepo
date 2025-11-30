@@ -17,7 +17,7 @@ public class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleComment
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<UpdateRuleCommentCommandHandler> _logger;
 
-    private const int MaxCommentLength = 10000;
+    private const int MaxCommentLength = 2000;
 
     public UpdateRuleCommentCommandHandler(
         MeepleAiDbContext dbContext,

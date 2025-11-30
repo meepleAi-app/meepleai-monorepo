@@ -69,7 +69,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
         var query = new GetSessionStatusQuery(sessionId, userId, false);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -111,7 +111,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
         var query = new GetSessionStatusQuery(sessionId, adminUserId, true);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -152,7 +152,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
         var query = new GetSessionStatusQuery(sessionId, differentUserId, false);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -168,7 +168,7 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
         var query = new GetSessionStatusQuery(sessionId, userId, false);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -180,3 +180,4 @@ public class GetSessionStatusQueryHandlerTests : IDisposable
         GC.SuppressFinalize(this);
     }
 }
+

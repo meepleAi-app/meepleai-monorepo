@@ -107,6 +107,37 @@ const adminAuth = mockAdminAuth();
 - `fillField(label, value, user)` - Fill form field
 - `clickAndWaitForReady(buttonName, user, timeout)` - Click + wait
 
+### `sse-test-helpers.ts` (Issue #1502, #1495)
+
+**Purpose**: Server-Sent Events (SSE) mocking utilities for streaming tests
+
+**Core Functions**:
+- `createSSEResponse(events, options?)` - Create SSE Response with async sequential delivery
+- `createSSEErrorResponse(code, message)` - Create error SSE response
+
+**Event Builders**:
+- `createTokenEvent(token)` - Token streaming event
+- `createStateUpdateEvent(state)` - State update event
+- `createCitationsEvent(citations)` - Citations event
+- `createFollowUpQuestionsEvent(questions)` - Follow-up questions event
+- `createCompleteEvent(totalTokens, confidence, snippets?)` - Completion event
+- `createErrorEvent(code, message)` - Error event
+
+**Composite Helpers** (Common Scenarios):
+- `createTokenStreamResponse(tokens, options?, sseOptions?)` - Complete token stream with completion
+- `createStateUpdateResponse(states, sseOptions?)` - State updates with completion
+- `createCitationsResponse(citations, answer?, confidence?)` - Citations with optional answer
+
+**SSE Options** (Issue #1495):
+```typescript
+interface SSEOptions {
+  eventDelay?: number;  // 0ms (fast), 10ms (default/realistic), 50-100ms (slow)
+  signal?: AbortSignal; // Cancellation support
+}
+```
+
+**📖 SEE**: `SSE_TIMING_GUIDELINES.md` for complete timing strategy guide
+
 ## Mock API Router
 
 Located in `__tests__/utils/mock-api-router.ts`
@@ -134,6 +165,47 @@ global.fetch = jest.fn(router.toMockImplementation());
 - Type-safe route handlers with context
 
 ## Usage Patterns
+
+### Pattern 0: SSE Streaming Mocks (Issue #1502)
+
+```typescript
+import { createSSEResponse, createTokenEvent, createCompleteEvent } from '../fixtures/sse-test-helpers';
+import type { Mock } from 'vitest';
+
+test('handles token streaming', async () => {
+  const events = [
+    createTokenEvent('Hello'),
+    createTokenEvent(' World'),
+    createCompleteEvent(2, 0.95),
+  ];
+
+  (global.fetch as Mock).mockResolvedValue(createSSEResponse(events));
+
+  const { result } = renderHook(() => useStreamingChat());
+  await act(async () => {
+    await result.current[1].startStreaming('game-123', 'test');
+  });
+
+  await waitFor(() => {
+    expect(result.current[0].currentAnswer).toBe('Hello World');
+  });
+});
+```
+
+**Or use composite helpers**:
+```typescript
+import { createTokenStreamResponse } from '../fixtures/sse-test-helpers';
+
+test('simplified token streaming', async () => {
+  (global.fetch as Mock).mockResolvedValue(
+    createTokenStreamResponse(['Hello', ' World'], {
+      totalTokens: 2,
+      confidence: 0.95,
+    })
+  );
+  // ... test code
+});
+```
 
 ### Pattern 1: Simple Mock Response
 

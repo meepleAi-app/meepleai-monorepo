@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { ThreadListItem } from './ThreadListItem';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
 import { ChatThread } from '@/types';
@@ -28,7 +28,11 @@ export function ChatHistory() {
       <nav aria-label="Thread history" className="flex-1 overflow-y-auto p-2">
         <div role="status" aria-live="polite" className="p-4 text-center">
           <div className="mb-3 text-[13px] text-[#64748b]">Caricamento thread...</div>
-          <SkeletonLoader variant="chatHistory" count={5} ariaLabel="Caricamento cronologia thread" />
+          <SkeletonLoader
+            variant="chatHistory"
+            count={5}
+            ariaLabel="Caricamento cronologia thread"
+          />
         </div>
       </nav>
     );

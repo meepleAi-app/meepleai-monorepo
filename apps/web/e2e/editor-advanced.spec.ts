@@ -1,10 +1,17 @@
+/**
+ * Editor Advanced E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
+ */
+
 import { test, expect } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { WaitHelper } from './helpers/WaitHelper';
 
 test.describe('RuleSpecEditor E2E', () => {
   test.beforeEach(async ({ page }) => {
     // Mock API responses
-    await page.route('**/api/v1/auth/me', async (route) => {
+    await page.route('**/api/v1/auth/me', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -20,7 +27,7 @@ test.describe('RuleSpecEditor E2E', () => {
       });
     });
 
-    await page.route('**/api/v1/games/demo-chess/rulespec', async (route) => {
+    await page.route('**/api/v1/games/demo-chess/rulespec', async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -29,9 +36,7 @@ test.describe('RuleSpecEditor E2E', () => {
             gameId: 'demo-chess',
             version: '1.0.0',
             createdAt: '2025-01-15T10:00:00Z',
-            rules: [
-              { id: 'rule-1', text: 'Initial rule text' },
-            ],
+            rules: [{ id: 'rule-1', text: 'Initial rule text' }],
           }),
         });
       } else if (route.request().method() === 'PUT') {
@@ -63,21 +68,26 @@ test.describe('RuleSpecEditor E2E', () => {
     await expect(textarea).toBeVisible({ timeout: 5000 });
 
     // Edit content
-    await textarea.fill(JSON.stringify({
-      gameId: 'demo-chess',
-      version: '1.0.1',
-      createdAt: '2025-01-15T10:00:00Z',
-      rules: [
-        { id: 'rule-1', text: 'Updated rule text' },
-      ],
-    }, null, 2));
+    await textarea.fill(
+      JSON.stringify(
+        {
+          gameId: 'demo-chess',
+          version: '1.0.1',
+          createdAt: '2025-01-15T10:00:00Z',
+          rules: [{ id: 'rule-1', text: 'Updated rule text' }],
+        },
+        null,
+        2
+      )
+    );
     await textarea.blur();
 
     // Verify unsaved changes indicator
     await expect(page.getByText(/unsaved|modifiche non salvate/i)).toBeVisible({ timeout: 2000 });
 
     // Wait for auto-save (2 second debounce)
-    await page.waitForTimeout(2500);
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForNetworkIdle(5000);
     await expect(page.getByText(/auto.saved|auto.salvato/i)).toBeVisible({ timeout: 5000 });
 
     // Test undo functionality (use force: true to handle nextjs-portal overlay)
@@ -89,14 +99,18 @@ test.describe('RuleSpecEditor E2E', () => {
     expect(content).toContain('"version": "1.0.0"');
 
     // Make another edit
-    await textarea.fill(JSON.stringify({
-      gameId: 'demo-chess',
-      version: '1.0.2',
-      createdAt: '2025-01-15T10:00:00Z',
-      rules: [
-        { id: 'rule-1', text: 'Final rule text' },
-      ],
-    }, null, 2));
+    await textarea.fill(
+      JSON.stringify(
+        {
+          gameId: 'demo-chess',
+          version: '1.0.2',
+          createdAt: '2025-01-15T10:00:00Z',
+          rules: [{ id: 'rule-1', text: 'Final rule text' }],
+        },
+        null,
+        2
+      )
+    );
     await textarea.blur();
 
     // Manual save (use force: true to handle nextjs-portal overlay)
@@ -105,12 +119,14 @@ test.describe('RuleSpecEditor E2E', () => {
     await saveButton.click({ force: true });
 
     // Verify save success
-    await expect(page.getByText(/successfully saved|salvato con successo/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/successfully saved|salvato con successo/i)).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test('handles network failure gracefully', async ({ page }) => {
     // Mock network failure for save
-    await page.route('**/api/v1/games/demo-chess/rulespec', async (route) => {
+    await page.route('**/api/v1/games/demo-chess/rulespec', async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -136,12 +152,18 @@ test.describe('RuleSpecEditor E2E', () => {
     await expect(page.getByText('Editor RuleSpec')).toBeVisible({ timeout: 10000 });
 
     const textarea = page.locator('textarea');
-    await textarea.fill(JSON.stringify({
-      gameId: 'demo-chess',
-      version: '1.0.1',
-      createdAt: '2025-01-15T10:00:00Z',
-      rules: [{ id: 'rule-1', text: 'Updated text' }],
-    }, null, 2));
+    await textarea.fill(
+      JSON.stringify(
+        {
+          gameId: 'demo-chess',
+          version: '1.0.1',
+          createdAt: '2025-01-15T10:00:00Z',
+          rules: [{ id: 'rule-1', text: 'Updated text' }],
+        },
+        null,
+        2
+      )
+    );
     await textarea.blur();
 
     const saveButton = page.getByRole('button', { name: getTextMatcher('editor.save') });
@@ -179,24 +201,28 @@ test.describe('RuleSpecEditor E2E', () => {
     const textarea = page.locator('textarea');
 
     // Make an edit
-    await textarea.fill(JSON.stringify({
-      gameId: 'demo-chess',
-      version: '2.0.0',
-      createdAt: '2025-01-15T10:00:00Z',
-      rules: [{ id: 'rule-1', text: 'New text' }],
-    }, null, 2));
+    await textarea.fill(
+      JSON.stringify(
+        {
+          gameId: 'demo-chess',
+          version: '2.0.0',
+          createdAt: '2025-01-15T10:00:00Z',
+          rules: [{ id: 'rule-1', text: 'New text' }],
+        },
+        null,
+        2
+      )
+    );
     await textarea.blur();
 
     // Use Ctrl+Z to undo
     await page.keyboard.press('Control+z');
-    await page.waitForTimeout(500);
 
     const content = await textarea.inputValue();
     expect(content).toContain('"version": "1.0.0"');
 
     // Use Ctrl+Y to redo
     await page.keyboard.press('Control+y');
-    await page.waitForTimeout(500);
 
     const redoneContent = await textarea.inputValue();
     expect(redoneContent).toContain('"version": "2.0.0"');
@@ -205,7 +231,7 @@ test.describe('RuleSpecEditor E2E', () => {
   test('handles session expiry during operation', async ({ page }) => {
     let requestCount = 0;
 
-    await page.route('**/api/v1/auth/me', async (route) => {
+    await page.route('**/api/v1/auth/me', async route => {
       requestCount++;
       if (requestCount === 1) {
         // First request succeeds
@@ -239,7 +265,9 @@ test.describe('RuleSpecEditor E2E', () => {
     await page.reload();
 
     // Should show login prompt
-    await expect(page.getByText(/login required|devi effettuare l'accesso/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/login required|devi effettuare l'accesso/i)).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('preserves content during view mode toggle', async ({ page }) => {
@@ -252,13 +280,11 @@ test.describe('RuleSpecEditor E2E', () => {
 
     // Toggle to rich mode (if toggle button exists, use force: true to handle nextjs-portal overlay)
     const toggleButton = page.getByTestId('view-toggle').or(page.getByText(/Switch to|toggle/i));
-    if (await toggleButton.count() > 0) {
+    if ((await toggleButton.count()) > 0) {
       await toggleButton.click({ force: true });
-      await page.waitForTimeout(500);
 
       // Toggle back to JSON (use force: true to handle nextjs-portal overlay)
       await toggleButton.click({ force: true });
-      await page.waitForTimeout(500);
 
       // Content should be preserved
       const newContent = await textarea.inputValue();

@@ -2,7 +2,8 @@
 # Supports both GPU and CPU inference
 
 # Use CUDA base image for GPU support (can run CPU-only too)
-FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
+# Pick a newer CUDA/LTS image to replace the soon-to-be-deprecated tag
+FROM nvidia/cuda:13.0.2-cudnn-runtime-ubuntu22.04
 
 WORKDIR /app
 

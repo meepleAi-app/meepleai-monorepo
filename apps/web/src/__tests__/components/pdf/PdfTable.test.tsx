@@ -41,12 +41,12 @@ describe('PdfTable', () => {
     loading: false,
     error: null,
     retryingPdfId: null,
-    onRetryParsing: jest.fn(),
-    onOpenLog: jest.fn()
+    onRetryParsing: vi.fn(),
+    onOpenLog: vi.fn()
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {

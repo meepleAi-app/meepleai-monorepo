@@ -4,7 +4,13 @@ import { AlertCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { LoadingButton } from '@/components/loading';
 import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
@@ -12,10 +18,15 @@ import { categorizeError, type CategorizedError, extractCorrelationId } from '@/
 import { ApiError } from '@/lib/api';
 
 // Dynamic import to prevent SSR issues with react-pdf
-const PdfPreview = dynamic(() => import('../PdfPreview').then(mod => ({ default: mod.PdfPreview })), {
-  ssr: false,
-  loading: () => <div className="p-5 text-center text-sm text-muted-foreground">Loading PDF preview...</div>
-});
+const PdfPreview = dynamic(
+  () => import('./PdfPreview').then(mod => ({ default: mod.PdfPreview })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-5 text-center text-sm text-muted-foreground">Loading PDF preview...</div>
+    ),
+  }
+);
 
 interface PdfUploadFormProps {
   gameId: string;
@@ -68,7 +79,7 @@ async function validatePdfFile(file: File): Promise<ValidationResult> {
 
   return {
     isValid: Object.keys(errors).length === 0,
-    errors
+    errors,
   };
 }
 
@@ -77,6 +88,7 @@ function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
+  // eslint-disable-next-line security/detect-object-injection
   return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
 }
 
@@ -96,7 +108,7 @@ export function PdfUploadForm({
   gameName,
   onUploadSuccess,
   onUploadError,
-  onUploadStart
+  onUploadStart,
 }: PdfUploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState('en');
@@ -161,7 +173,7 @@ export function PdfUploadForm({
           const res = await fetch(`${API_BASE}/api/v1/ingest/pdf`, {
             method: 'POST',
             body: formData,
-            credentials: 'include'
+            credentials: 'include',
           });
 
           if (!res.ok) {
@@ -169,7 +181,12 @@ export function PdfUploadForm({
             const errorBody = await res.json().catch(() => ({}));
             const errorMessage = errorBody.error ?? res.statusText;
 
-            const apiError = new ApiError({ message: errorMessage, statusCode: res.status, correlationId, response: res });
+            const apiError = new ApiError({
+              message: errorMessage,
+              statusCode: res.status,
+              correlationId,
+              response: res,
+            });
             throw apiError;
           }
 
@@ -177,13 +194,13 @@ export function PdfUploadForm({
         },
         {
           maxAttempts: 3,
-          shouldRetry: (error) => isRetryableError(error),
+          shouldRetry: error => isRetryableError(error),
           onRetry: (error, attempt, delayMs) => {
             setRetryCount(attempt);
             setRetryMessage(
               `Upload failed. Retrying (attempt ${attempt}/3) in ${Math.round(delayMs / 1000)}s...`
             );
-          }
+          },
         }
       );
 
@@ -217,9 +234,7 @@ export function PdfUploadForm({
             disabled={uploading || validating}
             className={hasErrors ? 'border-destructive' : ''}
           />
-          {validating && (
-            <p className="text-sm text-muted-foreground mt-1">Validating file...</p>
-          )}
+          {validating && <p className="text-sm text-muted-foreground mt-1">Validating file...</p>}
           {file && !hasErrors && (
             <p className="text-sm text-green-600 mt-1">
               ✓ {file.name} ({formatFileSize(file.size)})

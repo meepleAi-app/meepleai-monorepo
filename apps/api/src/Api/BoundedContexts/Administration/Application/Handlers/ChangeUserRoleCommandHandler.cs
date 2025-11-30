@@ -31,6 +31,8 @@ public class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleComman
         var newRole = Role.Parse(command.NewRole);
         user.UpdateRole(newRole);
 
+        // Persist updates - required because repository uses AsNoTracking
+        await _userRepository.UpdateAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new UserDto(

@@ -14,12 +14,12 @@ import {
 describe('Timer Test Helpers', () => {
   describe('advanceTimersAndWaitFor', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.runOnlyPendingTimers();
-      jest.useRealTimers();
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
     });
 
     it('should advance timers and wait for assertion', async () => {
@@ -135,43 +135,43 @@ describe('Timer Test Helpers', () => {
     // Instead, we test its behavior pattern manually
 
     it('should enable fake timers in beforeEach', () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
-      const callback = jest.fn();
+      const callback = vi.fn();
       setTimeout(callback, 1000);
 
       expect(callback).not.toHaveBeenCalled();
 
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       expect(callback).toHaveBeenCalledTimes(1);
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should run pending timers in afterEach', () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
-      const callback = jest.fn();
+      const callback = vi.fn();
       setTimeout(callback, 1000);
 
       // Simulate afterEach behavior
-      jest.runOnlyPendingTimers();
+      vi.runOnlyPendingTimers();
 
       expect(callback).toHaveBeenCalledTimes(1);
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should restore real timers in afterEach', () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       // Simulate afterEach behavior
-      jest.runOnlyPendingTimers();
-      jest.useRealTimers();
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
 
       // Verify real timers work
       const start = Date.now();
-      const callback = jest.fn();
+      const callback = vi.fn();
 
       setTimeout(callback, 10);
 
@@ -188,16 +188,16 @@ describe('Timer Test Helpers', () => {
 
   describe('advanceTimers', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.runOnlyPendingTimers();
-      jest.useRealTimers();
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
     });
 
     it('should advance timers by specified milliseconds', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
 
       setTimeout(callback, 1000);
 
@@ -207,8 +207,8 @@ describe('Timer Test Helpers', () => {
     });
 
     it('should work with multiple callbacks', () => {
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
 
       setTimeout(callback1, 500);
       setTimeout(callback2, 1000);
@@ -222,9 +222,9 @@ describe('Timer Test Helpers', () => {
     });
 
     it('should handle advancing past multiple timers at once', () => {
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
-      const callback3 = jest.fn();
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
+      const callback3 = vi.fn();
 
       setTimeout(callback1, 100);
       setTimeout(callback2, 200);
@@ -238,13 +238,13 @@ describe('Timer Test Helpers', () => {
     });
 
     it('should be a simple wrapper around jest.advanceTimersByTime', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
 
       setTimeout(callback, 1000);
 
       // Both should work identically
       advanceTimers(500);
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
 
       expect(callback).toHaveBeenCalledTimes(1);
     });
@@ -252,18 +252,18 @@ describe('Timer Test Helpers', () => {
 
   describe('runAllPendingTimers', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.runOnlyPendingTimers();
-      jest.useRealTimers();
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
     });
 
     it('should execute all pending timers', () => {
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
-      const callback3 = jest.fn();
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
+      const callback3 = vi.fn();
 
       setTimeout(callback1, 100);
       setTimeout(callback2, 1000);
@@ -277,11 +277,11 @@ describe('Timer Test Helpers', () => {
     });
 
     it('should work with setInterval', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
 
       const intervalId = setInterval(callback, 100);
 
-      // Note: jest.runAllTimers() with intervals can run indefinitely
+      // Note: vi.runAllTimers() with intervals can run indefinitely
       // so we clear it after a reasonable count
       setTimeout(() => clearInterval(intervalId), 350);
 
@@ -318,19 +318,19 @@ describe('Timer Test Helpers', () => {
       const after = Date.now();
 
       // Date.now() should advance by at least the timer duration (1000ms)
-      // since jest.runAllTimers() advances the fake timer clock
+      // since vi.runAllTimers() advances the fake timer clock
       expect(after - before).toBeGreaterThanOrEqual(1000);
     });
   });
 
   describe('Anti-Pattern Prevention', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.runOnlyPendingTimers();
-      jest.useRealTimers();
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
     });
 
     it('should demonstrate correct pattern: advance THEN wait', async () => {
@@ -341,7 +341,7 @@ describe('Timer Test Helpers', () => {
       }, 1000);
 
       // ✅ CORRECT: Advance timers first
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
 
       // THEN wait for assertion
       await waitFor(() => {
@@ -358,7 +358,7 @@ describe('Timer Test Helpers', () => {
 
       // ❌ ANTI-PATTERN (commented out to prevent actual failure):
       // await waitFor(() => {
-      //   jest.advanceTimersByTime(1000); // This won't work!
+      //   vi.advanceTimersByTime(1000); // This won't work!
       //   expect(executed).toBe(true);
       // });
 
@@ -382,18 +382,18 @@ describe('Timer Test Helpers', () => {
 
   describe('Edge Cases', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.runOnlyPendingTimers();
-      jest.useRealTimers();
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
     });
 
     it('should handle timers with same delay', () => {
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
-      const callback3 = jest.fn();
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
+      const callback3 = vi.fn();
 
       setTimeout(callback1, 100);
       setTimeout(callback2, 100);
@@ -407,7 +407,7 @@ describe('Timer Test Helpers', () => {
     });
 
     it('should handle clearTimeout', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
 
       const timeoutId = setTimeout(callback, 1000);
       clearTimeout(timeoutId);
@@ -418,7 +418,7 @@ describe('Timer Test Helpers', () => {
     });
 
     it('should handle clearInterval', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
 
       const intervalId = setInterval(callback, 100);
 

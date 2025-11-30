@@ -44,7 +44,7 @@ public class GetActiveN8nConfigQueryHandlerTests
             .ReturnsAsync(activeConfig);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -65,7 +65,7 @@ public class GetActiveN8nConfigQueryHandlerTests
             .ReturnsAsync((N8nConfiguration?)null);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -97,7 +97,7 @@ public class GetActiveN8nConfigQueryHandlerTests
             .ReturnsAsync(testedConfig);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -126,7 +126,7 @@ public class GetActiveN8nConfigQueryHandlerTests
             .ReturnsAsync(untestedConfig);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -155,7 +155,7 @@ public class GetActiveN8nConfigQueryHandlerTests
             .ReturnsAsync(configWithoutWebhook);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -203,7 +203,7 @@ public class GetActiveN8nConfigQueryHandlerTests
             .ReturnsAsync(config);
 
         // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -211,3 +211,4 @@ public class GetActiveN8nConfigQueryHandlerTests
         Assert.True(result.CreatedAt <= DateTime.UtcNow);
     }
 }
+

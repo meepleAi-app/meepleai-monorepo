@@ -13,8 +13,6 @@ public class AgentBuilder
     private string _name = "Test Agent";
     private AgentStrategy _strategy = AgentStrategy.HybridSearch(topK: 10, minScore: 0.70);  // Changed from object initializer
     private bool _isActive = true;
-    private bool _shouldRecordInvocations;
-    private int _invocationCount;
 
     public AgentBuilder WithId(Guid id)
     {
@@ -79,13 +77,6 @@ public class AgentBuilder
         return this;
     }
 
-    public AgentBuilder WithInvocations(int count)
-    {
-        _shouldRecordInvocations = true;
-        _invocationCount = count;
-        return this;
-    }
-
     /// <summary>
     /// Builds the Agent instance.
     /// </summary>
@@ -99,3 +90,4 @@ public class AgentBuilder
     /// </summary>
     public static implicit operator Agent(AgentBuilder builder) => builder.Build();
 }
+

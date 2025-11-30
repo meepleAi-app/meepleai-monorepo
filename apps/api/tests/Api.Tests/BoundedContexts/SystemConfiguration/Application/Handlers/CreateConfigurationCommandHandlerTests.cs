@@ -44,7 +44,7 @@ public class CreateConfigurationCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -83,7 +83,7 @@ public class CreateConfigurationCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -111,7 +111,7 @@ public class CreateConfigurationCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("string", result.ValueType);
@@ -135,7 +135,7 @@ public class CreateConfigurationCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Development", result.Environment);
@@ -159,7 +159,7 @@ public class CreateConfigurationCommandHandlerTests
         );
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsActive); // Default is active
@@ -200,3 +200,4 @@ public class CreateConfigurationCommandHandlerTests
             Times.Once);
     }
 }
+

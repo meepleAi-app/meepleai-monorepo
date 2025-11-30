@@ -51,34 +51,57 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Start PostgreSQL container
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "postgres")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "quota_test")
-            .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
-            .Build();
+        // Prefer external infra if provided
+        var externalConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
+        var externalRedis = Environment.GetEnvironmentVariable("TEST_REDIS_CONNSTRING");
+        string connectionString;
+        string redisConnectionString;
 
-        await _postgresContainer.StartAsync(TestCancellationToken);
+        if (!string.IsNullOrWhiteSpace(externalConn))
+        {
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder(externalConn)
+            {
+                Database = "quota_test",
+                SslMode = Npgsql.SslMode.Disable,
+                KeepAlive = 30,
+                Pooling = false
+            };
+            connectionString = builder.ConnectionString;
+        }
+        else
+        {
+            _postgresContainer = new ContainerBuilder()
+                .WithImage("postgres:16-alpine")
+                .WithEnvironment("POSTGRES_USER", "postgres")
+                .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+                .WithEnvironment("POSTGRES_DB", "quota_test")
+                .WithPortBinding(5432, true)
+                .WithWaitStrategy(Wait.ForUnixContainer()
+                    .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+                .Build();
 
-        // Start Redis container
-        _redisContainer = new ContainerBuilder()
-            .WithImage("redis:7-alpine")
-            .WithPortBinding(6379, true)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("redis-cli", "ping"))
-            .Build();
+            await _postgresContainer.StartAsync(TestCancellationToken);
+            var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+            connectionString = $"Host=localhost;Port={postgresPort};Database=quota_test;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+        }
 
-        await _redisContainer.StartAsync(TestCancellationToken);
+        if (!string.IsNullOrWhiteSpace(externalRedis))
+        {
+            redisConnectionString = externalRedis;
+        }
+        else
+        {
+            _redisContainer = new ContainerBuilder()
+                .WithImage("redis:7-alpine")
+                .WithPortBinding(6379, true)
+                .WithWaitStrategy(Wait.ForUnixContainer()
+                    .UntilCommandIsCompleted("redis-cli", "ping"))
+                .Build();
 
-        // Setup services
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        var redisPort = _redisContainer.GetMappedPublicPort(6379);
-        var connectionString = $"Host=localhost;Port={postgresPort};Database=quota_test;Username=postgres;Password=postgres;";
-        var redisConnectionString = $"localhost:{redisPort}";
+            await _redisContainer.StartAsync(TestCancellationToken);
+            var redisPort = _redisContainer.GetMappedPublicPort(6379);
+            redisConnectionString = $"localhost:{redisPort}";
+        }
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -110,7 +133,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var configServiceMock = new Mock<IConfigurationService>();
         configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
             .ReturnsAsync((int?)null); // Use default limits
-        services.AddSingleton(configServiceMock.Object);
+        services.AddSingleton<IConfigurationService>(configServiceMock.Object);
 
         // Register quota service
         services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
@@ -120,12 +143,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
 
         await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
-
-        // Clear Redis
-        var db = _redis.GetDatabase();
-        var endpoints = _redis.GetEndPoints();
-        var server = _redis.GetServer(endpoints[0]);
-        await server.FlushDatabaseAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -212,7 +229,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Free Tier Quota Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
     public async Task FreeTier_FiveUploadsInDay_SixthUploadDenied()
     {
         // Arrange - Create free tier user
@@ -241,12 +258,12 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Daily upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("5 PDF/day");
-        deniedCheck.ErrorMessage.Should().Contain("free tier");
+        deniedCheck.ErrorMessage.ShouldIndicateDailyLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicateFreeTierDailyLimit();
+        deniedCheck.ErrorMessage.ShouldIndicateFreeTier();
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task FreeTier_TwentyUploadsInWeek_TwentyFirstUploadDenied()
     {
         // Arrange - Create free tier user
@@ -270,16 +287,16 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Weekly upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("20 PDF/week");
-        deniedCheck.ErrorMessage.Should().Contain("free tier");
+        deniedCheck.ErrorMessage.ShouldIndicateQuotaLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicateFreeTierLimit();
+        deniedCheck.ErrorMessage.ShouldIndicateFreeTier();
     }
 
     #endregion
 
     #region Normal Tier Quota Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task NormalTier_TwentyUploadsInDay_AllAllowed()
     {
         // Arrange - Create normal tier user
@@ -308,12 +325,12 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Daily upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("20 PDF/day");
-        deniedCheck.ErrorMessage.Should().Contain("normal tier");
+        deniedCheck.ErrorMessage.ShouldIndicateDailyLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicateNormalTierDailyLimit();
+        deniedCheck.ErrorMessage.ShouldIndicateNormalTier();
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task NormalTier_HundredUploadsInWeek_AllAllowed()
     {
         // Arrange - Create normal tier user
@@ -340,16 +357,16 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Weekly upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("100 PDF/week");
-        deniedCheck.ErrorMessage.Should().Contain("normal tier");
+        deniedCheck.ErrorMessage.ShouldIndicateQuotaLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicateNormalTierLimit();
+        deniedCheck.ErrorMessage.ShouldIndicateNormalTier();
     }
 
     #endregion
 
     #region Premium Tier Quota Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task PremiumTier_HundredUploadsInDay_AllAllowed()
     {
         // Arrange - Create premium tier user
@@ -376,15 +393,15 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         // Assert
         deniedCheck.Allowed.Should().BeFalse();
-        deniedCheck.ErrorMessage.Should().Contain("Daily upload limit reached");
-        deniedCheck.ErrorMessage.Should().Contain("100 PDF/day");
+        deniedCheck.ErrorMessage.ShouldIndicateDailyLimitReached();
+        deniedCheck.ErrorMessage.ShouldIndicatePremiumTierDailyLimit();
     }
 
     #endregion
 
     #region Admin/Editor Bypass Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task AdminUser_UnlimitedUploads_NoQuotaCheck()
     {
         // Arrange - Create admin user (tier doesn't matter for admin)
@@ -415,7 +432,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(int.MaxValue); // WeeklyRemaining computed
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task EditorUser_UnlimitedUploads_NoQuotaCheck()
     {
         // Arrange - Create editor user
@@ -448,7 +465,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Tier Upgrade Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UserUpgrade_FreeToPremium_QuotaLimitIncreases()
     {
         // Arrange - Create free tier user and upload 5 PDFs (at limit)
@@ -482,7 +499,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (quotaCheckAfter.DailyLimit - quotaCheckAfter.DailyUploadsUsed).Should().Be(95); // DailyRemaining computed
     }
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task UserDowngrade_PremiumToFree_QuotaLimitDecreases()
     {
         // Arrange - Create premium tier user and upload 10 PDFs
@@ -513,14 +530,14 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         quotaCheckAfter.Allowed.Should().BeFalse();
         quotaCheckAfter.DailyUploadsUsed.Should().Be(10);
         quotaCheckAfter.DailyLimit.Should().Be(5);
-        quotaCheckAfter.ErrorMessage.Should().Contain("Daily upload limit reached");
+        quotaCheckAfter.ErrorMessage.ShouldIndicateDailyLimitReached();
     }
 
     #endregion
 
     #region Multiple Users Isolation Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task MultipleUsers_QuotaTrackedIndependently()
     {
         // Arrange - Create 3 users with different tiers
@@ -559,7 +576,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #region Redis Persistence Tests
 
-    [Fact]
+    [Fact(Timeout = 30000)]
     public async Task QuotaTracking_PersistsInRedis_AcrossServiceInstances()
     {
         // Arrange - Create user and upload 3 PDFs with first service instance
@@ -591,3 +608,4 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
     #endregion
 }
+

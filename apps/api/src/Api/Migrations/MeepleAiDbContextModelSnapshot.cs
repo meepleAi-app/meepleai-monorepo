@@ -414,6 +414,40 @@ namespace Api.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.UsedTotpCodeEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("TimeStep")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_used_totp_codes_expiry");
+
+                    b.HasIndex("UserId", "CodeHash", "ExpiresAt")
+                        .HasDatabaseName("ix_used_totp_codes_user_code_expiry");
+
+                    b.ToTable("used_totp_codes", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.CacheStatEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -1695,6 +1729,9 @@ namespace Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("IsDemoAccount")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsTwoFactorEnabled")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -2028,6 +2065,17 @@ namespace Api.Migrations
                         .IsRequired();
 
                     b.Navigation("RevokedByUser");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.UsedTotpCodeEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

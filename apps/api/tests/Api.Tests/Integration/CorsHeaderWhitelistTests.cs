@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Services;
 using Api.SharedKernel.Application.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using StackExchange.Redis;
 using System.Net;
+using System.Threading;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -29,6 +31,17 @@ public class CorsTestFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+
+        builder.ConfigureAppConfiguration((context, configBuilder) =>
+        {
+            // Provide dummy secrets so hosted services don't throw during startup
+            configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["OPENROUTER_API_KEY"] = "test-openrouter-key",
+                ["OPENROUTER_API_KEY_FILE"] = null,
+                ["ConnectionStrings:Postgres"] = "Host=localhost;Port=5432;Database=dummy;Username=dummy;Password=dummy"
+            });
+        });
 
         builder.ConfigureServices(services =>
         {
@@ -104,6 +117,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
 {
     private readonly CorsTestFactory _factory;
     private readonly HttpClient _client;
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Whitelisted headers (Issue #1448)
     private static readonly string[] WhitelistedHeaders = new[]
@@ -143,7 +157,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         request.Headers.Add("Access-Control-Request-Headers", headerName);
 
         // Act
-        var response = await _client.SendAsync(request);
+        var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -169,7 +183,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         request.Headers.Add("Access-Control-Request-Headers", headerName);
 
         // Act
-        var response = await _client.SendAsync(request);
+        var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
         // Preflight should succeed (NoContent), but the header should NOT be in allowed headers
@@ -196,7 +210,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         request.Headers.Add("Access-Control-Request-Headers", requestedHeaders);
 
         // Act
-        var response = await _client.SendAsync(request);
+        var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -225,7 +239,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         request.Headers.Add("Access-Control-Request-Headers", mixedHeaders);
 
         // Act
-        var response = await _client.SendAsync(request);
+        var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -259,7 +273,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         request.Headers.Add("Access-Control-Request-Headers", headerName);
 
         // Act
-        var response = await _client.SendAsync(request);
+        var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -276,7 +290,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         request.Headers.Add("Access-Control-Request-Headers", "Content-Type");
 
         // Act
-        var response = await _client.SendAsync(request);
+        var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -296,7 +310,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         request.Headers.Add("X-Correlation-ID", Guid.NewGuid().ToString());
 
         // Act
-        var response = await _client.SendAsync(request);
+        var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
         // Should succeed (or return 401 if auth is required, but NOT a CORS error)
@@ -315,7 +329,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         request.Headers.Add("Access-Control-Request-Headers", string.Join(", ", WhitelistedHeaders));
 
         // Act
-        var response = await _client.SendAsync(request);
+        var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -332,3 +346,4 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         }
     }
 }
+

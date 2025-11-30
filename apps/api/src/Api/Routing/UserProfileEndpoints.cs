@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using DddUpdateUserProfileCommand = Api.BoundedContexts.Authentication.Application.Commands.UpdateUserProfileCommand;
 using DddChangePasswordCommand = Api.BoundedContexts.Authentication.Application.Commands.ChangePasswordCommand;
 using DddGetUserProfileQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserProfileQuery;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
 namespace Api.Routing;
 
@@ -139,6 +140,50 @@ public static class UserProfileEndpoints
 - Requires current password verification
 - Users can only change their own password
 - Password hash uses PBKDF2 with 210k iterations")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+
+        // Get user's PDF upload quota (USER-QUOTA-01)
+        group.MapGet("/users/me/upload-quota", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (ActiveSession)context.Items[nameof(ActiveSession)]!;
+
+            if (!Guid.TryParse(session.User.Id, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+            }
+
+            var query = new GetUserUploadQuotaQuery(userId);
+            var quotaInfo = await mediator.Send(query, ct);
+
+            return Results.Json(quotaInfo);
+        })
+        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireAuthorization()
+        .WithName("GetUserUploadQuota")
+        .WithTags("User Profile")
+        .WithSummary("Get current user's PDF upload quota")
+        .WithDescription(@"Returns PDF upload quota information for the authenticated user including:
+- Daily and weekly upload limits based on user tier (free/normal/premium)
+- Current usage counts for daily and weekly periods
+- Remaining uploads before hitting limits
+- Reset times for daily and weekly quotas
+
+**User Tiers**:
+- **Free**: 5 PDF/day, 20 PDF/week
+- **Normal**: 20 PDF/day, 100 PDF/week
+- **Premium**: 100 PDF/day, 500 PDF/week
+- **Admin/Editor**: Unlimited (bypass quota checks)
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Response**: PdfUploadQuotaInfo object with quota details.")
         .Produces(200)
         .Produces(400)
         .Produces(401);

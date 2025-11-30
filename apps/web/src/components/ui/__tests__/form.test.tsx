@@ -53,7 +53,7 @@ function TestForm({ onSubmit }: { onSubmit: (data: TestFormValues) => void }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} data-testid="test-form">
+      <form noValidate onSubmit={form.handleSubmit(onSubmit)} data-testid="test-form">
         <FormField
           control={form.control}
           name="username"
@@ -90,7 +90,7 @@ function TestForm({ onSubmit }: { onSubmit: (data: TestFormValues) => void }) {
 describe('Form Component', () => {
   describe('Rendering', () => {
     it('should render form with all fields', () => {
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe('Form Component', () => {
     });
 
     it('should render form labels correctly', () => {
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       expect(screen.getByText('Username')).toBeInTheDocument();
@@ -107,14 +107,14 @@ describe('Form Component', () => {
     });
 
     it('should render form description', () => {
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       expect(screen.getByText('Your public username')).toBeInTheDocument();
     });
 
     it('should render input placeholders', () => {
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       expect(screen.getByPlaceholderText('Enter username')).toBeInTheDocument();
@@ -125,7 +125,7 @@ describe('Form Component', () => {
   describe('Validation (Zod)', () => {
     it('should show validation error for empty username', async () => {
       const user = userEvent.setup();
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const submitButton = screen.getByRole('button', { name: /submit/i });
@@ -139,7 +139,7 @@ describe('Form Component', () => {
 
     it('should show validation error for short username', async () => {
       const user = userEvent.setup();
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const usernameInput = screen.getByLabelText(/username/i);
@@ -156,7 +156,7 @@ describe('Form Component', () => {
 
     it('should show validation error for long username', async () => {
       const user = userEvent.setup();
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const usernameInput = screen.getByLabelText(/username/i);
@@ -172,32 +172,32 @@ describe('Form Component', () => {
     });
 
     // TODO: Fix HTML5 validation interference with Zod validation
-    // it('should show validation error for invalid email format', async () => {
-    //   const user = userEvent.setup();
-    //   const mockSubmit = jest.fn();
-    //   render(<TestForm onSubmit={mockSubmit} />);
+    it('should show validation error for invalid email format', async () => {
+      const user = userEvent.setup();
+      const mockSubmit = vi.fn();
+      render(<TestForm onSubmit={mockSubmit} />);
 
-    //   const usernameInput = screen.getByLabelText(/username/i);
-    //   const emailInput = screen.getByLabelText(/email/i);
+      const usernameInput = screen.getByLabelText(/username/i);
+      const emailInput = screen.getByLabelText(/email/i);
 
-    //   await user.type(usernameInput, 'validuser');
-    //   await user.type(emailInput, 'invalid-email');
+      await user.type(usernameInput, 'validuser');
+      await user.type(emailInput, 'invalid-email');
 
-    //   const submitButton = screen.getByRole('button', { name: /submit/i });
-    //   await user.click(submitButton);
+      const submitButton = screen.getByRole('button', { name: /submit/i });
+      await user.click(submitButton);
 
-    //   await waitFor(
-    //     () => {
-    //       expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument();
-    //     },
-    //     { timeout: 3000 }
-    //   );
-    //   expect(mockSubmit).not.toHaveBeenCalled();
-    // });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+      expect(mockSubmit).not.toHaveBeenCalled();
+    });
 
     it('should show multiple validation errors', async () => {
       const user = userEvent.setup();
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const submitButton = screen.getByRole('button', { name: /submit/i });
@@ -213,34 +213,34 @@ describe('Form Component', () => {
 
   describe('Form Submission', () => {
     // TODO: Fix form submission test - possible timing issue with jsdom
-    // it('should submit form with valid data', async () => {
-    //   const user = userEvent.setup();
-    //   const mockSubmit = jest.fn();
-    //   render(<TestForm onSubmit={mockSubmit} />);
+    it('should submit form with valid data', async () => {
+      const user = userEvent.setup();
+      const mockSubmit = vi.fn();
+      render(<TestForm onSubmit={mockSubmit} />);
 
-    //   const usernameInput = screen.getByLabelText(/username/i);
-    //   const emailInput = screen.getByLabelText(/email/i);
+      const usernameInput = screen.getByLabelText(/username/i);
+      const emailInput = screen.getByLabelText(/email/i);
 
-    //   await user.type(usernameInput, 'testuser');
-    //   await user.type(emailInput, 'test@example.com');
+      await user.type(usernameInput, 'testuser');
+      await user.type(emailInput, 'test@example.com');
 
-    //   const submitButton = screen.getByRole('button', { name: /submit/i });
-    //   await user.click(submitButton);
+      const submitButton = screen.getByRole('button', { name: /submit/i });
+      await user.click(submitButton);
 
-    //   await waitFor(
-    //     () => {
-    //       expect(mockSubmit).toHaveBeenCalledWith({
-    //         username: 'testuser',
-    //         email: 'test@example.com',
-    //       });
-    //     },
-    //     { timeout: 3000 }
-    //   );
-    // });
+      await waitFor(
+        () => {
+          expect(mockSubmit).toHaveBeenCalledWith({
+            username: 'testuser',
+            email: 'test@example.com',
+          });
+        },
+        { timeout: 3000 }
+      );
+    });
 
     it('should not submit form with invalid data', async () => {
       const user = userEvent.setup();
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const usernameInput = screen.getByLabelText(/username/i);
@@ -257,7 +257,7 @@ describe('Form Component', () => {
 
     it('should clear validation errors when corrected', async () => {
       const user = userEvent.setup();
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const usernameInput = screen.getByLabelText(/username/i);
@@ -276,7 +276,9 @@ describe('Form Component', () => {
       await user.type(usernameInput, 'validuser');
 
       await waitFor(() => {
-        expect(screen.queryByText(/username must be at least 3 characters/i)).not.toBeInTheDocument();
+        expect(
+          screen.queryByText(/username must be at least 3 characters/i)
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -284,7 +286,7 @@ describe('Form Component', () => {
   describe('Keyboard Navigation', () => {
     it('should support tab navigation between fields', async () => {
       const user = userEvent.setup();
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const usernameInput = screen.getByLabelText(/username/i);
@@ -301,39 +303,39 @@ describe('Form Component', () => {
     });
 
     // TODO: Fix form submission test - possible timing issue with jsdom
-    // it('should submit form on Enter key in input field', async () => {
-    //   const user = userEvent.setup();
-    //   const mockSubmit = jest.fn();
-    //   render(<TestForm onSubmit={mockSubmit} />);
+    it('should submit form on Enter key in input field', async () => {
+      const user = userEvent.setup();
+      const mockSubmit = vi.fn();
+      render(<TestForm onSubmit={mockSubmit} />);
 
-    //   const usernameInput = screen.getByLabelText(/username/i);
-    //   const emailInput = screen.getByLabelText(/email/i);
+      const usernameInput = screen.getByLabelText(/username/i);
+      const emailInput = screen.getByLabelText(/email/i);
 
-    //   await user.type(usernameInput, 'testuser');
-    //   await user.type(emailInput, 'test@example.com{Enter}');
+      await user.type(usernameInput, 'testuser');
+      await user.type(emailInput, 'test@example.com{Enter}');
 
-    //   await waitFor(
-    //     () => {
-    //       expect(mockSubmit).toHaveBeenCalledWith({
-    //         username: 'testuser',
-    //         email: 'test@example.com',
-    //       });
-    //     },
-    //     { timeout: 3000 }
-    //   );
-    // });
+      await waitFor(
+        () => {
+          expect(mockSubmit).toHaveBeenCalledWith({
+            username: 'testuser',
+            email: 'test@example.com',
+          });
+        },
+        { timeout: 3000 }
+      );
+    });
   });
 
   describe('Accessibility', () => {
     it('should have no accessibility violations', async () => {
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       const { container } = render(<TestForm onSubmit={mockSubmit} />);
       const results = await axe(container);
       expect(results).toHaveNoViolations();
     });
 
     it('should associate labels with inputs', () => {
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const usernameInput = screen.getByLabelText(/username/i);
@@ -345,7 +347,7 @@ describe('Form Component', () => {
 
     it('should mark invalid inputs with aria-invalid', async () => {
       const user = userEvent.setup();
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const submitButton = screen.getByRole('button', { name: /submit/i });
@@ -359,7 +361,7 @@ describe('Form Component', () => {
 
     it('should associate error messages with inputs using aria-describedby', async () => {
       const user = userEvent.setup();
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
 
       const submitButton = screen.getByRole('button', { name: /submit/i });
@@ -371,7 +373,9 @@ describe('Form Component', () => {
         expect(ariaDescribedBy).toBeTruthy();
 
         if (ariaDescribedBy) {
-          const errorMessageId = ariaDescribedBy.split(' ').find(id => id.includes('-form-item-message'));
+          const errorMessageId = ariaDescribedBy
+            .split(' ')
+            .find(id => id.includes('-form-item-message'));
           expect(errorMessageId).toBeTruthy();
         }
       });
@@ -382,7 +386,7 @@ describe('Form Component', () => {
     it('should throw error when useFormField is used outside FormField', () => {
       // This test verifies the context boundary
       // Actual implementation would require a separate test component
-      const mockSubmit = jest.fn();
+      const mockSubmit = vi.fn();
       const { container } = render(<TestForm onSubmit={mockSubmit} />);
 
       // Verify form structure is correct

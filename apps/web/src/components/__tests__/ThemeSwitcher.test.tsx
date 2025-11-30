@@ -1,20 +1,21 @@
+import type { Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeSwitcher } from '../ThemeSwitcher';
 import { useTheme } from 'next-themes';
 
-jest.mock('next-themes', () => ({
-  useTheme: jest.fn(),
+vi.mock('next-themes', () => ({
+  useTheme: vi.fn(),
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }));
 
-const mockUseTheme = useTheme as jest.MockedFunction<typeof useTheme>;
+const mockUseTheme = useTheme as Mock<typeof useTheme>;
 
 describe('ThemeSwitcher', () => {
-  const mockSetTheme = jest.fn();
+  const mockSetTheme = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('shows loading state before mounting', () => {

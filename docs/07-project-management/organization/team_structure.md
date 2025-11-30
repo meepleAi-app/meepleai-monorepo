@@ -1,3 +1,0 @@
-# MeepleAI — Team Structure & AI Integration
-> Path: `docs/org/team_structure.md`
-... (contenuto completo già fornito sopra) ...

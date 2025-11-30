@@ -861,12 +861,13 @@ public static class AiEndpoints
             {
                 return Results.BadRequest(new { error = queryError });
             }
+            var validatedQuery = q!;
 
-            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, q);
+            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, validatedQuery);
 
             var searchResult = await mediator.Send(new SearchChessKnowledgeQuery
             {
-                Query = q,
+                Query = validatedQuery,
                 Limit = limit ?? 5
             }, ct);
 

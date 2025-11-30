@@ -5,12 +5,12 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RouteErrorBoundary } from '../RouteErrorBoundary';
+import { RouteErrorBoundary } from '../errors/RouteErrorBoundary';
 
 // Mock the logger
-jest.mock('../../lib/logger', () => ({
+vi.mock('../../lib/logger', () => ({
   logger: {
-    error: jest.fn()
+    error: vi.fn()
   }
 }));
 
@@ -23,9 +23,9 @@ describe('RouteErrorBoundary', () => {
   const originalError = console.error;
 
   beforeAll(() => {
-    console.error = jest.fn();
+    console.error = vi.fn();
     // Mock fetch for logger (not available in jsdom)
-    global.fetch = jest.fn(() =>
+    global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({}),
@@ -62,7 +62,7 @@ describe('RouteErrorBoundary', () => {
   });
 
   it('calls custom error handler when provided', () => {
-    const onError = jest.fn();
+    const onError = vi.fn();
     const error = new Error('Test error');
 
     render(

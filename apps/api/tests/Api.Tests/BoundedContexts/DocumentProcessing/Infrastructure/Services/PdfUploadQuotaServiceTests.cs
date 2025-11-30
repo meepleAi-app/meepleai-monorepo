@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 using UserTier = Api.BoundedContexts.Authentication.Domain.ValueObjects.UserTier;
 
@@ -53,13 +54,13 @@ public class PdfUploadQuotaServiceTests
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.Allowed);
-        Assert.Equal(0, result.DailyUploadsUsed);
-        Assert.Equal(int.MaxValue, result.DailyLimit);
-        Assert.Equal(0, result.WeeklyUploadsUsed);
-        Assert.Equal(int.MaxValue, result.WeeklyLimit);
-        Assert.Equal(DateTime.MaxValue, result.DailyResetAt);
-        Assert.Equal(DateTime.MaxValue, result.WeeklyResetAt);
+        result.Allowed.Should().BeTrue();
+        result.DailyUploadsUsed.Should().Be(0);
+        result.DailyLimit.Should().Be(int.MaxValue);
+        result.WeeklyUploadsUsed.Should().Be(0);
+        result.WeeklyLimit.Should().Be(int.MaxValue);
+        result.DailyResetAt.Should().Be(DateTime.MaxValue);
+        result.WeeklyResetAt.Should().Be(DateTime.MaxValue);
 
         // Verify Redis was never called
         _databaseMock.Verify(
@@ -79,9 +80,9 @@ public class PdfUploadQuotaServiceTests
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.Allowed);
-        Assert.Equal(int.MaxValue, result.DailyLimit);
-        Assert.Equal(int.MaxValue, result.WeeklyLimit);
+        result.Allowed.Should().BeTrue();
+        result.DailyLimit.Should().Be(int.MaxValue);
+        result.WeeklyLimit.Should().Be(int.MaxValue);
 
         // Verify Redis was never called
         _databaseMock.Verify(
@@ -120,15 +121,15 @@ public class PdfUploadQuotaServiceTests
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.False(result.Allowed);
-        Assert.NotNull(result.ErrorMessage);
+        result.Allowed.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
         Assert.Contains("Daily upload limit reached", result.ErrorMessage);
         Assert.Contains("5 PDF/day", result.ErrorMessage);
         Assert.Contains("free tier", result.ErrorMessage);
-        Assert.Equal(5, result.DailyUploadsUsed);
-        Assert.Equal(5, result.DailyLimit);
-        Assert.Equal(10, result.WeeklyUploadsUsed);
-        Assert.Equal(20, result.WeeklyLimit);
+        result.DailyUploadsUsed.Should().Be(5);
+        result.DailyLimit.Should().Be(5);
+        result.WeeklyUploadsUsed.Should().Be(10);
+        result.WeeklyLimit.Should().Be(20);
     }
 
     [Fact]
@@ -160,13 +161,13 @@ public class PdfUploadQuotaServiceTests
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.False(result.Allowed);
-        Assert.NotNull(result.ErrorMessage);
+        result.Allowed.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
         Assert.Contains("Weekly upload limit reached", result.ErrorMessage);
         Assert.Contains("20 PDF/week", result.ErrorMessage);
         Assert.Contains("free tier", result.ErrorMessage);
-        Assert.Equal(3, result.DailyUploadsUsed);
-        Assert.Equal(20, result.WeeklyUploadsUsed);
+        result.DailyUploadsUsed.Should().Be(3);
+        result.WeeklyUploadsUsed.Should().Be(20);
     }
 
     [Fact]
@@ -198,12 +199,12 @@ public class PdfUploadQuotaServiceTests
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.Allowed);
-        Assert.Null(result.ErrorMessage);
-        Assert.Equal(10, result.DailyUploadsUsed);
-        Assert.Equal(20, result.DailyLimit);
-        Assert.Equal(50, result.WeeklyUploadsUsed);
-        Assert.Equal(100, result.WeeklyLimit);
+        result.Allowed.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.DailyUploadsUsed.Should().Be(10);
+        result.DailyLimit.Should().Be(20);
+        result.WeeklyUploadsUsed.Should().Be(50);
+        result.WeeklyLimit.Should().Be(100);
         Assert.Equal(new DateTime(2025, 11, 23, 0, 0, 0, DateTimeKind.Utc), result.DailyResetAt);
         // Weekly reset should be next Monday (Nov 24, 2025 - Saturday + 2 days)
         Assert.Equal(new DateTime(2025, 11, 24, 0, 0, 0, DateTimeKind.Utc), result.WeeklyResetAt);
@@ -225,11 +226,11 @@ public class PdfUploadQuotaServiceTests
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
 
         // Assert - Fail-open: allow access when Redis is down
-        Assert.True(result.Allowed);
-        Assert.Equal(0, result.DailyUploadsUsed);
-        Assert.Equal(int.MaxValue, result.DailyLimit);
-        Assert.Equal(0, result.WeeklyUploadsUsed);
-        Assert.Equal(int.MaxValue, result.WeeklyLimit);
+        result.Allowed.Should().BeTrue();
+        result.DailyUploadsUsed.Should().Be(0);
+        result.DailyLimit.Should().Be(int.MaxValue);
+        result.WeeklyUploadsUsed.Should().Be(0);
+        result.WeeklyLimit.Should().Be(int.MaxValue);
     }
 
     [Fact]
@@ -263,10 +264,10 @@ public class PdfUploadQuotaServiceTests
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
 
         // Assert - Should use custom limits, not defaults
-        Assert.True(result.Allowed);
-        Assert.Equal(150, result.DailyUploadsUsed);
+        result.Allowed.Should().BeTrue();
+        result.DailyUploadsUsed.Should().Be(150);
         Assert.Equal(200, result.DailyLimit); // Custom limit
-        Assert.Equal(800, result.WeeklyUploadsUsed);
+        result.WeeklyUploadsUsed.Should().Be(800);
         Assert.Equal(1000, result.WeeklyLimit); // Custom limit
     }
 
@@ -321,26 +322,26 @@ public class PdfUploadQuotaServiceTests
             Times.Exactly(2));
 
         // Verify daily key format: pdf:upload:daily:{userId}:2025-11-22
-        Assert.NotNull(capturedDailyKeys);
+        capturedDailyKeys.Should().NotBeNull();
         Assert.Single(capturedDailyKeys);
         Assert.Contains("pdf:upload:daily", capturedDailyKeys[0].ToString());
         Assert.Contains(userId.ToString(), capturedDailyKeys[0].ToString());
         Assert.Contains("2025-11-22", capturedDailyKeys[0].ToString());
 
         // Verify weekly key format: pdf:upload:weekly:{userId}:2025-W47
-        Assert.NotNull(capturedWeeklyKeys);
+        capturedWeeklyKeys.Should().NotBeNull();
         Assert.Single(capturedWeeklyKeys);
         Assert.Contains("pdf:upload:weekly", capturedWeeklyKeys[0].ToString());
         Assert.Contains(userId.ToString(), capturedWeeklyKeys[0].ToString());
         Assert.Contains("2025-W47", capturedWeeklyKeys[0].ToString());
 
         // Verify TTL values (25 hours = 90000 seconds for daily)
-        Assert.NotNull(capturedDailyValues);
+        capturedDailyValues.Should().NotBeNull();
         Assert.Single(capturedDailyValues);
         Assert.Equal(90000, (int)capturedDailyValues[0]); // 25 * 3600
 
         // Verify TTL values (8 days = 691200 seconds for weekly)
-        Assert.NotNull(capturedWeeklyValues);
+        capturedWeeklyValues.Should().NotBeNull();
         Assert.Single(capturedWeeklyValues);
         Assert.Equal(691200, (int)capturedWeeklyValues[0]); // 8 * 24 * 3600
     }
@@ -389,15 +390,15 @@ public class PdfUploadQuotaServiceTests
         var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(info.IsUnlimited);
-        Assert.Equal(0, info.DailyUploadsUsed);
-        Assert.Equal(int.MaxValue, info.DailyLimit);
-        Assert.Equal(int.MaxValue, info.DailyRemaining);
-        Assert.Equal(0, info.WeeklyUploadsUsed);
-        Assert.Equal(int.MaxValue, info.WeeklyLimit);
-        Assert.Equal(int.MaxValue, info.WeeklyRemaining);
-        Assert.Equal(DateTime.MaxValue, info.DailyResetAt);
-        Assert.Equal(DateTime.MaxValue, info.WeeklyResetAt);
+        info.IsUnlimited.Should().BeTrue();
+        info.DailyUploadsUsed.Should().Be(0);
+        info.DailyLimit.Should().Be(int.MaxValue);
+        info.DailyRemaining.Should().Be(int.MaxValue);
+        info.WeeklyUploadsUsed.Should().Be(0);
+        info.WeeklyLimit.Should().Be(int.MaxValue);
+        info.WeeklyRemaining.Should().Be(int.MaxValue);
+        info.DailyResetAt.Should().Be(DateTime.MaxValue);
+        info.WeeklyResetAt.Should().Be(DateTime.MaxValue);
 
         // Verify Redis was never called
         _databaseMock.Verify(
@@ -417,9 +418,9 @@ public class PdfUploadQuotaServiceTests
         var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(info.IsUnlimited);
-        Assert.Equal(int.MaxValue, info.DailyLimit);
-        Assert.Equal(int.MaxValue, info.WeeklyLimit);
+        info.IsUnlimited.Should().BeTrue();
+        info.DailyLimit.Should().Be(int.MaxValue);
+        info.WeeklyLimit.Should().Be(int.MaxValue);
     }
 
     [Fact]
@@ -451,12 +452,12 @@ public class PdfUploadQuotaServiceTests
         var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.False(info.IsUnlimited);
-        Assert.Equal(12, info.DailyUploadsUsed);
-        Assert.Equal(20, info.DailyLimit);
+        info.IsUnlimited.Should().BeFalse();
+        info.DailyUploadsUsed.Should().Be(12);
+        info.DailyLimit.Should().Be(20);
         Assert.Equal(8, info.DailyRemaining); // 20 - 12
-        Assert.Equal(45, info.WeeklyUploadsUsed);
-        Assert.Equal(100, info.WeeklyLimit);
+        info.WeeklyUploadsUsed.Should().Be(45);
+        info.WeeklyLimit.Should().Be(100);
         Assert.Equal(55, info.WeeklyRemaining); // 100 - 45
         Assert.Equal(new DateTime(2025, 11, 23, 0, 0, 0, DateTimeKind.Utc), info.DailyResetAt);
         Assert.Equal(new DateTime(2025, 11, 24, 0, 0, 0, DateTimeKind.Utc), info.WeeklyResetAt);
@@ -493,11 +494,11 @@ public class PdfUploadQuotaServiceTests
         var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.Equal(7, info.DailyUploadsUsed);
-        Assert.Equal(5, info.DailyLimit);
+        info.DailyUploadsUsed.Should().Be(7);
+        info.DailyLimit.Should().Be(5);
         Assert.Equal(0, info.DailyRemaining); // Math.Max(0, 5 - 7) = 0
-        Assert.Equal(22, info.WeeklyUploadsUsed);
-        Assert.Equal(20, info.WeeklyLimit);
+        info.WeeklyUploadsUsed.Should().Be(22);
+        info.WeeklyLimit.Should().Be(20);
         Assert.Equal(0, info.WeeklyRemaining); // Math.Max(0, 20 - 22) = 0
     }
 
@@ -582,7 +583,7 @@ public class PdfUploadQuotaServiceTests
         // Debug: Check if ScriptEvaluateAsync was called at all
         Assert.Equal(2, callCount); // Should be 2 (daily + weekly)
 
-        Assert.NotNull(capturedWeeklyKeys);
+        capturedWeeklyKeys.Should().NotBeNull();
         Assert.Single(capturedWeeklyKeys);
         var weeklyKeyString = capturedWeeklyKeys[0].ToString();
 
@@ -656,7 +657,7 @@ public class PdfUploadQuotaServiceTests
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.Equal(expectedReset, result.WeeklyResetAt);
+        result.WeeklyResetAt.Should().Be(expectedReset);
     }
 
     #endregion
@@ -667,3 +668,4 @@ public class PdfUploadQuotaServiceTests
 
     #endregion
 }
+

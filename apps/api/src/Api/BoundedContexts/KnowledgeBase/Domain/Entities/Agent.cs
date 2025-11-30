@@ -95,21 +95,32 @@ public sealed class Agent : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Records an agent invocation.
+    /// Records an agent invocation with token usage tracking.
     /// </summary>
     /// <remarks>
     /// This method should be called by the application layer after successful agent execution.
     /// The actual invocation logic (using VectorSearchDomainService, etc.) is handled by the command handler.
+    /// Issue #1694: Now tracks actual token usage from LLM calls with cost calculation.
     /// </remarks>
-    public void RecordInvocation(string input, int tokensUsed)
+    public void RecordInvocation(string input, TokenUsage tokenUsage)
     {
         if (!IsActive)
             throw new InvalidOperationException($"Cannot invoke inactive agent: {Name}");
 
+        if (tokenUsage == null)
+            throw new ArgumentNullException(nameof(tokenUsage));
+
         LastInvokedAt = DateTime.UtcNow;
         InvocationCount++;
 
-        AddDomainEvent(new AgentInvokedEvent(Id, input, tokensUsed));
+        // Emit domain event with token usage details for observability
+        AddDomainEvent(new AgentInvokedEvent(
+            Id,
+            input,
+            tokenUsage.TotalTokens,
+            tokenUsage.EstimatedCost,
+            tokenUsage.ModelId,
+            tokenUsage.Provider));
     }
 
     /// <summary>

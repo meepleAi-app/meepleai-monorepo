@@ -1,18 +1,12 @@
 /**
- * E2E Tests for Session Expiration Behavior (AUTH-05)
+ * Session Expiration Behavior E2E Tests (AUTH-05) - MIGRATED TO POM
  *
- * Tests cover:
- * - Expired session (0 minutes) redirect to login
- * - Negative time session redirect to login
- * - Valid session without redirect
- * - Session expiring soon warning with countdown
- *
- * These tests verify actual browser redirect behavior that cannot be
- * properly tested in jsdom unit tests.
+ * @see apps/web/e2e/pages/
  */
 
 import { test, expect, Page } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
+import { WaitHelper } from './helpers/WaitHelper';
 
 const apiBase = 'http://localhost:8080';
 
@@ -26,33 +20,33 @@ async function setupAuthRoutes(page: Page) {
       id: 'user-1',
       email: 'user@example.com',
       displayName: 'Test User',
-      role: 'User'
+      role: 'User',
     },
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   };
 
-  await page.route(`${apiBase}/auth/me`, async (route) => {
+  await page.route(`${apiBase}/auth/me`, async route => {
     if (authenticated) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(userResponse)
+        body: JSON.stringify(userResponse),
       });
     } else {
       await route.fulfill({
         status: 401,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' })
+        body: JSON.stringify({ error: 'Unauthorized' }),
       });
     }
   });
 
-  await page.route(`${apiBase}/auth/login`, async (route) => {
+  await page.route(`${apiBase}/auth/login`, async route => {
     authenticated = true;
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(userResponse)
+      body: JSON.stringify(userResponse),
     });
   });
 
@@ -62,7 +56,7 @@ async function setupAuthRoutes(page: Page) {
     },
     setAuthenticated(value: boolean) {
       authenticated = value;
-    }
+    },
   };
 }
 
@@ -77,27 +71,27 @@ test.describe('Session Expiration Behavior', () => {
     auth.authenticate();
 
     // Mock session status API to return 0 minutes remaining
-    await page.route(`${apiBase}/api/v1/auth/session/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/session/status`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           expiresAt: new Date().toISOString(),
           lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 0
-        })
+          remainingMinutes: 0,
+        }),
       });
     });
 
     // Mock QA endpoint to avoid errors
-    await page.route(`${apiBase}/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           answer: 'Test response',
-          sources: []
-        })
+          sources: [],
+        }),
       });
     });
 
@@ -114,27 +108,27 @@ test.describe('Session Expiration Behavior', () => {
     auth.authenticate();
 
     // Mock session status API to return negative time
-    await page.route(`${apiBase}/api/v1/auth/session/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/session/status`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           expiresAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
           lastSeenAt: new Date().toISOString(),
-          remainingMinutes: -5
-        })
+          remainingMinutes: -5,
+        }),
       });
     });
 
     // Mock QA endpoint
-    await page.route(`${apiBase}/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           answer: 'Test response',
-          sources: []
-        })
+          sources: [],
+        }),
       });
     });
 
@@ -151,27 +145,27 @@ test.describe('Session Expiration Behavior', () => {
     auth.authenticate();
 
     // Mock session status API to return plenty of time remaining
-    await page.route(`${apiBase}/api/v1/auth/session/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/session/status`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
           lastSeenAt: new Date().toISOString(),
-          remainingMinutes: 30
-        })
+          remainingMinutes: 30,
+        }),
       });
     });
 
     // Mock QA endpoint
-    await page.route(`${apiBase}/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           answer: 'Test response',
-          sources: []
-        })
+          sources: [],
+        }),
       });
     });
 
@@ -193,27 +187,27 @@ test.describe('Session Expiration Behavior', () => {
 
     // Mock session status API to return 3 minutes remaining (near expiry)
     const remainingMinutes = 3;
-    await page.route(`${apiBase}/api/v1/auth/session/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/session/status`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           expiresAt: new Date(Date.now() + remainingMinutes * 60 * 1000).toISOString(),
           lastSeenAt: new Date().toISOString(),
-          remainingMinutes: remainingMinutes
-        })
+          remainingMinutes: remainingMinutes,
+        }),
       });
     });
 
     // Mock QA endpoint
-    await page.route(`${apiBase}/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           answer: 'Test response',
-          sources: []
-        })
+          sources: [],
+        }),
       });
     });
 
@@ -228,7 +222,6 @@ test.describe('Session Expiration Behavior', () => {
     // If no warning UI exists yet, this test documents expected behavior for future implementation.
 
     // Wait a bit to ensure the hook has run
-    await page.waitForTimeout(1000);
 
     // Verify we're still on the chat page (not redirected)
     await expect(page).toHaveURL('/chat');
@@ -240,7 +233,7 @@ test.describe('Session Expiration Behavior', () => {
 
     // First check: valid session
     let callCount = 0;
-    await page.route(`${apiBase}/api/v1/auth/session/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/session/status`, async route => {
       callCount++;
       if (callCount === 1) {
         // First check: valid session
@@ -250,8 +243,8 @@ test.describe('Session Expiration Behavior', () => {
           body: JSON.stringify({
             expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
             lastSeenAt: new Date().toISOString(),
-            remainingMinutes: 10
-          })
+            remainingMinutes: 10,
+          }),
         });
       } else {
         // Subsequent checks: expired session
@@ -261,21 +254,21 @@ test.describe('Session Expiration Behavior', () => {
           body: JSON.stringify({
             expiresAt: new Date().toISOString(),
             lastSeenAt: new Date().toISOString(),
-            remainingMinutes: 0
-          })
+            remainingMinutes: 0,
+          }),
         });
       }
     });
 
     // Mock QA endpoint
-    await page.route(`${apiBase}/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           answer: 'Test response',
-          sources: []
-        })
+          sources: [],
+        }),
       });
     });
 
@@ -288,7 +281,8 @@ test.describe('Session Expiration Behavior', () => {
 
     // Wait for enough time to trigger the hook's manual check or polling
     // The hook polls every 5 minutes, but we can trigger earlier by waiting for API call
-    await page.waitForTimeout(2000);
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForNetworkIdle(5000);
 
     // Trigger manual session check by reloading (simulates hook behavior)
     // In a real scenario, the hook's useEffect would trigger this automatically
@@ -304,19 +298,19 @@ test.describe('Session Expiration Behavior', () => {
     auth.authenticate();
 
     // Mock session status API to return network error
-    await page.route(`${apiBase}/api/v1/auth/session/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/session/status`, async route => {
       await route.abort('failed');
     });
 
     // Mock QA endpoint
-    await page.route(`${apiBase}/agents/qa`, async (route) => {
+    await page.route(`${apiBase}/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           answer: 'Test response',
-          sources: []
-        })
+          sources: [],
+        }),
       });
     });
 
@@ -324,7 +318,6 @@ test.describe('Session Expiration Behavior', () => {
     await page.goto('/chat');
 
     // Wait a bit to ensure the hook has run
-    await page.waitForTimeout(1000);
 
     // Should stay on chat page (not redirect due to network error)
     await expect(page).toHaveURL('/chat');
@@ -336,11 +329,11 @@ test.describe('Session Expiration Behavior', () => {
     // Don't authenticate
 
     // Mock session status API to return null (unauthenticated)
-    await page.route(`${apiBase}/api/v1/auth/session/status`, async (route) => {
+    await page.route(`${apiBase}/api/v1/auth/session/status`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: 'null'
+        body: 'null',
       });
     });
 

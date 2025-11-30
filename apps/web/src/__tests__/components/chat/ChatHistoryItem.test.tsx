@@ -22,12 +22,12 @@ describe('ChatHistoryItem', () => {
   const defaultProps = {
     chat: mockChat,
     isActive: false,
-    onSelect: jest.fn(),
-    onDelete: jest.fn()
+    onSelect: vi.fn(),
+    onDelete: vi.fn()
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Rendering', () => {
@@ -97,7 +97,7 @@ describe('ChatHistoryItem', () => {
 
   describe('Interactions', () => {
     it('calls onSelect when chat item is clicked', () => {
-      const onSelect = jest.fn();
+      const onSelect = vi.fn();
       const { container } = render(<ChatHistoryItem {...defaultProps} onSelect={onSelect} />);
       const listItem = container.querySelector('li');
 
@@ -109,7 +109,7 @@ describe('ChatHistoryItem', () => {
     });
 
     it('calls onSelect when Enter key is pressed', () => {
-      const onSelect = jest.fn();
+      const onSelect = vi.fn();
       const { container } = render(<ChatHistoryItem {...defaultProps} onSelect={onSelect} />);
       const listItem = container.querySelector('li');
 
@@ -121,7 +121,7 @@ describe('ChatHistoryItem', () => {
     });
 
     it('calls onSelect when Space key is pressed', () => {
-      const onSelect = jest.fn();
+      const onSelect = vi.fn();
       const { container } = render(<ChatHistoryItem {...defaultProps} onSelect={onSelect} />);
       const listItem = container.querySelector('li');
 
@@ -133,20 +133,20 @@ describe('ChatHistoryItem', () => {
     });
 
     it('prevents default behavior on Space key press', () => {
-      const onSelect = jest.fn();
+      const onSelect = vi.fn();
       const { container } = render(<ChatHistoryItem {...defaultProps} onSelect={onSelect} />);
       const listItem = container.querySelector('li');
 
       if (listItem) {
         const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true });
-        const preventDefaultSpy = jest.spyOn(event, 'preventDefault');
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
         listItem.dispatchEvent(event);
         expect(preventDefaultSpy).toHaveBeenCalled();
       }
     });
 
     it('does not call onSelect for other keys', () => {
-      const onSelect = jest.fn();
+      const onSelect = vi.fn();
       const { container } = render(<ChatHistoryItem {...defaultProps} onSelect={onSelect} />);
       const listItem = container.querySelector('li');
 
@@ -160,7 +160,7 @@ describe('ChatHistoryItem', () => {
 
     it('calls onDelete when delete button is clicked', async () => {
       const user = userEvent.setup();
-      const onDelete = jest.fn();
+      const onDelete = vi.fn();
       render(<ChatHistoryItem {...defaultProps} onDelete={onDelete} />);
 
       const deleteButton = screen.getByLabelText('Delete chat Chess Expert');
@@ -171,8 +171,8 @@ describe('ChatHistoryItem', () => {
 
     it('stops propagation on delete button click', async () => {
       const user = userEvent.setup();
-      const onSelect = jest.fn();
-      const onDelete = jest.fn();
+      const onSelect = vi.fn();
+      const onDelete = vi.fn();
       render(<ChatHistoryItem {...defaultProps} onSelect={onSelect} onDelete={onDelete} />);
 
       const deleteButton = screen.getByLabelText('Delete chat Chess Expert');

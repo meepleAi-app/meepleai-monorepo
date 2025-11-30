@@ -40,14 +40,14 @@ public class ReopenThreadCommandHandlerTests
         var command = new ReopenThreadCommand(threadId);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(threadId, result.Id);
         Assert.Equal("active", result.Status);
-        _mockRepository.Verify(r => r.UpdateAsync(thread, default), Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class ReopenThreadCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("not found", exception.Message);
     }
 
@@ -83,7 +83,7 @@ public class ReopenThreadCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
         Assert.Contains("already active", exception.Message);
     }
 
@@ -109,3 +109,4 @@ public class ReopenThreadCommandHandlerTests
         Assert.True(thread.Status.IsActive);
     }
 }
+

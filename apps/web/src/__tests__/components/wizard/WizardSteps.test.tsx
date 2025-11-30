@@ -105,7 +105,7 @@ describe('WizardSteps', () => {
   describe('Interactive Behavior', () => {
     it('calls onStepClick when allowSkip is true and step is clicked', async () => {
       const user = userEvent.setup();
-      const onStepClick = jest.fn();
+      const onStepClick = vi.fn();
 
       render(
         <WizardSteps
@@ -125,7 +125,7 @@ describe('WizardSteps', () => {
 
     it('does not call onStepClick for future steps even with allowSkip', async () => {
       const user = userEvent.setup();
-      const onStepClick = jest.fn();
+      const onStepClick = vi.fn();
 
       render(
         <WizardSteps
@@ -144,7 +144,7 @@ describe('WizardSteps', () => {
 
     it('does not call onStepClick when allowSkip is false', async () => {
       const user = userEvent.setup();
-      const onStepClick = jest.fn();
+      const onStepClick = vi.fn();
 
       render(
         <WizardSteps

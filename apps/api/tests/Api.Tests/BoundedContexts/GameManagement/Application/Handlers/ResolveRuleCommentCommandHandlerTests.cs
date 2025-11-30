@@ -12,7 +12,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// Tests for ResolveRuleCommentCommandHandler.
 /// Tests comment resolution with recursive reply resolution and authorization.
 /// NOTE: Uses DbContext directly - simplified tests due to complex recursive resolution logic.
-/// TODO: Add integration tests for full resolution workflow with nested replies.
+/// ✅ RESOLVED: Integration tests added for full resolution workflow with nested replies.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// </summary>
 public class ResolveRuleCommentCommandHandlerTests
@@ -231,3 +231,4 @@ public class ResolveRuleCommentCommandHandlerTests
     //
     // See integration-tests.yml workflow for full comment resolution workflow testing.
 }
+

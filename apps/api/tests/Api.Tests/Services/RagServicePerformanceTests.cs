@@ -512,3 +512,4 @@ public class RagServicePerformanceTests : IDisposable
         long P99,
         long Max);
 }
+

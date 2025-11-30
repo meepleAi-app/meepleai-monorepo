@@ -2,10 +2,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import ViewModeToggle from "../ViewModeToggle";
 
 describe("ViewModeToggle", () => {
-  const mockOnModeChange = jest.fn();
+  const mockOnModeChange = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("renders both mode buttons", () => {

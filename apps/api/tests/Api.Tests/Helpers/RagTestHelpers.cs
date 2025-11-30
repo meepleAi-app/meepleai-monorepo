@@ -102,3 +102,4 @@ public static class RagTestHelpers
         return mock;
     }
 }
+

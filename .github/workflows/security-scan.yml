@@ -53,13 +53,14 @@ jobs:
             build-mode: none
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
 
       # Build .NET projects for CodeQL analysis
       - name: Setup .NET (C# only)
@@ -94,7 +95,7 @@ jobs:
       security-events: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       # .NET dependency scanning
       - name: Setup .NET
@@ -149,7 +150,7 @@ jobs:
           fi
 
       - name: Upload .NET Vulnerability Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dotnet-vulnerability-report
           path: apps/api/vulnerability-report.txt
@@ -206,7 +207,7 @@ jobs:
           fi
 
       - name: Upload Frontend Vulnerability Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: frontend-vulnerability-report
           path: |
@@ -231,7 +232,7 @@ jobs:
         working-directory: apps/api
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -316,7 +317,7 @@ jobs:
           exit 1
 
       - name: Upload Security Scan Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dotnet-security-scan-report
           path: apps/api/security-scan.log
@@ -334,7 +335,7 @@ jobs:
       image: semgrep/semgrep
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Run Semgrep Security Analysis
         run: |
@@ -376,7 +377,7 @@ jobs:
         if: always()
 
       - name: Upload Semgrep Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: semgrep-security-reports
           path: |

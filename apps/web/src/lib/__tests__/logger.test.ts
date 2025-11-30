@@ -1,29 +1,47 @@
 /**
  * Unit tests for logger service
+ *
+ * Vitest Migration (Issue #1503):
+ * - ✅ Migrated from Jest to Vitest
+ * - ✅ Uses MSW 2.x for API mocking
+ * - ✅ Test isolation via server.resetHandlers()
  */
 
+import { describe, it, expect, beforeEach, afterEach, beforeAll, vi } from 'vitest';
 import { getLogger, resetLogger, LogLevel } from '../logger';
 import { ApiError } from '../errors';
-
-// Mock fetch
-global.fetch = jest.fn(() =>
-  Promise.resolve({
-    ok: true,
-    status: 204,
-    json: async () => ({}),
-  } as Response)
-);
+import { server } from '@/__tests__/mocks/server';
+import { http, HttpResponse } from 'msw';
 
 describe('Logger', () => {
+  let fetchSpy: any;
+
+  // Setup MSW handler for logging endpoint
+  beforeAll(() => {
+    server.use(
+      http.post('*/api/v1/logs', () => {
+        return HttpResponse.json({}, {
+          status: 204,
+          headers: {
+            'X-Correlation-Id': `test-correlation-${Date.now()}`,
+          },
+        });
+      })
+    );
+  });
+
   beforeEach(() => {
     resetLogger();
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    // Spy on fetch to track calls (MSW intercepts but doesn't spy by default)
+    fetchSpy = vi.spyOn(global, 'fetch');
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+    fetchSpy?.mockRestore();
   });
 
   describe('initialization', () => {
@@ -54,7 +72,7 @@ describe('Logger', () => {
 
   describe('logging methods', () => {
     it('should log debug messages', () => {
-      const consoleSpy = jest.spyOn(console, 'debug').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'debug').mockImplementation();
       const logger = getLogger({ enableConsole: true, minLevel: LogLevel.DEBUG });
 
       logger.debug('Debug message', { component: 'TestComponent' });
@@ -64,7 +82,7 @@ describe('Logger', () => {
     });
 
     it('should log info messages', () => {
-      const consoleSpy = jest.spyOn(console, 'info').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'info').mockImplementation();
       const logger = getLogger({ enableConsole: true, minLevel: LogLevel.INFO });
 
       logger.info('Info message');
@@ -74,7 +92,7 @@ describe('Logger', () => {
     });
 
     it('should log warnings', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation();
       const logger = getLogger({ enableConsole: true, minLevel: LogLevel.WARN });
 
       logger.warn('Warning message');
@@ -84,7 +102,7 @@ describe('Logger', () => {
     });
 
     it('should log errors with error object', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
       const logger = getLogger({ enableConsole: true });
 
       const error = new ApiError('Not found', 404, '/api/v1/test');
@@ -95,7 +113,7 @@ describe('Logger', () => {
     });
 
     it('should respect minimum log level', () => {
-      const consoleSpy = jest.spyOn(console, 'debug').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'debug').mockImplementation();
       const logger = getLogger({ enableConsole: true, minLevel: LogLevel.WARN });
 
       logger.debug('Debug message');
@@ -126,7 +144,7 @@ describe('Logger', () => {
       logger.info('Message 1');
       expect(fetch).not.toHaveBeenCalled();
 
-      jest.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(5000);
 
       expect(fetch).toHaveBeenCalledTimes(1);
     });
@@ -148,7 +166,7 @@ describe('Logger', () => {
     });
 
     it('should handle flush errors gracefully', () => {
-      (fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+      fetchSpy.mockRejectedValue(new Error('Network error'));
       const logger = getLogger({ enableRemote: true, batchSize: 1, enableConsole: false });
 
       expect(() => {
@@ -200,7 +218,7 @@ describe('Logger', () => {
 
       expect(fetch).toHaveBeenCalledTimes(1);
 
-      (fetch as jest.Mock).mockClear();
+      fetchSpy.mockClear();
       logger.flush();
 
       expect(fetch).not.toHaveBeenCalled();
@@ -214,7 +232,7 @@ describe('Logger', () => {
       logger.info('Message 1');
       logger.destroy();
 
-      jest.advanceTimersByTime(10000);
+      vi.advanceTimersByTime(10000);
 
       expect(fetch).toHaveBeenCalledTimes(1); // Only initial destroy flush
     });

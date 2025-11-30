@@ -318,3 +318,4 @@ public class CosineSimilarityCalculatorTests
         Assert.Equal(0.0, similarity3);
     }
 }
+

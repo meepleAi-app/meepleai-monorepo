@@ -5,15 +5,24 @@
  * Tests all major pages for WCAG 2.1 AA compliance
  */
 
+/**
+ * E2E Accessibility Tests (UI-05) - MIGRATED TO POM
+ *
+ * Comprehensive accessibility testing with Playwright + axe-core
+ * Tests all major pages for WCAG 2.1 AA compliance
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
+
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import type { Result } from 'axe-core';
 import { getTextMatcher, t } from './fixtures/i18n';
-import { setupMockAuth } from './fixtures/auth';
+import { AuthHelper } from './pages';
 
 // Helper to get readable violations
 function formatViolations(violations: Result[]) {
-  return violations.map((v) => ({
+  return violations.map(v => ({
     id: v.id,
     impact: v.impact,
     description: v.description,
@@ -182,7 +191,7 @@ test.describe('Focus Indicators', () => {
     await button.focus();
 
     // Check for focus styles (outline should be visible)
-    const hasOutline = await button.evaluate((el) => {
+    const hasOutline = await button.evaluate(el => {
       const styles = window.getComputedStyle(el);
       return styles.outline !== 'none' || styles.boxShadow !== 'none';
     });
@@ -198,7 +207,7 @@ test.describe('Focus Indicators', () => {
     await link.focus();
 
     // Check for focus styles
-    const hasOutline = await link.evaluate((el) => {
+    const hasOutline = await link.evaluate(el => {
       const styles = window.getComputedStyle(el);
       return styles.outline !== 'none' || styles.boxShadow !== 'none';
     });
@@ -333,11 +342,15 @@ test.describe('Accessibility - Admin Role Pages', () => {
   });
 
   test('admin analytics should not have accessibility violations', async ({ page }) => {
-    await testPageAccessibility(page, '/admin/analytics', 'Admin analytics', { waitForNetworkIdle: true });
+    await testPageAccessibility(page, '/admin/analytics', 'Admin analytics', {
+      waitForNetworkIdle: true,
+    });
   });
 
   test('admin configuration should not have accessibility violations', async ({ page }) => {
-    await testPageAccessibility(page, '/admin/configuration', 'Admin configuration', { waitForNetworkIdle: true });
+    await testPageAccessibility(page, '/admin/configuration', 'Admin configuration', {
+      waitForNetworkIdle: true,
+    });
   });
 });
 
@@ -348,11 +361,11 @@ test.describe('Accessibility - Admin Role Pages', () => {
 test.describe('Accessibility - Error States', () => {
   test('401 Unauthorized error should be accessible', async ({ page }) => {
     // Mock 401 error for auth endpoint
-    await page.route('**/api/v1/auth/me', async (route) => {
+    await page.route('**/api/v1/auth/me', async route => {
       await route.fulfill({
         status: 401,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized', message: 'Session expired' })
+        body: JSON.stringify({ error: 'Unauthorized', message: 'Session expired' }),
       });
     });
 
@@ -390,11 +403,11 @@ test.describe('Accessibility - Error States', () => {
 
   test('500 Internal Server Error should be accessible', async ({ page }) => {
     // Mock 500 error for a commonly accessed endpoint
-    await page.route('**/api/v1/games', async (route) => {
+    await page.route('**/api/v1/games', async route => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Internal Server Error' })
+        body: JSON.stringify({ error: 'Internal Server Error' }),
       });
     });
 
@@ -415,7 +428,7 @@ test.describe('Accessibility - Error States', () => {
 
   test('403 Forbidden error should be accessible', async ({ page }) => {
     // Setup user role (not admin)
-    await page.route('**/api/v1/auth/me', async (route) => {
+    await page.route('**/api/v1/auth/me', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -424,18 +437,18 @@ test.describe('Accessibility - Error States', () => {
             id: 'user-test-id',
             email: 'user@meepleai.dev',
             displayName: 'Test User',
-            role: 'User'
-          }
-        })
+            role: 'User',
+          },
+        }),
       });
     });
 
     // Mock 403 for admin endpoint
-    await page.route('**/api/v1/admin/**', async (route) => {
+    await page.route('**/api/v1/admin/**', async route => {
       await route.fulfill({
         status: 403,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Forbidden', message: 'Insufficient permissions' })
+        body: JSON.stringify({ error: 'Forbidden', message: 'Insufficient permissions' }),
       });
     });
 
@@ -459,13 +472,13 @@ test.describe('Accessibility - Error States', () => {
     await setupMockAuth(page, 'User', 'user@meepleai.dev');
 
     // Mock delayed response to test loading state
-    await page.route('**/api/v1/games', async (route) => {
+    await page.route('**/api/v1/games', async route => {
       // Delay response to capture loading state
       await new Promise(resolve => setTimeout(resolve, 1000));
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([]),
       });
     });
 
@@ -493,7 +506,7 @@ test.describe('Accessibility - Error States', () => {
 
   test('Network timeout error should be accessible', async ({ page }) => {
     // Mock timeout by aborting request
-    await page.route('**/api/v1/games', async (route) => {
+    await page.route('**/api/v1/games', async route => {
       await route.abort('timedout');
     });
 

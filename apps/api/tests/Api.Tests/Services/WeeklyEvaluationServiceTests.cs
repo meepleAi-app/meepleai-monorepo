@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries.QualityReports;
 using Api.Models;
 using Api.Services;
@@ -72,7 +73,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         var executeTask = service.StartAsync(_cts.Token);
-        await Task.Delay(100); // Give it time to potentially run
+        await Task.Delay(100, CancellationToken.None); // Give it time to potentially run
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -95,7 +96,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         await service.StartAsync(_cts.Token);
-        await Task.Delay(100);
+        await Task.Delay(100, CancellationToken.None);
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -118,7 +119,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
 
         // Act
         await service.StartAsync(_cts.Token);
-        await Task.Delay(100);
+        await Task.Delay(100, CancellationToken.None);
         await service.StopAsync(_cts.Token);
 
         // Assert
@@ -162,7 +163,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200);
+        await Task.Delay(200, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -214,7 +215,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200);
+        await Task.Delay(200, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -263,7 +264,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200);
+        await Task.Delay(200, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -312,7 +313,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for first execution (which throws) to complete in real time
-        await Task.Delay(200);
+        await Task.Delay(200, CancellationToken.None);
 
         // Service should continue running despite exception
         // We can verify by checking that it didn't crash
@@ -401,7 +402,7 @@ public class WeeklyEvaluationServiceTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
 
         // Wait for execution to complete in real time
-        await Task.Delay(200);
+        await Task.Delay(200, CancellationToken.None);
 
         await service.StopAsync(_cts.Token);
 
@@ -415,4 +416,237 @@ public class WeeklyEvaluationServiceTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenQualityThresholdsBreached_SendsAlert()
+    {
+        // Arrange
+        var options = Options.Create(_config);
+        var expectedReport = new QualityReport
+        {
+            StartDate = new DateTime(2025, 1, 8),
+            EndDate = new DateTime(2025, 1, 15),
+            TotalResponses = 100,
+            LowQualityCount = 15, // 15% exceeds default threshold of 10%
+            LowQualityPercentage = 15.0,
+            AverageOverallConfidence = 0.65, // Below default threshold of 0.70
+            AverageRagConfidence = 0.60, // Below default threshold of 0.65
+            AverageLlmConfidence = 0.88,
+            AverageCitationQuality = 0.90
+        };
+
+        SendAlertCommand? capturedAlertCommand = null;
+        _mediatorMock
+            .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedReport);
+
+        _mediatorMock
+            .Setup(x => x.Send(It.IsAny<SendAlertCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<AlertDto>, CancellationToken>((cmd, ct) =>
+            {
+                capturedAlertCommand = cmd as SendAlertCommand;
+            })
+            .ReturnsAsync(new AlertDto(
+                Guid.NewGuid(),
+                "QualityEvaluation",
+                "Warning",
+                "Alert sent",
+                null,
+                DateTime.UtcNow,
+                null,
+                true,
+                new Dictionary<string, bool> { { "Email", true } }
+            ));
+
+        var service = new WeeklyEvaluationService(
+            _scopeFactoryMock.Object,
+            _loggerMock.Object,
+            options,
+            _timeProvider);
+
+        // Act
+        await service.StartAsync(_cts.Token);
+
+        // Advance fake clock past initial delay (0.001 minutes)
+        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+
+        // Wait for execution to complete in real time
+        await Task.Delay(200, CancellationToken.None);
+
+        await service.StopAsync(_cts.Token);
+
+        // Assert
+        _mediatorMock.Verify(
+            x => x.Send(It.IsAny<SendAlertCommand>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        Assert.NotNull(capturedAlertCommand);
+        Assert.Equal("QualityEvaluation", capturedAlertCommand.AlertType);
+        Assert.Equal("Warning", capturedAlertCommand.Severity);
+        Assert.Contains("3 issue(s)", capturedAlertCommand.Message);
+        Assert.NotNull(capturedAlertCommand.Metadata);
+        Assert.True(capturedAlertCommand.Metadata.ContainsKey("Issues"));
+        Assert.True(capturedAlertCommand.Metadata.ContainsKey("IssueCount"));
+        Assert.Equal(3, capturedAlertCommand.Metadata["IssueCount"]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAllThresholdsPass_DoesNotSendAlert()
+    {
+        // Arrange
+        var options = Options.Create(_config);
+        var expectedReport = new QualityReport
+        {
+            StartDate = new DateTime(2025, 1, 8),
+            EndDate = new DateTime(2025, 1, 15),
+            TotalResponses = 100,
+            LowQualityCount = 3, // 3% below default threshold of 10%
+            LowQualityPercentage = 3.0,
+            AverageOverallConfidence = 0.85, // Above default threshold of 0.70
+            AverageRagConfidence = 0.82, // Above default threshold of 0.65
+            AverageLlmConfidence = 0.88,
+            AverageCitationQuality = 0.90
+        };
+
+        _mediatorMock
+            .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedReport);
+
+        var service = new WeeklyEvaluationService(
+            _scopeFactoryMock.Object,
+            _loggerMock.Object,
+            options,
+            _timeProvider);
+
+        // Act
+        await service.StartAsync(_cts.Token);
+
+        // Advance fake clock past initial delay (0.001 minutes)
+        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+
+        // Wait for execution to complete in real time
+        await Task.Delay(200, CancellationToken.None);
+
+        await service.StopAsync(_cts.Token);
+
+        // Assert
+        _mediatorMock.Verify(
+            x => x.Send(It.IsAny<SendAlertCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Verify success log
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("All quality thresholds passed")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRagQualityGatesFail_SendsAlert()
+    {
+        // Arrange
+        _config.EnableRagEvaluation = true;
+        _config.RagDatasetPath = "datasets/rag/evaluation.json";
+        var options = Options.Create(_config);
+
+        var qualityReport = new QualityReport
+        {
+            StartDate = new DateTime(2025, 1, 8),
+            EndDate = new DateTime(2025, 1, 15),
+            TotalResponses = 100,
+            LowQualityCount = 3,
+            LowQualityPercentage = 3.0,
+            AverageOverallConfidence = 0.85,
+            AverageRagConfidence = 0.82
+        };
+
+        var ragReport = new RagEvaluationReport
+        {
+            DatasetName = "Test Dataset",
+            TotalQueries = 50,
+            SuccessfulQueries = 45,
+            PassedQualityGates = false, // Failed gates
+            QualityGateFailures = new List<string> { "MRR below threshold", "P@5 below threshold" },
+            MeanReciprocalRank = 0.45,
+            AvgPrecisionAt5 = 0.50
+        };
+
+        var ragServiceMock = new Mock<IRagEvaluationService>();
+        ragServiceMock
+            .Setup(x => x.LoadDatasetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RagEvaluationDataset { Queries = Array.Empty<RagEvaluationQuery>() });
+
+        ragServiceMock
+            .Setup(x => x.EvaluateAsync(
+                It.IsAny<RagEvaluationDataset>(),
+                It.IsAny<int>(),
+                It.IsAny<RagQualityThresholds>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ragReport);
+
+        _serviceProviderMock
+            .Setup(x => x.GetService(typeof(IRagEvaluationService)))
+            .Returns(ragServiceMock.Object);
+
+        SendAlertCommand? capturedAlertCommand = null;
+        _mediatorMock
+            .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(qualityReport);
+
+        _mediatorMock
+            .Setup(x => x.Send(It.IsAny<SendAlertCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<AlertDto>, CancellationToken>((cmd, ct) =>
+            {
+                capturedAlertCommand = cmd as SendAlertCommand;
+            })
+            .ReturnsAsync(new AlertDto(
+                Guid.NewGuid(),
+                "QualityEvaluation",
+                "Warning",
+                "Alert sent",
+                null,
+                DateTime.UtcNow,
+                null,
+                true,
+                new Dictionary<string, bool> { { "Email", true } }
+            ));
+
+        var service = new WeeklyEvaluationService(
+            _scopeFactoryMock.Object,
+            _loggerMock.Object,
+            options,
+            _timeProvider);
+
+        // Act
+        await service.StartAsync(_cts.Token);
+
+        // Advance fake clock past initial delay (0.001 minutes)
+        _timeProvider.Advance(TimeSpan.FromMinutes(0.002));
+
+        // Wait for execution to complete in real time
+        await Task.Delay(200, CancellationToken.None);
+
+        await service.StopAsync(_cts.Token);
+
+        // Assert
+        _mediatorMock.Verify(
+            x => x.Send(It.IsAny<SendAlertCommand>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        Assert.NotNull(capturedAlertCommand);
+        Assert.Equal("QualityEvaluation", capturedAlertCommand.AlertType);
+        Assert.Equal("Warning", capturedAlertCommand.Severity);
+        Assert.NotNull(capturedAlertCommand.Metadata);
+        Assert.True(capturedAlertCommand.Metadata.ContainsKey("Issues"));
+
+        // Metadata["Issues"] is a List<string>, so cast it properly
+        var issuesList = capturedAlertCommand.Metadata["Issues"] as IEnumerable<string>;
+        Assert.NotNull(issuesList);
+        Assert.Contains(issuesList, issue => issue.Contains("RAG evaluation failed quality gates"));
+    }
 }
+

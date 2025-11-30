@@ -18,7 +18,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { MobileSidebar } from './MobileSidebar';
@@ -32,7 +32,7 @@ export function ChatContent() {
     chats,
     errorMessage,
     sidebarCollapsed,
-    toggleSidebar
+    toggleSidebar,
   } = useChatContext();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -86,7 +86,7 @@ export function ChatContent() {
             <div className="flex items-center gap-2">
               <h1 className="m-0 text-xl truncate">
                 {activeChatId
-                  ? activeThread?.title ?? 'Chat Thread'
+                  ? (activeThread?.title ?? 'Chat Thread')
                   : 'Seleziona o crea un thread'}
               </h1>
               {/* Archived Badge (Issue #858) */}
@@ -103,9 +103,7 @@ export function ChatContent() {
             {/* Thread Metadata (Issue #858) */}
             <div className="mt-1 mb-0 text-[#64748b] text-[13px] flex items-center gap-2">
               <span>
-                {selectedGameId
-                  ? selectedGame?.name ?? ''
-                  : 'Nessun gioco selezionato'}
+                {selectedGameId ? (selectedGame?.title ?? '') : 'Nessun gioco selezionato'}
               </span>
               {activeThread && (
                 <>

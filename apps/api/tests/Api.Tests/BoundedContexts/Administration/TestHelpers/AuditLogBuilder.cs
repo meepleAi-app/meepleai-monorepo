@@ -12,10 +12,10 @@ public class AuditLogBuilder
     private string _action = "TestAction";
     private string _resource = "TestResource";
     private string _result = "success";
-    private string? _resourceId;
+    private string? _resourceId = null;
     private string? _details;
     private string? _ipAddress;
-    private string? _userAgent;
+    private string? _userAgent = null;
 
     public AuditLogBuilder WithId(Guid id)
     {
@@ -92,3 +92,4 @@ public class AuditLogBuilder
 
     public static implicit operator AuditLog(AuditLogBuilder builder) => builder.Build();
 }
+

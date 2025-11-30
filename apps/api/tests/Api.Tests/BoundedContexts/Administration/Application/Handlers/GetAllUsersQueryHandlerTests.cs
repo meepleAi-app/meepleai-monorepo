@@ -147,3 +147,4 @@ public class GetAllUsersQueryHandlerTests
     // 7. Empty result sets
     // 8. LastSeenAt calculation from active sessions
 }
+

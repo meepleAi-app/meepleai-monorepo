@@ -24,7 +24,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
     private readonly IConfiguration _configuration;
 
     // Default timeout for VLM processing (longer than Unstructured due to GPU inference)
-    private const int DefaultTimeoutSeconds = 60;
+    private const int DefaultTimeoutSeconds = 120;
 
     public SmolDoclingPdfTextExtractor(
         IHttpClientFactory httpClientFactory,
@@ -50,16 +50,15 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             "[{RequestId}] Starting SmolDocling VLM extraction (Stage 2 fallback)",
             requestId);
 
+        var timeoutSeconds = GetTimeoutSeconds();
+
         try
         {
             // Create HTTP client with circuit breaker and retry policies
             var client = _httpClientFactory.CreateClient("SmolDoclingService");
 
             // Configure timeout
-            var timeout = _configuration.GetValue<int>(
-                "PdfExtraction:SmolDocling:TimeoutSeconds",
-                DefaultTimeoutSeconds);
-            client.Timeout = TimeSpan.FromSeconds(timeout);
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 
             // Prepare multipart form data
             using var content = new MultipartFormDataContent();
@@ -134,10 +133,10 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
         {
             _logger.LogError(ex,
                 "[{RequestId}] Request timed out after {Timeout}s",
-                requestId, DefaultTimeoutSeconds);
+                requestId, timeoutSeconds);
 
             return TextExtractionResult.CreateFailure(
-                $"SmolDocling extraction timeout after {DefaultTimeoutSeconds}s");
+                $"SmolDocling extraction timeout after {timeoutSeconds}s");
         }
         catch (TaskCanceledException ex) when (ex.CancellationToken == ct)
         {
@@ -190,10 +189,8 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
         {
             var client = _httpClientFactory.CreateClient("SmolDoclingService");
 
-            var timeout = _configuration.GetValue<int>(
-                "PdfExtraction:SmolDocling:TimeoutSeconds",
-                DefaultTimeoutSeconds);
-            client.Timeout = TimeSpan.FromSeconds(timeout);
+            var timeoutSeconds = GetTimeoutSeconds();
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 
             using var content = new MultipartFormDataContent();
 
@@ -261,6 +258,15 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             _logger.LogError(ex, "[{RequestId}] Unexpected error", requestId);
             return PagedTextExtractionResult.CreateFailure($"Unexpected error: {ex.Message}");
         }
+    }
+
+    private int GetTimeoutSeconds()
+    {
+        var configuredTimeout = _configuration.GetValue<int?>(
+            "PdfExtraction:SmolDocling:TimeoutSeconds");
+
+        var timeout = configuredTimeout ?? DefaultTimeoutSeconds;
+        return Math.Max(DefaultTimeoutSeconds, timeout);
     }
 
     /// <summary>

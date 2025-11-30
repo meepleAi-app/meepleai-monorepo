@@ -25,8 +25,8 @@ public class DebugHallucinationTests
         var text1 = "ich weiß nicht wie viele."; // lowercase
         var text2 = "ICH WEISS NICHT WIE VIELE."; // uppercase (ß -> ss in uppercase)
 
-        var result1 = await _service.DetectHallucinationsAsync(text1, "de", CancellationToken.None);
-        var result2 = await _service.DetectHallucinationsAsync(text2, "de", CancellationToken.None);
+        var result1 = await _service.DetectHallucinationsAsync(text1, "de", TestContext.Current.CancellationToken);
+        var result2 = await _service.DetectHallucinationsAsync(text2, "de", TestContext.Current.CancellationToken);
 
         // Assert: Both should detect (fixed with ß/SS normalization)
         Assert.False(result1.IsValid, "Lowercase German text should be detected");
@@ -48,7 +48,7 @@ public class DebugHallucinationTests
 
         foreach (var text in criticalTexts)
         {
-            var result = await _service.DetectHallucinationsAsync(text, language: null, CancellationToken.None);
+            var result = await _service.DetectHallucinationsAsync(text, language: null, TestContext.Current.CancellationToken);
 
             // Assert: All critical phrases should be detected as invalid with High severity
             Assert.False(result.IsValid, $"Critical phrase '{text}' should be detected");
@@ -56,3 +56,4 @@ public class DebugHallucinationTests
         }
     }
 }
+

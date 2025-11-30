@@ -6,9 +6,15 @@
  */
 
 import React from 'react';
-import { useChatContext } from './ChatProvider';
+import { useChatContext } from '@/hooks/useChatContext';
 import { SkeletonLoader } from '../loading/SkeletonLoader';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 export function AgentSelector() {
@@ -17,9 +23,7 @@ export function AgentSelector() {
   if (loading.agents) {
     return (
       <div className="mb-3">
-        <label className="block mb-1.5 font-medium text-sm">
-          Seleziona Agente:
-        </label>
+        <label className="block mb-1.5 font-medium text-sm">Seleziona Agente:</label>
         <SkeletonLoader variant="gameSelection" />
       </div>
     );
@@ -31,32 +35,33 @@ export function AgentSelector() {
   const placeholderText = !selectedGameId
     ? 'Seleziona prima un gioco'
     : !hasAgents
-    ? 'Nessun agente disponibile'
-    : 'Seleziona un agente';
+      ? 'Nessun agente disponibile'
+      : 'Seleziona un agente';
 
   return (
     <div className="mb-3">
-      <label className="block mb-1.5 font-medium text-sm">
-        Seleziona Agente:
-      </label>
+      <label className="block mb-1.5 font-medium text-sm">Seleziona Agente:</label>
       <Select
         value={selectedAgentId ?? ''}
-        onValueChange={(value) => selectAgent(value || null)}
+        onValueChange={value => selectAgent(value || null)}
         disabled={isDisabled}
       >
         <SelectTrigger
           className="w-full"
+          data-testid="agent-selector"
           aria-busy={loading.agents}
           title={!selectedGameId ? 'Seleziona prima un gioco' : undefined}
         >
           <SelectValue placeholder={placeholderText} />
         </SelectTrigger>
         <SelectContent>
-          {selectedGameId && hasAgents && agents.map((agent: AgentDto) => (
-            <SelectItem key={agent.id} value={agent.id}>
-              {agent.name}
-            </SelectItem>
-          ))}
+          {selectedGameId &&
+            hasAgents &&
+            agents.map((agent: AgentDto) => (
+              <SelectItem key={agent.id} value={agent.id} data-testid={`agent-option-${agent.id}`}>
+                {agent.name}
+              </SelectItem>
+            ))}
         </SelectContent>
       </Select>
     </div>

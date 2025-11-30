@@ -63,7 +63,7 @@ public class StreamSetupGuideQueryHandlerTests
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -122,7 +122,7 @@ The youngest player goes first.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -168,7 +168,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -209,7 +209,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -254,7 +254,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -286,7 +286,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -309,7 +309,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -334,7 +334,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -359,7 +359,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -380,7 +380,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -398,7 +398,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -485,7 +485,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in handlerWithPromptDb.Handle(query, CancellationToken.None))
+        await foreach (var evt in handlerWithPromptDb.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -517,7 +517,7 @@ This is required.";
         // Use default handler (prompt database disabled in constructor)
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -564,7 +564,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in handlerWithPromptDb.Handle(query, CancellationToken.None))
+        await foreach (var evt in handlerWithPromptDb.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -594,7 +594,7 @@ This is required.";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -632,7 +632,7 @@ Instruction 4";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -667,7 +667,7 @@ Instruction 4";
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, CancellationToken.None))
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
         {
             events.Add(evt);
         }
@@ -770,3 +770,4 @@ Give each player their starting items.";
 
     #endregion
 }
+

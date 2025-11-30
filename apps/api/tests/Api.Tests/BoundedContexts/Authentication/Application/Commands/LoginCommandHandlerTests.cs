@@ -61,7 +61,7 @@ public class LoginCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -72,8 +72,8 @@ public class LoginCommandHandlerTests
         Assert.Equal("user@example.com", result.User.Email);
         Assert.Equal(Role.User.Value, result.User.Role);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Once);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _tempSessionServiceMock.Verify(x => x.CreateTempSessionAsync(It.IsAny<Guid>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -100,7 +100,7 @@ public class LoginCommandHandlerTests
             .ReturnsAsync("temp_session_token_abc123");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -109,8 +109,8 @@ public class LoginCommandHandlerTests
         Assert.Null(result.User);
         Assert.Null(result.SessionToken);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         _tempSessionServiceMock.Verify(x => x.CreateTempSessionAsync(user.Id, "127.0.0.1"), Times.Once);
     }
 
@@ -133,7 +133,7 @@ public class LoginCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -165,7 +165,7 @@ public class LoginCommandHandlerTests
             .Callback<Session, CancellationToken>((session, _) => capturedSession = session);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(capturedSession);
@@ -193,13 +193,13 @@ public class LoginCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
         Assert.Equal("Invalid email or password", exception.Message);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -221,13 +221,13 @@ public class LoginCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
         Assert.Equal("Invalid email or password", exception.Message);
 
-        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), default), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class LoginCommandHandlerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
         // Generic error message prevents user enumeration attacks
@@ -271,7 +271,7 @@ public class LoginCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
         _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), default), Times.Never);
@@ -290,7 +290,7 @@ public class LoginCommandHandlerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, CancellationToken.None)
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
 
@@ -321,7 +321,7 @@ public class LoginCommandHandlerTests
             .ReturnsAsync("temp_token");
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _tempSessionServiceMock.Verify(x => x.CreateTempSessionAsync(user.Id, "192.168.1.100"), Times.Once);
@@ -350,7 +350,7 @@ public class LoginCommandHandlerTests
             .ReturnsAsync("temp_token");
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         _tempSessionServiceMock.Verify(x => x.CreateTempSessionAsync(user.Id, null), Times.Once);
@@ -379,7 +379,7 @@ public class LoginCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.User);
@@ -414,7 +414,7 @@ public class LoginCommandHandlerTests
             .ReturnsAsync("temp_token");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - User is NOT returned in 2FA response
         Assert.Null(result.User);
@@ -444,10 +444,10 @@ public class LoginCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -473,10 +473,10 @@ public class LoginCommandHandlerTests
             .ReturnsAsync("temp_token");
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(default), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     #endregion
@@ -502,7 +502,7 @@ public class LoginCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -528,7 +528,7 @@ public class LoginCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -588,3 +588,4 @@ public class LoginCommandHandlerTests
 
     #endregion
 }
+

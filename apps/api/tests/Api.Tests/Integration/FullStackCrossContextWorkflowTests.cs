@@ -16,6 +16,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -34,6 +35,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
     private IContainer? _postgresContainer;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
+    private IServiceProvider ServiceProvider => _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized");
     private readonly TimeProvider _timeProvider = TimeProvider.System;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -82,7 +84,18 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                break;
+            }
+            catch (NpgsqlException) when (attempt < 2)
+            {
+                await Task.Delay(500, TestCancellationToken);
+            }
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -119,12 +132,14 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
             try
             {
+                #pragma warning disable EF1002
                 foreach (var tableName in tableNames)
                 {
                     await _dbContext.Database.ExecuteSqlRawAsync(
                         $"TRUNCATE TABLE \"{tableName}\" CASCADE;",
                         TestCancellationToken);
                 }
+                #pragma warning restore EF1002
             }
             finally
             {
@@ -141,11 +156,11 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var sessionRepository = _serviceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
-        var chatThreadRepository = _serviceProvider.GetRequiredService<IChatThreadRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
+        var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         // Step 1: Register user
         var user = CreateTestUser("newuser@meepleai.dev", "New User");
@@ -222,11 +237,11 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var sessionRepository = _serviceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
-        var chatThreadRepository = _serviceProvider.GetRequiredService<IChatThreadRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
+        var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var users = new List<User>();
         var userNames = new[] { "Alice", "Bob", "Charlie" };
@@ -290,11 +305,11 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         // Arrange
         await ResetDatabaseAsync();
 
-        var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
-        var sessionRepository = _serviceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = _serviceProvider.GetRequiredService<IGameRepository>();
-        var gameSessionRepository = _serviceProvider.GetRequiredService<IGameSessionRepository>();
-        var chatThreadRepository = _serviceProvider.GetRequiredService<IChatThreadRepository>();
+        var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
+        var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
+        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
+        var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
+        var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("expiring@meepleai.dev", "Expiring User");
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -354,3 +369,4 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         );
     }
 }
+

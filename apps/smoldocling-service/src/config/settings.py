@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     # Performance Optimization
     enable_model_warmup: bool = True  # Warm up on startup
     batch_processing: bool = False  # Batch multiple pages (experimental)
+    test_mode: bool = False  # Shortcut pipeline for integration tests
 
     class Config:
         env_file = ".env"

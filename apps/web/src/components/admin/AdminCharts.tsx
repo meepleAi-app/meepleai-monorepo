@@ -1,4 +1,18 @@
-import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 type EndpointChartProps = {
   endpointCounts: Record<string, number>;
@@ -17,27 +31,38 @@ type FeedbackChartProps = {
 };
 
 const ENDPOINT_COLORS: Record<string, string> = {
-  qa: "#1a73e8",
-  explain: "#f9ab00",
-  setup: "#a142f4",
-  chess: "#34a853",
+  qa: '#1a73e8',
+  explain: '#f9ab00',
+  setup: '#a142f4',
+  chess: '#34a853',
 };
 
-const COLORS = ["#1a73e8", "#f9ab00", "#a142f4", "#34a853", "#ea4335"];
+const COLORS = ['#1a73e8', '#f9ab00', '#a142f4', '#34a853', '#ea4335'];
 
 export function EndpointDistributionChart({ endpointCounts }: EndpointChartProps) {
-  const data = Object.entries(endpointCounts).map(([name, value]) => ({
-    name,
-    value,
-    color: ENDPOINT_COLORS[name] || "#64748b"
-  }));
+  const data = Object.entries(endpointCounts).map(([name, value]) => {
+    let color = '#64748b';
+    switch (name) {
+      case 'qa':
+        color = ENDPOINT_COLORS.qa;
+        break;
+      case 'explain':
+        color = ENDPOINT_COLORS.explain;
+        break;
+      case 'setup':
+        color = ENDPOINT_COLORS.setup;
+        break;
+      case 'chess':
+        color = ENDPOINT_COLORS.chess;
+        break;
+      default:
+        color = '#64748b';
+    }
+    return { name, value, color };
+  });
 
   if (data.length === 0) {
-    return (
-      <div className="p-12 text-center text-gray-500">
-        No endpoint data available
-      </div>
-    );
+    return <div className="p-12 text-center text-gray-500">No endpoint data available</div>;
   }
 
   return (
@@ -65,11 +90,7 @@ export function EndpointDistributionChart({ endpointCounts }: EndpointChartProps
 
 export function LatencyDistributionChart({ requests }: LatencyChartProps) {
   if (requests.length === 0) {
-    return (
-      <div className="p-12 text-center text-gray-500">
-        No latency data available
-      </div>
-    );
+    return <div className="p-12 text-center text-gray-500">No latency data available</div>;
   }
 
   // Group latency into bins
@@ -99,37 +120,44 @@ export function LatencyDistributionChart({ requests }: LatencyChartProps) {
 
 export function RequestsTimeSeriesChart({ requests }: TimeSeriesChartProps) {
   if (requests.length === 0) {
-    return (
-      <div className="p-12 text-center text-gray-500">
-        No time series data available
-      </div>
-    );
+    return <div className="p-12 text-center text-gray-500">No time series data available</div>;
   }
 
-  // Group by hour
+  // Group by hour using a Map to avoid dynamic object key assignment (prevents prototype pollution / object injection)
   const grouped = requests.reduce((acc, req) => {
     const date = new Date(req.createdAt);
-    const hour = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()).toISOString();
+    const hour = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      date.getHours()
+    ).toISOString();
 
-    if (!acc[hour]) {
-      acc[hour] = { time: hour, success: 0, error: 0, total: 0 };
+    if (!acc.has(hour)) {
+      acc.set(hour, { time: hour, success: 0, error: 0, total: 0 });
     }
 
-    acc[hour].total++;
-    if (req.status === "Success") {
-      acc[hour].success++;
+    let entry = acc.get(hour);
+    if (!entry) {
+      entry = { time: hour, success: 0, error: 0, total: 0 };
+      acc.set(hour, entry);
+    }
+
+    entry.total++;
+    if (req.status === 'Success') {
+      entry.success++;
     } else {
-      acc[hour].error++;
+      entry.error++;
     }
 
     return acc;
-  }, {} as Record<string, { time: string; success: number; error: number; total: number }>);
+  }, new Map<string, { time: string; success: number; error: number; total: number }>());
 
-  const data = Object.values(grouped)
+  const data = Array.from(grouped.values())
     .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
     .map(item => ({
       ...item,
-      time: new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      time: new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }));
 
   return (
@@ -140,8 +168,20 @@ export function RequestsTimeSeriesChart({ requests }: TimeSeriesChartProps) {
         <YAxis />
         <Tooltip />
         <Legend />
-        <Line type="monotone" dataKey="total" stroke="#1a73e8" name="Total Requests" strokeWidth={2} />
-        <Line type="monotone" dataKey="success" stroke="#0f9d58" name="Successful" strokeWidth={2} />
+        <Line
+          type="monotone"
+          dataKey="total"
+          stroke="#1a73e8"
+          name="Total Requests"
+          strokeWidth={2}
+        />
+        <Line
+          type="monotone"
+          dataKey="success"
+          stroke="#0f9d58"
+          name="Successful"
+          strokeWidth={2}
+        />
         <Line type="monotone" dataKey="error" stroke="#d93025" name="Errors" strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
@@ -150,17 +190,13 @@ export function RequestsTimeSeriesChart({ requests }: TimeSeriesChartProps) {
 
 export function FeedbackChart({ feedbackCounts }: FeedbackChartProps) {
   const data = Object.entries(feedbackCounts).map(([name, value], index) => ({
-    name: name === "helpful" ? "Helpful" : "Not Helpful",
+    name: name === 'helpful' ? 'Helpful' : 'Not Helpful',
     value,
-    color: name === "helpful" ? "#34a853" : "#ea4335"
+    color: name === 'helpful' ? '#34a853' : '#ea4335',
   }));
 
   if (data.length === 0 || data.every(d => d.value === 0)) {
-    return (
-      <div className="p-12 text-center text-gray-500">
-        No feedback data available
-      </div>
-    );
+    return <div className="p-12 text-center text-gray-500">No feedback data available</div>;
   }
 
   return (

@@ -1,20 +1,57 @@
-import { test, expect } from './fixtures/auth';
-import { getTextMatcher, t } from './fixtures/i18n';
+/**
+ * Chat Streaming E2E Tests (CHAT-01) - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
+
+import { test as base, expect, Page } from '@playwright/test';
+import { AuthHelper, USER_FIXTURES } from './pages';
+import { WaitHelper } from './helpers/WaitHelper';
+import {
+  mockGamesAPI,
+  mockAgentsAPI,
+  waitForAutoSelection,
+  QATestGame,
+  QATestAgent,
+} from './helpers/qa-test-utils';
+
+const test = base.extend<{ userPage: Page }>({
+  userPage: async ({ page }, use) => {
+    const authHelper = new AuthHelper(page);
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.user);
+    await use(page);
+  },
+});
 
 test.describe('Chat Streaming (CHAT-01)', () => {
+  const testGame: QATestGame = {
+    id: 'chess-1',
+    title: 'Chess',
+    createdAt: '2025-01-01T00:00:00Z',
+  };
+
+  const testAgent: QATestAgent = {
+    id: 'agent-qa-1',
+    gameId: 'chess-1',
+    name: 'Chess Q&A Agent',
+    kind: 'qa',
+    createdAt: '2025-01-01T00:00:00Z',
+  };
+
   test.beforeEach(async ({ userPage: page }) => {
+    // Mock games and agents for auto-selection (Issue #1800 fix)
+    await mockGamesAPI(page, [testGame]);
+    await mockAgentsAPI(page, testGame.id, [testAgent]);
+
     // Navigate to chat (already authenticated as user)
     await page.goto('/chat');
-    await page.waitForLoadState('networkidle');
-    await page.waitForLoadState('networkidle');
+
+    // Wait for auto-selection to complete
+    await waitForAutoSelection(page, testGame.id, testAgent.id);
   });
 
   test('should display streaming UI elements', async ({ userPage: page }) => {
-    // Game and agent should auto-select
-    await expect(page.locator('#gameSelect')).toHaveValue(/.+/);
-    await expect(page.locator('#agentSelect')).toHaveValue(/.+/);
-
-    // Message input should be enabled
+    // Message input enabled = game and agent auto-selected (Issue #1800 fix)
     await expect(page.locator('#message-input')).toBeEnabled();
 
     // Send button should be enabled when input has text
@@ -33,15 +70,21 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
     // Should show "Invio..." or streaming indicator
     // Either the button shows "Invio..." or we see a streaming response bubble
-    const hasInvioText = await page.locator('button[type="submit"]:has-text("Invio...")').isVisible().catch(() => false);
-    const hasStreamingBubble = await page.locator('text=Sto pensando').isVisible().catch(() => false);
+    const hasInvioText = await page
+      .locator('button[type="submit"]:has-text("Invio...")')
+      .isVisible()
+      .catch(() => false);
+    const hasStreamingBubble = await page
+      .locator('text=Sto pensando')
+      .isVisible()
+      .catch(() => false);
 
     expect(hasInvioText || hasStreamingBubble).toBe(true);
   });
 
   test('should display stop button during streaming', async ({ userPage: page }) => {
     // Intercept streaming endpoint to make it slow
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       // Simulate slow streaming
       await new Promise(resolve => setTimeout(resolve, 500));
       await route.continue();
@@ -51,8 +94,9 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'What are the rules?');
     await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
-    // Wait for streaming to start
-    await page.waitForTimeout(100);
+    // Wait for SSE response to start (smart wait)
+    const waitHelper = new WaitHelper(page);
+    await waitHelper.waitForApiResponse('/stream', 200, 3000).catch(() => {});
 
     // Stop button should be visible (has ⏹ Stop or aria-label)
     const stopButton = page.locator('button[aria-label="Stop streaming"], button:has-text("Stop")');
@@ -70,14 +114,14 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     // Intercept to create a slow stream
     let streamingStopped = false;
 
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       // Create a response that streams slowly
       const response = {
         status: 200,
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
+          Connection: 'keep-alive',
         },
         body: 'event: stateUpdate\ndata: {"state":"Thinking..."}\n\n',
       };
@@ -93,8 +137,11 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'Tell me about the game');
     await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
-    // Wait a bit for streaming to start
-    await page.waitForTimeout(200);
+    // Wait for streaming button state change (smart wait)
+    const waitHelper = new WaitHelper(page);
+    await waitHelper
+      .waitForActionable('button[aria-label="Stop streaming"], button:has-text("Stop")', 3000)
+      .catch(() => {});
 
     // Try to find and click stop button (use force: true to handle nextjs-portal overlay)
     const stopButton = page.locator('button[aria-label="Stop streaming"], button:has-text("Stop")');
@@ -103,13 +150,15 @@ test.describe('Chat Streaming (CHAT-01)', () => {
       await stopButton.click({ force: true });
 
       // Streaming should stop (button changes back to "Invia")
-      await expect(page.locator('button[type="submit"]:has-text("Invia")')).toBeVisible({ timeout: 2000 });
+      await expect(page.locator('button[type="submit"]:has-text("Invia")')).toBeVisible({
+        timeout: 2000,
+      });
     }
   });
 
   test('should accumulate tokens in real-time', async ({ userPage: page }) => {
     // Intercept to simulate token-by-token streaming
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       const sseData = [
         'event: stateUpdate\ndata: {"state":"Generating embeddings..."}\n\n',
         'event: token\ndata: {"token":"The"}\n\n',
@@ -132,16 +181,13 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'Is this game fun?');
     await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
-    // Wait for response to appear
-    await page.waitForTimeout(500);
-
-    // Should eventually show the complete answer
+    // Wait for complete answer (auto-retry assertion)
     await expect(page.getByText(/The game is fun/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('should display citations when received', async ({ userPage: page }) => {
     // Intercept to include citations
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       const sseData = [
         'event: stateUpdate\ndata: {"state":"Searching rules..."}\n\n',
         'event: citations\ndata: {"snippets":[{"text":"Players take turns","source":"rules.pdf","page":1,"line":null}]}\n\n',
@@ -161,10 +207,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'How do players move?');
     await page.locator('button[type="submit"]').click({ timeout: 5000 });
 
-    // Wait for response
-    await page.waitForTimeout(500);
-
-    // Should show sources section
+    // Should show sources section (auto-retry assertion)
     await expect(page.getByText(/Fonti|sources/i)).toBeVisible({ timeout: 5000 });
 
     // Should show the citation source
@@ -173,8 +216,9 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should display error message on failure', async ({ userPage: page }) => {
     // Intercept to return error
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
-      const sseData = 'event: error\ndata: {"message":"Failed to process request","code":"INTERNAL_ERROR"}\n\n';
+    await page.route('**/api/v1/agents/qa/stream', async route => {
+      const sseData =
+        'event: error\ndata: {"message":"Failed to process request","code":"INTERNAL_ERROR"}\n\n';
 
       await route.fulfill({
         status: 200,
@@ -194,7 +238,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should handle authentication error (401)', async ({ userPage: page }) => {
     // Intercept to return 401
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       await route.fulfill({
         status: 401,
         body: JSON.stringify({ message: 'Unauthorized' }),
@@ -210,7 +254,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should disable input during streaming', async ({ userPage: page }) => {
     // Intercept to create slow stream
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       // Don't fulfill immediately - simulate long stream
       await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -230,7 +274,6 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(page.locator('#message-input')).toBeDisabled({ timeout: 500 });
 
     // Wait for completion
-    await page.waitForTimeout(1500);
 
     // Input should be re-enabled after streaming completes
     await expect(page.locator('#message-input')).toBeEnabled({ timeout: 1000 });
@@ -238,7 +281,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
   test('should preserve chat history after streaming', async ({ userPage: page }) => {
     // Intercept streaming
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       const sseData = [
         'event: token\ndata: {"token":"Response 1"}\n\n',
         'event: complete\ndata: {"totalTokens":2,"confidence":0.9,"snippets":[]}\n\n',
@@ -257,25 +300,21 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await page.fill('#message-input', 'First question');
     await page.click('button[type="submit"]', { force: true });
 
-    await page.waitForTimeout(500);
-
     // First message should be visible
-    await expect(page.getByText('First question')).toBeVisible();
+    await expect(page.getByText('First question')).toBeVisible({ timeout: 3000 });
 
     // Send second message (use force: true to handle nextjs-portal overlay)
     await page.fill('#message-input', 'Second question');
     await page.click('button[type="submit"]', { force: true });
 
-    await page.waitForTimeout(500);
-
     // Both messages should be visible
-    await expect(page.getByText('First question')).toBeVisible();
-    await expect(page.getByText('Second question')).toBeVisible();
+    await expect(page.getByText('First question')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText('Second question')).toBeVisible({ timeout: 3000 });
   });
 
   test('should show state updates during streaming', async ({ userPage: page }) => {
     // Intercept with state updates
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       const sseData = [
         'event: stateUpdate\ndata: {"state":"Generating embeddings..."}\n\n',
         'event: stateUpdate\ndata: {"state":"Searching vector database..."}\n\n',
@@ -298,10 +337,15 @@ test.describe('Chat Streaming (CHAT-01)', () => {
 
     // Should show state update (might be brief)
     // We check if either a state message appears or the final answer
-    await page.waitForTimeout(300);
 
-    const hasStateUpdate = await page.getByText(/Generating|Searching/i).isVisible().catch(() => false);
-    const hasFinalAnswer = await page.getByText(/Final answer/i).isVisible().catch(() => false);
+    const hasStateUpdate = await page
+      .getByText(/Generating|Searching/i)
+      .isVisible()
+      .catch(() => false);
+    const hasFinalAnswer = await page
+      .getByText(/Final answer/i)
+      .isVisible()
+      .catch(() => false);
 
     expect(hasStateUpdate || hasFinalAnswer).toBe(true);
   });
@@ -309,7 +353,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
   test('should handle rapid consecutive messages', async ({ userPage: page }) => {
     let requestCount = 0;
 
-    await page.route('**/api/v1/agents/qa/stream', async (route) => {
+    await page.route('**/api/v1/agents/qa/stream', async route => {
       requestCount++;
       const responseNum = requestCount;
 
@@ -330,8 +374,6 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     // Send first message (use force: true to handle nextjs-portal overlay)
     await page.fill('#message-input', 'Question 1');
     await page.click('button[type="submit"]', { force: true });
-
-    await page.waitForTimeout(200);
 
     // Send second message quickly (use force: true to handle nextjs-portal overlay)
     await page.fill('#message-input', 'Question 2');

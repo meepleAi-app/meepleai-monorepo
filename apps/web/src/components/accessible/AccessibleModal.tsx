@@ -36,14 +36,9 @@
  * ```
  */
 
-import { ReactNode, useRef } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { ReactNode, useRef } from 'react';
 
 export interface AccessibleModalProps {
   /**
@@ -118,13 +113,22 @@ export function AccessibleModal({
     description ? `modal-desc-${Math.random().toString(36).substr(2, 9)}` : undefined
   );
 
-  // Size classes mapping
-  const sizeClasses = {
-    sm: 'sm:max-w-[350px]',
-    md: 'sm:max-w-[500px]',
-    lg: 'sm:max-w-[700px]',
-    xl: 'sm:max-w-[900px]',
-    full: 'sm:max-w-[95vw]',
+  // Get size class based on size prop
+  const getSizeClass = (s: typeof size): string => {
+    switch (s) {
+      case 'sm':
+        return 'sm:max-w-[350px]';
+      case 'md':
+        return 'sm:max-w-[500px]';
+      case 'lg':
+        return 'sm:max-w-[700px]';
+      case 'xl':
+        return 'sm:max-w-[900px]';
+      case 'full':
+        return 'sm:max-w-[95vw]';
+      default:
+        return 'sm:max-w-[500px]';
+    }
   };
 
   // Handle dialog close
@@ -144,10 +148,7 @@ export function AccessibleModal({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
-        className={cn(
-          sizeClasses[size],
-          className
-        )}
+        className={cn(getSizeClass(size), className)}
         aria-modal="true"
         aria-labelledby={titleId.current}
         aria-describedby={descriptionId.current}

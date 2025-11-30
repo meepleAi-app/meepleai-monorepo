@@ -5,6 +5,7 @@
  * Covers: ChatThreads, Messages, RuleSpec Comments, Cache Management, Export
  */
 
+import type { FeedbackOutcome } from '@/lib/constants/feedback';
 import type { HttpClient } from '../core/httpClient';
 import { downloadFile } from '../core/httpClient';
 import {
@@ -114,7 +115,7 @@ export interface ChatClient {
     messageId: string;
     endpoint: string;
     gameId: string;
-    feedback: 'helpful' | 'not-helpful';
+    outcome: FeedbackOutcome;
   }): Promise<void>;
 }
 
@@ -293,7 +294,7 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
       messageId: string;
       endpoint: string;
       gameId: string;
-      feedback: 'helpful' | 'not-helpful';
+      outcome: FeedbackOutcome;
     }): Promise<void> {
       return httpClient.post('/api/v1/agents/feedback', request);
     },

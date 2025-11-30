@@ -1,3 +1,9 @@
+/**
+ * Visual Debug Demo E2E Tests - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/
+ */
+
 import { test, expect } from '@playwright/test';
 import { getTextMatcher, t } from './fixtures/i18n';
 
@@ -54,13 +60,13 @@ test.describe.skip('Visual Debug Demo', () => {
     if (portalCount > 0) {
       console.log(`❌ Found ${portalCount} portal element(s)`);
       // Check z-index
-      const zIndex = await portal.first().evaluate((el) => {
+      const zIndex = await portal.first().evaluate(el => {
         return window.getComputedStyle(el).zIndex;
       });
       console.log(`   z-index: ${zIndex}`);
 
       // Check pointer-events
-      const pointerEvents = await portal.first().evaluate((el) => {
+      const pointerEvents = await portal.first().evaluate(el => {
         return window.getComputedStyle(el).pointerEvents;
       });
       console.log(`   pointer-events: ${pointerEvents}`);
@@ -97,7 +103,8 @@ test.describe.skip('Visual Debug Demo', () => {
         await getStartedButton.click({ force: true, timeout: 5000 });
         console.log('✅ Force click succeeded (but handler might not fire)');
       } catch (forceError) {
-        const forceErrorMessage = forceError instanceof Error ? forceError.message : String(forceError);
+        const forceErrorMessage =
+          forceError instanceof Error ? forceError.message : String(forceError);
         console.log('❌ Force click also failed:', forceErrorMessage);
       }
     }
@@ -111,7 +118,7 @@ test.describe.skip('Visual Debug Demo', () => {
     console.log('✅ Mock Auth Approach - No Portal Issues');
 
     // Setup mock auth (like fixtures/auth.ts does)
-    await page.route('http://localhost:8080/api/v1/auth/me', async (route) => {
+    await page.route('http://localhost:8080/api/v1/auth/me', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -160,7 +167,7 @@ test.describe('Automated Visual Checks', () => {
 
     if (exists) {
       // Get portal properties
-      const computedStyle = await portal.first().evaluate((el) => {
+      const computedStyle = await portal.first().evaluate(el => {
         const style = window.getComputedStyle(el);
         return {
           zIndex: style.zIndex,
@@ -196,7 +203,7 @@ test.describe('Automated Visual Checks', () => {
 
   test('verify portal absent on authenticated pages', async ({ page }) => {
     // Setup mock auth
-    await page.route('http://localhost:8080/api/v1/auth/me', async (route) => {
+    await page.route('http://localhost:8080/api/v1/auth/me', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

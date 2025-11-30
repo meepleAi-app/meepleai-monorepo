@@ -9,14 +9,14 @@ import { api } from '@/lib/api';
 import React, { PropsWithChildren } from 'react';
 
 // Mock api module
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
-    get: jest.fn(),
-    post: jest.fn(),
+    get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
-const mockApi = api as jest.Mocked<typeof api>;
+const mockApi = api as Mocked<typeof api>;
 
 describe('GameProvider', () => {
   const wrapper = ({ children }: PropsWithChildren) => (
@@ -26,12 +26,12 @@ describe('GameProvider', () => {
   const mockGames = [
     {
       id: 'game-1',
-      name: 'Gloomhaven',
+      title: 'Gloomhaven',
       createdAt: '2024-01-01T00:00:00Z',
     },
     {
       id: 'game-2',
-      name: 'Catan',
+      title: 'Catan',
       createdAt: '2024-01-02T00:00:00Z',
     },
   ];
@@ -54,7 +54,7 @@ describe('GameProvider', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Reset all mock implementations to ensure clean state
     mockApi.get.mockReset();
     mockApi.post.mockReset();
@@ -157,7 +157,7 @@ describe('GameProvider', () => {
     });
 
     it('handles agents load failure', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       mockApi.get
         .mockResolvedValueOnce(mockGames)
@@ -332,7 +332,7 @@ describe('GameProvider', () => {
 
   describe('error handling', () => {
     it('throws error if useGame used outside GameProvider', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(() => {
         renderHook(() => useGame());
@@ -363,7 +363,7 @@ describe('GameProvider', () => {
 
       // Verify derived state
       expect(result.current.selectedGame).toEqual(mockGames[0]);
-      expect(result.current.selectedGame?.name).toBe('Gloomhaven');
+      expect(result.current.selectedGame?.title).toBe('Gloomhaven');
     });
 
     it('returns null for selectedGame when no game selected', async () => {

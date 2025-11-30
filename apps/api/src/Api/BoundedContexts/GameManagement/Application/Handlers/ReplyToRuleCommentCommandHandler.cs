@@ -18,7 +18,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ReplyToRuleCommentCommandHandler> _logger;
 
-    private const int MaxCommentLength = 10000;
+    private const int MaxCommentLength = 2000;
     private const int MaxThreadDepth = 5;
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(100);
 
@@ -45,9 +45,9 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
             .FirstOrDefaultAsync(c => c.Id == command.ParentCommentId, cancellationToken)
             ?? throw new InvalidOperationException($"Parent comment {command.ParentCommentId} not found");
 
-        // Validate thread depth
+        // Validate thread depth (adding reply would increase depth by 1)
         var threadDepth = await CalculateThreadDepthAsync(command.ParentCommentId, cancellationToken);
-        if (threadDepth >= MaxThreadDepth)
+        if (threadDepth >= MaxThreadDepth - 1)
         {
             throw new InvalidOperationException(
                 $"Maximum thread depth of {MaxThreadDepth} exceeded. Cannot reply to this comment.");

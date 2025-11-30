@@ -3,6 +3,8 @@
  * Centralized type definitions for core business entities
  */
 
+import type { FeedbackOutcome } from '@/lib/constants/feedback';
+
 /**
  * Game entity
  */
@@ -19,7 +21,7 @@ export interface Agent {
   id: string;
   gameId: string;
   name: string;
-  kind: string;
+  type: string; // Changed from 'kind' to match backend AgentDto
   createdAt: string;
 }
 
@@ -77,7 +79,7 @@ export interface ChatThreadMessage {
   backendMessageId?: string;
   endpoint?: string;
   gameId?: string;
-  feedback?: 'helpful' | 'not-helpful' | null;
+  feedback?: FeedbackOutcome | null;
 }
 
 /**
@@ -153,7 +155,7 @@ export interface Message {
   snippets?: Snippet[];
   citations?: Citation[]; // Issue #859: RAG citations with relevance scoring
   followUpQuestions?: string[];
-  feedback?: 'helpful' | 'not-helpful' | null;
+  feedback?: FeedbackOutcome | null;
   endpoint?: string;
   gameId?: string;
   timestamp: Date;
@@ -165,13 +167,24 @@ export interface Message {
 }
 
 /**
- * Q&A response from agent
+ * Q&A response from agent (Issue #1002: BGAI-062)
+ * Aligned with backend QaResponseDto
  */
 export interface QaResponse {
   answer: string;
   snippets?: Snippet[];
   followUpQuestions?: string[];
   messageId?: string;
+  /** Search/retrieval confidence score (0-1) */
+  searchConfidence?: number;
+  /** LLM generation confidence score (0-1) */
+  llmConfidence?: number;
+  /** Overall confidence score (0-1) - Primary metric for UI display */
+  overallConfidence?: number;
+  /** Flag indicating if response quality is below threshold */
+  isLowQuality?: boolean;
+  /** RAG citations with page numbers and snippets */
+  citations?: Citation[];
 }
 
 /**

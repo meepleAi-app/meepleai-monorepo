@@ -1,32 +1,22 @@
 /**
- * E2E-004: RBAC Authorization Tests
+ * RBAC Authorization E2E Tests - MIGRATED TO POM
  *
- * Issue #1490: Comprehensive Role-Based Access Control testing
- *
- * Tests that users with different roles (Admin, Editor, User) have appropriate
- * access to protected routes and receive 403 Forbidden when attempting unauthorized access.
- *
- * Coverage:
- * - Admin-only routes (12 tests)
- * - Editor+ routes (3 tests)
- * - Public routes (3 tests)
- * - Unauthenticated access (3 tests)
- *
- * Total: 21 RBAC tests
+ * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
 import { test, expect } from '@playwright/test';
-import { setupMockAuth, setupMockAuthWithForbidden } from './fixtures/auth';
+import { AuthHelper, USER_FIXTURES } from './pages';
 import { expectForbiddenOrRedirect, expectPageLoaded } from './helpers/assertions';
+import { WaitHelper } from './helpers/WaitHelper';
 
-const API_BASE = process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const API_BASE =
+  process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('RBAC Authorization Tests - E2E-004', () => {
-
   test.describe('Admin-Only Routes', () => {
-
     test('Admin can access /admin dashboard', async ({ page }) => {
-      await setupMockAuth(page, 'Admin');
+      const authHelper = new AuthHelper(page);
+      await authHelper.setupMockAuth('Admin');
       await page.goto('/admin');
 
       await expect(page).toHaveURL('/admin');
@@ -49,7 +39,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
     });
 
     test('Admin can access /admin/users', async ({ page }) => {
-      await setupMockAuth(page, 'Admin');
+      const authHelper = new AuthHelper(page);
+      await authHelper.setupMockAuth('Admin');
       await page.goto('/admin/users');
 
       await expect(page).toHaveURL('/admin/users');
@@ -72,7 +63,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
     });
 
     test('Admin can access /admin/configuration', async ({ page }) => {
-      await setupMockAuth(page, 'Admin');
+      const authHelper = new AuthHelper(page);
+      await authHelper.setupMockAuth('Admin');
       await page.goto('/admin/configuration');
 
       await expect(page).toHaveURL('/admin/configuration');
@@ -95,7 +87,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
     });
 
     test('Admin can access /admin/analytics', async ({ page }) => {
-      await setupMockAuth(page, 'Admin');
+      const authHelper = new AuthHelper(page);
+      await authHelper.setupMockAuth('Admin');
       await page.goto('/admin/analytics');
 
       await expect(page).toHaveURL('/admin/analytics');
@@ -119,9 +112,9 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
   });
 
   test.describe('Editor+ Routes (Admin or Editor)', () => {
-
     test('Admin can access /editor', async ({ page }) => {
-      await setupMockAuth(page, 'Admin');
+      const authHelper = new AuthHelper(page);
+      await authHelper.setupMockAuth('Admin');
       await page.goto('/editor');
 
       await expect(page).toHaveURL('/editor');
@@ -130,7 +123,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
     });
 
     test('Editor can access /editor', async ({ page }) => {
-      await setupMockAuth(page, 'Editor');
+      const authHelper = new AuthHelper(page);
+      await authHelper.setupMockAuth('Editor');
       await page.goto('/editor');
 
       await expect(page).toHaveURL('/editor');
@@ -146,7 +140,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
     });
 
     test('Admin can access /upload', async ({ page }) => {
-      await setupMockAuth(page, 'Admin');
+      const authHelper = new AuthHelper(page);
+      await authHelper.setupMockAuth('Admin');
       await page.goto('/upload');
 
       await expect(page).toHaveURL('/upload');
@@ -155,7 +150,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
     });
 
     test('Editor can access /upload', async ({ page }) => {
-      await setupMockAuth(page, 'Editor');
+      const authHelper = new AuthHelper(page);
+      await authHelper.setupMockAuth('Editor');
       await page.goto('/upload');
 
       await expect(page).toHaveURL('/upload');
@@ -172,12 +168,12 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
   });
 
   test.describe('Public Routes (All Roles)', () => {
-
     const publicRoutes = ['/', '/chat', '/games'];
 
     publicRoutes.forEach(route => {
       test(`Admin can access ${route}`, async ({ page }) => {
-        await setupMockAuth(page, 'Admin');
+        const authHelper = new AuthHelper(page);
+        await authHelper.setupMockAuth('Admin');
         await page.goto(route);
 
         await expect(page).toHaveURL(route);
@@ -185,7 +181,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
       });
 
       test(`Editor can access ${route}`, async ({ page }) => {
-        await setupMockAuth(page, 'Editor');
+        const authHelper = new AuthHelper(page);
+        await authHelper.setupMockAuth('Editor');
         await page.goto(route);
 
         await expect(page).toHaveURL(route);
@@ -193,7 +190,8 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
       });
 
       test(`User can access ${route}`, async ({ page }) => {
-        await setupMockAuth(page, 'User');
+        const authHelper = new AuthHelper(page);
+        await authHelper.setupMockAuth('User');
         await page.goto(route);
 
         await expect(page).toHaveURL(route);
@@ -203,7 +201,6 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
   });
 
   test.describe('Unauthenticated Access', () => {
-
     test('Unauthenticated user redirected from /admin', async ({ page }) => {
       // No mock auth setup = unauthenticated
       // Clear any existing cookies first
@@ -218,11 +215,15 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
       } catch {
         // If middleware didn't redirect, check for RequireRole loading/redirect
         await page.waitForLoadState('networkidle');
-        await page.waitForTimeout(2000); // Give RequireRole time to redirect
+        const waitHelper = new WaitHelper(page);
+        await waitHelper.waitForNetworkIdle(5000); // Give RequireRole time to redirect
 
         const currentUrl = page.url();
         const isLoginRedirect = currentUrl.includes('/login');
-        const hasLoadingSpinner = await page.locator('text=/verifica autorizzazioni/i').isVisible().catch(() => false);
+        const hasLoadingSpinner = await page
+          .locator('text=/verifica autorizzazioni/i')
+          .isVisible()
+          .catch(() => false);
 
         expect(isLoginRedirect || hasLoadingSpinner).toBe(true);
       }
@@ -242,11 +243,15 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
       } catch {
         // If middleware didn't redirect, check for RequireRole loading/redirect
         await page.waitForLoadState('networkidle');
-        await page.waitForTimeout(2000); // Give RequireRole time to redirect
+        const waitHelper = new WaitHelper(page);
+        await waitHelper.waitForNetworkIdle(5000); // Give RequireRole time to redirect
 
         const currentUrl = page.url();
         const isLoginRedirect = currentUrl.includes('/login');
-        const hasLoadingSpinner = await page.locator('text=/verifica autorizzazioni/i').isVisible().catch(() => false);
+        const hasLoadingSpinner = await page
+          .locator('text=/verifica autorizzazioni/i')
+          .isVisible()
+          .catch(() => false);
 
         expect(isLoginRedirect || hasLoadingSpinner).toBe(true);
       }

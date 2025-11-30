@@ -97,7 +97,7 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync();
-        var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
+        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("not_found", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -123,7 +123,7 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync();
-        var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
+        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("unauthorized", errorResponse.RootElement.GetProperty("error").GetString());
         Assert.Equal("Token expired", errorResponse.RootElement.GetProperty("message").GetString());
@@ -169,7 +169,7 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync();
-        var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
+        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("conflict", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -195,7 +195,7 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync();
-        var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
+        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("domain_error", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -225,7 +225,7 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync();
-        var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
+        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("validation_error", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -289,7 +289,7 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync();
-        var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
+        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("not_found", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -334,7 +334,7 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync();
-        var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
+        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("internal_server_error", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -554,4 +554,10 @@ public class ApiExceptionHandlerMiddlewareTests
         // Assert
         Assert.Equal(expectedStatusCode, _httpContext.Response.StatusCode);
     }
+
+    private static JsonDocument ParseErrorResponse(string responseBody)
+    {
+        return JsonDocument.Parse(responseBody);
+    }
 }
+

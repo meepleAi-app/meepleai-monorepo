@@ -33,7 +33,12 @@ import type { NextRequest } from 'next/server';
  * Protected routes that require authentication
  * Unauthenticated users will be redirected to /login
  */
-const PROTECTED_ROUTES = ['/chat', '/upload', '/admin', '/editor'];
+const PROTECTED_ROUTES = ['/chat', '/upload', '/admin', '/editor', '/settings'];
+
+/**
+ * Admin-only routes that require admin role
+ */
+const ADMIN_ONLY_ROUTES = ['/admin'];
 
 /**
  * Public routes that don't require authentication
@@ -46,6 +51,12 @@ const PUBLIC_AUTH_ROUTES = ['/login', '/register'];
  * This matches the cookie name set in CookieHelpers.cs (default: "meepleai_session")
  */
 const SESSION_COOKIE_NAME = 'meepleai_session';
+
+/**
+ * User role cookie name
+ * Used to check authorization for protected routes
+ */
+const USER_ROLE_COOKIE = 'meepleai_user_role';
 
 // ============================================================================
 // Middleware Function
@@ -65,9 +76,8 @@ function getApiOrigin(): string {
   }
 
   const envBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
-  const apiBase = (envBase && envBase !== 'undefined' && envBase !== 'null')
-    ? envBase
-    : 'http://localhost:8080';
+  const apiBase =
+    envBase && envBase !== 'undefined' && envBase !== 'null' ? envBase : 'http://localhost:8080';
 
   try {
     const url = new URL(apiBase);
@@ -78,23 +88,6 @@ function getApiOrigin(): string {
     cachedApiOrigin = 'http://localhost:8080';
     return cachedApiOrigin;
   }
-}
-
-/**
- * Get API origin for CSP connect-src directive
- */
-function getApiOrigin(): string {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
-  if (apiBase && apiBase !== 'undefined' && apiBase !== 'null') {
-    try {
-      const url = new URL(apiBase);
-      return url.origin;
-    } catch {
-      // If URL parsing fails, fall back to default
-      return 'http://localhost:8080';
-    }
-  }
-  return 'http://localhost:8080';
 }
 
 /**
@@ -175,9 +168,15 @@ export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
   const isAuthenticated = !!sessionCookie?.value;
 
+  // Check user role
+  const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
+  const userRole = userRoleCookie?.value || 'user';
+  const isAdmin = userRole === 'admin';
+
   // Check if the current route is protected or public auth route
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
   const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some(route => pathname === route);
+  const isAdminRoute = ADMIN_ONLY_ROUTES.some(route => pathname.startsWith(route));
 
   // Redirect unauthenticated users from protected routes to login
   if (isProtectedRoute && !isAuthenticated) {
@@ -188,13 +187,21 @@ export async function middleware(request: NextRequest) {
     return addSecurityHeaders(response, requestOrigin);
   }
 
+  // Redirect non-admin users from admin routes
+  if (isAdminRoute && isAuthenticated && !isAdmin) {
+    const homeUrl = new URL('/', request.url);
+    const response = NextResponse.redirect(homeUrl);
+    return addSecurityHeaders(response, requestOrigin);
+  }
+
   // Redirect authenticated users from login/register pages to chat
   if (isPublicAuthRoute && isAuthenticated) {
     // Check if there's a 'from' parameter to redirect back to
     const fromParam = request.nextUrl.searchParams.get('from');
-    const redirectUrl = fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
-      ? new URL(fromParam, request.url)
-      : new URL('/chat', request.url);
+    const redirectUrl =
+      fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
+        ? new URL(fromParam, request.url)
+        : new URL('/chat', request.url);
     const response = NextResponse.redirect(redirectUrl);
     return addSecurityHeaders(response, requestOrigin);
   }

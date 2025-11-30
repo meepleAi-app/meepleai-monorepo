@@ -265,3 +265,4 @@ public sealed class ResetPasswordCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.NewPassword);
     }
 }
+

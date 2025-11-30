@@ -3,22 +3,22 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ErrorDisplay } from '../ErrorDisplay';
+import { ErrorDisplay } from '../errors/ErrorDisplay';
 import { ErrorCategory, type CategorizedError } from '../../lib/errorUtils';
 
 // Mock clipboard API
 Object.assign(navigator, {
   clipboard: {
-    writeText: jest.fn().mockResolvedValue(undefined)
+    writeText: vi.fn().mockResolvedValue(undefined)
   }
 });
 
 describe('ErrorDisplay', () => {
-  const mockOnRetry = jest.fn();
-  const mockOnDismiss = jest.fn();
+  const mockOnRetry = vi.fn();
+  const mockOnDismiss = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Basic rendering', () => {

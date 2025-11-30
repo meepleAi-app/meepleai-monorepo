@@ -11,19 +11,19 @@ import { api } from '@/lib/api';
 import React, { PropsWithChildren } from 'react';
 
 // Mock api module
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
-    get: jest.fn(),
-    post: jest.fn(),
-    delete: jest.fn(),
+    get: vi.fn(),
+    post: vi.fn(),
+    delete: vi.fn(),
     chat: {
-      updateMessage: jest.fn(),
-      deleteMessage: jest.fn(),
+      updateMessage: vi.fn(),
+      deleteMessage: vi.fn(),
     },
   },
 }));
 
-const mockApi = api as jest.Mocked<typeof api>;
+const mockApi = api as Mocked<typeof api>;
 
 describe('UIProvider', () => {
   // UIProvider needs to be nested under GameProvider and ChatProvider
@@ -36,7 +36,7 @@ describe('UIProvider', () => {
   );
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Mock empty responses for GameProvider and ChatProvider
     mockApi.get.mockResolvedValue([]);
   });
@@ -115,7 +115,7 @@ describe('UIProvider', () => {
     });
 
     it('saves edit and clears state', async () => {
-      const mockEditMessage = jest.fn().mockResolvedValue(undefined);
+      const mockEditMessage = vi.fn().mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useUI(), { wrapper });
 
@@ -134,7 +134,7 @@ describe('UIProvider', () => {
     });
 
     it('does not save if no message is being edited', async () => {
-      const mockEditMessage = jest.fn();
+      const mockEditMessage = vi.fn();
 
       const { result } = renderHook(() => useUI(), { wrapper });
 
@@ -146,7 +146,7 @@ describe('UIProvider', () => {
     });
 
     it('handles save edit failure', async () => {
-      const mockEditMessage = jest.fn().mockRejectedValue(new Error('Save failed'));
+      const mockEditMessage = vi.fn().mockRejectedValue(new Error('Save failed'));
 
       const { result } = renderHook(() => useUI(), { wrapper });
 
@@ -222,7 +222,7 @@ describe('UIProvider', () => {
 
   describe('error handling', () => {
     it('throws error if useUI used outside UIProvider', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(() => {
         renderHook(() => useUI());

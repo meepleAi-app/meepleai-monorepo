@@ -34,7 +34,7 @@ test.describe('Request Deduplication Cache', () => {
     // Track API calls
     const apiCalls: string[] = [];
 
-    page.on('request', (request) => {
+    page.on('request', request => {
       if (request.url().includes('/api/v1/')) {
         apiCalls.push(`${request.method()} ${request.url()}`);
       }
@@ -84,8 +84,8 @@ test.describe('Request Deduplication Cache', () => {
     expect(results.dataEqual).toBe(true);
 
     // Count actual API calls made (should be 1 due to deduplication)
-    const gameApiCalls = apiCalls.filter(call =>
-      call.includes('/api/v1/games') && call.startsWith('GET')
+    const gameApiCalls = apiCalls.filter(
+      call => call.includes('/api/v1/games') && call.startsWith('GET')
     );
 
     // Note: This may be higher than 1 in E2E because the cache is in the
@@ -128,7 +128,7 @@ test.describe('Request Deduplication Cache', () => {
     // Track API calls
     const apiCalls: string[] = [];
 
-    page.on('request', (request) => {
+    page.on('request', request => {
       if (request.url().includes('/api/v1/')) {
         apiCalls.push(`${request.method()} ${request.url()}`);
       }
@@ -202,7 +202,6 @@ test.describe('Request Deduplication Cache', () => {
     });
 
     // Wait for TTL to expire (default 100ms + buffer)
-    await page.waitForTimeout(200);
 
     // Make second request (should be cache miss due to expiration)
     await page.evaluate(async () => {
@@ -290,8 +289,9 @@ test.describe('Request Deduplication Cache', () => {
       return {
         componentCount: results.length,
         allReceivedData: results.every(r => r.dataLength > 0),
-        consistentData: results[0].dataLength === results[1].dataLength &&
-                        results[1].dataLength === results[2].dataLength,
+        consistentData:
+          results[0].dataLength === results[1].dataLength &&
+          results[1].dataLength === results[2].dataLength,
       };
     });
 

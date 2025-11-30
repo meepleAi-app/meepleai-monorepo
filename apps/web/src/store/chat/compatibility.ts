@@ -20,11 +20,13 @@
  * 4. Remove compatibility layer when all components migrated
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useChatStore } from './store';
 import { ChatThread, Message, Game, Agent } from '@/types';
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import type { FeedbackOutcome } from '@/lib/constants/feedback';
+import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
 
 export interface ChatContextValue {
   // Authentication (from AuthProvider - not migrated)
@@ -48,7 +50,7 @@ export interface ChatContextValue {
 
   // Messaging (from Zustand MessagesSlice)
   sendMessage: (content: string) => Promise<void>;
-  setMessageFeedback: (messageId: string, feedback: 'helpful' | 'not-helpful') => Promise<void>;
+  setMessageFeedback: (messageId: string, feedback: FeedbackOutcome) => Promise<void>;
   editMessage: (messageId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
 
@@ -82,6 +84,13 @@ export interface ChatContextValue {
   // Search Mode State (from Zustand UISlice)
   searchMode: string;
   setSearchMode: (mode: string) => void;
+
+  // Streaming State (Issue #1007)
+  isStreaming: boolean;
+  streamingAnswer: string;
+  streamingState: string;
+  streamingCitations: import('@/lib/api/schemas/streaming.schemas').Citation[];
+  stopStreaming: () => void;
 }
 
 /**
@@ -112,6 +121,58 @@ export function useChatContext(): ChatContextValue {
   const chats = selectedGameId ? (store.chatsByGame[selectedGameId] ?? []) : [];
   const messages = activeChatId ? (store.messagesByChat[activeChatId] ?? []) : [];
 
+  // Streaming hook (Issue #1007)
+  const [streamingState, streamingControls] = useStreamingChat({
+    onToken: useCallback((token: string, accumulated: string) => {
+      // Optional: Could add real-time token display logic here
+      // For now, state updates happen automatically via hook
+    }, []),
+    onStateUpdate: useCallback((state: string) => {
+      // Optional: Could add custom state update logic here
+      // For now, state updates happen automatically via hook
+    }, []),
+    onComplete: useCallback((answer: string, citations: import('@/lib/api/schemas/streaming.schemas').Citation[], confidence: number | null) => {
+      // When streaming completes, add assistant message to chat
+      if (!activeChatId) return;
+
+      const assistantMessage: Message = {
+        id: `temp-assistant-${Date.now()}`,
+        role: 'assistant',
+        content: answer,
+        timestamp: new Date(),
+        endpoint: 'qa-stream',
+        gameId: selectedGameId || undefined,
+      };
+
+      // Add to messages via store
+      store.addOptimisticMessage(assistantMessage, activeChatId);
+
+      // Reload messages to get backend-persisted version
+      void store.loadMessages(activeChatId);
+    }, [activeChatId, selectedGameId, store]),
+    onError: useCallback((err: Error) => {
+      store.setError(err.message || 'Errore durante lo streaming');
+    }, [store]),
+  });
+
+  // Wrap sendMessage to trigger streaming (Issue #1007)
+  const sendMessageWithStreaming = useCallback(
+    async (content: string) => {
+      if (!selectedGameId || !content.trim()) return;
+
+      // Send user message via store (adds to thread, updates backend)
+      await store.sendMessage(content);
+
+      // Get active chat ID after message is sent (might have created new thread)
+      const currentActiveChatId = selectedGameId ? store.activeChatIds[selectedGameId] : null;
+      if (!currentActiveChatId) return;
+
+      // Start SSE streaming for AI response
+      await streamingControls.startStreaming(selectedGameId, content.trim(), currentActiveChatId);
+    },
+    [selectedGameId, store, streamingControls]
+  );
+
   return useMemo<ChatContextValue>(
     () => ({
       // Authentication
@@ -134,7 +195,7 @@ export function useChatContext(): ChatContextValue {
       selectChat: store.selectChat,
 
       // Messaging
-      sendMessage: store.sendMessage,
+      sendMessage: sendMessageWithStreaming, // Issue #1007: Wrapped to trigger SSE streaming
       setMessageFeedback: store.setMessageFeedback,
       editMessage: store.editMessage,
       deleteMessage: store.deleteMessage,
@@ -162,6 +223,13 @@ export function useChatContext(): ChatContextValue {
       // Search Mode State
       searchMode: store.searchMode,
       setSearchMode: store.setSearchMode,
+
+      // Streaming State (Issue #1007)
+      isStreaming: streamingState.isStreaming,
+      streamingAnswer: streamingState.currentAnswer,
+      streamingState: streamingState.stateMessage,
+      streamingCitations: streamingState.citations,
+      stopStreaming: streamingControls.stopStreaming,
     }),
     [
       auth.user,
@@ -170,6 +238,12 @@ export function useChatContext(): ChatContextValue {
       activeChatId,
       chats,
       messages,
+      sendMessageWithStreaming,
+      streamingState.isStreaming,
+      streamingState.currentAnswer,
+      streamingState.stateMessage,
+      streamingState.citations,
+      streamingControls.stopStreaming,
     ]
   );
 }

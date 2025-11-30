@@ -1,92 +1,51 @@
-import { test, expect, Page } from '@playwright/test';
-import { getTextMatcher, t } from './fixtures/i18n';
+/**
+ * Chess Registration Journey - MIGRATED TO POM
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
 
-const apiBase = 'http://localhost:8080';
+import { test, expect } from '@playwright/test';
+import { AuthHelper, USER_FIXTURES } from './pages';
 
-async function setupAuthRoutes(page: Page) {
-  let authenticated = false;
-  const userResponse = {
-    user: {
-      id: 'new-user-1',
-      email: 'newuser@meepleai.dev',
-      displayName: 'New Chess Player',
-      role: 'User'
-    },
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-  };
-
-  await page.route(`${apiBase}/auth/me`, async (route) => {
-    if (authenticated) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(userResponse)
-      });
-    } else {
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' })
-      });
-    }
-  });
-
-  await page.route(`${apiBase}/auth/register`, async (route) => {
-    authenticated = true;
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(userResponse)
-    });
-  });
-
-  await page.route(`${apiBase}/auth/login`, async (route) => {
-    authenticated = true;
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(userResponse)
-    });
-  });
-
-  await page.route(`${apiBase}/agents/chess`, async (route) => {
-    const requestBody = route.request().postDataJSON() as { question: string; fenPosition: string };
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        answer: `Risposta alla domanda: ${requestBody.question}. La posizione attuale è: ${requestBody.fenPosition.substring(0, 20)}...`,
-        fen: null,
-        suggestedMoves: ['e2e4', 'Nf3', 'd2d4']
-      })
-    });
-  });
-
-  return {
-    authenticate() {
-      authenticated = true;
-    },
-    reset() {
-      authenticated = false;
-    },
-    userResponse
-  };
-}
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('Chess page - User registration and access journey', () => {
   test('allows a user to register and access the chess page', async ({ page }) => {
-    await setupAuthRoutes(page);
+    const authHelper = new AuthHelper(page);
+
+    // Mock unauthenticated initially, then successful register/login
+    await authHelper.mockUnauthenticatedSession();
+    await authHelper.mockLoginEndpoint(true, {
+      ...USER_FIXTURES.user,
+      email: 'newuser@meepleai.dev',
+      displayName: 'New Chess Player',
+    });
+
+    // Mock chess agent
+    await page.route(`${apiBase}/agents/chess`, async route => {
+      const requestBody = route.request().postDataJSON() as {
+        question: string;
+        fenPosition: string;
+      };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          answer: `Risposta alla domanda: ${requestBody.question}. La posizione attuale è: ${requestBody.fenPosition.substring(0, 20)}...`,
+          fen: null,
+          suggestedMoves: ['e2e4', 'Nf3', 'd2d4'],
+        }),
+      });
+    });
 
     // Step 1: Navigate to home page
     await page.goto('/');
 
     // Step 2: Open auth modal and wait for it to be visible
     await page.getByRole('button', { name: 'Get Started' }).first().click();
-    await page.waitForTimeout(500); // Wait for modal animation
 
     // Step 3: Switch to Register tab and wait for form switch animation
     await page.getByRole('button', { name: 'Register' }).click();
-    await page.waitForTimeout(800); // Wait for form switch animation to complete
 
     // Step 4: Fill registration form using reliable selectors
     // Find all email inputs and use the last visible one (register form)
@@ -98,7 +57,9 @@ test.describe('Chess page - User registration and access journey', () => {
     await passwordInputs.last().fill('ChessPlayer123!');
 
     // Display Name is optional - find text input that's not email/password
-    const displayNameInput = page.locator('input:not([type="email"]):not([type="password"]):not([type="submit"])').first();
+    const displayNameInput = page
+      .locator('input:not([type="email"]):not([type="password"]):not([type="submit"])')
+      .first();
     await displayNameInput.fill('New Chess Player');
 
     // Step 5: Submit registration
@@ -121,7 +82,9 @@ test.describe('Chess page - User registration and access journey', () => {
     // Verify chat interface is present
     await expect(page.getByRole('heading', { name: "Chat con l'Agente" })).toBeVisible();
     await expect(page.getByText('Benvenuto nella Chess Chat!')).toBeVisible();
-    await expect(page.getByPlaceholder('Chiedi consigli o analisi della posizione...')).toBeVisible();
+    await expect(
+      page.getByPlaceholder('Chiedi consigli o analisi della posizione...')
+    ).toBeVisible();
 
     // Verify game status is displayed
     await expect(page.getByText('Turno:')).toBeVisible();
@@ -167,7 +130,9 @@ test.describe('Chess page - User registration and access journey', () => {
 
     // Should show login required message
     await expect(page.getByRole('heading', { name: 'Accesso richiesto' })).toBeVisible();
-    await expect(page.getByText("Devi effettuare l'accesso per utilizzare la chat scacchi.")).toBeVisible();
+    await expect(
+      page.getByText("Devi effettuare l'accesso per utilizzare la chat scacchi.")
+    ).toBeVisible();
 
     // Should have link to go back to login
     await expect(page.getByRole('link', { name: 'Vai al Login' })).toBeVisible();
@@ -221,7 +186,9 @@ test.describe('Chess page - User registration and access journey', () => {
     await expect(rotateButton).toBeVisible();
   });
 
-  test('complete user journey: register, login, use chess agent, reset, ask again', async ({ page }) => {
+  test('complete user journey: register, login, use chess agent, reset, ask again', async ({
+    page,
+  }) => {
     await setupAuthRoutes(page);
 
     // 1. Register new user
@@ -230,10 +197,8 @@ test.describe('Chess page - User registration and access journey', () => {
     // Open auth modal and wait for animation
     await page.getByRole('button', { name: 'Get Started' }).first().click();
     await page.waitForTimeout(500); // Wait for modal animation
-
     // Switch to Register tab and wait for form switch animation
     await page.getByRole('button', { name: 'Register' }).click();
-    await page.waitForTimeout(800); // Wait for form switch animation to complete
 
     // Fill registration form using robust selectors
     const emailInputs = page.locator('input[type="email"]');
@@ -242,7 +207,9 @@ test.describe('Chess page - User registration and access journey', () => {
     const passwordInputs = page.locator('input[type="password"]');
     await passwordInputs.last().fill('ChessMaster123!');
 
-    const displayNameInput = page.locator('input:not([type="email"]):not([type="password"]):not([type="submit"])').first();
+    const displayNameInput = page
+      .locator('input:not([type="email"]):not([type="password"]):not([type="submit"])')
+      .first();
     await displayNameInput.fill('Chess Master');
     await page.getByRole('button', { name: 'Create Account' }).click();
 
@@ -261,7 +228,7 @@ test.describe('Chess page - User registration and access journey', () => {
 
     // 4. Ask second question
     input = page.getByPlaceholder('Chiedi consigli o analisi della posizione...');
-    await input.fill('Spiegami l\'arrocco');
+    await input.fill("Spiegami l'arrocco");
     await page.getByRole('button', { name: 'Invia' }).click();
     await expect(page.getByText(/Risposta alla domanda: Spiegami l'arrocco/)).toBeVisible();
 
@@ -279,7 +246,7 @@ test.describe('Chess page - User registration and access journey', () => {
 
     // 7. Ask new question after reset
     input = page.getByPlaceholder('Chiedi consigli o analisi della posizione...');
-    await input.fill('Qual è l\'apertura italiana?');
+    await input.fill("Qual è l'apertura italiana?");
     await page.getByRole('button', { name: 'Invia' }).click();
     await expect(page.getByText(/Risposta alla domanda: Qual è l'apertura italiana/)).toBeVisible();
   });

@@ -69,7 +69,7 @@ describe('Timeline Component', () => {
 
   describe('Visibility Toggle', () => {
     it('renders floating button when timeline is hidden', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={[]} isVisible={false} onToggleVisibility={onToggle} />);
 
       const button = screen.getByTitle('Mostra Timeline RAG');
@@ -78,7 +78,7 @@ describe('Timeline Component', () => {
     });
 
     it('shows event count badge on floating button when events exist', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={false} onToggleVisibility={onToggle} />);
 
       expect(screen.getByText('5')).toBeInTheDocument(); // Event count badge
@@ -86,7 +86,7 @@ describe('Timeline Component', () => {
 
     it('calls onToggleVisibility when floating button is clicked', async () => {
       const user = userEvent.setup();
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={[]} isVisible={false} onToggleVisibility={onToggle} />);
 
       const button = screen.getByTitle('Mostra Timeline RAG');
@@ -96,7 +96,7 @@ describe('Timeline Component', () => {
     });
 
     it('renders full timeline interface when visible', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       expect(screen.getByRole('heading', { name: /Timeline RAG/i })).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe('Timeline Component', () => {
 
     it('calls onToggleVisibility when close button is clicked', async () => {
       const user = userEvent.setup();
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       const closeButton = screen.getByText('Chiudi Timeline');
@@ -117,28 +117,28 @@ describe('Timeline Component', () => {
 
   describe('Multi-Pane Layout', () => {
     it('renders filters sidebar', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       expect(screen.getByText('Filtri Timeline')).toBeInTheDocument();
     });
 
     it('renders event list in center pane', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       expect(screen.getByText(/5 eventi trovati/i)).toBeInTheDocument();
     });
 
     it('renders event details panel', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       expect(screen.getByText('Dettagli Evento')).toBeInTheDocument();
     });
 
     it('shows empty state message in details panel initially', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       expect(screen.getByText(/Seleziona un evento dalla timeline per vedere i dettagli/i)).toBeInTheDocument();
@@ -147,7 +147,7 @@ describe('Timeline Component', () => {
 
   describe('Stats Bar', () => {
     it('displays total event count', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       // The text is split: <strong>5</strong> eventi totali
@@ -157,7 +157,7 @@ describe('Timeline Component', () => {
     });
 
     it('displays completed events count', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       const completedCount = mockEvents.filter(e => e.status === 'success').length;
@@ -168,7 +168,7 @@ describe('Timeline Component', () => {
     });
 
     it('displays error events count', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       const errorCount = mockEvents.filter(e => e.status === 'error').length;
@@ -180,7 +180,7 @@ describe('Timeline Component', () => {
     });
 
     it('displays total tokens when metrics are present', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       // The text is split: <strong>300</strong> token totali
@@ -190,7 +190,7 @@ describe('Timeline Component', () => {
     });
 
     it('does not render stats bar when no events exist', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={[]} isVisible={true} onToggleVisibility={onToggle} />);
 
       expect(screen.queryByText(/eventi totali/i)).not.toBeInTheDocument();
@@ -200,7 +200,7 @@ describe('Timeline Component', () => {
   describe('Event Selection', () => {
     it('selects event when clicked in event list', async () => {
       const user = userEvent.setup();
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       // Click on the message text itself (which is in the clickable event item)
@@ -216,7 +216,7 @@ describe('Timeline Component', () => {
 
     it('updates details panel when different event is selected', async () => {
       const user = userEvent.setup();
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       // Select first event by clicking its message text
@@ -242,7 +242,7 @@ describe('Timeline Component', () => {
   describe('Filter Collapse/Expand', () => {
     it('collapses filters sidebar when collapse button is clicked', async () => {
       const user = userEvent.setup();
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       const filtersHeading = screen.getByText('Filtri Timeline');
@@ -259,7 +259,7 @@ describe('Timeline Component', () => {
 
     it('expands filters sidebar when expand button is clicked', async () => {
       const user = userEvent.setup();
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       const { rerender } = render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       // Collapse first
@@ -283,7 +283,7 @@ describe('Timeline Component', () => {
   describe('Details Collapse/Expand', () => {
     it('collapses details panel when collapse button is clicked', async () => {
       const user = userEvent.setup();
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       const detailsHeading = screen.getByText('Dettagli Evento');
@@ -300,7 +300,7 @@ describe('Timeline Component', () => {
 
     it('expands details panel when expand button is clicked', async () => {
       const user = userEvent.setup();
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
       // First, select an event (expand button is disabled when no event is selected)
@@ -333,7 +333,7 @@ describe('Timeline Component', () => {
 
   describe('Empty State', () => {
     it('renders empty state when no events are provided', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={[]} isVisible={true} onToggleVisibility={onToggle} />);
 
       expect(screen.getByText(/Nessun evento trovato/i)).toBeInTheDocument();
@@ -343,7 +343,7 @@ describe('Timeline Component', () => {
 
   describe('Accessibility', () => {
     it('floating button has descriptive title', () => {
-      const onToggle = jest.fn();
+      const onToggle = vi.fn();
       render(<Timeline events={[]} isVisible={false} onToggleVisibility={onToggle} />);
 
       expect(screen.getByTitle('Mostra Timeline RAG')).toBeInTheDocument();

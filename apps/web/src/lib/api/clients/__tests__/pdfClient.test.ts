@@ -5,35 +5,36 @@
  * Tests: Processing progress, cancellation, download URLs, edge cases
  */
 
+import type { Mock } from 'vitest';
 import { createPdfClient } from '../pdfClient';
 import { HttpClient } from '../../core/httpClient';
 import { getApiBase } from '../../core/httpClient';
 
-jest.mock('../../core/httpClient', () => ({
-  ...jest.requireActual('../../core/httpClient'),
-  getApiBase: jest.fn(),
+vi.mock('../../core/httpClient', () => ({
+  ...vi.importActual('../../core/httpClient'),
+  getApiBase: vi.fn(),
 }));
 
 describe('createPdfClient', () => {
-  let mockHttpClient: jest.Mocked<HttpClient>;
+  let mockHttpClient: Mocked<HttpClient>;
   let pdfClient: ReturnType<typeof createPdfClient>;
 
   beforeEach(() => {
     mockHttpClient = {
-      get: jest.fn(),
-      post: jest.fn(),
-      put: jest.fn(),
-      delete: jest.fn(),
-      postFile: jest.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      postFile: vi.fn(),
     } as any;
 
     pdfClient = createPdfClient({ httpClient: mockHttpClient });
 
-    (getApiBase as jest.Mock).mockReturnValue('http://localhost:8080');
+    (getApiBase as Mock).mockReturnValue('http://localhost:8080');
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getProcessingProgress', () => {
@@ -105,10 +106,7 @@ describe('createPdfClient', () => {
 
       await pdfClient.getProcessingProgress('');
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/pdfs//progress',
-        expect.anything()
-      );
+      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/pdfs//progress', expect.anything());
     });
 
     it('should propagate httpClient errors', async () => {
@@ -151,9 +149,7 @@ describe('createPdfClient', () => {
 
       await pdfClient.cancelProcessing('pdf&id=123');
 
-      expect(mockHttpClient.delete).toHaveBeenCalledWith(
-        expect.stringContaining('pdf%26id%3D123')
-      );
+      expect(mockHttpClient.delete).toHaveBeenCalledWith(expect.stringContaining('pdf%26id%3D123'));
     });
 
     it('should handle UUID format pdfIds', async () => {
@@ -201,7 +197,7 @@ describe('createPdfClient', () => {
     });
 
     it('should use correct API base URL', () => {
-      (getApiBase as jest.Mock).mockReturnValueOnce('https://api.meepleai.dev');
+      (getApiBase as Mock).mockReturnValueOnce('https://api.meepleai.dev');
 
       const url = pdfClient.getPdfDownloadUrl('pdf-123');
 
@@ -209,7 +205,7 @@ describe('createPdfClient', () => {
     });
 
     it('should handle trailing slash in API base URL', () => {
-      (getApiBase as jest.Mock).mockReturnValueOnce('http://localhost:8080/');
+      (getApiBase as Mock).mockReturnValueOnce('http://localhost:8080/');
 
       const url = pdfClient.getPdfDownloadUrl('pdf-123');
 
@@ -292,9 +288,9 @@ describe('createPdfClient', () => {
       const result2 = await pdfClient.getProcessingProgress('pdf-123');
       const result3 = await pdfClient.getProcessingProgress('pdf-123');
 
-      expect(result1?.progress).toBe(0.3);
-      expect(result2?.progress).toBe(0.7);
-      expect(result3?.progress).toBe(1.0);
+      expect(result1?.percentComplete).toBe(30);
+      expect(result2?.percentComplete).toBe(70);
+      expect(result3?.percentComplete).toBe(100);
     });
 
     it('should handle cancel during processing', async () => {

@@ -8,11 +8,11 @@ import { useDebounce } from '../useDebounce';
 
 describe('useDebounce', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('should return initial value immediately', () => {
@@ -33,7 +33,7 @@ describe('useDebounce', () => {
     expect(result.current).toBe('initial');
 
     act(() => {
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
     });
 
     expect(result.current).toBe('updated');
@@ -45,13 +45,13 @@ describe('useDebounce', () => {
     });
 
     rerender({ value: 'change1' });
-    act(() => { jest.advanceTimersByTime(400); });
+    act(() => { vi.advanceTimersByTime(400); });
 
     rerender({ value: 'change2' });
-    act(() => { jest.advanceTimersByTime(400); });
+    act(() => { vi.advanceTimersByTime(400); });
 
     rerender({ value: 'final' });
-    act(() => { jest.advanceTimersByTime(500); });
+    act(() => { vi.advanceTimersByTime(500); });
 
     expect(result.current).toBe('final');
   });
@@ -62,7 +62,7 @@ describe('useDebounce', () => {
     rerender();
 
     act(() => {
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
     });
 
     expect(result.current).toBe('initial');
@@ -88,7 +88,7 @@ describe('useDebounce', () => {
     unmount();
 
     act(() => {
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
     });
 
     expect(true).toBe(true);

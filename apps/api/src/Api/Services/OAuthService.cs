@@ -58,17 +58,21 @@ public class OAuthService : IOAuthService
         var providerConfig = GetProviderConfig(provider);
         var callbackUrl = GetCallbackUrl(provider);
 
+        // Ensure we don't end up with duplicate '?' when AuthorizationUrl already has query params
+        var hasQuery = providerConfig.AuthorizationUrl.Contains('?');
+
         var authUrl = new StringBuilder(providerConfig.AuthorizationUrl);
-        authUrl.Append("?response_type=code");
+        authUrl.Append(hasQuery ? "&" : "?");
+        authUrl.Append("response_type=code");
         authUrl.Append($"&client_id={Uri.EscapeDataString(providerConfig.ClientId)}");
         authUrl.Append($"&redirect_uri={Uri.EscapeDataString(callbackUrl)}");
         authUrl.Append($"&scope={Uri.EscapeDataString(providerConfig.Scope)}");
         authUrl.Append($"&state={Uri.EscapeDataString(state)}");
 
-        // GitHub requires specific Accept header for JSON response
-        if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
+        // Google needs explicit offline access and re-consent to issue refresh tokens
+        if (provider.Equals("google", StringComparison.OrdinalIgnoreCase))
         {
-            authUrl.Append("&response_type=code");
+            authUrl.Append("&access_type=offline&prompt=consent");
         }
 
         _logger.LogDebug("Generated OAuth authorization URL for provider: {Provider}", provider);
@@ -158,7 +162,44 @@ public class OAuthService : IOAuthService
             throw new InvalidOperationException($"OAuth provider {provider} is not configured.");
         }
 
-        return config;
+        return NormalizeProviderConfig(providerKey, config);
+    }
+
+    private static OAuthProviderConfig NormalizeProviderConfig(string providerKey, OAuthProviderConfig config)
+    {
+        // Allow ${ENV_VAR} placeholders in appsettings to be resolved at runtime
+        string Resolve(string value, string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+
+            if (value.StartsWith("${") && value.EndsWith("}", StringComparison.Ordinal))
+            {
+                var envName = value.Substring(2, value.Length - 3);
+                var envValue = Environment.GetEnvironmentVariable(envName);
+                if (!string.IsNullOrWhiteSpace(envValue))
+                {
+                    return envValue;
+                }
+
+                throw new InvalidOperationException(
+                    $"OAuth {providerKey} {fieldName} is configured as placeholder {value} but environment variable {envName} is not set.");
+            }
+
+            return value;
+        }
+
+        return new OAuthProviderConfig
+        {
+            ClientId = Resolve(config.ClientId, "ClientId"),
+            ClientSecret = Resolve(config.ClientSecret, "ClientSecret"),
+            AuthorizationUrl = config.AuthorizationUrl,
+            TokenUrl = config.TokenUrl,
+            UserInfoUrl = config.UserInfoUrl,
+            Scope = config.Scope
+        };
     }
 
     private string GetCallbackUrl(string provider)

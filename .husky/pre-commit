@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Pre-commit hook for MeepleAI
+# Runs linting and type checking on staged files
+
+echo "🚀 Running pre-commit checks..."
+
+# Validate that apps/web directory exists
+if [ ! -d "apps/web" ]; then
+  echo "❌ Error: apps/web directory not found. Are you in the repository root?"
+  exit 1
+fi
+
+# Run lint-staged for frontend
+echo "🔍 Running lint-staged..."
+(cd apps/web && npx lint-staged) || {
+  echo "❌ Lint-staged checks failed. Please fix the issues before committing."
+  exit 1
+}
+
+# Run TypeScript type checking (frontend)
+echo "📘 Running TypeScript type check..."
+(cd apps/web && pnpm typecheck) || {
+  echo "❌ TypeScript errors found. Please fix them before committing."
+  exit 1
+}
+
+echo "✅ Pre-commit checks passed!"

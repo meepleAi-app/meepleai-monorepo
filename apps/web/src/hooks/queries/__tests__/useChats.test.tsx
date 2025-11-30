@@ -6,6 +6,7 @@
  * Tests TanStack Query hooks for chat thread management
  */
 
+import type { Mock } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import {
   useChats,
@@ -25,17 +26,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 
 // Mock API module
-jest.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   api: {
     chat: {
-      getThreadsByGame: jest.fn(),
-      getThreadById: jest.fn(),
-      createThread: jest.fn(),
-      addMessage: jest.fn(),
-      updateMessage: jest.fn(),
-      deleteMessage: jest.fn(),
-      closeThread: jest.fn(),
-      reopenThread: jest.fn(),
+      getThreadsByGame: vi.fn(),
+      getThreadById: vi.fn(),
+      createThread: vi.fn(),
+      addMessage: vi.fn(),
+      updateMessage: vi.fn(),
+      deleteMessage: vi.fn(),
+      closeThread: vi.fn(),
+      reopenThread: vi.fn(),
     },
   },
 }));
@@ -45,7 +46,7 @@ describe('useChats hooks', () => {
 
   beforeEach(() => {
     queryClient = createTestQueryClient();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -67,7 +68,7 @@ describe('useChats hooks', () => {
         { id: 'chat-1', gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'Chat 1', messages: [] },
         { id: 'chat-2', gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'Chat 2', messages: [] },
       ];
-      (api.chat.getThreadsByGame as jest.Mock).mockResolvedValue(mockChats);
+      (api.chat.getThreadsByGame as Mock).mockResolvedValue(mockChats);
 
       const { result } = renderHook(() => useChats('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
@@ -86,7 +87,7 @@ describe('useChats hooks', () => {
 
     it('handles fetch errors', async () => {
       const error = new Error('Failed to fetch chats');
-      (api.chat.getThreadsByGame as jest.Mock).mockRejectedValue(error);
+      (api.chat.getThreadsByGame as Mock).mockRejectedValue(error);
 
       const { result } = renderHook(() => useChats('770e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
@@ -99,7 +100,7 @@ describe('useChats hooks', () => {
   describe('useChatThread', () => {
     it('fetches a single chat thread', async () => {
       const mockThread = { id: 'aa0e8400-e29b-41d4-a716-000000000001', gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'Thread', messages: [] };
-      (api.chat.getThreadById as jest.Mock).mockResolvedValue(mockThread);
+      (api.chat.getThreadById as Mock).mockResolvedValue(mockThread);
 
       const { result } = renderHook(() => useChatThread('aa0e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
@@ -120,7 +121,7 @@ describe('useChats hooks', () => {
   describe('useMessages', () => {
     it('fetches messages for a chat (alias for useChatThread)', async () => {
       const mockThread = { id: 'aa0e8400-e29b-41d4-a716-000000000001', gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'Thread', messages: [] };
-      (api.chat.getThreadById as jest.Mock).mockResolvedValue(mockThread);
+      (api.chat.getThreadById as Mock).mockResolvedValue(mockThread);
 
       const { result } = renderHook(() => useMessages('aa0e8400-e29b-41d4-a716-000000000001'), { wrapper });
 
@@ -135,7 +136,7 @@ describe('useChats hooks', () => {
     it('creates a new chat thread', async () => {
       const request = { gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'New Chat' };
       const mockNewChat = { id: 'new-chat', ...request, messages: [] };
-      (api.chat.createThread as jest.Mock).mockResolvedValue(mockNewChat);
+      (api.chat.createThread as Mock).mockResolvedValue(mockNewChat);
 
       const { result } = renderHook(() => useCreateChat(), { wrapper });
 
@@ -150,9 +151,9 @@ describe('useChats hooks', () => {
     it('invalidates game chats query on success', async () => {
       const request = { gameId: '770e8400-e29b-41d4-a716-000000000001', title: 'New Chat' };
       const mockNewChat = { id: 'new-chat', ...request, messages: [] };
-      (api.chat.createThread as jest.Mock).mockResolvedValue(mockNewChat);
+      (api.chat.createThread as Mock).mockResolvedValue(mockNewChat);
 
-      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       const { result } = renderHook(() => useCreateChat(), { wrapper });
 
@@ -174,7 +175,7 @@ describe('useChats hooks', () => {
         gameId: '770e8400-e29b-41d4-a716-000000000001',
         messages: [{ id: 'msg-1', ...request }],
       };
-      (api.chat.addMessage as jest.Mock).mockResolvedValue(mockUpdatedThread);
+      (api.chat.addMessage as Mock).mockResolvedValue(mockUpdatedThread);
 
       const { result } = renderHook(() => useAddMessage(), { wrapper });
 
@@ -193,9 +194,9 @@ describe('useChats hooks', () => {
         gameId: '770e8400-e29b-41d4-a716-000000000001',
         messages: [{ id: 'msg-1', ...request }],
       };
-      (api.chat.addMessage as jest.Mock).mockResolvedValue(mockUpdatedThread);
+      (api.chat.addMessage as Mock).mockResolvedValue(mockUpdatedThread);
 
-      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       const { result } = renderHook(() => useAddMessage(), { wrapper });
 
@@ -215,7 +216,7 @@ describe('useChats hooks', () => {
   describe('useEditMessage', () => {
     it('edits a message', async () => {
       const variables = { chatId: 'chat-1', messageId: 'msg-1', content: 'Updated' };
-      (api.chat.updateMessage as jest.Mock).mockResolvedValue({ success: true });
+      (api.chat.updateMessage as Mock).mockResolvedValue({ success: true });
 
       const { result } = renderHook(() => useEditMessage(), { wrapper });
 
@@ -228,9 +229,9 @@ describe('useChats hooks', () => {
 
     it('invalidates chat thread on success', async () => {
       const variables = { chatId: 'chat-1', messageId: 'msg-1', content: 'Updated' };
-      (api.chat.updateMessage as jest.Mock).mockResolvedValue({ success: true });
+      (api.chat.updateMessage as Mock).mockResolvedValue({ success: true });
 
-      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       const { result } = renderHook(() => useEditMessage(), { wrapper });
 
@@ -247,7 +248,7 @@ describe('useChats hooks', () => {
   describe('useDeleteMessage', () => {
     it('deletes a message', async () => {
       const variables = { chatId: 'chat-1', messageId: 'msg-1' };
-      (api.chat.deleteMessage as jest.Mock).mockResolvedValue(undefined);
+      (api.chat.deleteMessage as Mock).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useDeleteMessage(), { wrapper });
 
@@ -260,9 +261,9 @@ describe('useChats hooks', () => {
 
     it('invalidates chat thread on success', async () => {
       const variables = { chatId: 'chat-1', messageId: 'msg-1' };
-      (api.chat.deleteMessage as jest.Mock).mockResolvedValue(undefined);
+      (api.chat.deleteMessage as Mock).mockResolvedValue(undefined);
 
-      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       const { result } = renderHook(() => useDeleteMessage(), { wrapper });
 
@@ -284,7 +285,7 @@ describe('useChats hooks', () => {
         closed: true,
         messages: [],
       };
-      (api.chat.closeThread as jest.Mock).mockResolvedValue(mockClosedThread);
+      (api.chat.closeThread as Mock).mockResolvedValue(mockClosedThread);
 
       const { result } = renderHook(() => useCloseChat(), { wrapper });
 
@@ -303,9 +304,9 @@ describe('useChats hooks', () => {
         closed: true,
         messages: [],
       };
-      (api.chat.closeThread as jest.Mock).mockResolvedValue(mockClosedThread);
+      (api.chat.closeThread as Mock).mockResolvedValue(mockClosedThread);
 
-      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       const { result } = renderHook(() => useCloseChat(), { wrapper });
 
@@ -330,7 +331,7 @@ describe('useChats hooks', () => {
         closed: false,
         messages: [],
       };
-      (api.chat.reopenThread as jest.Mock).mockResolvedValue(mockReopenedThread);
+      (api.chat.reopenThread as Mock).mockResolvedValue(mockReopenedThread);
 
       const { result } = renderHook(() => useReopenChat(), { wrapper });
 
@@ -349,9 +350,9 @@ describe('useChats hooks', () => {
         closed: false,
         messages: [],
       };
-      (api.chat.reopenThread as jest.Mock).mockResolvedValue(mockReopenedThread);
+      (api.chat.reopenThread as Mock).mockResolvedValue(mockReopenedThread);
 
-      const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       const { result } = renderHook(() => useReopenChat(), { wrapper });
 

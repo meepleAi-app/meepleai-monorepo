@@ -1,33 +1,20 @@
-import { test, expect, Page } from '@playwright/test';
-import { getTextMatcher, t } from './fixtures/i18n';
+/**
+ * RuleSpec Versions History E2E - MIGRATED TO POM
+ *
+ * Tests version history, diff viewing, and version restoration.
+ *
+ * @see apps/web/e2e/pages/ - Page Object Model architecture
+ */
 
-const apiBase = 'http://localhost:8080';
+import { test, expect } from '@playwright/test';
+import { AuthHelper, USER_FIXTURES } from './pages';
 
-async function mockAuth(page: Page, shouldAuthenticate = true) {
-  await page.route(`${apiBase}/auth/me`, async (route) => {
-    if (!shouldAuthenticate) {
-      await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: 'Unauthorized' }) });
-      return;
-    }
-
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        user: {
-          id: 'admin-1',
-          email: 'admin@example.com',
-          role: 'Admin'
-        },
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
-      })
-    });
-  });
-}
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('RuleSpec versions history', () => {
   test('shows history, diff and allows restoring a version', async ({ page }) => {
-    await mockAuth(page, true);
+    const authHelper = new AuthHelper(page);
+    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
     const historyData = {
       gameId: 'demo-chess',
@@ -37,21 +24,21 @@ test.describe('RuleSpec versions history', () => {
           version: 'v3',
           createdAt: new Date('2025-01-03T09:00:00Z').toISOString(),
           ruleCount: 58,
-          createdBy: 'admin@example.com'
+          createdBy: 'admin@example.com',
         },
         {
           version: 'v2',
           createdAt: new Date('2025-01-02T09:00:00Z').toISOString(),
           ruleCount: 56,
-          createdBy: 'editor@example.com'
+          createdBy: 'editor@example.com',
         },
         {
           version: 'v1',
           createdAt: new Date('2025-01-01T09:00:00Z').toISOString(),
           ruleCount: 52,
-          createdBy: 'editor@example.com'
-        }
-      ]
+          createdBy: 'editor@example.com',
+        },
+      ],
     };
 
     const specsByVersion: Record<string, any> = {
@@ -59,13 +46,16 @@ test.describe('RuleSpec versions history', () => {
         gameId: 'demo-chess',
         version: 'v1',
         createdAt: new Date('2025-01-01T09:00:00Z').toISOString(),
-        rules: [{ id: 'rule-1', text: 'Setup pedine' }]
+        rules: [{ id: 'rule-1', text: 'Setup pedine' }],
       },
       v2: {
         gameId: 'demo-chess',
         version: 'v2',
         createdAt: new Date('2025-01-02T09:00:00Z').toISOString(),
-        rules: [{ id: 'rule-1', text: 'Setup pedine' }, { id: 'rule-2', text: 'Turno giocatore' }]
+        rules: [
+          { id: 'rule-1', text: 'Setup pedine' },
+          { id: 'rule-2', text: 'Turno giocatore' },
+        ],
       },
       v3: {
         gameId: 'demo-chess',
@@ -74,9 +64,9 @@ test.describe('RuleSpec versions history', () => {
         rules: [
           { id: 'rule-1', text: 'Setup pedine' },
           { id: 'rule-2', text: 'Turno giocatore' },
-          { id: 'rule-3', text: 'Scacco matto' }
-        ]
-      }
+          { id: 'rule-3', text: 'Scacco matto' },
+        ],
+      },
     };
 
     const diffResponses: Record<string, any> = {
@@ -91,21 +81,25 @@ test.describe('RuleSpec versions history', () => {
           {
             type: 'Added',
             newAtom: 'rule-3',
-            newValue: { id: 'rule-3', text: 'Scacco matto', section: 'Finale', page: '12' }
+            newValue: { id: 'rule-3', text: 'Scacco matto', section: 'Finale', page: '12' },
           },
           {
             type: 'Modified',
             newAtom: 'rule-2',
             fieldChanges: [
-              { fieldName: 'text', oldValue: 'Turno giocatore', newValue: 'Sequenza turno aggiornata' }
-            ]
+              {
+                fieldName: 'text',
+                oldValue: 'Turno giocatore',
+                newValue: 'Sequenza turno aggiornata',
+              },
+            ],
           },
           {
             type: 'Unchanged',
             oldAtom: 'rule-1',
-            oldValue: { id: 'rule-1', text: 'Setup pedine' }
-          }
-        ]
+            oldValue: { id: 'rule-1', text: 'Setup pedine' },
+          },
+        ],
       },
       'v3->v4': {
         gameId: 'demo-chess',
@@ -118,52 +112,62 @@ test.describe('RuleSpec versions history', () => {
           {
             type: 'Unchanged',
             oldAtom: 'rule-1',
-            oldValue: { id: 'rule-1', text: 'Setup pedine' }
-          }
-        ]
-      }
+            oldValue: { id: 'rule-1', text: 'Setup pedine' },
+          },
+        ],
+      },
     };
 
-    await page.route(`${apiBase}/games/demo-chess/rulespec/history`, async (route) => {
+    await page.route(`${apiBase}/games/demo-chess/rulespec/history`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(historyData)
+        body: JSON.stringify(historyData),
       });
     });
 
-    await page.route(new RegExp(`${apiBase}/games/demo-chess/rulespec/diff.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/games/demo-chess/rulespec/diff.*`), async route => {
       const url = new URL(route.request().url());
       const key = `${url.searchParams.get('from')}->${url.searchParams.get('to')}`;
       const diff = diffResponses[key] ?? diffResponses['v2->v3'];
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(diff)
+        body: JSON.stringify(diff),
       });
     });
 
-    await page.route(new RegExp(`${apiBase}/games/demo-chess/rulespec/versions/.*`), async (route) => {
-      const version = route.request().url().split('/').pop()!;
-      const spec = specsByVersion[version];
-      if (!spec) {
-        await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Not found' }) });
-        return;
+    await page.route(
+      new RegExp(`${apiBase}/games/demo-chess/rulespec/versions/.*`),
+      async route => {
+        const version = route.request().url().split('/').pop()!;
+        const spec = specsByVersion[version];
+        if (!spec) {
+          await route.fulfill({
+            status: 404,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'Not found' }),
+          });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(spec),
+        });
       }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(spec)
-      });
-    });
+    );
 
-    await page.route(`${apiBase}/games/demo-chess/rulespec`, async (route) => {
-      const restoredSpec = route.request().postDataJSON() as { rules?: unknown[] } & Record<string, any>;
+    await page.route(`${apiBase}/games/demo-chess/rulespec`, async route => {
+      const restoredSpec = route.request().postDataJSON() as { rules?: unknown[] } & Record<
+        string,
+        any
+      >;
       const createdAt = new Date('2025-01-04T09:00:00Z').toISOString();
       const newSpecVersion = {
         ...restoredSpec,
         version: 'v4',
-        createdAt
+        createdAt,
       };
 
       historyData.versions = [
@@ -171,21 +175,21 @@ test.describe('RuleSpec versions history', () => {
           version: newSpecVersion.version,
           createdAt,
           ruleCount: Array.isArray(restoredSpec.rules) ? restoredSpec.rules.length : 0,
-          createdBy: 'admin@example.com'
+          createdBy: 'admin@example.com',
         },
-        ...historyData.versions
+        ...historyData.versions,
       ];
       historyData.totalVersions = historyData.versions.length;
       specsByVersion.v4 = newSpecVersion;
       diffResponses['v3->v4'] = {
         ...diffResponses['v3->v4'],
-        toCreatedAt: createdAt
+        toCreatedAt: createdAt,
       };
 
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(newSpecVersion)
+        body: JSON.stringify(newSpecVersion),
       });
     });
 
@@ -218,14 +222,22 @@ test.describe('RuleSpec versions history', () => {
     const restoreButton = page.getByRole('button', { name: 'Ripristina' }).nth(1);
     await restoreButton.click();
 
-    const confirmMessages = await page.evaluate(() => (window as any).__confirmMessages as string[]);
-    expect(confirmMessages.some((message) => message.includes('Sei sicuro di voler ripristinare la versione v2'))).toBeTruthy();
+    const confirmMessages = await page.evaluate(
+      () => (window as any).__confirmMessages as string[]
+    );
+    expect(
+      confirmMessages.some(message =>
+        message.includes('Sei sicuro di voler ripristinare la versione v2')
+      )
+    ).toBeTruthy();
 
     await page.waitForResponse(`${apiBase}/games/demo-chess/rulespec/versions/v2`);
     await page.waitForResponse(`${apiBase}/games/demo-chess/rulespec`);
     await page.waitForResponse(`${apiBase}/games/demo-chess/rulespec/history`);
 
-    await expect(page.getByText('Versione v2 ripristinata con successo come versione v4')).toBeVisible();
+    await expect(
+      page.getByText('Versione v2 ripristinata con successo come versione v4')
+    ).toBeVisible();
     await expect(page.getByText('Versioni (4)')).toBeVisible();
     await expect(page.getByText('v4')).toBeVisible();
   });
@@ -235,18 +247,20 @@ test.describe('RuleSpec versions history', () => {
 
     await page.goto('/versions?gameId=demo-chess');
 
-    await expect(page.getByText("Devi effettuare l'accesso per visualizzare lo storico.")).toBeVisible();
+    await expect(
+      page.getByText("Devi effettuare l'accesso per visualizzare lo storico.")
+    ).toBeVisible();
     await expect(page.getByRole('link', { name: 'Torna alla home' })).toBeVisible();
   });
 
   test('displays an error banner when history retrieval fails', async ({ page }) => {
     await mockAuth(page, true);
 
-    await page.route(`${apiBase}/games/demo-chess/rulespec/history`, async (route) => {
+    await page.route(`${apiBase}/games/demo-chess/rulespec/history`, async route => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Server error' })
+        body: JSON.stringify({ error: 'Server error' }),
       });
     });
 
@@ -266,15 +280,15 @@ test.describe('RuleSpec versions history', () => {
           version: 'v2',
           createdAt: new Date('2025-01-02T09:00:00Z').toISOString(),
           ruleCount: 10,
-          createdBy: 'admin@example.com'
+          createdBy: 'admin@example.com',
         },
         {
           version: 'v1',
           createdAt: new Date('2025-01-01T09:00:00Z').toISOString(),
           ruleCount: 8,
-          createdBy: 'admin@example.com'
-        }
-      ]
+          createdBy: 'admin@example.com',
+        },
+      ],
     };
 
     const diffData = {
@@ -284,7 +298,7 @@ test.describe('RuleSpec versions history', () => {
       fromCreatedAt: historyData.versions[1].createdAt,
       toCreatedAt: historyData.versions[0].createdAt,
       summary: { totalChanges: 2, added: 2, modified: 0, deleted: 0, unchanged: 8 },
-      changes: []
+      changes: [],
     };
 
     const commentsData: {
@@ -315,82 +329,91 @@ test.describe('RuleSpec versions history', () => {
           userDisplayName: 'admin@example.com',
           commentText: 'This version looks good overall',
           createdAt: new Date('2025-01-02T10:00:00Z').toISOString(),
-          updatedAt: null
-        }
+          updatedAt: null,
+        },
       ],
-      totalComments: 1
+      totalComments: 1,
     };
 
-    await page.route(`${apiBase}/games/demo-chess/rulespec/history`, async (route) => {
+    await page.route(`${apiBase}/games/demo-chess/rulespec/history`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(historyData)
+        body: JSON.stringify(historyData),
       });
     });
 
-    await page.route(new RegExp(`${apiBase}/games/demo-chess/rulespec/diff.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/games/demo-chess/rulespec/diff.*`), async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(diffData)
+        body: JSON.stringify(diffData),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/games/demo-chess/rulespec/versions/v2/comments`, async (route) => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(commentsData)
-        });
-      } else if (route.request().method() === 'POST') {
-        const postData = route.request().postDataJSON() as { commentText: string; atomId: string | null };
-        const newComment = {
-          id: 'comment-2',
-          gameId: 'demo-chess',
-          version: 'v2',
-          atomId: postData.atomId,
-          userId: 'admin-1',
-          userDisplayName: 'admin@example.com',
-          commentText: postData.commentText,
-          createdAt: new Date().toISOString(),
-          updatedAt: null
-        };
-        commentsData.comments.push(newComment);
-        commentsData.totalComments = commentsData.comments.length;
-        await route.fulfill({
-          status: 201,
-          contentType: 'application/json',
-          body: JSON.stringify(newComment)
-        });
-      }
-    });
-
-    await page.route(new RegExp(`${apiBase}/api/v1/games/demo-chess/rulespec/comments/.*`), async (route) => {
-      const method = route.request().method();
-      const commentId = route.request().url().split('/').pop()!;
-
-      if (method === 'PUT') {
-        const putData = route.request().postDataJSON() as { commentText: string };
-        const comment = commentsData.comments.find((c) => c.id === commentId);
-        if (comment) {
-          comment.commentText = putData.commentText;
-          comment.updatedAt = new Date().toISOString();
+    await page.route(
+      `${apiBase}/api/v1/games/demo-chess/rulespec/versions/v2/comments`,
+      async route => {
+        if (route.request().method() === 'GET') {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify(comment)
+            body: JSON.stringify(commentsData),
           });
-        } else {
-          await route.fulfill({ status: 404 });
+        } else if (route.request().method() === 'POST') {
+          const postData = route.request().postDataJSON() as {
+            commentText: string;
+            atomId: string | null;
+          };
+          const newComment = {
+            id: 'comment-2',
+            gameId: 'demo-chess',
+            version: 'v2',
+            atomId: postData.atomId,
+            userId: 'admin-1',
+            userDisplayName: 'admin@example.com',
+            commentText: postData.commentText,
+            createdAt: new Date().toISOString(),
+            updatedAt: null,
+          };
+          commentsData.comments.push(newComment);
+          commentsData.totalComments = commentsData.comments.length;
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify(newComment),
+          });
         }
-      } else if (method === 'DELETE') {
-        commentsData.comments = commentsData.comments.filter((c) => c.id !== commentId);
-        commentsData.totalComments = commentsData.comments.length;
-        await route.fulfill({ status: 204 });
       }
-    });
+    );
+
+    await page.route(
+      new RegExp(`${apiBase}/api/v1/games/demo-chess/rulespec/comments/.*`),
+      async route => {
+        const method = route.request().method();
+        const commentId = route.request().url().split('/').pop()!;
+
+        if (method === 'PUT') {
+          const putData = route.request().postDataJSON() as { commentText: string };
+          const comment = commentsData.comments.find(c => c.id === commentId);
+          if (comment) {
+            comment.commentText = putData.commentText;
+            comment.updatedAt = new Date().toISOString();
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify(comment),
+            });
+          } else {
+            await route.fulfill({ status: 404 });
+          }
+        } else if (method === 'DELETE') {
+          commentsData.comments = commentsData.comments.filter(c => c.id !== commentId);
+          commentsData.totalComments = commentsData.comments.length;
+          await route.fulfill({ status: 204 });
+        }
+      }
+    );
 
     await page.addInitScript(() => {
       (window as any).__confirmMessages = [] as string[];
@@ -425,23 +448,35 @@ test.describe('RuleSpec versions history', () => {
     const editButton = page.getByRole('button', { name: 'Modifica' }).first();
     await editButton.click();
 
-    const editTextarea = page.locator('textarea').filter({ hasText: 'This version looks good overall' });
+    const editTextarea = page
+      .locator('textarea')
+      .filter({ hasText: 'This version looks good overall' });
     await editTextarea.fill('This version is excellent!');
 
     const saveButton = page.getByRole('button', { name: 'Salva' });
     await saveButton.click();
 
-    await page.waitForResponse(new RegExp(`${apiBase}/api/v1/games/demo-chess/rulespec/comments/.*`));
+    await page.waitForResponse(
+      new RegExp(`${apiBase}/api/v1/games/demo-chess/rulespec/comments/.*`)
+    );
     await expect(page.getByText('This version is excellent!')).toBeVisible();
 
     // Delete the second comment
     const deleteButton = page.getByRole('button', { name: 'Elimina' }).last();
     await deleteButton.click();
 
-    const confirmMessages = await page.evaluate(() => (window as any).__confirmMessages as string[]);
-    expect(confirmMessages.some((message) => message.includes('Sei sicuro di voler eliminare questo commento'))).toBeTruthy();
+    const confirmMessages = await page.evaluate(
+      () => (window as any).__confirmMessages as string[]
+    );
+    expect(
+      confirmMessages.some(message =>
+        message.includes('Sei sicuro di voler eliminare questo commento')
+      )
+    ).toBeTruthy();
 
-    await page.waitForResponse(new RegExp(`${apiBase}/api/v1/games/demo-chess/rulespec/comments/.*`));
+    await page.waitForResponse(
+      new RegExp(`${apiBase}/api/v1/games/demo-chess/rulespec/comments/.*`)
+    );
     await expect(page.getByText('Commenti (1)')).toBeVisible();
     await expect(page.getByText('Great improvements in v2!')).not.toBeVisible();
   });
@@ -457,9 +492,9 @@ test.describe('RuleSpec versions history', () => {
           version: 'v1',
           createdAt: new Date('2025-01-01T09:00:00Z').toISOString(),
           ruleCount: 8,
-          createdBy: 'admin@example.com'
-        }
-      ]
+          createdBy: 'admin@example.com',
+        },
+      ],
     };
 
     const diffData = {
@@ -469,39 +504,42 @@ test.describe('RuleSpec versions history', () => {
       fromCreatedAt: historyData.versions[0].createdAt,
       toCreatedAt: historyData.versions[0].createdAt,
       summary: { totalChanges: 0, added: 0, modified: 0, deleted: 0, unchanged: 8 },
-      changes: []
+      changes: [],
     };
 
     const emptyCommentsData = {
       gameId: 'demo-chess',
       version: 'v1',
       comments: [],
-      totalComments: 0
+      totalComments: 0,
     };
 
-    await page.route(`${apiBase}/games/demo-chess/rulespec/history`, async (route) => {
+    await page.route(`${apiBase}/games/demo-chess/rulespec/history`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(historyData)
+        body: JSON.stringify(historyData),
       });
     });
 
-    await page.route(new RegExp(`${apiBase}/games/demo-chess/rulespec/diff.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/games/demo-chess/rulespec/diff.*`), async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(diffData)
+        body: JSON.stringify(diffData),
       });
     });
 
-    await page.route(`${apiBase}/api/v1/games/demo-chess/rulespec/versions/v1/comments`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(emptyCommentsData)
-      });
-    });
+    await page.route(
+      `${apiBase}/api/v1/games/demo-chess/rulespec/versions/v1/comments`,
+      async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(emptyCommentsData),
+        });
+      }
+    );
 
     await page.goto('/versions?gameId=demo-chess');
 

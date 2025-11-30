@@ -32,7 +32,7 @@ jobs:
       web: ${{ steps.filter.outputs.web }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Paths Filter
@@ -55,7 +55,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup frontend environment
         uses: ./.github/actions/setup-frontend
@@ -84,7 +84,7 @@ jobs:
           NODE_ENV: production
 
       - name: Upload Next.js Build Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: nextjs-build-${{ github.sha }}
           path: |
@@ -94,15 +94,16 @@ jobs:
           retention-days: 1
 
   lighthouse-performance:
-    needs: build-nextjs
+    needs: [changes, build-nextjs]
     name: Lighthouse - Performance Testing
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true'
     defaults:
       run:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup frontend environment
         uses: ./.github/actions/setup-frontend
@@ -118,7 +119,7 @@ jobs:
           working-directory: apps/web
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: nextjs-build-${{ github.sha }}
           path: apps/web
@@ -130,7 +131,7 @@ jobs:
 
       - name: Upload Playwright Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lighthouse-playwright-report-${{ github.run_number }}
           path: apps/web/playwright-report/
@@ -150,22 +151,23 @@ jobs:
 
       - name: Upload Lighthouse Reports
         if: always() && steps.check-reports.outputs.reports_exist == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lighthouse-reports-${{ github.run_number }}
           path: apps/web/lighthouse-reports/
           retention-days: 7
 
   lighthouse-cli:
-    needs: build-nextjs
+    needs: [changes, build-nextjs]
     name: Lighthouse CI - Core Web Vitals
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true'
     defaults:
       run:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -178,7 +180,7 @@ jobs:
           frozen-lockfile: 'false'
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: nextjs-build-${{ github.sha }}
           path: apps/web
@@ -191,7 +193,7 @@ jobs:
 
       - name: Upload Lighthouse CI Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci/
@@ -239,16 +241,16 @@ jobs:
             }
 
   performance-regression-check:
-    needs: [build-nextjs, lighthouse-cli]
+    needs: [changes, build-nextjs, lighthouse-cli]
     name: Check Performance Regression
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: needs.changes.outputs.web == 'true' && github.event_name == 'pull_request'
     defaults:
       run:
         working-directory: apps/web
     steps:
       - name: Checkout PR Branch
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -256,7 +258,7 @@ jobs:
           node-version: 20
 
       - name: Download PR Lighthouse Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci-pr

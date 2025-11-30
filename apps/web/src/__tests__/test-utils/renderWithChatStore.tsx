@@ -24,7 +24,6 @@ import { createGameSlice } from '@/store/chat/slices/gameSlice';
 import { createChatSlice } from '@/store/chat/slices/chatSlice';
 import { createMessagesSlice } from '@/store/chat/slices/messagesSlice';
 import { createUISlice } from '@/store/chat/slices/uiSlice';
-import { createMockAgent } from '@/__tests__/fixtures/common-fixtures';
 
 // ============================================================================
 // Test Store Creation
@@ -119,7 +118,7 @@ export function renderWithChatStore(
   testStore = store;
 
   // Mock the useChatStore hook globally
-  jest.mock('@/store/chat/ChatStoreProvider', () => ({
+  vi.mock('@/store/chat/ChatStoreProvider', () => ({
     useChatStore: mockUseChatStore,
     ChatStoreProvider: ({ children }: PropsWithChildren) => (
       <TestChatStoreProvider store={store}>{children}</TestChatStoreProvider>
@@ -197,18 +196,25 @@ export function createFullChatState(): Partial<ChatStore> {
     games: [
       {
         id: gameId,
-        name: 'Chess',
+        title: 'Chess',
         createdAt: new Date().toISOString(),
       },
     ],
 
     agents: [
-      createMockAgent({
+      {
         id: agentId,
         name: 'QA Agent',
         type: 'qa',
+        strategyName: 'default',
+        strategyParameters: {},
+        isActive: true,
         createdAt: new Date().toISOString(),
-      }),
+        lastInvokedAt: null,
+        invocationCount: 0,
+        isRecentlyUsed: false,
+        isIdle: true,
+      },
     ],
 
     chatsByGame: {

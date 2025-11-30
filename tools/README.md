@@ -555,3 +555,59 @@ gh issue list --search "milestone:'Phase 2' is:open"
 **Prerequisiti**: GitHub CLI (`gh`) installato e autenticato
 
 **Documentazione Completa**: Vedi `EXECUTIVE_SUMMARY_ISSUE_TRIAGE.md`
+
+### 18. Golden Dataset Accuracy Evaluation
+
+**File**: `run-golden-dataset-evaluation.ps1`
+
+**Issue**: #999 (BGAI-059) - Quality test implementation for accuracy validation
+
+Script PowerShell per valutazione completa dell'accuracy RAG contro 1000 test cases annotati da esperti.
+
+**Uso**:
+
+```powershell
+# Valutazione completa (tutti i 1000 casi, ~$5, 10 min)
+powershell.exe -ExecutionPolicy Bypass -File tools/run-golden-dataset-evaluation.ps1
+
+# Valutazione campionata (50 casi, ~$0.25, 2 min)
+powershell.exe -ExecutionPolicy Bypass -File tools/run-golden-dataset-evaluation.ps1 -SampleSize 50
+
+# Dry run (solo statistiche, no API calls)
+powershell.exe -ExecutionPolicy Bypass -File tools/run-golden-dataset-evaluation.ps1 -DryRun
+```
+
+**Prerequisiti**:
+- API in esecuzione (`cd apps/api/src/Api && dotnet run`)
+- OpenRouter API key configurato
+- Dataset golden: `tests/data/golden_dataset.json`
+
+**Output**:
+- Console: Progresso real-time e summary
+- Report: `claudedocs/quality/golden-dataset-results.md` (markdown dettagliato)
+
+**Metriche Calcolate**:
+- Accuracy globale (target: ≥80%)
+- Accuracy per difficoltà (easy/medium/hard)
+- Accuracy per categoria (gameplay/setup/endgame/edge_cases)
+- Accuracy per gioco
+- Confidence media
+- Lista test cases falliti
+
+**Exit Codes**:
+- `0`: Success (accuracy ≥80%)
+- `1`: Failure (accuracy <80% o errore API)
+
+**Quando usarlo**:
+- **Pre-release**: Validazione completa (1000 casi)
+- **Weekly QA**: Campionamento (100-200 casi)
+- **Development**: Dry run per statistiche
+
+**Costo API**: ~$0.005 per test case (OpenRouter GPT-4 Turbo)
+
+**Documentazione**: Vedi `docs/02-development/testing/golden-dataset-testing-guide.md`
+
+---
+
+**Ultimo Aggiornamento**: 2025-11-28
+**Issue**: #999 (BGAI-059)

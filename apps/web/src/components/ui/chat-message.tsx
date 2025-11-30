@@ -12,7 +12,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { MeepleAvatar, type MeepleAvatarState } from './meeple-avatar';
 import { Avatar, AvatarImage, AvatarFallback } from './avatar';
-import { Badge } from './badge';
+import { ConfidenceBadge as StandaloneConfidenceBadge } from './confidence-badge';
 
 // ============================================================================
 // Types
@@ -64,21 +64,7 @@ function getAvatarState(confidence?: number, isTyping?: boolean): MeepleAvatarSt
   return 'uncertain';
 }
 
-/**
- * Maps confidence score to badge variant and color
- */
-function getConfidenceBadgeVariant(confidence: number): {
-  variant: 'default' | 'secondary' | 'destructive';
-  colorClass: string;
-} {
-  if (confidence >= 85) {
-    return { variant: 'default', colorClass: 'bg-green-500 hover:bg-green-600' };
-  }
-  if (confidence >= 70) {
-    return { variant: 'secondary', colorClass: 'bg-yellow-500 hover:bg-yellow-600' };
-  }
-  return { variant: 'destructive', colorClass: 'bg-red-500 hover:bg-red-600' };
-}
+// Note: getConfidenceBadgeVariant removed - using standalone ConfidenceBadge component
 
 /**
  * Formats timestamp for display
@@ -93,28 +79,7 @@ function formatTimestamp(timestamp?: string | Date): string {
 // Sub-Components
 // ============================================================================
 
-/**
- * ConfidenceBadge - Color-coded confidence indicator
- */
-interface ConfidenceBadgeProps {
-  confidence: number;
-  className?: string;
-}
-
-const ConfidenceBadge = React.memo<ConfidenceBadgeProps>(({ confidence, className }) => {
-  const { variant, colorClass } = getConfidenceBadgeVariant(confidence);
-
-  return (
-    <Badge
-      variant={variant}
-      className={cn('text-xs font-medium text-white', colorClass, className)}
-      aria-label={`Confidence: ${confidence}%`}
-    >
-      {confidence}%
-    </Badge>
-  );
-});
-ConfidenceBadge.displayName = 'ConfidenceBadge';
+// Note: ConfidenceBadge now imported from standalone component (confidence-badge.tsx)
 
 /**
  * CitationLink - Clickable citation badge
@@ -272,7 +237,7 @@ export const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
             {/* Confidence Badge (AI only) */}
             {isAssistant && confidence !== undefined && !isTyping && (
               <div className="mt-3">
-                <ConfidenceBadge confidence={confidence} />
+                <StandaloneConfidenceBadge confidence={confidence} />
               </div>
             )}
 
@@ -309,5 +274,8 @@ ChatMessage.displayName = 'ChatMessage';
 // Exports
 // ============================================================================
 
-export { ConfidenceBadge, CitationLink, TypingIndicator };
-export type { ConfidenceBadgeProps, CitationLinkProps, TypingIndicatorProps };
+// Re-export standalone ConfidenceBadge for backward compatibility
+export { StandaloneConfidenceBadge as ConfidenceBadge };
+export type { ConfidenceBadgeProps } from './confidence-badge';
+export { CitationLink, TypingIndicator };
+export type { CitationLinkProps, TypingIndicatorProps };

@@ -8,8 +8,10 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
 import { CitationLink } from './citation-link';
+
+// Mock function for onClick handlers in Storybook 10
+const fn = () => () => {};
 
 // ============================================================================
 // Story Configuration

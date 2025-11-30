@@ -53,6 +53,9 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Export for testing/Storybook mocking
+export { AuthContext };
+
 // ============================================================================
 // Provider Component
 // ============================================================================

@@ -78,17 +78,17 @@ export const Default: Story = {
 
 /**
  * Games tab active.
- * Pathname: /giochi
+ * Pathname: /games
  */
 export const GamesActive: Story = {
-  decorators: [mockNavigationDecorator('/giochi')],
+  decorators: [mockNavigationDecorator('/games')],
   parameters: {
     viewport: {
       defaultViewport: 'mobile1',
     },
     docs: {
       description: {
-        story: 'Games catalog active state (pathname: /giochi)',
+        story: 'Games catalog active state (pathname: /games)',
       },
     },
   },
@@ -192,17 +192,17 @@ export const TabletView: Story = {
 
 /**
  * Nested route active state.
- * Pathname: /giochi/catan
+ * Pathname: /games/catan
  */
 export const NestedRouteActive: Story = {
-  decorators: [mockNavigationDecorator('/giochi/catan')],
+  decorators: [mockNavigationDecorator('/games/catan')],
   parameters: {
     viewport: {
       defaultViewport: 'mobile1',
     },
     docs: {
       description: {
-        story: 'Games tab active for nested route (pathname: /giochi/catan)',
+        story: 'Games tab active for nested route (pathname: /games/catan)',
       },
     },
   },

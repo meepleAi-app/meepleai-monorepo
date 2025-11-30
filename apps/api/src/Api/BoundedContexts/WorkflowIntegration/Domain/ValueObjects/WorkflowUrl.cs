@@ -20,7 +20,7 @@ public sealed class WorkflowUrl : ValueObject
         if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
             throw new ValidationException($"Invalid URL format: {trimmed}");
 
-        if (uri.Scheme != "http" && uri.Scheme != "https")
+        if (!string.Equals(uri.Scheme, "http", StringComparison.Ordinal) && !string.Equals(uri.Scheme, "https", StringComparison.Ordinal))
             throw new ValidationException("URL must use HTTP or HTTPS protocol");
 
         Value = trimmed;

@@ -40,7 +40,7 @@ public sealed class ChangePasswordCommandValidator : AbstractValidator<ChangePas
             .WithMessage("New password must contain at least one special character");
 
         RuleFor(x => x)
-            .Must(cmd => cmd.NewPassword != cmd.CurrentPassword)
+            .Must(cmd => !string.Equals(cmd.NewPassword, cmd.CurrentPassword, StringComparison.Ordinal))
             .WithMessage("New password must be different from current password")
             .WithName("NewPassword");
     }

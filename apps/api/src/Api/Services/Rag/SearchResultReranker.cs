@@ -27,7 +27,7 @@ public class SearchResultReranker : ISearchResultReranker
         var k = await GetRrfKAsync();
 
         // Dictionary to store RRF scores for each unique document
-        var rrfScores = new Dictionary<string, (SearchResultItem item, double score)>();
+        var rrfScores = new Dictionary<string, (SearchResultItem item, double score)>(StringComparer.Ordinal);
 
         // Process each search result list
         for (int queryIndex = 0; queryIndex < searchResults.Count; queryIndex++)

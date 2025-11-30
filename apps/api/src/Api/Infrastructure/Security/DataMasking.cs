@@ -152,7 +152,7 @@ public static partial class DataMasking
     /// <returns>Masked IP (e.g., "192.168.1.***" or "2001:db8::***")</returns>
     public static string MaskIpAddress(string? ipAddress)
     {
-        if (string.IsNullOrEmpty(ipAddress) || ipAddress == "unknown")
+        if (string.IsNullOrEmpty(ipAddress) || string.Equals(ipAddress, "unknown", StringComparison.Ordinal))
             return "***";
 
         // IPv4: mask last octet

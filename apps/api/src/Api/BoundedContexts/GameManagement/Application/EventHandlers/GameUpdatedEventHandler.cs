@@ -28,6 +28,7 @@ public sealed class GameUpdatedEventHandler : DomainEventHandlerBase<GameUpdated
     protected override Dictionary<string, object?>? GetAuditMetadata(GameUpdatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["GameId"] = domainEvent.GameId,
             ["Name"] = domainEvent.Name,

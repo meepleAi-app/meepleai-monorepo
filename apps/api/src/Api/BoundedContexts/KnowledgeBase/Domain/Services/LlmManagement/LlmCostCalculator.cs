@@ -20,7 +20,7 @@ public class LlmCostCalculator : ILlmCostCalculator
 {
     // Pricing database (per 1M tokens in USD)
     // Source: OpenRouter pricing + Anthropic direct pricing (Q1 2025)
-    private static readonly Dictionary<string, LlmModelPricing> ModelPricing = new()
+    private static readonly Dictionary<string, LlmModelPricing> ModelPricing = new(StringComparer.Ordinal)
     {
         // OpenRouter Models - OpenAI
         ["openai/gpt-4o-mini"] = new()

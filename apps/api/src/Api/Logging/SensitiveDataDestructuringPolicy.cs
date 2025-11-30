@@ -105,7 +105,7 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
         if (value is string stringValue)
         {
             var redacted = RedactSensitiveStringPatterns(stringValue);
-            if (redacted != stringValue)
+            if (!string.Equals(redacted, stringValue, StringComparison.Ordinal))
             {
                 result = new ScalarValue(redacted);
                 return true;

@@ -207,6 +207,6 @@ public sealed class GameSession : AggregateRoot<Guid>
             return false;
 
         var normalized = playerName.Trim().ToLowerInvariant();
-        return _players.Any(p => p.PlayerName.ToLowerInvariant() == normalized);
+        return _players.Any(p => string.Equals(p.PlayerName.ToLowerInvariant(), normalized, StringComparison.Ordinal));
     }
 }

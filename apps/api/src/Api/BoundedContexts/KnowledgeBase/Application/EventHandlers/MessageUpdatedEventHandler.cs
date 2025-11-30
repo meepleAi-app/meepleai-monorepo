@@ -23,6 +23,7 @@ public sealed class MessageUpdatedEventHandler : DomainEventHandlerBase<MessageU
     protected override Dictionary<string, object?>? GetAuditMetadata(MessageUpdatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["Action"] = "MessageUpdated",
             ["ThreadId"] = domainEvent.ThreadId,

@@ -160,7 +160,7 @@ public class AdminStatsService : IAdminStatsService
             .Where(u => u.CreatedAt >= fromDate && u.CreatedAt <= toDate);
 
         // Apply role filter if specified
-        if (!string.IsNullOrWhiteSpace(roleFilter) && roleFilter != "all")
+        if (!string.IsNullOrWhiteSpace(roleFilter) && !string.Equals(roleFilter, "all", StringComparison.Ordinal))
         {
             var normalizedRole = roleFilter.ToLower();
             query = query.Where(u => u.Role == normalizedRole);

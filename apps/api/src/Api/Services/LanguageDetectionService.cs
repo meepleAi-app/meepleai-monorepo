@@ -13,6 +13,7 @@ public class LanguageDetectionService : ILanguageDetectionService
     // FIX MA0009: Add timeout to prevent ReDoS attacks
     private static readonly Regex WordRegex = new(@"\p{L}+", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
     private static readonly IReadOnlyDictionary<string, LanguageProfile> Profiles = new Dictionary<string, LanguageProfile>
+(StringComparer.Ordinal)
     {
         ["en"] = CreateProfile(
             "en",
@@ -128,7 +129,7 @@ public class LanguageDetectionService : ILanguageDetectionService
             return false;
         }
 
-        return SupportedLanguages.Contains(languageCode.ToLowerInvariant());
+        return SupportedLanguages.Contains(languageCode.ToLowerInvariant(), StringComparer.Ordinal);
     }
 
     private static string DetectLanguageCore(string text)
@@ -199,8 +200,8 @@ public class LanguageDetectionService : ILanguageDetectionService
     {
         return new LanguageProfile(
             code,
-            new HashSet<string>(keywords.Select(k => k.ToLowerInvariant())),
-            new HashSet<string>(stopWords.Select(w => w.ToLowerInvariant())),
+            new HashSet<string>(keywords.Select(k => k.ToLowerInvariant()), StringComparer.Ordinal),
+            new HashSet<string>(stopWords.Select(w => w.ToLowerInvariant()), StringComparer.Ordinal),
             new HashSet<char>(accentCharacters.Select(char.ToLowerInvariant)));
     }
 

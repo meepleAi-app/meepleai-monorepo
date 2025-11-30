@@ -32,6 +32,7 @@ public sealed class PasswordChangedEventHandler : DomainEventHandlerBase<Passwor
     protected override Dictionary<string, object?>? GetAuditMetadata(PasswordChangedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["Action"] = "PasswordChanged"

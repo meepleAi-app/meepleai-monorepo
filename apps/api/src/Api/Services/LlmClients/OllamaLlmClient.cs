@@ -150,6 +150,7 @@ public class OllamaLlmClient : ILlmClient
                 };
 
                 var metadata = new Dictionary<string, string>
+(StringComparer.Ordinal)
                 {
                     ["model"] = chatResponse.Model ?? model,
                     ["provider"] = "Ollama",

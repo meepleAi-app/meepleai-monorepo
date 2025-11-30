@@ -26,7 +26,7 @@ public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
     public async Task Handle(DeleteUserCommand command, CancellationToken cancellationToken)
     {
         // Prevent self-deletion
-        if (command.UserId == command.RequestingUserId)
+        if (string.Equals(command.UserId, command.RequestingUserId, StringComparison.Ordinal))
             throw new DomainException("Cannot delete your own account");
 
         // Find user

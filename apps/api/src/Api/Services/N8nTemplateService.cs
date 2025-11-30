@@ -127,8 +127,8 @@ public class N8nTemplateService
         }
 
         return templates
-            .OrderBy(t => t.Category)
-            .ThenBy(t => t.Name)
+            .OrderBy(t => t.Category, StringComparer.Ordinal)
+            .ThenBy(t => t.Name, StringComparer.Ordinal)
             .ToList();
     }
 
@@ -382,7 +382,7 @@ public class N8nTemplateService
                     break;
 
                 case "select":
-                    if (param.Options != null && !param.Options.Contains(value))
+                    if (param.Options != null && !param.Options.Contains(value, StringComparer.Ordinal))
                     {
                         throw new InvalidOperationException(
                             $"Parameter '{param.Name}' must be one of: {string.Join(", ", param.Options)}");
@@ -415,7 +415,7 @@ public class N8nTemplateService
 
         if (matches.Count > 0)
         {
-            var unreplacedParams = matches.Select(m => m.Groups[1].Value).Distinct().ToList();
+            var unreplacedParams = matches.Select(m => m.Groups[1].Value).Distinct(StringComparer.Ordinal).ToList();
             _logger.LogWarning(
                 "Template contains unreplaced parameters: {Parameters}. These will be left as placeholders.",
                 string.Join(", ", unreplacedParams));
@@ -546,7 +546,7 @@ public class N8nTemplateService
     {
         var key = _configuration[EncryptionKeyConfigName]?.Trim();
 
-        if (string.IsNullOrWhiteSpace(key) || key == EncryptionKeyPlaceholder)
+        if (string.IsNullOrWhiteSpace(key) || string.Equals(key, EncryptionKeyPlaceholder, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Missing or invalid n8n encryption key. Set the {EncryptionKeyConfigName} environment variable to a secure value.");

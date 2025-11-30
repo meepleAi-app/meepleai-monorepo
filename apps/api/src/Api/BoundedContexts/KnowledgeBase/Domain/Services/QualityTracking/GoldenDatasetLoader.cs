@@ -223,9 +223,9 @@ public class GoldenDatasetLoader : IGoldenDatasetLoader
         }
 
         // Stratified sampling: sample proportionally from each difficulty level
-        var easy = allCases.Where(tc => tc.Difficulty == "easy").ToList();
-        var medium = allCases.Where(tc => tc.Difficulty == "medium").ToList();
-        var hard = allCases.Where(tc => tc.Difficulty == "hard").ToList();
+        var easy = allCases.Where(tc => string.Equals(tc.Difficulty, "easy", StringComparison.Ordinal)).ToList();
+        var medium = allCases.Where(tc => string.Equals(tc.Difficulty, "medium", StringComparison.Ordinal)).ToList();
+        var hard = allCases.Where(tc => string.Equals(tc.Difficulty, "hard", StringComparison.Ordinal)).ToList();
 
         var total = allCases.Count;
         var easyCount = (int)Math.Round((double)easy.Count / total * count);

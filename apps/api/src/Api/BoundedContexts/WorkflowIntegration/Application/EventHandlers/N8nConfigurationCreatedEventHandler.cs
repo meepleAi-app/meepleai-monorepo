@@ -27,6 +27,7 @@ public sealed class N8nConfigurationCreatedEventHandler : DomainEventHandlerBase
     protected override Dictionary<string, object?>? GetAuditMetadata(N8nConfigurationCreatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["ConfigurationId"] = domainEvent.ConfigurationId,
             ["Name"] = domainEvent.Name,

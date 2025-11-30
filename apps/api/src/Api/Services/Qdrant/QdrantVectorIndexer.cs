@@ -85,7 +85,7 @@ public class QdrantVectorIndexer : IQdrantVectorIndexer
             var pointId = Guid.NewGuid().ToString();
 
             // Clone base payload and add chunk-specific data
-            var payload = new Dictionary<string, Value>(basePayload)
+            var payload = new Dictionary<string, Value>(basePayload, StringComparer.Ordinal)
             {
                 ["chunk_index"] = i,
                 ["text"] = chunk.Text,

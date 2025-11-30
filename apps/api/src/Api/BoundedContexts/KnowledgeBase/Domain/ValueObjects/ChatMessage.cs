@@ -39,7 +39,7 @@ public sealed class ChatMessage
         if (trimmed.Length > 10000)
             throw new ValidationException("Message content cannot exceed 10,000 characters");
 
-        if (role != UserRole && role != AssistantRole)
+        if (!string.Equals(role, UserRole, StringComparison.Ordinal) && !string.Equals(role, AssistantRole, StringComparison.Ordinal))
             throw new ValidationException($"Role must be '{UserRole}' or '{AssistantRole}'");
 
         Id = id ?? Guid.NewGuid();
@@ -51,8 +51,8 @@ public sealed class ChatMessage
         IsInvalidated = false;
     }
 
-    public bool IsUserMessage => Role == UserRole;
-    public bool IsAssistantMessage => Role == AssistantRole;
+    public bool IsUserMessage => string.Equals(Role, UserRole, StringComparison.Ordinal);
+    public bool IsAssistantMessage => string.Equals(Role, AssistantRole, StringComparison.Ordinal);
 
     /// <summary>
     /// Updates the message content. Only user messages can be edited.

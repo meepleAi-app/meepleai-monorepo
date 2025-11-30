@@ -22,8 +22,8 @@ public class GetConfigCategoriesQueryHandler : IQueryHandler<GetConfigCategories
 
         var categories = allConfigs
             .Select(c => c.Category)
-            .Distinct()
-            .OrderBy(c => c)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(c => c, StringComparer.Ordinal)
             .ToList();
 
         return categories;

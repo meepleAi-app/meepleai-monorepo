@@ -23,6 +23,7 @@ public sealed class AgentDeactivatedEventHandler : DomainEventHandlerBase<AgentD
     protected override Dictionary<string, object?>? GetAuditMetadata(AgentDeactivatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["Action"] = "AgentDeactivated",
             ["AgentId"] = domainEvent.AgentId

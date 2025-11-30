@@ -307,6 +307,7 @@ public class WeeklyEvaluationService : BackgroundService
                 Severity: "Warning",
                 Message: $"Weekly quality evaluation detected {alerts.Count} issue(s)",
                 Metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
                     { "Issues", alerts },
                     { "IssueCount", alerts.Count },

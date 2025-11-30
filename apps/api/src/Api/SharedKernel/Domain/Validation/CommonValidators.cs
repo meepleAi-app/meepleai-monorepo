@@ -67,7 +67,7 @@ public static class CommonValidators
         }
 
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.Ordinal) && !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal)))
         {
             return Result<string>.Failure(Error.Validation(
                 message ?? $"{parameterName} must be a valid HTTP or HTTPS URL"));

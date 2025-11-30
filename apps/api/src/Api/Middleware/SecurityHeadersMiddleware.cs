@@ -311,7 +311,7 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
             {
                 var validValues = new[] { "DENY", "SAMEORIGIN" };
                 var upperPolicy = options.XFrameOptionsPolicy.Trim().ToUpperInvariant();
-                if (!validValues.Contains(upperPolicy) && !upperPolicy.StartsWith("ALLOW-FROM"))
+                if (!validValues.Contains(upperPolicy, StringComparer.Ordinal) && !upperPolicy.StartsWith("ALLOW-FROM"))
                 {
                     errors.Add($"X-Frame-Options must be DENY, SAMEORIGIN, or ALLOW-FROM uri (got: {options.XFrameOptionsPolicy})");
                 }
@@ -341,7 +341,7 @@ public class SecurityHeadersOptionsValidator : IValidateOptions<SecurityHeadersO
             else
             {
                 var validPatterns = new[] { "0", "1", "1; mode=block" };
-                if (!validPatterns.Contains(options.XssProtectionPolicy.Trim()))
+                if (!validPatterns.Contains(options.XssProtectionPolicy.Trim(), StringComparer.Ordinal))
                 {
                     errors.Add($"X-XSS-Protection must be '0', '1', or '1; mode=block' (got: {options.XssProtectionPolicy})");
                 }

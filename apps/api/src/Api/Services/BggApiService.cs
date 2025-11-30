@@ -255,7 +255,7 @@ public class BggApiService : IBggApiService
         {
             // Primary name (type="primary")
             var primaryName = item.Elements("name")
-                .FirstOrDefault(n => n.Attribute("type")?.Value == "primary")
+                .FirstOrDefault(n => string.Equals(n.Attribute("type")?.Value, "primary", StringComparison.Ordinal))
                 ?.Attribute("value")?.Value;
 
             var name = primaryName ?? item.Element("name")?.Attribute("value")?.Value;
@@ -289,28 +289,28 @@ public class BggApiService : IBggApiService
 
             // Categories, Mechanics, Designers, Publishers
             var categories = item.Elements("link")
-                .Where(l => l.Attribute("type")?.Value == "boardgamecategory")
+                .Where(l => string.Equals(l.Attribute("type")?.Value, "boardgamecategory", StringComparison.Ordinal))
                 .Select(l => l.Attribute("value")?.Value)
                 .Where(v => !string.IsNullOrEmpty(v))
                 .Cast<string>()
                 .ToList();
 
             var mechanics = item.Elements("link")
-                .Where(l => l.Attribute("type")?.Value == "boardgamemechanic")
+                .Where(l => string.Equals(l.Attribute("type")?.Value, "boardgamemechanic", StringComparison.Ordinal))
                 .Select(l => l.Attribute("value")?.Value)
                 .Where(v => !string.IsNullOrEmpty(v))
                 .Cast<string>()
                 .ToList();
 
             var designers = item.Elements("link")
-                .Where(l => l.Attribute("type")?.Value == "boardgamedesigner")
+                .Where(l => string.Equals(l.Attribute("type")?.Value, "boardgamedesigner", StringComparison.Ordinal))
                 .Select(l => l.Attribute("value")?.Value)
                 .Where(v => !string.IsNullOrEmpty(v))
                 .Cast<string>()
                 .ToList();
 
             var publishers = item.Elements("link")
-                .Where(l => l.Attribute("type")?.Value == "boardgamepublisher")
+                .Where(l => string.Equals(l.Attribute("type")?.Value, "boardgamepublisher", StringComparison.Ordinal))
                 .Select(l => l.Attribute("value")?.Value)
                 .Where(v => !string.IsNullOrEmpty(v))
                 .Cast<string>()

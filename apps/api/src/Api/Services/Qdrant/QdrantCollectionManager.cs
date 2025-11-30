@@ -28,7 +28,7 @@ public class QdrantCollectionManager : IQdrantCollectionManager
         try
         {
             var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct);
-            return collectionsResponse.Any(c => c == collectionName);
+            return collectionsResponse.Any(c => string.Equals(c, collectionName, StringComparison.Ordinal));
         }
         catch (RpcException ex)
         {

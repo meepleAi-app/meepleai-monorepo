@@ -47,7 +47,7 @@ public sealed class PdfDocument : AggregateRoot<Guid>
 
     public void MarkAsProcessing()
     {
-        if (ProcessingStatus == "completed")
+        if (string.Equals(ProcessingStatus, "completed", StringComparison.Ordinal))
             throw new InvalidOperationException("Cannot reprocess completed document");
 
         ProcessingStatus = "processing";

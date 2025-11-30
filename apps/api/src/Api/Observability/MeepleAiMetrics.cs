@@ -903,7 +903,7 @@ public static class MeepleAiMetrics
             tags.Add("user_id", userId);
         }
 
-        if (verificationType.ToLowerInvariant() == "totp")
+        if (string.Equals(verificationType.ToLowerInvariant(), "totp", StringComparison.Ordinal))
         {
             if (isReplayAttack)
             {
@@ -918,7 +918,7 @@ public static class MeepleAiMetrics
                 TwoFactorFailedTotpAttempts.Add(1, tags);
             }
         }
-        else if (verificationType.ToLowerInvariant() == "backup_code")
+        else if (string.Equals(verificationType.ToLowerInvariant(), "backup_code", StringComparison.Ordinal))
         {
             if (success)
             {

@@ -43,6 +43,7 @@ public sealed class ConfigurationUpdatedEventHandler : DomainEventHandlerBase<Co
     protected override Dictionary<string, object?>? GetAuditMetadata(ConfigurationUpdatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["ConfigurationId"] = domainEvent.ConfigurationId,
             ["Key"] = domainEvent.Key.Value,

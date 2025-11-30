@@ -37,7 +37,7 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
     private readonly TimeProvider _timeProvider;
     private readonly long _maxFileSizeBytes;
 
-    private static readonly HashSet<string> AllowedContentTypes = new() { "application/pdf" };
+    private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.Ordinal) { "application/pdf" };
 
     #endregion
 
@@ -793,11 +793,11 @@ public class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUplo
         {
             try
             {
-                if (step == "pages_processed" && count.HasValue)
+                if (string.Equals(step, "pages_processed", StringComparison.Ordinal) && count.HasValue)
                 {
                     MeepleAiMetrics.PdfPagesProcessed.Add(count.Value);
                 }
-                else if (step == "extraction_error")
+                else if (string.Equals(step, "extraction_error", StringComparison.Ordinal))
                 {
                     MeepleAiMetrics.PdfExtractionErrors.Add(1);
                 }

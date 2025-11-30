@@ -23,6 +23,7 @@ public sealed class PlayerAddedToSessionEventHandler : DomainEventHandlerBase<Pl
     protected override Dictionary<string, object?>? GetAuditMetadata(PlayerAddedToSessionEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["SessionId"] = domainEvent.SessionId,
             ["PlayerName"] = domainEvent.PlayerName,

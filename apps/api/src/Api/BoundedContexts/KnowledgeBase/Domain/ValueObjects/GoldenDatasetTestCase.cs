@@ -105,13 +105,13 @@ public record GoldenDatasetTestCase
     private static bool IsValidDifficulty(string difficulty)
     {
         var valid = new[] { "easy", "medium", "hard" };
-        return valid.Contains(difficulty?.ToLowerInvariant());
+        return valid.Contains(difficulty?.ToLowerInvariant(), StringComparer.Ordinal);
     }
 
     private static bool IsValidCategory(string category)
     {
         var valid = new[] { "gameplay", "setup", "endgame", "edge_case", "edge_cases" }; // Accept both singular and plural
-        return valid.Contains(category?.ToLowerInvariant());
+        return valid.Contains(category?.ToLowerInvariant(), StringComparer.Ordinal);
     }
 }
 

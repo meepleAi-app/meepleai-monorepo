@@ -24,7 +24,7 @@ public class ExportConfigsQueryHandler : IQueryHandler<ExportConfigsQuery, Confi
 
         // Filter by environment and active status
         var configs = allConfigs
-            .Where(c => c.Environment == query.Environment || c.Environment == "All")
+            .Where(c => string.Equals(c.Environment, query.Environment, StringComparison.Ordinal) || string.Equals(c.Environment, "All", StringComparison.Ordinal))
             .Where(c => !query.ActiveOnly || c.IsActive)
             .Select(MapToDto)
             .ToList();

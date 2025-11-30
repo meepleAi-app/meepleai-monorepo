@@ -124,6 +124,7 @@ public static class KnowledgeBaseMappers
         this Embedding embedding)
     {
         var payload = new Dictionary<string, object>
+(StringComparer.Ordinal)
         {
             ["vector_document_id"] = embedding.VectorDocumentId.ToString(),
             ["text_content"] = embedding.TextContent,
@@ -190,10 +191,10 @@ public static class KnowledgeBaseMappers
     private static AgentStrategy DeserializeStrategy(string name, string parametersJson)
     {
         var parameters = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(parametersJson)
-            ?? new Dictionary<string, object>();
+            ?? new Dictionary<string, object>(StringComparer.Ordinal);
 
         // Convert JsonElement to appropriate types
-        var typedParams = new Dictionary<string, object>();
+        var typedParams = new Dictionary<string, object>(StringComparer.Ordinal);
         foreach (var (key, value) in parameters)
         {
             if (value is System.Text.Json.JsonElement jsonElement)

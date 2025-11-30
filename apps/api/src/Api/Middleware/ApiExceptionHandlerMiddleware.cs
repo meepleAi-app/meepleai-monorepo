@@ -121,11 +121,11 @@ public class ApiExceptionHandlerMiddleware
 
         // Group validation errors by property name
         var errors = validationException.Errors
-            .GroupBy(e => e.PropertyName)
+            .GroupBy(e => e.PropertyName, StringComparer.Ordinal)
             .ToDictionary(
                 g => g.Key,
                 g => g.Select(e => e.ErrorMessage).ToArray()
-            );
+, StringComparer.Ordinal);
 
         var errorResponse = new
         {

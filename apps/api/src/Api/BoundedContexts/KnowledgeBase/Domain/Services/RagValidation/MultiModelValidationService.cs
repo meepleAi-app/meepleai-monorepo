@@ -51,7 +51,7 @@ public class MultiModelValidationService : IMultiModelValidationService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Get OpenRouter client (supports both GPT-4 and Claude)
-        _openRouterClient = llmClients.FirstOrDefault(c => c.ProviderName == "OpenRouter")
+        _openRouterClient = llmClients.FirstOrDefault(c => string.Equals(c.ProviderName, "OpenRouter", StringComparison.Ordinal))
             ?? throw new InvalidOperationException("OpenRouter client not found in DI container");
 
         // Initialize cosine similarity calculator

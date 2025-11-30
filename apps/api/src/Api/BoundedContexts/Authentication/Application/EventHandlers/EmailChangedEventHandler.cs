@@ -30,6 +30,7 @@ public sealed class EmailChangedEventHandler : DomainEventHandlerBase<EmailChang
     protected override Dictionary<string, object?>? GetAuditMetadata(EmailChangedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["OldEmail"] = domainEvent.OldEmail,

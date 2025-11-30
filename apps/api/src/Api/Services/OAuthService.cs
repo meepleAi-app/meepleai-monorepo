@@ -227,6 +227,7 @@ public class OAuthService : IOAuthService
         var callbackUrl = GetCallbackUrl(provider);
 
         var requestData = new Dictionary<string, string>
+(StringComparer.Ordinal)
         {
             { "client_id", config.ClientId },
             { "client_secret", config.ClientSecret },
@@ -486,6 +487,7 @@ public class OAuthService : IOAuthService
 #pragma warning restore CA2000
 
         var requestData = new Dictionary<string, string>
+(StringComparer.Ordinal)
         {
             { "client_id", config.ClientId },
             { "client_secret", config.ClientSecret },

@@ -39,26 +39,26 @@ public class AgentOrchestrationService
         var selectedAgent = queryType switch
         {
             QueryType.RulesInterpretation => activeAgents
-                .FirstOrDefault(a => a.Type.Value == AgentType.RulesInterpreter.Value),
+                .FirstOrDefault(a => string.Equals(a.Type.Value, AgentType.RulesInterpreter.Value, StringComparison.Ordinal)),
 
             QueryType.CitationVerification => activeAgents
-                .FirstOrDefault(a => a.Type.Value == AgentType.CitationAgent.Value),
+                .FirstOrDefault(a => string.Equals(a.Type.Value, AgentType.CitationAgent.Value, StringComparison.Ordinal)),
 
             QueryType.ConfidenceAssessment => activeAgents
-                .FirstOrDefault(a => a.Type.Value == AgentType.ConfidenceAgent.Value),
+                .FirstOrDefault(a => string.Equals(a.Type.Value, AgentType.ConfidenceAgent.Value, StringComparison.Ordinal)),
 
             QueryType.ConversationContinuation => activeAgents
-                .FirstOrDefault(a => a.Type.Value == AgentType.ConversationAgent.Value),
+                .FirstOrDefault(a => string.Equals(a.Type.Value, AgentType.ConversationAgent.Value, StringComparison.Ordinal)),
 
             QueryType.GeneralQuestion => activeAgents
-                .FirstOrDefault(a => a.Type.Value == AgentType.RagAgent.Value),
+                .FirstOrDefault(a => string.Equals(a.Type.Value, AgentType.RagAgent.Value, StringComparison.Ordinal)),
 
             _ => null
         };
 
         // Fallback: Select any active RAG agent if no specialized match
         selectedAgent ??= activeAgents
-            .FirstOrDefault(a => a.Type.Value == AgentType.RagAgent.Value);
+            .FirstOrDefault(a => string.Equals(a.Type.Value, AgentType.RagAgent.Value, StringComparison.Ordinal));
 
         // Final fallback: Select the most recently used active agent
         selectedAgent ??= activeAgents

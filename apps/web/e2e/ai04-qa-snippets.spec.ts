@@ -4,7 +4,7 @@
  * @see apps/web/e2e/helpers/qa-test-utils.ts
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page } from './fixtures/chromatic';
 import { getTextMatcher, t } from './fixtures/i18n';
 import { waitForAutoSelection } from './helpers/qa-test-utils';
 

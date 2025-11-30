@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page } from './fixtures/chromatic';
 import { AuthPage } from './pages/auth/AuthPage';
 import {
   setupMockEmailService,

@@ -11,7 +11,7 @@
  * @see ../../tests/postman/README.md for Postman collection documentation
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
@@ -26,12 +26,27 @@ const TESTS_POSTMAN_DIR = path.join(MONOREPO_ROOT, 'tests/postman');
 const RESULTS_DIR = path.join(MONOREPO_ROOT, 'newman-results');
 
 // Collection files
-const KNOWLEDGE_BASE_COLLECTION = path.join(POSTMAN_DIR, 'KnowledgeBase-DDD-Tests.postman_collection.json');
+const KNOWLEDGE_BASE_COLLECTION = path.join(
+  POSTMAN_DIR,
+  'KnowledgeBase-DDD-Tests.postman_collection.json'
+);
 const KNOWLEDGE_BASE_ENV = path.join(POSTMAN_DIR, 'Local-Development.postman_environment.json');
-const HEALTH_COLLECTION = path.join(TESTS_POSTMAN_DIR, 'collections/01-health/HealthCheck.postman_collection.json');
-const AUTH_COLLECTION = path.join(TESTS_POSTMAN_DIR, 'collections/02-authentication/Authentication.postman_collection.json');
-const GAMES_COLLECTION = path.join(TESTS_POSTMAN_DIR, 'collections/03-game-management/GameManagement.postman_collection.json');
-const KB_COLLECTION = path.join(TESTS_POSTMAN_DIR, 'collections/04-knowledge-base/KnowledgeBase.postman_collection.json');
+const HEALTH_COLLECTION = path.join(
+  TESTS_POSTMAN_DIR,
+  'collections/01-health/HealthCheck.postman_collection.json'
+);
+const AUTH_COLLECTION = path.join(
+  TESTS_POSTMAN_DIR,
+  'collections/02-authentication/Authentication.postman_collection.json'
+);
+const GAMES_COLLECTION = path.join(
+  TESTS_POSTMAN_DIR,
+  'collections/03-game-management/GameManagement.postman_collection.json'
+);
+const KB_COLLECTION = path.join(
+  TESTS_POSTMAN_DIR,
+  'collections/04-knowledge-base/KnowledgeBase.postman_collection.json'
+);
 const LOCAL_ENV = path.join(TESTS_POSTMAN_DIR, 'environments/local.postman_environment.json');
 
 /**
@@ -81,8 +96,8 @@ async function runNewmanCollection(
       timeout,
       env: {
         ...process.env,
-        NODE_TLS_REJECT_UNAUTHORIZED: '0' // For local development with self-signed certs
-      }
+        NODE_TLS_REJECT_UNAUTHORIZED: '0', // For local development with self-signed certs
+      },
     });
 
     // Read and parse Newman JSON results
@@ -97,20 +112,20 @@ async function runNewmanCollection(
         assertions: {
           passed: results.run.stats.assertions.passed || 0,
           failed: results.run.stats.assertions.failed || 0,
-          total: results.run.stats.assertions.total || 0
+          total: results.run.stats.assertions.total || 0,
         },
         requests: {
-          total: results.run.stats.requests.total || 0
+          total: results.run.stats.requests.total || 0,
         },
         tests: {
           passed: results.run.stats.tests.passed || 0,
           failed: results.run.stats.tests.failed || 0,
-          total: results.run.stats.tests.total || 0
-        }
+          total: results.run.stats.tests.total || 0,
+        },
       },
       failures: results.run.failures || [],
       stdout,
-      stderr
+      stderr,
     };
   } catch (error: any) {
     // If Newman fails, try to read partial results
@@ -124,20 +139,20 @@ async function runNewmanCollection(
           assertions: {
             passed: results.run?.stats?.assertions?.passed || 0,
             failed: results.run?.stats?.assertions?.failed || 0,
-            total: results.run?.stats?.assertions?.total || 0
+            total: results.run?.stats?.assertions?.total || 0,
           },
           requests: {
-            total: results.run?.stats?.requests?.total || 0
+            total: results.run?.stats?.requests?.total || 0,
           },
           tests: {
             passed: results.run?.stats?.tests?.passed || 0,
             failed: results.run?.stats?.tests?.failed || 0,
-            total: results.run?.stats?.tests?.total || 0
-          }
+            total: results.run?.stats?.tests?.total || 0,
+          },
         },
         failures: results.run?.failures || [],
         stdout: error.stdout || '',
-        stderr: error.stderr || error.message
+        stderr: error.stderr || error.message,
       };
     }
 
@@ -176,11 +191,9 @@ test.describe('KnowledgeBase API Tests (DDD Phase 3)', () => {
   test.describe.configure({ mode: 'serial' });
 
   test('should pass all KnowledgeBase DDD tests (11/11)', async () => {
-    const result = await runNewmanCollection(
-      KNOWLEDGE_BASE_COLLECTION,
-      KNOWLEDGE_BASE_ENV,
-      { timeout: 60000 }
-    );
+    const result = await runNewmanCollection(KNOWLEDGE_BASE_COLLECTION, KNOWLEDGE_BASE_ENV, {
+      timeout: 60000,
+    });
 
     // Log results for debugging
     console.log('\n📊 KnowledgeBase DDD Test Results:');
@@ -205,11 +218,10 @@ test.describe('KnowledgeBase API Tests (DDD Phase 3)', () => {
   });
 
   test('should validate Search endpoint (4 tests)', async () => {
-    const result = await runNewmanCollection(
-      KNOWLEDGE_BASE_COLLECTION,
-      KNOWLEDGE_BASE_ENV,
-      { folder: 'KnowledgeBase - Search', timeout: 30000 }
-    );
+    const result = await runNewmanCollection(KNOWLEDGE_BASE_COLLECTION, KNOWLEDGE_BASE_ENV, {
+      folder: 'KnowledgeBase - Search',
+      timeout: 30000,
+    });
 
     console.log('\n🔍 Search Tests:');
     console.log(`  ✅ Passed: ${result.stats.tests.passed}/4`);
@@ -219,11 +231,10 @@ test.describe('KnowledgeBase API Tests (DDD Phase 3)', () => {
   });
 
   test('should validate Q&A endpoint (4 tests)', async () => {
-    const result = await runNewmanCollection(
-      KNOWLEDGE_BASE_COLLECTION,
-      KNOWLEDGE_BASE_ENV,
-      { folder: 'KnowledgeBase - Q&A', timeout: 30000 }
-    );
+    const result = await runNewmanCollection(KNOWLEDGE_BASE_COLLECTION, KNOWLEDGE_BASE_ENV, {
+      folder: 'KnowledgeBase - Q&A',
+      timeout: 30000,
+    });
 
     console.log('\n🤖 Q&A Tests:');
     console.log(`  ✅ Passed: ${result.stats.tests.passed}/4`);
@@ -237,11 +248,7 @@ test.describe('DDD Bounded Context Tests (New Structure)', () => {
   test.describe.configure({ mode: 'serial' });
 
   test('should pass Health Check tests', async () => {
-    const result = await runNewmanCollection(
-      HEALTH_COLLECTION,
-      LOCAL_ENV,
-      { timeout: 30000 }
-    );
+    const result = await runNewmanCollection(HEALTH_COLLECTION, LOCAL_ENV, { timeout: 30000 });
 
     console.log('\n💚 Health Check Tests:');
     console.log(`  ✅ Passed: ${result.stats.tests.passed}`);
@@ -252,11 +259,7 @@ test.describe('DDD Bounded Context Tests (New Structure)', () => {
   });
 
   test('should pass Authentication tests', async () => {
-    const result = await runNewmanCollection(
-      AUTH_COLLECTION,
-      LOCAL_ENV,
-      { timeout: 60000 }
-    );
+    const result = await runNewmanCollection(AUTH_COLLECTION, LOCAL_ENV, { timeout: 60000 });
 
     console.log('\n🔐 Authentication Tests:');
     console.log(`  ✅ Passed: ${result.stats.tests.passed}`);
@@ -267,11 +270,7 @@ test.describe('DDD Bounded Context Tests (New Structure)', () => {
   });
 
   test('should pass Game Management tests', async () => {
-    const result = await runNewmanCollection(
-      GAMES_COLLECTION,
-      LOCAL_ENV,
-      { timeout: 30000 }
-    );
+    const result = await runNewmanCollection(GAMES_COLLECTION, LOCAL_ENV, { timeout: 30000 });
 
     console.log('\n🎲 Game Management Tests:');
     console.log(`  ✅ Passed: ${result.stats.tests.passed}`);
@@ -299,11 +298,10 @@ test.describe('Performance & Reliability', () => {
   test('Newman smoke test should complete in under 60 seconds', async () => {
     const startTime = Date.now();
 
-    await runNewmanCollection(
-      KNOWLEDGE_BASE_COLLECTION,
-      KNOWLEDGE_BASE_ENV,
-      { bail: true, timeout: 60000 }
-    );
+    await runNewmanCollection(KNOWLEDGE_BASE_COLLECTION, KNOWLEDGE_BASE_ENV, {
+      bail: true,
+      timeout: 60000,
+    });
 
     const duration = Date.now() - startTime;
     console.log(`\n⏱️  Smoke test duration: ${duration}ms`);

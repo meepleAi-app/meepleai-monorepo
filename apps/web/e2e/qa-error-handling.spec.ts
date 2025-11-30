@@ -4,7 +4,7 @@
  * @see apps/web/e2e/helpers/qa-test-utils.ts
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { setupQATestEnvironment } from './helpers/qa-test-utils';
 
 test.describe('Q&A Interface - Error Handling (Issue #1009)', () => {

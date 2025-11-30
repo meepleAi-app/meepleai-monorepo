@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/
  */
 
-import { test, expect, Page, BrowserContext, Route } from '@playwright/test';
+import { test, expect, Page, BrowserContext, Route } from './fixtures/chromatic';
 import './fixtures/auth';
 import { getTextMatcher, t } from './fixtures/i18n';
 import { WaitHelper } from './helpers/WaitHelper';

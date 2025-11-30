@@ -5,7 +5,7 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import {
   checkMobileLayout,
   checkTabletLayout,

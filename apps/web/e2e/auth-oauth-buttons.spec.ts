@@ -14,7 +14,7 @@
  * @see apps/web/e2e/page-objects/ - Page Object Model architecture
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { getTextMatcher } from './fixtures/i18n';
 import { LoginPage, AuthHelper } from './pages';
 import { WaitHelper } from './helpers/WaitHelper';

@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { AuthHelper, USER_FIXTURES } from './pages';
 import { expectForbiddenOrRedirect, expectPageLoaded } from './helpers/assertions';
 import { WaitHelper } from './helpers/WaitHelper';

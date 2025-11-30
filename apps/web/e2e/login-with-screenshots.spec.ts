@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/auth/LoginPage.ts
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/chromatic';
 import { LoginPage } from './pages';
 
 const WEB_BASE = 'http://localhost:3000';

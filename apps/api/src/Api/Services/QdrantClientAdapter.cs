@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -46,7 +47,7 @@ public class QdrantClientAdapter : IQdrantClientAdapter
         var grpcPortSetting = configuration["QDRANT_GRPC_PORT"];
         if (!string.IsNullOrWhiteSpace(grpcPortSetting))
         {
-            if (int.TryParse(grpcPortSetting, out var explicitPort) && explicitPort > 0)
+            if (int.TryParse(grpcPortSetting, NumberStyles.Integer, CultureInfo.InvariantCulture, out var explicitPort) && explicitPort > 0)
             {
                 return explicitPort;
             }

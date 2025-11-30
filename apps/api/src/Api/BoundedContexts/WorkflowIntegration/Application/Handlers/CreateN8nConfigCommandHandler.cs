@@ -35,8 +35,8 @@ public class CreateN8nConfigCommandHandler : ICommandHandler<CreateN8nConfigComm
             webhookUrl: webhookUrl
         );
 
-        await _configRepository.AddAsync(config, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _configRepository.AddAsync(config, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToDto(config);
     }

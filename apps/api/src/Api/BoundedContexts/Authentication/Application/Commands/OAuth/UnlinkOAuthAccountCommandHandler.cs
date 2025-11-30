@@ -34,7 +34,7 @@ public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAu
         try
         {
             // Load user by ID
-            var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
             if (user == null)
             {
                 _logger.LogWarning("User {UserId} not found for OAuth unlinking", command.UserId);
@@ -66,8 +66,8 @@ public sealed class UnlinkOAuthAccountCommandHandler : ICommandHandler<UnlinkOAu
             }
 
             // Delete via repository
-            await _oauthAccountRepository.DeleteAsync(oauthAccount, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _oauthAccountRepository.DeleteAsync(oauthAccount, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully unlinked {Provider} OAuth account for user {UserId}", command.Provider, command.UserId);
 

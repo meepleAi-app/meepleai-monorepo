@@ -16,12 +16,13 @@ public sealed class GameSessionPausedEventHandler : DomainEventHandlerBase<GameS
 
     protected override async Task HandleEventAsync(GameSessionPausedEvent domainEvent, CancellationToken cancellationToken)
     {
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(GameSessionPausedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["SessionId"] = domainEvent.SessionId,
             ["PausedAt"] = domainEvent.PausedAt,

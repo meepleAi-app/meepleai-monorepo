@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -127,8 +128,8 @@ public class N8nTemplateService
         }
 
         return templates
-            .OrderBy(t => t.Category)
-            .ThenBy(t => t.Name)
+            .OrderBy(t => t.Category, StringComparer.Ordinal)
+            .ThenBy(t => t.Name, StringComparer.Ordinal)
             .ToList();
     }
 
@@ -363,10 +364,10 @@ public class N8nTemplateService
             if (!providedParams.TryGetValue(param.Name, out var value))
                 continue;
 
-            switch (param.Type.ToLower())
+            switch (param.Type.ToLower(CultureInfo.InvariantCulture))
             {
                 case "number":
-                    if (!int.TryParse(value, out _) && !double.TryParse(value, out _))
+                    if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) && !double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     {
                         throw new InvalidOperationException(
                             $"Parameter '{param.Name}' must be a number");
@@ -382,7 +383,7 @@ public class N8nTemplateService
                     break;
 
                 case "select":
-                    if (param.Options != null && !param.Options.Contains(value))
+                    if (param.Options != null && !param.Options.Contains(value, StringComparer.Ordinal))
                     {
                         throw new InvalidOperationException(
                             $"Parameter '{param.Name}' must be one of: {string.Join(", ", param.Options)}");
@@ -403,17 +404,19 @@ public class N8nTemplateService
         foreach (var (key, value) in parameters)
         {
             var pattern = $@"\{{\{{\s*{Regex.Escape(key)}\s*\}}}}";
-            workflowJson = Regex.Replace(workflowJson, pattern, value);
+            // FIX MA0009: Add timeout to prevent ReDoS attacks
+            workflowJson = Regex.Replace(workflowJson, pattern, value, RegexOptions.None, TimeSpan.FromSeconds(1));
         }
 
         // Also apply defaults for any remaining placeholders
         // This handles parameters with default values that weren't explicitly provided
+        // FIX MA0009: Add timeout to prevent ReDoS attacks
         var defaultPattern = @"\{\{(\w+)\}\}";
-        var matches = Regex.Matches(workflowJson, defaultPattern);
+        var matches = Regex.Matches(workflowJson, defaultPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
         if (matches.Count > 0)
         {
-            var unreplacedParams = matches.Select(m => m.Groups[1].Value).Distinct().ToList();
+            var unreplacedParams = matches.Select(m => m.Groups[1].Value).Distinct(StringComparer.Ordinal).ToList();
             _logger.LogWarning(
                 "Template contains unreplaced parameters: {Parameters}. These will be left as placeholders.",
                 string.Join(", ", unreplacedParams));
@@ -544,7 +547,7 @@ public class N8nTemplateService
     {
         var key = _configuration[EncryptionKeyConfigName]?.Trim();
 
-        if (string.IsNullOrWhiteSpace(key) || key == EncryptionKeyPlaceholder)
+        if (string.IsNullOrWhiteSpace(key) || string.Equals(key, EncryptionKeyPlaceholder, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Missing or invalid n8n encryption key. Set the {EncryptionKeyConfigName} environment variable to a secure value.");

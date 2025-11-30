@@ -29,7 +29,7 @@ public sealed class TestN8nConnectionCommandHandler : ICommandHandler<TestN8nCon
         // Business logic validation
         if (command.ConfigId == Guid.Empty)
         {
-            throw new ArgumentException("Config ID is required", nameof(command.ConfigId));
+            throw new ArgumentException("Config ID is required", nameof(command));
         }
 
         _logger.LogInformation("Testing n8n connection for config {ConfigId}", command.ConfigId);
@@ -40,7 +40,7 @@ public sealed class TestN8nConnectionCommandHandler : ICommandHandler<TestN8nCon
         // - HTTP call to n8n
         // - Latency measurement
         // - Database update (LastTestedAt, LastTestResult)
-        var result = await _configService.TestConnectionAsync(command.ConfigId.ToString(), cancellationToken);
+        var result = await _configService.TestConnectionAsync(command.ConfigId.ToString(), cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "n8n config {ConfigId} test result: {Success}, Latency: {Latency}ms",

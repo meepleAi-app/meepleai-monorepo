@@ -46,7 +46,7 @@ public class CosineSimilarityCalculator
         }
 
         // Build vocabulary (all unique terms across both documents)
-        var vocabulary = new HashSet<string>(tokens1.Keys);
+        var vocabulary = new HashSet<string>(tokens1.Keys, StringComparer.Ordinal);
         vocabulary.UnionWith(tokens2.Keys);
 
         // Calculate TF-IDF vectors

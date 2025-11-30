@@ -295,7 +295,7 @@ public class ConfigurationService : IConfigurationService
     private static T? DeserializeValue<T>(string value, string valueType)
     {
         // Parse to intermediate type, then convert to target type
-        object parsed = valueType.ToLower() switch
+        object parsed = valueType.ToLower(System.Globalization.CultureInfo.InvariantCulture) switch
         {
             "int" or "integer" => int.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
             "long" => long.Parse(value, System.Globalization.CultureInfo.InvariantCulture),

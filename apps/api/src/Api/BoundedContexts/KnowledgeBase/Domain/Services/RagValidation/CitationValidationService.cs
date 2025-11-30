@@ -81,7 +81,7 @@ public class CitationValidationService : ICitationValidationService
             .Select(p => new { p.Id, p.PageCount })
             .ToListAsync(cancellationToken);
 
-        var pdfDict = pdfDocuments.ToDictionary(p => p.Id.ToString(), p => p.PageCount ?? 0);
+        var pdfDict = pdfDocuments.ToDictionary(p => p.Id.ToString(), p => p.PageCount ?? 0, StringComparer.Ordinal);
 
         // Validate each citation
         foreach (var snippet in snippets)
@@ -136,10 +136,10 @@ public class CitationValidationService : ICitationValidationService
             .Select(p => new { p.Id, p.PageCount })
             .ToListAsync(cancellationToken);
 
-        var pdfDict = pdfDocuments.ToDictionary(p => p.Id.ToString(), p => p.PageCount ?? 0);
+        var pdfDict = pdfDocuments.ToDictionary(p => p.Id.ToString(), p => p.PageCount ?? 0, StringComparer.Ordinal);
         var errors = new List<CitationValidationError>();
 
-        return await ValidateSingleCitationInternalAsync(snippet, pdfDict, errors, cancellationToken);
+        return await ValidateSingleCitationInternalAsync(snippet, pdfDict, errors, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -165,7 +165,7 @@ public class CitationValidationService : ICitationValidationService
         }
 
         var sourceParts = snippet.source.Split(':', 2);
-        if (sourceParts.Length != 2 || sourceParts[0] != "PDF")
+        if (sourceParts.Length != 2 || !string.Equals(sourceParts[0], "PDF", StringComparison.Ordinal))
         {
             errors.Add(new CitationValidationError
             {

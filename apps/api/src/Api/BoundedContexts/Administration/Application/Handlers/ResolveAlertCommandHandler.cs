@@ -19,6 +19,6 @@ public class ResolveAlertCommandHandler : ICommandHandler<ResolveAlertCommand, b
 
     public async Task<bool> Handle(ResolveAlertCommand command, CancellationToken cancellationToken)
     {
-        return await _alertingService.ResolveAlertAsync(command.AlertType, cancellationToken);
+        return await _alertingService.ResolveAlertAsync(command.AlertType, cancellationToken).ConfigureAwait(false);
     }
 }

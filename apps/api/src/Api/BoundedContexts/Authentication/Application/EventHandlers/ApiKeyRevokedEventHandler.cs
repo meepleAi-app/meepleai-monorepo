@@ -22,7 +22,7 @@ public sealed class ApiKeyRevokedEventHandler : DomainEventHandlerBase<ApiKeyRev
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., send API key revoked notification)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(ApiKeyRevokedEvent domainEvent) => domainEvent.UserId;
@@ -30,6 +30,7 @@ public sealed class ApiKeyRevokedEventHandler : DomainEventHandlerBase<ApiKeyRev
     protected override Dictionary<string, object?>? GetAuditMetadata(ApiKeyRevokedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["ApiKeyId"] = domainEvent.ApiKeyId,
             ["UserId"] = domainEvent.UserId,

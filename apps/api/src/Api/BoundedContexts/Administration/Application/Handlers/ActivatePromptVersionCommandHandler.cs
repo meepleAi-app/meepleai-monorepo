@@ -33,17 +33,17 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
 
         if (templateId == Guid.Empty)
         {
-            throw new ArgumentException("Template ID is required", nameof(templateId));
+            throw new ArgumentException("Template ID is required", nameof(command));
         }
 
         if (versionId == Guid.Empty)
         {
-            throw new ArgumentException("Version ID is required", nameof(versionId));
+            throw new ArgumentException("Version ID is required", nameof(command));
         }
 
         if (activatedByUserId == Guid.Empty)
         {
-            throw new ArgumentException("Activated by user ID is required", nameof(activatedByUserId));
+            throw new ArgumentException("Activated by user ID is required", nameof(command));
         }
 
         // Check if version exists and belongs to the specified template
@@ -69,7 +69,7 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Start transaction for activation
-        using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -129,8 +129,8 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
 
             _db.PromptAuditLogs.Add(activationAuditLog);
 
-            await _db.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Activated version {VersionNumber} ({VersionId}) for template {TemplateId} by user {UserId}",
@@ -152,7 +152,7 @@ public class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePromp
 
             try
             {
-                await transaction.RollbackAsync(cancellationToken);
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception rollbackEx)

@@ -31,7 +31,7 @@ public class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand,
     public async Task<RevokeSessionResponse> Handle(RevokeSessionCommand command, CancellationToken cancellationToken)
     {
         // Retrieve session
-        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken);
+        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
 
         if (session == null)
         {
@@ -59,15 +59,15 @@ public class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionCommand,
             session.Revoke(reason: reason);
 
             // Persist changes (domain events will be collected automatically)
-            await _sessionRepository.UpdateAsync(session, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Invalidate cache to ensure immediate effect
             if (_sessionCache != null)
             {
                 try
                 {
-                    await _sessionCache.InvalidateAsync(session.TokenHash, cancellationToken);
+                    await _sessionCache.InvalidateAsync(session.TokenHash, cancellationToken).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
                 // Justification: Service boundary - cache failure resilience

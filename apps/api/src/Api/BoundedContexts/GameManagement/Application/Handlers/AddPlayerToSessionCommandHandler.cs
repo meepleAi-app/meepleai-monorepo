@@ -28,7 +28,7 @@ public class AddPlayerToSessionCommandHandler : ICommandHandler<AddPlayerToSessi
     public async Task<GameSessionDto> Handle(AddPlayerToSessionCommand command, CancellationToken cancellationToken)
     {
         // Get existing session
-        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken);
+        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
         if (session == null)
             throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
 
@@ -39,8 +39,8 @@ public class AddPlayerToSessionCommandHandler : ICommandHandler<AddPlayerToSessi
         session.AddPlayer(player);
 
         // Persist
-        await _sessionRepository.UpdateAsync(session, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO using shared mapper
         return session.ToDto();

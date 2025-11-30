@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -41,7 +42,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
         ValidateLineNumber(command.LineNumber);
 
         // Extract and resolve mentions
-        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(command.CommentText, cancellationToken);
+        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(command.CommentText, cancellationToken).ConfigureAwait(false);
         var mentionedUserIds = mentionedUserIdsStr
             .Select(id => Guid.Parse(id))
             .ToList();
@@ -58,7 +59,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
         };
 
         _dbContext.RuleSpecComments.Add(comment);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created comment {CommentId} by user {UserId} for {GameId} v{Version} (line: {LineNumber})",
@@ -81,7 +82,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
             var matches = MentionRegex().Matches(text);
             var mentionedUsernames = matches
                 .Select(m => m.Groups[1].Value.ToLowerInvariant())
-                .Distinct()
+                .Distinct(StringComparer.Ordinal)
                 .ToList();
 
             if (!mentionedUsernames.Any())
@@ -91,8 +92,8 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
 
             var users = await _dbContext.Users
                 .AsNoTracking()
-                .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m))))
+                .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower(CultureInfo.InvariantCulture)))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower(CultureInfo.InvariantCulture).StartsWith(m))))
                 .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync(cancellationToken);

@@ -56,7 +56,7 @@ public class N8nConfigurationRepository : RepositoryBase, IN8nConfigurationRepos
     {
         CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.N8nConfigEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(N8nConfiguration config, CancellationToken cancellationToken = default)

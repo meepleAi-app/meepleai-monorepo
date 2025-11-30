@@ -27,16 +27,16 @@ public sealed class GenerateTotpSetupCommandHandler : ICommandHandler<GenerateTo
         // Business logic validation
         if (command.UserId == Guid.Empty)
         {
-            throw new ArgumentException("User ID is required", nameof(command.UserId));
+            throw new ArgumentException("User ID is required", nameof(command));
         }
 
         if (string.IsNullOrWhiteSpace(command.UserEmail))
         {
-            throw new ArgumentException("User email is required", nameof(command.UserEmail));
+            throw new ArgumentException("User email is required", nameof(command));
         }
 
         // Delegate TOTP setup to infrastructure service
-        var setup = await _totpService.GenerateSetupAsync(command.UserId, command.UserEmail, cancellationToken);
+        var setup = await _totpService.GenerateSetupAsync(command.UserId, command.UserEmail, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("TOTP setup generated for user {UserId}", command.UserId);
 

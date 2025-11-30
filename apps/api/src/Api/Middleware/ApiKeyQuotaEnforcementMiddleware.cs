@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Globalization;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.AspNetCore.Http;
@@ -106,9 +107,9 @@ public class ApiKeyQuotaEnforcementMiddleware
 
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 context.Response.ContentType = "application/json";
-                context.Response.Headers.Append("X-RateLimit-Limit", quota.HourlyLimit.Value.ToString());
+                context.Response.Headers.Append("X-RateLimit-Limit", quota.HourlyLimit.Value.ToString(CultureInfo.InvariantCulture));
                 context.Response.Headers.Append("X-RateLimit-Remaining", "0");
-                context.Response.Headers.Append("X-RateLimit-Reset", hourStart.AddHours(1).ToUnixTimeSeconds().ToString());
+                context.Response.Headers.Append("X-RateLimit-Reset", hourStart.AddHours(1).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
 
                 var error = new
                 {
@@ -122,9 +123,9 @@ public class ApiKeyQuotaEnforcementMiddleware
             }
 
             // Add rate limit headers for hourly quota
-            context.Response.Headers.Append("X-RateLimit-Limit", quota.HourlyLimit.Value.ToString());
-            context.Response.Headers.Append("X-RateLimit-Remaining", (quota.HourlyLimit.Value - hourlyCount - 1).ToString());
-            context.Response.Headers.Append("X-RateLimit-Reset", hourStart.AddHours(1).ToUnixTimeSeconds().ToString());
+            context.Response.Headers.Append("X-RateLimit-Limit", quota.HourlyLimit.Value.ToString(CultureInfo.InvariantCulture));
+            context.Response.Headers.Append("X-RateLimit-Remaining", (quota.HourlyLimit.Value - hourlyCount - 1).ToString(CultureInfo.InvariantCulture));
+            context.Response.Headers.Append("X-RateLimit-Reset", hourStart.AddHours(1).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
         }
 
         // Check daily limit
@@ -145,9 +146,9 @@ public class ApiKeyQuotaEnforcementMiddleware
 
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 context.Response.ContentType = "application/json";
-                context.Response.Headers.Append("X-RateLimit-Limit-Daily", quota.DailyLimit.Value.ToString());
+                context.Response.Headers.Append("X-RateLimit-Limit-Daily", quota.DailyLimit.Value.ToString(CultureInfo.InvariantCulture));
                 context.Response.Headers.Append("X-RateLimit-Remaining-Daily", "0");
-                context.Response.Headers.Append("X-RateLimit-Reset-Daily", dayStart.AddDays(1).ToUnixTimeSeconds().ToString());
+                context.Response.Headers.Append("X-RateLimit-Reset-Daily", dayStart.AddDays(1).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
 
                 var error = new
                 {
@@ -161,9 +162,9 @@ public class ApiKeyQuotaEnforcementMiddleware
             }
 
             // Add rate limit headers for daily quota
-            context.Response.Headers.Append("X-RateLimit-Limit-Daily", quota.DailyLimit.Value.ToString());
-            context.Response.Headers.Append("X-RateLimit-Remaining-Daily", (quota.DailyLimit.Value - dailyCount - 1).ToString());
-            context.Response.Headers.Append("X-RateLimit-Reset-Daily", dayStart.AddDays(1).ToUnixTimeSeconds().ToString());
+            context.Response.Headers.Append("X-RateLimit-Limit-Daily", quota.DailyLimit.Value.ToString(CultureInfo.InvariantCulture));
+            context.Response.Headers.Append("X-RateLimit-Remaining-Daily", (quota.DailyLimit.Value - dailyCount - 1).ToString(CultureInfo.InvariantCulture));
+            context.Response.Headers.Append("X-RateLimit-Reset-Daily", dayStart.AddDays(1).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
         }
 
         // Quota not exceeded, proceed with request

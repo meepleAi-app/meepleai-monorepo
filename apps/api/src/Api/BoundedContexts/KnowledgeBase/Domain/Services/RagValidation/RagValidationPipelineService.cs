@@ -94,10 +94,10 @@ public class RagValidationPipelineService : IRagValidationPipelineService
             _hallucinationDetection.DetectHallucinationsAsync(answerText, language, CancellationToken.None));
 
         // Wait for both tasks to complete
-        await Task.WhenAll(citationTask, hallucinationTask);
+        await Task.WhenAll(citationTask, hallucinationTask).ConfigureAwait(false);
 
-        var citationResult = EnsureCitationResult(await citationTask, snippets.Count);
-        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask);
+        var citationResult = EnsureCitationResult(await citationTask.ConfigureAwait(false), snippets.Count);
+        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask.ConfigureAwait(false));
         var citation = citationResult!;
         var hallucination = hallucinationResult!;
 
@@ -214,7 +214,7 @@ public class RagValidationPipelineService : IRagValidationPipelineService
         // Start hallucination detection after multi-model completes (needs consensus response)
         var hallucinationTask = multiModelTask.ContinueWith(async task =>
         {
-            var multiModelResult = EnsureMultiModelResult(await task);
+            var multiModelResult = EnsureMultiModelResult(await task.ConfigureAwait(false));
             var textToValidate = multiModelResult.HasConsensus && !string.IsNullOrWhiteSpace(multiModelResult.ConsensusResponse)
                 ? multiModelResult.ConsensusResponse
                 : answerText;
@@ -226,11 +226,11 @@ public class RagValidationPipelineService : IRagValidationPipelineService
         }, cancellationToken).Unwrap();
 
         // Wait for all tasks to complete
-        await Task.WhenAll(multiModelTask, citationTask, hallucinationTask);
+        await Task.WhenAll(multiModelTask, citationTask, hallucinationTask).ConfigureAwait(false);
 
-        var multiModelResult = EnsureMultiModelResult(await multiModelTask);
-        var citationResult = EnsureCitationResult(await citationTask, snippets.Count);
-        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask);
+        var multiModelResult = EnsureMultiModelResult(await multiModelTask.ConfigureAwait(false));
+        var citationResult = EnsureCitationResult(await citationTask.ConfigureAwait(false), snippets.Count);
+        var hallucinationResult = EnsureHallucinationResult(await hallucinationTask.ConfigureAwait(false));
         var multiModel = multiModelResult!;
         var citation = citationResult!;
         var hallucination = hallucinationResult!;

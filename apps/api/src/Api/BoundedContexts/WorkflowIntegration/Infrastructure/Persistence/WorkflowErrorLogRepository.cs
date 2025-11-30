@@ -57,7 +57,7 @@ public class WorkflowErrorLogRepository : RepositoryBase, IWorkflowErrorLogRepos
     {
         CollectDomainEvents(errorLog);
         var entity = MapToPersistence(errorLog);
-        await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.WorkflowErrorLogEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(WorkflowErrorLog errorLog, CancellationToken cancellationToken = default)

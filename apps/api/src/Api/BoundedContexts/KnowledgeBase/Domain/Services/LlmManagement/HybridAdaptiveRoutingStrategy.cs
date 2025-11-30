@@ -116,7 +116,7 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
                 userId, selectedProvider, selectedProvider);
 
             // Try alternative provider
-            var alternativeProvider = selectedProvider == "Ollama" ? "OpenRouter" : "Ollama";
+            var alternativeProvider = string.Equals(selectedProvider, "Ollama", StringComparison.Ordinal) ? "OpenRouter" : "Ollama";
 
             // ISSUE-1159: Treat missing providers as implicitly enabled (using default configuration)
             var alternativeEnabled = !settings.Providers.ContainsKey(alternativeProvider) ||
@@ -232,8 +232,8 @@ public class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         return providerName.ToLowerInvariant() switch
         {
             "ollama" => "llama3:8b",
-            "openrouter" => userRole?.Value == "admin"
-                ? "anthropic/claude-3.5-haiku"
+            "openrouter" => string.Equals(userRole?.Value, "admin"
+, StringComparison.Ordinal) ? "anthropic/claude-3.5-haiku"
                 : "meta-llama/llama-3.3-70b-instruct:free",
             _ => "llama3:8b"
         };

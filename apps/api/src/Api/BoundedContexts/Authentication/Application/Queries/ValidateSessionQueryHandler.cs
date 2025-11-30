@@ -32,7 +32,7 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
         var tokenHash = sessionToken.ComputeHash();
 
         // Find session by token hash
-        var session = await _sessionRepository.GetByTokenHashAsync(tokenHash, cancellationToken);
+        var session = await _sessionRepository.GetByTokenHashAsync(tokenHash, cancellationToken).ConfigureAwait(false);
 
         if (session == null)
         {
@@ -58,10 +58,10 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
         // Update last seen timestamp
         session.UpdateLastSeen(_timeProvider);
         var lastSeenAt = session.LastSeenAt ?? _timeProvider.GetUtcNow().UtcDateTime;
-        await _sessionRepository.UpdateLastSeenAsync(session.Id, lastSeenAt, cancellationToken);
+        await _sessionRepository.UpdateLastSeenAsync(session.Id, lastSeenAt, cancellationToken).ConfigureAwait(false);
 
         // Get user information
-        var user = await _userRepository.GetByIdAsync(session.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(session.UserId, cancellationToken).ConfigureAwait(false);
 
         if (user == null)
         {

@@ -87,7 +87,7 @@ public class AlertingService : IAlertingService
         };
 
         // Send to all enabled channels
-        var channelResults = new Dictionary<string, bool>();
+        var channelResults = new Dictionary<string, bool>(StringComparer.Ordinal);
         foreach (var channel in _alertChannels)
         {
             try

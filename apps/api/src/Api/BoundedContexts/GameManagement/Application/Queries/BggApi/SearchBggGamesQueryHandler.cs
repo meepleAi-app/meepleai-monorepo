@@ -40,7 +40,7 @@ public sealed class SearchBggGamesQueryHandler : IQueryHandler<SearchBggGamesQue
         // - XML parsing
         // - Caching (HybridCache)
         // - Rate limiting
-        var results = await _bggApiService.SearchGamesAsync(query.Query, query.Exact, cancellationToken);
+        var results = await _bggApiService.SearchGamesAsync(query.Query, query.Exact, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("BGG search returned {Count} results for: {Query}", results.Count, query.Query);
 

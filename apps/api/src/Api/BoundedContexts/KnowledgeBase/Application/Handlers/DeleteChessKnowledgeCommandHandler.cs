@@ -32,7 +32,7 @@ public sealed class DeleteChessKnowledgeCommandHandler
         {
             _logger.LogInformation("Deleting all chess knowledge");
 
-            var result = await _qdrantService.DeleteByCategoryAsync(ChessCategory, cancellationToken);
+            var result = await _qdrantService.DeleteByCategoryAsync(ChessCategory, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Chess knowledge deletion completed: {Success}", result);
 

@@ -32,9 +32,10 @@ public static class AlertEndpoints
             {
                 try
                 {
-                    if (alert.Status == "firing")
+                    if (string.Equals(alert.Status, "firing", StringComparison.Ordinal))
                     {
                         var metadata = new Dictionary<string, object>
+(StringComparer.Ordinal)
                         {
                             ["labels"] = alert.Labels,
                             ["annotations"] = alert.Annotations,
@@ -49,7 +50,7 @@ public static class AlertEndpoints
                             metadata: metadata,
                             cancellationToken: ct);
                     }
-                    else if (alert.Status == "resolved")
+                    else if (string.Equals(alert.Status, "resolved", StringComparison.Ordinal))
                     {
                         var alertType = alert.Labels.GetValueOrDefault("alertname", "Unknown");
                         await alertingService.ResolveAlertAsync(alertType, ct);

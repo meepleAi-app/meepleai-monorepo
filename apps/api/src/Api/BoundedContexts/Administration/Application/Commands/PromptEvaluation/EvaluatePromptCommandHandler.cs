@@ -41,7 +41,7 @@ public sealed class EvaluatePromptCommandHandler : ICommandHandler<EvaluatePromp
 
         if (command.StoreResults)
         {
-            await _evaluationService.StoreResultsAsync(result, cancellationToken);
+            await _evaluationService.StoreResultsAsync(result, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation(
                 "Evaluation result {EvaluationId} stored to database",
                 result.EvaluationId);

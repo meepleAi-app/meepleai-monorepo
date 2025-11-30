@@ -31,7 +31,7 @@ public class GetUserUploadQuotaQueryHandler : IQueryHandler<GetUserUploadQuotaQu
     public async Task<PdfUploadQuotaInfo> Handle(GetUserUploadQuotaQuery query, CancellationToken cancellationToken)
     {
         // Get user from repository (DDD pattern)
-        var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
         if (user == null)
         {

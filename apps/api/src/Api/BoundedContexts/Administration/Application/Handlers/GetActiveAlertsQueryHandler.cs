@@ -20,6 +20,6 @@ public class GetActiveAlertsQueryHandler : IQueryHandler<GetActiveAlertsQuery, L
 
     public async Task<List<AlertDto>> Handle(GetActiveAlertsQuery query, CancellationToken cancellationToken)
     {
-        return await _alertingService.GetActiveAlertsAsync(cancellationToken);
+        return await _alertingService.GetActiveAlertsAsync(cancellationToken).ConfigureAwait(false);
     }
 }

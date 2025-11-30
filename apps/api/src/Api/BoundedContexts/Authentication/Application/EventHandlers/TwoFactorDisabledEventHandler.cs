@@ -32,7 +32,7 @@ public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFa
         // Send security alert email to user
         try
         {
-            var user = await _userRepository.GetByIdAsync(domainEvent.UserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(domainEvent.UserId, cancellationToken).ConfigureAwait(false);
             if (user != null)
             {
                 await _emailService.SendTwoFactorDisabledEmailAsync(
@@ -62,6 +62,7 @@ public sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<TwoFa
     protected override Dictionary<string, object?>? GetAuditMetadata(TwoFactorDisabledEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["UserId"] = domainEvent.UserId,
             ["Action"] = "TwoFactorDisabled",

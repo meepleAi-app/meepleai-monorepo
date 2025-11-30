@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -46,7 +47,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
             ?? throw new InvalidOperationException($"Parent comment {command.ParentCommentId} not found");
 
         // Validate thread depth (adding reply would increase depth by 1)
-        var threadDepth = await CalculateThreadDepthAsync(command.ParentCommentId, cancellationToken);
+        var threadDepth = await CalculateThreadDepthAsync(command.ParentCommentId, cancellationToken).ConfigureAwait(false);
         if (threadDepth >= MaxThreadDepth - 1)
         {
             throw new InvalidOperationException(
@@ -54,7 +55,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
         }
 
         // Extract and resolve mentions
-        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(command.CommentText, cancellationToken);
+        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(command.CommentText, cancellationToken).ConfigureAwait(false);
         var mentionedUserIds = mentionedUserIdsStr
             .Select(id => Guid.Parse(id))
             .ToList();
@@ -73,7 +74,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
         };
 
         _dbContext.RuleSpecComments.Add(reply);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created reply {ReplyId} by user {UserId} to parent {ParentId}",
@@ -131,7 +132,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
             var matches = MentionRegex().Matches(text);
             var mentionedUsernames = matches
                 .Select(m => m.Groups[1].Value.ToLowerInvariant())
-                .Distinct()
+                .Distinct(StringComparer.Ordinal)
                 .ToList();
 
             if (!mentionedUsernames.Any())
@@ -141,8 +142,8 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
 
             var users = await _dbContext.Users
                 .AsNoTracking()
-                .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m))))
+                .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower(CultureInfo.InvariantCulture)))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower(CultureInfo.InvariantCulture).StartsWith(m))))
                 .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync(cancellationToken);

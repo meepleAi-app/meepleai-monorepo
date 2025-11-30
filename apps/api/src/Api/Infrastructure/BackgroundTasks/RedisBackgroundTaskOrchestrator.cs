@@ -26,8 +26,8 @@ public class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
     {
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _runningTasks = new ConcurrentDictionary<string, CancellationTokenSource>();
-        _scheduledTasks = new ConcurrentDictionary<string, CancellationTokenSource>();
+        _runningTasks = new ConcurrentDictionary<string, CancellationTokenSource>(StringComparer.Ordinal);
+        _scheduledTasks = new ConcurrentDictionary<string, CancellationTokenSource>(StringComparer.Ordinal);
     }
 
     public async Task ScheduleAsync(

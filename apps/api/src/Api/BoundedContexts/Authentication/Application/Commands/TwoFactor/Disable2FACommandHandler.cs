@@ -25,7 +25,7 @@ public class Disable2FACommandHandler : ICommandHandler<Disable2FACommand, Disab
         try
         {
             // Delegate to existing TotpService (handles password + code verification)
-            await _totpService.DisableTwoFactorAsync(command.UserId, command.CurrentPassword, command.TotpOrBackupCode, cancellationToken);
+            await _totpService.DisableTwoFactorAsync(command.UserId, command.CurrentPassword, command.TotpOrBackupCode, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("2FA disabled successfully for user {UserId} via CQRS", command.UserId);
             return new Disable2FAResult(Success: true);

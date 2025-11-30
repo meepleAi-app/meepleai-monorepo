@@ -22,7 +22,7 @@ public sealed class OAuthTokensRefreshedEventHandler : DomainEventHandlerBase<OA
     {
         // Auto-audit logging is handled by base class
         // Token refresh is a routine operation, no additional business logic needed
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(OAuthTokensRefreshedEvent domainEvent) => null; // OAuth account event, not user-specific
@@ -30,6 +30,7 @@ public sealed class OAuthTokensRefreshedEventHandler : DomainEventHandlerBase<OA
     protected override Dictionary<string, object?>? GetAuditMetadata(OAuthTokensRefreshedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["OAuthAccountId"] = domainEvent.OAuthAccountId,
             ["Provider"] = domainEvent.Provider,

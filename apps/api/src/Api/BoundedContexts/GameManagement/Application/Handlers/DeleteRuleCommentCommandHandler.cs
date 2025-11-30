@@ -37,11 +37,11 @@ public class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComment
         // Manually delete all replies (cascade delete - DeleteBehavior.Restrict requires manual handling)
         if (comment.Replies?.Count > 0)
         {
-            await DeleteRepliesRecursivelyAsync(comment.Id, cancellationToken);
+            await DeleteRepliesRecursivelyAsync(comment.Id, cancellationToken).ConfigureAwait(false);
         }
 
         _dbContext.RuleSpecComments.Remove(comment);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Deleted comment {CommentId} by user {UserId} (admin: {IsAdmin})",
@@ -59,7 +59,7 @@ public class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComment
         foreach (var reply in replies)
         {
             // Recursively delete nested replies
-            await DeleteRepliesRecursivelyAsync(reply.Id, cancellationToken);
+            await DeleteRepliesRecursivelyAsync(reply.Id, cancellationToken).ConfigureAwait(false);
             _dbContext.RuleSpecComments.Remove(reply);
         }
     }

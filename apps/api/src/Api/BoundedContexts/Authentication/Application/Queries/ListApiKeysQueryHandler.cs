@@ -39,7 +39,7 @@ public class ListApiKeysQueryHandler : IQueryHandler<ListApiKeysQuery, ApiKeyLis
             query = query.Where(k => k.RevokedAt == null);
         }
 
-        var totalCount = await query.CountAsync(cancellationToken);
+        var totalCount = await query.CountAsync(cancellationToken).ConfigureAwait(false);
 
         var keyEntities = await query
             .OrderByDescending(k => k.CreatedAt)

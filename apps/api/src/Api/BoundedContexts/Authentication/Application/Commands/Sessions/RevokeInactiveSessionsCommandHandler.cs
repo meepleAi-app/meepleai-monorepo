@@ -63,11 +63,11 @@ public class RevokeInactiveSessionsCommandHandler : ICommandHandler<RevokeInacti
             // Invalidate cache if present
             if (_sessionCache != null)
             {
-                await _sessionCache.InvalidateAsync(session.TokenHash, cancellationToken);
+                await _sessionCache.InvalidateAsync(session.TokenHash, cancellationToken).ConfigureAwait(false);
             }
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Auto-revoked {Count} inactive sessions (inactive for >{Days} days)",

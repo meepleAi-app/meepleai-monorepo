@@ -20,7 +20,7 @@ public class GetAllGamesQueryHandler : IQueryHandler<GetAllGamesQuery, IReadOnly
 
     public async Task<IReadOnlyList<GameDto>> Handle(GetAllGamesQuery query, CancellationToken cancellationToken)
     {
-        var games = await _gameRepository.GetAllAsync(cancellationToken);
+        var games = await _gameRepository.GetAllAsync(cancellationToken).ConfigureAwait(false);
 
         return games.Select(MapToDto).ToList();
     }

@@ -29,12 +29,12 @@ public sealed class ImportN8nTemplateCommandHandler : ICommandHandler<ImportN8nT
         // Business logic validation
         if (string.IsNullOrWhiteSpace(command.TemplateId))
         {
-            throw new ArgumentException("Template ID is required", nameof(command.TemplateId));
+            throw new ArgumentException("Template ID is required", nameof(command));
         }
 
         if (string.IsNullOrWhiteSpace(command.UserId))
         {
-            throw new ArgumentException("User ID is required", nameof(command.UserId));
+            throw new ArgumentException("User ID is required", nameof(command));
         }
 
         _logger.LogInformation(

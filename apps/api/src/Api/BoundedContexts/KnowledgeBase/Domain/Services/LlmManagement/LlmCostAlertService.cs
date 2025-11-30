@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Services;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -34,7 +35,7 @@ public class LlmCostAlertService
     public async Task CheckDailyCostThresholdAsync(CancellationToken ct = default)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, ct);
+        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, ct).ConfigureAwait(false);
 
         if (dailyCost > DailyThreshold)
         {
@@ -42,7 +43,7 @@ public class LlmCostAlertService
                 "ALERT: Daily LLM cost ${DailyCost:F2} exceeds threshold ${Threshold:F2}",
                 dailyCost, DailyThreshold);
 
-            var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(today, today, ct);
+            var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(today, today, ct).ConfigureAwait(false);
             var providerBreakdown = string.Join(", ",
                 costsByProvider.Select(kv => $"{kv.Key}: ${kv.Value:F2}"));
 
@@ -51,8 +52,9 @@ public class LlmCostAlertService
                 severity: "warning",
                 message: $"Daily LLM cost ${dailyCost:F2} exceeds threshold ${DailyThreshold:F2}. Breakdown: {providerBreakdown}",
                 metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
-                    ["date"] = today.ToString("yyyy-MM-dd"),
+                    ["date"] = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                     ["daily_cost"] = dailyCost,
                     ["threshold"] = DailyThreshold,
                     ["exceeded_by"] = dailyCost - DailyThreshold,
@@ -74,7 +76,7 @@ public class LlmCostAlertService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var weekStart = today.AddDays(-7);
-        var weeklyCost = await _costLogRepository.GetTotalCostAsync(weekStart, today, ct);
+        var weeklyCost = await _costLogRepository.GetTotalCostAsync(weekStart, today, ct).ConfigureAwait(false);
 
         if (weeklyCost > WeeklyThreshold)
         {
@@ -87,9 +89,10 @@ public class LlmCostAlertService
                 severity: "warning",
                 message: $"Weekly LLM cost ${weeklyCost:F2} exceeds threshold ${WeeklyThreshold:F2} (Period: {weekStart} to {today})",
                 metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
-                    ["start_date"] = weekStart.ToString("yyyy-MM-dd"),
-                    ["end_date"] = today.ToString("yyyy-MM-dd"),
+                    ["start_date"] = weekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    ["end_date"] = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                     ["weekly_cost"] = weeklyCost,
                     ["threshold"] = WeeklyThreshold
                 },
@@ -104,7 +107,7 @@ public class LlmCostAlertService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var monthStart = new DateOnly(today.Year, today.Month, 1);
-        var monthCost = await _costLogRepository.GetTotalCostAsync(monthStart, today, ct);
+        var monthCost = await _costLogRepository.GetTotalCostAsync(monthStart, today, ct).ConfigureAwait(false);
 
         // Project monthly cost based on current daily average
         var daysElapsed = (today.DayNumber - monthStart.DayNumber) + 1;
@@ -122,8 +125,9 @@ public class LlmCostAlertService
                 severity: "warning",
                 message: $"Projected monthly LLM cost ${projectedMonthlyCost:F2} exceeds budget ${MonthlyThreshold:F2}. Current: ${monthCost:F2} ({daysElapsed}/{daysInMonth} days)",
                 metadata: new Dictionary<string, object>
+(StringComparer.Ordinal)
                 {
-                    ["month"] = today.ToString("yyyy-MM"),
+                    ["month"] = today.ToString("yyyy-MM", CultureInfo.InvariantCulture),
                     ["current_cost"] = monthCost,
                     ["projected_cost"] = projectedMonthlyCost,
                     ["threshold"] = MonthlyThreshold,

@@ -24,7 +24,7 @@ public class SmolDoclingResponse
     public int PageCount { get; set; }
 
     [JsonPropertyName("metadata")]
-    public Dictionary<string, object> Metadata { get; set; } = new();
+    public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -43,7 +43,7 @@ public class SmolDoclingChunk
     public string? ElementType { get; set; }
 
     [JsonPropertyName("metadata")]
-    public Dictionary<string, object> Metadata { get; set; } = new();
+    public Dictionary<string, object> Metadata { get; set; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>

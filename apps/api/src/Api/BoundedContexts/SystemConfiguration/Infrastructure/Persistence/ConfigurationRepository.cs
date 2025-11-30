@@ -72,7 +72,7 @@ public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
                 .ThenByDescending(c => c.Version);
         }
 
-        var entity = await query.FirstOrDefaultAsync(cancellationToken);
+        var entity = await query.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
     }
@@ -103,7 +103,7 @@ public class ConfigurationRepository : RepositoryBase, IConfigurationRepository
     {
         CollectDomainEvents(config);
         var entity = MapToPersistence(config);
-        await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(SystemConfigurationAggregate config, CancellationToken cancellationToken = default)

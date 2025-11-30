@@ -3,6 +3,7 @@ using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 
@@ -269,10 +270,12 @@ public sealed class ChatThread : AggregateRoot<Guid>
         // Header
         sb.AppendLine($"# {Title ?? "Untitled Chat"}");
         sb.AppendLine();
-        sb.AppendLine($"**Created:** {CreatedAt:yyyy-MM-dd HH:mm:ss UTC}  ");
-        sb.AppendLine($"**Last Activity:** {LastMessageAt:yyyy-MM-dd HH:mm:ss UTC}  ");
+        sb.AppendLine($"**Created:** {CreatedAt.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture)}  ");
+        sb.AppendLine($"**Last Activity:** {LastMessageAt.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture)}  ");
         sb.AppendLine($"**Status:** {Status.Value}  ");
+#pragma warning disable MA0011 // False positive: MessageCount is an int, no culture-sensitive formatting
         sb.AppendLine($"**Messages:** {MessageCount}");
+#pragma warning restore MA0011
         sb.AppendLine();
         sb.AppendLine("---");
         sb.AppendLine();
@@ -286,8 +289,8 @@ public sealed class ChatThread : AggregateRoot<Guid>
         {
             foreach (var message in Messages)
             {
-                var roleLabel = message.Role == ChatMessage.UserRole ? "👤 User" : "🤖 Assistant";
-                var timestamp = message.Timestamp.ToString("HH:mm:ss");
+                var roleLabel = string.Equals(message.Role, ChatMessage.UserRole, StringComparison.Ordinal) ? "👤 User" : "🤖 Assistant";
+                var timestamp = message.Timestamp.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
 
                 sb.AppendLine($"## {roleLabel} ({timestamp})");
                 sb.AppendLine();
@@ -299,7 +302,7 @@ public sealed class ChatThread : AggregateRoot<Guid>
         }
 
         // Footer
-        sb.AppendLine($"*Exported on {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss UTC}*");
+        sb.AppendLine($"*Exported on {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture)}*");
 
         return sb.ToString();
     }

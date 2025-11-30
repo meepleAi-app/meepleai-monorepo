@@ -25,7 +25,7 @@ public class RollbackConfigCommandHandler : ICommandHandler<RollbackConfigComman
 
     public async Task<ConfigurationDto?> Handle(RollbackConfigCommand command, CancellationToken cancellationToken)
     {
-        var config = await _configurationRepository.GetByIdAsync(command.ConfigurationId, cancellationToken);
+        var config = await _configurationRepository.GetByIdAsync(command.ConfigurationId, cancellationToken).ConfigureAwait(false);
         if (config == null)
             return null;
 
@@ -34,8 +34,8 @@ public class RollbackConfigCommandHandler : ICommandHandler<RollbackConfigComman
         // For full version history, a separate audit table would be needed
         config.Rollback(command.UserId);
 
-        await _configurationRepository.UpdateAsync(config, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _configurationRepository.UpdateAsync(config, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToDto(config);
     }

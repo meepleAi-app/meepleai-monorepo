@@ -32,7 +32,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -89,9 +89,9 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await Task.Delay(TestConstants.Timing.TinyDelay);
         var session3 = CreateTestSession(userId);
 
-        await Repository.AddAsync(session1, TestCancellationToken);
-        await Repository.AddAsync(session2, TestCancellationToken);
-        await Repository.AddAsync(session3, TestCancellationToken);
+        await Repository.AddAsync(session1, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(session2, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(session3, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -116,9 +116,9 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var session2 = CreateTestSession(user1Id);
         var session3 = CreateTestSession(user2Id);
 
-        await Repository.AddAsync(session1, TestCancellationToken);
-        await Repository.AddAsync(session2, TestCancellationToken);
-        await Repository.AddAsync(session3, TestCancellationToken);
+        await Repository.AddAsync(session1, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(session2, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(session3, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -143,8 +143,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var session1 = CreateTestSession(userId);
         var session2 = CreateTestSession(userId);
 
-        await Repository.AddAsync(session1, TestCancellationToken);
-        await Repository.AddAsync(session2, TestCancellationToken);
+        await Repository.AddAsync(session1, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(session2, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -163,8 +163,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var activeSession = CreateTestSession(userId);
         var expiredSession = CreateTestSession(userId, TimeSpan.FromDays(-1)); // Already expired
 
-        await Repository.AddAsync(activeSession, TestCancellationToken);
-        await Repository.AddAsync(expiredSession, TestCancellationToken);
+        await Repository.AddAsync(activeSession, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(expiredSession, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -185,8 +185,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var revokedSession = CreateTestSession(userId);
         revokedSession.Revoke();
 
-        await Repository.AddAsync(activeSession, TestCancellationToken);
-        await Repository.AddAsync(revokedSession, TestCancellationToken);
+        await Repository.AddAsync(activeSession, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(revokedSession, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -209,10 +209,10 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var revoked = CreateTestSession(userId);
         revoked.Revoke();
 
-        await Repository.AddAsync(active1, TestCancellationToken);
-        await Repository.AddAsync(active2, TestCancellationToken);
-        await Repository.AddAsync(expired, TestCancellationToken);
-        await Repository.AddAsync(revoked, TestCancellationToken);
+        await Repository.AddAsync(active1, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(active2, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(expired, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(revoked, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -237,7 +237,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var session = CreateTestSession(userId, ipAddress: "192.168.1.1", userAgent: "TestBrowser/1.0");
 
         // Act
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -262,7 +262,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         );
 
         // Act
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -285,7 +285,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         DbContext.ChangeTracker.Clear();
@@ -308,7 +308,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         DbContext.ChangeTracker.Clear();
@@ -338,9 +338,9 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var session2 = CreateTestSession(userId);
         var session3 = CreateTestSession(userId);
 
-        await Repository.AddAsync(session1, TestCancellationToken);
-        await Repository.AddAsync(session2, TestCancellationToken);
-        await Repository.AddAsync(session3, TestCancellationToken);
+        await Repository.AddAsync(session1, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(session2, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(session3, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -362,8 +362,8 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var session2 = CreateTestSession(userId);
         session2.Revoke();
 
-        await Repository.AddAsync(session1, TestCancellationToken);
-        await Repository.AddAsync(session2, TestCancellationToken);
+        await Repository.AddAsync(session1, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(session2, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var originalRevokedAt = session2.RevokedAt;
@@ -394,9 +394,9 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var user1Session2 = CreateTestSession(user1Id);
         var user2Session = CreateTestSession(user2Id);
 
-        await Repository.AddAsync(user1Session1, TestCancellationToken);
-        await Repository.AddAsync(user1Session2, TestCancellationToken);
-        await Repository.AddAsync(user2Session, TestCancellationToken);
+        await Repository.AddAsync(user1Session1, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(user1Session2, TestCancellationToken, TestContext.Current.CancellationToken);
+        await Repository.AddAsync(user2Session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -427,7 +427,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         );
 
         // Act
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -449,7 +449,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -476,7 +476,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var userId = await CreateTestUserAsync();
         // Create session that expires in 1 second
         var session = CreateTestSession(userId, AuthenticationTestConstants.SessionExpiry.VeryShort);
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Check active immediately
@@ -500,7 +500,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId, TimeSpan.FromDays(30));
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -521,7 +521,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Multiple concurrent token lookups using independent repositories
@@ -548,7 +548,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Multiple concurrent revocations using independent repositories
@@ -579,7 +579,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var session = CreateTestSession(userId, ipAddress: null);
 
         // Act
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -597,7 +597,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var session = CreateTestSession(userId, userAgent: null);
 
         // Act
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -616,7 +616,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         var session = CreateTestSession(userId, userAgent: longUserAgent);
 
         // Act
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - UserAgent is truncated to 256 chars (database column limit)
@@ -633,7 +633,7 @@ public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
         var session = CreateTestSession(userId);
-        await Repository.AddAsync(session, TestCancellationToken);
+        await Repository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act

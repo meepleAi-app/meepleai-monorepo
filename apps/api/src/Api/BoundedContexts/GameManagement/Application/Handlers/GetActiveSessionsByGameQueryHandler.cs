@@ -20,7 +20,7 @@ public class GetActiveSessionsByGameQueryHandler : IQueryHandler<GetActiveSessio
 
     public async Task<IReadOnlyList<GameSessionDto>> Handle(GetActiveSessionsByGameQuery query, CancellationToken cancellationToken)
     {
-        var sessions = await _sessionRepository.FindActiveByGameIdAsync(query.GameId, cancellationToken);
+        var sessions = await _sessionRepository.FindActiveByGameIdAsync(query.GameId, cancellationToken).ConfigureAwait(false);
 
         return sessions.Select(MapToDto).ToList();
     }

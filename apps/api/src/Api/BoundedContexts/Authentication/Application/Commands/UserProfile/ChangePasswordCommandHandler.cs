@@ -33,7 +33,7 @@ public class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComman
         }
 
         // Retrieve user
-        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
         if (user == null)
         {
             throw new DomainException("User not found");
@@ -46,7 +46,7 @@ public class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComman
         user.ChangePassword(command.CurrentPassword, newPasswordHash);
 
         // Persist updates
-        await _userRepository.UpdateAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

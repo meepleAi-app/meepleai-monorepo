@@ -22,12 +22,13 @@ public sealed class GameLinkedToBggEventHandler : DomainEventHandlerBase<GameLin
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., trigger BGG metadata sync)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(GameLinkedToBggEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["GameId"] = domainEvent.GameId,
             ["BggId"] = domainEvent.BggId,

@@ -66,7 +66,7 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
 
                     if (qdrantService != null)
                     {
-                        var deleteResult = await qdrantService.DeleteDocumentAsync(pdfId, cancellationToken);
+                        var deleteResult = await qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);
                         if (!deleteResult)
                         {
                             _logger.LogWarning("Failed to delete vectors from Qdrant for PDF {PdfId}", pdfId);
@@ -91,14 +91,14 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
 
             // Delete PDF document record
             _db.PdfDocuments.Remove(pdfDoc);
-            await _db.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Deleted PDF document record {PdfId}", pdfId);
 
             // Delegate physical file deletion to BlobStorageService
             try
             {
-                await _blobStorageService.DeleteAsync(pdfId, gameId.ToString(), cancellationToken);
+                await _blobStorageService.DeleteAsync(pdfId, gameId.ToString(), cancellationToken).ConfigureAwait(false);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
@@ -107,7 +107,7 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
             }
 #pragma warning restore CA1031
 
-            await InvalidateCacheSafelyAsync(gameId.ToString(), cancellationToken, "PDF deletion");
+            await InvalidateCacheSafelyAsync(gameId.ToString(), cancellationToken, "PDF deletion").ConfigureAwait(false);
 
             return new PdfDeleteResult(true, "PDF deleted successfully", gameId.ToString());
         }
@@ -138,7 +138,7 @@ public class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDele
     {
         try
         {
-            await _cacheService.InvalidateGameAsync(gameId, ct);
+            await _cacheService.InvalidateGameAsync(gameId, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

@@ -164,13 +164,13 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
         // Step 1: Register user
         var user = CreateTestUser("newuser@meepleai.dev", "New User");
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Step 2: Login (create session)
         var sessionToken = SessionToken.Generate();
         var session = new Session(Guid.NewGuid(), user.Id, sessionToken, TimeSpan.FromHours(2));
-        await sessionRepository.AddAsync(session, TestCancellationToken);
+        await sessionRepository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Step 3: Browse games
@@ -180,7 +180,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
             playerCount: new PlayerCount(3, 4),
             playTime: new PlayTime(60, 120)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Step 4: Start game session
@@ -192,7 +192,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         };
         var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
         gameSession.Start();
-        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
+        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Step 5: Ask questions
@@ -204,7 +204,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         );
         chatThread.AddUserMessage("How many resources do I start with?");
         chatThread.AddAssistantMessage("Each player starts with resources based on second settlement...");
-        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
+        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Step 6: Complete game (reload to avoid tracking conflict)
@@ -249,11 +249,11 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         foreach (var name in userNames)
         {
             var user = CreateTestUser($"{name.ToLower()}@meepleai.dev", name);
-            await userRepository.AddAsync(user, TestCancellationToken);
+            await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
 
             var sessionToken = SessionToken.Generate();
             var session = new Session(Guid.NewGuid(), user.Id, sessionToken, TimeSpan.FromHours(3));
-            await sessionRepository.AddAsync(session, TestCancellationToken);
+            await sessionRepository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
             users.Add(user);
         }
 
@@ -263,7 +263,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
             playerCount: new PlayerCount(2, 4),
             playTime: new PlayTime(60, 90)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -271,13 +271,13 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         var players = userNames.Select((name, idx) => new SessionPlayer(name, idx + 1)).ToList();
         var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
         gameSession.Start();
-        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
+        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken, TestContext.Current.CancellationToken);
 
         foreach (var user in users)
         {
             var thread = new ChatThread(Guid.NewGuid(), user.Id, game.Id, $"{user.DisplayName}'s Questions");
             thread.AddUserMessage("Individual question");
-            await chatThreadRepository.AddAsync(thread, TestCancellationToken);
+            await chatThreadRepository.AddAsync(thread, TestCancellationToken, TestContext.Current.CancellationToken);
         }
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
@@ -312,12 +312,12 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
         var user = CreateTestUser("expiring@meepleai.dev", "Expiring User");
-        await userRepository.AddAsync(user, TestCancellationToken);
+        await userRepository.AddAsync(user, TestCancellationToken, TestContext.Current.CancellationToken);
 
         // Create short-lived session
         var sessionToken = SessionToken.Generate();
         var session = new Session(Guid.NewGuid(), user.Id, sessionToken, TestConstants.Timing.VeryShortTimeout);
-        await sessionRepository.AddAsync(session, TestCancellationToken);
+        await sessionRepository.AddAsync(session, TestCancellationToken, TestContext.Current.CancellationToken);
 
         var game = new Game(
             Guid.NewGuid(),
@@ -325,7 +325,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
             playerCount: new PlayerCount(1, 2),
             playTime: new PlayTime(15, 30)
         );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        await gameRepository.AddAsync(game, TestCancellationToken, TestContext.Current.CancellationToken);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
@@ -333,12 +333,12 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
             new List<SessionPlayer> { new SessionPlayer("Expiring User", 1) }
         );
         gameSession.Start();
-        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
+        await gameSessionRepository.AddAsync(gameSession, TestCancellationToken, TestContext.Current.CancellationToken);
 
         var chatThread = new ChatThread(Guid.NewGuid(), user.Id, game.Id, "Quick Questions");
         chatThread.AddUserMessage("Quick question");
         chatThread.AddAssistantMessage("Quick answer");
-        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
+        await chatThreadRepository.AddAsync(chatThread, TestCancellationToken, TestContext.Current.CancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Wait for session expiration

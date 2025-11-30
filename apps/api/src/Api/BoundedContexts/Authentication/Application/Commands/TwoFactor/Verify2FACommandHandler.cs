@@ -49,7 +49,7 @@ public sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand, 
 
         // Step 1: Validate and consume temporary session (infrastructure - delegate to service)
         // Temp sessions are single-use with 5-minute TTL
-        var userIdNullable = await _tempSessionService.ValidateAndConsumeTempSessionAsync(command.SessionToken);
+        var userIdNullable = await _tempSessionService.ValidateAndConsumeTempSessionAsync(command.SessionToken).ConfigureAwait(false);
         if (userIdNullable == null)
         {
             _logger.LogWarning("2FA verification failed: Invalid or expired temporary session");
@@ -63,12 +63,12 @@ public sealed class Verify2FACommandHandler : ICommandHandler<Verify2FACommand, 
         var userId = userIdNullable.Value;
 
         // Step 2: Verify TOTP code (infrastructure - delegate to service)
-        var isValid = await _totpService.VerifyCodeAsync(userId, command.Code, cancellationToken);
+        var isValid = await _totpService.VerifyCodeAsync(userId, command.Code, cancellationToken).ConfigureAwait(false);
 
         // Step 3: If TOTP fails, try backup code (infrastructure - delegate to service)
         if (!isValid)
         {
-            isValid = await _totpService.VerifyBackupCodeAsync(userId, command.Code, cancellationToken);
+            isValid = await _totpService.VerifyBackupCodeAsync(userId, command.Code, cancellationToken).ConfigureAwait(false);
             if (isValid)
             {
                 _logger.LogInformation("2FA verified using backup code for user {UserId}", userId);

@@ -3,6 +3,7 @@ using Api.Infrastructure.Entities;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -158,7 +159,7 @@ public class PdfExportFormatter : IExportFormatter
                 // Message header
                 column.Item().Row(row =>
                 {
-                    row.RelativeItem().Text(log.Level.ToUpper())
+                    row.RelativeItem().Text(log.Level.ToUpper(CultureInfo.InvariantCulture))
                         .FontSize(10)
                         .Bold()
                         .FontColor(borderColor);

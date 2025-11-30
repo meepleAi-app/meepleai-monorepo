@@ -101,7 +101,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             });
         }
 
-        await DbContext.Users.AddAsync(userEntity, cancellationToken);
+        await DbContext.Users.AddAsync(userEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(User entity, CancellationToken cancellationToken = default)
@@ -147,12 +147,12 @@ public class UserRepository : RepositoryBase, IUserRepository
             });
         }
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(User entity, CancellationToken cancellationToken = default)
     {
-        var userEntity = await DbContext.Users.FindAsync(new object[] { entity.Id }, cancellationToken);
+        var userEntity = await DbContext.Users.FindAsync(new object[] { entity.Id }, cancellationToken).ConfigureAwait(false);
         if (userEntity != null)
         {
             DbContext.Users.Remove(userEntity);

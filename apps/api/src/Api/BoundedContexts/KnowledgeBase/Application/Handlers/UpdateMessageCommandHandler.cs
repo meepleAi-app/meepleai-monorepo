@@ -57,8 +57,8 @@ public class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageCommand,
         thread.UpdateMessage(request.MessageId, request.NewContent, request.UserId);
 
         // Persist
-        await _threadRepository.UpdateAsync(thread, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _threadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Updated message {MessageId} in thread {ThreadId} by user {UserId}",

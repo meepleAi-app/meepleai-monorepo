@@ -56,8 +56,8 @@ public class GetRuleSpecsQueryHandlerTests
         var ruleSpec2 = CreateRuleSpec(gameId, "1.1", DateTime.UtcNow.AddDays(-3));
         var ruleSpec3 = CreateRuleSpec(gameId, "2.0", DateTime.UtcNow);
 
-        await context.RuleSpecs.AddRangeAsync(ruleSpec1, ruleSpec2, ruleSpec3);
-        await context.SaveChangesAsync();
+        await context.RuleSpecs.AddRangeAsync(ruleSpec1, ruleSpec2, ruleSpec3, TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetRuleSpecsQuery(gameId);
 
@@ -107,8 +107,8 @@ public class GetRuleSpecsQueryHandlerTests
 
         ruleSpec.Atoms = new List<RuleAtomEntity> { atom1, atom2 };
 
-        await context.RuleSpecs.AddAsync(ruleSpec);
-        await context.SaveChangesAsync();
+        await context.RuleSpecs.AddAsync(ruleSpec, TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetRuleSpecsQuery(gameId);
 
@@ -162,8 +162,8 @@ public class GetRuleSpecsQueryHandlerTests
         var ruleSpec1 = CreateRuleSpec(gameId1, "1.0", DateTime.UtcNow);
         var ruleSpec2 = CreateRuleSpec(gameId2, "1.0", DateTime.UtcNow);
 
-        await context.RuleSpecs.AddRangeAsync(ruleSpec1, ruleSpec2);
-        await context.SaveChangesAsync();
+        await context.RuleSpecs.AddRangeAsync(ruleSpec1, ruleSpec2, TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetRuleSpecsQuery(gameId1);
 
@@ -184,13 +184,13 @@ public class GetRuleSpecsQueryHandlerTests
         var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var parentSpec = CreateRuleSpec(gameId, "1.0", DateTime.UtcNow.AddDays(-7));
-        await context.RuleSpecs.AddAsync(parentSpec);
-        await context.SaveChangesAsync();
+        await context.RuleSpecs.AddAsync(parentSpec, TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var childSpec = CreateRuleSpec(gameId, "1.1", DateTime.UtcNow);
         childSpec.ParentVersionId = parentSpec.Id;
-        await context.RuleSpecs.AddAsync(childSpec);
-        await context.SaveChangesAsync();
+        await context.RuleSpecs.AddAsync(childSpec, TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetRuleSpecsQuery(gameId);
 
@@ -254,8 +254,8 @@ public class GetRuleSpecsQueryHandlerTests
 
         ruleSpec.Atoms = new List<RuleAtomEntity> { atom };
 
-        await context.RuleSpecs.AddAsync(ruleSpec);
-        await context.SaveChangesAsync();
+        await context.RuleSpecs.AddAsync(ruleSpec, TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var query = new GetRuleSpecsQuery(gameId);
 

@@ -28,7 +28,7 @@ public class DeleteChatThreadCommandHandler : ICommandHandler<DeleteChatThreadCo
     public async Task<bool> Handle(DeleteChatThreadCommand request, CancellationToken cancellationToken)
     {
         // Load thread
-        var thread = await _threadRepository.GetByIdAsync(request.ThreadId, cancellationToken);
+        var thread = await _threadRepository.GetByIdAsync(request.ThreadId, cancellationToken).ConfigureAwait(false);
         if (thread == null)
         {
             return false;
@@ -42,8 +42,8 @@ public class DeleteChatThreadCommandHandler : ICommandHandler<DeleteChatThreadCo
         }
 
         // Delete
-        await _threadRepository.DeleteAsync(thread, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _threadRepository.DeleteAsync(thread, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Deleted chat thread {ThreadId} for user {UserId}",

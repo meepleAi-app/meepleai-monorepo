@@ -28,8 +28,8 @@ public sealed class GenerateEvaluationReportQueryHandler : IQueryHandler<Generat
 
         // Retrieve all historical results and find the specific evaluation
         // Note: This approach is used to maintain compatibility with existing service implementation
-        var allResults = await _evaluationService.GetHistoricalResultsAsync("", 1000, cancellationToken);
-        var result = allResults.FirstOrDefault(r => r.EvaluationId == query.EvaluationId);
+        var allResults = await _evaluationService.GetHistoricalResultsAsync("", 1000, cancellationToken).ConfigureAwait(false);
+        var result = allResults.FirstOrDefault(r => string.Equals(r.EvaluationId, query.EvaluationId, StringComparison.Ordinal));
 
         if (result == null)
         {

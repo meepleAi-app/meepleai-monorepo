@@ -1,6 +1,7 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -123,7 +124,7 @@ public class PasswordHashingService : IPasswordHashingService
             return false;
         }
 
-        if (!int.TryParse(parts[1], out iterations))
+        if (!int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out iterations))
         {
             return false;
         }

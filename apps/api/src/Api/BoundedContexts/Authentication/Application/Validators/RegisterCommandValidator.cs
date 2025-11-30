@@ -49,7 +49,7 @@ public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand
             .WithMessage("Display name can only contain letters, numbers, spaces, hyphens, underscores, and periods");
 
         RuleFor(x => x.Role)
-            .Must(role => string.IsNullOrWhiteSpace(role) || ValidRoles.Contains(role.ToLowerInvariant()))
+            .Must(role => string.IsNullOrWhiteSpace(role) || ValidRoles.Contains(role.ToLowerInvariant(), StringComparer.Ordinal))
             .WithMessage($"Role must be one of: {string.Join(", ", ValidRoles)}");
     }
 }

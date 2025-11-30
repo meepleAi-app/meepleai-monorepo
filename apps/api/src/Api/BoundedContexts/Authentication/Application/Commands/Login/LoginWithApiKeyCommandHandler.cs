@@ -26,7 +26,7 @@ public class LoginWithApiKeyCommandHandler : ICommandHandler<LoginWithApiKeyComm
     public async Task<ApiKeyLoginResponse> Handle(LoginWithApiKeyCommand command, CancellationToken cancellationToken)
     {
         // Validate API key
-        var validationResult = await _apiKeyService.ValidateApiKeyAsync(command.ApiKey, cancellationToken);
+        var validationResult = await _apiKeyService.ValidateApiKeyAsync(command.ApiKey, cancellationToken).ConfigureAwait(false);
 
         if (!validationResult.IsValid)
         {
@@ -35,7 +35,7 @@ public class LoginWithApiKeyCommandHandler : ICommandHandler<LoginWithApiKeyComm
 
         // Get user information
         var userId = Guid.Parse(validationResult.UserId!);
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
 
         if (user == null)
         {

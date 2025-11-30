@@ -126,7 +126,7 @@ public sealed class User : AggregateRoot<Guid>
         if (string.IsNullOrWhiteSpace(newDisplayName))
             throw new ValidationException(nameof(DisplayName), "Display name cannot be empty");
 
-        if (DisplayName == newDisplayName)
+        if (string.Equals(DisplayName, newDisplayName, StringComparison.Ordinal))
             return; // No change
 
         DisplayName = newDisplayName;
@@ -231,7 +231,7 @@ public sealed class User : AggregateRoot<Guid>
     /// <exception cref="DomainException">Thrown when code not found or already used.</exception>
     public void UseBackupCode(string backupCodeHash, DateTime usedAt)
     {
-        var code = _backupCodes.FirstOrDefault(bc => bc.HashedValue == backupCodeHash);
+        var code = _backupCodes.FirstOrDefault(bc => string.Equals(bc.HashedValue, backupCodeHash, StringComparison.Ordinal));
         if (code == null)
             throw new DomainException("Backup code not found");
 
@@ -251,7 +251,7 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     public bool HasUnusedBackupCode(string backupCodeHash)
     {
-        return _backupCodes.Any(bc => bc.HashedValue == backupCodeHash && !bc.IsUsed);
+        return _backupCodes.Any(bc => string.Equals(bc.HashedValue, backupCodeHash, StringComparison.Ordinal) && !bc.IsUsed);
     }
 
     /// <summary>

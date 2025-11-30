@@ -23,12 +23,13 @@ public sealed class ConfigurationCreatedEventHandler : DomainEventHandlerBase<Co
         // Base class automatically creates audit log entry
         // Future: Send notification to administrators for critical configurations
         // Future: Trigger configuration validation workflow
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(ConfigurationCreatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["ConfigurationId"] = domainEvent.ConfigurationId,
             ["Key"] = domainEvent.Key.Value,

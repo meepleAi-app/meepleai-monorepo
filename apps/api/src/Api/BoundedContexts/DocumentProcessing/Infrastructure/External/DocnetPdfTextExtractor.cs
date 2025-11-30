@@ -42,13 +42,13 @@ public class DocnetPdfTextExtractor : IPdfTextExtractor
         try
         {
             // Step 1: Write stream to temp file (Docnet.Core requires file path)
-            tempFilePath = await WriteTempFileAsync(pdfStream, ct);
+            tempFilePath = await WriteTempFileAsync(pdfStream, ct).ConfigureAwait(false);
 
             // Step 2: Extract raw text with Docnet (infrastructure)
-            await DocnetSemaphore.WaitAsync(ct);
+            await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                var (rawText, pageCount) = await Task.Run(() => ExtractRawText(tempFilePath), ct);
+                var (rawText, pageCount) = await Task.Run(() => ExtractRawText(tempFilePath), ct).ConfigureAwait(false);
 
                 // Step 3: Normalize text (domain service)
                 var normalizedText = _domainService.NormalizeText(rawText);
@@ -68,7 +68,7 @@ public class DocnetPdfTextExtractor : IPdfTextExtractor
                         quality);
 
                     // Step 6: Trigger OCR (infrastructure - delegate to IOcrService)
-                    var ocrResult = await _ocrService.ExtractTextFromPdfAsync(tempFilePath, ct);
+                    var ocrResult = await _ocrService.ExtractTextFromPdfAsync(tempFilePath, ct).ConfigureAwait(false);
 
                     if (!ocrResult.Success)
                     {
@@ -171,13 +171,13 @@ public class DocnetPdfTextExtractor : IPdfTextExtractor
         try
         {
             // Step 1: Write stream to temp file (Docnet.Core requires file path)
-            tempFilePath = await WriteTempFileAsync(pdfStream, ct);
+            tempFilePath = await WriteTempFileAsync(pdfStream, ct).ConfigureAwait(false);
 
             // Step 2: Extract paged text with Docnet (infrastructure)
-            await DocnetSemaphore.WaitAsync(ct);
+            await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                var pageChunks = await Task.Run(() => ExtractPagedRawText(tempFilePath), ct);
+                var pageChunks = await Task.Run(() => ExtractPagedRawText(tempFilePath), ct).ConfigureAwait(false);
 
                 var totalPages = pageChunks.Count;
                 var totalChars = pageChunks.Sum(pc => pc.CharCount);
@@ -337,8 +337,8 @@ public class DocnetPdfTextExtractor : IPdfTextExtractor
             bufferSize: 81920,
             useAsync: true);
 
-        await pdfStream.CopyToAsync(fileStream, ct);
-        await fileStream.FlushAsync(ct);
+        await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
+        await fileStream.FlushAsync(ct).ConfigureAwait(false);
 
         return tempPath;
     }

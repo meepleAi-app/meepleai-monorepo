@@ -295,7 +295,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         };
         _dbContext.Games.Add(testGame);
 
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     #endregion
@@ -337,10 +337,10 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     private static async Task CleanDatabaseAsync(MeepleAiDbContext context)
     {
         // Clean any existing data from shared database to avoid unique constraint violations
-        context.PdfDocuments.RemoveRange(await context.PdfDocuments.ToListAsync());
-        context.Games.RemoveRange(await context.Games.ToListAsync());
-        context.Users.RemoveRange(await context.Users.ToListAsync());
-        await context.SaveChangesAsync();
+        context.PdfDocuments.RemoveRange(await context.PdfDocuments.ToListAsync(TestContext.Current.CancellationToken));
+        context.Games.RemoveRange(await context.Games.ToListAsync(TestContext.Current.CancellationToken));
+        context.Users.RemoveRange(await context.Users.ToListAsync(TestContext.Current.CancellationToken));
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private static async Task<UserEntity> SeedUserInContextAsync(MeepleAiDbContext context)
@@ -355,7 +355,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         };
         context.Users.Add(user);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return user;
     }
 
@@ -376,7 +376,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         };
         context.Games.Add(game);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return game;
     }
 
@@ -410,7 +410,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         result.Document.Should().BeNull("no document should be created for corrupted PDF");
 
         // Verify no database record created
-        var docCount = await _dbContext.PdfDocuments.CountAsync();
+        var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "corrupted PDF should not create database record");
     }
 
@@ -440,7 +440,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         result.Document.Should().BeNull();
 
         // Verify no database record created
-        var docCount = await _dbContext.PdfDocuments.CountAsync();
+        var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "non-PDF file should not create database record");
     }
 
@@ -470,7 +470,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         result.Document.Should().BeNull();
 
         // Verify no database record created
-        var docCount = await _dbContext.PdfDocuments.CountAsync();
+        var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "empty file should not create database record");
     }
 
@@ -501,7 +501,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         result.Document.Should().BeNull();
 
         // Verify no database record created
-        var docCount = await _dbContext.PdfDocuments.CountAsync();
+        var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "malformed PDF should not create database record");
     }
 
@@ -571,7 +571,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         result.Document.Should().BeNull();
 
         // Verify no database record created
-        var docCount = await _dbContext.PdfDocuments.CountAsync();
+        var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "oversized file should not create database record");
     }
 
@@ -667,11 +667,11 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         results.Select(r => r.Document!.Id).Should().OnlyHaveUniqueItems("each upload should have unique document ID");
 
         // Verify all database records created
-        var docCount = await _dbContext.PdfDocuments.CountAsync();
+        var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(concurrentUploads, "all concurrent uploads should create database records");
 
         // Verify data integrity - no duplicates or corruption
-        var docs = await _dbContext.PdfDocuments.ToListAsync();
+        var docs = await _dbContext.PdfDocuments.ToListAsync(TestContext.Current.CancellationToken);
         docs.Select(d => d.Id).Should().OnlyHaveUniqueItems("document IDs should be unique");
         docs.Select(d => d.FileName).Should().OnlyHaveUniqueItems("file names should be unique");
     }
@@ -719,7 +719,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         results.Where(r => r.Success).Should().HaveCountGreaterThan(0, "at least some uploads should succeed");
 
         // Verify database consistency
-        var docs = await _dbContext.PdfDocuments.ToListAsync();
+        var docs = await _dbContext.PdfDocuments.ToListAsync(TestContext.Current.CancellationToken);
         docs.Select(d => d.Id).Should().OnlyHaveUniqueItems("no duplicate document IDs despite race conditions");
         docs.Select(d => d.FileName).Should().OnlyHaveUniqueItems("no duplicate file names");
 
@@ -797,7 +797,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         result.Document.Should().BeNull();
 
         // Verify real PostgreSQL transaction rollback - no database record created
-        var docCount = await testDbContext.PdfDocuments.CountAsync();
+        var docCount = await testDbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "PostgreSQL transaction rollback should prevent any database records");
 
         // Additional verification: check that transaction was properly rolled back
@@ -853,7 +853,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         result.Success.Should().BeFalse("FK constraint violation should result in failed upload");
 
         // Verify PostgreSQL enforced constraint and rolled back
-        var docCount = await testDbContext.PdfDocuments.CountAsync();
+        var docCount = await testDbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "PostgreSQL should enforce FK constraint and rollback transaction");
     }
 
@@ -1091,7 +1091,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         result.Document.Should().BeNull();
 
         // Verify PostgreSQL transaction rollback - no database record created
-        var docCount = await testDbContext.PdfDocuments.CountAsync();
+        var docCount = await testDbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "PostgreSQL transaction rollback should prevent database records on permission failure");
     }
 

@@ -28,6 +28,6 @@ public class GetAdminStatsQueryHandler : IQueryHandler<GetAdminStatsQuery, Dashb
             RoleFilter: query.RoleFilter
         );
 
-        return await _adminStatsService.GetDashboardStatsAsync(queryParams, cancellationToken);
+        return await _adminStatsService.GetDashboardStatsAsync(queryParams, cancellationToken).ConfigureAwait(false);
     }
 }

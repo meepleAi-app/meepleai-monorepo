@@ -67,7 +67,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             byte[] pdfBytes;
             using (var memoryStream = new MemoryStream())
             {
-                await pdfStream.CopyToAsync(memoryStream, ct);
+                await pdfStream.CopyToAsync(memoryStream, ct).ConfigureAwait(false);
                 pdfBytes = memoryStream.ToArray();
             }
 
@@ -80,12 +80,12 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             // Execute HTTP request (retry + circuit breaker handled by Polly in DI)
             _logger.LogDebug("[{RequestId}] Sending request to SmolDocling service", requestId);
 
-            using var response = await client.PostAsync("/api/v1/extract", content, ct);
+            using var response = await client.PostAsync("/api/v1/extract", content, ct).ConfigureAwait(false);
 
             // Handle response
             if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync(ct);
+                var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError(
                     "[{RequestId}] SmolDocling service returned {StatusCode}: {Error}",
                     requestId, response.StatusCode, errorContent);
@@ -198,7 +198,7 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             byte[] pdfBytes;
             using (var memoryStream = new MemoryStream())
             {
-                await pdfStream.CopyToAsync(memoryStream, ct);
+                await pdfStream.CopyToAsync(memoryStream, ct).ConfigureAwait(false);
                 pdfBytes = memoryStream.ToArray();
             }
 
@@ -208,11 +208,11 @@ public class SmolDoclingPdfTextExtractor : IPdfTextExtractor
 
             content.Add(streamContent, "file", "document.pdf");
 
-            using var response = await client.PostAsync("/api/v1/extract", content, ct);
+            using var response = await client.PostAsync("/api/v1/extract", content, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync(ct);
+                var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError(
                     "[{RequestId}] SmolDocling service error: {StatusCode}",
                     requestId, response.StatusCode);

@@ -21,12 +21,13 @@ public sealed class N8nConfigurationTestedEventHandler : DomainEventHandlerBase<
     {
         // Future: Send alert if test failed
         // Future: Update health monitoring dashboard
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(N8nConfigurationTestedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["ConfigurationId"] = domainEvent.ConfigurationId,
             ["TestSuccess"] = domainEvent.TestSuccess,

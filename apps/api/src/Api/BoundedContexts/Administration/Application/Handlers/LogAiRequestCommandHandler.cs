@@ -54,7 +54,7 @@ public class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
             };
 
             _db.AiRequestLogs.Add(log);
-            await _db.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)

@@ -25,6 +25,7 @@ using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
 using System;
+using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
@@ -106,7 +107,7 @@ if (forwardedHeadersEnabled)
             }
 
             var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], out var prefixLength))
+            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], CultureInfo.InvariantCulture, out var prefixLength))
             {
                 options.KnownNetworks.Add(new AspNetIpNetwork(networkAddress, prefixLength));
             }

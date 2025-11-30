@@ -20,7 +20,7 @@ public class GetChatThreadByIdQueryHandler : IQueryHandler<GetChatThreadByIdQuer
 
     public async Task<ChatThreadDto?> Handle(GetChatThreadByIdQuery query, CancellationToken cancellationToken)
     {
-        var thread = await _threadRepository.GetByIdAsync(query.ThreadId, cancellationToken);
+        var thread = await _threadRepository.GetByIdAsync(query.ThreadId, cancellationToken).ConfigureAwait(false);
 
         return thread != null ? MapToDto(thread) : null;
     }

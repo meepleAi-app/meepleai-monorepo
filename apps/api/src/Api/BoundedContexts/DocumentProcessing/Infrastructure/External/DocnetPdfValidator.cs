@@ -51,6 +51,7 @@ public class DocnetPdfValidator : IPdfValidator
         if (pdfStream == null)
         {
             return PdfValidationResult.CreateFailure(new Dictionary<string, string>
+(StringComparer.Ordinal)
             {
                 ["stream"] = "PDF stream cannot be null"
             });
@@ -59,12 +60,13 @@ public class DocnetPdfValidator : IPdfValidator
         if (string.IsNullOrWhiteSpace(fileName))
         {
             return PdfValidationResult.CreateFailure(new Dictionary<string, string>
+(StringComparer.Ordinal)
             {
                 ["fileName"] = "File name cannot be empty"
             });
         }
 
-        var errors = new Dictionary<string, string>();
+        var errors = new Dictionary<string, string>(StringComparer.Ordinal);
         PdfMetadata? metadata = null;
 
         try
@@ -102,7 +104,7 @@ public class DocnetPdfValidator : IPdfValidator
             }
 
             // Step 4: Technical validation - Docnet parsing + metadata extraction
-            await DocnetSemaphore.WaitAsync(ct);
+            await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
             try
             {
                 // Save stream to temporary file for Docnet.Core processing
@@ -111,14 +113,14 @@ public class DocnetPdfValidator : IPdfValidator
                 {
                     using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
                     {
-                        await pdfStream.CopyToAsync(fileStream, ct);
+                        await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
                     }
 
                     // Reset stream position for potential further use
                     pdfStream.Position = 0;
 
                     // Validate with Docnet.Core
-                    var validationResult = await Task.Run(() => ValidatePdfWithDocnet(tempFile), ct);
+                    var validationResult = await Task.Run(() => ValidatePdfWithDocnet(tempFile), ct).ConfigureAwait(false);
 
                     if (validationResult.Errors.Count > 0)
                     {
@@ -220,7 +222,7 @@ public class DocnetPdfValidator : IPdfValidator
         if (pdfStream == null)
             return null;
 
-        await DocnetSemaphore.WaitAsync(ct);
+        await DocnetSemaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var tempFile = Path.GetTempFileName();
@@ -228,12 +230,12 @@ public class DocnetPdfValidator : IPdfValidator
             {
                 using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
                 {
-                    await pdfStream.CopyToAsync(fileStream, ct);
+                    await pdfStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
                 }
 
                 pdfStream.Position = 0;
 
-                var result = await Task.Run(() => ValidatePdfWithDocnet(tempFile), ct);
+                var result = await Task.Run(() => ValidatePdfWithDocnet(tempFile), ct).ConfigureAwait(false);
                 return result.Metadata;
             }
             finally
@@ -260,7 +262,7 @@ public class DocnetPdfValidator : IPdfValidator
 
         stream.Position = 0;
         var buffer = new byte[PdfMagicBytes.Length];
-        var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct);
+        var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct).ConfigureAwait(false);
 
         if (bytesRead < PdfMagicBytes.Length)
         {
@@ -284,7 +286,7 @@ public class DocnetPdfValidator : IPdfValidator
     /// </summary>
     private (Dictionary<string, string> Errors, PdfMetadata? Metadata) ValidatePdfWithDocnet(string filePath)
     {
-        var errors = new Dictionary<string, string>();
+        var errors = new Dictionary<string, string>(StringComparer.Ordinal);
         PdfMetadata? metadata = null;
 
         try

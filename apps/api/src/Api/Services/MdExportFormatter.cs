@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Api.Infrastructure.Entities;
+using System.Globalization;
 
 namespace Api.Services;
 
@@ -33,8 +34,10 @@ public class MdExportFormatter : IExportFormatter
         sb.AppendLine();
         sb.AppendLine("---");
         sb.AppendLine();
-        sb.AppendLine($"**Exported:** {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC  ");
+        sb.AppendLine($"**Exported:** {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)} UTC  ");
+#pragma warning disable MA0011 // False positive: Count is an integer, no culture-sensitive formatting
         sb.AppendLine($"**Messages:** {filteredLogs.Count}");
+#pragma warning restore MA0011
         sb.AppendLine();
         sb.AppendLine("---");
         sb.AppendLine();
@@ -48,7 +51,7 @@ public class MdExportFormatter : IExportFormatter
             foreach (var log in filteredLogs.OrderBy(l => l.CreatedAt))
             {
                 // Message header with timestamp
-                sb.AppendLine($"## {log.Level} - {log.CreatedAt:yyyy-MM-dd HH:mm:ss}");
+                sb.AppendLine($"## {log.Level} - {log.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)}");
                 sb.AppendLine();
                 sb.AppendLine(log.Message);
                 sb.AppendLine();
@@ -61,7 +64,9 @@ public class MdExportFormatter : IExportFormatter
                     sb.AppendLine();
                     foreach (var citation in citations)
                     {
+#pragma warning disable MA0011 // False positive: Page is an integer, no culture-sensitive formatting
                         sb.AppendLine($"- *{citation.Source}*, Page {citation.Page}");
+#pragma warning restore MA0011
                     }
                     sb.AppendLine();
                 }

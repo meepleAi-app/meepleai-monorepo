@@ -32,7 +32,7 @@ public static class AgentEndpoints
                 Name: req.Name,
                 AgentType: req.Type,
                 StrategyName: req.StrategyName,
-                StrategyParameters: req.StrategyParameters ?? new Dictionary<string, object>(),
+                StrategyParameters: req.StrategyParameters ?? new Dictionary<string, object>(StringComparer.Ordinal),
                 IsActive: req.IsActive ?? true
             );
 
@@ -123,7 +123,7 @@ public static class AgentEndpoints
             var command = new ConfigureAgentCommand(
                 AgentId: id,
                 StrategyName: req.StrategyName,
-                StrategyParameters: req.StrategyParameters ?? new Dictionary<string, object>()
+                StrategyParameters: req.StrategyParameters ?? new Dictionary<string, object>(StringComparer.Ordinal)
             );
 
             var result = await mediator.Send(command, ct);

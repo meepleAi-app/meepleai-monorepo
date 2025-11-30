@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -148,9 +149,10 @@ public class OpenRouterLlmClient : ILlmClient
                 };
 
                 var metadata = new Dictionary<string, string>
+(StringComparer.Ordinal)
                 {
                     ["provider"] = "OpenRouter",
-                    ["cost_usd"] = cost.TotalCost.ToString("F6")
+                    ["cost_usd"] = cost.TotalCost.ToString("F6", CultureInfo.InvariantCulture)
                 };
 
                 if (!string.IsNullOrWhiteSpace(chatResponse.Id))
@@ -319,7 +321,7 @@ public class OpenRouterLlmClient : ILlmClient
                     var data = line.Substring(6).Trim();
 
                     // OpenRouter sends "[DONE]" when stream is complete
-                    if (data == "[DONE]")
+                    if (string.Equals(data, "[DONE]", StringComparison.Ordinal))
                     {
                         _logger.LogInformation("OpenRouter streaming finished");
                         break;

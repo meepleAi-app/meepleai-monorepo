@@ -35,7 +35,7 @@ public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAc
         try
         {
             // Load user by ID
-            var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
             if (user == null)
             {
                 _logger.LogWarning("User {UserId} not found for OAuth linking", command.UserId);
@@ -77,8 +77,8 @@ public sealed class LinkOAuthAccountCommandHandler : ICommandHandler<LinkOAuthAc
             user.LinkOAuthAccount(oauthAccount);
 
             // Save via repository
-            await _oauthAccountRepository.AddAsync(oauthAccount, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _oauthAccountRepository.AddAsync(oauthAccount, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully linked {Provider} OAuth account for user {UserId}", command.Provider, command.UserId);
 

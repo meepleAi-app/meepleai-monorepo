@@ -29,7 +29,7 @@ public class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, UserD
     {
         // Find user
         var userId = Guid.Parse(command.UserId);
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
             throw new DomainException($"User {command.UserId} not found");
 
@@ -40,7 +40,7 @@ public class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, UserD
             if (!user.Email.Equals(newEmail))
             {
                 // Check uniqueness
-                var existingUser = await _userRepository.GetByEmailAsync(newEmail, cancellationToken);
+                var existingUser = await _userRepository.GetByEmailAsync(newEmail, cancellationToken).ConfigureAwait(false);
                 if (existingUser != null && existingUser.Id != userId)
                     throw new DomainException($"Email {command.Email} is already in use");
 
@@ -62,7 +62,7 @@ public class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, UserD
         }
 
         // Save changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         return new UserDto(

@@ -17,12 +17,13 @@ public sealed class VectorDocumentSearchedEventHandler : DomainEventHandlerBase<
     protected override async Task HandleEventAsync(VectorDocumentSearchedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(VectorDocumentSearchedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["Action"] = "VectorDocumentSearched",
             ["DocumentId"] = domainEvent.DocumentId,

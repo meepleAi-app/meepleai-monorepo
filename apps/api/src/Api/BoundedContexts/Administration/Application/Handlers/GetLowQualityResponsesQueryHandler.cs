@@ -50,7 +50,7 @@ public class GetLowQualityResponsesQueryHandler : IQueryHandler<GetLowQualityRes
             if (endDate.HasValue)
                 dbQuery = dbQuery.Where(log => log.CreatedAt <= endDate.Value);
 
-            var totalCount = await dbQuery.CountAsync(cancellationToken);
+            var totalCount = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);
             var responses = await dbQuery
                 .OrderByDescending(log => log.CreatedAt)
                 .Skip(query.Offset)

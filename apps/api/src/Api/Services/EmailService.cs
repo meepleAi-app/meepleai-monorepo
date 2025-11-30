@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Configuration;
@@ -26,7 +27,7 @@ public class EmailService : IEmailService
         _fromAddress = _configuration["Email:FromAddress"] ?? "noreply@meepleai.dev";
         _fromName = _configuration["Email:FromName"] ?? "MeepleAI";
         _smtpHost = _configuration["Email:SmtpHost"] ?? "localhost";
-        _smtpPort = int.Parse(_configuration["Email:SmtpPort"] ?? "587");
+        _smtpPort = int.Parse(_configuration["Email:SmtpPort"] ?? "587", CultureInfo.InvariantCulture);
         _smtpUsername = _configuration["Email:SmtpUsername"];
         _smtpPassword = _configuration["Email:SmtpPassword"];
         _enableSsl = bool.Parse(_configuration["Email:EnableSsl"] ?? "true");

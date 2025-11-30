@@ -78,7 +78,7 @@ public class HybridSearchService : IHybridSearchService
                     return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, cancellationToken);
 
                 default:
-                    throw new ArgumentException($"Unsupported search mode: {mode}");
+                    throw new ArgumentException($"Unsupported search mode: {mode}", nameof(mode));
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -283,16 +283,16 @@ public class HybridSearchService : IHybridSearchService
                 Result = r,
                 Rank = index + 1 // 1-based ranking
             })
-            .ToDictionary(x => x.ChunkId);
+            .ToDictionary(x => x.ChunkId, StringComparer.Ordinal);
 
         var keywordLookup = keywordResults
             .Select((r, index) => new { ChunkId = r.ChunkId, Result = r, Rank = index + 1 })
-            .ToDictionary(x => x.ChunkId);
+            .ToDictionary(x => x.ChunkId, StringComparer.Ordinal);
 
         // Collect all unique chunk IDs from both result sets
         var allChunkIds = vectorLookup.Keys
-            .Union(keywordLookup.Keys)
-            .ToHashSet();
+            .Union(keywordLookup.Keys, StringComparer.Ordinal)
+            .ToHashSet(StringComparer.Ordinal);
 
         _logger.LogDebug(
             "Fusing results: {VectorCount} vector, {KeywordCount} keyword, {UniqueCount} unique chunks",

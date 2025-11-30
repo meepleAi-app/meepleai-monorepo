@@ -31,7 +31,7 @@ public class GetLlmHealthQueryHandler : IQueryHandler<GetLlmHealthQuery, LlmHeal
         var monitoringStatus = _hybridLlmService.GetMonitoringStatus();
 
         // Build provider DTOs
-        var providers = new Dictionary<string, ProviderHealthDto>();
+        var providers = new Dictionary<string, ProviderHealthDto>(StringComparer.Ordinal);
 
         foreach (var (providerName, health) in allHealth)
         {

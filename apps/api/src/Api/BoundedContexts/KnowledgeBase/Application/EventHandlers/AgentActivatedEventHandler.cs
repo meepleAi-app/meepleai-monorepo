@@ -17,12 +17,13 @@ public sealed class AgentActivatedEventHandler : DomainEventHandlerBase<AgentAct
     protected override async Task HandleEventAsync(AgentActivatedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(AgentActivatedEvent domainEvent)
     {
         return new Dictionary<string, object?>
+(StringComparer.Ordinal)
         {
             ["Action"] = "AgentActivated",
             ["AgentId"] = domainEvent.AgentId

@@ -142,7 +142,7 @@ public class N8nConfigService
             throw new InvalidOperationException("Configuration not found");
         }
 
-        if (request.Name != null && request.Name != config.Name)
+        if (request.Name != null && !string.Equals(request.Name, config.Name, StringComparison.Ordinal))
         {
             var existingConfig = await _db.N8nConfigs
                 .FirstOrDefaultAsync(c => c.Name == request.Name && c.Id != guidId, ct);
@@ -318,7 +318,7 @@ public class N8nConfigService
     {
         var key = _configuration[EncryptionKeyConfigName]?.Trim();
 
-        if (string.IsNullOrWhiteSpace(key) || key == EncryptionKeyPlaceholder)
+        if (string.IsNullOrWhiteSpace(key) || string.Equals(key, EncryptionKeyPlaceholder, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Missing or invalid n8n encryption key. Set the {EncryptionKeyConfigName} environment variable to a secure value.");

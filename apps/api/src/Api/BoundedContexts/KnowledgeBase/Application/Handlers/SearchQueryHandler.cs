@@ -66,7 +66,7 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
             "hybrid" => await PerformHybridSearchAsync(
                 query.GameId, queryVector, query.Query, query.TopK, query.MinScore, cancellationToken),
 
-            _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}")
+            _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}", nameof(query))
         } ?? new List<Domain.Entities.SearchResult>();
 
         // Map to DTOs

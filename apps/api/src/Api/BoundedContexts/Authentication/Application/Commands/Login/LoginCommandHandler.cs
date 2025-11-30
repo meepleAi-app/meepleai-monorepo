@@ -39,7 +39,7 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
     {
         // Find user by email
         var email = new Email(command.Email);
-        var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
+        var user = await _userRepository.GetByEmailAsync(email, cancellationToken).ConfigureAwait(false);
 
         if (user == null)
             throw new DomainException("Invalid email or password");
@@ -76,8 +76,8 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
             userAgent: command.UserAgent
         );
 
-        await _sessionRepository.AddAsync(session, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         var userDto = MapToUserDto(user);

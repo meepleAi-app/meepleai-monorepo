@@ -36,8 +36,8 @@ public class CreateConfigurationCommandHandler : ICommandHandler<CreateConfigura
             requiresRestart: command.RequiresRestart
         );
 
-        await _configurationRepository.AddAsync(config, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _configurationRepository.AddAsync(config, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToDto(config);
     }

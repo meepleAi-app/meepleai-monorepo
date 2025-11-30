@@ -10,14 +10,23 @@
  */
 
 import type { Metadata, Viewport } from 'next';
+import { Quicksand } from 'next/font/google';
 import { AppProviders } from './providers';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
 import 'prismjs/themes/prism-tomorrow.css';
 
+const quicksand = Quicksand({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-quicksand',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'MeepleAI - AI-Powered Board Game Rules Assistant',
-  description: 'Never argue about rules again. Get instant, accurate answers from any game\'s rulebook with AI-powered semantic search.',
+  description:
+    "Never argue about rules again. Get instant, accurate answers from any game's rulebook with AI-powered semantic search.",
   keywords: ['board games', 'rules', 'AI', 'assistant', 'semantic search'],
   authors: [{ name: 'MeepleAI Team' }],
 };
@@ -31,14 +40,10 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" suppressHydrationWarning>
-      <body>
+      <body className={quicksand.variable}>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

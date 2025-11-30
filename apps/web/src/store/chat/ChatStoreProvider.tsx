@@ -30,14 +30,14 @@ import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
 import { useChatStore as chatStore } from './store';
 
 export function ChatStoreProvider({ children }: PropsWithChildren) {
-  const loadGames = useChatStore((state) => state.loadGames);
-  const selectedGameId = useChatStore((state) => state.selectedGameId);
-  const selectGame = useChatStore((state) => state.selectGame);
-  const selectAgent = useChatStore((state) => state.selectAgent);
-  const loadAgents = useChatStore((state) => state.loadAgents);
-  const loadChats = useChatStore((state) => state.loadChats);
-  const activeChatIds = useChatStore((state) => state.activeChatIds);
-  const loadMessages = useChatStore((state) => state.loadMessages);
+  const loadGames = useChatStore(state => state.loadGames);
+  const selectedGameId = useChatStore(state => state.selectedGameId);
+  const selectGame = useChatStore(state => state.selectGame);
+  const selectAgent = useChatStore(state => state.selectAgent);
+  const loadAgents = useChatStore(state => state.loadAgents);
+  const loadChats = useChatStore(state => state.loadChats);
+  const activeChatIds = useChatStore(state => state.activeChatIds);
+  const loadMessages = useChatStore(state => state.loadMessages);
 
   // Streaming chat hook (for test hooks integration - Issue #1807)
   const [streamingState, streamingControls] = useStreamingChat({
@@ -52,7 +52,7 @@ export function ChatStoreProvider({ children }: PropsWithChildren) {
         };
       }
     },
-    onError: (error) => {
+    onError: error => {
       console.error('Streaming error:', error);
     },
   });
@@ -101,7 +101,6 @@ export function ChatStoreProvider({ children }: PropsWithChildren) {
   // Safe to expose in all environments (no security/functional impact)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // eslint-disable-next-line security/detect-object-injection
       window.__MEEPLEAI_TEST_HOOKS__ = {
         ...window.__MEEPLEAI_TEST_HOOKS__,
         chat: {
@@ -109,18 +108,18 @@ export function ChatStoreProvider({ children }: PropsWithChildren) {
           selectGameAndAgent: async (gameId: string, agentId: string) => {
             selectGame(gameId);
             // Wait for game selection and agents to load
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 500));
             selectAgent(agentId);
             // Wait for chats to load
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             // Auto-select first chat if available (CRITICAL: Without this, sendMessage creates new thread)
-            await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for loadChats to complete
+            await new Promise(resolve => setTimeout(resolve, 500)); // Wait for loadChats to complete
             const state = chatStore.getState();
             const chats = state.chatsByGame[gameId];
             if (chats && chats.length > 0) {
               await chatStore.getState().selectChat(chats[0].id);
-              await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for selectChat to complete
+              await new Promise(resolve => setTimeout(resolve, 500)); // Wait for selectChat to complete
             }
           },
           sendMessage: async (content: string) => {

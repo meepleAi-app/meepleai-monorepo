@@ -15,12 +15,12 @@
  * This eliminates flash of unauthorized content.
  */
 
-import { useState } from "react";
-import { ChatStoreProvider } from "@/store/chat/ChatStoreProvider";
-import { ChatSidebar } from "@/components/chat/ChatSidebar";
-import { ChatContent } from "@/components/chat/ChatContent";
-import { BottomNav } from "@/components/chat/BottomNav";
-import { ExportChatModal } from "@/components/modals";
+import { useState } from 'react';
+import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
+import { ChatSidebar } from '@/components/chat/ChatSidebar';
+import { ChatContent } from '@/components/chat/ChatContent';
+import { BottomNav } from '@/components/layout/BottomNav';
+import { ExportChatModal } from '@/components/modals';
 
 export default function ChatPage() {
   const [showExportModal, setShowExportModal] = useState(false);
@@ -37,8 +37,8 @@ export default function ChatPage() {
         <ExportChatModal
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
-          chatId={"temp-placeholder"}
-          gameName={"placeholder"}
+          chatId={'temp-placeholder'}
+          gameName={'placeholder'}
         />
       </main>
     </ChatStoreProvider>

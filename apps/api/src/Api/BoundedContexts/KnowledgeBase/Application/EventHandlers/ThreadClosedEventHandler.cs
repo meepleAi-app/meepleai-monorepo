@@ -17,7 +17,7 @@ public sealed class ThreadClosedEventHandler : DomainEventHandlerBase<ThreadClos
     protected override async Task HandleEventAsync(ThreadClosedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(ThreadClosedEvent domainEvent)

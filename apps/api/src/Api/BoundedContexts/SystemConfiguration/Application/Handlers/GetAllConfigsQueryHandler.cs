@@ -20,15 +20,15 @@ public class GetAllConfigsQueryHandler : IQueryHandler<GetAllConfigsQuery, Paged
 
         if (query.ActiveOnly)
         {
-            configs = await _configurationRepository.GetActiveConfigurationsAsync(cancellationToken);
+            configs = await _configurationRepository.GetActiveConfigurationsAsync(cancellationToken).ConfigureAwait(false);
         }
         else if (!string.IsNullOrWhiteSpace(query.Category))
         {
-            configs = await _configurationRepository.GetByCategoryAsync(query.Category, cancellationToken);
+            configs = await _configurationRepository.GetByCategoryAsync(query.Category, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            configs = await _configurationRepository.GetAllAsync(cancellationToken);
+            configs = await _configurationRepository.GetAllAsync(cancellationToken).ConfigureAwait(false);
         }
 
         // Filter by environment if specified

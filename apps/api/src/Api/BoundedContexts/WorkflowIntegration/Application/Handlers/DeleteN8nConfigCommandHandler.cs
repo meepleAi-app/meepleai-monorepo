@@ -20,12 +20,12 @@ public class DeleteN8nConfigCommandHandler : ICommandHandler<DeleteN8nConfigComm
 
     public async Task<bool> Handle(DeleteN8nConfigCommand command, CancellationToken cancellationToken)
     {
-        var config = await _repository.GetByIdAsync(command.ConfigId, cancellationToken);
+        var config = await _repository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
         if (config == null)
             return false;
 
-        await _repository.DeleteAsync(config, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _repository.DeleteAsync(config, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return true;
     }

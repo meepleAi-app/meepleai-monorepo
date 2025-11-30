@@ -24,7 +24,7 @@ public class DeleteApiKeyCommandHandler : ICommandHandler<DeleteApiKeyCommand, b
             return false;
         }
 
-        var apiKey = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == keyGuid, cancellationToken);
+        var apiKey = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == keyGuid, cancellationToken).ConfigureAwait(false);
         if (apiKey == null)
         {
             _logger.LogWarning("API key deletion failed: key not found. KeyId: {KeyId}", command.KeyId);
@@ -32,7 +32,7 @@ public class DeleteApiKeyCommandHandler : ICommandHandler<DeleteApiKeyCommand, b
         }
 
         _db.ApiKeys.Remove(apiKey);
-        await _db.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("API key deleted. KeyId: {KeyId}, DeletedBy: {DeletedBy}", command.KeyId, command.UserId);
 

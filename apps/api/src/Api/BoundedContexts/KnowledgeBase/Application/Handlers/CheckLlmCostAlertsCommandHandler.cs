@@ -20,9 +20,9 @@ public class CheckLlmCostAlertsCommandHandler : ICommandHandler<CheckLlmCostAler
     public async Task<CheckLlmCostAlertsResult> Handle(CheckLlmCostAlertsCommand command, CancellationToken cancellationToken)
     {
         // Check all thresholds (daily, weekly, monthly projection)
-        await _alertService.CheckDailyCostThresholdAsync(cancellationToken);
-        await _alertService.CheckWeeklyCostThresholdAsync(cancellationToken);
-        await _alertService.CheckMonthlyCostProjectionAsync(cancellationToken);
+        await _alertService.CheckDailyCostThresholdAsync(cancellationToken).ConfigureAwait(false);
+        await _alertService.CheckWeeklyCostThresholdAsync(cancellationToken).ConfigureAwait(false);
+        await _alertService.CheckMonthlyCostProjectionAsync(cancellationToken).ConfigureAwait(false);
 
         return new CheckLlmCostAlertsResult(
             Success: true,

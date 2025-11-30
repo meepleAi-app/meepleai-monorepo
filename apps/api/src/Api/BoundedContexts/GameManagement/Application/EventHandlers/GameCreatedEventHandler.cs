@@ -36,7 +36,7 @@ public sealed class GameCreatedEventHandler : DomainEventHandlerBase<GameCreated
             bggId: domainEvent.BggId
         );
 
-        await _mediator.Publish(integrationEvent, cancellationToken);
+        await _mediator.Publish(integrationEvent, cancellationToken).ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(GameCreatedEvent domainEvent)

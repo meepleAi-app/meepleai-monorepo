@@ -46,7 +46,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
             ?? throw new InvalidOperationException($"Parent comment {command.ParentCommentId} not found");
 
         // Validate thread depth (adding reply would increase depth by 1)
-        var threadDepth = await CalculateThreadDepthAsync(command.ParentCommentId, cancellationToken);
+        var threadDepth = await CalculateThreadDepthAsync(command.ParentCommentId, cancellationToken).ConfigureAwait(false);
         if (threadDepth >= MaxThreadDepth - 1)
         {
             throw new InvalidOperationException(
@@ -54,7 +54,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
         }
 
         // Extract and resolve mentions
-        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(command.CommentText, cancellationToken);
+        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(command.CommentText, cancellationToken).ConfigureAwait(false);
         var mentionedUserIds = mentionedUserIdsStr
             .Select(id => Guid.Parse(id))
             .ToList();
@@ -73,7 +73,7 @@ public partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyToR
         };
 
         _dbContext.RuleSpecComments.Add(reply);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created reply {ReplyId} by user {UserId} to parent {ParentId}",

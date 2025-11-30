@@ -22,7 +22,7 @@ public class ToggleConfigurationCommandHandler : ICommandHandler<ToggleConfigura
 
     public async Task<ConfigurationDto> Handle(ToggleConfigurationCommand command, CancellationToken cancellationToken)
     {
-        var config = await _configurationRepository.GetByIdAsync(command.ConfigId, cancellationToken);
+        var config = await _configurationRepository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
 
         if (config == null)
             throw new DomainException($"Configuration with ID {command.ConfigId} not found");
@@ -32,8 +32,8 @@ public class ToggleConfigurationCommandHandler : ICommandHandler<ToggleConfigura
         else
             config.Deactivate();
 
-        await _configurationRepository.UpdateAsync(config, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _configurationRepository.UpdateAsync(config, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToDto(config);
     }

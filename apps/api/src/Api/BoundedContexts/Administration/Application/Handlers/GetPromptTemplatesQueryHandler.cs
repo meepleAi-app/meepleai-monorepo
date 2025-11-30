@@ -37,7 +37,7 @@ public class GetPromptTemplatesQueryHandler
         }
 
         // Get total count
-        var totalCount = await dbQuery.CountAsync(cancellationToken);
+        var totalCount = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);
 
         // Get paginated results
         var templates = await dbQuery

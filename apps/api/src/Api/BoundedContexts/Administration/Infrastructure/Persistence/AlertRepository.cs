@@ -60,7 +60,7 @@ public class AlertRepository : RepositoryBase, IAlertRepository
     {
         CollectDomainEvents(alert);
         var entity = MapToPersistence(alert);
-        await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>().AddAsync(entity, cancellationToken);
+        await DbContext.Set<Api.Infrastructure.Entities.AlertEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(Alert alert, CancellationToken cancellationToken = default)

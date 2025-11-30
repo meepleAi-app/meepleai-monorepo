@@ -34,7 +34,7 @@ public class LlmCostAlertService
     public async Task CheckDailyCostThresholdAsync(CancellationToken ct = default)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, ct);
+        var dailyCost = await _costLogRepository.GetDailyCostAsync(today, ct).ConfigureAwait(false);
 
         if (dailyCost > DailyThreshold)
         {
@@ -42,7 +42,7 @@ public class LlmCostAlertService
                 "ALERT: Daily LLM cost ${DailyCost:F2} exceeds threshold ${Threshold:F2}",
                 dailyCost, DailyThreshold);
 
-            var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(today, today, ct);
+            var costsByProvider = await _costLogRepository.GetCostsByProviderAsync(today, today, ct).ConfigureAwait(false);
             var providerBreakdown = string.Join(", ",
                 costsByProvider.Select(kv => $"{kv.Key}: ${kv.Value:F2}"));
 
@@ -74,7 +74,7 @@ public class LlmCostAlertService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var weekStart = today.AddDays(-7);
-        var weeklyCost = await _costLogRepository.GetTotalCostAsync(weekStart, today, ct);
+        var weeklyCost = await _costLogRepository.GetTotalCostAsync(weekStart, today, ct).ConfigureAwait(false);
 
         if (weeklyCost > WeeklyThreshold)
         {
@@ -104,7 +104,7 @@ public class LlmCostAlertService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var monthStart = new DateOnly(today.Year, today.Month, 1);
-        var monthCost = await _costLogRepository.GetTotalCostAsync(monthStart, today, ct);
+        var monthCost = await _costLogRepository.GetTotalCostAsync(monthStart, today, ct).ConfigureAwait(false);
 
         // Project monthly cost based on current daily average
         var daysElapsed = (today.DayNumber - monthStart.DayNumber) + 1;

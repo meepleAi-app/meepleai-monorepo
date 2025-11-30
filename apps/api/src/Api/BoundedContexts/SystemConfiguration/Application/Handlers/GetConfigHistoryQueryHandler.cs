@@ -20,7 +20,7 @@ public class GetConfigHistoryQueryHandler : IQueryHandler<GetConfigHistoryQuery,
 
     public async Task<IReadOnlyList<ConfigurationHistoryDto>> Handle(GetConfigHistoryQuery query, CancellationToken cancellationToken)
     {
-        var config = await _configurationRepository.GetByIdAsync(query.ConfigurationId, cancellationToken);
+        var config = await _configurationRepository.GetByIdAsync(query.ConfigurationId, cancellationToken).ConfigureAwait(false);
         if (config == null)
         {
             return Array.Empty<ConfigurationHistoryDto>();

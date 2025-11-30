@@ -27,7 +27,7 @@ public sealed class GetLinkedOAuthAccountsQueryHandler : IQueryHandler<GetLinked
         try
         {
             // Get all OAuth accounts for user
-            var accounts = await _oauthAccountRepository.GetByUserIdAsync(query.UserId, cancellationToken);
+            var accounts = await _oauthAccountRepository.GetByUserIdAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
             // Map domain entities to DTOs
             var accountDtos = accounts.Select(MapToDto).ToList();

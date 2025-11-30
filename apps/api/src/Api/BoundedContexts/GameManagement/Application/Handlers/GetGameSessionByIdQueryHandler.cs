@@ -20,7 +20,7 @@ public class GetGameSessionByIdQueryHandler : IQueryHandler<GetGameSessionByIdQu
 
     public async Task<GameSessionDto?> Handle(GetGameSessionByIdQuery query, CancellationToken cancellationToken)
     {
-        var session = await _sessionRepository.GetByIdAsync(query.SessionId, cancellationToken);
+        var session = await _sessionRepository.GetByIdAsync(query.SessionId, cancellationToken).ConfigureAwait(false);
 
         return session != null ? MapToDto(session) : null;
     }

@@ -21,7 +21,7 @@ public class GetUserChatsQueryHandler : IQueryHandler<GetUserChatsQuery, IReadOn
     public async Task<IReadOnlyList<ChatThreadDto>> Handle(GetUserChatsQuery request, CancellationToken cancellationToken)
     {
         // Get user's threads (repository returns ordered by LastMessageAt descending)
-        var threads = await _threadRepository.FindByUserIdAsync(request.UserId, cancellationToken);
+        var threads = await _threadRepository.FindByUserIdAsync(request.UserId, cancellationToken).ConfigureAwait(false);
 
         // Apply pagination
         var paginatedThreads = threads

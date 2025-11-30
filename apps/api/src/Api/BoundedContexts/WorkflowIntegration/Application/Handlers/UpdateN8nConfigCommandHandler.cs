@@ -24,7 +24,7 @@ public class UpdateN8nConfigCommandHandler : ICommandHandler<UpdateN8nConfigComm
 
     public async Task<N8nConfigurationDto> Handle(UpdateN8nConfigCommand command, CancellationToken cancellationToken)
     {
-        var config = await _repository.GetByIdAsync(command.ConfigId, cancellationToken);
+        var config = await _repository.GetByIdAsync(command.ConfigId, cancellationToken).ConfigureAwait(false);
         if (config == null)
             throw new DomainException($"N8nConfiguration with ID {command.ConfigId} not found");
 
@@ -48,8 +48,8 @@ public class UpdateN8nConfigCommandHandler : ICommandHandler<UpdateN8nConfigComm
                 config.Deactivate();
         }
 
-        await _repository.UpdateAsync(config, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _repository.UpdateAsync(config, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToDto(config);
     }

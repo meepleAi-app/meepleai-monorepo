@@ -17,7 +17,7 @@ public class GetPdfDocumentsByGameQueryHandler : IQueryHandler<GetPdfDocumentsBy
 
     public async Task<IReadOnlyList<PdfDocumentDto>> Handle(GetPdfDocumentsByGameQuery query, CancellationToken cancellationToken)
     {
-        var documents = await _documentRepository.FindByGameIdAsync(query.GameId, cancellationToken);
+        var documents = await _documentRepository.FindByGameIdAsync(query.GameId, cancellationToken).ConfigureAwait(false);
 
         return documents.Select(MapToDto).ToList();
     }

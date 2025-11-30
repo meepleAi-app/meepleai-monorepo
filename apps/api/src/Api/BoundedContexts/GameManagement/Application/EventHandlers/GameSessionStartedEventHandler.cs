@@ -16,7 +16,7 @@ public sealed class GameSessionStartedEventHandler : DomainEventHandlerBase<Game
 
     protected override async Task HandleEventAsync(GameSessionStartedEvent domainEvent, CancellationToken cancellationToken)
     {
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(GameSessionStartedEvent domainEvent)

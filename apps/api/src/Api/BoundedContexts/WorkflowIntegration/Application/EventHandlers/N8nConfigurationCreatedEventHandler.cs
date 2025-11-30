@@ -21,7 +21,7 @@ public sealed class N8nConfigurationCreatedEventHandler : DomainEventHandlerBase
     {
         // Future: Trigger configuration validation workflow
         // Future: Send notification to administrators
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(N8nConfigurationCreatedEvent domainEvent)

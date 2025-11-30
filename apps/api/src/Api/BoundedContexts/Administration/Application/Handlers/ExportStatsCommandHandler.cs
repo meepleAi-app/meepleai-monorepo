@@ -27,6 +27,6 @@ public class ExportStatsCommandHandler : ICommandHandler<ExportStatsCommand, str
             GameId: command.GameId
         );
 
-        return await _adminStatsService.ExportDashboardDataAsync(request, cancellationToken);
+        return await _adminStatsService.ExportDashboardDataAsync(request, cancellationToken).ConfigureAwait(false);
     }
 }

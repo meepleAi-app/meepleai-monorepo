@@ -17,7 +17,7 @@ public class GetPdfDocumentByIdQueryHandler : IQueryHandler<GetPdfDocumentByIdQu
 
     public async Task<PdfDocumentDto?> Handle(GetPdfDocumentByIdQuery query, CancellationToken cancellationToken)
     {
-        var document = await _documentRepository.GetByIdAsync(query.DocumentId, cancellationToken);
+        var document = await _documentRepository.GetByIdAsync(query.DocumentId, cancellationToken).ConfigureAwait(false);
 
         return document != null ? MapToDto(document) : null;
     }

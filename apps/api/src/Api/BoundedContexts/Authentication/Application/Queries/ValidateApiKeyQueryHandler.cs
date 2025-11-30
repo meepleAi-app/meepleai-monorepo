@@ -30,7 +30,7 @@ public class ValidateApiKeyQueryHandler : IQueryHandler<ValidateApiKeyQuery, Use
         var keyPrefix = query.PlaintextKey[..8];
 
         // Find API key by prefix
-        var apiKey = await _apiKeyRepository.GetByKeyPrefixAsync(keyPrefix, cancellationToken);
+        var apiKey = await _apiKeyRepository.GetByKeyPrefixAsync(keyPrefix, cancellationToken).ConfigureAwait(false);
 
         if (apiKey == null)
             return null;
@@ -45,10 +45,10 @@ public class ValidateApiKeyQueryHandler : IQueryHandler<ValidateApiKeyQuery, Use
 
         // Update last used timestamp
         apiKey.MarkAsUsed();
-        await _apiKeyRepository.UpdateAsync(apiKey, cancellationToken);
+        await _apiKeyRepository.UpdateAsync(apiKey, cancellationToken).ConfigureAwait(false);
 
         // Get user information
-        var user = await _userRepository.GetByIdAsync(apiKey.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(apiKey.UserId, cancellationToken).ConfigureAwait(false);
 
         if (user == null)
             return null;

@@ -95,7 +95,7 @@ public class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsComm
                     };
 
                     var json = JsonSerializer.Serialize(exportObject, jsonOptions);
-                    await writer.WriteAsync(json);
+                    await writer.WriteAsync(json).ConfigureAwait(false);
                 }
             }
         }

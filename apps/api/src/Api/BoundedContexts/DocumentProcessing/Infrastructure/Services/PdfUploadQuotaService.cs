@@ -64,8 +64,8 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
         try
         {
-            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct);
-            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct);
+            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct).ConfigureAwait(false);
+            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct).ConfigureAwait(false);
 
             var now = _timeProvider.GetUtcNow().UtcDateTime;
             var dailyReset = GetNextDailyReset(now);
@@ -140,11 +140,11 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
             var dailyKeys = new RedisKey[] { dailyKey };
             var dailyValues = new RedisValue[] { (int)dailyTtl.TotalSeconds };
-            await db.ScriptEvaluateAsync(script, dailyKeys, dailyValues);
+            await db.ScriptEvaluateAsync(script, dailyKeys, dailyValues).ConfigureAwait(false);
 
             var weeklyKeys = new RedisKey[] { weeklyKey };
             var weeklyValues = new RedisValue[] { (int)weeklyTtl.TotalSeconds };
-            await db.ScriptEvaluateAsync(script, weeklyKeys, weeklyValues);
+            await db.ScriptEvaluateAsync(script, weeklyKeys, weeklyValues).ConfigureAwait(false);
 
             _logger.LogDebug("Incremented PDF upload count for user {UserId}", userId);
         }
@@ -181,8 +181,8 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
 
         try
         {
-            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct);
-            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct);
+            var (dailyLimit, weeklyLimit) = await GetLimitsForTierAsync(userTier, ct).ConfigureAwait(false);
+            var (dailyUsed, weeklyUsed) = await GetUsageAsync(userId, ct).ConfigureAwait(false);
 
             var currentTime = _timeProvider.GetUtcNow().UtcDateTime;
             var dailyReset = GetNextDailyReset(currentTime);
@@ -217,8 +217,8 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         var weeklyKey = $"UploadLimits:{tierValue}:WeeklyLimit";
 
         // Get from configuration service (with fallback to defaults)
-        var dailyLimit = await _configService.GetValueAsync<int?>(dailyKey, defaultValue: null);
-        var weeklyLimit = await _configService.GetValueAsync<int?>(weeklyKey, defaultValue: null);
+        var dailyLimit = await _configService.GetValueAsync<int?>(dailyKey, defaultValue: null).ConfigureAwait(false);
+        var weeklyLimit = await _configService.GetValueAsync<int?>(weeklyKey, defaultValue: null).ConfigureAwait(false);
 
         // Default limits if not configured
         var defaultLimits = GetDefaultLimits(tier);
@@ -237,8 +237,8 @@ public class PdfUploadQuotaService : IPdfUploadQuotaService
         var dailyKey = $"pdf:upload:daily:{userId}:{GetDateKey(now)}";
         var weeklyKey = $"pdf:upload:weekly:{userId}:{GetWeekKey(now)}";
 
-        var dailyValue = await db.StringGetAsync(dailyKey);
-        var weeklyValue = await db.StringGetAsync(weeklyKey);
+        var dailyValue = await db.StringGetAsync(dailyKey).ConfigureAwait(false);
+        var weeklyValue = await db.StringGetAsync(weeklyKey).ConfigureAwait(false);
 
         var dailyUsed = dailyValue.HasValue ? (int)dailyValue : 0;
         var weeklyUsed = weeklyValue.HasValue ? (int)weeklyValue : 0;

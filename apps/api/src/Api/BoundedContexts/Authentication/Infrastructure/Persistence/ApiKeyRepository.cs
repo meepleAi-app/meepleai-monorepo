@@ -59,7 +59,7 @@ public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
         CollectDomainEvents(apiKey);
 
         var apiKeyEntity = MapToPersistence(apiKey);
-        await DbContext.ApiKeys.AddAsync(apiKeyEntity, cancellationToken);
+        await DbContext.ApiKeys.AddAsync(apiKeyEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(ApiKey apiKey, CancellationToken cancellationToken = default)
@@ -69,7 +69,7 @@ public class ApiKeyRepository : RepositoryBase, IApiKeyRepository
 
         var apiKeyEntity = MapToPersistence(apiKey);
         DbContext.ApiKeys.Update(apiKeyEntity);
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     /// <summary>

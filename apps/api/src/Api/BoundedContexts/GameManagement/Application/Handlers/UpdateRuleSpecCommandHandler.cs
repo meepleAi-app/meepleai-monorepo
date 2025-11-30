@@ -61,11 +61,11 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
 
         if (!versionProvided)
         {
-            version = await _versioningService.GenerateNextVersionAsync(command.GameId, cancellationToken);
+            version = await _versioningService.GenerateNextVersionAsync(command.GameId, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            var duplicate = await _versioningService.VersionExistsAsync(command.GameId, version, cancellationToken);
+            var duplicate = await _versioningService.VersionExistsAsync(command.GameId, version, cancellationToken).ConfigureAwait(false);
             if (duplicate)
             {
                 throw new InvalidOperationException($"Version {version} already exists for game {command.GameId}");
@@ -97,10 +97,10 @@ public class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComman
         }
 
         _dbContext.RuleSpecs.Add(specEntity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Invalidate cache
-        await _cache.InvalidateGameAsync(command.GameId.ToString(), cancellationToken);
+        await _cache.InvalidateGameAsync(command.GameId.ToString(), cancellationToken).ConfigureAwait(false);
 
         // Audit trail
         await _auditService.LogAsync(

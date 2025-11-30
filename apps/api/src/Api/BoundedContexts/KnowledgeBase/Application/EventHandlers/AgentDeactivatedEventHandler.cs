@@ -17,7 +17,7 @@ public sealed class AgentDeactivatedEventHandler : DomainEventHandlerBase<AgentD
     protected override async Task HandleEventAsync(AgentDeactivatedEvent domainEvent, CancellationToken cancellationToken)
     {
         // Auto-audit logging is handled by base class
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(AgentDeactivatedEvent domainEvent)

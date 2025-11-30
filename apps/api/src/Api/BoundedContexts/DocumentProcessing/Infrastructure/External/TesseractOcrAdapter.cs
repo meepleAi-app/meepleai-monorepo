@@ -94,11 +94,11 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
             return OcrResult.CreateFailure($"PDF file not found: {pdfPath}");
         }
 
-        await _semaphore.WaitAsync(ct);
+        await _semaphore.WaitAsync(ct).ConfigureAwait(false);
 
         try
         {
-            var (text, confidence) = await Task.Run(() => ExtractTextFromPageInternal(pdfPath, pageIndex), ct);
+            var (text, confidence) = await Task.Run(() => ExtractTextFromPageInternal(pdfPath, pageIndex), ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "OCR completed for page {PageIndex} of {PdfPath}. Confidence: {Confidence:F2}, Characters: {CharCount}",
@@ -156,7 +156,7 @@ public class TesseractOcrAdapter : IOcrService, IDisposable
             {
                 ct.ThrowIfCancellationRequested();
 
-                var pageResult = await ExtractTextFromPageAsync(pdfPath, i, ct);
+                var pageResult = await ExtractTextFromPageAsync(pdfPath, i, ct).ConfigureAwait(false);
 
                 if (!pageResult.Success)
                 {

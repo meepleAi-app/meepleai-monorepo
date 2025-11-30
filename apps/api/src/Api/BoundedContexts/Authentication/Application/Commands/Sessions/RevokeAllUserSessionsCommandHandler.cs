@@ -47,7 +47,7 @@ public class RevokeAllUserSessionsCommandHandler : ICommandHandler<RevokeAllUser
             {
                 try
                 {
-                    await _sessionCache.InvalidateAsync(session.TokenHash, cancellationToken);
+                    await _sessionCache.InvalidateAsync(session.TokenHash, cancellationToken).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
                 // Justification: Service boundary - cache failure resilience for batch session operations
@@ -60,7 +60,7 @@ public class RevokeAllUserSessionsCommandHandler : ICommandHandler<RevokeAllUser
             }
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Revoked {Count} sessions for user {UserId}", sessions.Count, request.UserId);
         return sessions.Count;

@@ -24,7 +24,7 @@ public class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleComman
     public async Task<UserDto> Handle(ChangeUserRoleCommand command, CancellationToken cancellationToken)
     {
         var userId = Guid.Parse(command.UserId);
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
             throw new DomainException($"User {command.UserId} not found");
 
@@ -32,8 +32,8 @@ public class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleComman
         user.UpdateRole(newRole);
 
         // Persist updates - required because repository uses AsNoTracking
-        await _userRepository.UpdateAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return new UserDto(
             Id: user.Id.ToString(),

@@ -20,7 +20,7 @@ public class GetUserProfileQueryHandler : IQueryHandler<GetUserProfileQuery, Use
 
     public async Task<UserProfileDto?> Handle(GetUserProfileQuery query, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
         return user != null ? MapToUserProfileDto(user) : null;
     }

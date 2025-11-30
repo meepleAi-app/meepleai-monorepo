@@ -56,7 +56,7 @@ public class CreateDemoRuleSpecCommandHandler : ICommandHandler<CreateDemoRuleSp
         }
 
         // Create game if it doesn't exist
-        var game = await _dbContext.Games.FirstOrDefaultAsync(g => g.Id == command.GameId, cancellationToken);
+        var game = await _dbContext.Games.FirstOrDefaultAsync(g => g.Id == command.GameId, cancellationToken).ConfigureAwait(false);
         if (game is null)
         {
             game = new GameEntity
@@ -99,7 +99,7 @@ public class CreateDemoRuleSpecCommandHandler : ICommandHandler<CreateDemoRuleSp
         });
 
         _dbContext.RuleSpecs.Add(newSpecEntity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return new RuleSpecDto(
             Id: newSpecEntity.Id,

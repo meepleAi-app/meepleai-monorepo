@@ -34,7 +34,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
     public async Task<CreateSessionResponse> Handle(CreateSessionCommand command, CancellationToken cancellationToken)
     {
         // Get user by ID
-        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
 
         if (user == null)
             throw new DomainException($"User with ID {command.UserId} not found");
@@ -50,8 +50,8 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
             userAgent: command.UserAgent
         );
 
-        await _sessionRepository.AddAsync(session, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         var userDto = MapToUserDto(user);

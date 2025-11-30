@@ -69,7 +69,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         CollectDomainEvents(session);
 
         var sessionEntity = MapToPersistence(session);
-        await DbContext.UserSessions.AddAsync(sessionEntity, cancellationToken);
+        await DbContext.UserSessions.AddAsync(sessionEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(Session session, CancellationToken cancellationToken = default)
@@ -79,7 +79,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
 
         var sessionEntity = MapToPersistence(session);
         DbContext.UserSessions.Update(sessionEntity);
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     public async Task UpdateLastSeenAsync(Guid sessionId, DateTime lastSeenAt, CancellationToken cancellationToken = default)
@@ -112,7 +112,7 @@ public class SessionRepository : RepositoryBase, ISessionRepository
 
         try
         {
-            var rowsAffected = await DbContext.SaveChangesAsync(cancellationToken);
+            var rowsAffected = await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             // rowsAffected might be 0 if another concurrent operation already revoked the sessions
         }
         catch (DbUpdateConcurrencyException)

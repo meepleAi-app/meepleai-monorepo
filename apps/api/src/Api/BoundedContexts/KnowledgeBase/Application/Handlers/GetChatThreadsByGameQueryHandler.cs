@@ -21,7 +21,7 @@ public class GetChatThreadsByGameQueryHandler : IQueryHandler<GetChatThreadsByGa
     public async Task<IReadOnlyList<ChatThreadDto>> Handle(GetChatThreadsByGameQuery query, CancellationToken cancellationToken)
     {
         // Get threads for user and game
-        var threads = await _threadRepository.FindByUserIdAndGameIdAsync(query.UserId, query.GameId, cancellationToken);
+        var threads = await _threadRepository.FindByUserIdAndGameIdAsync(query.UserId, query.GameId, cancellationToken).ConfigureAwait(false);
 
         // Apply pagination
         var paginatedThreads = threads

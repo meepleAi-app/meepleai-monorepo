@@ -51,7 +51,7 @@ public class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedResu
             _ => query.SortOrder == "asc" ? dbQuery.OrderBy(u => u.CreatedAt) : dbQuery.OrderByDescending(u => u.CreatedAt)
         };
 
-        var total = await dbQuery.CountAsync(cancellationToken);
+        var total = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);
         var users = await dbQuery
             .Skip((query.Page - 1) * query.Limit)
             .Take(query.Limit)

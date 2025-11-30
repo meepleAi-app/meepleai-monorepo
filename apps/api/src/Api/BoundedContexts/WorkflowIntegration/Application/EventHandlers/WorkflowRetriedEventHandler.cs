@@ -21,7 +21,7 @@ public sealed class WorkflowRetriedEventHandler : DomainEventHandlerBase<Workflo
     {
         // Future: Track retry patterns for workflow optimization
         // Future: Alert if retry count approaches max retries
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(WorkflowRetriedEvent domainEvent)

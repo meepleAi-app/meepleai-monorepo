@@ -27,7 +27,7 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
     public async Task Handle(UpdateUserProfileCommand command, CancellationToken cancellationToken)
     {
         // Retrieve user
-        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
         if (user == null)
         {
             throw new DomainException("User not found");
@@ -50,7 +50,7 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
             var newEmail = new Email(normalizedEmail);
 
             // Check if email is already in use by another user
-            var existingUser = await _userRepository.GetByEmailAsync(newEmail, cancellationToken);
+            var existingUser = await _userRepository.GetByEmailAsync(newEmail, cancellationToken).ConfigureAwait(false);
             if (existingUser != null && existingUser.Id != user.Id)
             {
                 throw new DomainException("Email is already in use");
@@ -60,7 +60,7 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         }
 
         // Persist updates
-        await _userRepository.UpdateAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

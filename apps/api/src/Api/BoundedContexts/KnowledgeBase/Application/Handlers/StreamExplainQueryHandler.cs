@@ -56,7 +56,7 @@ public class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQue
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Generating embeddings for topic..."));
 
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query.Topic, cancellationToken);
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query.Topic, cancellationToken).ConfigureAwait(false);
 
         if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
         {
@@ -72,7 +72,7 @@ public class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQue
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Searching vector database for relevant content..."));
 
-        var searchResult = await _qdrantService.SearchAsync(query.GameId, topicEmbedding, limit: 5, cancellationToken);
+        var searchResult = await _qdrantService.SearchAsync(query.GameId, topicEmbedding, limit: 5, cancellationToken).ConfigureAwait(false);
 
         if (!searchResult.Success || searchResult.Results.Count == 0)
         {
@@ -121,7 +121,7 @@ public class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQue
             // and avoid overwhelming the client
             if (i < scriptChunks.Count - 1)
             {
-                await Task.Delay(50, cancellationToken);
+                await Task.Delay(50, cancellationToken).ConfigureAwait(false);
             }
         }
 

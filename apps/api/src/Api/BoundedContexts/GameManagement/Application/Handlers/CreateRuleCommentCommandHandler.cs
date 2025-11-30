@@ -41,7 +41,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
         ValidateLineNumber(command.LineNumber);
 
         // Extract and resolve mentions
-        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(command.CommentText, cancellationToken);
+        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(command.CommentText, cancellationToken).ConfigureAwait(false);
         var mentionedUserIds = mentionedUserIdsStr
             .Select(id => Guid.Parse(id))
             .ToList();
@@ -58,7 +58,7 @@ public partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateRul
         };
 
         _dbContext.RuleSpecComments.Add(comment);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created comment {CommentId} by user {UserId} for {GameId} v{Version} (line: {LineNumber})",

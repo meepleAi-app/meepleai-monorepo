@@ -35,7 +35,7 @@ public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, UserD
         var email = new Email(command.Email);
 
         // Check if email already exists
-        var existingUser = await _userRepository.GetByEmailAsync(email, cancellationToken);
+        var existingUser = await _userRepository.GetByEmailAsync(email, cancellationToken).ConfigureAwait(false);
         if (existingUser != null)
             throw new DomainException($"User with email {command.Email} already exists");
 
@@ -56,8 +56,8 @@ public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, UserD
         );
 
         // Save user
-        await _userRepository.AddAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         return MapToUserDto(user);

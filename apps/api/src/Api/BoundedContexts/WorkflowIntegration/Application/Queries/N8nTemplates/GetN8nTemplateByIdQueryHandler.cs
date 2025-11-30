@@ -36,7 +36,7 @@ public sealed class GetN8nTemplateByIdQueryHandler : IQueryHandler<GetN8nTemplat
         _logger.LogInformation("Retrieving n8n template {TemplateId}", query.TemplateId);
 
         // Delegate to infrastructure service (includes path security validation)
-        var template = await _templateService.GetTemplateAsync(query.TemplateId, cancellationToken);
+        var template = await _templateService.GetTemplateAsync(query.TemplateId, cancellationToken).ConfigureAwait(false);
 
         if (template == null)
         {

@@ -41,8 +41,8 @@ public class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThreadCo
         }
 
         // Persist
-        await _threadRepository.AddAsync(thread, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _threadRepository.AddAsync(thread, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         return MapToDto(thread);

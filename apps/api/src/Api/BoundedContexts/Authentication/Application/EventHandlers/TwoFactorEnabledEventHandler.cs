@@ -22,7 +22,7 @@ public sealed class TwoFactorEnabledEventHandler : DomainEventHandlerBase<TwoFac
     {
         // Auto-audit logging is handled by base class
         // Add additional business logic here if needed (e.g., send 2FA enabled confirmation email)
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override Guid? GetUserId(TwoFactorEnabledEvent domainEvent) => domainEvent.UserId;

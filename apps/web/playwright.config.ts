@@ -7,7 +7,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 4 : 2, // Issue #843: 4 workers in CI, 2 local for optimal speed
-  reporter: process.env.CI ? 'dot' : 'html', // Concise output in CI, HTML report locally
+  reporter: process.env.CI
+    ? [['dot'], ['@chromatic-com/playwright']]
+    : [['html'], ['@chromatic-com/playwright']], // Chromatic + standard reporters
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',

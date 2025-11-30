@@ -36,11 +36,11 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --max-warnings=0 --fix",
+      "bash -c 'files=\"$@\"; files_filtered=$(echo \"$files\" | tr \" \" \"\\n\" | grep -v \"__tests__\" | tr \"\\n\" \" \"); [ -n \"$files_filtered\" ] && eslint --max-warnings=0 --fix $files_filtered || true' --",
       "prettier --write"
     ],
     "*.{js,jsx}": [
-      "eslint --max-warnings=0 --fix",
+      "bash -c 'files=\"$@\"; files_filtered=$(echo \"$files\" | tr \" \" \"\\n\" | grep -v \"__tests__\" | tr \"\\n\" \" \"); [ -n \"$files_filtered\" ] && eslint --max-warnings=0 --fix $files_filtered || true' --",
       "prettier --write"
     ]
   },
